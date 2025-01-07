@@ -1,212 +1,221 @@
+#include "code_data/instruction.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
+#include "opcodes_utils.hpp"
 #include <core/process/vmprocess.hpp>
+
+
+#ifdef DEBUG_OPCODES
+#define OPCODE_NAME(name) op_debug_##name
+#define FUNCTION_ARGS OPFUN_REF_ARGS
+#define FUNCTION_CONT(step) instr += step;
+#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+#else
+#define OPCODE_NAME(name) op_##name 
+#define FUNCTION_ARGS OPFUN_ARGS
+#define FUNCTION_CONT(step) OPFUN_CONT(step)
+#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
+#endif
 
 namespace vm {
 
-	template<typename T>
-	[[gnu::always_inline]]
-	inline static T& derefStack(std::byte* stack, i64 position) {
-		return *(reinterpret_cast<T*>(&stack[position]));
-	}
-
 	// NOTE: functions that implement opcodes (opfunctions) must be done this way:
 	//
-	// RETURN_TYPE OpFuns::op_<opcode_name>(OPFUN_ARGS) {
+	// RETURN_TYPE OpFuns::op_<opcode_name>(FUNCTION_ARGS) {
 	//  {
 	//    <function_body>
 	//  }
-	//  OPFUN_CONT(<step>);
+	//  FUNCTION_CONT(<step>);
 	// }
 	//
-	// Function body must be seperated from the scope of OPFUN_CONT to make sure
+	// Function body must be seperated from the scope of FUNCTION_CONT to make sure
 	// that all its destructors have been called before invoking next tail call.
 	// Otherwise, the compiler may get confused and may schedule destructors from
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
-	// `op_exit` is the only opcode without the `OPFUN_CONT` or `OPFUN_CONT_CHECK_STRATEGY` macro.
+	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY` macro.
 	// This means, every other will jump to the next instruction at the end of it with
-	// `OPFUN_CONT`/`OPFUN_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
+	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
 	// opcode. It also requires different macro surrounding the function call in the computed goto's
 	// and switch case, because in those approaches we can't end execution from within the function,
 	// but we have to add some instructions on the outside of it. Hence we use the `OP_CASE_END`
 	// macro that adds `goto End` instruction, residing after opcode function, inside interpeter
 	// loop.
-	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
+	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-	RETURN_TYPE OpFuns::op_mov_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_imm)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_l64)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_cmov_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l64_l64)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag)
 				derefStack<u64>(local_stack, instr->arg0)
 					= derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_l64_r0(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_add_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_l64)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) += derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_add_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_imm)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) += instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_sub_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_l64)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) -= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_sub_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_imm)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) -= instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mul_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l64_imm)(FUNCTION_ARGS) {
 		{
 			// @TODO: check types
 			derefStack<u64>(local_stack, instr->arg0) *= instr->arg1;
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mod_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_imm)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) %= instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mod_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_l64)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) %= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_div_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(div_l64_imm)(FUNCTION_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) /= instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_cmpEq_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_l64)(FUNCTION_ARGS) {
 		{
 			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
 			                 == derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_cmpEq_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_imm)(FUNCTION_ARGS) {
 		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_cmpG_l64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_l64)(FUNCTION_ARGS) {
 		{
 			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
 			                  > derefStack<u64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_cmpG_l64_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_imm)(FUNCTION_ARGS) {
 		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_jmpRel_label(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRel_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
-		OPFUN_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::op_jmpRelIf_label(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelIf_label)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelNotIf_label)(FUNCTION_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
-		OPFUN_CONT_CHECK_STRATEGY(1);
+		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_l64_arg64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_arg64)(FUNCTION_ARGS) {
 		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, instr->arg1); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_lptr_argptr(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_argptr)(FUNCTION_ARGS) {
 		{
 			derefStack<Pointer>(local_stack, instr->arg0)
 				= derefStack<Pointer>(frame->args, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_getFstArg_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(getFstArg_l64)(FUNCTION_ARGS) {
 		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, 0); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_getFstArg_lptr(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(getFstArg_lptr)(FUNCTION_ARGS) {
 		{ derefStack<Pointer>(local_stack, instr->arg0) = derefStack<Pointer>(frame->args, 0); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setFstArg_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setFstArg_l64)(FUNCTION_ARGS) {
 		{ derefStack<i64>(frame->next_args, 0) = derefStack<i64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_setFstArg_lptr(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setFstArg_lptr)(FUNCTION_ARGS) {
 		{
 			derefStack<Pointer>(frame->next_args, 0)
 				= derefStack<Pointer>(local_stack, instr->arg0);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_arg64_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_arg64_l64)(FUNCTION_ARGS) {
 		{
 			derefStack<i64>(frame->next_args, instr->arg0)
 				= derefStack<i64>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_argptr_lptr(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_argptr_lptr)(FUNCTION_ARGS) {
 		{
 			derefStack<Pointer>(frame->next_args, instr->arg0)
 				= derefStack<Pointer>(local_stack, instr->arg1);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_call_func(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		{
-			// We have to change variables passed in the arguments (OPFUN_ARGS). After this
+			// We have to change variables passed in the arguments (FUNCTION_ARGS). After this
 			// function: `instr` should be pointer to the instruction in the new function, `frame`
 			// should be pointer to the next frame, `local_stack` should be pointer to the local
 			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
@@ -244,10 +253,10 @@ namespace vm {
 		// instructions. For future returns, the first instruction that should be executed after
 		// call is saved on frame so that op_ret's have to move forward zero instructions after
 		// restoring `instr` from frame.
-		OPFUN_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
 		{
 			auto function_id = instr->arg0;
 
@@ -255,10 +264,10 @@ namespace vm {
 
 			swap(frame->args, frame->next_args);
 		}
-		OPFUN_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_l64)(FUNCTION_ARGS) {
 		{
 			// @TODO: refactor op_rets to reduce code duplication
 
@@ -280,10 +289,10 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		OPFUN_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_imm)(FUNCTION_ARGS) {
 		{
 			// For explanation go to op_ret_l64.
 			frame--;
@@ -296,10 +305,10 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		OPFUN_CONT_CHECK_STRATEGY(0);
+		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
 			auto type     = thread.process_types.getType(vm::TypeID(instr->arg0));
 			auto data_ptr = local_stack + frame->local_stack_head;
@@ -307,10 +316,10 @@ namespace vm {
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize();
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{
 			auto block = frame->block_stack.back();
 			auto type  = thread.process_memory.getBlockType(block);
@@ -318,48 +327,48 @@ namespace vm {
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
 			thread.notifyProcess(api::WaitingForInput{});
 			derefStack<i64>(local_stack, instr->arg0)
 				= thread.process.getIO().getInput<i64>(thread);
 			thread.notifyProcess(api::Running{});
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_output_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
 		{ thread.process.getIO().writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_nop(OPFUN_ARGS) { OPFUN_CONT(1); }
+	RETURN_TYPE OpFuns::OPCODE_NAME(nop)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
 
-	RETURN_TYPE OpFuns::op_ext_l64(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
-	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type  = thread.process_types.getType(vm::TypeID(instr->arg1));
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(free_lptr)(FUNCTION_ARGS) {
 		{
 			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
 			);
 		}
-		OPFUN_CONT(1);
+		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_load_l64_lptr_ofs(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_l64_lptr_ofs)(FUNCTION_ARGS) {
 		constexpr const uint8_t view_size = 8;
 		int                     next      = 1;
 		{
@@ -383,10 +392,10 @@ namespace vm {
 
 			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
 		}
-		OPFUN_CONT(next);
+		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::op_store_lptr_l64_ofs(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_l64_ofs)(FUNCTION_ARGS) {
 		constexpr const uint8_t view_size = 8;
 		int                     next      = 1;
 		{
@@ -410,10 +419,10 @@ namespace vm {
 
 			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
 		}
-		OPFUN_CONT(next);
+		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::op_breakpoint(OPFUN_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{	
 			save_execution_state(instr, local_stack, frame, thread);
 
@@ -425,30 +434,11 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
-		{
-			save_execution_state(instr, local_stack, frame, thread);
-
-			thread.handleExecutionBreak();
-
-			// Restore current registers and flow.
-			// They can be changed when doing "step by step" execution.
-			frame       = thread.runtime_data.frame_stack_current;
-			instr       = frame->instr;
-			local_stack = frame->local_stack;
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
-		{
-			// Save current registers and flow.
-			frame->instr       = instr;
-			frame->local_stack = local_stack;
-			thread.runtime_data.frame_stack_current = frame;
-		}
+		FUNCTION_CONT(1);
 	}
 }
+
+#undef OPCODE_NAME
+#undef FUNCTION_ARGS
+#undef FUNCTION_CONT
+#undef FUNCTION_CONT_CHECK_STRATEGY

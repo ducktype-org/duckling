@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/process/memory/block.hpp"
 #include "status.hpp"
 #include <core/process/type_metadata/type.hpp>
 
@@ -9,6 +10,15 @@ struct nlohmann::adl_serializer<base::RawView> {
 
 	static void from_json(const json&, const base::RawView&) {
 		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (yet).");
+	}
+};
+
+template<>
+struct nlohmann::adl_serializer<vm::BlockID> {
+	static void to_json(json& j, const vm::BlockID& e) { j = std::to_string(static_cast<u64>(e)); }
+
+	static void from_json(const json& j, vm::BlockID& e) {
+		e = static_cast<vm::BlockID>(std::stoull(j.get<std::string>()));
 	}
 };
 
@@ -25,8 +35,19 @@ namespace vm::api {
 			base::RawView data;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
 		};
+
+		struct BlockIDs {
+			std::vector<BlockID> ids;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(BlockIDs, ids);
+		};
+
+		struct CodePosition {
+			std::string function_name;
+			u64         line;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, line, function_name);
+		};
 	}
 
 	using Response
-		= std::variant<ProcStatus, response::Output, response::Block, TypeCRef, response::Empty>;
+		= std::variant<ProcStatus, response::Output, response::Block, TypeCRef, response::Empty, response::BlockIDs, response::CodePosition>;
 }

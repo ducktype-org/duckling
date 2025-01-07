@@ -51,6 +51,7 @@ namespace vm {
 
 	class OpFuns;
 	using OpFun = void(OPFUN_ARGS);
+	using DebugOpFun = void(OPFUN_REF_ARGS);
 
 
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
@@ -88,6 +89,11 @@ namespace vm {
 #define DEF_OPCODE(opcode) static OpFun op_##opcode;
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
+
+#define DEF_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+
 		static OpFun handle_execution_break;
 		static OpFun save_execution_state;
 		/**
@@ -100,5 +106,18 @@ namespace vm {
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 		};
+
+		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> debug_opfuns{
+#define DEF_OPCODE(opcode) op_debug_##opcode,
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+		};
+
+		static u16 getOpcodeFromOpFun(OpFun* fun) {
+			for (u16 i = 0; i < OP_CASES_COUNT; i++) {
+				if (opfuns.at(i) == fun) return i;
+			}
+			return 0;
+		}
 	};
 }  // namespace vm

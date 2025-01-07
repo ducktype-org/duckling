@@ -16,6 +16,7 @@
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes.hpp"
+#include "opcodes_debug.hpp"
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -27,20 +28,55 @@ namespace vm {
 		notifyProcess(api::NotStarted{});
 	}
 
+	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
+		{
+			save_execution_state(instr, local_stack, frame, thread);
+
+			thread.handleExecutionBreak();
+
+			// Restore current registers and flow, because
+			// they could be changed when doing "step by step" execution.
+			frame       = thread.runtime_data.frame_stack_current;
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
+		}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
+		{
+			// Save current registers and flow.
+			frame->instr                            = instr;
+			frame->local_stack                      = local_stack;
+			thread.runtime_data.frame_stack_current = frame;
+		}
+	}
+
+	void VMThread::executeOneStep() {
+		Frame*     frame       = runtime_data.frame_stack_current;
+		std::byte* local_stack = frame->local_stack;
+		auto*      instr       = frame->instr;
+
+#ifdef USE_TAIL_CALLS
+		auto opcode = OpFuns::getOpcodeFromOpFun(instr->opfun);
+#else
+		auto            opcode = static_cast<u16>(instr->opcode);
+#endif
+
+		// Execute the instruction
+		OpFuns::debug_opfuns.at(opcode)(instr, local_stack, frame, *this);
+
+		runtime_data.frame_stack_current = frame;
+		frame->local_stack               = local_stack;
+		frame->instr                     = instr;
+	}
+
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
 #elif defined(__GNUG__)
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
-
-
-	void VMThread::executeOneStep() {
-		Frame*     frame       = runtime_data.frame_stack_current;
-		std::byte* local_stack = frame->local_stack;
-		auto*      instr       = frame->instr;
-		// Here we have a problem...
-	}
 
 	u64 VMThread::internalCallMain(const FuncData& main_func) {
 		// We create one artificial "pre" frame, that when main function returns
