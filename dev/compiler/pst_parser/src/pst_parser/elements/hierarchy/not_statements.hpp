@@ -41,6 +41,18 @@ namespace pst {
 		MCRef<ExprElement> getType() const {
 			return type.ref();
 		}
+
+		[[nodiscard]]
+		base::StrID getName() const {
+			return name.value;
+		}
+
+		[[nodiscard]]
+		base::Optional<MCRef<ExprElement>> getValue() const {
+			return initial.map([](const auto& v) { return v.ref(); });
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 
 	class DottedName final: public NotStmt {

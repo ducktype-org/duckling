@@ -1,91 +1,112 @@
 #pragma once
 
-#include <core/process/memory/allocator/allocator.hpp>
-#include <core/process/memory/allocator/stack_allocator.hpp>
-#include "memory_data/block.hpp"
-#include <base/smart_pointers.hpp>
+#include <deque>
+#include <mutex>
+#include <shared_mutex>
+#include <cstring>
+#include <base/ints.hpp>
+#include <base/ref.hpp>
+#include <base/exceptions.hpp>
+#include <base/raw_view.hpp>
+#include <base/stable_container.hpp>
+#include <base/maps.hpp>
+#include <core/process/type_metadata/definitions.hpp>
+#include <code_data/frame.hpp>
+
+#include "block.hpp"
+#include "pointer.hpp"
+#include "thread_stack.hpp"
+#include "allocator/block_data.hpp"
+#include "allocator/heap_allocator.hpp"
+#include "allocator/stack_allocator.hpp"
 
 namespace vm {
-	class VMProcess;
-
-	/**
-	 * @brief Holds metadata about all dynamic memory of the VCPU.
-	 *
-	 * This class is used to manage memory blocks of the VCPU.
-	 * The memory used by the VCPU is divided into blocks. Each block
-	 * has a unique ID, which is used to access the block, fixed size
-	 * and a pointer to the data. Owner of the block is the one who
-	 * creates it - mainly `Allocator` services or `Executor` itself.
-	 *
-	 * More information in the paper
-	 * ["Prototyp maszyny
-	 * wirtualnej..."](https://github.com/ducktype-org/dev-space/blob/main/prace_naukowe/maszyna_wirtualna.pdf)
-	 */
 	class Memory {
 	private:
-		Memory();
+		mutable std::shared_mutex mutex;
+		HeapAllocator             heap_allocator;
+		StackAllocator            stack_allocator;
 
-		friend class VMProcess;
+		std::deque<ThreadStack> threads_frame_stacks;
 
-		struct BlockData {
-			u64    refcount = 0;
-			bool   owned    = false;
-			bool   filled   = false;
-			bool   deleted  = false;
-			Block* block    = nullptr;
-		};
+		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
+		// After the block is destroyed and the reference count drops to zero, instead of freeing
+		// the memory, we mark the block as unused and add its ID to the free_ids list. Then when we
+		// need to allocate a new block, we first check if there are any free IDs available. Blocks
+		// are stored in a deque, so we can have pointers to them without worrying about
+		// reallocation.
+		std::deque<Block>   blocks   = {};
+		std::deque<BlockID> free_ids = {};
 
-		static constexpr usize   special_blocks_count = 1;
-		static constexpr BlockID null_block_id        = BlockID(-1);
+		[[nodiscard]]
+		Ref<Block> createBlock(BlockData data);
 
-		std::vector<BlockData> blocks = {};
+		void deleteBlock(Ref<Block> block);
 
-		// high_id is lowest non-owned id
-		BlockID high_id = BlockID(0);
+		void destroyReference(Ref<Block> block);
 
-		std::vector<BlockID> free_ids = {};
-
-		bool refCheck(BlockID block_id);
-
-		[[gnu::always_inline]]
-		inline bool isUnowned(BlockID id) {
-			return id >= high_id || !blocks[usize(id)].owned;
-		}
-
-		StackAllocator stack_allocator;
-		Allocator      dynamic_allocator;
+		[[nodiscard]]
+		Ref<Block> getBlock(BlockID id);
 
 	public:
+		Memory() = default;
+
 		using error = std::string;
 
-		StackAllocator& getStackAllocator();
-		Allocator&      getDynamicAllocator();
+		// =================== Used by executor ===================
 
-		BlockID reserveBlockID();
-		void    returnBlockID(BlockID);
+		auto initializeFrameStack() -> Ref<ThreadStack>;
 
-		[[gnu::always_inline]]
-		inline Block* getBlock(BlockID id) {
-			// @NOTE: disabling these checks increases
-			// load/store performance in TC by eliminating
-			// 4 stack push-pops in asm
-			if (isUnowned(id))
-				CORE_PANIC("Tried accessing unowned block");
-			else if (!blocks[usize(id)].filled)
-				CORE_PANIC("Tried accessing uninitialized block");
-			return blocks[usize(id)].block;
-		}
+		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
-		void makeBlock(BlockID block_id, Block&& block);
-		void deleteBlock(BlockID block_id);
+		auto allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
-		void createRef(BlockID block_id);
-		void destroyRef(BlockID block_id);
+		void freeBlock(Ref<Block> block);
 
-		// @TODO: nullPtr deref errors, block ownership, etc
+		// =================== Block operations ===================
+
 		[[nodiscard]]
-		inline Pointer nullPtr() const {
-			return Pointer{ null_block_id, 0 };
+		static inline auto getBlockType(Ref<Block> block) -> TypeCRef {
+			std::shared_lock lock(*block->shared_mutex);
+			return block->data.element_type;
 		}
+
+		// ======================== Pointers ========================
+
+		[[nodiscard]]
+		static inline auto getPointer(Ref<Block> block) -> Pointer {
+			std::unique_lock lock(*block->shared_mutex);
+			block->refcount++;
+			return { block, 0 };
+		}
+
+		// @todo panics slows down the execution of the code in executor
+		// we should implement entirely different error handling (maybe exception free)
+		[[nodiscard]]
+		static __attribute__((always_inline)
+		) inline auto getPointerData(Pointer pointer, u64 size_bytes) -> base::ModRawView {
+			std::shared_lock lock(*pointer.block->shared_mutex);
+			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
+			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
+			if (pointer.offset + size_bytes > pointer.block->data.view.size())
+				CORE_PANIC("Accessing data out of bounds");
+			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
+		}
+
+		inline auto destroyPointer(Pointer pointer) -> void {
+			std::unique_lock lock(*pointer.block->shared_mutex);
+			destroyReference(pointer.block.toOpt()->get());
+		}
+
+		// ======================== Requests ========================
+
+		[[nodiscard]]
+		auto requestBlockIDs() -> std::vector<BlockID>;
+
+		[[nodiscard]]
+		auto requestBlockData(BlockID id) -> base::RawView;
+
+		[[nodiscard]]
+		auto requestBlockType(BlockID id) -> TypeCRef;
 	};
 }
