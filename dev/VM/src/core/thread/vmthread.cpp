@@ -71,11 +71,6 @@ namespace vm {
 	// loop.
 	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
 
-	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
-		{ thread.handleExecutionStrategy(); }
-		OPFUN_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::op_mov_l64_imm(OPFUN_ARGS) {
 		{ derefStack<u64>(local_stack, instr->arg0) = instr->arg1; }
 		OPFUN_CONT(1);
@@ -454,6 +449,16 @@ namespace vm {
 		OPFUN_CONT(next);
 	}
 
+	RETURN_TYPE OpFuns::op_breakpoint(OPFUN_ARGS) {
+		{}
+		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::handle_strategy(OPFUN_ARGS) {
+		{ thread.handleExecutionStrategy(); }
+		OPFUN_CONT(1);
+	}
+
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
 #elif defined(__GNUG__)
@@ -490,34 +495,62 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
-#else
-	// Computed gotos labels:
-	#ifdef USE_COMPUTED_GOTO
+#endif
+
+#ifdef USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
-		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
+		#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
 		#include <code_data/opcodes_list.hpp>
 		#undef DEF_OPCODE
 		};
-	#endif
 
-		IF_NOT_CG(while (true)) {
-			IF_CG(DISPATCH_OPCODE());
+		goto* opcode_label[static_cast<u64>(instr->opcode)];
 
+		#define DEF_OPCODE(opcode_name)                                         \
+			LABEL_##opcode_name: {                                              \
+				vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+			}
+		#define DEF_OPCODE_END(opcode_name)                                     \
+			LABEL_##opcode_name: {                                              \
+				vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+				goto End;                                                       \
+			}
+		#include <code_data/opcodes_list.hpp>
+		#undef DEF_OPCODE
+		#undef DEF_OPCODE_END
+
+	End:
+		return runtime_data.frame_stack_base->regs.p64_reg_0;
+#endif
+
+#ifdef USE_SWITCH_CASE
+		while (true) {
 			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
 
-			IF_NOT_CG(switch (static_cast<OpcodeFix8>(instr->opcode))) {
-	#define DEF_OPCODE(opcode)     OP_CASE(opcode)
-	#define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
-	#include <code_data/opcodes_list.hpp>
-	#undef DEF_OPCODE
-	#undef DEF_OPCODE_END
-				IF_NOT_CG(default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); })
+			switch (static_cast<OpcodeFix8>(instr->opcode)) {
+		#define DEF_OPCODE(opcode_name)                                     \
+		case OpcodeFix8::opcode_name: {                                     \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+			break;                                                          \
+		}
+		#define DEF_OPCODE_END(opcode_name)\
+		case OpcodeFix8::opcode_name: {\
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);\
+			goto End;\
+		}
+		#include <code_data/opcodes_list.hpp>
+		#undef DEF_OPCODE
+		#undef DEF_OPCODE_END
+
+				default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); }
 			}
 		}
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
+
 #endif
-	}
+	} // internalCallMain end
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang

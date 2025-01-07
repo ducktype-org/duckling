@@ -122,7 +122,7 @@ DEF_OPCODE(ext_l64)
 // terminates execution
 DEF_OPCODE_END(exit)
 
-DEF_OPCODE(handle_strategy)
+DEF_OPCODE(breakpoint)
 
 #ifdef DEFAULT_DEF_OPCODE
 #undef DEFAULT_DEF_OPCODE
