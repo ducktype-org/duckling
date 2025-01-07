@@ -60,7 +60,7 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief Represents a boolean literal value written in the expression.
+	 * @brief Represents a boolean literal value written in the expression (true, false).
 	 */
 	struct LiteralBoolExpr final: public Expr {
 		bool value;
@@ -71,6 +71,9 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
+	/**
+	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
+	 */
 	struct LiteralTypeExpr final: public Expr {
 		tsh::TypeInfo value_type;
 
