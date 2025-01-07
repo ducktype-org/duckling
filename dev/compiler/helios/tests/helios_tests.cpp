@@ -612,7 +612,6 @@ private:
 
 		ASSERT_EQUAL(true_expr_casted->value, true);
 		ASSERT_EQUAL(false_expr_casted->value, false);
-
 	}
 
 	void testFunctionParameters() {
