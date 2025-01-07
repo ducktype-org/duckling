@@ -5,10 +5,9 @@ compile_args: "-o @{program_name}"
 
 Compile: "g++ @{program_name}.cpp @{compile_args} @{compile_flags}"
 Run: "./@{program_name}"
-PostRun: "echo \"Ran @{program_name}!\""
+PostRun: "echo \"This is a post run message about @{program_name}!\""
 Clean: "rm @{program_name}"
 
-FailFast: true
 ExitCode: 0
 TimeOut: 10
 
@@ -23,7 +22,7 @@ Tests:
         Input:
           string: "5"
         Output:
-          string: "0 1 1 2 3 "
+          string: "0 1 1 2 4 "
       simple-from-file:
         Input:
           file: input_for_fib

@@ -8,7 +8,6 @@ Run = "./@{program_name}"
 PostRun = "echo Ran @{program_name}!"
 Clean = "rm @{program_name}"
 
-FailFast = true
 ExitCode = 0
 TimeOut = 10
 

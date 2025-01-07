@@ -8,6 +8,8 @@ from .utils import (
     ExpressionFillError,
     VariableNotFound,
     check_resembles_builtin,
+    log_failure,
+    log_success,
 )
 
 from .config import (
@@ -54,23 +56,33 @@ class Test:
     fail_fast: bool
     clean: str
 
-    def run_test(self, dry: bool):
+    def run_test(self, dry: bool, fail_fast: bool, verbose: bool) -> bool:
+        success = True
         if self.compile:
             self.exec_command(self.compile, cwd=self.cwd, dry=dry)
         for i, run_case in enumerate(self.run_cases):
-            log_info(f"[{i + 1}/{len(self)}] - {run_case.name}")
+            log_info(f"Run [{i + 1}/{len(self)}] - {run_case.name}")
             try:
-                self.test_case(run_case, dry)
+                if err := self.test_case(run_case, dry, verbose):
+                    log_failure(
+                        f"Case `{self.name}/{run_case.name}` has failed because: {err}"
+                    )
+                else:
+                    log_success(f"Case `{self.name}/{run_case.name}` passed")
             except BashCommandError as e:
-                exit_with_error(
+                log_failure(
                     f"Case `{self.name}/{run_case.name}` has failed because: {''.join(e.args)}"
                 )
+                success = False
+                if fail_fast:
+                    break
+        return success
 
-    def test_case(self, run_case, dry: bool) -> bool:
-        var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
-        var = make_singleline_command(var)
-
-        log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
+    def test_case(self, run_case, dry: bool, verbose: bool) -> bool:
+        if verbose:
+            var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
+            var = make_singleline_command(var)
+            log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
 
         # get input
         test_input = bytes()
@@ -94,6 +106,7 @@ class Test:
                 run_case.expected_output.get_command(), cwd=self.cwd, dry=dry
             )
             if test_output != test_expected_output:
+                return "Stdouts do not match"
                 # For now...
                 print("", test_output, "\n", test_expected_output)
                 exit_with_error(
@@ -106,17 +119,21 @@ class Test:
                 run_case.expected_err.get_command(), cwd=self.cwd, dry=dry
             )
             if test_err != test_expected_err:
+                return "Stderrs do not match"
                 # For now...
                 print("", test_err, "\n", test_expected_err)
-                exit_with_error(
-                    f"Stderrs do not match: {clamp_str(test_err.decode('UTF-8'))} != {clamp_str(test_expected_err.decode('UTF-8'))}"
-                )
+                return False
+                # exit_with_error(
+                #     f": {clamp_str(test_err.decode('UTF-8'))} != {clamp_str(test_expected_err.decode('UTF-8'))}"
+                # )
 
         # post run
         if self.post_run:
             self.exec_command(
                 self.post_run, self.cwd, redirect=False, input=test_output, dry=dry
             )
+
+        return ""
 
     def exec_command(
         self,
@@ -170,11 +187,11 @@ class TestSet:
     subtests: list[Self]
     tests: list[Test]
 
+    def test_count(self):
+        return len(self.tests) + sum(testset.test_count() for testset in self.subtests)
+
     def __str__(self) -> str:
         return f"{self.name}: {len(self.tests)} tests"
-
-    def __len__(self) -> int:
-        return sum(len(test) for test in self.tests)
 
 
 def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
@@ -240,11 +257,9 @@ def load_subtest(config: dict) -> TestSet:
     )
 
 
-def run_tests(tests: TestSet, tree, clean, dry):
-    if tree is None:
-        tree = [tests.name]
-    else:
-        tree.append(tests.name)
+def run_tests(tests: TestSet, tree, clean, dry, fail_fast, verbose) -> list[str]:
+    tree.append(tests.name)
+    failed_tests = []
 
     for test in tests.tests:
         pth = "/".join(tree + [test.name])
@@ -253,14 +268,31 @@ def run_tests(tests: TestSet, tree, clean, dry):
             test.run_clean(dry)
         else:
             log_info(f"Testing: {pth}")
-            test.run_test(dry)
+            test_success = test.run_test(dry, fail_fast, verbose)
+            if not test_success:
+                failed_tests.append(pth)
+            if fail_fast:
+                return failed_tests
 
     for subtests in tests.subtests:
-        run_tests(subtests, tree.copy(), clean, dry=dry)
+        failed_tests += run_tests(subtests, tree.copy(), clean, dry, fail_fast, verbose)
+
+    return failed_tests
 
 
-def integration_tests(clean, dry, test):
+def integration_tests(clean, dry, test, fail_fast, verbose):
     log_info("Running integration tests...")
     config = load_config("tests")
     testset = load_subtest(config)
-    run_tests(testset, tree=None, clean=clean, dry=dry)
+
+    failed_tests = run_tests(testset, [], clean, dry, fail_fast, verbose)
+
+    if failed_tests:
+        num_failed = len(failed_tests)
+        failed_tests = map(lambda x: " - " + x, failed_tests)
+        exit_with_error(
+            f"{'(Fail fast) ' if fail_fast else ''}{num_failed} test(s) failed:\n{'\n'.join(failed_tests)}"
+        )
+    elif not clean:
+        count = testset.test_count()
+        log_success(f"All [{count}/{count}] have run successfully!")

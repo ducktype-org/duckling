@@ -20,7 +20,6 @@ CONFIG_KEYS = {
     "PostRun",
     "TimeOut",
     "ExitCode",
-    "FailFast",
 }
 
 
@@ -53,8 +52,6 @@ def get_config_dict(dir_with_config: Path, ext="yaml"):
 
 
 def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
-    log_info(f"Loading config from {dir_with_config}")
-
     dir_with_config = Path(dir_with_config)
     if not dir_with_config.exists():
         exit_with_error(f"Directory {dir_with_config.absolute()} does not exist")

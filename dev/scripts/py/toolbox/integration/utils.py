@@ -1,5 +1,6 @@
 
-from ..helpers import exit_with_error
+import sys
+from ..helpers import click_log, exit_with_error
 
 
 def make_test_name(name: str) -> str:
@@ -55,3 +56,10 @@ class ExpressionFillError(Exception):
             f"Couldn't resolve {expr}. Possible usage of cyclic variables."
         )
         self.expr = expr
+
+
+def log_success(msg, file=sys.stdout):
+    click_log("GOOD", msg, fg="green", file=file)
+
+def log_failure(msg, file=sys.stdout):
+    click_log("FAIL", msg, fg="red", file=file)

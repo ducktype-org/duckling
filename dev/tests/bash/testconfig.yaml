@@ -10,7 +10,6 @@ Tests:
       error-no-file:
         RunArgs: inexistent-file
         ExitCode: 1
-
   test-shell-echo:
     Run: "echo"
     RunCases:

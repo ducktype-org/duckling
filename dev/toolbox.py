@@ -528,7 +528,21 @@ def duck_linter(*args, **kwargs):
     "--test",
     type=str,
     default="",
-    help="Runs a particular test, i.e `tests/C++/",
+    help="Runs a particular test, i.e `tests/C++` or `tests/C++/RunCase1`",
+)
+@click.option(
+    "-f",
+    "--fail-fast",
+    is_flag=True,
+    default=False,
+    help="Whether to fail upon a testcase failure. Otherwise it runs all tests regardless of their result.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Prints some debug information about run cases",
 )
 def itest(*args, **kwargs):
     """Runs integration tests"""
