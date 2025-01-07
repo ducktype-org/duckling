@@ -35,6 +35,16 @@ namespace compiler::helios::code {
 		std::vector<base::Box<Stmt>> statements;
 	};
 
+	/**
+	 * @brief Represents HOUT function parameter.
+	 */
+	struct Parameter final {
+		base::StrID                     name;
+		tsh::TypeDesc<>                 type;
+		base::Optional<base::Box<Expr>> initial_value;
+		SymID                           helios_symbol;
+	};
+
 	/***********************\
 	|    DERIVED CLASSES    |
 	\***********************/

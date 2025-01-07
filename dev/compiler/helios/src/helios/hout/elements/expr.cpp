@@ -98,7 +98,7 @@ namespace compiler::helios::code {
 		  rhs(std::move(rhs)) {}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
-		// hmm, todo in this PR
+		// hmm, @todo in this PR
 		// lhs->debugPrint(out);
 		// out << base::strConcat(op.str());
 		// rhs->debugPrint(out);
@@ -188,7 +188,7 @@ namespace compiler::helios::code {
 		  expr(std::move(expr)) {}
 
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
-		// hmm, todo in this PR
+		// hmm, @todo in this PR
 		// if (prefix) {
 		// 	out << op.str();
 		// 	expr->debugPrint(out);

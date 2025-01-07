@@ -2,7 +2,8 @@ from concurrent.futures import ThreadPoolExecutor
 import pathlib
 import sys
 import tempfile
-from scripts.toolbox.helpers import (
+
+from .helpers import (
     BashCommandError,
     bash_command,
     bash_command_get_output,

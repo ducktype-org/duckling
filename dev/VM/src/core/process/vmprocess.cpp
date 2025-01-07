@@ -146,7 +146,7 @@ namespace vm {
 			}
 			variant_case(api::request::Block, block_request) {
 				response = api::Response(api::response::Block{
-					memory.getBlock(block_request.block_id)->rawPointer() });
+					memory.requestBlockData(block_request.block_id) });
 			}
 			variant_default { response = api::Response(api::response::Empty()); }
 		}

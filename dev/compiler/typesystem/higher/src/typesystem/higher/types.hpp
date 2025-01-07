@@ -138,6 +138,12 @@ namespace tsh {
 		[[nodiscard]]
 		bool isSigned() const;
 
+		/**
+		 * @return true if the integer is singed
+		 */
+		[[nodiscard]]
+		bool getSignedness() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(Integral)

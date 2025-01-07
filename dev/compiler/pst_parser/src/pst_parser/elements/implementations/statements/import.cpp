@@ -31,5 +31,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Import::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitImport(*this); }
+	void Import::acceptVisitor(PstVisitor& visitor) const { visitor.visitImport(*this); }
 }

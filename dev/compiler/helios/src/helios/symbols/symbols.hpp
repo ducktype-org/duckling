@@ -11,7 +11,6 @@
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
 #include <base/box.hpp>
-#include <base/unique_pointer.hpp>
 #include <typesystem/higher/type_info.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -32,6 +31,7 @@ namespace compiler::helios {
 		Using,
 		Variable,
 		Import,
+		Parameter,
 
 		// Class Symbols
 		Method,
@@ -67,16 +67,17 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
-	 * @return Pst element symbol was created from
+	 * @return PST Stmt element symbol was created from.
+	 * Panics if the element was not a statement.
 	 * @todo should this be an external API? It might depend on incremental compilation
 	 * implementation
 	 */
-	MCRef<pst::Stmt> stmt(SymID);
+	CRef<pst::Stmt> stmt(SymID);
 
 	/**
 	 * @brief Query symbols associated with given element in PST
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<pst::Stmt>, SymID);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
 
 	struct KeyOf_LookupInSymbol {
 		/**

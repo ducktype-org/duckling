@@ -137,6 +137,10 @@ namespace compiler::helios::code {
 				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
 				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
 
+
+				// @TODO in this PR:
+				// add get sigdness check here, fix compilation, 
+
 				// we only do the most simplest version here:
 				if (lhs_as_integer.getSize() != rhs_as_integer.getSize() or
 				    lhs_as_integer.) {
@@ -252,7 +256,7 @@ namespace compiler::helios::code {
 
 			void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getInner()->acceptVisitor(vis);
+				stmt.getInner()->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
 			}
 
@@ -297,7 +301,7 @@ namespace compiler::helios::code {
 				if (inner.hasError()) return;  // failed
 
 				node = makeBox<UnaryOperatorExpr>(
-					scope, stmt.getOperator(), false, std::move(inner.value())
+					scope, stmt.getOperator(), std::move(inner.value())
 				);
 			}
 
@@ -308,7 +312,7 @@ namespace compiler::helios::code {
 				if (inner.hasError()) return;  // failed
 
 				node = makeBox<UnaryOperatorExpr>(
-					scope, stmt.getOperator(), true, std::move(inner.value())
+					scope, stmt.getOperator(), std::move(inner.value())
 				);
 			}
 		};
@@ -321,7 +325,7 @@ namespace compiler::helios::code {
 			// std::cerr << '\n'
 
 			PstExprToHoutExprVisitor visitor(ctx, scope);
-			element->acceptVisitor(visitor);
+			element->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return errors::HError(errors::Failed());
@@ -334,6 +338,10 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// Note: we might actually accept nulls in such queries, and just return failed
+			// Something to think about as part of #412
+			CORE_ASSERT(key.element.toOpt().has_value(), "Nullptr provided to QueryHoutOfExpr");
+
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
 		}
