@@ -543,16 +543,16 @@ private:
 	void testKeywordLiterals() {
 		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
 
-		auto i8_type  = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
-		auto i16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		auto i32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		auto i64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
+		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
+		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
 		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, true });
 
-		auto u8_type  = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
-		auto u16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
-		auto u32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
-		auto u64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
+		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
+		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
+		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
+		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
 		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, false });
 
 		auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
@@ -573,7 +573,7 @@ private:
 		// debug print test just for cov and to see if it does not throw:
 		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
 
-		auto foo = hout.functions.at(0);
+		auto foo            = hout.functions.at(0);
 		auto foo_body_scope = foo.content.body->lifetime_scope;
 
 		// variable types:
@@ -601,11 +601,13 @@ private:
 		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_f", foo_body_scope));
 
 		// true, false literals:
-		auto true_expr = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
+		auto true_expr  = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
 		auto false_expr = getExprOfVariable(getChain("v_bool_f", foo_body_scope).back());
 
-		auto true_expr_casted = dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*true_expr);
-		auto false_expr_casted = dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*false_expr);
+		auto true_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*true_expr);
+		auto false_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*false_expr);
 
 		ASSERT_TRUE(true_expr_casted != nullptr);
 		ASSERT_TRUE(false_expr_casted != nullptr);

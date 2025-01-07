@@ -59,7 +59,7 @@ namespace compiler::lir {
 
 	public:
 		LirLocation(i64 value): value(value) {}
-		
+
 		LirLocation(bool value): value(value) {}
 
 		LirLocation(LocalRef value): value(value) {}

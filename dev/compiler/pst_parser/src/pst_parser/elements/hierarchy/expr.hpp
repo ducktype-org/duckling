@@ -133,6 +133,10 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @TODO add doc comment, what does it represent?
+		 * If its something specific, change the name.
+		 */
 		class ExprValue final: public ExprElement {
 			lexer::Value number;
 

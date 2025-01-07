@@ -59,9 +59,7 @@ namespace compiler::helios::code {
 		  ),
 		  value_type(type) {}
 
-	void LiteralTypeExpr::debugPrint(std::ostream& out) const {
-		out << value_type.toString();
-	}
+	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(

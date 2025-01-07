@@ -517,7 +517,8 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) override {
-				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet"
+				);
 			}
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) override {

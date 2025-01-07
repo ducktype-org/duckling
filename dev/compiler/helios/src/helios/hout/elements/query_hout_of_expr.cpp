@@ -231,7 +231,6 @@ namespace compiler::helios::code {
 
 			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
 				switch (stmt.getKeyword()) {
-				
 				// true, false:
 				case pst::Keyword::True:
 					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
@@ -239,7 +238,7 @@ namespace compiler::helios::code {
 				case pst::Keyword::False:
 					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
 					break;
-			
+
 
 				// types:
 				case pst::Keyword::Bool:
@@ -250,38 +249,58 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryCharType>({}));
 					break;
 
-				// @todo: add meta keyword and type
-				
+					// @todo: add meta keyword and type
+
 				case pst::Keyword::i128:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({128, true}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, true })
+					);
 					break;
 				case pst::Keyword::i64:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({64, true}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, true })
+					);
 					break;
 				case pst::Keyword::i32:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({32, true}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, true })
+					);
 					break;
 				case pst::Keyword::i16:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({16, true}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, true })
+					);
 					break;
 				case pst::Keyword::i8:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({8, true}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, true })
+					);
 					break;
-				
+
 				case pst::Keyword::u128:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({128, false}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, false })
+					);
 					break;
 				case pst::Keyword::u64:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({64, false}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, false })
+					);
 					break;
 				case pst::Keyword::u32:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({32, false}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, false })
+					);
 					break;
 				case pst::Keyword::u16:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({16, false}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, false })
+					);
 					break;
 				case pst::Keyword::u8:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryIntegralType>({8, false}));
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, false })
+					);
 					break;
 
 				case pst::Keyword::f80:
@@ -299,7 +318,9 @@ namespace compiler::helios::code {
 
 
 				default:
-					CORE_PANIC("Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor");
+					CORE_PANIC(
+						"Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor"
+					);
 				}
 			}
 

@@ -23,8 +23,7 @@ private:
 	void runTestForSingleFunctionInModule(std::string module_path) {
 		using namespace compiler;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module
-				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			ASSERT_TRUE(top_level.functions.size() == 1);
@@ -42,9 +41,7 @@ private:
 		});
 	}
 
-	void returnVoidTest() {
-		runTestForSingleFunctionInModule("modules/simple");
-	}
+	void returnVoidTest() { runTestForSingleFunctionInModule("modules/simple"); }
 
 	void simpleTypesVariables() {
 		// Currently this test is for coverage mainly, but it will be
@@ -53,9 +50,7 @@ private:
 		runTestForSingleFunctionInModule("modules/variables");
 	}
 
-	void booleanLiteralsTests() {
-		runTestForSingleFunctionInModule("modules/boolean_literals");
-	}
+	void booleanLiteralsTests() { runTestForSingleFunctionInModule("modules/boolean_literals"); }
 };
 
 
