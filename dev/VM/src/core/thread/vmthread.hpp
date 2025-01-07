@@ -21,7 +21,7 @@
 
 
 namespace vm {
-	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
+	enum class ExecutionRequest { Resume, Pause, ExecuteOneStep, Terminate, NoRequest };
 	struct Frame;
 
 	class VMProcess;
@@ -40,23 +40,27 @@ namespace vm {
 	 */
 	constexpr u64 STACK_LENGTH = FRAME_COUNT * 256;
 
-	// This structure holds pointers to `frame_stack` and `local_stack_reserved`
-	// vectors for fast access during runtime. `frame_stack` is a vector of frames,
-	// that we use like a stack. Top of the stack is saved in the `frame` argument
-	// passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
-	// one continuous block of memory, from which every function gets it's own chunk. It also
-	// behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
-	// is kept to remember where the top of the stack currently is.
+	/**
+	 * @brief This structure holds pointers to `frame_stack` and `local_stack_reserved`
+	 * vectors for fast access during runtime. `frame_stack` is a vector of frames,
+	 * that we use like a stack. Top of the stack is saved in the `frame` argument
+	 * passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
+	 * one continuous block of memory, from which every function gets it's own chunk. It also
+	 * behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
+	 * is kept to remember where the top of the stack currently is.
+	 */
 	struct RuntimeData {
-		Frame*     frame_stack_base;  // Pointer to the first frame from `frame_stack` vector.
-		Frame*     frame_stack_end;   // Pointer to the first value not allocated.
-		std::byte* local_stack_base;  // Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
-		std::byte* local_stack_end;   // Pointer to the first value not allocated.
+		Frame* frame_stack_base;      /// Pointer to the first frame from `frame_stack` vector.
+		Frame* frame_stack_end;       /// Pointer to the first value not allocated.
+		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
+		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
+		std::byte* local_stack_top;   /// Pointer to the place, where new stack should start.
+		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
 
 		RuntimeData(Ref<ThreadStack> stack):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
+			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_top(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
@@ -97,26 +101,14 @@ namespace vm {
 		 *
 		 * When the supervisor thread (external api) wants to change the execution strategy, it has
 		 * to lock this mutex. The Execution Thread running in a loop will first check the
-		 * `is_running` flag every instruction, and if it is false, it will wait on `pause_cv` until
+		 * `execution_status_changed` flag, and if it is ture, it will wait on `pause_cv` until
 		 * it is notified by the supervisor thread.
 		 */
-		std::mutex        external_api_mutex;
-		ExecutionStrategy execution_strategy = ExecutionStrategy::Stoped;
-		// @todo change to atomic_flag
-		std::atomic<bool> is_running = false;
+		std::mutex        execution_request_mutex;
+		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
+		std::atomic<bool> execution_request_break = false;
 
-		// This function is marked as cold, because, well, it is cold, but
-		// the compiler did not figure this out on its own, hence the
-		// attribute. In short, this makes the compiler emit assembly with
-		// the assumption this method is rarely called. Testing has shown this
-		// speeds things up significantly.
-		[[gnu::cold]]
-		void handleExecutionStrategy();
-		/**
-		 * @brief This function is called to check the `is_running` atomic bool.
-		 * If it is false, it will call `handleExecutionStrategy`.
-		 */
-		void handleExecutionStrategyIfNeeded();
+		void executeOneStep();
 
 		/**
 		 * @brief @TODO:
@@ -143,11 +135,16 @@ namespace vm {
 		u64 internalCallMain(const FuncData&);
 
 		// @TODO add some thread data in the future
-
-		void setStatus(vm::api::ExecStatus status);
+		void notifyProcess(vm::api::ExecStatus status);
 
 	public:
 		VMThread(VMProcess& process);
+
+		void handleExecutionBreak();
+
+		void handleExecutionPauseRequest(std::unique_lock<std::mutex>&);
+
+		void handleBreakpoint();
 
 		/**
 		 * @brief Pause the execution of a program (by Supervisor)
@@ -171,6 +168,10 @@ namespace vm {
 		 */
 		bool resume();
 
+		/**
+		 * @brief Execute one step of the program.
+		 * Valid only when the VM is paused.
+		 */
 		bool step();
 
 		/**
@@ -179,9 +180,7 @@ namespace vm {
 		 */
 		void stop();
 
-		void prestart();
-
-		void initThread(Ref<const vm::Code> code);
+		bool initThread(Ref<const vm::Code> code);
 
 		/**
 		 * @brief Called on coreThread
@@ -195,13 +194,13 @@ namespace vm {
 		void waitUntilNotPausedAndCondition(
 			std::unique_lock<std::mutex>& lock, Condition condition
 		) {
-			pause_cv.wait(lock, [this, &condition] { return !isPaused() && condition(); });
+			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
 
 		void notifyPaused();
 
-		bool isPaused();
-		bool isAlive();
+		bool isPauseRequested();
+		bool isTerminateRequested();
 
 		friend class VMProcess;
 		friend class OpFuns;

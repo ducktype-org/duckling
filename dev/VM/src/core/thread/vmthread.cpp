@@ -1,4 +1,5 @@
 
+#include <mutex>
 #include <utility>
 #include <cstring>
 #include <base/ints.hpp>
@@ -11,6 +12,7 @@
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
 #include <core/process/memory/pointer.hpp>
+#include "api/data/status.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 
@@ -21,23 +23,7 @@ namespace vm {
 		  process_memory(process.getMemory()),
 		  process_types(process.getTypeMetadata()) {
 		// @TODO: not loaded status
-		setStatus(api::NotStarted{});
-	}
-
-	void VMThread::handleExecutionStrategy() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
-		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
-		setStatus(api::Running{});
-		if (execution_strategy == ExecutionStrategy::Stoped) throw KillProcessException{};
-		if (execution_strategy == ExecutionStrategy::StepByStep)
-			execution_strategy = ExecutionStrategy::Paused;
-	}
-
-	[[gnu::always_inline]]
-	inline void VMThread::handleExecutionStrategyIfNeeded() {
-		if (is_running) return;
-		handleExecutionStrategy();
+		notifyProcess(api::NotStarted{});
 	}
 
 	template<typename T>
@@ -359,10 +345,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
 		{
-			thread.setStatus(api::WaitingForInput{});
+			thread.notifyProcess(api::WaitingForInput{});
 			derefStack<i64>(local_stack, instr->arg0)
 				= thread.process.getIO().getInput<i64>(thread);
-			thread.setStatus(api::Running{});
+			thread.notifyProcess(api::Running{});
 		}
 		OPFUN_CONT(1);
 	}
@@ -450,13 +436,42 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::op_breakpoint(OPFUN_ARGS) {
-		{}
+		{	
+			save_execution_state(instr, local_stack, frame, thread);
+
+			thread.handleBreakpoint();
+
+			// Restore current registers and flow.
+			// They can be changed when doing "step by step" execution.
+			frame       = thread.runtime_data.frame_stack_current;
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
+		}
 		OPFUN_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::handle_strategy(OPFUN_ARGS) {
-		{ thread.handleExecutionStrategy(); }
+	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
+		{
+			save_execution_state(instr, local_stack, frame, thread);
+
+			thread.handleExecutionBreak();
+
+			// Restore current registers and flow.
+			// They can be changed when doing "step by step" execution.
+			frame       = thread.runtime_data.frame_stack_current;
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
+		}
 		OPFUN_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
+		{
+			// Save current registers and flow.
+			frame->instr       = instr;
+			frame->local_stack = local_stack;
+			thread.runtime_data.frame_stack_current = frame;
+		}
 	}
 
 #if defined(__clang__)
@@ -465,6 +480,14 @@ namespace vm {
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
+
+
+	void VMThread::executeOneStep() {
+		Frame*     frame       = runtime_data.frame_stack_current;
+		std::byte* local_stack = frame->local_stack;
+		auto*      instr       = frame->instr;
+		// Here we have a problem...
+	}
 
 	u64 VMThread::internalCallMain(const FuncData& main_func) {
 		// We create one artificial "pre" frame, that when main function returns
@@ -499,26 +522,26 @@ namespace vm {
 
 #ifdef USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
-		#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
-		#include <code_data/opcodes_list.hpp>
-		#undef DEF_OPCODE
+	#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
 		};
 
 		goto* opcode_label[static_cast<u64>(instr->opcode)];
 
-		#define DEF_OPCODE(opcode_name)                                         \
-			LABEL_##opcode_name: {                                              \
-				vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
-			}
-		#define DEF_OPCODE_END(opcode_name)                                     \
-			LABEL_##opcode_name: {                                              \
-				vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-				goto End;                                                       \
-			}
-		#include <code_data/opcodes_list.hpp>
-		#undef DEF_OPCODE
-		#undef DEF_OPCODE_END
+	#define DEF_OPCODE(opcode_name)                                         \
+		LABEL_##opcode_name: {                                              \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+			goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+		}
+	#define DEF_OPCODE_END(opcode_name)                                     \
+		LABEL_##opcode_name: {                                              \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+			goto End;                                                       \
+		}
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
+	#undef DEF_OPCODE_END
 
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
@@ -526,31 +549,31 @@ namespace vm {
 
 #ifdef USE_SWITCH_CASE
 		while (true) {
-			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
-
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
-		#define DEF_OPCODE(opcode_name)                                     \
-		case OpcodeFix8::opcode_name: {                                     \
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-			break;                                                          \
-		}
-		#define DEF_OPCODE_END(opcode_name)\
-		case OpcodeFix8::opcode_name: {\
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);\
-			goto End;\
-		}
-		#include <code_data/opcodes_list.hpp>
-		#undef DEF_OPCODE
-		#undef DEF_OPCODE_END
+	#define DEF_OPCODE(opcode_name)                                     \
+	case OpcodeFix8::opcode_name: {                                     \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+		break;                                                          \
+	}
+	#define DEF_OPCODE_END(opcode_name)                                 \
+	case OpcodeFix8::opcode_name: {                                     \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+		goto End;                                                       \
+	}
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
+	#undef DEF_OPCODE_END
 
-				default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); }
+			default: {
+				CORE_PANIC("Unknown operator:", u64(instr->opcode));
+			}
 			}
 		}
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
 
 #endif
-	} // internalCallMain end
+	}  // internalCallMain end
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -561,87 +584,126 @@ namespace vm {
 	void VMThread::run(Ref<const Code> code) {
 		// @TODO: ensure correct status
 
-		setStatus(api::Running{});
+		notifyProcess(api::Running{});
 
 		executing_code = code;
 		try {
 			internalCallMain(executing_code->functions[code->main_id]);
-			setStatus(api::NotStarted{});
-		} catch (KillProcessException) { setStatus(api::NotStarted{}); }
-	}
-
-	void VMThread::prestart() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped) {
-			is_running         = true;
-			execution_strategy = ExecutionStrategy::Normal;
-		}
+			notifyProcess(api::Terminated{});
+		} catch (KillProcessException) { notifyProcess(api::Terminated{}); }
 	}
 
 	void VMThread::stop() {
-		std::unique_lock lock(external_api_mutex);
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::Stoped;
+		std::unique_lock lock(execution_request_mutex);
+
+		execution_request       = ExecutionRequest::Terminate;
+		execution_request_break = true;
 		pause_cv.notify_all();
 	}
 
 	bool VMThread::resume() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Normal) {
-			return false;
-		}
-		is_running         = true;
-		execution_strategy = ExecutionStrategy::Normal;
+		std::unique_lock lock(execution_request_mutex);
+
+		execution_request = ExecutionRequest::Resume;
 		pause_cv.notify_all();
 		return true;
 	}
 
 	bool VMThread::pause() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Paused) {
-			return false;
-		} else if (execution_strategy == ExecutionStrategy::StepByStep) {
-			return true;
-		}
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::Paused;
-		std::cout << "Set strategy to paused\n";
+		std::unique_lock lock(execution_request_mutex);
+
+		execution_request       = ExecutionRequest::Pause;
+		execution_request_break = true;
 		return true;
 	}
 
 	bool VMThread::step() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped)
-			return false;
-		else if (execution_strategy != ExecutionStrategy::Paused)
-			return true;
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::StepByStep;
+		std::unique_lock lock(execution_request_mutex);
+
+		execution_request = ExecutionRequest::ExecuteOneStep;
 		pause_cv.notify_all();
 		return true;
 	}
 
-	void VMThread::setStatus(vm::api::ExecStatus new_status) {
-		// @TODO: check if change is legal
-		this->status = std::move(new_status);
-		process.onEvent(api::Executing{ status });
+	/**
+	 * @brief Handle execution status when "not running" flag is set.
+	 * It's only legal to change the execution status to `paused` or `terminated`.
+	 */
+	void VMThread::handleExecutionBreak() {
+		std::unique_lock lock(execution_request_mutex);
+		switch (execution_request) {
+		case ExecutionRequest::Pause:
+			handleExecutionPauseRequest(lock);
+			execution_request_break = false;
+			break;
+
+		case ExecutionRequest::Terminate:
+			throw KillProcessException{};
+
+		default:
+			CORE_PANIC("unexpected execution status");
+		}
 	}
 
-	bool VMThread::isPaused() {
-		std::unique_lock lock(external_api_mutex);
-		return execution_strategy == ExecutionStrategy::Paused;
+	/**
+	 * @brief Main function of the VMThread "debug" mode, where the step by step execution takes
+	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
+	 * next command. Mutex is held when the VM is executing the code.
+	 *
+	 * @param lock
+	 */
+	void VMThread::handleExecutionPauseRequest(std::unique_lock<std::mutex>& lock) {
+		while (true) {
+			notifyProcess(vm::api::Paused{});
+			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
+
+			switch (execution_request) {
+			case ExecutionRequest::Resume: {
+				notifyProcess(vm::api::Running{});
+				execution_request = ExecutionRequest::NoRequest;
+				return;
+			}
+			case ExecutionRequest::Terminate: {
+				throw KillProcessException{};
+			}
+			case ExecutionRequest::ExecuteOneStep: {
+				notifyProcess(vm::api::Running{});
+				executeOneStep();
+				execution_request = ExecutionRequest::Pause;
+				break;
+			}
+			default:
+				CORE_PANIC("resumed with paused status");
+			}
+		}
 	}
 
-	bool VMThread::isAlive() {
-		std::unique_lock lock(external_api_mutex);
-		return execution_strategy != ExecutionStrategy::Stoped;
+	void VMThread::handleBreakpoint() {
+		std::unique_lock lock(execution_request_mutex);
+		execution_request = ExecutionRequest::Pause;
+		this->handleExecutionPauseRequest(lock);
+	}
+
+	void VMThread::notifyProcess(vm::api::ExecStatus new_status) {
+		process.onEvent(api::Executing{ std::move(new_status) });
+	}
+
+	bool VMThread::isPauseRequested() {
+		std::unique_lock lock(execution_request_mutex);
+		return execution_request == ExecutionRequest::Pause;
+	}
+
+	bool VMThread::isTerminateRequested() {
+		std::unique_lock lock(execution_request_mutex);
+		return execution_request == ExecutionRequest::Terminate;
 	}
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	void VMThread::initThread(Ref<const vm::Code> code) {
+	bool VMThread::initThread(Ref<const vm::Code> code) {
+		if (exec_thread)  // there is already a thread running
+			return false;
+
 		exec_thread = std::thread([this, code] {
 			try {
 				run(code);
@@ -652,5 +714,6 @@ namespace vm {
 				process.onEvent(api::ProcStatus{ api::Panicked{ e } });
 			}
 		});
+		return true;
 	}
 }  // namespace vm

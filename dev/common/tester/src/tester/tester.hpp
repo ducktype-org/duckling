@@ -112,7 +112,12 @@ namespace tester {
 		// rvalue reference to make sure the order is correct for the macro above.
 		template<class T, class U>
 		void assertEqual(const T& expected, const U& actual, std::string_view error) {
-			assertTrue(expected == actual, error);
+			std::ostringstream expected_str;
+			expected_str << expected;
+			std::ostringstream actual_str;
+			actual_str << actual;
+			std::string error_str = std::string(error) + "\n\t\tExpected: " + expected_str.str() + "\n\t\tActual: " + actual_str.str();
+			assertTrue(expected == actual, error_str);
 		}
 	};
 

@@ -17,6 +17,10 @@
 		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
 		Frame *IF_NOT_TC(&) frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
 
+#define OPFUN_REF_ARGS                                                                        \
+	const Fix8Instruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
+		Frame *&frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
+
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
 namespace {
@@ -84,7 +88,8 @@ namespace vm {
 #define DEF_OPCODE(opcode) static OpFun op_##opcode;
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
-		static OpFun handle_strategy;
+		static OpFun handle_execution_break;
+		static OpFun save_execution_state;
 		/**
 		 * @brief A mapping between opcode ids and function pointers.
 		 *

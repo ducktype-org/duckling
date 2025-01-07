@@ -44,12 +44,8 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::run() {
 		std::unique_lock lock(rwGlobal);
-		if (getMainVMThread().exec_thread)
-			return cpp::failure(api::CoreOperationError{ api::RunError{} }
-			);  // @TODO: change to more verbose error handling
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
-		getMainVMThread().prestart();
 		getMainVMThread().initThread(Ref(&*loadedCode));
 		return api::Response(api::response::Empty());
 	}
