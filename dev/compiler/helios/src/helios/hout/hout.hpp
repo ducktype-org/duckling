@@ -14,18 +14,27 @@
 
 namespace compiler::helios {
 
+	// for friend:
+	struct ImplementationOf_QueryCodeOFFun;
+
 	namespace code {
 		// Forward declaration:
 		struct CodeBlock;
+		struct Parameter;
 	}
 
 	/**
-	 * @brief placeholder for code that can execute (expressions, function body, etc)
+	 * @brief Storage for heavy function data,
+	 * in a way that makes it cheap to copy, since
+	 * we want HOUTFunction to be a copyable object.
+	 * @note use of shared_ptr's is intentional, as they
+	 * work well for incomplete types, and fit the use case.
+	 * In the future we might optimize it to single (or zero) shared_ptr, but
+	 * that will require some boilerplate.
 	 */
-	struct HOUTCode {
-		// @NOTE: as of right now HOUTCode contains shared ptr, to avoid a lot of boilerplate, and
-		// copying
-		std::shared_ptr<const code::CodeBlock> body;
+	struct HOUTFunctionContent {
+		std::shared_ptr<const std::vector<code::Parameter>> parameters;
+		std::shared_ptr<const code::CodeBlock>              body;
 	};
 
 	/**
@@ -37,6 +46,11 @@ namespace compiler::helios {
 
 		// @TODO: decide if HOUT functions should contain its HELIOS SymID
 
+		HOUTFunction() = delete;
+
+		HOUTFunction(const HOUTFunction&) = default;
+		HOUTFunction(HOUTFunction&&)      = default;
+
 		/**
 		 * @note it is used for hashes, and == only
 		 * @note For now it works,
@@ -45,11 +59,9 @@ namespace compiler::helios {
 		 */
 		SymID original_symbol;
 
-		// @TODO: store here list of parameters
-
 		base::StrID original_name;
 
-		HOUTCode body;
+		HOUTFunctionContent content;
 
 		tsh::FunctionInfo type;
 
@@ -58,13 +70,6 @@ namespace compiler::helios {
 		 * then any lifetime scope in the function (including parameters)
 		 */
 		helios::ScopeID top_lifetime_scope;
-
-		/**
-		 * Construct a HOUT Function object.
-		 * @param symbol The symbol of the function.
-		 * @param ctx The query context to resolve the function's properties.
-		 */
-		HOUTFunction(SymID symbol, query::Context& ctx);
 
 		[[nodiscard]]
 		std::string debugPrint() const;
@@ -75,6 +80,16 @@ namespace compiler::helios {
 		bool operator==(const HOUTFunction& oth) const {
 			return original_symbol == oth.original_symbol;
 		}
+
+	private:
+		/**
+		 * Construct a HOUT Function object.
+		 * @param symbol The symbol of the function.
+		 * @param ctx The query context to resolve the function's properties.
+		 */
+		HOUTFunction(SymID symbol, query::Context& ctx);
+
+		friend ImplementationOf_QueryCodeOFFun;
 	};
 
 	/**

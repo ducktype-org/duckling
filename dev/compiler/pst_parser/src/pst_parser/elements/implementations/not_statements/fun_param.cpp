@@ -45,4 +45,6 @@ namespace pst {
 
 		out << "}}";
 	}
+
+	void FunParam::acceptVisitor(PstVisitor& visitor) const { visitor.visitFunParam(*this); }
 }
