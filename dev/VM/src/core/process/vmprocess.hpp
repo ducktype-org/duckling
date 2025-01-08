@@ -149,6 +149,8 @@ namespace vm {
 
 		VMThread& getMainVMThread();
 
+		bool waitForPaused();
+		bool waitForResumed();
 	public:
 		/**
 		 * For internal use only

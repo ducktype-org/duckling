@@ -44,4 +44,6 @@ namespace vm::api {
 
 	cpp::result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
 	cpp::result<response::Block, ApiError> getBlock(PID pid, u64 block_id);
+	// cpp::result<response::BlockIDs, ApiError> getBlocks(PID pid);
+	cpp::result<response::CodePosition, ApiError> getCurrentPosition(PID pid);
 }

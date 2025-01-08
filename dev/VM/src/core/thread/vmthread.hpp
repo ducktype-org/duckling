@@ -1,5 +1,7 @@
 #pragma once
 
+#include "api/data/core_operation_error.hpp"
+#include "api/data/response.hpp"
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <condition_variable>
@@ -84,7 +86,7 @@ namespace vm {
 		/**
 		 * This is currently duplicated inside VCPUStatus
 		 */
-		api::ExecStatus status;
+		api::ExecStatus status = api::NotStarted{};
 
 		/**
 		 * @brief Process link as well as some of it's resources.
@@ -187,6 +189,8 @@ namespace vm {
 		 * coreThread is `main` exec thread
 		 */
 		void run(Ref<const Code>);
+
+		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.

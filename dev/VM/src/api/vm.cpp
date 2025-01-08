@@ -1,4 +1,5 @@
 #include "vm.hpp"
+#include "api/data/response.hpp"
 #include <api/data/request.hpp>
 #include <core/supervisor/supervisor.hpp>
 
@@ -104,5 +105,11 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(api::makeIORequest(pid, request::Detach{}))
 		    .map(ignoreResponse);
+	}
+
+	cpp::result<response::CodePosition, ApiError> getCurrentPosition(PID pid) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(pid, request::ExecutionPosition{}))
+		    .flat_map(mapOrWrongResponse<response::CodePosition>);
 	}
 }

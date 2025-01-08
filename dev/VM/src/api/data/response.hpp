@@ -42,12 +42,18 @@ namespace vm::api {
 		};
 
 		struct CodePosition {
-			std::string function_name;
-			u64         line;
-			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, line, function_name);
+			u64 function_id;
+			u64 instr_number;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
 		};
 	}
 
-	using Response
-		= std::variant<ProcStatus, response::Output, response::Block, TypeCRef, response::Empty, response::BlockIDs, response::CodePosition>;
+	using Response = std::variant<
+		ProcStatus,
+		response::Output,
+		response::Block,
+		TypeCRef,
+		response::Empty,
+		response::BlockIDs,
+		response::CodePosition>;
 }

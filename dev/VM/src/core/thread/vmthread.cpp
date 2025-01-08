@@ -12,7 +12,9 @@
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
 #include <core/process/memory/pointer.hpp>
+#include "api/data/response.hpp"
 #include "api/data/status.hpp"
+#include "base/variant.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes.hpp"
@@ -170,6 +172,66 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
+	/**
+	 * @brief Handle execution status when "not running" flag is set.
+	 * It's only legal to change the execution status to `paused` or `terminated`.
+	 */
+	void VMThread::handleExecutionBreak() {
+		std::unique_lock lock(execution_request_mutex);
+		switch (execution_request) {
+		case ExecutionRequest::Pause:
+			handleExecutionPauseRequest(lock);
+			execution_request_break = false;
+			break;
+
+		case ExecutionRequest::Terminate:
+			throw KillProcessException{};
+
+		default:
+			CORE_PANIC("unexpected execution status");
+		}
+	}
+
+	/**
+	 * @brief Main function of the VMThread "debug" mode, where the step by step execution takes
+	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
+	 * next command. Mutex is held when the VM is executing the code.
+	 *
+	 * @param lock
+	 */
+	void VMThread::handleExecutionPauseRequest(std::unique_lock<std::mutex>& lock) {
+		while (true) {
+			notifyProcess(vm::api::Paused{});
+			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
+
+
+			switch (execution_request) {
+			case ExecutionRequest::Resume: {
+				notifyProcess(vm::api::Running{});
+				execution_request = ExecutionRequest::NoRequest;
+				return;
+			}
+			case ExecutionRequest::Terminate: {
+				throw KillProcessException{};
+			}
+			case ExecutionRequest::ExecuteOneStep: {
+				notifyProcess(vm::api::Running{});
+				executeOneStep();
+				execution_request = ExecutionRequest::Pause;
+				break;
+			}
+			default:
+				CORE_PANIC("resumed with paused status");
+			}
+		}
+	}
+
+	void VMThread::handleBreakpoint() {
+		std::unique_lock lock(execution_request_mutex);
+		execution_request = ExecutionRequest::Pause;
+		this->handleExecutionPauseRequest(lock);
+	}
+
 	void VMThread::run(Ref<const Code> code) {
 		// @TODO: ensure correct status
 
@@ -179,7 +241,7 @@ namespace vm {
 		try {
 			internalCallMain(executing_code->functions[code->main_id]);
 			notifyProcess(api::Terminated{});
-		} catch (KillProcessException) { notifyProcess(api::Terminated{}); }
+		} catch (KillProcessException) { notifyProcess(api::Panicked{}); }
 	}
 
 	void VMThread::stop() {
@@ -214,66 +276,31 @@ namespace vm {
 		return true;
 	}
 
-	/**
-	 * @brief Handle execution status when "not running" flag is set.
-	 * It's only legal to change the execution status to `paused` or `terminated`.
-	 */
-	void VMThread::handleExecutionBreak() {
-		std::unique_lock lock(execution_request_mutex);
-		switch (execution_request) {
-		case ExecutionRequest::Pause:
-			handleExecutionPauseRequest(lock);
-			execution_request_break = false;
-			break;
+	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+		variant_match(status) {
+			variant_case_novalue(api::Paused) {
+				auto frame = runtime_data.frame_stack_current;
+				auto instr = frame->instr;
 
-		case ExecutionRequest::Terminate:
-			throw KillProcessException{};
-
-		default:
-			CORE_PANIC("unexpected execution status");
-		}
-	}
-
-	/**
-	 * @brief Main function of the VMThread "debug" mode, where the step by step execution takes
-	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
-	 * next command. Mutex is held when the VM is executing the code.
-	 *
-	 * @param lock
-	 */
-	void VMThread::handleExecutionPauseRequest(std::unique_lock<std::mutex>& lock) {
-		while (true) {
-			notifyProcess(vm::api::Paused{});
-			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
-
-			switch (execution_request) {
-			case ExecutionRequest::Resume: {
-				notifyProcess(vm::api::Running{});
-				execution_request = ExecutionRequest::NoRequest;
-				return;
+				for (size_t index = 0; index < executing_code->functions.size(); ++index) {
+					const auto& func = executing_code->functions[index];
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
+						return api::Response(api::response::CodePosition{
+							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+					}
+				}
 			}
-			case ExecutionRequest::Terminate: {
-				throw KillProcessException{};
-			}
-			case ExecutionRequest::ExecuteOneStep: {
-				notifyProcess(vm::api::Running{});
-				executeOneStep();
-				execution_request = ExecutionRequest::Pause;
-				break;
-			}
-			default:
-				CORE_PANIC("resumed with paused status");
+			variant_default {
+				return cpp::failure(api::CoreOperationError{
+					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
-	}
-
-	void VMThread::handleBreakpoint() {
-		std::unique_lock lock(execution_request_mutex);
-		execution_request = ExecutionRequest::Pause;
-		this->handleExecutionPauseRequest(lock);
+		CORE_UNREACHABLE();
 	}
 
 	void VMThread::notifyProcess(vm::api::ExecStatus new_status) {
+		status = new_status;
 		process.onEvent(api::Executing{ std::move(new_status) });
 	}
 

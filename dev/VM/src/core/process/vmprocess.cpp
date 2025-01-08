@@ -1,4 +1,5 @@
 #include "vmprocess.hpp"
+#include "api/data/status.hpp"
 #include <api/data/core_operation_error.hpp>
 #include <base/exceptions.hpp>
 #include <core/process/memory/memory.hpp>
@@ -8,6 +9,7 @@
 #include <mutex>
 #include <base/variant.hpp>
 #include <api/data/request.hpp>
+#include <variant>
 
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
@@ -80,6 +82,7 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
 		getMainVMThread().stop();
+
 		(void) join();
 		getMainVMThread().exec_thread.reset();
 		return api::response::Empty{};
@@ -92,15 +95,21 @@ namespace vm {
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
 				getMainVMThread().pause();
-				return api::Response(api::response::Empty());
+				bool is_paused = waitForPaused();
+				if (!is_paused) return cpp::failure(api::CoreOperationError{ api::PauseError{} });
+				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
 				getMainVMThread().resume();
+				bool is_resumed = waitForResumed();
+				if (!is_resumed) return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
 				getMainVMThread().step();
-				return api::Response(api::response::Empty());
+				bool is_paused = waitForPaused();
+				if (!is_paused) return cpp::failure(api::CoreOperationError{ api::OtherError{} });
+				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
 				return loadProgram(load_request.filename).map_error([](auto err) {
@@ -108,6 +117,9 @@ namespace vm {
 				});
 			}
 			variant_case_novalue(api::request::Stop) { return stop(); }
+			variant_case_novalue(api::request::ExecutionPosition) {
+				return getMainVMThread().getCurrentPosition();
+			}
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -203,5 +215,41 @@ namespace vm {
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
+	}
+
+	bool VMProcess::waitForPaused() {
+		std::shared_lock lock(rwStatus);
+		status_cv.wait(lock, [&] {
+			if (!std::holds_alternative<api::Executing>(status))
+				return true;  // If not executing return true
+			auto exec_status = std::get<api::Executing>(status).exec_status;
+			return std::holds_alternative<api::Terminated>(exec_status)
+			    || std::holds_alternative<api::PausedOnError>(exec_status)
+			    || std::holds_alternative<api::Panicked>(exec_status)
+			    || std::holds_alternative<api::Paused>(exec_status);
+		});
+		if (std::holds_alternative<api::Executing>(status)) {
+			auto exec_status = std::get<api::Executing>(status).exec_status;
+			if (std::holds_alternative<api::Paused>(exec_status)) return true;
+		}
+		return false;
+	}
+
+	bool VMProcess::waitForResumed() {
+		std::shared_lock lock(rwStatus);
+		status_cv.wait(lock, [&] {
+			if (!std::holds_alternative<api::Executing>(status))
+				return true;  // If not executing return true
+			auto exec_status = std::get<api::Executing>(status).exec_status;
+			return std::holds_alternative<api::Terminated>(exec_status)
+			    || std::holds_alternative<api::PausedOnError>(exec_status)
+			    || std::holds_alternative<api::Panicked>(exec_status)
+			    || std::holds_alternative<api::Running>(exec_status);
+		});
+		if (std::holds_alternative<api::Executing>(status)) {
+			auto exec_status = std::get<api::Executing>(status).exec_status;
+			if (std::holds_alternative<api::Running>(exec_status)) return true;
+		}
+		return false;
 	}
 }
