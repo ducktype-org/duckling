@@ -1,7 +1,7 @@
-#include "code_data/instruction.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_utils.hpp"
+#include <code_data/instruction.hpp>
 #include <core/process/vmprocess.hpp>
 
 

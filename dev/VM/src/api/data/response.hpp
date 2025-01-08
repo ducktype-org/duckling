@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/process/memory/block.hpp"
-#include "status.hpp"
+#include <core/process/memory/block.hpp>
 #include <core/process/type_metadata/type.hpp>
+#include "status.hpp"
 
 // NOLINTBEGIN(readability-identifier-naming)
 template<>

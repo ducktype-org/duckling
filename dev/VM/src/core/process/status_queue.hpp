@@ -1,9 +1,8 @@
-#include "api/data/status.hpp"
 #include <queue>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
-#include <iostream>
+#include <api/data/status.hpp>
 
 namespace vm {
 

@@ -12,9 +12,9 @@
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
 #include <core/process/memory/pointer.hpp>
-#include "api/data/response.hpp"
-#include "api/data/status.hpp"
-#include "base/variant.hpp"
+#include <api/data/response.hpp>
+#include <api/data/status.hpp>
+#include <base/variant.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes.hpp"

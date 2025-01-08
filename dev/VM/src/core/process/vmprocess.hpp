@@ -1,6 +1,6 @@
 #pragma once
 
-#include "api/data/status.hpp"
+#include <api/data/status.hpp>
 #include <deque>
 #include <services/profiler/profiler.hpp>
 #include <services/service_manager.hpp>
@@ -19,8 +19,6 @@
 #include <api/data/request.hpp>
 #include <preprocessor/preprocessor.hpp>
 #include "status_queue.hpp"
-
-#include <iostream>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
