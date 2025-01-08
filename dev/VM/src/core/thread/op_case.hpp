@@ -26,7 +26,7 @@
 #define OPFUN_CONT_CHECK_STRATEGY(i)                                                  \
 	IF_TC({                                                                           \
 		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.execution_request_break)                                      \
+			if (thread.execution_request_break)                                       \
 				return handle_execution_break(&instr[i], local_stack, frame, thread); \
 		}                                                                             \
 		return instr[i].opfun(&instr[i], local_stack, frame, thread);                 \
@@ -34,7 +34,7 @@
 	IF_NOT_TC({                                                                       \
 		instr += i;                                                                   \
 		if constexpr (!IGNORE_EXECUTION_STRATEGY) {                                   \
-			if (thread.execution_request_break) [[unlikely]] {                       \
+			if (thread.execution_request_break) [[unlikely]] {                        \
 				return handle_execution_break(instr, local_stack, frame, thread);     \
 			}                                                                         \
 		}                                                                             \

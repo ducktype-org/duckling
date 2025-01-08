@@ -20,7 +20,6 @@ public:
 
 
 private:
-	
 };
 
 TESTER_COMMON_MAIN("/VM/tests/basic/");

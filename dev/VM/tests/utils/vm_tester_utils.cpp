@@ -20,7 +20,7 @@ void VmTestSuite::runTestOnVm(
 	auto output_response = vm::api::output(pid);
 	assertTrue(output_response.has_value(), "Output failed (1)");
 	std::cerr << output_response.value().output << "\n";
-	ASSERT_EQUAL( output, output_response.value().output);
+	ASSERT_EQUAL(output, output_response.value().output);
 
 	auto join_response = vm::api::join(pid);
 	assertTrue(join_response.has_value(), "Join failed (1)");

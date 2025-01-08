@@ -25,9 +25,7 @@ namespace vm {
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata())
-		   {
-	}
+		  process_types(process.getTypeMetadata()) {}
 
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
@@ -61,7 +59,7 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		auto opcode = OpFuns::getOpcodeFromOpFun(instr->opfun);
 #else
-		auto            opcode = static_cast<u16>(instr->opcode);
+		auto opcode = static_cast<u16>(instr->opcode);
 #endif
 
 		// Execute the instruction
@@ -296,28 +294,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	static inline void printStatus(api::ExecStatus exec_status) {
-		variant_match(exec_status) {
-			variant_case_novalue(api::Running) { std::cout << "Running"; }
-			variant_case_novalue(api::Paused) { std::cout << "Paused"; }
-			variant_case(api::PausedOnError, pausedOnError) {
-				std::cout << "PausedOnError: " << pausedOnError.reason;
-			}
-			variant_case_novalue(api::WaitingForInput) { std::cout << "WaitingForInput"; }
-			variant_case_novalue(api::NotStarted) { std::cout << "NotStarted"; }
-			variant_case_novalue(api::ExecutionCompleted) { std::cout << "Terminated"; }
-			variant_case(api::Panicked, panicked) {
-				std::cout << "Panicked: " << panicked.exception.what();
-			}
-		}
-		std::cout << std::endl;
-	}
-
-	void VMThread::setProcessStatus(const vm::api::ExecStatus &new_status, bool is_blocking) {
+	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status, bool is_blocking) {
 		status = new_status;
-		std::cout << "new status: ";
-		printStatus(new_status);
-		process.setExecutionStatus( new_status, is_blocking);
+		process.setExecutionStatus(new_status, is_blocking);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -343,7 +322,7 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				setProcessStatus( api::Panicked{ e }, true );
+				setProcessStatus(api::Panicked{ e }, true);
 			}
 		});
 		return true;

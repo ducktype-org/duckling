@@ -34,7 +34,8 @@ namespace vm {
 			// beforehand, but it's not always true so this design is not perfect.
 			if (!attached) {
 				thread.waitUntilNotPausedAndCondition(lck, [this, &thread] {
-					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail() || attached;
+					return thread.isTerminateRequested() || input_stream.rdbuf()->in_avail()
+					    || attached;
 				});
 			}
 

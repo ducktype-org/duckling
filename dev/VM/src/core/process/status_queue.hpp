@@ -6,7 +6,7 @@
 #include <iostream>
 
 namespace vm {
-	
+
 	class ExecutionStatusQueue {
 	public:
 		api::ExecStatus pop() {
@@ -29,7 +29,7 @@ namespace vm {
 			std::unique_lock<std::mutex> mlock(mutex);
 			return status;
 		}
-		
+
 		void setStatus(const api::ExecStatus& new_status) {
 			std::unique_lock<std::mutex> mlock(mutex);
 			status = new_status;

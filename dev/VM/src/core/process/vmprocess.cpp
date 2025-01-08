@@ -13,7 +13,6 @@
 #include <shared_mutex>
 #include <variant>
 
-
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
@@ -22,9 +21,8 @@ namespace vm {
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
 	api::ProcStatus VMProcess::getStatus() {
-		if (std::holds_alternative<api::Executing>(status)) {
-			return api::Executing{exec_status_queue.getStatus()};
-		}
+		if (std::holds_alternative<api::Executing>(status))
+			return api::Executing{ exec_status_queue.getStatus() };
 		return status;
 	}
 
@@ -46,14 +44,14 @@ namespace vm {
 		std::unique_lock lock(rwGlobal);
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
-		
+
 		exec_status_queue.clear();
 		getMainVMThread().initThread(Ref(&*loadedCode));
 		auto status = getThreadStatusResponse();
 
 		if (!std::holds_alternative<api::Running>(status))
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
-		
+
 		return api::Response(api::response::Empty());
 	}
 
@@ -85,17 +83,18 @@ namespace vm {
 		return api::Response(api::response::Output{ content });
 	}
 
-	
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
 		getMainVMThread().stop();
 		auto status = getThreadStatusResponse();
 
 		(void) join();
 		getMainVMThread().exec_thread.reset();
-		
-		// @TODO: make two different "stop" functions, one that throws error if program panicked	
-		if (!std::holds_alternative<api::ExecutionCompleted>(status) && !std::holds_alternative<api::Panicked>(status))
-			return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status response"} });
+
+		// @TODO: make two different "stop" functions, one that throws error if program panicked
+		if (!std::holds_alternative<api::ExecutionCompleted>(status)
+		    && !std::holds_alternative<api::Panicked>(status))
+			return cpp::failure(api::CoreOperationError{
+				api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
 	}
 
@@ -107,26 +106,28 @@ namespace vm {
 			variant_case_novalue(api::request::Pause) {
 				getMainVMThread().pause();
 				auto thread_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Paused>(thread_status)) 
+				if (!std::holds_alternative<api::Paused>(thread_status))
 					return cpp::failure(api::CoreOperationError{ api::PauseError{} });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
 				getMainVMThread().resume();
 				auto thread_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Running>(thread_status)) 
+				if (!std::holds_alternative<api::Running>(thread_status))
 					return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
 				getMainVMThread().step();
 				auto thread_running_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Running>(thread_running_status)) 
-					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+				if (!std::holds_alternative<api::Running>(thread_running_status))
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status" } });
 
 				auto thread_paused_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Paused>(thread_paused_status)) 
-					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+				if (!std::holds_alternative<api::Paused>(thread_paused_status))
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status" } });
 
 				return getMainVMThread().getCurrentPosition();
 			}
@@ -142,7 +143,8 @@ namespace vm {
 			variant_case_novalue(api::request::WaitForPaused) {
 				auto thread_status = getThreadStatusResponse();
 				if (!std::holds_alternative<api::Paused>(thread_status)) {
-					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status" } });
 				}
 				return getMainVMThread().getCurrentPosition();
 			}
@@ -154,7 +156,7 @@ namespace vm {
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::DataRequest& request) {
 		api::ProcStatus status = getStatus();
-		
+
 		if (!std::holds_alternative<api::Executing>(status)) {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
@@ -245,7 +247,5 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	api::ExecStatus VMProcess::getThreadStatusResponse() {
-		return exec_status_queue.pop();
-	}
+	api::ExecStatus VMProcess::getThreadStatusResponse() { return exec_status_queue.pop(); }
 }

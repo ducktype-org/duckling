@@ -29,8 +29,8 @@ namespace vm::api {
 	 * When this function returns true, the program is running. If false, the state is undefined.
 	 * @return
 	 */
-	cpp::result<void, ApiError> resume(PID pid);
-	cpp::result<void, ApiError> step(PID pid);
+	cpp::result<void, ApiError>                   resume(PID pid);
+	cpp::result<void, ApiError>                   step(PID pid);
 	cpp::result<response::CodePosition, ApiError> waitForPaused(PID pid);
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path);

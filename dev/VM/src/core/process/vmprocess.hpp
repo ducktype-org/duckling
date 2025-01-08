@@ -44,8 +44,8 @@ namespace vm {
 	class VMProcess final: public Listener<api::ProcStatus> {
 	private:
 		std::shared_mutex rwGlobal;
-		
-		api::ProcStatus status;
+
+		api::ProcStatus      status;
 		ExecutionStatusQueue exec_status_queue;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
@@ -153,15 +153,13 @@ namespace vm {
 		api::ExecStatus getThreadStatusResponse();
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept override {
-			status = event;
-		}
+		void onEvent(const api::ProcStatus& event) noexcept override { status = event; }
 
-		void setExecutionStatus(const api::ExecStatus &status, bool is_blocking = false) {
-			if (is_blocking) {
+		void setExecutionStatus(const api::ExecStatus& status, bool is_blocking = false) {
+			if (is_blocking)
 				exec_status_queue.push(status);
-			} else
-			exec_status_queue.setStatus(status);
+			else
+				exec_status_queue.setStatus(status);
 		}
 
 		Memory& getMemory();

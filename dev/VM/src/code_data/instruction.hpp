@@ -50,7 +50,7 @@ namespace vm {
 	struct Fix8Instruction;
 
 	class OpFuns;
-	using OpFun = void(OPFUN_ARGS);
+	using OpFun      = void(OPFUN_ARGS);
 	using DebugOpFun = void(OPFUN_REF_ARGS);
 
 
@@ -114,9 +114,8 @@ namespace vm {
 		};
 
 		static u16 getOpcodeFromOpFun(OpFun* fun) {
-			for (u16 i = 0; i < OP_CASES_COUNT; i++) {
+			for (u16 i = 0; i < OP_CASES_COUNT; i++)
 				if (opfuns.at(i) == fun) return i;
-			}
 			return 0;
 		}
 	};

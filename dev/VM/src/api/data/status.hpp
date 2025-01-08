@@ -30,16 +30,21 @@ namespace vm::api {
 
 	struct ExecutionCompleted {};
 
-	using ExecStatus
-		= std::variant<Running, Paused, PausedOnError, WaitingForInput, NotStarted, ExecutionCompleted, Panicked>;
+	using ExecStatus = std::variant<
+		Running,
+		Paused,
+		PausedOnError,
+		WaitingForInput,
+		NotStarted,
+		ExecutionCompleted,
+		Panicked>;
 
 	struct Executing {
 		ExecStatus exec_status;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
 	};
 
-	using ProcStatus
-		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
+	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
 }
 
 

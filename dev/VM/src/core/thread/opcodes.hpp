@@ -6,15 +6,15 @@
 
 
 #ifdef DEBUG_OPCODES
-#define OPCODE_NAME(name) op_debug_##name
-#define FUNCTION_ARGS OPFUN_REF_ARGS
-#define FUNCTION_CONT(step) instr += step;
-#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
+	#define OPCODE_NAME(name)                  op_debug_##name
+	#define FUNCTION_ARGS                      OPFUN_REF_ARGS
+	#define FUNCTION_CONT(step)                instr += step;
+	#define FUNCTION_CONT_CHECK_STRATEGY(step) instr += step;
 #else
-#define OPCODE_NAME(name) op_##name 
-#define FUNCTION_ARGS OPFUN_ARGS
-#define FUNCTION_CONT(step) OPFUN_CONT(step)
-#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
+	#define OPCODE_NAME(name)                  op_##name
+	#define FUNCTION_ARGS                      OPFUN_ARGS
+	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
+	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
 #endif
 
 namespace vm {
@@ -34,14 +34,14 @@ namespace vm {
 	// the body after the next tail call, which then becomes a regular function
 	// call and may cause the stack to explode.
 
-	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY` macro.
-	// This means, every other will jump to the next instruction at the end of it with
-	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
-	// opcode. It also requires different macro surrounding the function call in the computed goto's
-	// and switch case, because in those approaches we can't end execution from within the function,
-	// but we have to add some instructions on the outside of it. Hence we use the `OP_CASE_END`
-	// macro that adds `goto End` instruction, residing after opcode function, inside interpeter
-	// loop.
+	// `op_exit` is the only opcode without the `FUNCTION_CONT` or `FUNCTION_CONT_CHECK_STRATEGY`
+	// macro. This means, every other will jump to the next instruction at the end of it with
+	// `FUNCTION_CONT`/`FUNCTION_CONT_CHECK_STRATEGY`, so the the only way to end execution is to
+	// use this opcode. It also requires different macro surrounding the function call in the
+	// computed goto's and switch case, because in those approaches we can't end execution from
+	// within the function, but we have to add some instructions on the outside of it. Hence we use
+	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
+	// inside interpeter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_imm)(FUNCTION_ARGS) {
@@ -423,7 +423,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
-		{	
+		{
 			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 

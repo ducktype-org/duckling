@@ -136,7 +136,7 @@ namespace vm {
 		 */
 		u64 internalCallMain(const FuncData&);
 
-		void setProcessStatus(const vm::api::ExecStatus &status, bool is_blocking = false);
+		void setProcessStatus(const vm::api::ExecStatus& status, bool is_blocking = false);
 
 	public:
 		VMThread(VMProcess& process);
