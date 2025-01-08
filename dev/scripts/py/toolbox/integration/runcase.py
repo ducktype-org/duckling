@@ -76,4 +76,4 @@ class RunCase:
     expected_exitcode: int
     expected_output: Optional[Data]
     expected_err: Optional[Data]
-    post_run: str
+    timeout: int

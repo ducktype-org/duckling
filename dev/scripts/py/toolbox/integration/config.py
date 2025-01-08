@@ -6,7 +6,7 @@ import yaml
 
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
-from ..helpers import clamp_str, exit_with_error, log_info
+from ..helpers import clamp_str, exit_with_error
 
 CONFIG_KEYS = {
     "Name",
@@ -42,10 +42,11 @@ def get_config_dict(dir_with_config: Path, ext="yaml"):
         exit_with_error(f"Config file {config_file} does not exist")
 
     with open(config_file) as f:
-        if ext == "yaml":
-            config = yaml.safe_load(f.read())
-        elif ext == "toml":
-            config = tomllib.loads(f.read())
+        match ext:
+            case "yaml":
+                config = yaml.safe_load(f.read())
+            case "toml":
+                config = tomllib.loads(f.read())
 
     config["_ConfigFile"] = config_file
     return config
@@ -81,6 +82,9 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
             test["Name"] = test_name
             test["_Parent"] = config
 
+            for run_case in test["RunCases"]:
+                test["RunCases"][run_case]["_Parent"] = config["Tests"][test_name]
+
     return config
 
 
@@ -89,7 +93,7 @@ def config_find_value(config: dict, key, default=None) -> Optional[dict]:
         return config[key]
 
     if config["_Parent"]:
-        return config_find_value(config["_Parent"], key)
+        return config_find_value(config["_Parent"], key, default=default)
     return default
 
 

@@ -52,23 +52,28 @@ class Test:
     compile: str
     run: str
     post_run: str
-    timeout: int
     fail_fast: bool
     clean: str
 
-    def run_test(self, dry: bool, fail_fast: bool, verbose: bool) -> bool:
+    def run_test(
+        self, test_path: str, dry: bool, fail_fast: bool, verbose: bool
+    ) -> bool:
         success = True
         if self.compile:
             self.exec_command(self.compile, cwd=self.cwd, dry=dry)
         for i, run_case in enumerate(self.run_cases):
+            if test_path and run_case.name != test_path:
+                continue
             log_info(f"Run [{i + 1}/{len(self)}] - {run_case.name}")
             try:
                 if err := self.test_case(run_case, dry, verbose):
                     log_failure(
                         f"Case `{self.name}/{run_case.name}` has failed because: {err}"
                     )
+                    success = False
                 else:
-                    log_success(f"Case `{self.name}/{run_case.name}` passed")
+                    if not dry:
+                        log_success(f"Case `{self.name}/{run_case.name}` passed")
             except BashCommandError as e:
                 log_failure(
                     f"Case `{self.name}/{run_case.name}` has failed because: {''.join(e.args)}"
@@ -212,8 +217,8 @@ def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
         input=io_data[0],
         expected_output=io_data[1],
         expected_err=io_data[2],
-        expected_exitcode=run_case_dict.get("ExitCode", 0),
-        post_run=run_case_dict.get("PostRun", None),
+        expected_exitcode=config_find_value(run_case_dict, "ExitCode", default=0),
+        timeout=config_find_value(run_case_dict, "TimeOut", default=1),
     )
 
 
@@ -236,10 +241,8 @@ def load_test(config: dict, test_name) -> Test:
             post_run=config_find_and_fill(test_dict, "PostRun"),
             cwd=config["_ConfigFile"].parent,
             run_cases=[
-                load_run_case(test_dict, run_case)
-                for run_case in test_dict.get("RunCases", {})
+                load_run_case(test_dict, run_case) for run_case in test_dict["RunCases"]
             ],
-            timeout=config_find_value(test_dict, "TimeOut", default=10),
             clean=config_find_and_fill(test_dict, "Clean"),
             fail_fast=config_find_value(test_dict, "FailFast", default=False),
         )
@@ -257,42 +260,55 @@ def load_subtest(config: dict) -> TestSet:
     )
 
 
-def run_tests(tests: TestSet, tree, clean, dry, fail_fast, verbose) -> list[str]:
+def run_tests(
+    tests: TestSet, test_path: str, tree, clean, dry, fail_fast, verbose
+) -> list[str]:
     tree.append(tests.name)
     failed_tests = []
+    ran_tests = 0
 
     for test in tests.tests:
         pth = "/".join(tree + [test.name])
+        if not pth.startswith(test_path) and not test_path.startswith(pth):
+            continue
         if clean:
             log_info(f"Cleaning: {pth}")
             test.run_clean(dry)
         else:
             log_info(f"Testing: {pth}")
-            test_success = test.run_test(dry, fail_fast, verbose)
+            test_success = test.run_test(
+                test_path[len(pth) + 1 :], dry, fail_fast, verbose
+            )
+            ran_tests += 1
             if not test_success:
                 failed_tests.append(pth)
             if fail_fast:
                 return failed_tests
 
     for subtests in tests.subtests:
-        failed_tests += run_tests(subtests, tree.copy(), clean, dry, fail_fast, verbose)
+        new_failed_tests, new_ran_tests = run_tests(
+            subtests, test_path, tree.copy(), clean, dry, fail_fast, verbose
+        )
+        failed_tests += new_failed_tests
+        ran_tests += new_ran_tests
 
-    return failed_tests
+    return failed_tests, ran_tests
 
 
-def integration_tests(clean, dry, test, fail_fast, verbose):
+def integration_tests(clean, dry, test_path, fail_fast, verbose):
     log_info("Running integration tests...")
     config = load_config("tests")
     testset = load_subtest(config)
 
-    failed_tests = run_tests(testset, [], clean, dry, fail_fast, verbose)
+    failed_tests, ran_tests = run_tests(
+        testset, test_path, [], clean, dry, fail_fast, verbose
+    )
 
     if failed_tests:
         num_failed = len(failed_tests)
         failed_tests = map(lambda x: " - " + x, failed_tests)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}{num_failed} test(s) failed:\n{'\n'.join(failed_tests)}"
+            f"{'(Fail fast) ' if fail_fast else ''}{num_failed}/{ran_tests} tests failed:\n{'\n'.join(failed_tests)}"
         )
-    elif not clean:
-        count = testset.test_count()
-        log_success(f"All [{count}/{count}] have run successfully!")
+    elif not clean and not dry:
+        log_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")

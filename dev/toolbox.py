@@ -525,7 +525,7 @@ def duck_linter(*args, **kwargs):
 )
 @click.option(
     "-t",
-    "--test",
+    "--test-path",
     type=str,
     default="",
     help="Runs a particular test, i.e `tests/C++` or `tests/C++/RunCase1`",
@@ -535,7 +535,7 @@ def duck_linter(*args, **kwargs):
     "--fail-fast",
     is_flag=True,
     default=False,
-    help="Whether to fail upon a testcase failure. Otherwise it runs all tests regardless of their result.",
+    help="Whether to fail upon a testcase failure. If not passed, runs all tests regardless of their result.",
 )
 @click.option(
     "-v",
@@ -548,7 +548,7 @@ def itest(*args, **kwargs):
     """Runs integration tests"""
     # TODO:
     # * "--test"
-    # * FailFast
+    # * "--timeout"
     # * Better handling of errors (like logging to a file)
     # * improve readability of messages
     integration_tests(*args, **kwargs)
@@ -560,6 +560,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()
