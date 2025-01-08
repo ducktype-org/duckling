@@ -204,7 +204,6 @@ namespace vm {
 			notifyProcess(vm::api::Paused{});
 			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
 
-
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
 				notifyProcess(vm::api::Running{});

@@ -100,9 +100,9 @@ namespace vm {
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
+				// @todo we can't wait for resume here, because thread maybe be already paused on the next breakpoint
+				// and the status will be changed to paused again
 				getMainVMThread().resume();
-				bool is_resumed = waitForResumed();
-				if (!is_resumed) return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
@@ -235,9 +235,44 @@ namespace vm {
 		return false;
 	}
 
+	static void printVariant(api::ProcStatus procStatus) {
+		variant_match(procStatus) {
+			variant_case_novalue(api::ExecutionNotStarted) { std::cout << "ExecutionNotStarted"; }
+			variant_case_novalue(api::Parsing) { std::cout << "Parsing"; }
+			variant_case_novalue(api::TypeAnalysis) { std::cout << "TypeAnalysis"; }
+			variant_case(api::Panicked, panicked) {
+				std::cout << "Panicked: " << panicked.exception.what();
+			}
+			variant_case_novalue(api::Executing) { std::cout << "Executing"; }
+		}
+		if (std::holds_alternative<api::Executing>(procStatus)) {
+			auto exec_status = std::get<api::Executing>(procStatus).exec_status;
+			variant_match(exec_status) {
+				variant_case_novalue(api::Running) { std::cout << "Running"; }
+				variant_case_novalue(api::Paused) { std::cout << "Paused"; }
+				variant_case(api::PausedOnError, pausedOnError) {
+					std::cout << "PausedOnError: " << pausedOnError.reason;
+				}
+				variant_case_novalue(api::WaitingForInput) { std::cout << "WaitingForInput"; }
+				variant_case_novalue(api::NotStarted) { std::cout << "NotStarted"; }
+				variant_case_novalue(api::Terminated) { std::cout << "Terminated"; }
+			}
+		}
+		std::cout << std::endl;
+	}
+
+	/**
+	 * @brief Waits for "api::Running" status or for end of execution.
+	 * It doesn't work in the current concurrency model, 
+	 * because the status can be changed twice before the thread is notified.
+	 * @return true the status is "api::Running"
+	 * @return false the thread ended execution
+	 */
 	bool VMProcess::waitForResumed() {
 		std::shared_lock lock(rwStatus);
 		status_cv.wait(lock, [&] {
+			std::cout << "checking wait condition" << std::endl;
+			printVariant(status);
 			if (!std::holds_alternative<api::Executing>(status))
 				return true;  // If not executing return true
 			auto exec_status = std::get<api::Executing>(status).exec_status;

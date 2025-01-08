@@ -1,3 +1,5 @@
+type primitive: int64 8
+
 function main {
 	arg_size: 0;
 	next_arg_size: 0;
@@ -5,11 +7,13 @@ function main {
 	ret_size: 0;
 
 	code: {
-		mov_l64_imm 0, 100;
-		mov_l64_imm 0, 100;
-		mov_l64_imm 0, 100;
-        breakpoint;
-
+		mov_l64_imm  0, 0;
+		mov_l64_imm  8, 0;
+		mov_l64_imm 16, 0;
+		breakpoint;
+		mov_l64_imm  0, 0;
+		mov_l64_imm  8, 0;
+		breakpoint;
 		ret_l64 0;
 	}
 }

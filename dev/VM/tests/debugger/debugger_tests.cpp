@@ -29,8 +29,16 @@ private:
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
         assertPaused(vm::api::getExecutionStatus(pid));
 
-		auto executionPosition = vm::api::getCurrentPosition(pid).expect("Get current position failed (2)");
-		std::cout << "Function ID: " << executionPosition.function_id << ", Instruction number: " << executionPosition.instr_number << std::endl;
+		auto execution_position = vm::api::getCurrentPosition(pid).expect("Get current position failed (2)");
+		std::cout << "Function ID: " << execution_position.function_id << ", Instruction number: " << execution_position.instr_number << std::endl;
+
+		vm::api::resume(pid).expect("Resume failed (1)");
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        assertPaused(vm::api::getExecutionStatus(pid));
+
+		execution_position = vm::api::getCurrentPosition(pid).expect("Get current position failed (2)");
+		std::cout << "Function ID: " << execution_position.function_id << ", Instruction number: " << execution_position.instr_number << std::endl;
 
 		auto stop_response = vm::api::stop(pid);
 		assertTrue(stop_response.has_value(), "Stop failed (1)");
