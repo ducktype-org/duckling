@@ -94,28 +94,38 @@ namespace vm {
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 
+		// NOLINTBEGIN(readability-identifier-naming)
+		// Opcodes utilities functions (named the simmiliar way as all OpFuns)
 		static OpFun handle_execution_break;
 		static OpFun save_execution_state;
+		// NOLINTEND(readability-identifier-naming)
+
 		/**
 		 * @brief A mapping between opcode ids and function pointers.
 		 *
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
-		static constexpr std::array<OpFun*, OP_CASES_COUNT> opfuns{
+		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define DEF_OPCODE(opcode) op_##opcode,
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 		};
 
-		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> debug_opfuns{
+		/**
+		 * @brief A mapping between opcode ids and debug function pointers.
+		 */
+		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define DEF_OPCODE(opcode) op_debug_##opcode,
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 		};
 
+		/**
+		 * @brief Get the Opcode from the OpFun pointer.
+		 */
 		static u16 getOpcodeFromOpFun(OpFun* fun) {
 			for (u16 i = 0; i < OP_CASES_COUNT; i++)
-				if (opfuns.at(i) == fun) return i;
+				if (OPFUNS.at(i) == fun) return i;
 			return 0;
 		}
 	};

@@ -63,7 +63,7 @@ namespace vm {
 #endif
 
 		// Execute the instruction
-		OpFuns::debug_opfuns.at(opcode)(instr, local_stack, frame, *this);
+		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
@@ -76,7 +76,8 @@ namespace vm {
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
-
+	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
+	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	u64 VMThread::internalCallMain(const FuncData& main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
@@ -161,7 +162,12 @@ namespace vm {
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
 
 #endif
-	}  // internalCallMain end
+	}
+
+	// internalCallMain end
+
+	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang

@@ -4,6 +4,7 @@
 #include "status.hpp"
 #include <core/process/type_metadata/type.hpp>
 
+// NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
 	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
@@ -21,6 +22,8 @@ struct nlohmann::adl_serializer<vm::BlockID> {
 		e = static_cast<vm::BlockID>(std::stoull(j.get<std::string>()));
 	}
 };
+
+// NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
 	namespace response {

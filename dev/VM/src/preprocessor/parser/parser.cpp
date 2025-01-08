@@ -786,7 +786,7 @@ namespace assemble {
 			for (const auto& op: func.bc) {
 #ifdef USE_TAIL_CALLS
 				if (op.opfun
-				    == vm::OpFuns::opfuns.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
+				    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
 #else
 				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
 #endif
@@ -865,7 +865,7 @@ namespace assemble {
 
 #ifdef USE_TAIL_CALLS
 			funcData.bc.emplace_back(vm::Fix8Instruction{
-				.opfun = vm::OpFuns::opfuns.at(nameToOpcodeValue(op->opcode_name)),
+				.opfun = vm::OpFuns::OPFUNS.at(nameToOpcodeValue(op->opcode_name)),
 				.arg0  = static_cast<i32>(arg_0),
 				.arg1  = static_cast<i32>(arg_1) });
 #endif
