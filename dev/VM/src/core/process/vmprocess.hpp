@@ -1,5 +1,6 @@
 #pragma once
 
+#include "api/data/status.hpp"
 #include <deque>
 #include <services/profiler/profiler.hpp>
 #include <services/service_manager.hpp>
@@ -17,6 +18,7 @@
 #include <core/thread/vmthread.hpp>
 #include <api/data/request.hpp>
 #include <preprocessor/preprocessor.hpp>
+#include "status_queue.hpp"
 
 #include <iostream>
 
@@ -42,10 +44,9 @@ namespace vm {
 	class VMProcess final: public Listener<api::ProcStatus> {
 	private:
 		std::shared_mutex rwGlobal;
-
-		std::condition_variable_any status_cv;
-		std::shared_mutex           rwStatus;
-		api::ProcStatus             status;
+		
+		api::ProcStatus status;
+		ExecutionStatusQueue exec_status_queue;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
@@ -149,17 +150,19 @@ namespace vm {
 
 		VMThread& getMainVMThread();
 
-		bool waitForPaused();
-		bool waitForResumed();
+		api::ExecStatus getThreadStatusResponse();
+
 	public:
-		/**
-		 * For internal use only
-		 * Usage:
-		 * Supervisor::get().onEvent(status);
-		 *
-		 * Name of this method may be misleading
-		 */
-		void onEvent(const api::ProcStatus& event) noexcept override;
+		void onEvent(const api::ProcStatus& event) noexcept override {
+			status = event;
+		}
+
+		void setExecutionStatus(const api::ExecStatus &status, bool is_blocking = false) {
+			if (is_blocking) {
+				exec_status_queue.push(status);
+			} else
+			exec_status_queue.setStatus(status);
+		}
 
 		Memory& getMemory();
 
@@ -173,7 +176,6 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		// For external API
 
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.

@@ -31,6 +31,8 @@ namespace vm::api {
 
 		struct Step {};
 
+		struct WaitForPaused {};
+
 		struct ExecutionPosition {};
 
 		struct TypeMetadata {
@@ -64,6 +66,7 @@ namespace vm::api {
 		request::Run,
 		request::Join,
 		request::Step,
+		request::WaitForPaused,
 		request::ExecutionPosition>;
 
 	using IORequest

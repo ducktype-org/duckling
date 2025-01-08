@@ -1,4 +1,5 @@
 #include "vmprocess.hpp"
+#include "api/data/response.hpp"
 #include "api/data/status.hpp"
 #include <api/data/core_operation_error.hpp>
 #include <base/exceptions.hpp>
@@ -9,7 +10,9 @@
 #include <mutex>
 #include <base/variant.hpp>
 #include <api/data/request.hpp>
+#include <shared_mutex>
 #include <variant>
+
 
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
@@ -18,15 +21,10 @@ namespace vm {
 
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
-	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
-		std::unique_lock lock(rwStatus);
-		// @TODO: check if status change is legal
-		status = event;
-		status_cv.notify_all();
-	}
-
 	api::ProcStatus VMProcess::getStatus() {
-		std::shared_lock lock(rwStatus);
+		if (std::holds_alternative<api::Executing>(status)) {
+			return api::Executing{exec_status_queue.getStatus()};
+		}
 		return status;
 	}
 
@@ -48,7 +46,14 @@ namespace vm {
 		std::unique_lock lock(rwGlobal);
 		if (!loadedCode.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
+		
+		exec_status_queue.clear();
 		getMainVMThread().initThread(Ref(&*loadedCode));
+		auto status = getThreadStatusResponse();
+
+		if (!std::holds_alternative<api::Running>(status))
+			return cpp::failure(api::CoreOperationError{ api::RunError{} });
+		
 		return api::Response(api::response::Empty());
 	}
 
@@ -80,11 +85,17 @@ namespace vm {
 		return api::Response(api::response::Output{ content });
 	}
 
+	
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
 		getMainVMThread().stop();
+		auto status = getThreadStatusResponse();
 
 		(void) join();
 		getMainVMThread().exec_thread.reset();
+		
+		// @TODO: make two different "stop" functions, one that throws error if program panicked	
+		if (!std::holds_alternative<api::ExecutionCompleted>(status) && !std::holds_alternative<api::Panicked>(status))
+			return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status response"} });
 		return api::response::Empty{};
 	}
 
@@ -95,20 +106,28 @@ namespace vm {
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
 				getMainVMThread().pause();
-				bool is_paused = waitForPaused();
-				if (!is_paused) return cpp::failure(api::CoreOperationError{ api::PauseError{} });
+				auto thread_status = getThreadStatusResponse();
+				if (!std::holds_alternative<api::Paused>(thread_status)) 
+					return cpp::failure(api::CoreOperationError{ api::PauseError{} });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
-				// @todo we can't wait for resume here, because thread maybe be already paused on the next breakpoint
-				// and the status will be changed to paused again
 				getMainVMThread().resume();
+				auto thread_status = getThreadStatusResponse();
+				if (!std::holds_alternative<api::Running>(thread_status)) 
+					return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
 				getMainVMThread().step();
-				bool is_paused = waitForPaused();
-				if (!is_paused) return cpp::failure(api::CoreOperationError{ api::OtherError{} });
+				auto thread_running_status = getThreadStatusResponse();
+				if (!std::holds_alternative<api::Running>(thread_running_status)) 
+					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+
+				auto thread_paused_status = getThreadStatusResponse();
+				if (!std::holds_alternative<api::Paused>(thread_paused_status)) 
+					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
@@ -120,6 +139,13 @@ namespace vm {
 			variant_case_novalue(api::request::ExecutionPosition) {
 				return getMainVMThread().getCurrentPosition();
 			}
+			variant_case_novalue(api::request::WaitForPaused) {
+				auto thread_status = getThreadStatusResponse();
+				if (!std::holds_alternative<api::Paused>(thread_status)) {
+					return cpp::failure(api::CoreOperationError{ api::OtherError{"unexpected status"} });
+				}
+				return getMainVMThread().getCurrentPosition();
+			}
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -127,7 +153,8 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::DataRequest& request) {
-		std::shared_lock lock(rwStatus);
+		api::ProcStatus status = getStatus();
+		
 		if (!std::holds_alternative<api::Executing>(status)) {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
@@ -135,8 +162,9 @@ namespace vm {
 					"Cannot do memory request while parsing or analyzing types" } });
 			}
 		}
-		api::ExecStatus execStatus = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(execStatus))
+
+		api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
+		if (std::holds_alternative<api::Running>(exec_status))
 			return cpp::fail(api::CoreOperationError{
 				api::OtherError{ "Cannot do memory request while program is running" } });
 		cpp::result<api::Response, api::CoreOperationError> response;
@@ -217,74 +245,7 @@ namespace vm {
 		return api::Response(api::response::Empty());
 	}
 
-	bool VMProcess::waitForPaused() {
-		std::shared_lock lock(rwStatus);
-		status_cv.wait(lock, [&] {
-			if (!std::holds_alternative<api::Executing>(status))
-				return true;  // If not executing return true
-			auto exec_status = std::get<api::Executing>(status).exec_status;
-			return std::holds_alternative<api::Terminated>(exec_status)
-			    || std::holds_alternative<api::PausedOnError>(exec_status)
-			    || std::holds_alternative<api::Panicked>(exec_status)
-			    || std::holds_alternative<api::Paused>(exec_status);
-		});
-		if (std::holds_alternative<api::Executing>(status)) {
-			auto exec_status = std::get<api::Executing>(status).exec_status;
-			if (std::holds_alternative<api::Paused>(exec_status)) return true;
-		}
-		return false;
-	}
-
-	static void printVariant(api::ProcStatus procStatus) {
-		variant_match(procStatus) {
-			variant_case_novalue(api::ExecutionNotStarted) { std::cout << "ExecutionNotStarted"; }
-			variant_case_novalue(api::Parsing) { std::cout << "Parsing"; }
-			variant_case_novalue(api::TypeAnalysis) { std::cout << "TypeAnalysis"; }
-			variant_case(api::Panicked, panicked) {
-				std::cout << "Panicked: " << panicked.exception.what();
-			}
-			variant_case_novalue(api::Executing) { std::cout << "Executing"; }
-		}
-		if (std::holds_alternative<api::Executing>(procStatus)) {
-			auto exec_status = std::get<api::Executing>(procStatus).exec_status;
-			variant_match(exec_status) {
-				variant_case_novalue(api::Running) { std::cout << "Running"; }
-				variant_case_novalue(api::Paused) { std::cout << "Paused"; }
-				variant_case(api::PausedOnError, pausedOnError) {
-					std::cout << "PausedOnError: " << pausedOnError.reason;
-				}
-				variant_case_novalue(api::WaitingForInput) { std::cout << "WaitingForInput"; }
-				variant_case_novalue(api::NotStarted) { std::cout << "NotStarted"; }
-				variant_case_novalue(api::Terminated) { std::cout << "Terminated"; }
-			}
-		}
-		std::cout << std::endl;
-	}
-
-	/**
-	 * @brief Waits for "api::Running" status or for end of execution.
-	 * It doesn't work in the current concurrency model, 
-	 * because the status can be changed twice before the thread is notified.
-	 * @return true the status is "api::Running"
-	 * @return false the thread ended execution
-	 */
-	bool VMProcess::waitForResumed() {
-		std::shared_lock lock(rwStatus);
-		status_cv.wait(lock, [&] {
-			std::cout << "checking wait condition" << std::endl;
-			printVariant(status);
-			if (!std::holds_alternative<api::Executing>(status))
-				return true;  // If not executing return true
-			auto exec_status = std::get<api::Executing>(status).exec_status;
-			return std::holds_alternative<api::Terminated>(exec_status)
-			    || std::holds_alternative<api::PausedOnError>(exec_status)
-			    || std::holds_alternative<api::Panicked>(exec_status)
-			    || std::holds_alternative<api::Running>(exec_status);
-		});
-		if (std::holds_alternative<api::Executing>(status)) {
-			auto exec_status = std::get<api::Executing>(status).exec_status;
-			if (std::holds_alternative<api::Running>(exec_status)) return true;
-		}
-		return false;
+	api::ExecStatus VMProcess::getThreadStatusResponse() {
+		return exec_status_queue.pop();
 	}
 }

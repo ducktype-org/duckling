@@ -9,10 +9,10 @@ function main {
 	code: {
 		mov_l64_imm  0, 0;
 		mov_l64_imm  8, 0;
-		mov_l64_imm 16, 0;
 		breakpoint;
 		mov_l64_imm  0, 0;
 		mov_l64_imm  8, 0;
+		mov_l64_imm 16, 0;
 		breakpoint;
 		ret_l64 0;
 	}

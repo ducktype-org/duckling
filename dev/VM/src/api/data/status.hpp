@@ -28,10 +28,10 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	struct Terminated {};
+	struct ExecutionCompleted {};
 
 	using ExecStatus
-		= std::variant<Panicked, Running, Paused, PausedOnError, WaitingForInput, NotStarted, Terminated>;
+		= std::variant<Running, Paused, PausedOnError, WaitingForInput, NotStarted, ExecutionCompleted, Panicked>;
 
 	struct Executing {
 		ExecStatus exec_status;
@@ -39,7 +39,7 @@ namespace vm::api {
 	};
 
 	using ProcStatus
-		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
+		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
 }
 
 
@@ -54,4 +54,4 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Terminated, "Terminated")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "Terminated")

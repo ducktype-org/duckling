@@ -136,8 +136,7 @@ namespace vm {
 		 */
 		u64 internalCallMain(const FuncData&);
 
-		// @TODO add some thread data in the future
-		void notifyProcess(vm::api::ExecStatus status);
+		void setProcessStatus(const vm::api::ExecStatus &status, bool is_blocking = false);
 
 	public:
 		VMThread(VMProcess& process);
@@ -202,6 +201,7 @@ namespace vm {
 		}
 
 		void notifyPaused();
+
 
 		bool isPauseRequested();
 		bool isTerminateRequested();

@@ -18,10 +18,10 @@ namespace vm::api {
 		    .flat_map(mapOrWrongResponse<ProcStatus>);
 	}
 
-	cpp::result<void, ApiError> pause(PID pid) {
+	cpp::result<response::CodePosition, ApiError> pause(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Pause{}))
-		    .map(ignoreResponse);
+		    .flat_map(mapOrWrongResponse<response::CodePosition>);
 	}
 
 	cpp::result<void, ApiError> resume(PID pid) {
@@ -34,6 +34,12 @@ namespace vm::api {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Step{}))
 		    .map(ignoreResponse);
+	}
+
+	cpp::result<response::CodePosition, ApiError> waitForPaused(PID pid) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(pid, request::WaitForPaused{}))
+		    .flat_map(mapOrWrongResponse<response::CodePosition>);
 	}
 
 	cpp::result<ProcessInfo, ApiError> spawn() {

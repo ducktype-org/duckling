@@ -332,10 +332,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
-			thread.notifyProcess(api::WaitingForInput{});
+			thread.setProcessStatus(api::WaitingForInput{});
 			derefStack<i64>(local_stack, instr->arg0)
 				= thread.process.getIO().getInput<i64>(thread);
-			thread.notifyProcess(api::Running{});
+			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
 	}
@@ -424,6 +424,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{	
+			instr += 1;
 			save_execution_state(instr, local_stack, frame, thread);
 
 			thread.handleBreakpoint();
@@ -434,7 +435,7 @@ namespace vm {
 			instr       = frame->instr;
 			local_stack = frame->local_stack;
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(0);
 	}
 }
 

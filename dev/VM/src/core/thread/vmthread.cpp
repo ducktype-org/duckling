@@ -25,9 +25,8 @@ namespace vm {
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()) {
-		// @TODO: not loaded status
-		notifyProcess(api::NotStarted{});
+		  process_types(process.getTypeMetadata())
+		   {
 	}
 
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
@@ -201,12 +200,12 @@ namespace vm {
 	 */
 	void VMThread::handleExecutionPauseRequest(std::unique_lock<std::mutex>& lock) {
 		while (true) {
-			notifyProcess(vm::api::Paused{});
+			setProcessStatus(vm::api::Paused{}, true);
 			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
 
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
-				notifyProcess(vm::api::Running{});
+				setProcessStatus(vm::api::Running{}, true);
 				execution_request = ExecutionRequest::NoRequest;
 				return;
 			}
@@ -214,7 +213,7 @@ namespace vm {
 				throw KillProcessException{};
 			}
 			case ExecutionRequest::ExecuteOneStep: {
-				notifyProcess(vm::api::Running{});
+				setProcessStatus(vm::api::Running{}, true);
 				executeOneStep();
 				execution_request = ExecutionRequest::Pause;
 				break;
@@ -234,13 +233,12 @@ namespace vm {
 	void VMThread::run(Ref<const Code> code) {
 		// @TODO: ensure correct status
 
-		notifyProcess(api::Running{});
-
+		setProcessStatus(api::Running{}, true);
 		executing_code = code;
 		try {
 			internalCallMain(executing_code->functions[code->main_id]);
-			notifyProcess(api::Terminated{});
-		} catch (KillProcessException) { notifyProcess(api::Panicked{}); }
+			setProcessStatus(api::ExecutionCompleted{}, true);
+		} catch (KillProcessException) { setProcessStatus(api::Panicked{}, true); }
 	}
 
 	void VMThread::stop() {
@@ -298,9 +296,28 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::notifyProcess(vm::api::ExecStatus new_status) {
+	static inline void printStatus(api::ExecStatus exec_status) {
+		variant_match(exec_status) {
+			variant_case_novalue(api::Running) { std::cout << "Running"; }
+			variant_case_novalue(api::Paused) { std::cout << "Paused"; }
+			variant_case(api::PausedOnError, pausedOnError) {
+				std::cout << "PausedOnError: " << pausedOnError.reason;
+			}
+			variant_case_novalue(api::WaitingForInput) { std::cout << "WaitingForInput"; }
+			variant_case_novalue(api::NotStarted) { std::cout << "NotStarted"; }
+			variant_case_novalue(api::ExecutionCompleted) { std::cout << "Terminated"; }
+			variant_case(api::Panicked, panicked) {
+				std::cout << "Panicked: " << panicked.exception.what();
+			}
+		}
+		std::cout << std::endl;
+	}
+
+	void VMThread::setProcessStatus(const vm::api::ExecStatus &new_status, bool is_blocking) {
 		status = new_status;
-		process.onEvent(api::Executing{ std::move(new_status) });
+		std::cout << "new status: ";
+		printStatus(new_status);
+		process.setExecutionStatus( new_status, is_blocking);
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -326,7 +343,7 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				process.onEvent(api::ProcStatus{ api::Panicked{ e } });
+				setProcessStatus( api::Panicked{ e }, true );
 			}
 		});
 		return true;
