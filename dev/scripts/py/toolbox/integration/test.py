@@ -28,6 +28,7 @@ from ..helpers import (
     log_info,
     log_warning,
     make_singleline_command,
+    replace_special,
 )
 
 TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "RunCases"}
@@ -62,7 +63,8 @@ class Test:
         if self.compile:
             self.exec_command(self.compile, cwd=self.cwd)
         for i, run_case in enumerate(self.run_cases):
-            if test_path and run_case.name != test_path:
+            print(f"{test_path=}", run_case.name)
+            if not run_case.name.startswith(test_path):
                 continue
             log_info(f"Run [{i + 1}/{len(self)}] - {run_case.name}")
             try:
@@ -107,8 +109,13 @@ class Test:
                     else ""
                 )
             )
-            command = make_singleline_command(command, replace_newline_with="\\n")
+            command = replace_special(command)
+            command = make_singleline_command(command)
             log_bash(f'cd "{self.cwd.absolute()}" && {command}')
+            if self.post_run:
+                log_bash(
+                    f'cd "{self.cwd.absolute()}" && {replace_special(self.post_run)}'
+                )
 
         if dry:
             return ""

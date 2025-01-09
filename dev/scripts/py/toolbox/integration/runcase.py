@@ -32,7 +32,7 @@ class DataFromString(Data):
         self.string = string
 
     def get_command(self) -> str:
-        return f'echo -n "{self.string}"'
+        return f'echo -ne "{self.string}"'
 
     def __str__(self) -> str:
         return f'String: "{clamp_str(self.string)}"'

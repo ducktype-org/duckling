@@ -7,7 +7,7 @@ int main() {
 	std::cin >> n;
 
 	if (n >= 100'000) {
-		std::cerr << "Too large" << std::endl;
+		std::cerr << "Too large\n";
 		return 1;
 	}
 
