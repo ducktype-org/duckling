@@ -6,6 +6,8 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
 #include <filesystem/file.hpp>
@@ -38,11 +40,12 @@ public:
 		TESTER_ADD_TEST(testClassSymbolData);
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
-		TESTER_ADD_TEST(TestSimpleHOUT);
-		TESTER_ADD_TEST(TestHoutVisitor);
-		TESTER_ADD_TEST(TestHeliosResultConcept);
-		TESTER_ADD_TEST(TestHeliosResult);
+		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testHoutVisitor);
+		TESTER_ADD_TEST(testHeliosResultConcept);
+		TESTER_ADD_TEST(testHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testFunctionParameters);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -180,7 +183,7 @@ private:
 		// ASSERT_EQUAL(7, getValue("O4", root_scope));
 	}
 
-	void TestSimpleHOUT() {
+	void testSimpleHOUT() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
@@ -192,7 +195,7 @@ private:
 		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
 	}
 
-	void TestHoutVisitor() {
+	void testHoutVisitor() {
 		auto module = query::entryPoint<compiler::frontend::QueryModuleTree>(
 			fs::FilePath(path("test_modules/visitor_test_module"))
 		);
@@ -203,7 +206,7 @@ private:
 
 		auto the_function = hout.functions.at(0);
 
-		auto& stmt_list = the_function.body.body->statements;
+		auto& stmt_list = the_function.content.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 5);
 
 		using namespace compiler::helios::code;
@@ -353,7 +356,7 @@ private:
 		}
 	}
 
-	void TestHeliosResultConcept() {
+	void testHeliosResultConcept() {
 		using namespace compiler::helios::errors::impl;
 
 		static_assert(std::is_same_v<
@@ -408,7 +411,7 @@ private:
 						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
-	void TestHeliosResult() {
+	void testHeliosResult() {
 		using namespace compiler::helios::errors;
 
 		static_assert(std::is_same_v<HResult<int, int>::ErrorType, int>);
@@ -480,9 +483,9 @@ private:
 		ASSERT_EQUAL(function.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.body.body->statements.size(), 7);
+		ASSERT_EQUAL(function.content.body->statements.size(), 7);
 
-		auto& statements = function.body.body->statements;
+		auto& statements = function.content.body->statements;
 
 		auto get_var_ref = [&](usize i) -> decltype(auto) {
 			return dynamic_cast<const compiler::helios::code::VariableStmt&>(*statements.at(i));
@@ -534,6 +537,66 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+	}
+
+	void testFunctionParameters() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
+
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			ASSERT_EQUAL(hout.functions.size(), 2);
+			{
+				auto function = hout.functions.at(0);
+				ASSERT_EQUAL(function.original_name, "foo");
+
+				auto& a_param = function.content.parameters->at(0);
+				ASSERT_EQUAL("a", a_param.name);
+				ASSERT_EQUAL(int32_type, a_param.type.getType());
+				assertTrue(a_param.initial_value.empty(), "No initial value expected");
+
+				// get "a" thru return:
+				ASSERT_EQUAL(function.content.body->statements.size(), 1);
+
+				auto ret_stmt = function.content.body->statements.at(0).ref();
+				auto ret_stmt_casted
+					= dynamic_cast<const compiler::helios::code::ReturnStmt*>(&*ret_stmt);
+				assertTrue(ret_stmt_casted != nullptr, "Return statement expected");
+
+				auto ret_expr = ret_stmt_casted->value.ref();
+				auto ret_expr_casted
+					= dynamic_cast<const compiler::helios::code::IdentifierExpr*>(&*ret_expr);
+				assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
+
+				auto a_sym  = ret_expr_casted->symbol;
+				auto a_type = ret_expr_casted->type_desc;
+
+				ASSERT_EQUAL(int32_type, a_type.getType());
+				ASSERT_EQUAL(
+					int32_type, ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
+				);
+
+				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
+			}
+
+			{
+				auto function = hout.functions.at(1);
+				ASSERT_EQUAL(function.original_name, "bar");
+				auto& abc_param    = function.content.parameters->at(0);
+				auto& second_param = function.content.parameters->at(1);
+
+				ASSERT_EQUAL("abc", abc_param.name);
+				ASSERT_EQUAL("second", second_param.name);
+
+				ASSERT_EQUAL(int32_type, abc_param.type.getType());
+				ASSERT_EQUAL(int64_type, second_param.type.getType());
+
+				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
+				assertTrue(second_param.initial_value.empty(), "No initial value expected");
+			}
+		});
 	}
 
 	void scopeParentsAndDepthTests() {
