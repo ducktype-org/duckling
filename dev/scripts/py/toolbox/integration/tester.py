@@ -15,7 +15,6 @@ from .config import (
 
 from ..helpers import (
     BashCommandError,
-    bash_command,
     exit_with_error,
     get_input,
     log_bash,
