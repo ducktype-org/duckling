@@ -1,6 +1,31 @@
+/**
+ * @file opcodes_functions_implementation.hpp
+ * @brief The opcodes functions implementations.
+ *
+ * Motivation: each opcode that thread executes has its own function that is called to
+ * perform the opcode operation. They are called "OpFuns". At the end of each
+ * function, there is a call to `FUNCTION_CONT` macro that taill calls (in TC version)
+ * to the next instruction. But in debug mode, if we want to step only one instruction,
+ * we need OpFun that doesn't tail call to the next instruction.
+ *
+ * This file has **two versions**. One is for the OpFuns implementation and the other is
+ * for the debug version of the OpFuns (DebugOpFun), which is a copy of the OpFuns but
+ * with different `FUNCTION_CONT` and `ARGS`. This file **should not be included**.
+ * If you want to inclue the OpFuns, include `opcodes_functions.hpp` or
+ * `opcodes_functions_debug.hpp`.
+ *
+ * If `DEBUG_OPCODES` is defined, the debug version will be included, otherwise the regular
+ * version will be included. This way we also have C++ language server support while writing
+ * the code.
+ *
+ * @warning This file have to contain only the OpFuns. Any other functions will be declared
+ * and defined twice leading to multiple definition error. Utilities functions are defined in
+ * `opcodes_functions_utils.hpp`.
+ */
+
 #include "op_case.hpp"
 #include "vmthread.hpp"
-#include "opcodes_utils.hpp"
+#include "opcodes_functions_utils.hpp"
 #include <code_data/instruction.hpp>
 #include <core/process/vmprocess.hpp>
 

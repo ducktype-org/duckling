@@ -1,5 +1,7 @@
 #pragma once
 
+#include "blocking_queue.hpp"
+
 #include <api/data/core_operation_error.hpp>
 #include <api/data/response.hpp>
 #include <base/box.hpp>
@@ -21,9 +23,16 @@
  * For now only single threaded execution is suported
  */
 
-
 namespace vm {
-	enum class ExecutionRequest { Resume, Pause, ExecuteOneStep, Terminate, NoRequest };
+	enum class ExecutionRequest { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+	enum class ExecutionResponse {
+		Running,
+		Paused,
+		ExecutionStopped,
+		ExecutionCompleted,
+		ExecutionPanicked
+	};
+
 	struct Frame;
 
 	class VMProcess;
@@ -98,17 +107,32 @@ namespace vm {
 
 		// This might change:
 		std::condition_variable pause_cv;
+
 		/**
-		 * @brief Mutex that controls access to `is_running` and `execution_strategy`.
+		 * @brief Mutex responsible for setting the execution_request and execution_request_break
+		 * flags.
 		 *
-		 * When the supervisor thread (external api) wants to change the execution strategy, it has
-		 * to lock this mutex. The Execution Thread running in a loop will first check the
-		 * `execution_status_changed` flag, and if it is ture, it will wait on `pause_cv` until
-		 * it is notified by the supervisor thread.
+		 * This flags are used to signal the requests from the VMProcess to the VMThread to perform
+		 * an action like pause, resume, stop.
+		 *
+		 * As an optimization, when the VMThread is running and VMProcess want to break its
+		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
+		 * true, so the running VMThread can only check this flag first and not aquire the mutex.
 		 */
 		std::mutex        execution_request_mutex;
 		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
 		std::atomic<bool> execution_request_break = false;
+
+		BlockingQueue<ExecutionResponse> execution_response_queue;
+
+		bool getPausedResponse();
+
+		bool getStoppedResponse();
+
+		bool getRunningResponse();
+
+		void respondExecutionRequest(ExecutionResponse response);
+
 
 		void executeOneStep();
 
@@ -136,7 +160,7 @@ namespace vm {
 		 */
 		u64 internalCallMain(const FuncData&);
 
-		void setProcessStatus(const vm::api::ExecStatus& status, bool is_blocking = false);
+		void setProcessStatus(const vm::api::ExecStatus& status);
 
 	public:
 		VMThread(VMProcess& process);
@@ -179,7 +203,7 @@ namespace vm {
 		 * @brief Force kill the execution of a thread.
 		 * Called from the process.
 		 */
-		void stop();
+		bool stop();
 
 		bool initThread(Ref<const vm::Code> code);
 

@@ -21,19 +21,18 @@ namespace vm {
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
 	api::ProcStatus VMProcess::getStatus() {
-		if (std::holds_alternative<api::Executing>(status))
-			return api::Executing{ exec_status_queue.getStatus() };
+		std::shared_lock lock(rw_status);
 		return status;
 	}
 
 	cpp::result<api::Response, api::LoadProgramError>
 		VMProcess::loadProgram(const fs::FilePath& path) {
-		std::unique_lock lock(rwGlobal);
+		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
 		auto code_result = preprocessor.getCode(path);
 
 		if (code_result.has_value()) {
-			loadedCode = base::Optional(code_result.value());
+			loaded_code = base::Optional(code_result.value());
 			return api::Response(api::response::Empty());
 		} else {
 			return cpp::failure(api::LoadProgramError{ code_result.error() });
@@ -41,16 +40,12 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::run() {
-		std::unique_lock lock(rwGlobal);
-		if (!loadedCode.has_value())
+		std::unique_lock lock(rw_global);
+		if (!loaded_code.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
-		exec_status_queue.clear();
-		getMainVMThread().initThread(Ref(&*loadedCode));
-		auto status = getThreadStatusResponse();
-
-		if (!std::holds_alternative<api::Running>(status))
-			return cpp::failure(api::CoreOperationError{ api::RunError{} });
+		bool response = getMainVMThread().initThread(Ref(&*loaded_code));
+		if (!response) return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
 	}
@@ -84,15 +79,12 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
-		getMainVMThread().stop();
-		auto status = getThreadStatusResponse();
-
+		auto response = getMainVMThread().stop();
 		(void) join();
 		getMainVMThread().exec_thread.reset();
 
 		// @TODO: make two different "stop" functions, one that throws error if program panicked
-		if (!std::holds_alternative<api::ExecutionCompleted>(status)
-		    && !std::holds_alternative<api::Panicked>(status))
+		if (!response)
 			return cpp::failure(api::CoreOperationError{
 				api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
@@ -104,31 +96,19 @@ namespace vm {
 			variant_case_novalue(api::request::Run) { return run(); }
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
-				getMainVMThread().pause();
-				auto thread_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Paused>(thread_status))
-					return cpp::failure(api::CoreOperationError{ api::PauseError{} });
+				auto response = getMainVMThread().pause();
+				if (!response) return cpp::failure(api::CoreOperationError{ api::PauseError{} });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
-				getMainVMThread().resume();
-				auto thread_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Running>(thread_status))
-					return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
+				auto response = getMainVMThread().resume();
+				if (!response) return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
-				getMainVMThread().step();
-				auto thread_running_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Running>(thread_running_status))
-					return cpp::failure(api::CoreOperationError{
-						api::OtherError{ "unexpected status" } });
-
-				auto thread_paused_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Paused>(thread_paused_status))
-					return cpp::failure(api::CoreOperationError{
-						api::OtherError{ "unexpected status" } });
-
+				auto response = getMainVMThread().step();
+				if (!response)
+					return cpp::failure(api::CoreOperationError{ api::OtherError{ "step error" } });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
@@ -141,11 +121,26 @@ namespace vm {
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::WaitForPaused) {
-				auto thread_status = getThreadStatusResponse();
-				if (!std::holds_alternative<api::Paused>(thread_status)) {
+				std::shared_lock lock(rw_status);
+				status_cv.wait(lock, [&] {
+					if (!std::holds_alternative<api::Executing>(status)) return false;
+					auto exec_status = std::get<api::Executing>(status).exec_status;
+					return std::holds_alternative<api::Paused>(exec_status)
+					    || std::holds_alternative<api::PausedOnError>(exec_status)
+					    || std::holds_alternative<api::ExecutionStopped>(exec_status)
+					    || std::holds_alternative<api::ExecutionPanicked>(exec_status)
+					    || std::holds_alternative<api::ExecutionCompleted>(exec_status);
+				});
+
+				if (!std::holds_alternative<api::Executing>(status))
 					return cpp::failure(api::CoreOperationError{
-						api::OtherError{ "unexpected status" } });
-				}
+						api::OtherError{ "unexpected status response" } });
+
+				auto exec_status = std::get<api::Executing>(status).exec_status;
+				if (!std::holds_alternative<api::Paused>(exec_status))
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status response" } });
+
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_default { return api::Response(api::response::Empty()); }
@@ -246,6 +241,4 @@ namespace vm {
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
 	}
-
-	api::ExecStatus VMProcess::getThreadStatusResponse() { return exec_status_queue.pop(); }
 }

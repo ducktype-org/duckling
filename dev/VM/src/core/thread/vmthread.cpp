@@ -17,8 +17,8 @@
 #include <base/variant.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
-#include "opcodes.hpp"
-#include "opcodes_debug.hpp"
+#include "opcodes_functions.hpp"
+#include "opcodes_functions_debug.hpp"
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -27,6 +27,9 @@ namespace vm {
 		  process_memory(process.getMemory()),
 		  process_types(process.getTypeMetadata()) {}
 
+	/**
+	 * @brief Taill call written function that handles the execution pause request.
+	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
 			save_execution_state(instr, local_stack, frame, thread);
@@ -42,6 +45,13 @@ namespace vm {
 		OPFUN_CONT(1);
 	}
 
+	/**
+	 * @brief Saves all current execution state in thread memory.
+	 *
+	 * The opcodes functions in taill call mode passes some state values in the registers
+	 * (in the function arguments). This functions saves them from the registers to the
+	 * current frame.
+	 */
 	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
 		{
 			// Save current registers and flow.
@@ -51,6 +61,9 @@ namespace vm {
 		}
 	}
 
+	/**
+	 * @brief Main debug function that executes one step of the program.
+	 */
 	void VMThread::executeOneStep() {
 		Frame*     frame       = runtime_data.frame_stack_current;
 		std::byte* local_stack = frame->local_stack;
@@ -62,13 +75,14 @@ namespace vm {
 		auto opcode = static_cast<u16>(instr->opcode);
 #endif
 
-		// Execute the instruction
+		// Execute the instruction by calling  the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
 
 		runtime_data.frame_stack_current = frame;
 		frame->local_stack               = local_stack;
 		frame->instr                     = instr;
 	}
+
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -183,11 +197,12 @@ namespace vm {
 		std::unique_lock lock(execution_request_mutex);
 		switch (execution_request) {
 		case ExecutionRequest::Pause:
+			respondExecutionRequest(ExecutionResponse::Paused);
 			handleExecutionPauseRequest(lock);
 			execution_request_break = false;
 			break;
 
-		case ExecutionRequest::Terminate:
+		case ExecutionRequest::Stop:
 			throw KillProcessException{};
 
 		default:
@@ -196,30 +211,32 @@ namespace vm {
 	}
 
 	/**
-	 * @brief Main function of the VMThread "debug" mode, where the step by step execution takes
+	 * @brief Main function of the VMThread "debug" mode, where the step by step execution can take
 	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
-	 * next command. Mutex is held when the VM is executing the code.
+	 * next command. Mutex "execution_request_mutex" is held when the VM is executing the code.
 	 *
 	 * @param lock
 	 */
 	void VMThread::handleExecutionPauseRequest(std::unique_lock<std::mutex>& lock) {
 		while (true) {
-			setProcessStatus(vm::api::Paused{}, true);
 			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
 
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
-				setProcessStatus(vm::api::Running{}, true);
 				execution_request = ExecutionRequest::NoRequest;
+				respondExecutionRequest(ExecutionResponse::Running);
 				return;
 			}
-			case ExecutionRequest::Terminate: {
+			case ExecutionRequest::Stop: {
 				throw KillProcessException{};
 			}
 			case ExecutionRequest::ExecuteOneStep: {
-				setProcessStatus(vm::api::Running{}, true);
+				respondExecutionRequest(ExecutionResponse::Running);
+
 				executeOneStep();
+
 				execution_request = ExecutionRequest::Pause;
+				respondExecutionRequest(ExecutionResponse::Paused);
 				break;
 			}
 			default:
@@ -230,6 +247,7 @@ namespace vm {
 
 	void VMThread::handleBreakpoint() {
 		std::unique_lock lock(execution_request_mutex);
+		setProcessStatus(api::Paused{});
 		execution_request = ExecutionRequest::Pause;
 		this->handleExecutionPauseRequest(lock);
 	}
@@ -237,44 +255,61 @@ namespace vm {
 	void VMThread::run(Ref<const Code> code) {
 		// @TODO: ensure correct status
 
-		setProcessStatus(api::Running{}, true);
+		respondExecutionRequest(ExecutionResponse::Running);
 		executing_code = code;
 		try {
 			internalCallMain(executing_code->functions[code->main_id]);
-			setProcessStatus(api::ExecutionCompleted{}, true);
-		} catch (KillProcessException) { setProcessStatus(api::Panicked{}, true); }
+			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
+		} catch (KillProcessException) {
+			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
+		}
 	}
 
-	void VMThread::stop() {
-		std::unique_lock lock(execution_request_mutex);
+	bool VMThread::stop() {
+		{
+			std::unique_lock lock(execution_request_mutex);
 
-		execution_request       = ExecutionRequest::Terminate;
-		execution_request_break = true;
+			execution_request       = ExecutionRequest::Stop;
+			execution_request_break = true;
+		}
 		pause_cv.notify_all();
+
+		return getStoppedResponse();
 	}
 
 	bool VMThread::resume() {
-		std::unique_lock lock(execution_request_mutex);
+		{
+			std::unique_lock lock(execution_request_mutex);
 
-		execution_request = ExecutionRequest::Resume;
+			execution_request = ExecutionRequest::Resume;
+		}
 		pause_cv.notify_all();
-		return true;
+
+		return getRunningResponse();
 	}
 
 	bool VMThread::pause() {
-		std::unique_lock lock(execution_request_mutex);
+		{
+			std::unique_lock lock(execution_request_mutex);
 
-		execution_request       = ExecutionRequest::Pause;
-		execution_request_break = true;
-		return true;
+			execution_request       = ExecutionRequest::Pause;
+			execution_request_break = true;
+		}
+
+		return getPausedResponse();
 	}
 
 	bool VMThread::step() {
-		std::unique_lock lock(execution_request_mutex);
+		{
+			std::unique_lock lock(execution_request_mutex);
 
-		execution_request = ExecutionRequest::ExecuteOneStep;
-		pause_cv.notify_all();
-		return true;
+			execution_request = ExecutionRequest::ExecuteOneStep;
+			pause_cv.notify_all();
+		}
+		if (getRunningResponse()) {
+			if (getPausedResponse()) return true;
+		}
+		return false;
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
@@ -300,9 +335,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status, bool is_blocking) {
+	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status) {
 		status = new_status;
-		process.setExecutionStatus(new_status, is_blocking);
+		process.onEvent(api::Executing{ new_status });
 	}
 
 	bool VMThread::isPauseRequested() {
@@ -312,7 +347,7 @@ namespace vm {
 
 	bool VMThread::isTerminateRequested() {
 		std::unique_lock lock(execution_request_mutex);
-		return execution_request == ExecutionRequest::Terminate;
+		return execution_request == ExecutionRequest::Stop;
 	}
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
@@ -328,9 +363,47 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				setProcessStatus(api::Panicked{ e }, true);
+				respondExecutionRequest(ExecutionResponse::ExecutionPanicked);
 			}
 		});
-		return true;
+		return getRunningResponse();
+	}
+
+	void VMThread::respondExecutionRequest(ExecutionResponse response) {
+		switch (response) {
+		case ExecutionResponse::Running:
+			setProcessStatus(api::Running{});
+			break;
+		case ExecutionResponse::Paused:
+			setProcessStatus(api::Paused{});
+			break;
+		case ExecutionResponse::ExecutionStopped:
+			setProcessStatus(api::ExecutionStopped{});
+			break;
+		case ExecutionResponse::ExecutionCompleted:
+			setProcessStatus(api::ExecutionCompleted{});
+			break;
+		case ExecutionResponse::ExecutionPanicked:
+			setProcessStatus(api::ExecutionPanicked{});
+			break;
+		default:
+			CORE_PANIC("unexpected execution response");
+		}
+		execution_response_queue.push(response);
+	}
+
+	bool VMThread::getStoppedResponse() {
+		auto response = execution_response_queue.pop();
+		return ExecutionResponse::ExecutionStopped == response
+		    || ExecutionResponse::ExecutionCompleted == response
+		    || ExecutionResponse::ExecutionPanicked == response;
+	}
+
+	bool VMThread::getPausedResponse() {
+		return execution_response_queue.pop() == ExecutionResponse::Paused;
+	}
+
+	bool VMThread::getRunningResponse() {
+		return execution_response_queue.pop() == ExecutionResponse::Running;
 	}
 }  // namespace vm

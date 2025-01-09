@@ -10,9 +10,9 @@ namespace vm::api {
 
 	struct TypeAnalysis {};
 
-	struct Panicked {
+	struct ExecutionPanicked {
 		std::exception exception;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, exception);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, exception);
 	};
 
 	struct Paused {};
@@ -30,6 +30,8 @@ namespace vm::api {
 
 	struct ExecutionCompleted {};
 
+	struct ExecutionStopped {};
+
 	using ExecStatus = std::variant<
 		Running,
 		Paused,
@@ -37,7 +39,8 @@ namespace vm::api {
 		WaitingForInput,
 		NotStarted,
 		ExecutionCompleted,
-		Panicked>;
+		ExecutionStopped,
+		ExecutionPanicked>;
 
 	struct Executing {
 		ExecStatus exec_status;
@@ -57,6 +60,7 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "Terminated")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

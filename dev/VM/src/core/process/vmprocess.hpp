@@ -2,6 +2,7 @@
 
 #include <api/data/status.hpp>
 #include <deque>
+#include <mutex>
 #include <services/profiler/profiler.hpp>
 #include <services/service_manager.hpp>
 #include <services/reference_counter/reference_counter.hpp>
@@ -18,7 +19,6 @@
 #include <core/thread/vmthread.hpp>
 #include <api/data/request.hpp>
 #include <preprocessor/preprocessor.hpp>
-#include "status_queue.hpp"
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -41,15 +41,16 @@ namespace vm {
 	 */
 	class VMProcess final: public Listener<api::ProcStatus> {
 	private:
-		std::shared_mutex rwGlobal;
+		std::shared_mutex rw_global;
 
-		api::ProcStatus      status;
-		ExecutionStatusQueue exec_status_queue;
+		api::ProcStatus             status;
+		std::shared_mutex           rw_status;
+		std::condition_variable_any status_cv;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::Code> loadedCode = {};
+		base::Optional<vm::Code> loaded_code = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
@@ -148,16 +149,13 @@ namespace vm {
 
 		VMThread& getMainVMThread();
 
-		api::ExecStatus getThreadStatusResponse();
-
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept override { status = event; }
-
-		void setExecutionStatus(const api::ExecStatus& status, bool is_blocking = false) {
-			if (is_blocking)
-				exec_status_queue.push(status);
-			else
-				exec_status_queue.setStatus(status);
+		void onEvent(const api::ProcStatus& event) noexcept override {
+			{
+				std::unique_lock<std::shared_mutex> lock(rw_status);
+				status = event;
+			}
+			status_cv.notify_all();
 		}
 
 		Memory& getMemory();
