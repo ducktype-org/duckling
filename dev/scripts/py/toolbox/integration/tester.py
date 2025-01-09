@@ -4,8 +4,8 @@ from .test_loader import Test, TestSet, load_subtest
 
 from .utils import (
     exec_command,
-    log_failure,
-    log_success,
+    print_failure,
+    print_success,
     write_log,
 )
 
@@ -16,7 +16,6 @@ from .config import (
 from ..helpers import (
     BashCommandError,
     bash_command,
-    clamp_str,
     exit_with_error,
     get_input,
     log_bash,
@@ -26,7 +25,7 @@ from ..helpers import (
     replace_special,
 )
 
-DEFAULT_LOG_FILE_PATH = "/tmp/toolbox-tester.log"
+DEFAULT_LOG_FILE_PATH = Path("/tmp/toolbox-tester.log")
 
 
 def run_test(
@@ -46,20 +45,21 @@ def run_test(
         log_info(f"Run [{i + 1}/{len(test)}] - {run_case.name}")
         try:
             if err := test_case(test, run_case, dry, verbose, log_file):
-                log_failure(
+                print_failure(
                     f"Case `{test.name}/{run_case.name}` has failed because: {err}"
                 )
                 success = False
             else:
                 if not dry:
-                    log_success(f"Case `{test.name}/{run_case.name}` passed")
+                    print_success(f"Case `{test.name}/{run_case.name}` passed")
         except BashCommandError as e:
-            reason = "".join(e.args)
             if e.exit_code == 124:
-                reason = f"\n\tProgram has timed out after {run_case.timeout} second(s)"
-            log_failure(
-                f"Case `{test.name}/{run_case.name}` has failed because: {reason}"
-            )
+                print_failure(
+                    f"Case `{test.name}/{run_case.name}` has timed out after {run_case.timeout} second(s)."
+                )
+            else:
+                print_failure(f"Case `{test.name}/{run_case.name}` has failed.")
+            write_log(f"{test.name}/{run_case.name} has failed:\n{''.join(e.args)}\n")
             success = False
             if fail_fast:
                 break
@@ -72,7 +72,6 @@ def log_test_out_differs(test, run_case, message, got, expected, log_file):
             f"{test.name}/{run_case.name}: {message}\n"
             f"[GOT]:\n{got.decode('UTF-8')}\n"
             f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
-            f"{'-' * 50}\n"
         ),
         log_file,
     )
@@ -130,7 +129,7 @@ def test_case(
                 test_expected_output,
                 log_file,
             )
-            return f"Stdouts do not match. See {log_file.absolute()} for more info. "
+            return f"Stdouts do not match."
 
     # compare test and expected err
     if run_case.expected_err:
@@ -146,7 +145,7 @@ def test_case(
                 test_expected_err,
                 log_file,
             )
-            return f"Stderrs do not match. See {log_file.absolute()} for more info."
+            return f"Stderrs do not match."
 
     # post run
     if test.post_run:
@@ -212,7 +211,6 @@ def integration_tests(clean, dry, test_path, fail_fast, verbose, log_file):
                 exit_with_error("Exiting...")
         log_file.unlink()
         log_file = Path(log_file)
-    bash_command("")
 
     config = load_config("tests")
     test_set = load_subtest(config)
@@ -225,7 +223,8 @@ def integration_tests(clean, dry, test_path, fail_fast, verbose, log_file):
         num_failed = len(failed_tests)
         failed_tests = map(lambda x: " - " + x, failed_tests)
         exit_with_error(
-            f"{'(Fail fast) ' if fail_fast else ''}{num_failed}/{ran_tests} tests failed:\n{'\n'.join(failed_tests)}"
+            f"{'(Fail fast) ' if fail_fast else ''}{num_failed}/{ran_tests} tests failed:\n{'\n'.join(failed_tests)}\n"
+            + f"Please see log file '{log_file.absolute()}' for more info."
         )
     elif not clean and not dry:
-        log_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")
+        print_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")

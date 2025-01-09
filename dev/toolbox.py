@@ -7,7 +7,10 @@ import shutil
 
 import click
 
-from scripts.py.toolbox.integration.tester import DEFAULT_LOG_FILE_PATH, integration_tests
+from scripts.py.toolbox.integration.tester import (
+    DEFAULT_LOG_FILE_PATH,
+    integration_tests,
+)
 from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
@@ -548,7 +551,7 @@ def duck_linter(*args, **kwargs):
     "-l",
     "--log-file",
     type=str,
-    default=DEFAULT_LOG_FILE_PATH,
+    default=str(DEFAULT_LOG_FILE_PATH),
     help="Path to a log file",
 )
 def itest(*args, **kwargs):
@@ -562,6 +565,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    sys.tracebacklimit = 0
+    # sys.tracebacklimit = 0
 
     cli()

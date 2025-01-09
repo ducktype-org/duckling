@@ -65,11 +65,11 @@ class ExpressionFillError(Exception):
         self.expr = expr
 
 
-def log_success(msg, file=sys.stdout):
+def print_success(msg, file=sys.stdout):
     click_log("GOOD", msg, fg="green", file=file)
 
 
-def log_failure(msg, file=sys.stdout):
+def print_failure(msg, file=sys.stdout):
     click_log("FAIL", msg, fg="red", file=file)
 
 
@@ -107,6 +107,7 @@ def exec_command(
 
     return stdout, stderr
 
+
 def write_log(msg, log_file):
-    with open(log_file, 'a') as f:
-        print(msg, file=f)
+    with open(log_file, "a") as f:
+        print(">>>" + msg + f"{'-' * 50}", file=f)
