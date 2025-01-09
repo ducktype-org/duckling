@@ -17,3 +17,15 @@ Tests:
         RunArgs: '"Hello, world!"'
         Output:
           string: "Hello, world!\n"
+  test-timeout:
+    Run: "sleep"
+    TimeOut: 1
+    ExitCode: 124  # 124 means "timed out"
+    RunCases:
+      hello0.5:
+        RunArgs: "0.5"
+        ExitCode: 0
+      hello1:
+        RunArgs: "1"
+      hello5:
+        RunArgs: "5"

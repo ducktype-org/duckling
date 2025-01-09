@@ -127,8 +127,8 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
         )
 
 
-def make_singleline_command(command: str) -> str:
-    pretty_command = command.replace("\n", " ")
+def make_singleline_command(command: str, replace_newline_with=" ") -> str:
+    pretty_command = command.replace("\n", replace_newline_with)
     while "  " in pretty_command:
         pretty_command = pretty_command.replace("  ", " ")
     return pretty_command.lstrip().rstrip()

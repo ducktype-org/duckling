@@ -60,7 +60,7 @@ class Test:
     ) -> bool:
         success = True
         if self.compile:
-            self.exec_command(self.compile, cwd=self.cwd, dry=dry)
+            self.exec_command(self.compile, cwd=self.cwd)
         for i, run_case in enumerate(self.run_cases):
             if test_path and run_case.name != test_path:
                 continue
@@ -75,40 +75,63 @@ class Test:
                     if not dry:
                         log_success(f"Case `{self.name}/{run_case.name}` passed")
             except BashCommandError as e:
+                reason = "".join(e.args)
+                if e.exit_code == 124:
+                    reason = (
+                        f"\n\tProgram has timed out after {run_case.timeout} second(s)"
+                    )
                 log_failure(
-                    f"Case `{self.name}/{run_case.name}` has failed because: {''.join(e.args)}"
+                    f"Case `{self.name}/{run_case.name}` has failed because: {reason}"
                 )
                 success = False
                 if fail_fast:
                     break
         return success
 
-    def test_case(self, run_case, dry: bool, verbose: bool) -> bool:
-        if verbose:
-            var = f"{run_case.input.get_command() + ' | ' if run_case.input else ''} {self.run} {run_case.run_args}"
-            var = make_singleline_command(var)
-            log_bash(f'cd "{self.cwd.absolute()}" && "{var}"')
+    def test_case(self, run_case: RunCase, dry: bool, verbose: bool) -> bool:
+        if verbose or dry:
+            # This command is supposed to replicate the behavior of running a test case,
+            # but this command is not executed directly to have more control over
+            # what fails and what does not.
+            command = (
+                f"{run_case.input.get_command() + ' | ' if run_case.input else ''}"
+                f"timeout {run_case.timeout}s {self.run} {run_case.run_args}"
+                + (
+                    f" > >(diff <({run_case.expected_output.get_command()}) -)"
+                    if run_case.expected_output
+                    else ""
+                )
+                + (
+                    f" 2> >(diff <({run_case.expected_err.get_command()}) -)"
+                    if run_case.expected_err
+                    else ""
+                )
+            )
+            command = make_singleline_command(command, replace_newline_with="\\n")
+            log_bash(f'cd "{self.cwd.absolute()}" && {command}')
+
+        if dry:
+            return ""
 
         # get input
         test_input = bytes()
         if run_case.input:
             test_input, _ = self.exec_command(
-                run_case.input.get_command(), cwd=self.cwd, dry=dry
+                run_case.input.get_command(), cwd=self.cwd
             )
 
         # run test
         test_output, test_err = self.exec_command(
-            f"{self.run} {run_case.run_args}",
+            f"timeout {run_case.timeout}s {self.run} {run_case.run_args}",
             cwd=self.cwd,
             input=test_input,
             exitcode=run_case.expected_exitcode,
-            dry=dry,
         )
 
         # compare test and expected output
         if run_case.expected_output:
             test_expected_output, _ = self.exec_command(
-                run_case.expected_output.get_command(), cwd=self.cwd, dry=dry
+                run_case.expected_output.get_command(), cwd=self.cwd
             )
             if test_output != test_expected_output:
                 return "Stdouts do not match"
@@ -121,7 +144,7 @@ class Test:
         # compare test and expected err
         if run_case.expected_err:
             test_expected_err, _ = self.exec_command(
-                run_case.expected_err.get_command(), cwd=self.cwd, dry=dry
+                run_case.expected_err.get_command(), cwd=self.cwd
             )
             if test_err != test_expected_err:
                 return "Stderrs do not match"
@@ -135,7 +158,7 @@ class Test:
         # post run
         if self.post_run:
             self.exec_command(
-                self.post_run, self.cwd, redirect=False, input=test_output, dry=dry
+                self.post_run, self.cwd, redirect=False, input=test_output
             )
 
         return ""
@@ -151,7 +174,7 @@ class Test:
     ):
         if dry:
             cmd = cmd.replace("\n", "\\n")
-            log_info(f"[DRY RUN]: cd '{cwd}' && '{cmd}'")
+            log_bash(f'cd "{cwd.absolute()}" && {cmd}')
             return bytes(), bytes()
         else:
             proc = sp.Popen(

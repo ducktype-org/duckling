@@ -528,7 +528,7 @@ def duck_linter(*args, **kwargs):
     "--test-path",
     type=str,
     default="",
-    help="Runs a particular test, i.e `tests/C++` or `tests/C++/RunCase1`",
+    help="Runs particular test(s), i.e `tests/C++` or `tests/C++/RunCase1`. Given string has to be a prefix of a test path, or it the path has to be it's prefix.",
 )
 @click.option(
     "-f",
@@ -547,8 +547,6 @@ def duck_linter(*args, **kwargs):
 def itest(*args, **kwargs):
     """Runs integration tests"""
     # TODO:
-    # * "--test"
-    # * "--timeout"
     # * Better handling of errors (like logging to a file)
     # * improve readability of messages
     integration_tests(*args, **kwargs)
@@ -560,6 +558,6 @@ if __name__ == "__main__":
 
     # Disable traceback for shorter error messages.
     # Comment this line when debugging.
-    # sys.tracebacklimit = 0
+    sys.tracebacklimit = 0
 
     cli()
