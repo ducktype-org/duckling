@@ -22,7 +22,7 @@ Tests:
         Input:
           string: "5"
         Output:
-          string: "0 1 1 2 3 "
+          string: "0 1 1 2 4 "
       simple-from-file:
         Input:
           file: input_for_fib

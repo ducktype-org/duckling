@@ -7,7 +7,7 @@ import shutil
 
 import click
 
-from scripts.py.toolbox.integration.test import integration_tests
+from scripts.py.toolbox.integration.tester import DEFAULT_LOG_FILE_PATH, integration_tests
 from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
@@ -544,11 +544,15 @@ def duck_linter(*args, **kwargs):
     default=False,
     help="Prints some debug information about run cases",
 )
+@click.option(
+    "-l",
+    "--log-file",
+    type=str,
+    default=DEFAULT_LOG_FILE_PATH,
+    help="Path to a log file",
+)
 def itest(*args, **kwargs):
     """Runs integration tests"""
-    # TODO:
-    # * Better handling of errors (like logging to a file)
-    # * improve readability of messages
     integration_tests(*args, **kwargs)
 
 

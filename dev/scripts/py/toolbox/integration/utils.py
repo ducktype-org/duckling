@@ -1,6 +1,13 @@
-
+from pathlib import Path
 import sys
-from ..helpers import click_log, exit_with_error
+from ..helpers import (
+    BashCommandError,
+    click_log,
+    exit_with_error,
+    log_bash,
+    replace_special,
+)
+import subprocess as sp
 
 
 def make_test_name(name: str) -> str:
@@ -61,5 +68,45 @@ class ExpressionFillError(Exception):
 def log_success(msg, file=sys.stdout):
     click_log("GOOD", msg, fg="green", file=file)
 
+
 def log_failure(msg, file=sys.stdout):
     click_log("FAIL", msg, fg="red", file=file)
+
+
+def exec_command(
+    cmd,
+    cwd: Path,
+    redirect=True,
+    input: bytes | None = None,
+    exitcode=0,
+    dry: bool = False,
+    verbose: bool = False,
+):
+    if dry or verbose:
+        cmd = replace_special(cmd)
+        log_bash(f'cd "{cwd.absolute()}" && {cmd}')
+        if dry:
+            return bytes(), bytes()
+
+    proc = sp.Popen(
+        ["/bin/bash", "-c", cmd],
+        cwd=cwd,
+        stdin=sp.PIPE if input else None,
+        stdout=sp.PIPE if redirect else None,
+        stderr=sp.PIPE if redirect else None,
+    )
+    stdout, stderr = proc.communicate(input=input)
+
+    status = proc.wait()
+    if status != exitcode:
+        if stdout is not None:
+            stdout = stdout.decode("UTF-8")
+        if stderr is not None:
+            stderr = stderr.decode("UTF-8")
+        raise BashCommandError(cmd, status, stdout, stderr, at=cwd)
+
+    return stdout, stderr
+
+def write_log(msg, log_file):
+    with open(log_file, 'a') as f:
+        print(msg, file=f)

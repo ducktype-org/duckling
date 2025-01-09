@@ -1,1 +1,1 @@
-__all__ = ['config', 'runcase', 'test']
+__all__ = ['config', 'runcase', 'test_loader', 'tester', 'utils']
