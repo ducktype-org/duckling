@@ -68,5 +68,5 @@ jobs:
         run: |
          git fetch origin main
          cd dev
-         python3 toolbox.py duck-linter --branch origin/main --no-merge-base
+         python3 toolbox.py duck-linter --branch origin/main --no-merge-base --verbose
         shell: bash

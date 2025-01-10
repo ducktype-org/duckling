@@ -303,6 +303,14 @@ struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
+
+		// @todo modify it, when making proper helios errors
+		if (pst.getLogger().messageCount() != 0) {
+			std::cerr << "PARSING ERRORS: \n";
+			pst.getLogger().dumpLog(true, std::cerr);
+			std::cerr << "\n\n";
+		}
+
 		return &pst;
 	}
 

@@ -491,5 +491,9 @@ namespace dia {
 		std::string toStringBrief() const override {
 			return message;
 		}
+
+		static auto make(const SourcePosition& source_position, std::string message) {
+			return base::make_unique<PlaceholderMessage>(source_position, std::move(message));
+		}
 	};
 }

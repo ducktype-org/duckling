@@ -117,6 +117,8 @@ namespace base {
 		Optional()  = default;
 		~Optional() = default;
 
+		Optional(std::nullopt_t) noexcept {}
+
 		Optional(const T& value): private_optional(value) {}
 
 		Optional(Optional&&) noexcept            = default;
