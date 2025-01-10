@@ -17,6 +17,7 @@ env:
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
+  CXX_COMPILER: g++-14
 
 jobs:
   build:
@@ -103,7 +104,7 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
-              -D CMAKE_CXX_COMPILER=g++-14 \
+              -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \
