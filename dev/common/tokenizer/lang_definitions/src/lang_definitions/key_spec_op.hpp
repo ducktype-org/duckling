@@ -81,7 +81,7 @@ namespace lang_def {
 		// @IDEA: change i -> s
 
 		// NOLINTBEGIN
-		// no list, since those keywords do not much
+		// no lint, since those keywords do not follow
 		// identifier naming rules.
 
 		i8,
