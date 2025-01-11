@@ -306,6 +306,9 @@ namespace compiler::helios::code {
 				case pst::Keyword::f80:
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
 					break;
+				case pst::Keyword::f128:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+					break;
 				case pst::Keyword::f64:
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
 					break;

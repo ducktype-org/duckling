@@ -560,6 +560,7 @@ private:
 		auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
 
 		auto f80_type = query::entryPoint<tsh::QueryFloatType>(80);
+		auto f128_type = query::entryPoint<tsh::QueryFloatType>(128);
 
 		auto char_type = query::entryPoint<tsh::QueryCharType>({});
 
@@ -594,6 +595,7 @@ private:
 		ASSERT_EQUAL(f32_type, getTypeOf("v_f32", foo_body_scope));
 		ASSERT_EQUAL(f64_type, getTypeOf("v_f64", foo_body_scope));
 		ASSERT_EQUAL(f80_type, getTypeOf("v_f80", foo_body_scope));
+		ASSERT_EQUAL(f128_type, getTypeOf("v_f128", foo_body_scope));
 
 		ASSERT_EQUAL(char_type, getTypeOf("v_char", foo_body_scope));
 
