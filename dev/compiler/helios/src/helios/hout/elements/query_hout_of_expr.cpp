@@ -47,8 +47,10 @@ namespace compiler::helios::code {
 
 		/**
 		 * @brief Tries to extract a resulting symbol from hout expression.
+		 * @note Logic like this might be useful one day for "go-to-definition" on expressions,
+		 * but it might get removed from hout creation in the future.
 		 */
-		struct HoutResultingSymbolListVisitor: public HoutExprVisitor {
+		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
 			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -59,20 +61,13 @@ namespace compiler::helios::code {
 			base::Optional<SymbolList> symbols;
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				// ctx.query<tsh::internal::QueryInterfaceOfClass>()
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after binary operators");
 			}
 
 			void visitIdentifierExpr(const IdentifierExpr& val) override {
 				symbols = SymbolList{ val.symbol };
-			}
-
-			void visitKeywordExpr(const KeywordExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from Keywords");
-			}
-
-			void visitLiteralValueExpr(const LiteralValueExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
 
 			void visitParenthesisExpr(const ParenthesisExpr& val) override {
@@ -81,15 +76,9 @@ namespace compiler::helios::code {
 				symbols = vis.symbols;
 			}
 
-			void visitTupleTypeConstructorExpr(const TupleTypeConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
-			void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
 			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
 			}
 
@@ -98,7 +87,7 @@ namespace compiler::helios::code {
 			}
 		};
 
-		struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
+		struct PstExprToHoutExprVisitor final: public pst::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -110,7 +99,7 @@ namespace compiler::helios::code {
 
 			void visitExprValue(const pst::expr::ExprValue& stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralValueExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
@@ -226,7 +215,102 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-				node = makeBox<KeywordExpr>(ctx, scope, stmt.getKeyword());
+				switch (stmt.getKeyword()) {
+				// true, false:
+				case pst::Keyword::True:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
+					break;
+				case pst::Keyword::False:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
+					break;
+
+
+				// types:
+				case pst::Keyword::Bool:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryBoolType>({}));
+					break;
+
+				case pst::Keyword::Char:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryCharType>({}));
+					break;
+
+					// @todo: add meta keyword and type
+
+				case pst::Keyword::i128:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, true })
+					);
+					break;
+				case pst::Keyword::i64:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, true })
+					);
+					break;
+				case pst::Keyword::i32:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, true })
+					);
+					break;
+				case pst::Keyword::i16:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, true })
+					);
+					break;
+				case pst::Keyword::i8:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, true })
+					);
+					break;
+
+				case pst::Keyword::u128:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, false })
+					);
+					break;
+				case pst::Keyword::u64:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, false })
+					);
+					break;
+				case pst::Keyword::u32:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, false })
+					);
+					break;
+				case pst::Keyword::u16:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, false })
+					);
+					break;
+				case pst::Keyword::u8:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, false })
+					);
+					break;
+
+				case pst::Keyword::f80:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
+					break;
+				case pst::Keyword::f128:
+					node
+						= makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+					break;
+				case pst::Keyword::f64:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
+					break;
+				case pst::Keyword::f32:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(32));
+					break;
+				case pst::Keyword::f16:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
+					break;
+
+
+				default:
+					CORE_PANIC(
+						"Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor"
+					);
+				}
 			}
 
 			void visitComma(const pst::expr::Comma& stmt) override {
