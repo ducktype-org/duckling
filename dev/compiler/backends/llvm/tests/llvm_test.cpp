@@ -20,7 +20,7 @@ public:
 	}
 
 private:
-	void runTestForSingleFunctionInModule(std::string module_path) {
+	void runTestForModuleWithSingleFunction(std::string module_path) {
 		using namespace compiler;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
@@ -41,16 +41,16 @@ private:
 		});
 	}
 
-	void returnVoidTest() { runTestForSingleFunctionInModule("modules/simple"); }
+	void returnVoidTest() { runTestForModuleWithSingleFunction("modules/simple"); }
 
 	void simpleTypesVariables() {
 		// Currently this test is for coverage mainly, but it will be
 		// replaced with something more meaningful in the future.
 
-		runTestForSingleFunctionInModule("modules/variables");
+		runTestForModuleWithSingleFunction("modules/variables");
 	}
 
-	void booleanLiteralsTests() { runTestForSingleFunctionInModule("modules/boolean_literals"); }
+	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
 };
 
 

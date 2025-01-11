@@ -114,7 +114,7 @@ namespace compiler::helios {
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
-			// @TODO hout 2.0 (once it works) assert here that type of parsed.value() is meta
+			// @TODO hout 2.0 (once it works) assert here that type of parsed expr is meta
 
 			return evalHoutExprToType(ctx, parsed.value().ref());
 		}

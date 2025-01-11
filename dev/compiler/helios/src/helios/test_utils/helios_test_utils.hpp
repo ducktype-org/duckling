@@ -52,13 +52,15 @@ namespace compiler::helios::test_utils {
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
-	 * @brief returns hout-expr of the value of given const.
+	 * @brief returns hout-expr of the initialization value of given const.
+	 * For `const a = 42`, it returns the hout-expr of `42`.
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfConst(SymID sym);
 
 	/**
-	 * @brief returns hout-expr of the value of given variable.
+	 * @brief returns hout-expr of the initialization value of given variable.
+	 * For `var a = 42`, it returns the hout-expr of `42`.
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfVariable(SymID sym);

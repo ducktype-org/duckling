@@ -47,8 +47,10 @@ namespace compiler::helios::code {
 
 		/**
 		 * @brief Tries to extract a resulting symbol from hout expression.
+		 * @note Logic like this might be useful one day for "go-to-definition" on expressions,
+		 * but it might get removed from hout creation in the future.
 		 */
-		struct HoutResultingSymbolListVisitor final: public HoutExprVisitor {
+		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
 			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -59,24 +61,13 @@ namespace compiler::helios::code {
 			base::Optional<SymbolList> symbols;
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				// ctx.query<tsh::internal::QueryInterfaceOfClass>()
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after binary operators");
 			}
 
 			void visitIdentifierExpr(const IdentifierExpr& val) override {
 				symbols = SymbolList{ val.symbol };
-			}
-
-			void visitLiteralIntExpr(const LiteralIntExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
-			}
-
-			void visitLiteralBoolExpr(const LiteralBoolExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
-			}
-
-			void visitLiteralTypeExpr(const LiteralTypeExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
 
 			void visitParenthesisExpr(const ParenthesisExpr& val) override {
@@ -85,15 +76,9 @@ namespace compiler::helios::code {
 				symbols = vis.symbols;
 			}
 
-			void visitTupleTypeConstructorExpr(const TupleTypeConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
-			void visitVariantTypeConstructorExpr(const VariantTypeConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
 			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
 			}
 
