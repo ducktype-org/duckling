@@ -100,7 +100,7 @@ private:
 			// note: it might change where those branch operations are placed:
 			// if this happen just see mir-output of tested module for mir block numbers
 
-			auto true_lir_value = foo_lir->block_order.at(0)->terminator.arguments.at(0);
+			auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 			auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
 
 			ASSERT_EQUAL(true_lir_value.get<bool>(), true);

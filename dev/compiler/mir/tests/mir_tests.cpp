@@ -192,7 +192,7 @@ private:
 
 			// note: it might change where those branch operations are placed:
 			// if this happen just see mir-output of tested module for mir block numbers
-			auto true_mir_value = foo_mir->blocks.at(6).terminator.arguments.at(0);
+			auto true_mir_value  = foo_mir->blocks.at(6).terminator.arguments.at(0);
 			auto false_mir_value = foo_mir->blocks.at(3).terminator.arguments.at(0);
 
 			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
