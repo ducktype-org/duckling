@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
+		TESTER_ADD_TEST(simpleBools);
 	}
 
 private:
@@ -176,6 +177,26 @@ private:
 
 			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
 			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
+		});
+	}
+
+	void simpleBools() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+
+			// note: it might change where those branch operations are placed:
+			// if this happen just see mir-output of tested module for mir block numbers
+			auto true_mir_value = foo_mir->blocks.at(6).terminator.arguments.at(0);
+			auto false_mir_value = foo_mir->blocks.at(3).terminator.arguments.at(0);
+
+			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
+			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
 		});
 	}
 };
