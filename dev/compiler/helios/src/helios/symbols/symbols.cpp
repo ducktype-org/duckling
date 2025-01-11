@@ -636,9 +636,7 @@ namespace compiler::helios {
 
 			void visitConst(const pst::Const& stmt) final { setTypeOfSymbol(stmt.getType()); }
 
-			void visitVariable(const pst::Variable& stmt) final {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitVariable(const pst::Variable& stmt) final { setTypeOfSymbol(stmt.getType()); }
 
 			void visitField(const pst::Field& field) final { setTypeOfSymbol(field.getType()); }
 

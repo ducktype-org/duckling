@@ -81,9 +81,9 @@ namespace lang_def {
 		// @IDEA: change i -> s
 
 		// NOLINTBEGIN
-		// no list, since those keywords do not much 
+		// no list, since those keywords do not much
 		// identifier naming rules.
-		
+
 		i8,
 		i16,
 		i32,

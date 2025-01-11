@@ -559,7 +559,7 @@ private:
 		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
 		auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
 
-		auto f80_type = query::entryPoint<tsh::QueryFloatType>(80);
+		auto f80_type  = query::entryPoint<tsh::QueryFloatType>(80);
 		auto f128_type = query::entryPoint<tsh::QueryFloatType>(128);
 
 		auto char_type = query::entryPoint<tsh::QueryCharType>({});
