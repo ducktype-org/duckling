@@ -13,8 +13,10 @@ namespace pst {
 
 	/**
 	 * @brief Common ancestor element for code declarations.
-	 * 
-	 * Code declarations are statements that can generally create new symbols like function declarations, variable declarations or language construct with names like fors, blocks and whiles
+	 *
+	 * Code declarations are statements that can generally create new symbols like function
+	 * declarations, variable declarations or language construct with names like fors, blocks and
+	 * whiles
 	 */
 	class CodeDecl: public Decl {
 	public:

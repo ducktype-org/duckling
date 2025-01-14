@@ -45,7 +45,8 @@ namespace pst {
 
 	namespace expr {
 		/**
-		 * @brief General parseUntil that allows to parse an expression element with a condition for expression end.
+		 * @brief General parseUntil that allows to parse an expression element with a condition for
+		 * expression end.
 		 */
 		template<std::derived_from<ExprElement> T, StateCondition until>
 		MBox<ExprElement> parseUntil(LangParserState& state) {
@@ -435,7 +436,6 @@ namespace pst {
 
 			~GeneralSuffix() override = default;
 		};
-
 
 		/**
 		 * @brief General binary operator

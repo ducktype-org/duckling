@@ -76,7 +76,6 @@ namespace pst {
 		AccessBlock,
 	};
 
-
 	/**
 	 * @brief A general element that is a common ancestor of all statements.
 	 */
