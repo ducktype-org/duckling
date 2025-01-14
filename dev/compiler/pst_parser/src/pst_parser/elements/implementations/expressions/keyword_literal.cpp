@@ -30,7 +30,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void KeywordLiteral::acceptVisitor(PstExprVisitor& visitor) const {
+	void KeywordLiteral::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitKeywordLiteral(*this);
 	}
 }

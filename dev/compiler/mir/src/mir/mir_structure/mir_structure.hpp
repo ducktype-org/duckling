@@ -74,6 +74,12 @@ namespace compiler::mir {
 		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
+	struct MirBoolConst final {
+		bool value;
+
+		bool operator==(const MirBoolConst& other) const = default;
+	};
+
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
@@ -126,12 +132,14 @@ namespace compiler::mir {
 		// @TODO: global, literal, func-literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
+		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
 
 		ValueType value;
 
 	public:
 		MirLocation(MirIntegerConst value): value(value) {}
+
+		MirLocation(MirBoolConst value): value(value) {}
 
 		MirLocation(LocalRef value): value(value) {}
 

@@ -63,7 +63,7 @@ namespace pst {
 			return false;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	/**
@@ -121,7 +121,7 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Destructor final: public ClassSpecial {
@@ -139,7 +139,7 @@ namespace pst {
 			return "Class Destructor";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Method final: public ClassStmt {
@@ -175,7 +175,7 @@ namespace pst {
 			return false;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	class Field final: public ClassStmt {
@@ -216,6 +216,6 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

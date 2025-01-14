@@ -1,13 +1,13 @@
 #include <query_framework/query_impl.hpp>
-#include "query_hout_of_expr.hpp"
-
-#include "../../scopes/scopes.hpp"
 #include <pst_parser/pst_expr_visitor.hpp>
-#include "../visitors.hpp"
-#include "expr.hpp"
 
 #include <base/optional.hpp>
 #include <base/box.hpp>
+
+#include "../../scopes/scopes.hpp"
+#include "../visitors.hpp"
+#include "query_hout_of_expr.hpp"
+#include "expr.hpp"
 
 namespace compiler::helios::code {
 	namespace {
@@ -19,135 +19,38 @@ namespace compiler::helios::code {
 		 */
 		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
 
-		base::Optional<std::vector<base::Box<Expr>>> getVariantExpressions(base::Ref<Expr> expr) {
-			if (auto variant = dynamic_cast<VariantConstructorExpr*>(expr.get()); variant)
-				return std::move(variant->subtypes);
-			return {};
-		}
-
-		base::Box<VariantConstructorExpr> constructVariantFrom(
-			query::Context& ctx, ScopeID scope, base::Box<Expr> lhs, base::Box<Expr> rhs
+		void getVariantSubExprsInPlace(
+			MCRef<pst::ExprElement> expr, std::vector<CRef<pst::ExprElement>>& sub_exprs_append
 		) {
-			std::vector<base::Box<Expr>> all_subtypes;
-
-			for (auto&& expr: std::array{ std::move(lhs), std::move(rhs) }) {
-				auto subtypes = getVariantExpressions(expr.refMut());
-				if (subtypes)
-					for (auto&& subtype: *subtypes) all_subtypes.emplace_back(std::move(subtype));
-				else
-					all_subtypes.emplace_back(std::move(expr));
+			if (auto bin_op = dynamic_cast<const pst::expr::BinaryOperator*>(&*expr)) {
+				if (bin_op->getOperator().str() == "|") {
+					getVariantSubExprsInPlace(bin_op->getLeftOperand(), sub_exprs_append);
+					getVariantSubExprsInPlace(bin_op->getRightOperand(), sub_exprs_append);
+				}
+			} else {
+				sub_exprs_append.emplace_back(expr.toOpt().value());
 			}
-
-			return makeBox<VariantConstructorExpr>(ctx, scope, std::move(all_subtypes));
 		}
 
-		struct HoutIsTypeExprVisitor: public HoutExprVisitor {
-			// @TODO czy to nie powinno być roboione na poziomie HELIOS'a, żeby sprawdzać, czy
-			// użytkownik nie próbuje użyć typu jako wartości lub odwrotnie? Czyli żeby rzucić
-			// błędem, jeśli napisze: `let a: i32 + 13 = 20;`
-			explicit HoutIsTypeExprVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
-
-			bool            is_type_expr = false;
-			query::Context& ctx;
-			ScopeID         scope;
-
-			void visitLiteralValueExpr(const LiteralValueExpr&) override { is_type_expr = false; }
-
-			void visitIdentifierExpr(const IdentifierExpr& expr) override {
-				testSymbol(expr.symbol);
-			}
-
-			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				is_type_expr = false;
-			}
-
-			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override { is_type_expr = false; }
-
-			void visitParenthesisExpr(const ParenthesisExpr& expr) override {
-				HoutIsTypeExprVisitor vis(ctx, scope);
-				expr.inner->acceptVisitor(vis);
-				is_type_expr = vis.is_type_expr;
-			}
-
-			void visitKeywordExpr(const KeywordExpr& expr) override {
-				using Keyword = lang_def::Keyword;
-				switch (expr.keyword) {
-				case Keyword::None:
-				case Keyword::True:
-				case Keyword::False:
-					is_type_expr = false;
-					break;
-				case Keyword::i8:
-				case Keyword::i16:
-				case Keyword::i32:
-				case Keyword::i64:
-				case Keyword::i128:
-				case Keyword::u8:
-				case Keyword::u16:
-				case Keyword::u32:
-				case Keyword::u64:
-				case Keyword::u128:
-				case Keyword::f32:
-				case Keyword::f64:
-				case Keyword::f80:
-				case Keyword::Char:
-				case Keyword::Bool:
-				case Keyword::Vec:
-				case Keyword::Set:
-				case Keyword::Dict:
-				case Keyword::Array:
-					is_type_expr = true;
-					break;
-				default:
-					throw base::LogicError("KeywordExpr not yet handled by HoutIsTypeExprVisitor");
-				}
-			}
-
-			void visitTupleConstructorExpr(const TupleConstructorExpr& tuple) override {
-				iterOverExprs(tuple.elements);
-			}
-
-			void visitVariantConstructorExpr(const VariantConstructorExpr& variant) override {
-				iterOverExprs(variant.subtypes);
-			}
-
-			void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& val) override {
-				testSymbol(val.symbols.back());
-			}
-
-		private:
-			void testSymbol(SymID symbol) {
-				auto type = *ctx.query<QueryTypeOfSymbol>(symbol);
-				if (type.hasError()) {
-					// this is a class?
-					is_type_expr = true;
-				} else {
-					switch (type.value().getKind()) {
-					case tsh::Kind::Meta:
-						is_type_expr = true;
-						break;
-					default:
-						is_type_expr = false;
-					}
-				}
-			}
-
-			void iterOverExprs(const std::vector<base::Box<Expr>>& expressions) {
-				is_type_expr = true;
-				for (auto& el: expressions) {
-					HoutIsTypeExprVisitor vis(ctx, scope);
-					el->acceptVisitor(vis);
-					if (!vis.is_type_expr) is_type_expr = false;
-				}
-			}
-		};
+		/**
+		 * @brief Extracts sub expressions from a variant operator.
+		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
+		 */
+		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr
+		) {
+			CORE_ASSERT(expr.getOperator().str() == "|", "Not a variant operator");
+			std::vector<CRef<pst::ExprElement>> sub_exprs;
+			getVariantSubExprsInPlace(expr.getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(expr.getRightOperand(), sub_exprs);
+			return sub_exprs;
+		}
 
 		/**
 		 * @brief Tries to extract a resulting symbol from hout expression.
+		 * @note Logic like this might be useful one day for "go-to-definition" on expressions,
+		 * but it might get removed from hout creation in the future.
 		 */
-		struct HoutResultingSymbolListVisitor: public HoutExprVisitor {
+		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
 			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -158,20 +61,13 @@ namespace compiler::helios::code {
 			base::Optional<SymbolList> symbols;
 
 			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				// ctx.query<tsh::internal::QueryInterfaceOfClass>()
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after binary operators");
 			}
 
 			void visitIdentifierExpr(const IdentifierExpr& val) override {
 				symbols = SymbolList{ val.symbol };
-			}
-
-			void visitKeywordExpr(const KeywordExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from Keywords");
-			}
-
-			void visitLiteralValueExpr(const LiteralValueExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from literal values");
 			}
 
 			void visitParenthesisExpr(const ParenthesisExpr& val) override {
@@ -180,15 +76,9 @@ namespace compiler::helios::code {
 				symbols = vis.symbols;
 			}
 
-			void visitTupleConstructorExpr(const TupleConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
-			void visitVariantConstructorExpr(const VariantConstructorExpr&) override {
-				throw base::NotYetImplemented("Cannot evaluate symbol from tuple");
-			}
-
 			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
+				// note: it should be possible if given operator points to a
+				// user defined operator.
 				throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
 			}
 
@@ -197,7 +87,7 @@ namespace compiler::helios::code {
 			}
 		};
 
-		struct PstExprToHoutExprVisitor: public pst::PstExprVisitorPanicky {
+		struct PstExprToHoutExprVisitor final: public pst::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -209,41 +99,51 @@ namespace compiler::helios::code {
 
 			void visitExprValue(const pst::expr::ExprValue& stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralValueExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
-				PstExprToHoutExprVisitor lhs(ctx, scope);
-				PstExprToHoutExprVisitor rhs(ctx, scope);
-				stmt.getLeftOperand()->acceptVisitor(lhs);
-				stmt.getRightOperand()->acceptVisitor(rhs);
+				// handle variants:
+				if (stmt.getOperator().str() == "|") {
+					// @todo HOUT 2.0:
+					// Here we assume that "|" always produces a variant (likely valid).
+					// If it does not, and "|" will remain a binary operator,
+					// we will have to do something with it.
+					// (likely if-out if all sub expressions are meta or non-meta, throw otherwise,
+					// (require parentheses))
 
-				if (lhs.node && rhs.node) {
-					HoutIsTypeExprVisitor lhs_vis_expr(ctx, scope);
-					HoutIsTypeExprVisitor rhs_vis_expr(ctx, scope);
-					lhs.node.value()->acceptVisitor(lhs_vis_expr);
-					rhs.node.value()->acceptVisitor(rhs_vis_expr);
+					auto sub_exprs = getVariantSubExprs(stmt);
+					// @todo HOUT 2.0:
+					// validate that all sub types are meta
 
-					if (lhs_vis_expr.is_type_expr != rhs_vis_expr.is_type_expr) {
-						// @TODO: Report an error
-						return;
+					std::vector<Box<Expr>> all_subtypes;
+
+					for (auto sub_expr: sub_exprs) {
+						auto sub_expr_hout = fromPST(ctx, sub_expr);
+						if (sub_expr_hout.hasError()) {
+							// Error has occurred.
+							return;
+						}
+						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
 					}
-					// @TODO: should this not be .value == "|"?
-					if (stmt.getOperator().str()[0] == '|' && lhs_vis_expr.is_type_expr
-					    && rhs_vis_expr.is_type_expr) {
-						node = constructVariantFrom(
-							ctx, scope, std::move(*lhs.node), std::move(*rhs.node)
-						);
-					} else {
-						node = makeBox<BinaryOperatorExpr>(
-							ctx,
-							scope,
-							stmt.getOperator(),
-							std::move(*lhs.node),
-							std::move(*rhs.node)
-						);
-					}
+					node = makeBox<VariantTypeConstructorExpr>(ctx, scope, std::move(all_subtypes));
+					return;
 				}
+
+
+				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
+				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
+
+				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
+
+				auto lhs = std::move(lhs_res).value();
+				auto rhs = std::move(rhs_res).value();
+
+				// @todo here we should type check,
+				// and make function call / builtin binary operator
+				node = makeBox<BinaryOperatorExpr>(
+					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
+				);
 			}
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
@@ -294,7 +194,7 @@ namespace compiler::helios::code {
 
 			void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getInner()->acceptVisitor(vis);
+				stmt.getInner()->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
 			}
 
@@ -315,28 +215,122 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-				node = makeBox<KeywordExpr>(ctx, scope, stmt.getKeyword());
+				switch (stmt.getKeyword()) {
+				// true, false:
+				case pst::Keyword::True:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
+					break;
+				case pst::Keyword::False:
+					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
+					break;
+
+
+				// types:
+				case pst::Keyword::Bool:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryBoolType>({}));
+					break;
+
+				case pst::Keyword::Char:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryCharType>({}));
+					break;
+
+					// @todo: add meta keyword and type
+
+				case pst::Keyword::i128:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, true })
+					);
+					break;
+				case pst::Keyword::i64:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, true })
+					);
+					break;
+				case pst::Keyword::i32:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, true })
+					);
+					break;
+				case pst::Keyword::i16:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, true })
+					);
+					break;
+				case pst::Keyword::i8:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, true })
+					);
+					break;
+
+				case pst::Keyword::u128:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, false })
+					);
+					break;
+				case pst::Keyword::u64:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, false })
+					);
+					break;
+				case pst::Keyword::u32:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, false })
+					);
+					break;
+				case pst::Keyword::u16:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, false })
+					);
+					break;
+				case pst::Keyword::u8:
+					node = makeBox<LiteralTypeExpr>(
+						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, false })
+					);
+					break;
+
+				case pst::Keyword::f80:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
+					break;
+				case pst::Keyword::f128:
+					node
+						= makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+					break;
+				case pst::Keyword::f64:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
+					break;
+				case pst::Keyword::f32:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(32));
+					break;
+				case pst::Keyword::f16:
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
+					break;
+
+
+				default:
+					CORE_PANIC(
+						"Keyword not yet handled (or bad keyword) by PstExprToHoutExprVisitor"
+					);
+				}
 			}
 
 			void visitComma(const pst::expr::Comma& stmt) override {
 				std::vector<Box<Expr>> expressions;
-				for (auto&& ex: stmt.getExpressions()) {
-					PstExprToHoutExprVisitor vis(ctx, scope);
-					ex->acceptVisitor(vis);
-					if (!vis.node) {
+				for (auto& ex: stmt.getExpressions()) {
+					auto res = fromPST(ctx, ex.ref());
+					if (res.hasError()) {
 						// Error has occurred.
 						return;
 					}
-					if_opt_some(vis.node, b) { expressions.emplace_back(std::move(b)); }
+					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleConstructorExpr>(ctx, scope, std::move(expressions));
+				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
 			}
 
 			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
 				// @NOTE: This is a mockup
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
+				stmt.getExpr()->acceptExprVisitor(vis);
 				if_opt_some(vis.node, expr) {
 					node = makeBox<UnaryOperatorExpr>(
 						scope, stmt.getOperator(), false, std::move(expr)
@@ -347,7 +341,7 @@ namespace compiler::helios::code {
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
 				// @NOTE: This is a mockup
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptVisitor(vis);
+				stmt.getExpr()->acceptExprVisitor(vis);
 				if_opt_some(vis.node, expr) {
 					node = makeBox<UnaryOperatorExpr>(
 						scope, stmt.getOperator(), true, std::move(expr)
@@ -364,7 +358,7 @@ namespace compiler::helios::code {
 			// std::cerr << '\n'
 
 			PstExprToHoutExprVisitor visitor(ctx, scope);
-			element->acceptVisitor(visitor);
+			element->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return errors::HError(errors::Failed());
@@ -377,8 +371,12 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryHoutOfExpr, ExprConstructionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
+			// Note: we might actually accept nulls in such queries, and just return failed
+			// Something to think about as part of #412
+			CORE_ASSERT(key.element.toOpt().has_value(), "Nullptr provided to QueryHoutOfExpr");
+
 			// @TODO static assert this is top-expr
-			return code::fromPST(ctx, key.expr);
+			return code::fromPST(ctx, key.element);
 		}
 
 		// @TODO: perhaps add cache
@@ -392,10 +390,4 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
-
-	base::HashT KeyOf_QueryHoutOfExpr::customPerfectHash() const {
-		auto hash_1 = this->expr->getID().asInt();
-
-		return hash_1;
-	}
 }

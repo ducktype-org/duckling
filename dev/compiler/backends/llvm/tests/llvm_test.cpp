@@ -13,14 +13,17 @@ class LLVMBackendTest final: public tester::TestSuite {
 #define TESTER_CLASS LLVMBackendTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(returnVoidTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(returnVoidTest);
+		TESTER_ADD_TEST(simpleTypesVariables);
+		TESTER_ADD_TEST(booleanLiteralsTests);
+	}
 
 private:
-	void returnVoidTest() {
+	void runTestForModuleWithSingleFunction(std::string module_path) {
 		using namespace compiler;
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module
-				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path("modules/simple")));
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			ASSERT_TRUE(top_level.functions.size() == 1);
@@ -29,12 +32,25 @@ private:
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
+
+			// this is were the main part ot test is:
 			assertTrue(llvm_module.verify(), "LLVM module verification failed");
 
 			// debug print for coverage only:
 			llvm_module.debugPrint();
 		});
 	}
+
+	void returnVoidTest() { runTestForModuleWithSingleFunction("modules/simple"); }
+
+	void simpleTypesVariables() {
+		// Currently this test is for coverage mainly, but it will be
+		// replaced with something more meaningful in the future.
+
+		runTestForModuleWithSingleFunction("modules/variables");
+	}
+
+	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
 };
 
 

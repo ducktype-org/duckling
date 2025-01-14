@@ -36,4 +36,7 @@ namespace pst {
 			source_position = dia::SourcePosition(source_position, pos.getEnd());
 	}
 
+	void LangElement::acceptVisitor(PstVisitor&) const {
+		CORE_PANIC("PstVisitor not supported for " + elementType());
+	}
 }

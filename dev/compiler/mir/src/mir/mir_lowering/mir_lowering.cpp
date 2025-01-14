@@ -416,8 +416,16 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+		}
+
+		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+		}
+
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
+			throw base::NotYetImplemented("type literal");
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
@@ -436,15 +444,11 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("parenthesis expr");
 		}
 
-		void visitKeywordExpr(const hc::KeywordExpr&) override {
-			throw base::NotYetImplemented("keyword");
-		}
-
-		void visitTupleConstructorExpr(const hc::TupleConstructorExpr&) override {
+		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
-		void visitVariantConstructorExpr(const hc::VariantConstructorExpr&) override {
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
@@ -487,12 +491,12 @@ namespace compiler::mir {
 
 		// @TODO: add parameters do list od locals
 
-		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
 		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
 
 		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
+		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder);
 
 		function_builder.setEntry(first_block.begin);
 

@@ -7,11 +7,10 @@
 #include <query_framework/query_int.hpp>
 #include <pst_parser/elements/elements.hpp>
 
-#include "../lookup_result.hpp"
-#include "../helios_errors.hpp"
-#include "../helios_result.hpp"
+#include <helios/lookup_result.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
 #include <base/box.hpp>
-#include <base/unique_pointer.hpp>
 #include <typesystem/higher/type_info.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -32,6 +31,7 @@ namespace compiler::helios {
 		Using,
 		Variable,
 		Import,
+		Parameter,
 
 		// Class Symbols
 		Method,
@@ -67,25 +67,17 @@ namespace compiler::helios {
 	ScopeID scope(SymID);
 
 	/**
-	 * @return Pst element symbol was created from
+	 * @return PST Stmt element symbol was created from.
+	 * Panics if the element was not a statement.
+	 * @todo should this be an external API? It might depend on incremental compilation
+	 * implementation
 	 */
-	MCRef<pst::Stmt> stmt(SymID);
-
-	struct KeyOf_QuerySymbolOfSTMT {
-		/**
-		 * @brief Statement to change to symbol
-		 */
-		MCRef<pst::Stmt> stmt;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_QuerySymbolOfSTMT&) const = default;
-	};
+	CRef<pst::Stmt> stmt(SymID);
 
 	/**
 	 * @brief Query symbols associated with given element in PST
 	 */
-	DECLARE_QUERY(QuerySymbolOfSTMT, KeyOf_QuerySymbolOfSTMT, SymID);
+	DECLARE_QUERY(QuerySymbolOfSTMT, pst::GenericPSTQueryKey<>, SymID);
 
 	struct KeyOf_LookupInSymbol {
 		/**
@@ -127,8 +119,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, CRef<errors::HResult<i64 COMMA errors::Failed>>)
 
-	using ParseTypeFromExpr_Result = errors::HResult<tsh::TypeInfo, PotentialParsingErrors>;
-	using QueryType_Result         = errors::HResult<tsh::TypeInfo, errors::Failed>;
+	using QueryType_Result = errors::HResult<tsh::TypeInfo, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -145,12 +136,6 @@ namespace compiler::helios {
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
 	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryType_Result>);
-
-	/**
-	 * @brief Does QueryTypeOfSymbol and upon failing does QueryTypeFromDefinition.
-	 * @todo Helios Type Fixes: delete this query (see also issue #385)
-	 */
-	DECLARE_QUERY(QueryTypeOfSymbolOrDefinition, SymID, CRef<QueryType_Result>);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -194,16 +179,4 @@ namespace compiler::helios {
 	 * More information on `ClassSymbolData` in it's definition.
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
-
-	namespace code {
-		struct Expr;
-	}
-
-	/**
-	 * @brief Return Expr tree of HOUT of a expression assigned to a constant.
-	 * @note This query is temporary and is used for testing only.
-	 * @note type of this query is weird, but it will likely be refactored in expr-2.0 anyway
-	 * @todo Helios-types-fixes: probably delete this query (see also issue #385)
-	 */
-	DECLARE_QUERY(QueryHOUTExprTreeOfSym, SymID, CRef<errors::HResult<base::Box<code::Expr> COMMA errors::Failed>>);
 }

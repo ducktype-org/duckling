@@ -23,11 +23,12 @@
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/lang_parser_state.hpp>
+#include <pst_parser/generic_query_key.hpp>
 
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
-// @TODO: relax this dependency (we only need ModuleID in hpp)
+// @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
 #include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
@@ -63,17 +64,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID);
 
-	struct KeyOf_QueryCodeScopeFor final {
-		/**
-		 * @brief Element for which the scope is created.
-		 */
-		MCRef<pst::LangElement> base_element;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_QueryCodeScopeFor&) const = default;
-	};
-
 	/**
 	 * @brief Generate HELIOS-scope associated with given PST element.
 	 * Also: dictates what PST elements have their own scope.
@@ -88,7 +78,7 @@ namespace compiler::helios {
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
 	 */
-	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryCodeScopeFor, ScopeID);
+	DECLARE_QUERY(QueryPrimaryCodeScopeFor, pst::GenericPSTQueryKey<>, ScopeID);
 
 	/**
 	 * @brief A helper function, to make scope API consistent.

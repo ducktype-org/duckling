@@ -58,5 +58,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Field::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitField(*this); }
+	void Field::acceptVisitor(PstVisitor& visitor) const { visitor.visitField(*this); }
 }

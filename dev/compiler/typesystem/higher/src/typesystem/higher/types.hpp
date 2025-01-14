@@ -135,6 +135,12 @@ namespace tsh {
 		[[nodiscard]]
 		Bits getSize() const;
 
+		/**
+		 * @return true if the integer is singed
+		 */
+		[[nodiscard]]
+		bool getSignedness() const;
+
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(Integral)
@@ -168,6 +174,8 @@ namespace tsh {
 
 	/**
 	 * @brief A type supplied with mutability information.
+	 *
+	 * @todo should this exist, how it realted to typeinfo, typedesc; document it.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
 	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some

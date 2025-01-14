@@ -67,7 +67,7 @@ namespace pst {
 
 			~PrefixOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -92,7 +92,7 @@ namespace pst {
 
 			~SuffixOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -118,7 +118,7 @@ namespace pst {
 
 			~BinaryOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			MCRef<ExprElement> getLeftOperand() const;
@@ -133,6 +133,10 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @TODO add doc comment, what does it represent?
+		 * If its something specific, change the name.
+		 */
 		class ExprValue final: public ExprElement {
 			lexer::Value number;
 
@@ -150,7 +154,7 @@ namespace pst {
 
 			~ExprValue() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -182,7 +186,7 @@ namespace pst {
 
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -201,7 +205,7 @@ namespace pst {
 
 			~IdentifierLiteral() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			const tpc::Identifier& getName() const {
@@ -225,7 +229,7 @@ namespace pst {
 
 			~KeywordLiteral() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			Keyword getKeyword() const {
@@ -254,7 +258,7 @@ namespace pst {
 
 			~Access() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -289,7 +293,7 @@ namespace pst {
 
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -316,7 +320,7 @@ namespace pst {
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 			void                     dprint(std::ostream& out) const final;
-			void                     acceptVisitor(PstExprVisitor& visitor) const final;
+			void                     acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			~ChainExpr() override = default;
 
@@ -344,7 +348,7 @@ namespace pst {
 
 			~RoundExpr() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -372,7 +376,7 @@ namespace pst {
 
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			MCRef<CodeBlock> getBlock() { return block.ref(); }
 
@@ -498,7 +502,7 @@ namespace pst {
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		/**
@@ -577,7 +581,7 @@ namespace pst {
 
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		/**
@@ -603,7 +607,7 @@ namespace pst {
 
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			const std::vector<MBox<ExprElement>>& getExpressions() const;
@@ -634,7 +638,7 @@ namespace pst {
 
 			~Assignment() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 	}
 }

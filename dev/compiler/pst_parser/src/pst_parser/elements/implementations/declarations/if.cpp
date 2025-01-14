@@ -27,5 +27,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void If::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitIf(*this); }
+	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }
 }

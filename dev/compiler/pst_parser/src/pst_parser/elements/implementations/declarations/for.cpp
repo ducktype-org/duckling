@@ -93,5 +93,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void For::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFor(*this); }
+	void For::acceptVisitor(PstVisitor& visitor) const { visitor.visitFor(*this); }
 }

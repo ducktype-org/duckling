@@ -2,19 +2,20 @@
 
 #include "expr.hpp"
 
-namespace compiler::helios {
-	struct KeyOf_QueryHoutOfExpr {
-		MCRef<pst::ExprElement> expr;
+// @todo this file should not be here
+// we might want to review HELIOS folder structure in general,
+// after HOUT 2.0
 
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-	};
+namespace compiler::helios {
 
 	using ExprConstructionResult = errors::HResult<base::Box<code::Expr>, errors::Failed>;
 
 	/**
 	 * @brief Construct HOUT Expr from Pst Expr.
 	 * @note This will likely panic for non-top expression in the future.
+	 * @todo hout 2.0: make it return ref, not box
 	 */
-	DECLARE_QUERY(QueryHoutOfExpr, KeyOf_QueryHoutOfExpr, ExprConstructionResult)
+	DECLARE_QUERY(
+		QueryHoutOfExpr, pst::GenericPSTQueryKey<pst::ExprElement>, ExprConstructionResult
+	)
 }

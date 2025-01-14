@@ -4,7 +4,7 @@
 #include "../lang_parser_state.hpp"
 
 namespace pst {
-	class PstStmtVisitor;
+	class PstVisitor;
 	class PstExprVisitor;
 }
 

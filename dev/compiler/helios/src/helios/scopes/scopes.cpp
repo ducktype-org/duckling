@@ -218,41 +218,40 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey element) -> PResult {
-			auto element_scope_kind = getScopeKind(element.base_element);
+			auto element_scope_kind = getScopeKind(element.element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
-				auto element_ptr = &*element.base_element;
+				auto element_ptr = &*element.element;
 				CORE_PANIC(base::strConcat(
 					"Scope of element for which scope does not make sense (or was not added.): ",
 					typeid(*element_ptr).name()
 				));
 			}
 
-			ScopeID parent = element.base_element->getParent().has_value()
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(
-								   { element.base_element->getParent().value() }
-							   )
-			                   : ctx.query<QueryRootScopeOf>(
-								   { frontend::extendQueryModuleIDOfPST(ctx, element.base_element) }
-							   );
+			ScopeID parent
+				= element.element->getParent().has_value()
+			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.element->getParent().value() })
+			        : ctx.query<QueryRootScopeOf>(
+						{ frontend::extendQueryModuleIDOfPST(ctx, element.element) }
+					);
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			if (parent_map.contains(element.base_element->getID())) {
+			if (parent_map.contains(element.element->getID())) {
 				CORE_ASSERT(
-					parent_map.at(element.base_element->getID()) == parent,
+					parent_map.at(element.element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
-				parent_map.put(element.base_element->getID(), parent);
+				parent_map.put(element.element->getID(), parent);
 			}
 
 			return putInScopeTable(ScopeData{
 				.parent              = parent,
-				.related_pst_element = element.base_element,
+				.related_pst_element = element.element,
 				.parent_module       = module(parent),
 				.symbols             = {},
 				.depth               = scopeDepth(parent) + 1,
@@ -268,7 +267,7 @@ namespace compiler::helios {
 		// note: not all cases are handled here, which is intentional.
 		// We might add more in the future, but this function should remain a simple one.
 
-		struct QueryBodyScopeVisitor: pst::PstStmtVisitorPanicky {
+		struct QueryBodyScopeVisitor: pst::PstVisitorPanicky {
 			query::Context&  ctx;
 			MCRef<pst::Stmt> stmt;
 
@@ -312,7 +311,7 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets symbols for scopes of various statements.
 		 */
-		struct SymbolGrabVisitor final: pst::PstStmtVisitorPanicky {
+		struct SymbolGrabVisitor final: pst::PstVisitorPanicky {
 			SymbolGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
 			base::Optional<std::vector<SymID>> out;
@@ -327,12 +326,14 @@ namespace compiler::helios {
 
 			// here, we add only stmts, that actually have a primary scope.
 
-			void visitFun(const pst::Fun&) override {
+			void visitFun(const pst::Fun& fun) override {
 				// Scope of "fun →()← {}"
-				// @TODO: iterate function parameters and create symbols out of them
-				// The problem is that currently function parameters are Expr in Pst -- this has to
-				// change Variable declaration or custom element is probably a better choice
-				output(std::vector<SymID>{});
+
+				std::vector<SymID> out;
+				for (auto params: *fun.getParams())
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
+
+				output(std::move(out));
 			}
 
 			void visitIf(const pst::If&) override {
@@ -475,10 +476,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
-
-	base::HashT KeyOf_QueryCodeScopeFor::customPerfectHash() const {
-		return base_element->getID().asInt();
-	}
 
 	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
 		auto hash_1 = base::perfectHash(scope);
