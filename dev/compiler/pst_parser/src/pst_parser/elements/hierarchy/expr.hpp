@@ -182,7 +182,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Element representing template specialization in an expression
+		 * @brief Element representing template initialization in an expression. For example: `list:{i32}`.
 		 *
 		 * @note For now the inner expression is just a comma expression, this should probably have
 		 * it's own parsing in the future
