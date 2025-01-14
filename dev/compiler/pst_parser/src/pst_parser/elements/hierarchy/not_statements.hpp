@@ -212,7 +212,7 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Common root for expression sub-elements
+	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
 		const i64 precedence;
