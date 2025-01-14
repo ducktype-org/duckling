@@ -1,5 +1,6 @@
 namespace lexer::detail {
 	class ICUDeinit final {
+	public:
 		~ICUDeinit();
 	};
 
