@@ -1,5 +1,5 @@
 #include "../global_deinit.hpp"
-#include "unicode/uclean.h"
+#include <unicode/uclean.h>
 
 namespace base::detail {
 	ICUDeinit GlobalDeinit::icu_deinit;
