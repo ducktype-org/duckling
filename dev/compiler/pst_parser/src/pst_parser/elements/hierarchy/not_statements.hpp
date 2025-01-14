@@ -216,6 +216,9 @@ namespace pst {
 		virtual void acceptExprVisitor(PstExprVisitor& visitor) const = 0;
 	};
 
+	/**
+	 * @brief Class that keeps an expression with information whether it's a top-level expression.
+	 */
 	class ExprHolder: public NotStmt {
 	protected:
 		MBox<ExprElement> expr;
@@ -240,6 +243,9 @@ namespace pst {
 		virtual bool isTopLevel() = 0;
 	};
 
+	/**
+	 * @brief Collects different parsing entries.
+	 */
 	class ExprParserHelper {
 	public:
 		ExprParserHelper() = delete;
@@ -251,6 +257,9 @@ namespace pst {
 
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
 
+	/**
+	 * @brief Template for defining expression parsing entry points
+	 */
 	template<typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
 	class ExprHolderTemplate: public ExprHolder {
 	public:
