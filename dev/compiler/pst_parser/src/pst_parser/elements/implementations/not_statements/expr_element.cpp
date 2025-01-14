@@ -54,7 +54,7 @@ namespace pst {
 			return state[fwd].is(Special::Semicolon) || ExprClassify::isAssignment(state, fwd);
 		}
 
-		bool AssignmentEnd(const LangParserState& state, i64 fwd = 0) {
+		bool assignmentEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon);
 		}
 	}
@@ -68,6 +68,6 @@ namespace pst {
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseAssignment(LangParserState& state) {
-		return expr::parseUntil<expr::Assignment, AssignmentEnd>(state);
+		return expr::parseUntil<expr::Assignment, assignmentEnd>(state);
 	}
 }
