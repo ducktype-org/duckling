@@ -1,12 +1,12 @@
 namespace lexer::detail {
-	struct ICUDeinit final {
+	class ICUDeinit final {
 		~ICUDeinit();
 	};
 
 	/**
 	 * @brief Clears ICU resources that are not cleared bynormal deinitialization.
 	 */
-	struct ICUDeinitManager final {
+	class ICUDeinitManager final {
 		static ICUDeinit icu_deinit;
 	};
 }
