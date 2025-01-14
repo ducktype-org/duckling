@@ -134,4 +134,11 @@ namespace dia {
 		printer::StreamPrinter::printNL(content, res);
 		return res.str();
 	}
+
+	void SourcePosition::printToJson(std::ostream& out) const {
+		out << "{";
+		out << R"("sourceStart": )" << getStart() << ", ";
+		out << R"("sourceEnd": )" << getEnd();
+		out << "}";
+	}
 }
