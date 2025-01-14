@@ -153,10 +153,10 @@ namespace pst {
 	};
 
 	class Variable final: public Decl {
-		tpc::Identifier   name;
+		tpc::Identifier       name;
 		MBox<CommaExprHolder> type     = nullptr;
 		MBox<CommaExprHolder> value    = nullptr;
-		bool              is_const = true;
+		bool                  is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
@@ -196,10 +196,10 @@ namespace pst {
 	};
 
 	class Fun final: public Decl {
-		tpc::Identifier                   name;
-		MBox<ParamList>                   params = nullptr;
+		tpc::Identifier                       name;
+		MBox<ParamList>                       params = nullptr;
 		base::Optional<MBox<CommaExprHolder>> ret;
-		MBox<CodeBlockOrStmt>             body = nullptr;
+		MBox<CodeBlockOrStmt>                 body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
@@ -297,8 +297,8 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		tpc::Identifier         iterator;
-		MBox<ForTypeExprHolder>       type     = nullptr;
-		MBox<CommaExprHolder>       iterable = nullptr;
+		MBox<ForTypeExprHolder> type     = nullptr;
+		MBox<CommaExprHolder>   iterable = nullptr;
 		MBox<CodeBlockOrStmt>   body     = nullptr;
 
 	public:

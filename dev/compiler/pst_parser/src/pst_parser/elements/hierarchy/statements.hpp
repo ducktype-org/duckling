@@ -184,7 +184,7 @@ namespace pst {
 
 	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
-		tpc::Identifier   name;
+		tpc::Identifier       name;
 		MBox<CommaExprHolder> type;
 		MBox<CommaExprHolder> value;
 

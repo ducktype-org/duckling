@@ -39,16 +39,15 @@ namespace pst {
 		state.parse(out.toOpt().value()).eatOne();
 
 		// @TODO: for now we assume if there is no expression there is a semicolon
-		if (!state[0].is(Special::Semicolon))
-			state.parse(out.toOpt().value()).one(&out->expr);
+		if (!state[0].is(Special::Semicolon)) state.parse(out.toOpt().value()).one(&out->expr);
 
 		return out;
 	}
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream&                            out,
-			const std::string&                       kind,
+			std::ostream&                                out,
+			const std::string&                           kind,
 			const base::Optional<MBox<CommaExprHolder>>* expr
 		) {
 			out << "{";

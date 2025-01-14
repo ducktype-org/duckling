@@ -584,13 +584,17 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()->getExpr()); }
+			void visitConst(const pst::Const& stmt) override {
+				setTypeOfSymbol(stmt.getType()->getExpr());
+			}
 
 			void visitVariable(const pst::Variable& stmt) override {
 				setTypeOfSymbol(stmt.getType()->getExpr());
 			}
 
-			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()->getExpr()); }
+			void visitField(const pst::Field& field) override {
+				setTypeOfSymbol(field.getType()->getExpr());
+			}
 
 			void visitFun(const pst::Fun& fun) override {
 				auto params = fun.getParams();
@@ -796,9 +800,13 @@ namespace compiler::helios {
 		public:
 			PstStmtVisitor_GetHOUTExprTree(Context& ctx, ScopeID scope): ctx(ctx), scope(scope) {}
 
-			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()->getExpr()); }
+			void visitConst(const pst::Const& stmt) override {
+				setExprTree(stmt.getValue()->getExpr());
+			}
 
-			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()->getExpr()); }
+			void visitVariable(const pst::Variable& stmt) override {
+				setExprTree(stmt.getType()->getExpr());
+			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

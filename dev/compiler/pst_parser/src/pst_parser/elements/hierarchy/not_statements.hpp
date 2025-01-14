@@ -19,7 +19,7 @@
 namespace pst {
 
 	class FunParam final: public NotStmt {
-		tpc::Identifier                   name;
+		tpc::Identifier                           name;
 		MBox<UniversalExprHolder>                 type;
 		base::Optional<MBox<UniversalExprHolder>> initial;
 
@@ -222,7 +222,7 @@ namespace pst {
 
 		void dprint(std::ostream& out) const final;
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		MCRef<ExprElement> getExpr() const {
 			return expr.ref();
 		}
@@ -241,7 +241,7 @@ namespace pst {
 
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
 
-	template <typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
+	template<typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
 	class ExprHolderTemplate: public ExprHolder {
 	public:
 		using ExprHolder::ExprHolder;
@@ -254,15 +254,15 @@ namespace pst {
 			return out;
 		}
 
-		bool isTopLevel() override {return TOP_LEVEL;}
+		bool isTopLevel() override { return TOP_LEVEL; }
 	};
-
 
 	/**
 	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
 	 * top-level
 	 */
-	class UniversalExprHolder final: public ExprHolderTemplate<UniversalExprHolder, ExprParserHelper::parseUniversal, true> {
+	class UniversalExprHolder final:
+		  public ExprHolderTemplate<UniversalExprHolder, ExprParserHelper::parseUniversal, true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolder() final = default;
@@ -271,7 +271,11 @@ namespace pst {
 	/**
 	 * @brief The version of the default entry point that isn't top-level
 	 */
-	class UniversalExprHolderLowerLevel final: public ExprHolderTemplate<UniversalExprHolderLowerLevel, ExprParserHelper::parseUniversal, false> {
+	class UniversalExprHolderLowerLevel final:
+		  public ExprHolderTemplate<
+			  UniversalExprHolderLowerLevel,
+			  ExprParserHelper::parseUniversal,
+			  false> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolderLowerLevel() final = default;
@@ -281,16 +285,19 @@ namespace pst {
 	 * @brief Secondary entry point to expression parsing that allows comma expressions
 	 * top-level
 	 */
-	class CommaExprHolder final: public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
+	class CommaExprHolder final:
+		  public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~CommaExprHolder() final = default;
 	};
 
 	/**
-	 * @brief Tertiary entry point to expression parsing that allows assignment expressions top-level.
+	 * @brief Tertiary entry point to expression parsing that allows assignment expressions
+	 * top-level.
 	 */
-	class AssignmentExprHolder final: public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {
+	class AssignmentExprHolder final:
+		  public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~AssignmentExprHolder() final = default;
@@ -299,7 +306,8 @@ namespace pst {
 	/**
 	 * @brief Expression parsing entry point for type in for statement.
 	 */
-	class ForTypeExprHolder final: public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
+	class ForTypeExprHolder final:
+		  public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;

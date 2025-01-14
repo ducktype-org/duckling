@@ -29,8 +29,7 @@ namespace pst {
 		state.parse(out).all(Keyword::Fun, &out->name);
 		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
 
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
-			state.parse(out).one(&out->ret);
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);
 

@@ -11,8 +11,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
-			state.parse(out).one(&out->ret);
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);
 

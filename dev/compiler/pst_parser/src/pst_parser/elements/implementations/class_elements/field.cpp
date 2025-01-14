@@ -31,8 +31,7 @@ namespace pst {
 		state.parse(out).all(&out->name, NamedOperator::Colon);
 		state.parse(out).one(&out->type);
 
-		if (state.parse(out).tryEat(NamedOperator::Assign))
-			state.parse(out).one(&out->init);
+		if (state.parse(out).tryEat(NamedOperator::Assign)) state.parse(out).one(&out->init);
 
 		return out;
 	}
