@@ -82,7 +82,9 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Class constructor initialization list.
+	 * @brief c++-like class constructor initialization list.
+	 *
+	 * @note It's probably going to be deprecated
 	 */
 	class InitList final: public List<ExprElement, detail::NameGetters::classInitList> {
 	public:
