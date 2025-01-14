@@ -45,7 +45,7 @@ namespace pst {
 		const dia::SourcePosition& getSourcePosition() const;
 
 	protected:
-		void dprintPrefix(std::ostream& out) const {
+		void dprintPrefix(std::ostream& out) const override {
 			tpc::Element::dprintPrefix(out);
 			out << R"("position": )";
 			source_position.printToJson(out);
