@@ -260,7 +260,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getCondition() const {
+		MCRef<ExprHolder> getCondition() const {
 			return condition->getExpr();
 		}
 

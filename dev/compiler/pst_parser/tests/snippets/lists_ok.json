@@ -9,36 +9,10 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Keyword Expression": {
-						"keyword": "i32"
-					}
-				},
-				"body": {
-					"Code Block or Statement": {
-						"Code Block": []
-					}
-				}
-			}
-		},
-		{
-			"Function": {
-				"name": {
-					"Name": "A"
-				},
-				"parameters": {
-					"function parameter list": []
-				},
-				"return": {
-					"Binary Operator": {
-						"left_expr": {
-							"Value Expr": {
-								"number": "1"
-							}
-						},
-						"operator": "+",
-						"right_expr": {
-							"Value Expr": {
-								"number": "1"
+					"Top Level Expression": {
+						"expr": {
+							"Keyword Expression": {
+								"keyword": "i32"
 							}
 						}
 					}
@@ -59,19 +33,22 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
-							},
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
+					"Top Level Expression": {
+						"expr": {
+							"Binary Operator": {
+								"left_expr": {
+									"Value Expr": {
+										"number": "1"
+									}
+								},
+								"operator": "+",
+								"right_expr": {
+									"Value Expr": {
+										"number": "1"
+									}
 								}
 							}
-						]
+						}
 					}
 				},
 				"body": {
@@ -90,47 +67,23 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
-							},
-							{
-								"Binary Operator": {
-									"left_expr": {
-										"Value Expr": {
-											"number": "1"
+					"Top Level Expression": {
+						"expr": {
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									},
-									"operator": "+",
-									"right_expr": {
-										"Value Expr": {
-											"number": "1"
+									{
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									}
-								}
-							},
-							{
-								"Round Group Expression": {
-									"inner_expr": {
-										"Identifier Expression": {
-											"name": {
-												"Name": "abc"
-											}
-										}
-									}
-								}
-							},
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "x"
-									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"body": {
@@ -149,47 +102,114 @@
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
-							},
-							{
-								"Binary Operator": {
-									"left_expr": {
-										"Value Expr": {
-											"number": "1"
+					"Top Level Expression": {
+						"expr": {
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									},
-									"operator": "+",
-									"right_expr": {
-										"Value Expr": {
-											"number": "1"
+									{
+										"Binary Operator": {
+											"left_expr": {
+												"Value Expr": {
+													"number": "1"
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"Value Expr": {
+													"number": "1"
+												}
+											}
 										}
-									}
-								}
-							},
-							{
-								"Round Group Expression": {
-									"inner_expr": {
+									},
+									{
+										"Round Group Expression": {
+											"inner_expr": {
+												"Identifier Expression": {
+													"name": {
+														"Name": "abc"
+													}
+												}
+											}
+										}
+									},
+									{
 										"Identifier Expression": {
 											"name": {
-												"Name": "abc"
+												"Name": "x"
 											}
 										}
 									}
-								}
-							},
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "x"
-									}
-								}
+								]
 							}
-						]
+						}
+					}
+				},
+				"body": {
+					"Code Block or Statement": {
+						"Code Block": []
+					}
+				}
+			}
+		},
+		{
+			"Function": {
+				"name": {
+					"Name": "A"
+				},
+				"parameters": {
+					"function parameter list": []
+				},
+				"return": {
+					"Top Level Expression": {
+						"expr": {
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
+									},
+									{
+										"Binary Operator": {
+											"left_expr": {
+												"Value Expr": {
+													"number": "1"
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"Value Expr": {
+													"number": "1"
+												}
+											}
+										}
+									},
+									{
+										"Round Group Expression": {
+											"inner_expr": {
+												"Identifier Expression": {
+													"name": {
+														"Name": "abc"
+													}
+												}
+											}
+										}
+									},
+									{
+										"Identifier Expression": {
+											"name": {
+												"Name": "x"
+											}
+										}
+									}
+								]
+							}
+						}
 					}
 				},
 				"body": {

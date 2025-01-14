@@ -15,16 +15,24 @@
 				"Implements": {
 					"inheritance list": [
 						{
-							"Identifier Expression": {
-								"name": {
-									"Name": "bbb"
+							"Top Level Expression": {
+								"expr": {
+									"Identifier Expression": {
+										"name": {
+											"Name": "bbb"
+										}
+									}
 								}
 							}
 						},
 						{
-							"Identifier Expression": {
-								"name": {
-									"Name": "cccc"
+							"Top Level Expression": {
+								"expr": {
+									"Identifier Expression": {
+										"name": {
+											"Name": "cccc"
+										}
+									}
 								}
 							}
 						},
@@ -39,8 +47,12 @@
 									"Name": "x"
 								},
 								"type": {
-									"Keyword Expression": {
-										"keyword": "i32"
+									"Top Level Expression": {
+										"expr": {
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
 									}
 								}
 							}
@@ -55,13 +67,21 @@
 									"Name": "y"
 								},
 								"type": {
-									"Keyword Expression": {
-										"keyword": "i32"
+									"Top Level Expression": {
+										"expr": {
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
 									}
 								},
 								"initial": {
-									"Value Expr": {
-										"number": "5"
+									"Top Level Expression": {
+										"expr": {
+											"Value Expr": {
+												"number": "5"
+											}
+										}
 									}
 								}
 							}
@@ -80,8 +100,12 @@
 														"Name": "a"
 													},
 													"type": {
-														"Keyword Expression": {
-															"keyword": "i64"
+														"Top Level Expression": {
+															"expr": {
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
 														}
 													}
 												}
@@ -94,9 +118,13 @@
 														"Name": "c"
 													},
 													"type": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "yyy"
+														"Top Level Expression": {
+															"expr": {
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "yyy"
+																	}
+																}
 															}
 														}
 													}
@@ -125,9 +153,13 @@
 																"arguments": {
 																	"call list": [
 																		{
-																			"Identifier Expression": {
-																				"name": {
-																					"Name": "a"
+																			"Top Level Expression": {
+																				"expr": {
+																					"Identifier Expression": {
+																						"name": {
+																							"Name": "a"
+																						}
+																					}
 																				}
 																			}
 																		},
@@ -160,8 +192,12 @@
 														"Name": "z"
 													},
 													"type": {
-														"Keyword Expression": {
-															"keyword": "i64"
+														"Top Level Expression": {
+															"expr": {
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
 														}
 													}
 												}
@@ -170,8 +206,12 @@
 									]
 								},
 								"return": {
-									"Keyword Expression": {
-										"keyword": "i64"
+									"Top Level Expression": {
+										"expr": {
+											"Keyword Expression": {
+												"keyword": "i64"
+											}
+										}
 									}
 								},
 								"body": {
@@ -201,9 +241,13 @@
 											"Action": {
 												"kind": "Return",
 												"value": {
-													"Identifier Expression": {
-														"name": {
-															"Name": "y"
+													"Top Level Expression": {
+														"expr": {
+															"Identifier Expression": {
+																"name": {
+																	"Name": "y"
+																}
+															}
 														}
 													}
 												}
@@ -238,8 +282,12 @@
 																		"Name": "c"
 																	},
 																	"type": {
-																		"Keyword Expression": {
-																			"keyword": "i64"
+																		"Top Level Expression": {
+																			"expr": {
+																				"Keyword Expression": {
+																					"keyword": "i64"
+																				}
+																			}
 																		}
 																	}
 																}
@@ -250,32 +298,40 @@
 												"inits": {
 													"initialization list": [
 														{
-															"Chain Expression": {
-																"literal": {
-																	"Identifier Expression": {
-																		"name": {
-																			"Name": "aaa"
-																		}
-																	}
-																},
-																"chain": [
-																	{
-																		"Call Expression": {
-																			"type": "[]",
-																			"arguments": {
-																				"call list": [
-																					{
-																						"Identifier Expression": {
-																							"name": {
-																								"Name": "c"
-																							}
-																						}
-																					},
-																				]
+															"Top Level Expression": {
+																"expr": {
+																	"Chain Expression": {
+																		"literal": {
+																			"Identifier Expression": {
+																				"name": {
+																					"Name": "aaa"
+																				}
 																			}
-																		}
+																		},
+																		"chain": [
+																			{
+																				"Call Expression": {
+																					"type": "[]",
+																					"arguments": {
+																						"call list": [
+																							{
+																								"Top Level Expression": {
+																									"expr": {
+																										"Identifier Expression": {
+																											"name": {
+																												"Name": "c"
+																											}
+																										}
+																									}
+																								}
+																							},
+																						]
+																					}
+																				}
+																			}
+																		]
 																	}
-																]
+																}
 															}
 														},
 													]

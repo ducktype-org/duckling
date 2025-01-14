@@ -537,7 +537,7 @@ namespace compiler::helios {
 
 			const auto const_symbol = dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_stmt);
 
-			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue() });
+			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue()->getExpr() });
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
@@ -584,13 +584,13 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
+			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()->getExpr()); }
 
 			void visitVariable(const pst::Variable& stmt) override {
-				setTypeOfSymbol(stmt.getType());
+				setTypeOfSymbol(stmt.getType()->getExpr());
 			}
 
-			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()); }
+			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()->getExpr()); }
 
 			void visitFun(const pst::Fun& fun) override {
 				auto params = fun.getParams();
@@ -600,7 +600,7 @@ namespace compiler::helios {
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
-					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType());
+					auto&& parse_type_res = parseTypeFromExpr(ctx, param->getType()->getExpr());
 					if (parse_type_res.hasValue()) {
 						param_types.emplace_back(parse_type_res.value());
 					} else {
@@ -610,7 +610,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto&& parsed = parseTypeFromExpr(ctx, ret.value());
+					auto&& parsed = parseTypeFromExpr(ctx, ret.value()->getExpr());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -763,7 +763,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = parseTypeFromExpr(ctx, interface);
+					auto tp = parseTypeFromExpr(ctx, interface->getExpr());
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
@@ -796,9 +796,9 @@ namespace compiler::helios {
 		public:
 			PstStmtVisitor_GetHOUTExprTree(Context& ctx, ScopeID scope): ctx(ctx), scope(scope) {}
 
-			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
+			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()->getExpr()); }
 
-			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()); }
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getType()->getExpr()); }
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

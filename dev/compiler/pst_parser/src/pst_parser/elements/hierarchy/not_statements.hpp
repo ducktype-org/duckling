@@ -210,8 +210,11 @@ namespace pst {
 	protected:
 		MBox<ExprElement> expr;
 
-		using NotStmt::NotStmt;
 	public:
+		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
+			this->element_kind = ElementKind::ExprWrapper;
+		}
+
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Top Level Expression";
@@ -296,7 +299,7 @@ namespace pst {
 	/**
 	 * @brief Expression parsing entry point for type in for statement.
 	 */
-	class ForTypeExprHolder final: public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseAssignment, true> {
+	class ForTypeExprHolder final: public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~ForTypeExprHolder() final = default;

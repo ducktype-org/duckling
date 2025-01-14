@@ -185,8 +185,8 @@ namespace pst {
 	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
 	class Const final: public Stmt {
 		tpc::Identifier   name;
-		MBox<ExprElement> type;
-		MBox<ExprElement> value;
+		MBox<CommaExprHolder> type;
+		MBox<CommaExprHolder> value;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
@@ -198,12 +198,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getValue() const {
+		MCRef<ExprHolder> getValue() const {
 			return value.ref();
 		}
 

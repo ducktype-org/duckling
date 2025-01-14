@@ -14,8 +14,12 @@
 										"Name": "a"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									}
 								}
@@ -28,8 +32,12 @@
 										"Name": "b"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									}
 								}
@@ -59,8 +67,12 @@
 										"Name": "a"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									}
 								}
@@ -73,13 +85,21 @@
 										"Name": "b"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									},
 									"initial": {
-										"Value Expr": {
-											"number": "0"
+										"Top Level Expression": {
+											"expr": {
+												"Value Expr": {
+													"number": "0"
+												}
+											}
 										}
 									}
 								}
@@ -109,8 +129,12 @@
 										"Name": "a"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									}
 								}
@@ -123,13 +147,21 @@
 										"Name": "b"
 									},
 									"type": {
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									},
 									"initial": {
-										"Value Expr": {
-											"number": "42"
+										"Top Level Expression": {
+											"expr": {
+												"Value Expr": {
+													"number": "42"
+												}
+											}
 										}
 									}
 								}
@@ -159,9 +191,13 @@
 										"Name": "a"
 									},
 									"type": {
-										"Identifier Expression": {
-											"name": {
-												"Name": "A"
+										"Top Level Expression": {
+											"expr": {
+												"Identifier Expression": {
+													"name": {
+														"Name": "A"
+													}
+												}
 											}
 										}
 									}

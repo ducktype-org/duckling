@@ -134,4 +134,8 @@ namespace dia {
 		printer::StreamPrinter::printNL(content, res);
 		return res.str();
 	}
+
+	bool SourcePosition::isFileEnd() const {
+		return source_end == source_file->getChars().size() - 1;
+	}
 }

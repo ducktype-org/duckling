@@ -49,7 +49,7 @@ namespace pst {
 		void simpleActionDprint(
 			std::ostream&                            out,
 			const std::string&                       kind,
-			const base::Optional<MBox<ExprElement>>* expr
+			const base::Optional<MBox<CommaExprHolder>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

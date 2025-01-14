@@ -88,7 +88,7 @@ namespace compiler::helios {
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ val.value() })
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value()->getExpr() })
 					                .expect("Not handling errors here yet...");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
@@ -112,7 +112,7 @@ namespace compiler::helios {
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition() })
+				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition()->getExpr() })
 				                     .expect("Not handling errors here yet");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
@@ -133,7 +133,7 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
-				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue() })
+				auto initial_value = ctx.query<QueryHoutOfExpr>({ stmt.getValue()->getExpr() })
 				                         .expect("Not handling errors here yet...");
 
 				output(

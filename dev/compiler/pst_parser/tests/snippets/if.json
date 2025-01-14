@@ -7,33 +7,37 @@
 				},
 				"condition": {
 					"Round Group Expression": {
-						"Comparison Chain": {
-							"sub-expressions": [
-								{
-									"Binary Operator": {
-										"left_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "a"
+						"Top Level Expression": {
+							"expr": {
+								"Comparison Chain": {
+									"sub-expressions": [
+										{
+											"Binary Operator": {
+												"left_expr": {
+													"Identifier Expression": {
+														"name": {
+															"Name": "a"
+														}
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"Identifier Expression": {
+														"name": {
+															"Name": "b"
+														}
+													}
 												}
 											}
 										},
-										"operator": "+",
-										"right_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "b"
-												}
+										{
+											"Value Expr": {
+												"number": "0"
 											}
 										}
-									}
-								},
-								{
-									"Value Expr": {
-										"number": "0"
-									}
+									]
 								}
-							]
+							}
 						}
 					}
 				},
@@ -68,33 +72,37 @@
 							"name": "<ANONYMOUS>",
 							"condition": {
 								"Round Group Expression": {
-									"Comparison Chain": {
-										"sub-expressions": [
-											{
-												"Binary Operator": {
-													"left_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "a"
+									"Top Level Expression": {
+										"expr": {
+											"Comparison Chain": {
+												"sub-expressions": [
+													{
+														"Binary Operator": {
+															"left_expr": {
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+															"operator": "+",
+															"right_expr": {
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "b"
+																	}
+																}
 															}
 														}
 													},
-													"operator": "+",
-													"right_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "b"
-															}
+													{
+														"Value Expr": {
+															"number": "0"
 														}
 													}
-												}
-											},
-											{
-												"Value Expr": {
-													"number": "0"
-												}
+												]
 											}
-										]
+										}
 									}
 								}
 							},

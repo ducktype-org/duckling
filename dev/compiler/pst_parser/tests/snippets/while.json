@@ -5,43 +5,47 @@
 				"name": "<ANONYMOUS>",
 				"condition": {
 					"Round Group Expression": {
-						"Comparison Chain": {
-							"sub-expressions": [
-								{
-									"Binary Operator": {
-										"left_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "a"
+						"Top Level Expression": {
+							"expr": {
+								"Comparison Chain": {
+									"sub-expressions": [
+										{
+											"Binary Operator": {
+												"left_expr": {
+													"Identifier Expression": {
+														"name": {
+															"Name": "a"
+														}
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"Identifier Expression": {
+														"name": {
+															"Name": "b"
+														}
+													}
 												}
 											}
 										},
-										"operator": "+",
-										"right_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "b"
+										{
+											"Binary Operator": {
+												"left_expr": {
+													"Value Expr": {
+														"number": "4"
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"Value Expr": {
+														"number": "0.8"
+													}
 												}
 											}
 										}
-									}
-								},
-								{
-									"Binary Operator": {
-										"left_expr": {
-											"Value Expr": {
-												"number": "4"
-											}
-										},
-										"operator": "+",
-										"right_expr": {
-											"Value Expr": {
-												"number": "0.8"
-											}
-										}
-									}
+									]
 								}
-							]
+							}
 						}
 					}
 				},

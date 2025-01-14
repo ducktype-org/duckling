@@ -7,79 +7,95 @@
 					"Name": "a"
 				},
 				"type": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "T"
+					"Top Level Expression": {
+						"expr": {
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"Identifier Expression": {
+											"name": {
+												"Name": "T"
+											}
+										}
+									},
+									{
+										"Identifier Expression": {
+											"name": {
+												"Name": "U"
+											}
+										}
 									}
-								}
-							},
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "U"
-									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"iterable": {
-					"Chain Expression": {
-						"literal": {
-							"Identifier Expression": {
-								"name": {
-									"Name": "x"
-								}
-							}
-						},
-						"chain": [
-							{
-								"Access Expression": {
-									"type": ".",
-									"name": {
-										"Name": "b"
+					"Top Level Expression": {
+						"expr": {
+							"Chain Expression": {
+								"literal": {
+									"Identifier Expression": {
+										"name": {
+											"Name": "x"
+										}
 									}
-								}
-							},
-							{
-								"Call Expression": {
-									"type": "[]",
-									"arguments": {
-										"call list": [
-											{
-												"Binary Operator": {
-													"left_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "c"
+								},
+								"chain": [
+									{
+										"Access Expression": {
+											"type": ".",
+											"name": {
+												"Name": "b"
+											}
+										}
+									},
+									{
+										"Call Expression": {
+											"type": "[]",
+											"arguments": {
+												"call list": [
+													{
+														"Top Level Expression": {
+															"expr": {
+																"Binary Operator": {
+																	"left_expr": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "c"
+																			}
+																		}
+																	},
+																	"operator": "+",
+																	"right_expr": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "d"
+																			}
+																		}
+																	}
+																}
 															}
 														}
 													},
-													"operator": "+",
-													"right_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "d"
+													{
+														"Top Level Expression": {
+															"expr": {
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "w"
+																	}
+																}
 															}
 														}
-													}
-												}
-											},
-											{
-												"Identifier Expression": {
-													"name": {
-														"Name": "w"
-													}
-												}
-											},
-										]
+													},
+												]
+											}
+										}
 									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"body": {
@@ -102,9 +118,13 @@
 													"arguments": {
 														"call list": [
 															{
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "a"
+																"Top Level Expression": {
+																	"expr": {
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "a"
+																			}
+																		}
 																	}
 																}
 															},

@@ -86,6 +86,9 @@ namespace dia {
 		[[nodiscard]]
 		tokenizer::BorrowFile getSource() const;
 
+		[[nodiscard]]
+		bool isFileEnd() const;
+
 	private:
 		usize                 source_start;  ///< Start of the range of characters in the file.
 		usize                 source_end;    ///< End of the range of characters in the file.
