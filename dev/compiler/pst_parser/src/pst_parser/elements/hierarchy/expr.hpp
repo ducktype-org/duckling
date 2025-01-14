@@ -172,11 +172,12 @@ namespace pst {
 		};
 
 		/**
-		 * @brief This is a helper element for parsing literals that decides which literal to parse.
+		 * @brief This is a helper element for parsing literals and bracket subexpressions that
+		 * decides which literal to parse.
 		 */
-		class Literal: public ExprElement {
+		class Atom: public ExprElement {
 		public:
-			Literal() = delete;
+			Atom() = delete;
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 		};
@@ -317,12 +318,12 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Combined chain of a literal and Accesses / Calls / Subscripts.
+		 * @brief Combined chain of an atom followed by Accesses / Calls / Subscripts.
 		 */
 		class ChainExpr final: public ExprElement {
-			using Lower = Literal;
+			using Lower = Atom;
 
-			MBox<ExprElement>              literal;
+			MBox<ExprElement>              atom;
 			std::vector<MBox<ExprElement>> chain;
 
 			/**
@@ -345,7 +346,7 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getLiteral() const;
+			MCRef<ExprElement> getAtom() const;
 			[[nodiscard]]
 			const std::vector<MBox<ExprElement>>& getChain() const;
 		};
@@ -487,14 +488,14 @@ namespace pst {
 			/**
 			 * @brief
 			 *
-			 * @note Assumes an expression "literal" ends on either:
+			 * @note Assumes an expression atom ends on either:
 			 * 1. End of expression
 			 * 2. A General binary operator
 			 * 3. Literal that isn't following an access operator (`.`, in future also `.?`, maybe
 			 * `::`)
 			 *
 			 */
-			static i64 skipLiteral(const LangParserState& state, i64 base, i64 length);
+			static i64 skipAtom(const LangParserState& state, i64 base, i64 length);
 
 			static MBox<ExprElement>
 				parseRecursive(LangParserState& state, const BuilderExpr& expr);
