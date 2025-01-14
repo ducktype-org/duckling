@@ -11,6 +11,11 @@ namespace pst {
 #define DECL_CHILD_CONSTRUCTOR_NO_KIND(class_name) \
 	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {}
 
+	/**
+	 * @brief Common ancestor element for code declarations.
+	 * 
+	 * Code declarations are statements that can generally create new symbols like function declarations, variable declarations or language construct with names like fors, blocks and whiles
+	 */
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR_NO_KIND(CodeDecl);
@@ -26,6 +31,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Top-level element that is the root of the pst of a single file.
+	 */
 	class TopLevel final: public Decl {
 		std::vector<MBox<Stmt>> statements;
 
@@ -55,6 +63,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Block declaration
+	 */
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		MBox<CodeBlock>         code_block = nullptr;
@@ -76,6 +87,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Namespace declaration
+	 */
 	class Namespace final: public Decl {
 		tpc::Identifier name;
 		MBox<CodeBlock> body = nullptr;
@@ -105,6 +119,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class declaration
+	 */
 	class Class final: public Decl {
 	private:
 		tpc::Identifier      name;
@@ -152,6 +169,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Variable declaration
+	 */
 	class Variable final: public Decl {
 		tpc::Identifier   name;
 		MBox<ExprElement> type     = nullptr;
@@ -195,6 +215,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Function declaration
+	 */
 	class Fun final: public Decl {
 		tpc::Identifier                   name;
 		MBox<ParamList>                   params = nullptr;
@@ -239,6 +262,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief If declaration
+	 */
 	class If final: public CodeDecl {
 		MBox<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
@@ -272,6 +298,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief While declaration
+	 */
 	class While final: public CodeDecl {
 		MBox<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
@@ -294,6 +323,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief For declaration
+	 */
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		tpc::Identifier         iterator;

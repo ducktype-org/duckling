@@ -19,6 +19,9 @@ namespace pst {
 
 	using GetName = std::string (*)();
 
+	/**
+	 * @brief A general element that is a common ancestor for elements that aren't statements
+	 */
 	class NotStmt: public LangElement {
 	public:
 		explicit NotStmt(const dia::SourcePosition& position): LangElement(position) {}
@@ -31,6 +34,9 @@ namespace pst {
 		bool trailingSemicolon() override;
 	};
 
+	/**
+	 * @brief Attribute element, can be before any statement.
+	 */
 	class Attribute final: public NotStmt {
 		MBox<DottedName> name;
 		MBox<AtrArgList> args = nullptr;
@@ -70,6 +76,10 @@ namespace pst {
 		AccessBlock,
 	};
 
+
+	/**
+	 * @brief A general element that is a common ancestor of all statements.
+	 */
 	class Stmt: public LangElement {
 		StmtKind kind;
 
@@ -150,11 +160,21 @@ namespace pst {
 		this->element_kind = element_kind_;                                                 \
 	}
 
+	/**
+	 * @brief Context needed in class parsing
+	 *
+	 * includes:
+	 *  - name - class name
+	 *  - specifiers - current access and other specifiers
+	 */
 	struct ClassContext {
 		base::StrID                                 name;
 		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
 	};
 
+	/**
+	 * @brief Statements specific to the inside of a class
+	 */
 	class ClassStmt: public Stmt {
 	protected:
 		inline static const std::set<lang_def::Keyword> class_specs = {
