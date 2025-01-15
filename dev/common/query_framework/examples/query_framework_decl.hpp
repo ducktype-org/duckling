@@ -14,7 +14,15 @@ struct Key {
 	// for example:
 	uint64_t v;
 
-	base::HashT customPerfectHash() { return v; }
+	[[nodiscard]]
+	constexpr base::HashT customPerfectHash() const noexcept {
+		return v;
+	}
+
+	[[nodiscard]]
+	constexpr std::strong_ordering operator<=>(const Key& other) const noexcept {
+		return v <=> other.v;
+	}
 };
 
 /**

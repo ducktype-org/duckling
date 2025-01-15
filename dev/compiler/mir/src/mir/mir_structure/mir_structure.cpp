@@ -73,20 +73,20 @@ namespace compiler::mir {
 		output << "}\n";
 	}
 
-	void Instruction::debugPrint(std::ostream& output_) const {
+	void Instruction::debugPrint(std::ostream& output_stream) const {
 		// save flags to restore
-		auto output_flags = output_.flags();
+		auto output_flags = output_stream.flags();
 
-		output_ << std::left << std::setw(12);
+		output_stream << std::left << std::setw(12);
 		std::stringstream output_value;
 		if (this->output.has_value()) {
 			this->output.value()->debugPrint(output_value);
 			output_value << " :=";
 		}
-		output_ << output_value.str() << " ";
+		output_stream << output_value.str() << " ";
 
-		output_ << std::left << std::setw(15);
-		output_ << base::enumToStr(operation).strView() << "  ";
+		output_stream << std::left << std::setw(15);
+		output_stream << base::enumToStr(operation).strView() << "  ";
 
 		std::stringstream args;
 
@@ -97,21 +97,21 @@ namespace compiler::mir {
 			separator = ", ";
 		}
 
-		output_ << std::left << std::setw(15);
-		output_ << args.str() << "  ";
+		output_stream << std::left << std::setw(15);
+		output_stream << args.str() << "  ";
 
 		separator = "";
-		output_ << "Flags[";
+		output_stream << "Flags[";
 		for ([[maybe_unused]]
 		     const auto& flag: flags) {
-			output_ << separator;
-			flag.debugPrint(output_);
+			output_stream << separator;
+			flag.debugPrint(output_stream);
 			separator = ", ";
 		}
-		output_ << "], scope:" << scope.customPerfectHash();
+		output_stream << "], scope:" << scope.customPerfectHash();
 
 		// restore flags
-		output_.flags(output_flags);
+		output_stream.flags(output_flags);
 	}
 
 	void MirLocal::debugPrint(std::ostream& output, bool detailed) const {

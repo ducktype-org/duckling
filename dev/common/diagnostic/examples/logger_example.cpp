@@ -1,14 +1,18 @@
 #include <diagnostic/logger.hpp>
 
 // Extend Error, Warning, or Info.
-class MessageRelevantToThisSituation: public Error {
+class MessageRelevantToThisSituation: public dia::Error {
 	// ...
 
 protected:
-	dia::Message::Domain getDomain() const override { /* ... */ }
+	[[nodiscard]]
+	dia::Message::Domain getDomain() const override { /* ... */
+		return {};
+	}
 
 	std::string toStringBrief() const override {
 		// ...
+		return {};
 	}
 };
 
@@ -18,15 +22,15 @@ int main() {
 
 	// ...
 
-	dia::SourcePosition currentPosition = { /*...*/ };
+	// dia::SourcePosition current_position = { /*...*/ };
 	if (/*<check - if - error - in - current - position>*/ true)
 		// logger.log(base::make_unique<MessageRelevantToThisSituation>(/* ... */));
 
-	// ...
+		// ...
 
-	if (logger.bad()) {
-		bool detailed = false;
-		logger.dumpLog(detailed);  // prints errors with file, position, part of code, etc.
-		std::exit(1);
-	}
+		if (logger.bad()) {
+			bool detailed = false;
+			logger.dumpLog(detailed);  // prints errors with file, position, part of code, etc.
+			std::exit(1);
+		}
 }
