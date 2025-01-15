@@ -745,8 +745,8 @@ namespace compiler::helios {
 			void visitClass(const pst::Class& stmt) final {
 				name = stmt.getName();
 				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
-				if (auto implements = stmt.getImplements(); implements != nullptr)
-					this->implements = implements;
+				if (auto implements_ = stmt.getImplements(); implements_ != nullptr)
+					this->implements = implements_;
 			}
 		};
 

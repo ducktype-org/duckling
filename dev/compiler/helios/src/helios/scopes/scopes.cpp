@@ -329,11 +329,11 @@ namespace compiler::helios {
 			void visitFun(const pst::Fun& fun) override {
 				// Scope of "fun →()← {}"
 
-				std::vector<SymID> out;
+				std::vector<SymID> out_ret;
 				for (auto params: *fun.getParams())
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
+					out_ret.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
 
-				output(std::move(out));
+				output(std::move(out_ret));
 			}
 
 			void visitIf(const pst::If&) override {
