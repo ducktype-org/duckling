@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
 		TESTER_ADD_TEST(testFunctionParameters);
 
 		// this is at the end
@@ -252,7 +253,7 @@ private:
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
-			void visitLiteralValueExpr(const LiteralValueExpr&) override { const_int_count++; }
+			void visitLiteralIntExpr(const LiteralIntExpr&) override { const_int_count++; }
 
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
@@ -537,6 +538,84 @@ private:
 
 		// debug print test just for cov and to see if it does not throw:
 		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+	}
+
+	void testKeywordLiterals() {
+		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
+
+		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
+		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
+		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, true });
+
+		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
+		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
+		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
+		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
+		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, false });
+
+		auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
+		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
+		auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
+
+		auto f80_type  = query::entryPoint<tsh::QueryFloatType>(80);
+		auto f128_type = query::entryPoint<tsh::QueryFloatType>(128);
+
+		auto char_type = query::entryPoint<tsh::QueryCharType>({});
+
+		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
+
+		// a simple way to get function scope through hout:
+		// @todo maybe we want to put in in helios_test_utils.hpp?
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		ASSERT_EQUAL(1, hout.functions.size());
+
+		// debug print test just for cov and to see if it does not throw:
+		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+
+		auto foo            = hout.functions.at(0);
+		auto foo_body_scope = foo.content.body->lifetime_scope;
+
+		// variable types:
+
+		ASSERT_EQUAL(i8_type, getTypeOf("v_i8", foo_body_scope));
+		ASSERT_EQUAL(i16_type, getTypeOf("v_i16", foo_body_scope));
+		ASSERT_EQUAL(i32_type, getTypeOf("v_i32", foo_body_scope));
+		ASSERT_EQUAL(i64_type, getTypeOf("v_i64", foo_body_scope));
+		ASSERT_EQUAL(i128_type, getTypeOf("v_i128", foo_body_scope));
+
+		ASSERT_EQUAL(u8_type, getTypeOf("v_u8", foo_body_scope));
+		ASSERT_EQUAL(u16_type, getTypeOf("v_u16", foo_body_scope));
+		ASSERT_EQUAL(u32_type, getTypeOf("v_u32", foo_body_scope));
+		ASSERT_EQUAL(u64_type, getTypeOf("v_u64", foo_body_scope));
+		ASSERT_EQUAL(u128_type, getTypeOf("v_u128", foo_body_scope));
+
+		ASSERT_EQUAL(f16_type, getTypeOf("v_f16", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("v_f32", foo_body_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("v_f64", foo_body_scope));
+		ASSERT_EQUAL(f80_type, getTypeOf("v_f80", foo_body_scope));
+		ASSERT_EQUAL(f128_type, getTypeOf("v_f128", foo_body_scope));
+
+		ASSERT_EQUAL(char_type, getTypeOf("v_char", foo_body_scope));
+
+		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_t", foo_body_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_f", foo_body_scope));
+
+		// true, false literals:
+		auto true_expr  = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
+		auto false_expr = getExprOfVariable(getChain("v_bool_f", foo_body_scope).back());
+
+		auto true_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*true_expr);
+		auto false_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*false_expr);
+
+		ASSERT_TRUE(true_expr_casted != nullptr);
+		ASSERT_TRUE(false_expr_casted != nullptr);
+
+		ASSERT_EQUAL(true_expr_casted->value, true);
+		ASSERT_EQUAL(false_expr_casted->value, false);
 	}
 
 	void testFunctionParameters() {

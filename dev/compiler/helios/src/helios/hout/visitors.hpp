@@ -27,12 +27,13 @@ namespace compiler::helios::code {
 	 */
 	class HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD(LiteralValueExpr);
+		HOUT_VISITOR_METHOD(LiteralIntExpr);
+		HOUT_VISITOR_METHOD(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD(IdentifierExpr);
 		HOUT_VISITOR_METHOD(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD(UnaryOperatorExpr);
 		HOUT_VISITOR_METHOD(ParenthesisExpr);
-		HOUT_VISITOR_METHOD(KeywordExpr);
 		HOUT_VISITOR_METHOD(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD(LinkedIdentifierExpr);
@@ -58,12 +59,13 @@ namespace compiler::helios::code {
 
 	class HoutExprVisitorPanicky: public HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD_PANIC(LiteralValueExpr);
+		HOUT_VISITOR_METHOD_PANIC(LiteralIntExpr);
+		HOUT_VISITOR_METHOD_PANIC(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD_PANIC(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD_PANIC(IdentifierExpr);
 		HOUT_VISITOR_METHOD_PANIC(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD_PANIC(UnaryOperatorExpr);
 		HOUT_VISITOR_METHOD_PANIC(ParenthesisExpr);
-		HOUT_VISITOR_METHOD_PANIC(KeywordExpr);
 		HOUT_VISITOR_METHOD_PANIC(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_PANIC(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_PANIC(LinkedIdentifierExpr);
@@ -71,12 +73,13 @@ namespace compiler::helios::code {
 
 	class HoutExprVisitorEmpty: public HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD_EMPTY(LiteralValueExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LiteralIntExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LiteralBoolExpr);
+		HOUT_VISITOR_METHOD_EMPTY(LiteralTypeExpr);
 		HOUT_VISITOR_METHOD_EMPTY(IdentifierExpr);
 		HOUT_VISITOR_METHOD_EMPTY(BinaryOperatorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(UnaryOperatorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(ParenthesisExpr);
-		HOUT_VISITOR_METHOD_EMPTY(KeywordExpr);
 		HOUT_VISITOR_METHOD_EMPTY(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(LinkedIdentifierExpr);

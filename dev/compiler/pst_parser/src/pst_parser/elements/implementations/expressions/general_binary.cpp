@@ -19,7 +19,7 @@ namespace pst::expr {
 		OnlyPrefixError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	i64 GeneralBinary::skipLiteral(const LangParserState& state, i64 base, i64 length) {
+	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
 		while (fwd < length && !isGenBinOp(state, fwd)
@@ -62,7 +62,7 @@ namespace pst::expr {
 		std::vector<i64> operators;
 		i64              next = 0;
 		while (fwd < reduced_length) {
-			next = skipLiteral(state, fwd, reduced_length);
+			next = skipAtom(state, fwd, reduced_length);
 			if (fwd == next) base::make_unique<tpc::NoIdentifierError>(state.getPosition(fwd));
 			if (next < reduced_length - 1)  // Not a suffix operator or end of expression
 				operators.push_back(next);
