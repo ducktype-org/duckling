@@ -414,7 +414,7 @@ def download_llvm(*args, **kwargs):
     "clang_format_path",
     prompt="clang-format path",
     help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="scripts/downloads/clang-format",
+    default="clang-format-18",
 )
 @click.option(
     "-b",

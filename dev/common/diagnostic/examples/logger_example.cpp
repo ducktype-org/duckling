@@ -18,15 +18,15 @@ int main() {
 
 	// ...
 
-	dia::SourcePosition currentPosition = {... };
-	if (<check - if - error - in - current - position>)
-		logger.log(base::make_unique<MessageRelevantToThisSituation>(/* ... */));
+	dia::SourcePosition currentPosition = { /*...*/ };
+	if (/*<check - if - error - in - current - position>*/ true)
+		// logger.log(base::make_unique<MessageRelevantToThisSituation>(/* ... */));
 
 	// ...
 
 	if (logger.bad()) {
 		bool detailed = false;
 		logger.dumpLog(detailed);  // prints errors with file, position, part of code, etc.
-		exit(1);
+		std::exit(1);
 	}
 }

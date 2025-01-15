@@ -262,9 +262,9 @@ namespace compiler::mir {
 				             helios_symbol };
 		}
 
-		void setName(base::StrID name_) {
+		void setName(base::StrID function_name) {
 			CORE_ASSERT(not this->name.has_value(), "Name already set");
-			this->name.emplace(name_);
+			this->name.emplace(function_name);
 		}
 
 		void setTopLifetimeScope(helios::ScopeID scope) {

@@ -216,7 +216,7 @@ namespace pst {
 	 */
 	class ExprElement: public NotStmt {
 		[[maybe_unused]]
-		const i64 precedence;  // @TODO: this field is unused in the current implementation, when it
+		const i64 PRECEDENCE;  // @TODO: this field is unused in the current implementation, when it
 		                       // will, remove [[maybe_unused]]
 
 	protected:
@@ -232,7 +232,7 @@ namespace pst {
 
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
-			  precedence(precedence) {
+			  PRECEDENCE(precedence) {
 			this->element_kind = ElementKind::ExprElement;
 		}
 
