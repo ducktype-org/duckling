@@ -4,9 +4,11 @@ function(add_to_coverage target)
 	endif()
 endfunction()
 
+set(GCOV_PATH "gcov" CACHE STRING "GCOV program path")
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
+	find_program(GCOV_PATH gcov REQUIRED)
 	find_program(GENHTML genhtml REQUIRED)
 
 	add_custom_target(build_all_coverage_targets)
@@ -22,6 +24,7 @@ if(ENABLE_COVERAGE)
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+						--gcov-tool ${GCOV_PATH}
 						--initial 
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
