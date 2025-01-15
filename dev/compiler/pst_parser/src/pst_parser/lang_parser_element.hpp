@@ -240,7 +240,7 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(Ref<LangElement> parent) { this->parent.emplace(parent); }
+		void setParent(Ref<LangElement> parent_) { this->parent.emplace(parent_); }
 
 	private:
 		PstID id = PstID::next();
