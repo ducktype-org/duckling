@@ -149,14 +149,14 @@ namespace compiler::helios::code {
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
 
-				auto literal_expr = fromPST(ctx, stmt.getLiteral());
-				if (!literal_expr) {
+				auto atom_expr = fromPST(ctx, stmt.getAtom());
+				if (!atom_expr) {
 					// Report an error?
 					return;
 				}
 
 				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
-				literal_expr.value()->acceptVisitor(resulting_symbol_vis);
+				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
 
 				CORE_ASSERT(resulting_symbol_vis.symbols, "Failed to get symbols");
 

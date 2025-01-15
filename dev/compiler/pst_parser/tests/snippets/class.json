@@ -111,7 +111,7 @@
 										{
 											"Expr Stmt": {
 												"Chain Expression": {
-													"literal": {
+													"atom": {
 														"Identifier Expression": {
 															"name": {
 																"Name": "goo"
@@ -251,7 +251,7 @@
 													"initialization list": [
 														{
 															"Chain Expression": {
-																"literal": {
+																"atom": {
 																	"Identifier Expression": {
 																		"name": {
 																			"Name": "aaa"

@@ -104,6 +104,18 @@ namespace pst {
 	public:
 		ListParsingTemplate() = delete;
 
+		/**
+		 * @brief General Element representing a list of Elements.
+		 *
+		 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
+		 * @tparam Self - Inheriting class type for construction purposes
+		 * @tparam NON_EMPTY - Should empty list be an error.
+		 * @tparam BRACKETS - expected brackets or None if not expected
+		 * @tparam isSeparator - Separator should always be skip-able with one skip.
+		 * @tparam isEnding - Check for successful ending.
+		 * @tparam getName - List name getter for errors.
+		 * @tparam ParsingClass - Class that defines parsing for the elements
+		 */
 		template<
 			class ListElements,
 			typename Self,
