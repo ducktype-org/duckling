@@ -40,7 +40,9 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// lets call Query2:
-		[[maybe_unused]] auto result = context.query<Query2>(123);
+		[[maybe_unused]]
+		auto result
+			= context.query<Query2>(123);
 
 		// Normally we would do it because we need
 		// it in some computation.

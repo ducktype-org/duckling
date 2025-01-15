@@ -102,7 +102,8 @@ namespace compiler::mir {
 
 		separator = "";
 		output_ << "Flags[";
-		for ([[maybe_unused]] const auto& flag: flags) {
+		for ([[maybe_unused]]
+		     const auto& flag: flags) {
 			output_ << separator;
 			flag.debugPrint(output_);
 			separator = ", ";

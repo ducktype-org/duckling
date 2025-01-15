@@ -5,8 +5,7 @@ class MessageRelevantToThisSituation: public Error {
 	// ...
 
 protected:
-	dia::Message::Domain getDomain() const override { /* ... */
-	}
+	dia::Message::Domain getDomain() const override { /* ... */ }
 
 	std::string toStringBrief() const override {
 		// ...

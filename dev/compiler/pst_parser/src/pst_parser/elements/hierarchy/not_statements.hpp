@@ -215,7 +215,9 @@ namespace pst {
 	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
-		[[maybe_unused]] const i64 precedence;		// @TODO: this field is unused in the current implementation, when it will, remove [[maybe_unused]]
+		[[maybe_unused]]
+		const i64 precedence;  // @TODO: this field is unused in the current implementation, when it
+		                       // will, remove [[maybe_unused]]
 
 	protected:
 		/**

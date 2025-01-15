@@ -85,8 +85,8 @@
 #include "source_position.hpp"
 
 namespace dia {
-	
-		/**
+
+	/**
 	 * @brief A supplementary piece of information aimed to enhance a dia::Message.
 	 *
 	 * Examples of a Note include "note: previous declaration here" in a redeclaration message.
@@ -424,7 +424,6 @@ namespace dia {
 		explicit Hint(const SourcePosition& source_position): Message(source_position) {}
 	};
 
-
 	class NoteWithPosition: public Note {
 		/**
 		 * @brief The source position relevant to this note, e.g. the position of an original
@@ -483,7 +482,8 @@ namespace dia {
 		[[deprecated(
 			"Placeholder message should not be instantiated. "
 			"Make your own, specialised message class."
-		)]] PlaceholderMessage(const SourcePosition& source_position, std::string message):
+		)]]
+		PlaceholderMessage(const SourcePosition& source_position, std::string message):
 			  BASE_MESSAGE_CLASS(source_position),
 			  message(std::move(message)) {}
 

@@ -123,7 +123,7 @@ namespace tsh::internal {
 	};
 
 	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
-	
+
 	template<std::derived_from<TypeInfoImpl> T>
 	void pushType(base::unique_ptr<T>&& type) {
 		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));

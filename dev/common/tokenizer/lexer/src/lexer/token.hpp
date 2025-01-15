@@ -118,8 +118,9 @@ namespace lexer {
 		const Token& getSentinelEnd() const;
 
 		[[nodiscard]]
-		bool               isBracketGroup() const;
-		[[nodiscard]] bool isBracketGroup(BracketType) const;
+		bool isBracketGroup() const;
+		[[nodiscard]]
+		bool isBracketGroup(BracketType) const;
 
 		[[nodiscard]]
 		bool isRecursive() const;
@@ -148,10 +149,14 @@ namespace lexer {
 		[[nodiscard]]
 		bool isString() const;
 
-		[[nodiscard]] bool is(Type) const;
-		[[nodiscard]] bool is(Special) const;
-		[[nodiscard]] bool is(Operator) const;
-		[[nodiscard]] bool is(Keyword) const;
+		[[nodiscard]]
+		bool is(Type) const;
+		[[nodiscard]]
+		bool is(Special) const;
+		[[nodiscard]]
+		bool is(Operator) const;
+		[[nodiscard]]
+		bool is(Keyword) const;
 
 		[[nodiscard]]
 		bool isStr(base::StrID str) const;

@@ -163,7 +163,9 @@ private:
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			[[maybe_unused]] auto a_ref_const = a_moved.ref();
+			[[maybe_unused]]
+			auto a_ref_const
+				= a_moved.ref();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
 			static_assert(
@@ -190,7 +192,9 @@ private:
 		{
 			LiveCounterInherit a;
 
-			[[maybe_unused]] Ref<LiveCounter> a_ref = &a;
+			[[maybe_unused]]
+			Ref<LiveCounter> a_ref
+				= &a;
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			Box<LiveCounter> live = makeBox<LiveCounterInherit>();
@@ -303,7 +307,9 @@ private:
 			Container b = a;
 
 			// NOLINTBEGIN
-			[[maybe_unused]] Container c = std::move(b);
+			[[maybe_unused]]
+			Container c
+				= std::move(b);
 			// NOLINTEND
 		}
 	}
@@ -384,8 +390,10 @@ private:
 
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
-			auto                  a_ref_const = a_moved.ref();
-			[[maybe_unused]] auto pointer     = a_ref_const.toOpt().value().get();
+			auto a_ref_const = a_moved.ref();
+			[[maybe_unused]]
+			auto pointer
+				= a_ref_const.toOpt().value().get();
 
 			// decltype(a_ref_const->state) is just int for some reason, but "it" is still a const.
 			static_assert(
@@ -421,7 +429,9 @@ private:
 		{
 			LiveCounterInherit a;
 
-			[[maybe_unused]] MRef<LiveCounter> a_ref = &a;
+			[[maybe_unused]]
+			MRef<LiveCounter> a_ref
+				= &a;
 			ASSERT_EQUAL(LiveCounter::count, 1);
 
 			MBox<LiveCounter> live = makeBox<LiveCounterInherit>();

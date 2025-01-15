@@ -31,7 +31,8 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 	return {
 		400,
 		std::visit(
-			[]([[maybe_unused]] const auto& v) {
+			[]([[maybe_unused]]
+		       const auto& v) {
 				return "JSON is broken\n";  // JS::serializeStruct(v);
 			},
 			apiError
