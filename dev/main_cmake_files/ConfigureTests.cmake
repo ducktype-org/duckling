@@ -4,11 +4,12 @@ function(add_to_coverage target)
 	endif()
 endfunction()
 
-set(GCOV_PATH "gcov" CACHE STRING "GCOV program path")
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 	find_program(LCOV lcov REQUIRED)
-	find_program(GCOV_PATH gcov REQUIRED)
+	find_program(GCOV_PATH gcov-14 REQUIRED)
+	message(STATUS "GCOV path: ${GCOV_PATH}")
+
 	find_program(GENHTML genhtml REQUIRED)
 
 	add_custom_target(build_all_coverage_targets)
@@ -31,7 +32,8 @@ if(ENABLE_COVERAGE)
 						--no-external 
 						--output-file coverage_base.info
 		# Creating coverage data for the tests.
-		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
+						--gcov-tool ${GCOV_PATH} 
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
