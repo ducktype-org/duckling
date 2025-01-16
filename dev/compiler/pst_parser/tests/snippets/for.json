@@ -52,7 +52,7 @@
 						"sourceEnd": 27
 					},
 					"Chain Expression": {
-						"literal": {
+						"atom": {
 							"position": {
 								"sourceStart": 15,
 								"sourceEnd": 15
@@ -160,7 +160,7 @@
 										"sourceEnd": 42
 									},
 									"Chain Expression": {
-										"literal": {
+										"atom": {
 											"position": {
 												"sourceStart": 35,
 												"sourceEnd": 39
