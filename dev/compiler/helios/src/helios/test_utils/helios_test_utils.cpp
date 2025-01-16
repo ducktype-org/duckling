@@ -69,4 +69,23 @@ namespace compiler::helios::test_utils {
 
 		return std::move(visitor.expr_tree).value();
 	}
+
+	Box<code::Expr> getExprOfVariable(SymID sym) {
+		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
+			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
+
+			void setExprTree(const MCRef<pst::ExprElement>& expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			}
+
+		public:
+			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getValue()); }
+		};
+
+		auto            pst_stmt = stmt(sym);
+		GetHOUTExprTree visitor;
+		pst_stmt->acceptVisitor(visitor);
+
+		return std::move(visitor.expr_tree).value();
+	}
 }

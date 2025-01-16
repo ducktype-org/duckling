@@ -9,47 +9,22 @@
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
-	namespace {
-		tsh::TypeInfo getTypeOfKeyword(query::Context& ctx, lang_def::Keyword keyword) {
-			// @todo HOUT 2.0 this is incorrect
-			const static auto BUILTINS = std::unordered_map<lang_def::Keyword, tsh::TypeInfo>{
-				{ lang_def::Keyword::f80, ctx.query<::tsh::QueryFloatType>(80) },
-				{ lang_def::Keyword::f64, ctx.query<::tsh::QueryFloatType>(64) },
-				{ lang_def::Keyword::f32, ctx.query<::tsh::QueryFloatType>(32) },
-				{ lang_def::Keyword::f16, ctx.query<::tsh::QueryFloatType>(16) },
-
-				{ lang_def::Keyword::i128, ctx.query<::tsh::QueryIntegralType>({ 128, true }) },
-				{ lang_def::Keyword::i64, ctx.query<::tsh::QueryIntegralType>({ 64, true }) },
-				{ lang_def::Keyword::i32, ctx.query<::tsh::QueryIntegralType>({ 32, true }) },
-				{ lang_def::Keyword::i16, ctx.query<::tsh::QueryIntegralType>({ 16, true }) },
-				{ lang_def::Keyword::i8, ctx.query<::tsh::QueryIntegralType>({ 8, true }) },
-
-				{ lang_def::Keyword::u128, ctx.query<::tsh::QueryIntegralType>({ 128, false }) },
-				{ lang_def::Keyword::u64, ctx.query<::tsh::QueryIntegralType>({ 64, false }) },
-				{ lang_def::Keyword::u32, ctx.query<::tsh::QueryIntegralType>({ 32, false }) },
-				{ lang_def::Keyword::u16, ctx.query<::tsh::QueryIntegralType>({ 16, false }) },
-				{ lang_def::Keyword::u8, ctx.query<::tsh::QueryIntegralType>({ 8, false }) },
-
-				{ lang_def::Keyword::Bool, ctx.query<::tsh::QueryBoolType>({}) },
-			};
-			return BUILTINS.at(keyword);
-		}
-	}
 
 #define EXPR_VISITOR(type) \
 	void type::acceptVisitor(HoutExprVisitor& visitor) const { visitor.visit##type(*this); }
 
-	EXPR_VISITOR(LiteralValueExpr)
+	EXPR_VISITOR(LiteralIntExpr)
+	EXPR_VISITOR(LiteralBoolExpr)
+	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
-	EXPR_VISITOR(KeywordExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
 
-	LiteralValueExpr::LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value):
+	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(
@@ -60,7 +35,31 @@ namespace compiler::helios::code {
 		  ),
 		  value(value) {}
 
-	void LiteralValueExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
+
+	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value(value) {}
+
+	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
+
+	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type):
+		  Expr(
+			  scope,
+			  tsh::TypeDesc<>(
+				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value_type(type) {}
+
+	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(
@@ -113,19 +112,6 @@ namespace compiler::helios::code {
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, base::Box<Expr> inner):
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
-
-	KeywordExpr::KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword):
-		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
-				  getTypeOfKeyword(ctx, keyword), tsh::ValueCategory(tsh::PrimaryCategory::Literal)
-			  )
-		  ),
-		  keyword(keyword) {}
-
-	void KeywordExpr::debugPrint(std::ostream& out) const {
-		out << lang_def::keywordToStr(keyword).strView();
-	}
 
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements

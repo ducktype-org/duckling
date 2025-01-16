@@ -19,8 +19,8 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 71>
-		lang_keywords_array{ {
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 72>
+		LANG_KEYWORDS_ARRAY{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
@@ -76,6 +76,7 @@ namespace lang_def {
 			{ Keyword::f32, "f32", KeywordFlags() },
 			{ Keyword::f64, "f64", KeywordFlags() },
 			{ Keyword::f80, "f80", KeywordFlags() },
+			{ Keyword::f128, "f128", KeywordFlags() },
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 
@@ -189,7 +190,7 @@ namespace lang_def {
 		rev_keyword_map.put(Keyword::NotAKeyword, base::StrID("NotAKeyword"));
 		keyword_flags.put(Keyword::NotAKeyword, KeywordFlags());
 
-		for (auto [k, s, f]: lang_keywords_array) {
+		for (auto [k, s, f]: LANG_KEYWORDS_ARRAY) {
 			lang_keyword_map.put(makeStrID(s), k);
 			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
@@ -215,7 +216,7 @@ namespace lang_def {
 
 		// just to be safe for any future changes
 		// @TODO: move to same tests
-		CORE_ASSERT(lang_keywords_array.size() == lang_keyword_map.size(), "keyword map error");
+		CORE_ASSERT(LANG_KEYWORDS_ARRAY.size() == lang_keyword_map.size(), "keyword map error");
 		CORE_ASSERT(
 			special_array.size() == special_map.size()
 				&& special_array.size() == rev_special_map.size(),
@@ -271,8 +272,8 @@ namespace lang_def {
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;
-		result.reserve(lang_keywords_array.size());
-		for (const auto& [k, s, f]: lang_keywords_array) result.push_back(k);
+		result.reserve(LANG_KEYWORDS_ARRAY.size());
+		for (const auto& [k, s, f]: LANG_KEYWORDS_ARRAY) result.push_back(k);
 		return result;
 	}
 

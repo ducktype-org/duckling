@@ -58,6 +58,11 @@ namespace compiler::backend_llvm {
 
 	auto i32Type(llvm::LLVMContext& context) { return llvm::Type::getInt32Ty(context); }
 
+	/**
+	 * @note bools in LLVM are just i1 (i8 when stored in memory)
+	 */
+	auto i1Type(llvm::LLVMContext& context) { return llvm::Type::getInt1Ty(context); }
+
 	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::IntegralTypeLayout) {
@@ -175,6 +180,9 @@ namespace compiler::backend_llvm {
 		auto lir2LLVMLocation(const lir::LirLocation& lir_location) -> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) { return llvm::ConstantInt::get(i64Type(context), value); }
+				variant_case(bool, value) {
+					return llvm::ConstantInt::get(i1Type(context), value ? 1 : 0);
+				}
 				variant_case(lir::LocalRef, lir_local) {
 					return local_register_map[lir_local].get();
 				}

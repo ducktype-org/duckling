@@ -48,28 +48,39 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents an integer literal value written in the expression.
 	 */
-	struct LiteralValueExpr final: public Expr {
+	struct LiteralIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
+		LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
-	 * @brief Represents an expression made of a keyword, like "true", or "i32".
-	 * @brief This is a mock
+	 * @brief Represents a boolean literal value written in the expression (true, false).
 	 */
-	struct KeywordExpr final: public Expr {
-		lang_def::Keyword keyword;
+	struct LiteralBoolExpr final: public Expr {
+		bool value;
 
-		KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword);
+		LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
+	 */
+	struct LiteralTypeExpr final: public Expr {
+		tsh::TypeInfo value_type;
+
+		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -85,7 +96,7 @@ namespace compiler::helios::code {
 		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -106,7 +117,7 @@ namespace compiler::helios::code {
 		ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -142,7 +153,7 @@ namespace compiler::helios::code {
 		);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -164,8 +175,8 @@ namespace compiler::helios::code {
 
 		UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr);
 
-		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -178,8 +189,8 @@ namespace compiler::helios::code {
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 		);
 
-		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -193,7 +204,7 @@ namespace compiler::helios::code {
 		);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -210,7 +221,7 @@ namespace compiler::helios::code {
 		LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	// @todo HOUT 2.0: function call expression

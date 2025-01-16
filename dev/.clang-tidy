@@ -51,6 +51,7 @@ CheckOptions:
   readability-identifier-naming.MemberCase: lower_case
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.LocalConstantCase: lower_case
+  readability-identifier-naming.ConstantParameterCase: lower_case
   
   # Namespaces:
   readability-identifier-naming.NamespaceCase: lower_case
