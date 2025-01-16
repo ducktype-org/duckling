@@ -1,15 +1,39 @@
 {
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 35
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 35
+			},
 			"While": {
 				"name": "<ANONYMOUS>",
 				"condition": {
+					"position": {
+						"sourceStart": 5,
+						"sourceEnd": 21
+					},
 					"Round Group Expression": {
+						"position": {
+							"sourceStart": 6,
+							"sourceEnd": 20
+						},
 						"Comparison Chain": {
 							"sub-expressions": [
 								{
+									"position": {
+										"sourceStart": 6,
+										"sourceEnd": 10
+									},
 									"Binary Operator": {
 										"left_expr": {
+											"position": {
+												"sourceStart": 6,
+												"sourceEnd": 6
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "a"
@@ -18,6 +42,10 @@
 										},
 										"operator": "+",
 										"right_expr": {
+											"position": {
+												"sourceStart": 10,
+												"sourceEnd": 10
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "b"
@@ -27,14 +55,26 @@
 									}
 								},
 								{
+									"position": {
+										"sourceStart": 14,
+										"sourceEnd": 20
+									},
 									"Binary Operator": {
 										"left_expr": {
+											"position": {
+												"sourceStart": 14,
+												"sourceEnd": 14
+											},
 											"Value Expr": {
 												"number": "4"
 											}
 										},
 										"operator": "+",
 										"right_expr": {
+											"position": {
+												"sourceStart": 18,
+												"sourceEnd": 20
+											},
 											"Value Expr": {
 												"number": "0.8"
 											}
@@ -46,12 +86,32 @@
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 22,
+						"sourceEnd": 35
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 22,
+							"sourceEnd": 35
+						},
 						"Code Block": [
 							{
+								"position": {
+									"sourceStart": 28,
+									"sourceEnd": 33
+								},
 								"Expr Stmt": {
+									"position": {
+										"sourceStart": 28,
+										"sourceEnd": 32
+									},
 									"Binary Operator": {
 										"left_expr": {
+											"position": {
+												"sourceStart": 28,
+												"sourceEnd": 28
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "c"
@@ -60,6 +120,10 @@
 										},
 										"operator": "-",
 										"right_expr": {
+											"position": {
+												"sourceStart": 32,
+												"sourceEnd": 32
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "d"
