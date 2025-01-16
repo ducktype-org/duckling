@@ -150,7 +150,7 @@ namespace compiler::helios::code {
 				};
 
 				if (operators.contains(op)) {
-					return makeBox<BinaryOperatorExpr>(lhs, operators.at(op), std::move(lhs), std::move(rhs));
+					return makeBox<BinaryOperatorExpr>(ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs));
 				}
 				else {
 					return {};

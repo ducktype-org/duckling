@@ -338,7 +338,7 @@ private:
 		try {
 			getValue("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (base::NotYetImplemented& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
