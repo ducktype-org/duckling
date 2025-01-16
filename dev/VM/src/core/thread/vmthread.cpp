@@ -75,7 +75,7 @@ namespace vm {
 		auto opcode = static_cast<u16>(instr->opcode);
 #endif
 
-		// Execute the instruction by calling  the debug opcode function.
+		// Execute the instruction by calling the debug opcode function.
 		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
 
 		runtime_data.frame_stack_current = frame;
