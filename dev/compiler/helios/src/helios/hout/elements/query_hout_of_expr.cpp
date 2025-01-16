@@ -107,13 +107,14 @@ namespace compiler::helios::code {
 			 * If valid builtin exist, returns it.
 			 * Otherwise returns None.
 			 */
-			static base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Ref<Expr> lhs, Ref<Expr> rhs) {
+			base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Box<Expr> lhs, Box<Expr> rhs) {
+				// note: this is mock that works only for very simple int op int.
 				// @todo: make it smarter?
+				// @TODO: this hole section could be moved to a separate file
 
 				auto lhs_type = lhs->type_desc;
 				auto rhs_type = lhs->type_desc;
 				
-				// note: this is mock
 				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 				bool is_rhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 
@@ -127,21 +128,32 @@ namespace compiler::helios::code {
 				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
 
 
-				// @TODO in this PR:
-				// add get sigdness check here, fix compilation, 
-
 				// we only do the most simplest version here:
 				if (lhs_as_integer.getSize() != rhs_as_integer.getSize() or
-				    lhs_as_integer.) {
-
+				    lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
+					
+					// we don't have builtins for this case for now:
+					return {};
 				}
 
-				if (op == "+") {
-					return makeBox<BinaryOperatorExpr>(lhs, BuiltinBinary::IntegerAdd, std::move(lhs), std::move(rhs));
+				// only few things supported for now:
+
+				// @TODO: change to base::map when possible
+				const static std::map<base::StrID, BuiltinBinary> operators = {
+					{ base::StrID("+"), BuiltinBinary::IntegerAdd },
+					{ base::StrID("-"), BuiltinBinary::IntegerSub },
+					{ base::StrID("*"), BuiltinBinary::IntegerMul },
+					{ base::StrID("/"), BuiltinBinary::IntegerDiv },
+					{ base::StrID("%"), BuiltinBinary::IntegerMod },
+					{ base::StrID("**"), BuiltinBinary::IntegerPow }
+				};
+
+				if (operators.contains(op)) {
+					return makeBox<BinaryOperatorExpr>(lhs, operators.at(op), std::move(lhs), std::move(rhs));
 				}
-				node = makeBox<BinaryOperatorExpr>(
-					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
-				);
+				else {
+					return {};
+				}
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
@@ -185,14 +197,19 @@ namespace compiler::helios::code {
 				// * lookup for user defined operators
 				// * type check
 				// * make function call
-
+				// For now we support just builtins
+				
 				// if no function call is found, we try to use builtin operators:
-				auto builtin = binaryBuiltin(stmt.getOperator(), lhs, rhs);
-				if (builtin.hasValue()) {
+
+				auto builtin = binaryBuiltin(stmt.getOperator(), std::move(lhs), std::move(rhs));
+				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				}
 				else {
+					ctx.log(base::make_unique<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+						stmt.getSourcePosition(), "No builtin operator found"
+					));
 					// failed
 				}
 			}

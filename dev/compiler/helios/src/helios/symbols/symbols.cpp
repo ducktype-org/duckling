@@ -541,19 +541,26 @@ namespace compiler::helios {
 					return;
 				}
 				i64 lhs_value = lhs_result.value(), rhs_value = rhs_result.value();
-				if (expr.op.value == "+")
+				switch (expr.operation) {
+				case code::BuiltinBinary::IntegerAdd:
 					result = lhs_value + rhs_value;
-				else if (expr.op.value == "-")
+					break;
+				case code::BuiltinBinary::IntegerSub:
 					result = lhs_value - rhs_value;
-				else if (expr.op.value == "*")
+					break;
+				case code::BuiltinBinary::IntegerMul:
 					result = lhs_value * rhs_value;
-				else if (expr.op.value == "/")
+					break;
+				case code::BuiltinBinary::IntegerDiv:
 					result = lhs_value / rhs_value;
-				else if (expr.op.value == "%")
+					break;
+				case code::BuiltinBinary::IntegerMod:
 					result = lhs_value % rhs_value;
-				else if (expr.op.value == "**")
+					break;
+				case code::BuiltinBinary::IntegerPow:
 					result = std::pow(lhs_value, rhs_value);
-				else {
+					break;
+				default:
 					result = errors::HError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
