@@ -111,6 +111,7 @@ namespace compiler::helios::code {
 				// note: this is mock that works only for very simple int op int.
 				// @todo: make it smarter?
 				// @TODO: this hole section could be moved to a separate file
+				// // when refactoring it remember about unaryBuiltin
 
 				auto lhs_type = lhs->type_desc;
 				auto rhs_type = lhs->type_desc;
@@ -150,6 +151,34 @@ namespace compiler::helios::code {
 
 				if (operators.contains(op)) {
 					return makeBox<BinaryOperatorExpr>(lhs, operators.at(op), std::move(lhs), std::move(rhs));
+				}
+				else {
+					return {};
+				}
+			}
+
+			/**
+			 * If valid builtin exist, returns it.
+			 * Otherwise returns None.
+			 */
+			base::Optional<Box<Expr>> unaryBuiltin(base::StrID op, Box<Expr> expr) {
+				// note: this is mock that works only for very simple int op int.
+				// when refactoring it remember about binaryBuiltin
+
+				auto expr_type = expr->type_desc;
+
+				if (expr_type.getType().getKind() != tsh::Kind::Integral) {
+					// we don't have builtins for this case for now:
+					return {};
+				}
+
+				// @TODO: change to base::map when possible
+				const static std::map<base::StrID, BuiltinUnary> operators = {
+					{ base::StrID("-"), BuiltinUnary::IntegerNegation },
+				};
+
+				if (operators.contains(op)) {
+					return makeBox<UnaryOperatorExpr>(scope, operators.at(op), std::move(expr));
 				}
 				else {
 					return {};
@@ -395,26 +424,36 @@ namespace compiler::helios::code {
 				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
 			}
 
-			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
-				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt.getExpr());
-
-				if (inner.hasError()) return;  // failed
-
-				node = makeBox<UnaryOperatorExpr>(
-					scope, stmt.getOperator(), std::move(inner.value())
-				);
+			void visitSuffixOperator(const pst::expr::SuffixOperator&) override {
+				// note: here we will have to compile things like `a++`, `a--`, `T?`.
+				throw base::NotYetImplemented("Suffix operators are not yet implemented in HOUT, since there are any for now");
 			}
 
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
 				// @NOTE: This is a mockup
 				auto inner = fromPST(ctx, stmt.getExpr());
-
 				if (inner.hasError()) return;  // failed
 
-				node = makeBox<UnaryOperatorExpr>(
-					scope, stmt.getOperator(), std::move(inner.value())
-				);
+				// @todo here we should:
+				// * lookup for user defined operators
+				// * type check
+				// * make function call
+				// For now we support just builtins
+				
+				// if no function call is found, we try to use builtin operators:
+
+				auto builtin = unaryBuiltin(stmt.getOperator().value, std::move(inner.value()));
+
+				if (builtin.has_value()) {
+					node = std::move(builtin).value();
+					return;
+				}
+				else {
+					ctx.log(base::make_unique<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+						stmt.getSourcePosition(), "No builtin operator found"
+					));
+					// failed
+				}
 			}
 		};
 

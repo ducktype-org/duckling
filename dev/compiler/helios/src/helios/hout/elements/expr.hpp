@@ -162,6 +162,7 @@ namespace compiler::helios::code {
 	enum class BuiltinUnary {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
+		
 		IntegerNegation,
 	};
 
