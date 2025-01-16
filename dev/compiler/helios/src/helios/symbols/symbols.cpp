@@ -574,11 +574,14 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.expr);
 				if (result.hasError()) return;
 				i64 result_value = result.value();
-				if (expr.op.value == "-" && expr.prefix)
+
+				switch (expr.operation) {
+				case code::BuiltinUnary::IntegerNegation:
 					result = -result_value;
-				else {
-					// Not implemented yet
+					break;
+				default:
 					result = errors::HError(errors::Failed());
+					break;
 				}
 			}
 
