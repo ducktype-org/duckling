@@ -44,7 +44,7 @@ namespace vm {
 		if (!loaded_code.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThread(Ref(&*loaded_code));
+		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_code));
 		if (!response) return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -240,5 +240,13 @@ namespace vm {
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
+	}
+
+	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
+		{
+			std::unique_lock<std::shared_mutex> lock(rw_status);
+			status = event;
+		}
+		status_cv.notify_all();
 	}
 }

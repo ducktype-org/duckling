@@ -2,6 +2,9 @@
  * @file opcodes_functions_implementation.hpp
  * @brief The opcodes functions implementations.
  *
+ * @warning Do not include this file directly. Include `opcodes_functions.hpp` or
+ * `opcodes_functions_debug.hpp` instead.
+ *
  * Motivation: each opcode that thread executes has its own function that is called to
  * perform the opcode operation. They are called "OpFuns". At the end of each
  * function, there is a call to `FUNCTION_CONT` macro that taill calls (in TC version)

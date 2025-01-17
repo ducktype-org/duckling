@@ -125,14 +125,13 @@ namespace vm {
 
 		BlockingQueue<ExecutionResponse> execution_response_queue;
 
-		bool getPausedResponse();
+		bool waitForPausedResponse();
 
-		bool getStoppedResponse();
+		bool waitForStoppedResponse();
 
-		bool getRunningResponse();
+		bool waitForRunningResponse();
 
 		void respondExecutionRequest(ExecutionResponse response);
-
 
 		void executeOneStep();
 
@@ -165,30 +164,32 @@ namespace vm {
 	public:
 		VMThread(VMProcess& process);
 
-		void handleExecutionBreak();
+		void breakActiveExecution();
 
-		void handleExecutionPauseRequest(std::unique_lock<std::mutex>&);
+		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
 		void handleBreakpoint();
 
 		/**
-		 * @brief Pause the execution of a program (by Supervisor)
-		 * Set execution status to paused.
+		 * @brief Creates new thread that runs the code in the Executor service.
+		 * Blocks until the thread is running.
+		 * @param code
+		 * @return true if the thread was successfully created and the program is running
+		 */
+		bool initThreadAndRun(Ref<const vm::Code> code);
+
+		/**
+		 * @brief Pauses the execution of a program.
+		 * Sets the status to paused and waits for the execution thread to respond.
 		 * "Assumes execution status is `running`"
-		 *
-		 * This function should return only when the execution is paused
-		 * This function may be called at any state of the execution
 		 * @return true if and only if program was in the running state and was successfully paused
 		 */
 		bool pause();
 
 		/**
-		 * @brief Resume the execution of a program (by Supervisor)
-		 * Set execution status to `running`.
+		 * @brief Resumes the execution of a program.
+		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 *
-		 * Function should return only when the execution is resumed
-		 * This function may be called at any state of the execution
 		 * @return true if and only if program was in the paused state and was successfully resumed
 		 */
 		bool resume();
@@ -196,20 +197,20 @@ namespace vm {
 		/**
 		 * @brief Execute one step of the program.
 		 * Valid only when the VM is paused.
+		 * Waits for the program to perform one step and pause.
+		 * @return true if the program successfully performed one step and paused
 		 */
 		bool step();
 
 		/**
-		 * @brief Force kill the execution of a thread.
-		 * Called from the process.
+		 * @brief End the execution of a program.
+		 * Waits for the execution thread to responde.
+		 * @return true if the program is in the end stopped.
 		 */
 		bool stop();
 
-		bool initThread(Ref<const vm::Code> code);
-
 		/**
-		 * @brief Called on coreThread
-		 * coreThread is `main` exec thread
+		 * @brief Run the program.
 		 */
 		void run(Ref<const Code>);
 

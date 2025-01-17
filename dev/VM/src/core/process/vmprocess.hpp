@@ -150,13 +150,7 @@ namespace vm {
 		VMThread& getMainVMThread();
 
 	public:
-		void onEvent(const api::ProcStatus& event) noexcept override {
-			{
-				std::unique_lock<std::shared_mutex> lock(rw_status);
-				status = event;
-			}
-			status_cv.notify_all();
-		}
+		void onEvent(const api::ProcStatus& event) noexcept override;
 
 		Memory& getMemory();
 
