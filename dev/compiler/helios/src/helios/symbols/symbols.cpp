@@ -570,7 +570,6 @@ namespace compiler::helios {
 			}
 
 			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
-				// @TODO in this PR
 				result = evaluateExpr(ctx, *expr.expr);
 				if (result.hasError()) return;
 				i64 result_value = result.value();
