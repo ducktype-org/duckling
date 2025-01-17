@@ -5,6 +5,7 @@ add_library(Lexer
 	src/lexer/classifications.cpp
 	src/lexer/decode.cpp
 	src/lexer/lexer_class.cpp
+	src/lexer/icu_deinit.cpp
 )
 
 make_module(Lexer USES Filesystem Printer LexerDefinitions unicode Result::Result Diagnostic)

@@ -364,7 +364,7 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-		struct QueryLinkedScopeVisitor: pst::PstVisitorPanicky {
+		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
 			query::Context& ctx;
 			QKey            key;
 
@@ -377,7 +377,7 @@ namespace compiler::helios {
 				result_scope.emplace(out);
 			}
 
-			void visitUsing(const pst::Using& using_stmt) override {
+			void visitUsing(const pst::Using& using_stmt) final {
 				auto names      = using_stmt.getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
@@ -388,7 +388,7 @@ namespace compiler::helios {
 				output(ret);
 			}
 
-			void visitImport(const pst::Import& import_stmt) override {
+			void visitImport(const pst::Import& import_stmt) final {
 				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
 										   ctx, module(scope(key)), import_stmt.getModulePath()
@@ -499,7 +499,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i64 COMMA errors::Failed>) {
 		// @todo HOUT 2.0 move this to comp_time on integers
 
-		struct EvaluateHoutExprVisitor: public code::HoutExprVisitor {
+		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
 			Context&                                  ctx;
 			errors::HResult<i64 COMMA errors::Failed> result;
 
@@ -512,15 +512,24 @@ namespace compiler::helios {
 				return visitor.result;
 			}
 
-			void visitLiteralValueExpr(const code::LiteralValueExpr& expr) override {
+			void visitLiteralIntExpr(const code::LiteralIntExpr& expr) final {
 				result = expr.value;
 			}
 
-			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
+			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet"
+				);
+			}
+
+			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
+				throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
+			}
+
+			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
 				result = *ctx.query<QueryConstValueOf>(expr.symbol);
 			}
 
-			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) override {
+			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
 				auto lhs_result = evaluateExpr(ctx, *expr.lhs);
 				if (lhs_result.hasError()) {
 					result = lhs_result;
@@ -553,7 +562,7 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) override {
+			void visitUnaryOperatorExpr(const code::UnaryOperatorExpr& expr) final {
 				result = evaluateExpr(ctx, *expr.expr);
 				if (result.hasError()) return;
 				i64 result_value = result.value();
@@ -565,29 +574,24 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
+			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {
 				result = evaluateExpr(ctx, *expr.inner);
-			}
-
-			void visitKeywordExpr([[maybe_unused]] const code::KeywordExpr& expr) override {
-				throw base::NotYetImplemented("Evaluation of keyword values is not implemented yet"
-				);
 			}
 
 			void visitTupleTypeConstructorExpr(
 				[[maybe_unused]] const code::TupleTypeConstructorExpr& expr
-			) override {
+			) final {
 				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 			}
 
 			void visitVariantTypeConstructorExpr(
 				[[maybe_unused]] const code::VariantTypeConstructorExpr& expr
-			) override {
+			) final {
 				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet"
 				);
 			}
 
-			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) override {
+			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
 				result = *ctx.query<QueryConstValueOf>(expr.symbols.back());
 			}
 		};
@@ -630,15 +634,13 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) override { setTypeOfSymbol(stmt.getType()); }
+			void visitConst(const pst::Const& stmt) final { setTypeOfSymbol(stmt.getType()); }
 
-			void visitVariable(const pst::Variable& stmt) override {
-				setTypeOfSymbol(stmt.getType());
-			}
+			void visitVariable(const pst::Variable& stmt) final { setTypeOfSymbol(stmt.getType()); }
 
-			void visitField(const pst::Field& field) override { setTypeOfSymbol(field.getType()); }
+			void visitField(const pst::Field& field) final { setTypeOfSymbol(field.getType()); }
 
-			void visitFun(const pst::Fun& fun) override {
+			void visitFun(const pst::Fun& fun) final {
 				auto params = fun.getParams();
 				auto ret    = fun.getRet();
 
@@ -669,19 +671,19 @@ namespace compiler::helios {
 				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
 			}
 
-			void visitClass(const pst::Class&) override {
+			void visitClass(const pst::Class&) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
 			}
 
-			void visitNamespace(const pst::Namespace&) override {
+			void visitNamespace(const pst::Namespace&) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 
-			void visitImport(const pst::Import&) override {
+			void visitImport(const pst::Import&) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(const pst::FunParam& param) override {
+			void visitFunParam(const pst::FunParam& param) final {
 				setTypeOfSymbol(param.getType());
 			}
 		};
@@ -717,7 +719,7 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> definition_type_info;
 
-			void visitClass(const pst::Class&) override {
+			void visitClass(const pst::Class&) final {
 				definition_type_info = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
@@ -740,7 +742,7 @@ namespace compiler::helios {
 			base::Optional<MCRef<pst::ExprElement>>    base_class;
 			base::Optional<MCRef<pst::ImplementsList>> implements;
 
-			void visitClass(const pst::Class& stmt) override {
+			void visitClass(const pst::Class& stmt) final {
 				name = stmt.getName();
 				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
 				if (auto implements = stmt.getImplements(); implements != nullptr)

@@ -1,16 +1,40 @@
 {
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 28
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 28
+			},
 			"Namespace": {
 				"name": {
 					"Name": "myspace"
 				},
 				"block": {
+					"position": {
+						"sourceStart": 18,
+						"sourceEnd": 28
+					},
 					"Code Block": [
 						{
+							"position": {
+								"sourceStart": 21,
+								"sourceEnd": 26
+							},
 							"Expr Stmt": {
+								"position": {
+									"sourceStart": 21,
+									"sourceEnd": 25
+								},
 								"Binary Operator": {
 									"left_expr": {
+										"position": {
+											"sourceStart": 21,
+											"sourceEnd": 21
+										},
 										"Identifier Expression": {
 											"name": {
 												"Name": "x"
@@ -19,6 +43,10 @@
 									},
 									"operator": "+",
 									"right_expr": {
+										"position": {
+											"sourceStart": 25,
+											"sourceEnd": 25
+										},
 										"Value Expr": {
 											"number": "3"
 										}

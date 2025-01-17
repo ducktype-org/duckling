@@ -128,6 +128,9 @@ namespace compiler::lir {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LirLocation{ integer.value };
 					}
+					variant_case(mir::MirBoolConst, boolean) {
+						return LirLocation{ boolean.value };
+					}
 					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
 						return LirLocation{ BlockRef(mir_to_lir_block.at(block)) };
