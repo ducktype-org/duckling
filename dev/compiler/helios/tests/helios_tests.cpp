@@ -691,11 +691,12 @@ private:
 
 				// it is just for cov mostly
 
-				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console here:
+				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console
+				// here:
 				std::cerr.flush();
 				std::stringstream buffer;
-				std::streambuf* org_buffer = std::cerr.rdbuf(buffer.rdbuf());
-				defer (std::cerr.rdbuf(org_buffer));
+				std::streambuf*   org_buffer = std::cerr.rdbuf(buffer.rdbuf());
+				defer(std::cerr.rdbuf(org_buffer));
 
 				// @TODO: make it not print to cerr, but to ostream or string:
 				scope.debugPrintScopeAndParents();

@@ -98,15 +98,27 @@ namespace compiler::helios::code {
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
 		// note: this might get more complex in the future
-		
+
 		lhs->debugPrint(out);
 		switch (operation) {
-			case BuiltinBinary::IntegerAdd: out << "+"; break;
-			case BuiltinBinary::IntegerSub: out << "-"; break;
-			case BuiltinBinary::IntegerMul: out << "*"; break;
-			case BuiltinBinary::IntegerDiv: out << "/"; break;
-			case BuiltinBinary::IntegerMod: out << "%"; break;
-			case BuiltinBinary::IntegerPow: out << "=="; break;
+		case BuiltinBinary::IntegerAdd:
+			out << "+";
+			break;
+		case BuiltinBinary::IntegerSub:
+			out << "-";
+			break;
+		case BuiltinBinary::IntegerMul:
+			out << "*";
+			break;
+		case BuiltinBinary::IntegerDiv:
+			out << "/";
+			break;
+		case BuiltinBinary::IntegerMod:
+			out << "%";
+			break;
+		case BuiltinBinary::IntegerPow:
+			out << "==";
+			break;
 		}
 		rhs->debugPrint(out);
 	}
@@ -183,10 +195,10 @@ namespace compiler::helios::code {
 
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
 		switch (operation) {
-			case BuiltinUnary::IntegerNegation:
-				out << "-";
-				expr->debugPrint(out);
-				break;		
+		case BuiltinUnary::IntegerNegation:
+			out << "-";
+			expr->debugPrint(out);
+			break;
 		}
 	}
 }

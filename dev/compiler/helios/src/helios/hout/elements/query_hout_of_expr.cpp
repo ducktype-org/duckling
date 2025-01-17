@@ -32,7 +32,6 @@ namespace compiler::helios::code {
 			}
 		}
 
-
 		/**
 		 * @brief Extracts sub expressions from a variant operator.
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
@@ -115,7 +114,7 @@ namespace compiler::helios::code {
 
 				auto lhs_type = lhs->type_desc;
 				auto rhs_type = lhs->type_desc;
-				
+
 				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 				bool is_rhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 
@@ -130,9 +129,8 @@ namespace compiler::helios::code {
 
 
 				// we only do the most simplest version here:
-				if (lhs_as_integer.getSize() != rhs_as_integer.getSize() or
-				    lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
-					
+				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
+				    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
 					// we don't have builtins for this case for now:
 					return {};
 				}
@@ -140,19 +138,19 @@ namespace compiler::helios::code {
 				// only few things supported for now:
 
 				// @TODO: change to base::map when possible
-				const static std::map<base::StrID, BuiltinBinary> operators = {
-					{ base::StrID("+"), BuiltinBinary::IntegerAdd },
-					{ base::StrID("-"), BuiltinBinary::IntegerSub },
-					{ base::StrID("*"), BuiltinBinary::IntegerMul },
-					{ base::StrID("/"), BuiltinBinary::IntegerDiv },
-					{ base::StrID("%"), BuiltinBinary::IntegerMod },
-					{ base::StrID("**"), BuiltinBinary::IntegerPow }
-				};
+				const static std::map<base::StrID, BuiltinBinary> operators
+					= { { base::StrID("+"), BuiltinBinary::IntegerAdd },
+					    { base::StrID("-"), BuiltinBinary::IntegerSub },
+					    { base::StrID("*"), BuiltinBinary::IntegerMul },
+					    { base::StrID("/"), BuiltinBinary::IntegerDiv },
+					    { base::StrID("%"), BuiltinBinary::IntegerMod },
+					    { base::StrID("**"), BuiltinBinary::IntegerPow } };
 
 				if (operators.contains(op)) {
-					return makeBox<BinaryOperatorExpr>(ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs));
-				}
-				else {
+					return makeBox<BinaryOperatorExpr>(
+						ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs)
+					);
+				} else {
 					return {};
 				}
 			}
@@ -177,12 +175,10 @@ namespace compiler::helios::code {
 					{ base::StrID("-"), BuiltinUnary::IntegerNegation },
 				};
 
-				if (operators.contains(op)) {
+				if (operators.contains(op))
 					return makeBox<UnaryOperatorExpr>(scope, operators.at(op), std::move(expr));
-				}
-				else {
+				else
 					return {};
-				}
 			}
 
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
@@ -227,16 +223,16 @@ namespace compiler::helios::code {
 				// * type check
 				// * make function call
 				// For now we support just builtins
-				
+
 				// if no function call is found, we try to use builtin operators:
 
 				auto builtin = binaryBuiltin(stmt.getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
-				}
-				else {
-					ctx.log(base::make_unique<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+				} else {
+					ctx.log(base::make_unique<
+							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
 						stmt.getSourcePosition(), "No builtin operator found"
 					));
 					// failed
@@ -426,7 +422,9 @@ namespace compiler::helios::code {
 
 			void visitSuffixOperator(const pst::expr::SuffixOperator&) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
-				throw base::NotYetImplemented("Suffix operators are not yet implemented in HOUT, since there are any for now");
+				throw base::NotYetImplemented(
+					"Suffix operators are not yet implemented in HOUT, since there are any for now"
+				);
 			}
 
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
@@ -439,7 +437,7 @@ namespace compiler::helios::code {
 				// * type check
 				// * make function call
 				// For now we support just builtins
-				
+
 				// if no function call is found, we try to use builtin operators:
 
 				auto builtin = unaryBuiltin(stmt.getOperator().value, std::move(inner.value()));
@@ -447,9 +445,9 @@ namespace compiler::helios::code {
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
-				}
-				else {
-					ctx.log(base::make_unique<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+				} else {
+					ctx.log(base::make_unique<
+							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
 						stmt.getSourcePosition(), "No builtin operator found"
 					));
 					// failed
