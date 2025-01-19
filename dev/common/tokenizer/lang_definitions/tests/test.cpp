@@ -28,9 +28,9 @@ private:
 
 		auto exponentiate = operatorPrecedence(NamedOperator::Exponentiate, OperatorType::Binary);
 
-		auto multiply     = operatorPrecedence(NamedOperator::Multiply, OperatorType::Binary);
-		auto divide       = operatorPrecedence(NamedOperator::Divide, OperatorType::Binary);
-		auto remainder    = operatorPrecedence(NamedOperator::Remainder, OperatorType::Binary);
+		auto multiply  = operatorPrecedence(NamedOperator::Multiply, OperatorType::Binary);
+		auto divide    = operatorPrecedence(NamedOperator::Divide, OperatorType::Binary);
+		auto remainder = operatorPrecedence(NamedOperator::Remainder, OperatorType::Binary);
 
 		auto add      = operatorPrecedence(NamedOperator::Plus, OperatorType::Binary);
 		auto subtract = operatorPrecedence(NamedOperator::Minus, OperatorType::Binary);
@@ -64,7 +64,8 @@ private:
 		[[maybe_unused]] auto neg
 			= operatorAssociativity(NamedOperator::Minus, OperatorType::UnaryRight);
 
-		auto exponentiate = operatorAssociativity(NamedOperator::Exponentiate, OperatorType::Binary);
+		auto exponentiate
+			= operatorAssociativity(NamedOperator::Exponentiate, OperatorType::Binary);
 
 		auto multiply = operatorAssociativity(NamedOperator::Multiply, OperatorType::Binary);
 

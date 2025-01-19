@@ -26,7 +26,7 @@ namespace lang_def {
 		precedence.put({ NamedOperator::DoublePlus, OperatorType::UnaryRight }, 1);
 		precedence.put({ NamedOperator::Minus, OperatorType::UnaryRight }, 1);
 
-		precedence.put({NamedOperator::Exponentiate, OperatorType::Binary}, 2);
+		precedence.put({ NamedOperator::Exponentiate, OperatorType::Binary }, 2);
 
 		precedence.put({ NamedOperator::Multiply, OperatorType::Binary }, 3);
 		precedence.put({ NamedOperator::Divide, OperatorType::Binary }, 3);
@@ -51,7 +51,8 @@ namespace lang_def {
 		);
 
 		associativity.put(
-			{ NamedOperator::Exponentiate, OperatorType::Binary }, OperatorAssociativity::RightToLeft
+			{ NamedOperator::Exponentiate, OperatorType::Binary },
+			OperatorAssociativity::RightToLeft
 		);
 
 		associativity.put(

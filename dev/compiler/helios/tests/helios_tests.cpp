@@ -310,14 +310,14 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getValue("V1", root_scope));
-		auto sym_v1 = getChain("V1", root_scope).back();
-		auto tree_v1 = getExprOfConst(sym_v1);
+		auto              sym_v1  = getChain("V1", root_scope).back();
+		auto              tree_v1 = getExprOfConst(sym_v1);
 		std::stringstream out_v1;
 		tree_v1->debugPrint(out_v1);
 
 		ASSERT_EQUAL(-1, getValue("VM1", root_scope));
-		auto sym_vm1 = getChain("VM1", root_scope).back();
-		auto tree_vm1 = getExprOfConst(sym_vm1);
+		auto              sym_vm1  = getChain("VM1", root_scope).back();
+		auto              tree_vm1 = getExprOfConst(sym_vm1);
 		std::stringstream out_vm1;
 		tree_vm1->debugPrint(out_vm1);
 
@@ -335,9 +335,11 @@ private:
 		std::stringstream out_v12;
 		tree_v12->debugPrint(out_v12);
 
-		auto sym_v3       = getChain("N.V3", root_scope).back();
+		auto sym_v3      = getChain("N.V3", root_scope).back();
 		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
-		ASSERT_EQUAL(base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str());
+		ASSERT_EQUAL(
+			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
+		);
 	}
 
 	void testError() {

@@ -453,16 +453,18 @@ namespace pst {
 			 */
 			CONDITION(isGenBinOp) {
 				static const std::set<lang_def::NamedOperator> gen_bin_ops = {
-					NamedOperator::Exponentiate, NamedOperator::Multiply, NamedOperator::Divide, NamedOperator::Remainder, NamedOperator::Plus,
-					NamedOperator::Minus,    NamedOperator::Pipe,
+					NamedOperator::Exponentiate, NamedOperator::Multiply, NamedOperator::Divide,
+					NamedOperator::Remainder,    NamedOperator::Plus,     NamedOperator::Minus,
+					NamedOperator::Pipe,
 				};
 				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
 			}
 
 			static i64 getOpPrec(Operator op) {
 				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Pipe, 540 },   { NamedOperator::Exponentiate, 550 }, { NamedOperator::Multiply, 560 },
-					{ NamedOperator::Divide, 560 }, { NamedOperator::Remainder, 560 }, { NamedOperator::Plus, 570 },
+					{ NamedOperator::Pipe, 540 },      { NamedOperator::Exponentiate, 550 },
+					{ NamedOperator::Multiply, 560 },  { NamedOperator::Divide, 560 },
+					{ NamedOperator::Remainder, 560 }, { NamedOperator::Plus, 570 },
 					{ NamedOperator::Minus, 570 },
 				};
 				if (not precedences.contains(op.asNamed()))
