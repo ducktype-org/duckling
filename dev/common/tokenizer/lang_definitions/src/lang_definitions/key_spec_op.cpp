@@ -139,7 +139,7 @@ namespace lang_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 21> operator_array{ {
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 23> operator_array{ {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::PeriodStar, ".*" },
@@ -163,6 +163,8 @@ namespace lang_def {
 		{ NamedOperator::DoubleMinus, "--" },
 		{ NamedOperator::Multiply, "*" },
 		{ NamedOperator::Divide, "/" },
+		{ NamedOperator::Remainder, "%" },
+		{ NamedOperator::Exponentiate, "**" },
 	} };
 
 	// Distinct for all keyword modes:

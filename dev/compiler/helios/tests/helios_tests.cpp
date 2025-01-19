@@ -310,23 +310,34 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getValue("V1", root_scope));
-		ASSERT_EQUAL(31, getValue("V31", root_scope));
+		auto sym_v1 = getChain("V1", root_scope).back();
+		auto tree_v1 = getExprOfConst(sym_v1);
+		std::stringstream out_v1;
+		tree_v1->debugPrint(out_v1);
 
-		auto              sym1 = getChain("V31", root_scope).back();
-		std::stringstream out;
-		auto              tree1 = getExprOfConst(sym1);
-		tree1->debugPrint(out);
-		ASSERT_EQUAL("3+((5+9)*2)", out.str());
+		ASSERT_EQUAL(-1, getValue("VM1", root_scope));
+		auto sym_vm1 = getChain("VM1", root_scope).back();
+		auto tree_vm1 = getExprOfConst(sym_vm1);
+		std::stringstream out_vm1;
+		tree_vm1->debugPrint(out_vm1);
+
+		ASSERT_EQUAL(256, getValue("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto              sym2  = getChain("V12", root_scope).back();
-		auto              tree2 = getExprOfConst(sym2);
-		std::stringstream out2;
-		tree2->debugPrint(out2);
+		auto              sym_v12  = getChain("V12", root_scope).back();
+		auto              tree_v12 = getExprOfConst(sym_v12);
+		std::stringstream out_v12;
+		tree_v12->debugPrint(out_v12);
 
-		auto sym3       = getChain("N.V3", root_scope).back();
-		auto symV3_repr = base::strConcat("(Symbol V3 (", sym3.customPerfectHash(), "))");
-		ASSERT_EQUAL(base::strConcat(symV3_repr, "+", symV3_repr, "*", symV3_repr), out2.str());
+		auto sym_v3       = getChain("N.V3", root_scope).back();
+		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
+		ASSERT_EQUAL(base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str());
 	}
 
 	void testError() {

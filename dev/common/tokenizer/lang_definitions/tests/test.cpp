@@ -26,8 +26,11 @@ private:
 		auto inc = operatorPrecedence(NamedOperator::DoublePlus, OperatorType::UnaryRight);
 		auto neg = operatorPrecedence(NamedOperator::Minus, OperatorType::UnaryRight);
 
-		auto multiply = operatorPrecedence(NamedOperator::Multiply, OperatorType::Binary);
-		auto divide   = operatorPrecedence(NamedOperator::Divide, OperatorType::Binary);
+		auto exponentiate = operatorPrecedence(NamedOperator::Exponentiate, OperatorType::Binary);
+
+		auto multiply     = operatorPrecedence(NamedOperator::Multiply, OperatorType::Binary);
+		auto divide       = operatorPrecedence(NamedOperator::Divide, OperatorType::Binary);
+		auto remainder    = operatorPrecedence(NamedOperator::Remainder, OperatorType::Binary);
 
 		auto add      = operatorPrecedence(NamedOperator::Plus, OperatorType::Binary);
 		auto subtract = operatorPrecedence(NamedOperator::Minus, OperatorType::Binary);
@@ -36,17 +39,18 @@ private:
 
 		assertTrue(period == period_2, "Same operators have different precedence");
 		assertTrue(multiply == divide, "*, / have different precedence");
+		assertTrue(divide == remainder, "/, % have different precedence");
 		assertTrue(add == subtract, "+, - have different precedence");
 
 		assertTrue(period < add, ". is not the first operator");
 		assertTrue(period < inc, ". is not the first operator");
 		assertTrue(period < neg, ". is not the first operator");
-		assertTrue(period < subtract, ". is not the first operator");
-		assertTrue(period < multiply, ". is not the first operator");
-		assertTrue(period < divide, ". is not the first operator");
-		assertTrue(period < assign, ". is not the first operator");
 
-		assertTrue(multiply < subtract, "* is not before -");
+		assertTrue(inc < exponentiate, "++ is not before **");
+		assertTrue(neg < exponentiate, "-() is not before **");
+		assertTrue(exponentiate < multiply, "** is not before *");
+		assertTrue(multiply < add, "* is not before +");
+		assertTrue(add < assign, "+ is not before =");
 	}
 
 	void simpleOperatorAssociativityTest() {
@@ -60,10 +64,15 @@ private:
 		[[maybe_unused]] auto neg
 			= operatorAssociativity(NamedOperator::Minus, OperatorType::UnaryRight);
 
+		auto exponentiate = operatorAssociativity(NamedOperator::Exponentiate, OperatorType::Binary);
+
 		auto multiply = operatorAssociativity(NamedOperator::Multiply, OperatorType::Binary);
 
 		[[maybe_unused]] auto divide
 			= operatorAssociativity(NamedOperator::Divide, OperatorType::Binary);
+
+		[[maybe_unused]] auto remainder
+			= operatorAssociativity(NamedOperator::Remainder, OperatorType::Binary);
 
 		auto add = operatorAssociativity(NamedOperator::Plus, OperatorType::Binary);
 
@@ -75,6 +84,7 @@ private:
 
 		assertTrue(period == period_2, "Same operators have different associativity");
 
+		assertTrue(exponentiate == OperatorAssociativity::RightToLeft, "** had bad associativity");
 		assertTrue(multiply == OperatorAssociativity::LeftToRight, "* has bad associativity");
 		assertTrue(add == OperatorAssociativity::LeftToRight, "* has bad associativity");
 
@@ -84,7 +94,7 @@ private:
 	void exportsForLSPTest() {
 		ASSERT_EQUAL(lang_def::getKeywords().size(), 72);
 		ASSERT_EQUAL(lang_def::getSpecials().size(), 6);
-		ASSERT_EQUAL(lang_def::getOperators().size(), 21);
+		ASSERT_EQUAL(lang_def::getOperators().size(), 23);
 	}
 };
 
