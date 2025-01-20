@@ -36,12 +36,6 @@ DATA_PASS = "7ocwXWOAwg="
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
-    # InternetFile(
-    #     "scripts/downloads/clang-format",
-    #     "http://internal.ducktype.org/static/bin/clang-format",       @TODO: remove binary
-    #     auth=(DATA_USER, DATA_PASS),
-    #     after_download=[(callback_chmod, "clang-format", "u+x")],
-    # ),
     InternetFile(
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",

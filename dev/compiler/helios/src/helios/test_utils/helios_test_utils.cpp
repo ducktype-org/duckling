@@ -26,7 +26,6 @@ namespace compiler::helios::test_utils {
                                          )
 			                                : query::entryPoint<QueryLookupInSymbol>(
                                              { result.back(), base::StrID(sym.c_str()), false }
-
                                          );
 			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
