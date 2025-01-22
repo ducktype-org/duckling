@@ -25,7 +25,7 @@ if(ENABLE_COVERAGE)
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
-						--gcov-tool ${GCOV_PATH}
+						--gcov-tool "${GCOV_PATH}"
 						--initial 
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
@@ -33,7 +33,7 @@ if(ENABLE_COVERAGE)
 						--output-file coverage_base.info
 		# Creating coverage data for the tests.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
-						--gcov-tool ${GCOV_PATH} 
+						--gcov-tool "${GCOV_PATH}"
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
@@ -52,7 +52,8 @@ if(ENABLE_COVERAGE)
 		
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-		VERBATIM)
+		VERBATIM
+	)
 	add_dependencies(coverage build_all_coverage_targets)
 endif()
 
