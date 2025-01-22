@@ -48,7 +48,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<MCRef<ExprElement>> getValue() const;
+		base::Optional<MCRef<UniversalExprHolder>> getValue() const;
 
 		void acceptVisitor(PstVisitor& visitor) const final;
 	};
@@ -258,7 +258,12 @@ namespace pst {
 	using ExprParseFun = MBox<ExprElement>(LangParserState&);
 
 	/**
-	 * @brief Template for defining expression parsing entry points
+	 * @brief
+	 *
+	 * @tparam Self - Class of the holder, used for the correct return type of parse.
+	 * @tparam parseFun - The parsing function that parses the inner expression.
+	 * @tparam TOP_LEVEL - Whether the holder holds a top-level expression, for example some lists
+	 * shouldn't.
 	 */
 	template<typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
 	class ExprHolderTemplate: public ExprHolder {
@@ -301,8 +306,8 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Secondary entry point to expression parsing that allows comma expressions
-	 * top-level
+	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
+	 * allow for assignment expressions top-level
 	 */
 	class CommaExprHolder final:
 		  public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
@@ -312,8 +317,8 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Tertiary entry point to expression parsing that allows assignment expressions
-	 * top-level.
+	 * @brief Tertiary and most broad entry point to expression parsing that allows assignment
+	 * expressions top-level.
 	 */
 	class AssignmentExprHolder final:
 		  public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {

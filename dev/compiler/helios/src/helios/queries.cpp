@@ -198,7 +198,8 @@ namespace compiler::helios {
 							param_name, param_type->value(), std::nullopt, param_symbol
 						);
 					} else {
-						auto initial_value = ctx.query<QueryHoutOfExpr>({ value.value() });
+						auto initial_value
+							= ctx.query<QueryHoutOfExpr>({ value.value()->getExpr() });
 
 						if (initial_value.hasError()) {
 							// we just fail here, because we can't continue without correct initial

@@ -35,14 +35,14 @@ namespace pst {
 	};
 
 	namespace {
-		static bool end(const LangParserState& state, i64 fwd = 0) {
+		bool isForTypeEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
 			    || state[fwd].is(Keyword::In);
 		}
 	}
 
 	MBox<ExprElement> ExprParserHelper::parseForType(LangParserState& state) {
-		return expr::parseUntil<expr::Comma, end>(state);
+		return expr::parseUntil<expr::Comma, isForTypeEnd>(state);
 	}
 
 	MBox<For> For::parse(LangParserState& state) {

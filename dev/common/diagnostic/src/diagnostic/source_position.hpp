@@ -86,6 +86,9 @@ namespace dia {
 		[[nodiscard]]
 		tokenizer::BorrowFile getSource() const;
 
+		/**
+		 * @brief This checks exactly for position being EOF
+		 */
 		[[nodiscard]]
 		bool isFileEnd() const;
 
