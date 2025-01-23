@@ -104,8 +104,7 @@ private:
 		auto pth  = fs::FilePath(path("test_module"));
 		auto root = query::entryPoint<QueryModuleTree>(pth);
 
-		[[maybe_unused]]
-		auto awe
+		[[maybe_unused]] auto awe
 			= query::entryPoint<QuerySubmodules>(root)->at(base::StrID("awe"));
 
 		auto sources = query::entryPoint<QuerySourceFiles>(root);
@@ -113,9 +112,7 @@ private:
 
 		auto main_id = sources->at(0);
 
-		[[maybe_unused]]
-		auto pst
-			= query::entryPoint<QueryFilePST>(main_id);
+		[[maybe_unused]] auto pst = query::entryPoint<QueryFilePST>(main_id);
 	}
 };
 
