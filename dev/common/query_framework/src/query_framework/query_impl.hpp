@@ -109,7 +109,7 @@ namespace query::detail {
 			);
 
 			// @todo: This might bind & to a const&, via std::move "creating" &&.
-			// It should work for all cases in our codebase,
+			// It should works for all cases in our codebase,
 			// but I'm not sure if it will work always and if it is
 			// standardized behaviour.
 			return std::move(v.value().data);
@@ -192,9 +192,8 @@ namespace query::detail {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(                                                           \
-		type::QKey key, ::query::detail::NodeID from                                                \
-	) -> type::QResult {                                                                            \
+	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
+		-> type::QResult {                                                                          \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \

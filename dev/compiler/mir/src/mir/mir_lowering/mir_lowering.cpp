@@ -250,21 +250,21 @@ namespace compiler::mir {
 		Function build() {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 
-			std::vector<Block> blocks_ret;
+			std::vector<Block> blocks;
 			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks_ret.emplace_back(this->blocks.getRef(i).value()->build());
+				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
 			return Function{ name.value(),
-				             std::move(blocks_ret),
+				             std::move(blocks),
 				             std::move(local_list),
 				             entry_block.value()->getID(),
 				             top_lifetime_scope.value(),
 				             helios_symbol };
 		}
 
-		void setName(base::StrID function_name) {
+		void setName(base::StrID name) {
 			CORE_ASSERT(not this->name.has_value(), "Name already set");
-			this->name.emplace(function_name);
+			this->name.emplace(name);
 		}
 
 		void setTopLifetimeScope(helios::ScopeID scope) {

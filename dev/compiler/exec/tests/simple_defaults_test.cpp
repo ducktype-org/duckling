@@ -45,8 +45,8 @@ private:
 		exec::CTV member_result_ctv               = exec::alloc_new(bool_type, bool_type.getSize());
 		member_result_ctv.getData<bool>().front() = true;
 
-		auto fun = [&parent_counter, &parent_result_ctv]([[maybe_unused]]
-		                                                 const std::vector<exec::CTV>& input) {
+		auto fun = [&parent_counter,
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			parent_counter++;
 			return parent_result_ctv;
 		};
@@ -56,8 +56,8 @@ private:
 		};
 		operation::addDefault(operation::Defaultable::Equality, parent_class, parent_eq);
 
-		auto fun2 = [&member_counter, &member_result_ctv]([[maybe_unused]]
-		                                                  const std::vector<exec::CTV>& input) {
+		auto fun2 = [&member_counter,
+		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};
@@ -135,8 +135,8 @@ private:
 		exec::CTV member_result_ctv                 = exec::alloc_new(int_type, int_type.getSize());
 		member_result_ctv.getData<int8_t>().front() = 0;
 
-		auto fun = [&parent_counter, &parent_result_ctv]([[maybe_unused]]
-		                                                 const std::vector<exec::CTV>& input) {
+		auto fun = [&parent_counter,
+		            &parent_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			parent_counter++;
 			return parent_result_ctv;
 		};
@@ -146,8 +146,8 @@ private:
 		};
 		operation::addDefault(operation::Defaultable::Compare, parent_class, parent_comp);
 
-		auto fun2 = [&member_counter, &member_result_ctv]([[maybe_unused]]
-		                                                  const std::vector<exec::CTV>& input) {
+		auto fun2 = [&member_counter,
+		             &member_result_ctv]([[maybe_unused]] const std::vector<exec::CTV>& input) {
 			member_counter++;
 			return member_result_ctv;
 		};

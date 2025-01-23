@@ -292,13 +292,15 @@ namespace base {
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
-		constexpr const T* operator->() const {
+		constexpr const T*
+			operator->() const {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
-		constexpr T* operator->() {
+		constexpr T*
+			operator->() {
 			_throwOnNoValue();
 			return private_optional.operator->();
 		}

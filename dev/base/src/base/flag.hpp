@@ -21,17 +21,12 @@
 		class flag_name {                                                                      \
 			u64 data = 0;                                                                      \
                                                                                                \
-			[[nodiscard]]                                                                      \
-			constexpr flag_name(u64 data):                                                     \
-				  data(data) {}                                                                \
+			[[nodiscard]] constexpr flag_name(u64 data): data(data) {}                         \
                                                                                                \
 		public:                                                                                \
-			[[nodiscard]]                                                                      \
-			constexpr flag_name()                                                              \
-				= default;                                                                     \
+			[[nodiscard]] constexpr flag_name() = default;                                     \
                                                                                                \
-			[[nodiscard]]                                                                      \
-			constexpr flag_name(enum_name single_option):                                      \
+			[[nodiscard]] constexpr flag_name(enum_name single_option):                        \
 				  data(1 << static_cast<u32>(single_option)) {}                                \
                                                                                                \
 			[[nodiscard]]                                                                      \

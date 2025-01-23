@@ -232,8 +232,8 @@ namespace compiler::helios {
 				= element.element->getParent().has_value()
 			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.element->getParent().value() })
 			        : ctx.query<QueryRootScopeOf>(
-						  { frontend::extendQueryModuleIDOfPST(ctx, element.element) }
-					  );
+						{ frontend::extendQueryModuleIDOfPST(ctx, element.element) }
+					);
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
@@ -329,11 +329,11 @@ namespace compiler::helios {
 			void visitFun(const pst::Fun& fun) override {
 				// Scope of "fun →()← {}"
 
-				std::vector<SymID> out_ret;
+				std::vector<SymID> out;
 				for (auto params: *fun.getParams())
-					out_ret.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
 
-				output(std::move(out_ret));
+				output(std::move(out));
 			}
 
 			void visitIf(const pst::If&) override {
@@ -503,7 +503,8 @@ namespace compiler::helios {
 					  << (iter_scope.ref->related_pst_element.has_value()
 			                  ? iter_scope.ref->related_pst_element.value()->elementType()
 			                  : "ROOT")
-					  << ")" << " -> ";
+					  << ")"
+					  << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();

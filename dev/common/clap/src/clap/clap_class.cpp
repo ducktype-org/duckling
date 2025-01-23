@@ -332,7 +332,8 @@ namespace clap {
 							"\"" + getParameterName(param) + "\""
 						);
 				}
-				variant_case(Optional, _) { /* Nothing in this case */ }
+				variant_case(Optional, _) { /* Nothing in this case */
+				}
 				variant_case(Conditional, c) {
 					if (!c.condition(result)) {
 						throw exceptions::MissingConditionalParameter(
