@@ -48,8 +48,7 @@ namespace pst::expr {
 			out->chain.emplace_back(nullptr);
 			if (state[0].is(lang_def::NamedOperator::Period)) {
 				state.parse(out).with(&out->chain.back(), Access::parse, +fwd);
-			} else if (state[0].isBracketGroup(lexer::Token::Round)
-			           || state[0].isBracketGroup(lexer::Token::Square)) {
+			} else if (state[0].isBracketGroup(lexer::Token::Round) || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
 			} else {
 				state.log(base::make_unique<BadChainExprError>(
