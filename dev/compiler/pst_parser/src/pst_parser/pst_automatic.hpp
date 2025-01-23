@@ -46,7 +46,7 @@ namespace pst {
 		//
 		// parses one of the available types
 		// template<class T>
-		// void one([[maybe_unused]]T t, [[maybe_unused]]bool = false) {
+		// void one([[maybe_unused]]T t, [[maybe_unused]]bool ignorable = false) {
 		// 	static_assert(sizeof(T) < 0, "parseOne for type `T` is not implemented\n");
 		// }
 
@@ -123,7 +123,7 @@ namespace pst {
 		 * @brief Parses an identifier to @p result. Skips on success, does nothing on failure.
 		 * @param result The place to store the parsed identifier.
 		 */
-		void one(tpc::OptionalIdentifier* result, bool = false) {
+		void one(tpc::OptionalIdentifier* result, [[maybe_unused]] bool ignorable = false) {
 			if (state.ctokens().peek().isIdentifier()) {
 				el->addToken(state[0]);
 				result->value = state.tokens().next().getValue();
@@ -135,7 +135,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(MBox<T>* result, bool = false) {
+		void one(MBox<T>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
 		}
 
@@ -144,7 +144,7 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(base::Optional<MBox<T>>* result, bool = false) {
+		void one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
 		}
 
