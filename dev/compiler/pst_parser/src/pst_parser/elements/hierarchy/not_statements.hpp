@@ -330,7 +330,8 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Expression parsing entry point for type in for statement.
+	 * @brief Expression parsing entry point for type in for statement, i.e.:
+	 * `for (iter: this-expr in range) {...}`
 	 */
 	class ForTypeExprHolder final:
 		  public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
