@@ -18,6 +18,7 @@ env:
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   CXX_COMPILER: g++-14
+  CC_COMPILER: gcc-14
   GCOV_PATH: gcov-14
 
 jobs:
@@ -49,9 +50,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov, LLVM, compiler and gcov
+      - name: Install lcov, LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev ${{ env.CXX_COMPILER }} ${{ env.GCOV_PATH }}
+        run: sudo apt -y install lcov llvm llvm-dev
+
+      - name: Install GCC 14 and gcov-14
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt update
+          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }}
+      
+      - name: Check installations
+        run: |
+          ${{ env.CXX_COMPILER }} --version
+          ${{ env.CC_COMPILER }} --version
+          ${{ env.GCOV_PATH }} --version
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
