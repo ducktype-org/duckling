@@ -89,7 +89,7 @@ namespace hashing {
 
 		using std::hash;
 		template<typename T>
-		concept can_stdhash = requires(const T& t) { Hash<T>{}(t); };
+		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
 
 		template<typename T>
 		concept can_hash_decompose = requires(const T& t) { hash_decompose(t); };
@@ -104,7 +104,7 @@ namespace hashing {
 		concept is_range_with_hashable_elements
 			= hash_algorithm<HashAlgorithm> && std::ranges::input_range<R>
 			&& requires(HashAlgorithm& h, const R& t) {
-				add_to_hash(h, std::declval<std::ranges::range_value_t<R>());
+				add_to_hash(h, std::declval<std::ranges::range_value_t<R>>());
 		};
 
 		template<typename HashAlgorithm, typename R>

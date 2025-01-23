@@ -72,7 +72,7 @@ namespace hashing {
 		// its specialization should be provided above
 		else if constexpr (detail::can_stdhash<T>) {
 			using std::hash;
-			add_to_hash(h, Hash<T>{}(t));
+			add_to_hash(h, hash<T>{}(t));
 		} else {
 			static_assert(
 				false, "Please provide an 'add_to_hash' or 'hash_decompose' overload for this type"

@@ -56,7 +56,7 @@ namespace my_map {
 	template<
 		class Key,
 		class T,
-		class Hash  = hash<>,
+		class Hash  = Hash<>,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
 
@@ -114,7 +114,7 @@ private:
 
 	template<typename Alg>
 	void hashTest() {
-		hash<Alg> hasher;
+		Hash<Alg> hasher;
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 		constexpr auto res1 = hasher(X{});
 		constexpr auto res2 = hasher(S{});
