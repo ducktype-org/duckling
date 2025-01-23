@@ -39,7 +39,7 @@ jobs:
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
-    timeout-minutes: 12  # (Per matrix run)
+    timeout-minutes: 16  # (Per matrix run)
 
     runs-on: ubuntu-24.04
 
