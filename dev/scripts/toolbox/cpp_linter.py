@@ -95,7 +95,7 @@ def simulate_cpp_linter(clang_tidy_path: str, clang_format_path: str, build: str
                 tidy_out, _ = bash_command_get_output(
                     f"{clang_tidy_path} -p {build_folder} --format-style file"
                     f' --line-filter="[{{"name": "{file}", "lines": {diffs[file]}}}]"'
-                    f" --extra-arg=-std=c++23 {file}"
+                    f" --extra-arg= {file}"
                 )
                 if tidy_out:
                     log_warning(f"clang-tidy output: \n{tidy_out}")
