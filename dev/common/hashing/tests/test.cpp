@@ -75,8 +75,8 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(hashCodeTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
-		TESTER_ADD_TEST(hashTest<fnv1a_32>);
-		TESTER_ADD_TEST(hashTest<fnv1a_64>);
+		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
+		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
 	}
 
 private:
@@ -92,24 +92,24 @@ private:
 	}
 
 	void hashingAlgorithmsTest() {
-		assertTrue(hash_algorithm<fnv1a_32>, "fnv1a_32 should be a hashing algorithm");
-		assertTrue(hash_algorithm<fnv1a_64>, "fnv1a_64 should be a hashing algorithm");
-		assertTrue(hash_algorithm<debug_hash>, "debug_hash should be a hashing algorithm");
-		constexpr auto res1 = fnv1a_32{}(4);
+		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
+		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
+		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
+		constexpr auto res1 = Fnv1a_32{}(4);
 		assertTrue(
-			has_update_hash_char<fnv1a_64>, "fnv1a_64 should have update_hash(char*, usize)"
+			has_update_hash_char<Fnv1a_64>, "Fnv1a_64 should have update_hash(char*, usize)"
 		);
-		constexpr auto res2 = fnv1a_64{}(std::array{ 1, 2, 3 });
-		constexpr auto res3 = static_cast<std::string>(debug_hash{}("hello", 5)).size();
+		constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
+		constexpr auto res3 = static_cast<std::string>(DebugHash{}("hello", 5)).size();
 		assertTrue(
 			is_explicitly_convertible_to<decltype(res1), u32>,
-			"fnv1a_32 should be convertible to u32 "
+			"Fnv1a_32 should be convertible to u32 "
 		);
 		assertTrue(
 			is_explicitly_convertible_to<decltype(res2), u64>,
-			" fnv1a_64 should be convertible to u64"
+			" Fnv1a_64 should be convertible to u64"
 		);
-		assertTrue(res3 > 0, "debug_hash should return a non-empty string");
+		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 	}
 
 	template<typename Alg>

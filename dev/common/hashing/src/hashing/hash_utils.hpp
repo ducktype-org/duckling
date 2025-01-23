@@ -21,38 +21,38 @@ namespace hashing {
 
 	namespace detail {
 		template<typename Self, typename CheckT>
-		struct acc: public std::remove_cvref_t<Self> {
+		struct Acc: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len)
-				requires requires { acc{}.std::remove_cvref_t<Self>::update_hash(data, len); } {}
+				requires requires { Acc{}.std::remove_cvref_t<Self>::update_hash(data, len); } {}
 		};
 
 		template<typename Self>
-		struct hc_acc: public std::remove_cvref_t<Self> {
-			void check(const type_hash_code_t& hash)
-				requires requires { hc_acc{}.std::remove_cvref_t<Self>::add_hash_code(hash); } {}
+		struct Hc_acc: public std::remove_cvref_t<Self> {
+			void check(const TypeHashCode& hash)
+				requires requires { Hc_acc{}.std::remove_cvref_t<Self>::add_hash_code(hash); } {}
 		};
 	}
 
 	template<typename T>
 	concept has_update_hash_void
-		= requires(T t, void* data, usize len) { detail::acc<T, void>{}.check(data, len); };
+		= requires(T t, void* data, usize len) { detail::Acc<T, void>{}.check(data, len); };
 
 	template<typename T>
 	concept has_update_hash_char
-		= requires(T t, char* data, usize len) { detail::acc<T, char>{}.check(data, len); };
+		= requires(T t, char* data, usize len) { detail::Acc<T, char>{}.check(data, len); };
 
 	template<typename T>
 	concept has_update_hash = has_update_hash_void<T> || has_update_hash_char<T>;
 
 	template<typename Self, typename T>
 	constexpr bool is_hash_code_aware
-		= std::is_same_v<std::remove_cvref_t<T>, type_hash_code_t>
-	   && requires(const type_hash_code_t& hash) { detail::hc_acc<Self>{}.check(hash); };
+		= std::is_same_v<std::remove_cvref_t<T>, TypeHashCode>
+	   && requires(const TypeHashCode& hash) { detail::Hc_acc<Self>{}.check(hash); };
 
-	class call_overloads {
+	class CallOverloads {
 	public:
 		template<has_update_hash_void Self>
-		/*constexpr*/ auto&& operator()(this Self&& self, const void* data, usize len) noexcept {
+		auto&& operator()(this Self&& self, const void* data, usize len) noexcept {
 			std::forward<Self>(self).update_hash(data, len);
 			return std::forward<Self>(self);
 		}
@@ -89,7 +89,7 @@ namespace hashing {
 
 		using std::hash;
 		template<typename T>
-		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
+		concept can_stdhash = requires(const T& t) { Hash<T>{}(t); };
 
 		template<typename T>
 		concept can_hash_decompose = requires(const T& t) { hash_decompose(t); };

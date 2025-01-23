@@ -4,17 +4,17 @@
 
 namespace hashing {
 
-	struct type_hash_code_t {
+	struct TypeHashCode {
 		u32 value{};
 
-		constexpr auto operator<=>(const type_hash_code_t&) const = default;
+		constexpr auto operator<=>(const TypeHashCode&) const = default;
 
 		constexpr operator u32() const noexcept { return value; }
 	};
 
 	namespace detail {
 
-		class fnv1a_32_consteval {
+		class Fnv1a_32_Consteval {
 			static constexpr u32 offset_basis = 2'166'136'261u;
 			static constexpr u32 FNV_prime    = (1u << 24) + (1u << 8) + 0x93u;
 			u32                  state        = offset_basis;
@@ -35,36 +35,36 @@ namespace hashing {
 			}
 		};
 
-		struct str {
-			type_hash_code_t hash_value;
+		struct Str {
+			TypeHashCode hash_value;
 
 			template<usize N>
-			consteval str(const char (&arr)[N]) {
-				fnv1a_32_consteval h;
+			consteval Str(const char (&arr)[N]) {
+				Fnv1a_32_Consteval h;
 				h.update_hash(arr);
 				hash_value.value = static_cast<u32>(h);
 			}
 
-			consteval operator type_hash_code_t() const { return hash_value; }
+			consteval operator TypeHashCode() const { return hash_value; }
 		};
 
 		template<typename T>
-		consteval str unique_string() {
+		consteval Str unique_string() {
 #ifdef _MSC_VER
-			return str{ __FUNCDNAME__ };
+			return Str{ __FUNCDNAME__ };
 #else
-			return str{ __PRETTY_FUNCTION__ };
+			return Str{ __PRETTY_FUNCTION__ };
 #endif
 		}
 
 		template<typename T>
 		consteval auto unique_id() {
-			return static_cast<type_hash_code_t>(unique_string<T>());
+			return static_cast<TypeHashCode>(unique_string<T>());
 		}
 
 	}  // namespace detail
 
 	template<typename T>
-	constexpr type_hash_code_t type_hash_code = detail::unique_id<T>();
+	constexpr TypeHashCode type_hash_code = detail::unique_id<T>();
 
 }  // namespace hash

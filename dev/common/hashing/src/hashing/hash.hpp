@@ -72,7 +72,7 @@ namespace hashing {
 		// its specialization should be provided above
 		else if constexpr (detail::can_stdhash<T>) {
 			using std::hash;
-			add_to_hash(h, hash<T>{}(t));
+			add_to_hash(h, Hash<T>{}(t));
 		} else {
 			static_assert(
 				false, "Please provide an 'add_to_hash' or 'hash_decompose' overload for this type"
@@ -80,8 +80,8 @@ namespace hashing {
 		}
 	}
 
-	template<hash_algorithm HashAlgorithm = fnv1a_64, bool AppendTypeHashCode = true>
-	class hash {
+	template<hash_algorithm HashAlgorithm = Fnv1a_64, bool AppendTypeHashCode = true>
+	class Hash {
 	public:
 		using result_type = typename HashAlgorithm::result_type;
 
@@ -96,8 +96,8 @@ namespace hashing {
 		}
 	};
 
-	template<hash_algorithm HashAlgorithm = fnv1a_64, bool AppendTypeHashCode = true>
-	class stateful_hash {
+	template<hash_algorithm HashAlgorithm = Fnv1a_64, bool AppendTypeHashCode = true>
+	class StatefulHash {
 		HashAlgorithm h;
 
 	public:
