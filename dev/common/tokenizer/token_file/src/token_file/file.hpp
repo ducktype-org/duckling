@@ -49,8 +49,7 @@ namespace tokenizer {
 		TokenFile(const TokenFile&) = delete;
 		TokenFile()                 = delete;
 
-		TokenFile(TokenFile&&)
-			= delete;  // @TODO: this was defaulted, check if '=delete' was intended here
+		TokenFile(TokenFile&&) = default;
 
 		/**
 		 * @brief Compute pair (line, column) from character index.
