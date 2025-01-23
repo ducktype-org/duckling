@@ -49,9 +49,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov and LLVM
+      - name: Install lcov, LLVM, compiler and gcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev gcov-14
+        run: sudo apt -y install lcov llvm llvm-dev ${{ env.CXX_COMPILER }} ${{ env.GCOV_PATH }}
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}

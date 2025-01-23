@@ -122,7 +122,7 @@ def clang_tidy_on(
         tidy_out, _ = bash_command_get_output(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
-            f" --extra-arg=-std=c++23 --extra-arg= {file}",
+            f" --extra-arg=-std=c++23 {file}",
             click_file=log_file,
         )
         if tidy_out:
