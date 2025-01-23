@@ -1,5 +1,3 @@
-# @todo in this PR: make a test out of it in mir, lir
-
 fun foo() = {
     if (true) {
 
