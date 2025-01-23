@@ -1,6 +1,12 @@
 #pragma once
 
+#include "elements_list.hpp"
 #include "../lang_parser_state.hpp"
+
+namespace pst {
+	class PstVisitor;
+	class PstExprVisitor;
+}
 
 namespace pst::detail {
 
@@ -30,17 +36,18 @@ namespace pst::detail {
 		}
 
 		static bool isAssignOrSemicolon(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::Operator::Assign)
+			return st[fwd].is(lang_def::NamedOperator::Assign)
 			    || st[fwd].is(lang_def::Special::Semicolon);
 		}
 
 		static bool isAssignOrCommaOrEnd(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lexer::Token::Type::Sentinel)
-			    || st[fwd].is(lang_def::Operator::Assign) || st[fwd].is(lang_def::Special::Comma);
+			    || st[fwd].is(lang_def::NamedOperator::Assign)
+			    || st[fwd].is(lang_def::Special::Comma);
 		}
 
 		static bool isAssign(const LangParserState& st, i64 fwd) {
-			return st[fwd].is(lang_def::Operator::Assign);
+			return st[fwd].is(lang_def::NamedOperator::Assign);
 		}
 
 		/**
@@ -48,13 +55,13 @@ namespace pst::detail {
 		 */
 		static bool isBlockGroup(const LangParserState& st, i64 fwd) {
 			return st[fwd].isBracketGroup(lexer::Token::Curly)
-			    && not st[fwd - 1].is(lang_def::Operator::Colon);
+			    && not st[fwd - 1].is(lang_def::NamedOperator::Colon);
 		}
 
 		static bool isImplementsOrBlockGroup(const LangParserState& st, i64 fwd) {
 			return st[fwd].is(lang_def::Keyword::Implements)
 			    || (st[fwd].isBracketGroup(lexer::Token::Curly)
-			        && not st[fwd - 1].is(lang_def::Operator::Colon));
+			        && not st[fwd - 1].is(lang_def::NamedOperator::Colon));
 		}
 
 		template<lang_def::Keyword key>
@@ -79,6 +86,10 @@ namespace pst::detail {
 		static std::string attributeArgList() { return "attribute argument"; }
 
 		static std::string classInitList() { return "initialization"; }
+
+		static std::string callList() { return "call"; }
+
+		static std::string templateList() { return "template"; }
 	};
 
 	/**
@@ -97,7 +108,7 @@ namespace pst::detail {
 		internal_iterator it;
 
 	public:
-		using value_type        = ParserCBorrowRef<ParserElement>;
+		using value_type        = MCRef<ParserElement>;
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type   = typename internal_iterator::difference_type;
 		using reference         = value_type;
@@ -108,11 +119,11 @@ namespace pst::detail {
 
 		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
 
-		explicit ForwardBorrowIterator(const ParserRef<ParserElement>* ptr): it(ptr) {}
+		explicit ForwardBorrowIterator(const MBox<ParserElement>* ptr): it(ptr) {}
 
-		value_type operator*() const { return it->borrow(); }
+		value_type operator*() const { return it->ref(); }
 
-		value_type operator[](difference_type diff) const { return it[diff]->borrow(); }
+		value_type operator[](difference_type diff) const { return it[diff]->ref(); }
 
 		ForwardBorrowIterator& operator++() {
 			++it;

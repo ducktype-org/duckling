@@ -34,6 +34,7 @@ public:
 		// Add more tests with future LIR changes.
 
 		TESTER_ADD_TEST(noTest);
+		TESTER_ADD_TEST(simpleBools);
 	}
 
 private:
@@ -46,18 +47,64 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
 
-			auto& foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
-			ASSERT_TRUE(foo_lir.validateBlockOrder());
+			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
+			ASSERT_TRUE(foo_lir->validateBlockOrder());
 
-			// @TODO: add some proper tests here
+			// test locals types:
+
+			// this might change in the future:
+			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
+
+			for (auto& local: foo_lir->local_list) {
+				if (local->helios_id.has_value()
+				    and compiler::helios::name(local->helios_id.value()) == "a") {
+					ASSERT_EQUAL(
+						local->layout.getSourceType(),
+						ctx.query<::tsh::QueryIntegralType>({ 64, true })
+					);
+				}
+				if (local->helios_id.has_value()
+				    and compiler::helios::name(local->helios_id.value()) == "b") {
+					ASSERT_EQUAL(
+						local->layout.getSourceType(),
+						ctx.query<::tsh::QueryIntegralType>({ 32, true })
+					);
+				}
+			}
+
+			// @TODO: more proper tests here
 
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
-			foo_lir.debugPrint(ctx, foo_str);
+			foo_lir->debugPrint(ctx, foo_str);
+		});
+	}
+
+	void simpleBools() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
+
+			ASSERT_TRUE(foo_lir->validateBlockOrder());
+
+			// note: it might change where those branch operations are placed:
+			// if this happen just see mir-output of tested module for mir block numbers
+
+			auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
+			auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+
+			ASSERT_EQUAL(true_lir_value.get<bool>(), true);
+			ASSERT_EQUAL(false_lir_value.get<bool>(), false);
 		});
 	}
 };

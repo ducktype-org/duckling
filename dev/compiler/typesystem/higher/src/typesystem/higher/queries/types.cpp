@@ -204,7 +204,7 @@ namespace tsh {
 			return pointer_pimpl;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_CONSTRUCT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
@@ -216,7 +216,7 @@ namespace tsh {
 			return tuple_pimpl;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_CONSTRUCT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
@@ -228,7 +228,7 @@ namespace tsh {
 			return Variant_pimpl;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_CONSTRUCT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
@@ -242,7 +242,7 @@ namespace tsh {
 			return function_pimpl;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_CONSTRUCT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
@@ -254,7 +254,7 @@ namespace tsh {
 			return class_pimpl;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+		QUERY_AUTO_CACHE_CONSTRUCT
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
@@ -291,4 +291,15 @@ namespace tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
+
+	struct IMPLEMENT_QUERY(QueryImportType, ImportInfo::Pimpl) {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto import_impl = internal::ImportInfoImpl{};
+			return &import_impl;
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImportType)
 }

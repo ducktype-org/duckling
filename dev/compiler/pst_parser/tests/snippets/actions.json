@@ -13,43 +13,50 @@
 					"Code Block or Statement": {
 						"Code Block": [
 							{
-								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "a"
-										},
-										{
-											"Operator": ":"
-										},
-										{
-											"Identifier": "T"
-										},
-									]
+								"Let": {
+									"name": {
+										"Name": "a"
+									},
+									"type": {
+										"Identifier Expression": {
+											"name": {
+												"Name": "T"
+											}
+										}
+									}
 								}
 							},
 							{
 								"Action": {
 									"kind": "Defer",
 									"value": {
-										"Expression": [
-											{
-												"Identifier": "a"
-											},
-											{
-												"Operator": "."
-											},
-											{
-												"Identifier": "close"
-											},
-											{
-												"Group": {
-													"type": "()",
-													"expr": {
-														"Expression": []
+										"Chain Expression": {
+											"atom": {
+												"Identifier Expression": {
+													"name": {
+														"Name": "a"
 													}
 												}
 											},
-										]
+											"chain": [
+												{
+													"Access Expression": {
+														"type": ".",
+														"name": {
+															"Name": "close"
+														}
+													}
+												},
+												{
+													"Call Expression": {
+														"type": "[]",
+														"arguments": {
+															"call list": []
+														}
+													}
+												}
+											]
+										}
 									}
 								}
 							},
@@ -60,11 +67,9 @@
 									},
 									"condition": {
 										"Round Group Expression": {
-											"Expression": [
-												{
-													"KeywordValue": "true"
-												},
-											]
+											"Keyword Expression": {
+												"keyword": "true"
+											}
 										}
 									},
 									"body": {
@@ -77,11 +82,9 @@
 														},
 														"condition": {
 															"Round Group Expression": {
-																"Expression": [
-																	{
-																		"KeywordValue": "true"
-																	},
-																]
+																"Keyword Expression": {
+																	"keyword": "true"
+																}
 															}
 														},
 														"body": {
@@ -91,11 +94,11 @@
 																		"Action": {
 																			"kind": "Break",
 																			"value": {
-																				"Expression": [
-																					{
-																						"Identifier": "A"
-																					},
-																				]
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "A"
+																					}
+																				}
 																			}
 																		}
 																	},
@@ -108,11 +111,11 @@
 																		"Action": {
 																			"kind": "Continue",
 																			"value": {
-																				"Expression": [
-																					{
-																						"Identifier": "B"
-																					},
-																				]
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "B"
+																					}
+																				}
 																			}
 																		}
 																	},
@@ -125,11 +128,11 @@
 																		"Action": {
 																			"kind": "Redo",
 																			"value": {
-																				"Expression": [
-																					{
-																						"Identifier": "A"
-																					},
-																				]
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "A"
+																					}
+																				}
 																			}
 																		}
 																	},
@@ -142,11 +145,11 @@
 																		"Action": {
 																			"kind": "Restart",
 																			"value": {
-																				"Expression": [
-																					{
-																						"Identifier": "B"
-																					},
-																				]
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "B"
+																					}
+																				}
 																			}
 																		}
 																	},
@@ -159,11 +162,9 @@
 																		"Action": {
 																			"kind": "Throw",
 																			"value": {
-																				"Expression": [
-																					{
-																						"NumLiteral": "123"
-																					},
-																				]
+																				"Value Expr": {
+																					"number": "123"
+																				}
 																			}
 																		}
 																	},
@@ -181,11 +182,9 @@
 								"Action": {
 									"kind": "Return",
 									"value": {
-										"Expression": [
-											{
-												"NumLiteral": "12"
-											},
-										]
+										"Value Expr": {
+											"number": "12"
+										}
 									}
 								}
 							},

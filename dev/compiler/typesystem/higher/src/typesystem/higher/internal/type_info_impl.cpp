@@ -42,7 +42,7 @@ namespace tsh::internal {
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
 		  components(std::move(components)) {
-		representation = stringifyTypeVector(this->components);
+		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
 	FunctionInfoImpl::FunctionInfoImpl(
@@ -90,7 +90,7 @@ namespace tsh::internal {
 
 	VariantInfoImpl::VariantInfoImpl(const std::vector<TypeInfo>& variant_types):
 		  underlying_types(variant_types) {
-		representation = "Variant " + stringifyTypeVector(variant_types);
+		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
 
 	ClassInfoImpl::ClassInfoImpl(compiler::helios::SymID symbol): symbol(symbol) {
@@ -98,12 +98,12 @@ namespace tsh::internal {
 	}
 
 	const TypeInterface& ClassInfoImpl::getInterface(query::Context& ctx) const {
-		return ctx.query<QueryInterfaceOfClass>(this);
+		return *ctx.query<QueryInterfaceOfClass>(this);
 	}
 
 	base::Optional<ClassInfo> ClassInfoImpl::getBaseClassType(query::Context& ctx) const {
 		auto& base = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                 .expect("Not handling ERRORS in TS yet")
+		                 ->expect("Not handling ERRORS in TS yet")
 		                 .base;
 		if (base.has_value()) return { ClassInfo(base.value()) };
 		return {};
@@ -111,7 +111,7 @@ namespace tsh::internal {
 
 	std::vector<ClassInfo> ClassInfoImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       .expect("Not handling ERRORS in TS yet")
+		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;
 		return { implements.begin(), implements.end() };
 	}
@@ -119,7 +119,7 @@ namespace tsh::internal {
 	std::vector<compiler::helios::SymID>
 		ClassInfoImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
-		                       .expect("Not handling ERRORS in TS yet")
+		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;
 		// @TODO: change cast type to InterfaceInfo when interface type is created.
 		constexpr auto transformer

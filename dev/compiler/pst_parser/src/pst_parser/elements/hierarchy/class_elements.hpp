@@ -4,9 +4,11 @@
 #include "not_statements.hpp"
 
 namespace pst {
-#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name)                              \
+#define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                        \
 	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
-		  ClassStmt(StmtKind::class_name, position, ctx) {}
+		  ClassStmt(StmtKind::class_name, position, ctx) {                    \
+		this->element_kind = kind;                                            \
+	}
 
 #define CLASS_STMT_PASS_CONSTRUCTOR(class_name)                                              \
 	class_name(StmtKind kind, const dia::SourcePosition& position, const ClassContext& ctx): \
@@ -17,7 +19,7 @@ namespace pst {
 		  ClassSpecial(StmtKind::class_name, position, ctx) {}
 
 #define CLASS_STMT_PARSE(class_name) \
-	static ParserRef<class_name> parse(LangParserState& state, const ClassContext& ctx);
+	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx);
 
 	/**
 	 * @brief Access specifier block inside of a class.
@@ -31,11 +33,11 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword     specifier = lang_def::Keyword::NotAKeyword;
-		ParserRef<ClassBlock> block;
+		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
+		MBox<ClassBlock>  block;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock);
+		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
 		CLASS_STMT_PARSE(AccessBlock);
 
 		~AccessBlock() override = default;
@@ -52,8 +54,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<ClassBlock> getBlock() const {
-			return block.borrow();
+		MCRef<ClassBlock> getBlock() const {
+			return block.ref();
 		}
 
 		[[nodiscard]]
@@ -61,7 +63,7 @@ namespace pst {
 			return false;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 	/**
@@ -92,15 +94,18 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool trailingSemicolon() override final {
+		bool trailingSemicolon() final {
 			return false;
 		}
 	};
 
+	/**
+	 * @brief Class constructor element.
+	 */
 	class Constructor final: public ClassSpecial {
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<InitList>  inits  = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		MBox<ParamList> params = nullptr;
+		MBox<InitList>  inits  = nullptr;
+		MBox<CodeBlock> body   = nullptr;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -119,11 +124,14 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class destructor element.
+	 */
 	class Destructor final: public ClassSpecial {
-		ParserRef<CodeBlock> body = nullptr;
+		MBox<CodeBlock> body = nullptr;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
@@ -137,17 +145,20 @@ namespace pst {
 			return "Class Destructor";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class method element.
+	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier      name;
-		ParserRef<ParamList> params = nullptr;
-		ParserRef<RetList>   rets   = nullptr;
-		ParserRef<CodeBlock> body   = nullptr;
+		tpc::Identifier                   name;
+		MBox<ParamList>                   params = nullptr;
+		base::Optional<MBox<ExprElement>> ret;
+		MBox<CodeBlock>                   body = nullptr;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Method);
+		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
 		CLASS_STMT_PARSE(Method);
 
 		~Method() override = default;
@@ -173,17 +184,20 @@ namespace pst {
 			return false;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class field element.
+	 */
 	class Field final: public ClassStmt {
-		bool                            is_mutable = true;
-		tpc::Identifier                 name;
-		ParserRef<Expr>                 type;
-		base::Optional<ParserRef<Expr>> init;
+		bool                              is_mutable = true;
+		tpc::Identifier                   name;
+		MBox<ExprElement>                 type;
+		base::Optional<MBox<ExprElement>> init;
 
 	public:
-		CLASS_STMT_CHILD_CONSTRUCTOR(Field);
+		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
 		CLASS_STMT_PARSE(Field);
 
 		~Field() override = default;
@@ -200,8 +214,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
-			return type.borrow();
+		MCRef<ExprElement> getType() const {
+			return type.ref();
 		}
 
 		[[nodiscard]]
@@ -214,6 +228,6 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 }

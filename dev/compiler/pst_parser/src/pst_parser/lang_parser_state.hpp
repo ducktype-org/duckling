@@ -1,7 +1,6 @@
 #pragma once
 
 #include <token_parser_core/base_element.hpp>
-#include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <base/strongly_typed_id.hpp>
@@ -24,7 +23,7 @@ namespace pst {
 		/**
 		 * @brief Adds import to the list of imports.
 		 */
-		void addImport(const tpc::ParserCBorrowRef<pst::Import>& import);
+		void addImport(const CRef<pst::Import>& import);
 
 		/**
 		 * @brief Extracts imports from state.
@@ -40,15 +39,15 @@ namespace pst {
 		 * @brief Gives access to automatic parsing tools.
 		 */
 		template<std::derived_from<LangElement> El>
-		pst::PSTAutomatic<LangParserState> parse(ParserRef<El>& el) {
-			return { *this, el.borrow_mut() };
+		pst::PSTAutomatic<LangParserState> parse(Box<El>& el) {
+			return { *this, el.refMut() };
 		}
 
 		/**
 		 * @brief Gives access to automatic parsing tools.
 		 */
 		template<std::derived_from<LangElement> El>
-		pst::PSTAutomatic<LangParserState> parse(ParserBorrowRef<El> el) {
+		pst::PSTAutomatic<LangParserState> parse(Ref<El> el) {
 			return { *this, el };
 		}
 	};

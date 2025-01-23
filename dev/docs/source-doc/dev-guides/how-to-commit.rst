@@ -2,7 +2,7 @@
 How to commit
 =============
 
-This page describes how to comiit changes to our repositories following good practicies and standards. Keep in mind that this tutorial is focused on ``duckling`` - our repisitory. Other repositories do not require as strict practicies.
+This page describes how to commit changes to our repositories following good practices and standards. Keep in mind that this tutorial is focused on ``duckling`` - our repository. Other repositories do not require as strict practices.
 
 .. contents::
     :depth: 1
@@ -16,12 +16,12 @@ Set up your repo in a standard way. Some repositories have a ``toolbox.py`` scri
 Create a branch
 ===============
 
-Most of our repositories don't allow commiting directly to the ``main`` branch. To make any changes you need to create a new feature branch. You can do that via GH issue or link a branch to an existing issue or kanban card (see ...).
+Most of our repositories don't allow committing directly to the ``main`` branch. To make any changes you need to create a new feature branch. You can do that via GH issue or link a branch to an existing issue or kanban card (see ...).
 
 Make some changes
 =================
 
-Don't forget to write tests and docs! On ``duckling`` repo Quacker bot will block the merge if coverage percantege drops (this can be bypassed if really needed).
+Don't forget to write tests and docs! On ``duckling`` repo Quacker bot will block the merge if coverage percentage drops (this can be bypassed if really needed).
 
 Format your code
 ----------------

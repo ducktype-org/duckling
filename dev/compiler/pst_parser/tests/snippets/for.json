@@ -7,95 +7,113 @@
 					"Name": "a"
 				},
 				"type": {
-					"Expression": [
-						{
-							"Comma separated": [
-								{
-									"Expression": [
-										{
-											"Identifier": "T"
-										},
-									]
-								},
-								{
-									"Expression": [
-										{
-											"Identifier": "U"
-										},
-									]
+					"Comma Expr": {
+						"sub-expressions": [
+							{
+								"Identifier Expression": {
+									"name": {
+										"Name": "T"
+									}
 								}
-							]
-						},
-					]
+							},
+							{
+								"Identifier Expression": {
+									"name": {
+										"Name": "U"
+									}
+								}
+							}
+						]
+					}
 				},
 				"iterable": {
-					"Expression": [
-						{
-							"Identifier": "x"
-						},
-						{
-							"Operator": "."
-						},
-						{
-							"Identifier": "b"
-						},
-						{
-							"Group": {
-								"type": "()",
-								"expr": {
-									"Expression": [
-										{
-											"Comma separated": [
-												{
-													"Expression": [
-														{
-															"Identifier": "c"
-														},
-														{
-															"Operator": "+"
-														},
-														{
-															"Identifier": "d"
-														},
-													]
-												},
-												{
-													"Expression": [
-														{
-															"Identifier": "w"
-														},
-													]
-												}
-											]
-										},
-									]
+					"Chain Expression": {
+						"atom": {
+							"Identifier Expression": {
+								"name": {
+									"Name": "x"
 								}
 							}
 						},
-					]
+						"chain": [
+							{
+								"Access Expression": {
+									"type": ".",
+									"name": {
+										"Name": "b"
+									}
+								}
+							},
+							{
+								"Call Expression": {
+									"type": "[]",
+									"arguments": {
+										"call list": [
+											{
+												"Binary Operator": {
+													"left_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "c"
+															}
+														}
+													},
+													"operator": "+",
+													"right_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "d"
+															}
+														}
+													}
+												}
+											},
+											{
+												"Identifier Expression": {
+													"name": {
+														"Name": "w"
+													}
+												}
+											},
+										]
+									}
+								}
+							}
+						]
+					}
 				},
 				"body": {
 					"Code Block or Statement": {
 						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "print"
-										},
-										{
-											"Group": {
-												"type": "()",
-												"expr": {
-													"Expression": [
-														{
-															"Identifier": "a"
-														},
-													]
+									"Chain Expression": {
+										"atom": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "print"
 												}
 											}
 										},
-									]
+										"chain": [
+											{
+												"Call Expression": {
+													"type": "[]",
+													"arguments": {
+														"call list": [
+															{
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+														]
+													}
+												}
+											}
+										]
+									}
 								}
 							},
 						]

@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Block> Block::parse(LangParserState& state) {
+	MBox<Block> Block::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Block>(position);
+		auto out      = makeBox<Block>(position);
 
 		if (!assertStmtChoice<Block>(state, state[0].is(Keyword::Block))) return nullptr;
 
@@ -23,5 +23,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Block::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitBlock(*this); }
+	void Block::acceptVisitor(PstVisitor& visitor) const { visitor.visitBlock(*this); }
 }

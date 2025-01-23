@@ -28,6 +28,7 @@ public:
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
+		TESTER_ADD_TEST(simpleBools);
 	}
 
 private:
@@ -132,14 +133,14 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir->blocks.size(), 5);
+			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
 
 			auto get_block_terminator
-				= [&](u64 block_id) { return foo_mir.blocks.at(block_id).terminator; };
+				= [&](u64 block_id) { return foo_mir->blocks.at(block_id).terminator; };
 			auto get_block_successors = [&](u64 block_id) {
 				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
 			};
@@ -172,10 +173,30 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
-			auto& foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 
-			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
+		});
+	}
+
+	void simpleBools() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/booleans")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(1, functions.size());
+
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+
+			// note: it might change where those branch operations are placed:
+			// if this happen just see mir-output of tested module for mir block numbers
+			auto true_mir_value  = foo_mir->blocks.at(6).terminator.arguments.at(0);
+			auto false_mir_value = foo_mir->blocks.at(3).terminator.arguments.at(0);
+
+			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
+			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
 		});
 	}
 };

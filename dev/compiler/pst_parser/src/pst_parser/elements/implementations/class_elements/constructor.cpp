@@ -1,9 +1,10 @@
 #include "preamble.hpp"
+#include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
 
 namespace pst {
-	ParserRef<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
+	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Constructor>(position, ctx);
+		auto out      = makeBox<Constructor>(position, ctx);
 
 		out->parseSpecifiers(state);
 
@@ -12,11 +13,11 @@ namespace pst {
 		if (state[0].isBracketGroup(Token::Round))
 			out->kind = { base::StrID("create") };
 		else
-			state.parse(out).all(Operator::Period, &out->kind);
+			state.parse(out).all(NamedOperator::Period, &out->kind);
 
 		state.parse(out).one(&out->params);
-		if (state.parse(out).tryEat(Operator::Colon)) state.parse(out).one(&out->inits);
-		state.parse(out).all(Operator::Assign, &out->body);
+		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
+		state.parse(out).all(NamedOperator::Assign, &out->body);
 
 		return out;
 	}
@@ -34,7 +35,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Constructor::acceptVisitor(PstStmtVisitor& visitor) const {
-		visitor.visitConstructor(*this);
-	}
+	void Constructor::acceptVisitor(PstVisitor& visitor) const { visitor.visitConstructor(*this); }
 }

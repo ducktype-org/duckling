@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Namespace> Namespace::parse(LangParserState& state) {
+	MBox<Namespace> Namespace::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Namespace>(position);
+		auto out      = makeBox<Namespace>(position);
 
 		if (!assertStmtChoice<Namespace>(state, state[0].is(Keyword::Namespace))) return nullptr;
 
@@ -25,5 +25,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Namespace::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitNamespace(*this); }
+	void Namespace::acceptVisitor(PstVisitor& visitor) const { visitor.visitNamespace(*this); }
 }

@@ -1,5 +1,20 @@
-/** @file scopes.hpp
- *  @brief This file defines Queries responsible for creation of Scopes and operations on them.
+/**
+ * @file scopes.hpp
+ * @brief This file defines Queries responsible for creation of Scopes and operations on them.
+ *
+ * What are created for given PST element (list only for elements that have their own scope):
+ * * TopLevel: Scope containing all top-level statements in the file.
+ * * CodeBlockOrStmt: Scope containing all statements in the block.
+ * * CodeBlock: Scope containing all statements in the block.
+ *   Unless it is contained in CodeBlockOrStmt, then it does not have a scope.
+ * * ClassBlock: Scope containing all statements in the class.
+ * * If, While, For: Scope for symbols defined in the condition/iteration declaration.
+ * * Fun, ClassMethod: Scope for function parameters.
+ *
+ * * ExprStmt: Scope for expresion lifetime
+ *   (this will change in the future, we will just have scope for top-exprs).
+ *
+ * @note all symbols need a scope. If we don't have one, we should add it.
  */
 #pragma once
 
@@ -8,12 +23,12 @@
 #include <base/perfect_hash.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/lang_parser_state.hpp>
+#include <pst_parser/generic_query_key.hpp>
 
-#include "../pst_ref.hpp"
 #include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
 
-// @TODO: relax this dependency
+// @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
 #include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
@@ -49,38 +64,29 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryRootScopeOf, frontend::ModuleID, ScopeID);
 
-	struct KeyOf_QueryPrimaryCodeScopeFor final {
-		/**
-		 * @brief Element for which the scope is created.
-		 * @note: scopes of various elements behave differently
-		 * Scope behaviour for:
-		 * * StatementAggregates -- a scope of aggregated statements
-		 * * Function -- a scope of function arguments (@todo: function scopes are currently empty)
-		 * * Namespaces -- empty Scope
-		 * * Classes -- scope containing class fields
-		 * * Expr -- empty Scope
-		 * * Return -- empty Scope
-		 * * Variables -- empty Scope
-		 *
-		 * @todo: once scope refactor will be introduced, most "empty scope"
-		 * stuff will be no longer needed.
-		 */
-		PstRef<pst::LangElement> base_element;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_QueryPrimaryCodeScopeFor&) const = default;
-	};
-
 	/**
-	 * @brief Query Scope for given PST element.
-	 * @note: Primary Scopes are linked directly to PST structure.
-	 * This means that every PST element has a scope, even for some it doesn't make a lot of sense.
+	 * @brief Generate HELIOS-scope associated with given PST element.
+	 * Also: dictates what PST elements have their own scope.
+	 *
+	 * For some elements (e.g: code-block) this will be a scope of the element itself.
+	 * For some it will be a scope this element is contained in (e.g. inner expression elements).
+	 * For some (e.g: function) this might be slightly different.
+	 * For some elements for which scope does not make sense, it can panic.
+	 *
+	 * @note Scope strucure are linked directly to PST structure.
 	 * The reason for this is that handling scope structure without direct link to PST was highly
 	 * bug prone and led to potential errors or lack of consistency between different fragments of
 	 * code.
 	 */
-	DECLARE_QUERY(QueryPrimaryCodeScopeFor, KeyOf_QueryPrimaryCodeScopeFor, ScopeID);
+	DECLARE_QUERY(QueryPrimaryCodeScopeFor, pst::GenericPSTQueryKey<>, ScopeID);
+
+	/**
+	 * @brief A helper function, to make scope API consistent.
+	 * Generate scope of the body for given PST stmt element.
+	 * Intuitively this is a scope, that you associate with given element,
+	 * when looking at the code (think of namespaces for example).
+	 */
+	ScopeID queryBodyCodeScopeFor(query::Context&, MCRef<pst::Stmt> stmt);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
@@ -95,27 +101,27 @@ namespace compiler::helios {
 	/**
 	 * @brief Performs lookup of single name inside given scope.
 	 */
-	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScope, KeyOf_LookupInScope, CRef<LookupResult>);
 
 	/**
 	 * @brief Performs lookup of single name inside given scope and its parents.
 	 */
-	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, const LookupResult&);
+	DECLARE_QUERY(QueryLookupInScopeAndParents, KeyOf_LookupInScope, CRef<LookupResult>);
 
 	/**
 	 * @brief Query all symbols that are directly inside given scope.
-	 *
-	 * @NOTE: For structs, it returns what's inside struct's body.
+	 * Also: dictates what symbols are contained in what scopes.
 	 */
-	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, const std::vector<SymID>&);
+	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
 
 	/**
-	 * @brief Root scope of main module file is currently the "effective" root scope.
+	 * @brief Root scope of main module file.
+	 * It is currently the "effective" root scope of a module.
 	 * See: QueryRootScope for details
 	 * @todo: this has to change in the future
 	 *
 	 * @param module
 	 * @return ScopeID
 	 */
-	ScopeID extendQueryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
+	ScopeID queryRootScopeOfMainModuleFile(query::Context&, frontend::ModuleID module);
 }

@@ -59,6 +59,8 @@ namespace tsh {
 
 	Bits FloatInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
+	bool IntegralInfo::getSignedness() const { return toCPimpl(pimpl)->getSignedness(); }
+
 	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	ComponentType PointerInfo::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
@@ -189,7 +191,7 @@ namespace tsh {
 			const Kind        originalKind = p->getKind();
 			const Kind        targetKind   = TYPE_INFO::Impl::staticKind;
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
-			   << kindToString(originalKind) << " to " << kindToString(targetKind)
+			   << base::enumToStr(originalKind).str() << " to " << base::enumToStr(targetKind).str()
 			   << " was attempted.";
 			throw base::LogicError{ ss.str() };
 		}

@@ -74,7 +74,7 @@ namespace tsh::internal {
 		 * @return The text representation of this type.
 		 */
 		[[nodiscard]]
-		virtual const std::string& toString() const {
+		const std::string& toString() const {
 			// @TODO: this is just a draft, in the future this method may
 			// have verbosity / depth given as parameter
 			return representation;
@@ -660,6 +660,21 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind staticKind = Kind::Meta;
 
-		explicit MetaInfoImpl() = default;
+		explicit MetaInfoImpl() { representation = "META"; }
+	};
+
+	class ImportInfoImpl final: public TypeInfoImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return staticKind;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind staticKind = Kind::Import;
+
+		explicit ImportInfoImpl() = default;
 	};
 }

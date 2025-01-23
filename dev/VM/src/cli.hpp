@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <supervisor/supervisor.hpp>
+#include <core/supervisor/supervisor.hpp>
 
 void cli(const fs::FilePath& filepath);
 void cli();

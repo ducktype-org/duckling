@@ -35,6 +35,16 @@ namespace base {
 		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
 		~MapWrapper() = default;
 
+		MapWrapper& operator=(const MapWrapper& map) {
+			ContainerType::operator=(map);
+			return *this;
+		}
+
+		MapWrapper& operator=(MapWrapper&& map) noexcept {
+			ContainerType::operator=(std::move(map));
+			return *this;
+		}
+
 		// Change operator[] behaviour:
 		DATA_T& operator[](const KEY_T& key) { return ContainerType::at(key); }
 

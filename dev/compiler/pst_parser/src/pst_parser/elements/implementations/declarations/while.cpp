@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<While> While::parse(LangParserState& state) {
+	MBox<While> While::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<While>(position);
+		auto out      = makeBox<While>(position);
 
 		if (!assertStmtChoice<While>(state, state[0].is(Keyword::While))) return nullptr;
 
@@ -22,5 +22,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }
+	void While::acceptVisitor(PstVisitor& visitor) const { visitor.visitWhile(*this); }
 }

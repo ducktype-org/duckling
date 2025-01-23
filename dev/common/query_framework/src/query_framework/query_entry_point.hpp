@@ -5,14 +5,29 @@
  */
 #pragma once
 
-#include "query_id_provider.hpp"
-#include "node_making.hpp"
+#include "detail/query_id_provider.hpp"
+#include "detail/node_making.hpp"
 #include "empty_key.hpp"
-#include "dep_graph.hpp"
+#include "detail/dep_graph.hpp"
 
 #include <base/exceptions.hpp>
 
 namespace query {
+
+	namespace detail {
+		/**
+		 * Helper class implementing query entry point
+		 * @note This exist only, so it can be easily friend-ed by queries.
+		 */
+		struct EntryPointHelper {
+			template<typename QueryType>
+			auto static callQuery(typename QueryType::QKey key) -> decltype(auto) {
+				return QueryType::internal_query(
+					key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
+				);
+			}
+		};
+	}
 
 	/**
 	 * @brief This function is used to invoke queries from "outside world".
@@ -23,8 +38,6 @@ namespace query {
 		CORE_ASSERT(
 			detail::dep_graph::queryStackSize() == 0, "query::entryPoint called from within query!"
 		);
-		return QueryType::internal_query(
-			key, detail::makeNodeID(detail::outsideWorldQueryID(), EmptyKey())
-		);
+		return detail::EntryPointHelper::callQuery<QueryType>(key);
 	}
 }

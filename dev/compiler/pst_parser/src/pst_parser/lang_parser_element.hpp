@@ -1,32 +1,33 @@
 #pragma once
 
 #include <token_parser_core/base_element.hpp>
-#include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <base/strongly_typed_id.hpp>
+#include <base/ref.hpp>
+#include <base/box.hpp>
 
 #include <variant>
 
+#include "element_kind.hpp"
+
 namespace pst {
 	class Import;
-
-	using tpc::ParserBorrowRef;
-	using tpc::ParserCBorrowRef;
-	using tpc::ParserRef;
 
 	STRONG_TYPEDEF_ID(PstID);
 
 	template<typename State>
 	class PSTAutomatic;
 
+	class PstVisitor;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
 	public:
-		using Child      = ParserBorrowRef<LangElement>;
-		using ConstChild = ParserCBorrowRef<LangElement>;
+		using Child      = Ref<LangElement>;
+		using ConstChild = CRef<LangElement>;
 
 		using SubToken = base::c_borrow_ptr<tpc::Token>;
 
@@ -144,10 +145,11 @@ namespace pst {
 
 		/**
 		 * @return Whether an element is just a statement aggregate.
-		 * As of 30.05.2024 there are 3 statement aggregates:
+		 * As of 11.12.2024 there are 4 statement aggregates:
 		 * * CodeBlock
 		 * * CodeBlockOrStmt
 		 * * TopLevel
+		 * * ClassBlock
 		 */
 		[[nodiscard]]
 		virtual bool isStatementAggregate() const {
@@ -175,32 +177,57 @@ namespace pst {
 		 * @note it is used by helios as a hacky way to check if given element in an expression
 		 */
 		[[nodiscard]]
-		virtual std::string elementType() const {
+		std::string elementType() const override {
 			return "Element";
 		}
+
+		/**
+		 * @brief Returns the kind of the element.
+		 * This is mostly to decide how HELIOS will create scopes for this element.
+		 * We might change it to "ScopeKind" in the future.
+		 * For now we keep logic of deciding on ScopeKinds in HELIOS
+		 * for consistency.
+		 */
+		[[nodiscard]]
+		ElementKind getElementKind() const {
+			CORE_ASSERT(
+				element_kind != ElementKind::KindNotSet,
+				base::strConcat("Element kind not set. Element type: ", elementType())
+			);
+			return element_kind;
+		}
+
+		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 		template<typename X>
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition                          source_position;
-		std::vector<SubElement>                      sub_elements;
-		base::Optional<ParserBorrowRef<LangElement>> parent;
+		dia::SourcePosition              source_position;
+		std::vector<SubElement>          sub_elements;
+		base::Optional<Ref<LangElement>> parent;
+
+		/**
+		 * @brief Kind of the element.
+		 * @note This is mostly for HELIOS to decide how to create scopes.
+		 */
+		ElementKind element_kind = ElementKind::KindNotSet;
 
 		void addToken(const tpc::Token& token);
 		void addToken(const base::unique_ptr<tpc::Token>& token);
 		void addToken(base::c_borrow_ptr<tpc::Token> token);
 
 		template<std::derived_from<LangElement> El>
-		void addChild(base::Optional<ParserRef<El>>& el) {
-			if (el) addChild(el.value().borrow());
+		void addChild(MRef<El> el) {
+			auto opt = el.toOpt();
+			if (opt) addChild(opt.value());
 		}
 
-		void addChild(ParserBorrowRef<LangElement> child);
+		void addChild(MRef<LangElement> child);
 
 		template<typename T>
-		void addChild(ParserRef<T>& child) {
-			addChild(child.borrow_mut());
+		void addChild(MBox<T>& child) {
+			addChild(child.refMut());
 		}
 
 		/**
@@ -213,13 +240,13 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(ParserBorrowRef<LangElement> parent) { this->parent.emplace(parent); }
+		void setParent(Ref<LangElement> parent) { this->parent.emplace(parent); }
 
 	private:
 		PstID id = PstID::next();
 	};
 
-	using ImportType = tpc::ParserCBorrowRef<pst::Import>;
+	using ImportType = CRef<pst::Import>;
 }
 
 ID_STD_HASH(::pst::PstID);

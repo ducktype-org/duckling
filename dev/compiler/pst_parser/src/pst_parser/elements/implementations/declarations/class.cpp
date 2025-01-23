@@ -1,40 +1,34 @@
 #include "preamble.hpp"
+#include "../../hierarchy/expr.hpp"
 
 namespace pst {
-	class ClassEndingError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected end to class definition.";
-		}
-
+	/**
+	 * @brief Expr parser for the extends class expression.
+	 */
+	class ClassExtendsExpr: public NotStmt {
 	public:
-		ClassEndingError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
+		static bool end(const LangParserState& state, i64 fwd = 0) {
+			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
+			    || detail::Conditions::isImplementsOrBlockGroup(state, fwd);
 		}
+
+		static MBox<ExprElement> parse(LangParserState& state) {
+			return expr::parseUntil<expr::ChainExpr, end>(state);
+		}
+
+		ClassExtendsExpr() = delete;
 	};
 
-	ParserRef<Class> Class::parse(LangParserState& state) {
+	MBox<Class> Class::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Class>(position);
+		auto out      = makeBox<Class>(position);
 
 		if (!assertStmtChoice<Class>(state, state[0].is(Keyword::Class))) return nullptr;
 
 		state.parse(out).all(Keyword::Class, &out->name);
 
-		if (state.parse(out).tryEat(Keyword::Extends)) {
-			state.parse(out).with<Expr>(
-				&out->base,
-				Expr::parseUntil<
-					detail::Conditions::isImplementsOrBlockGroup,
-					detail::Conditions::isImplementsOrBlockGroup,
-					ClassEndingError>,
-				false
-			);
-		}
+		if (state.parse(out).tryEat(Keyword::Extends))
+			state.parse(out).with(&out->base, ClassExtendsExpr::parse);
 		if (state.parse(out).tryEat(Keyword::Implements))
 			state.parse(out).one(&out->implements, true);
 
@@ -59,5 +53,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Class::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitClass(*this); }
+	void Class::acceptVisitor(PstVisitor& visitor) const { visitor.visitClass(*this); }
 }

@@ -29,12 +29,12 @@ class PSTErrorTests: public tester::TestSuite {
 		virtual ~GenExample() = default;
 	};
 
-	template<typename Element, bool good = true>
+	template<typename Element, bool good = true, typename Parser = Element>
 	struct Example: public GenExample {
 		Example(std::string code): GenExample(std::move(code)) {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element>::fromContents(code);
+			auto parsed = pst::PST<Element, Parser>::fromContents(code);
 			return parsed.getLogger().good() == good;
 		}
 
@@ -48,7 +48,7 @@ class PSTErrorTests: public tester::TestSuite {
 		}
 	};
 
-	template<std::derived_from<pst::ClassStmt> Element, bool good = true>
+	template<std::derived_from<pst::ClassStmt> Element, bool good = true, typename Parser = Element>
 	struct ClassStmtExample: public GenExample {
 		pst::ClassContext context;
 
@@ -65,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 			  context{ base::StrID(class_name.c_str()), {} } {}
 
 		bool operator()() override {
-			auto parsed = pst::PST<Element>::fromContentsWithContext(this->code, context);
+			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
 			return parsed.getLogger().good() == good;
 		}
 
@@ -113,9 +113,9 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, false> badStmtChoice{ "block {}" };
 
-	Example<pst::Expr, true>  simpleExpr{ "x + y" };
-	Example<pst::Expr, true>  blockExpr{ "x + {return 2 * x;}" };
-	Example<pst::Expr, false> badTokenExpr{ "\"" };
+	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleExpr{ "x + y" };
+	Example<pst::ExprElement, true, pst::UniversalExpr>  blockExpr{ "x + {return 2 * x;}" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> badTokenExpr{ "\"" };
 
 	Example<pst::Fun, true>  simpleFunction1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
 	Example<pst::Fun, true>  simpleFunction2{ "fun foo(x: i32, y: i32 = 1) = {}" };
@@ -185,6 +185,27 @@ class PSTErrorTests: public tester::TestSuite {
 	// Example<pst::Variable, true> simpleLetVariable{"let x: i32 = 5"};
 
 	Example<pst::While, true> simpleWhile{ "while (x < 5) {}" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleTernary{ "if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad1Ternary{ "if if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad2Ternary{ "+ if 5 then x else y" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> bad3Ternary{ "if 5 else y" };
+
+	Example<pst::ExprStmt, true>  simpleAssign{ "x = y" };
+	Example<pst::ExprStmt, false> badAssign{ "x = y = z" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleOperators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprElement, false, pst::UniversalExpr> badOperators{ "++ ++ ++ ++" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleBlockExpr{ "x + {return 2;}" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleRoundExpr{ "x + (x, y)" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleChainExpr{ "(x * t).y.z(4)[3]" };
+
+	Example<pst::ExprElement, true, pst::UniversalExpr> simpleTemplateExpr{
+		"(x * t).y:{x, y}.z:{}(4)[3]"
+	};
 
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());

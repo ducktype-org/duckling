@@ -276,7 +276,7 @@ namespace compiler::mir {
 		LocalRef addLocal(helios::SymID helios_id) {
 			auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id).expect(
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
 				scope(helios_id) });
@@ -392,7 +392,7 @@ namespace compiler::mir {
 				opt_none { throw base::NotYetImplemented("variable without initial value in MIR"); }
 			}
 
-			CORE_PANIC("match_optional failed in visitVariableStmt.");
+			CORE_UNREACHABLE();
 		}
 	};
 
@@ -416,8 +416,16 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+		}
+
+		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+		}
+
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
+			throw base::NotYetImplemented("type literal");
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
@@ -426,6 +434,26 @@ namespace compiler::mir {
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override {
 			throw base::NotYetImplemented("binary operator");
+		}
+
+		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr&) override {
+			throw base::NotYetImplemented("unary operator");
+		}
+
+		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
+			throw base::NotYetImplemented("parenthesis expr");
+		}
+
+		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
+			throw base::NotYetImplemented("tuple constructor");
+		}
+
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
+			throw base::NotYetImplemented("variant constructor");
+		}
+
+		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
+			throw base::NotYetImplemented("linked identifier expr");
 		}
 	};
 
@@ -463,12 +491,12 @@ namespace compiler::mir {
 
 		// @TODO: add parameters do list od locals
 
-		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
 		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
 
 		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
+		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder);
 
 		function_builder.setEntry(first_block.begin);
 
@@ -484,7 +512,7 @@ namespace compiler::mir {
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToMirFunction);

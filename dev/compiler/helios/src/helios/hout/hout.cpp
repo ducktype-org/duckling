@@ -13,19 +13,32 @@ namespace compiler::helios {
 		for (auto& const_: glob_data) out += const_.debugPrint();
 
 		out += "\nFunctions:\n";
-		for (auto& func: functions) out += func.debugPrint();
+		for (auto& func: functions) {
+			out += func.debugPrint();
+			out += "\n";
+		}
 
 		return out;
 	}
 
 	std::string HOUTFunction::debugPrint() const {
 		std::stringstream out;
-		// @TODO
-
 		out << "fun ";
-		out << original_name.strView();
-		out << " ( @TODO ) -> @TODO {\n";
-		for (auto&& stmt: body.body->statements) stmt->debugPrint(out, 1);
+		out << original_name.strView() << " : ";
+		out << this->type.toString() << "\n";
+		out << "Parameters: \n";
+		if (content.parameters->empty()) out << "  none\n";
+		for (auto& param: *content.parameters) {
+			out << "  " << param.name.strView() << " : ";
+			out << param.type.getType().toString();
+			if (param.initial_value.has_value()) {
+				out << " = ";
+				param.initial_value.value()->debugPrint(out);
+			}
+			out << "\n";
+		}
+		out << "{\n";
+		for (auto& stmt: content.body->statements) stmt->debugPrint(out, 1);
 		out << "}\n";
 		return out.str();
 	}
@@ -40,7 +53,7 @@ namespace compiler::helios {
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               .expect("Handling errors in HOUT is not supported yet")),
+	               ->expect("Handling errors in HOUT is not supported yet")),
 		  top_lifetime_scope(parent(scope(symbol)).value()) {}
 
 	std::string HOUTGlobalData::debugPrint() const {
@@ -60,10 +73,10 @@ namespace compiler::helios {
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol).expect(
+		  value(ctx.query<QueryConstValueOf>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )),
-		  type(ctx.query<QueryTypeOfSymbol>(symbol).expect(
+		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )) {}
 }

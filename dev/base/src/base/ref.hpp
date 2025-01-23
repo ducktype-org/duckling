@@ -21,6 +21,9 @@ namespace base {
 		template<class U>
 		friend class Ref;
 
+		template<class U>
+		friend class MRef;
+
 		void assertNotNull() const {
 			if (ptr == nullptr) CORE_PANIC("Ref was in null state, when non-null was required!");
 		}

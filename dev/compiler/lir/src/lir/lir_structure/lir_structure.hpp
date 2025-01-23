@@ -6,30 +6,31 @@
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 
+#include "function_forward.hpp"
+
 // clang-format off
+// Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
+MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
+	/** Placeholder for uninitialized value, should not be in LIR output. */
+	Uninitialized,
 
-// @TODO:
-// once this is introduced: https://github.com/orgs/ducktype-org/projects/11/views/1?pane=issue&itemId=86181552
-// change name to just Operation
-MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, LirOperation,
-	Uninitialized, //< placeholder for uninitialized value, should not be in LIR output
-
-	Assign, //< simple byte by byte assignment
+	/** Simple byte by byte assignment. */
+	Assign,
 
 	/**
-	 * @brief Placeholder. 
-	 * @todo  Some decisions here to be made about operations like that.
-     * Perhaps we want more generic code for MIR, so algorithms are simpler.
-	 * There could be single operation for all Add, Sub, etc, and single one for all
-	 * comparisons.
-	 */
+		@brief Placeholder.
+		@todo Some decisions here to be made about operations like that.
+	*//**
+		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+	*/
 	IntegerAdd,
-	
+
 	ReturnVoid,
 	ReturnValue,
 	Jump,
 	Branch
-);
+)
 
 // clang-format on
 
@@ -53,11 +54,13 @@ namespace compiler::lir {
 	 */
 	struct LirLocation {
 	private:
-		using ValueType = std::variant<i64, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
 		ValueType value;
 
 	public:
 		LirLocation(i64 value): value(value) {}
+
+		LirLocation(bool value): value(value) {}
 
 		LirLocation(LocalRef value): value(value) {}
 
@@ -98,7 +101,6 @@ namespace compiler::lir {
 		// a copy of type-layout here might bu sub-optimal
 		tsl::TypeLayout layout;
 
-
 	private:
 		LirLocal(helios::SymID helios_id, tsl::TypeLayout layout):
 			  helios_id(helios_id),
@@ -106,7 +108,7 @@ namespace compiler::lir {
 
 		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
-		friend struct Function;
+		friend Function;
 		friend LocalRef;
 
 	public:
@@ -128,7 +130,7 @@ namespace compiler::lir {
 	 * @brief Single instruction of LIR code.
 	 */
 	struct Instruction final {
-		LirOperation             operation = LirOperation::Uninitialized;
+		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
 		std::vector<LirLocation> arguments;
 
@@ -141,9 +143,7 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			LirOperation             operation,
-			base::Optional<LocalRef> output,
-			std::vector<LirLocation> arguments
+			Operation operation, base::Optional<LocalRef> output, std::vector<LirLocation> arguments
 		):
 			  operation(operation),
 			  output(output),
@@ -185,5 +185,23 @@ namespace compiler::lir {
 		bool validateBlockOrder() const;
 
 		void debugPrint(query::Context&, std::ostream& output) const;
+
+		/**
+		 * @brief Returns a map from all blocks to unique ids.
+		 * @note Those ids do not cary any meaning, they are made here to be consistent in
+		 * different part of compiler (e.g. lir printing, llvm lowering).
+		 * @return base::Map<BlockRef, u64>
+		 */
+		[[nodiscard]]
+		base::Map<BlockRef, u64> getBlockIDs() const;
+
+		/**
+		 * @brief Returns a map from all locals to unique ids.
+		 * @note Those ids do not cary any meaning, they are made here to be consistent in
+		 * different part of compiler (e.g. lir printing, llvm lowering).
+		 * @return base::Map<BlockRef, u64>
+		 */
+		[[nodiscard]]
+		base::Map<LocalRef, u64> getLocalVariableIDs() const;
 	};
 }

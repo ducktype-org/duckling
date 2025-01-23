@@ -1,9 +1,9 @@
 #include "preamble.hpp"
 
 namespace pst {
-	ParserRef<Using> Using::parse(LangParserState& state) {
+	MBox<Using> Using::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Using>(position);
+		auto out      = makeBox<Using>(position);
 
 		if (!assertStmtChoice<Using>(state, state[0].is(Keyword::Using))) return nullptr;
 
@@ -14,5 +14,5 @@ namespace pst {
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
 
-	void Using::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitUsing(*this); }
+	void Using::acceptVisitor(PstVisitor& visitor) const { visitor.visitUsing(*this); }
 }

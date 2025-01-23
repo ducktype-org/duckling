@@ -29,7 +29,7 @@ namespace compiler::lir {
 	using MutBlockRef = Ref<Block>;
 
 	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
-		return base::perfectHash(function);
+		return base::perfectHash(*function);
 	}
 
 	/**
@@ -59,20 +59,20 @@ namespace compiler::lir {
 	 * that have direct counterpart.
 	 *
 	 * @param mir_operation
-	 * @return LirOperation
+	 * @return Operation
 	 */
-	LirOperation mir2lirOperation(mir::Operation mir_operation) {
+	Operation mir2lirOperation(mir::Operation mir_operation) {
 		switch (mir_operation) {
 		case mir::Operation::Assign:
-			return LirOperation::Assign;
+			return Operation::Assign;
 		case mir::Operation::ReturnValue:
-			return LirOperation::ReturnValue;
+			return Operation::ReturnValue;
 		case mir::Operation::ReturnVoid:
-			return LirOperation::ReturnVoid;
+			return Operation::ReturnVoid;
 		case mir::Operation::Jump:
-			return LirOperation::Jump;
+			return Operation::Jump;
 		case mir::Operation::Branch:
-			return LirOperation::Branch;
+			return Operation::Branch;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -128,6 +128,9 @@ namespace compiler::lir {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LirLocation{ integer.value };
 					}
+					variant_case(mir::MirBoolConst, boolean) {
+						return LirLocation{ boolean.value };
+					}
 					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
 						return LirLocation{ BlockRef(mir_to_lir_block.at(block)) };
@@ -144,7 +147,7 @@ namespace compiler::lir {
 			 * maps MIR locals to LIR local refs.
 			 */
 			void makeLocals() {
-				for (const auto& mir_local: key.function.local_list) {
+				for (const auto& mir_local: key.function->local_list) {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
@@ -160,7 +163,7 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function.blocks) {
+				for (const auto& mir_block: key.function->blocks) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					auto pos = blocks.pushBack({});
@@ -170,7 +173,7 @@ namespace compiler::lir {
 
 			void lowerBlocks() {
 				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function.blocks | std::views::reverse) {
+				for (const auto& block: key.function->blocks | std::views::reverse) {
 					const auto lir_block = mir_to_lir_block[block.id];
 					block_order.emplace_back(lir_block);
 
@@ -302,7 +305,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::FunctionEnd: {
 					// @TODO...
-					curr_block->terminator = Instruction{ LirOperation::ReturnVoid, {}, {} };
+					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
 					break;
 				}
 				// @TODO: add more cases
@@ -318,7 +321,7 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				return Function{
-					key.function.name, std::move(blocks), std::move(locals), std::move(block_order)
+					key.function->name, std::move(blocks), std::move(locals), std::move(block_order)
 				};
 			}
 		};
@@ -352,7 +355,7 @@ namespace compiler::lir {
 			return fun;
 		}
 
-		QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(LowerToLirFunction);

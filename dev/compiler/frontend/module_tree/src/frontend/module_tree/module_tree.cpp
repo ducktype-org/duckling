@@ -272,7 +272,7 @@ struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
@@ -290,7 +290,7 @@ struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID
 		return out;
 	}
 
-	QUERY_AUTO_CACHE_PRESULT_STABLE_REF
+	QUERY_AUTO_CACHE_REF
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
@@ -298,24 +298,31 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 /****************
  * QueryFilePST *
  ****************/
-struct IMPLEMENT_QUERY(QueryFilePST, const pst::PST<>&) {
+struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
 		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
-		return pst;
+
+		// @todo modify it, when making proper helios errors
+		if (pst.getLogger().messageCount() != 0) {
+			std::cerr << "PARSING ERRORS: \n";
+			pst.getLogger().dumpLog(true, std::cerr);
+			std::cerr << "\n\n";
+		}
+
+		return &pst;
 	}
 
 	// @note: unstable ref here is only possible, because
 	// PResult is already a reference
-	QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF
+	QUERY_AUTO_CACHE_COPY
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
-ModuleID compiler::frontend::extendQueryModuleIDOfPST(
-	query::Context&, pst::ParserCBorrowRef<pst::LangElement> element
-) {
+ModuleID
+	compiler::frontend::extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element) {
 	// get top-level:
 	while (element->getParent().has_value()) element = element->getParent().value();
 

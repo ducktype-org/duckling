@@ -10,10 +10,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 
-#include <base/unique_pointer.hpp>
 #include <base/string_id.hpp>
-
-#include <unicode/unistr.h>
 
 #include "meta.hpp"
 #include "not_statements.hpp"
@@ -27,12 +24,12 @@ namespace pst {
 	 * the optional "star" is ignored.
 	 */
 	class Import final: public Stmt {
-		ParserRef<DottedName> names;
-		tpc::Identifier       alias;
+		MBox<DottedName> names;
+		tpc::Identifier  alias;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Import);
-		static ParserRef<Import> parse(LangParserState& state);
+		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);
+		static MBox<Import> parse(LangParserState& state);
 		[[nodiscard]]
 		const decltype(names)& getNames() const;
 
@@ -53,7 +50,7 @@ namespace pst {
 		~Import() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -66,12 +63,15 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Using statement
+	 */
 	class Using final: public Stmt {
-		ParserRef<DottedName> names;
+		MBox<DottedName> names;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Using);
-		static ParserRef<Using> parse(LangParserState& state);
+		STMT_CHILD_CONSTRUCTOR(Using, ElementKind::Using);
+		static MBox<Using> parse(LangParserState& state);
 
 		[[nodiscard]]
 		auto getPointed() const {
@@ -86,7 +86,7 @@ namespace pst {
 		~Using() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -99,35 +99,44 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Statement that is an expression.
+	 */
 	class ExprStmt final: public Stmt {
-		ParserRef<Expr> expression;
+		MBox<ExprElement> expr;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(ExprStmt);
-		static ParserRef<ExprStmt> parse(LangParserState& state);
-
-		~ExprStmt() final = default;
-		void dprint(std::ostream& out) const final;
-
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
-
-		[[nodiscard]]
-		ParserCBorrowRef<Expr> getExpr() const {
-			return expression.borrow();
+		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
+			this->element_kind = ElementKind::ExprStmt;
 		}
+
+		static MBox<ExprStmt> parse(LangParserState& state);
+
+		~ExprStmt() override = default;
+		void dprint(std::ostream& out) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Expr Stmt";
 		}
+
+		[[nodiscard]]
+		MCRef<ExprElement> getExpr() const {
+			return expr.ref();
+		}
+
+		void acceptVisitor(PstVisitor&) const override;
 	};
 
+	/**
+	 * @brief Alias statement.
+	 */
 	class Alias final: public Stmt {
-		tpc::Identifier       name;
-		ParserRef<DottedName> points_to;
+		tpc::Identifier  name;
+		MBox<DottedName> points_to;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Alias);
+		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -139,11 +148,11 @@ namespace pst {
 			return points_to->getNames();
 		}
 
-		static ParserRef<Alias> parse(LangParserState& state);
+		static MBox<Alias> parse(LangParserState& state);
 		~Alias() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {
@@ -161,11 +170,11 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<ParserRef<Expr>> expr;
+		base::Optional<MBox<ExprElement>> expr;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Action);
-		static ParserRef<Action> parse(LangParserState& state);
+		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
+		static MBox<Action> parse(LangParserState& state);
 		~Action() override = default;
 
 		[[nodiscard]]
@@ -174,20 +183,27 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<ParserCBorrowRef<Expr>> getValue() const {
-			return expr.map([](const auto& e) { return e.borrow(); });
+		/**
+		 * @note Optional of MRef here is intentional
+		 */
+		base::Optional<MCRef<ExprElement>> getValue() const {
+			return expr.map([](const auto& e) { return e.ref(); });
 		}
 	};
 
-	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
+	/**
+	 * @brief Const variable declaration.
+	 *
+	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
+	 */
 	class Const final: public Stmt {
-		tpc::Identifier name;
-		ParserRef<Expr> type;
-		ParserRef<Expr> value;
+		tpc::Identifier   name;
+		MBox<ExprElement> type;
+		MBox<ExprElement> value;
 
 	public:
-		STMT_CHILD_CONSTRUCTOR(Const);
-		static ParserRef<Const> parse(LangParserState& state);
+		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
+		static MBox<Const> parse(LangParserState& state);
 
 		[[nodiscard]]
 		base::StrID getName() const {
@@ -195,19 +211,19 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getType() const {
-			return type.borrow();
+		MCRef<ExprElement> getType() const {
+			return type.ref();
 		}
 
 		[[nodiscard]]
-		ParserCBorrowRef<Expr> getValue() const {
-			return value.borrow();
+		MCRef<ExprElement> getValue() const {
+			return value.ref();
 		}
 
 		~Const() final = default;
 		void dprint(std::ostream& out) const final;
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 
 		[[nodiscard]]
 		std::string elementType() const override {

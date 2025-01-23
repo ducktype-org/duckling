@@ -4,6 +4,20 @@
 
 namespace base {
 
+	namespace extend {
+		/**
+		 * @brief Pointer deleter functor used by Box, MBox.
+		 * @note Adding specialization for custom types
+		 * can be used to avoid delete on incomplete types.
+		 *
+		 * @tparam T
+		 */
+		template<class T>
+		struct BoxPtrDeleter {
+			static void del(T* ptr) { delete ptr; }
+		};
+	}
+
 	/**
 	 * @brief A pointer wrapper type, that owns the pointer and deletes it when it goes out of
 	 * scope. It is not nullable, and it is not copyable.
@@ -28,15 +42,20 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("Box was in null state, when non-null was required!");
 		}
 
+		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+
 	public:
 		Box()               = delete;
 		Box(std::nullptr_t) = delete;
 
 		/**
 		 * @brief Constructs a Box from a raw pointer.
-		 * @note It takes ownership of the pointer.
+		 * It takes ownership of the pointer.
+		 *
+		 * For a regular construction use `makeBox` instead.
+		 * It is not a constructor in order to make this call more explicit.
 		 */
-		explicit Box(T* ptr) noexcept: ptr{ ptr } { assertNotNull(); }
+		static Box fromPointer(T* ptr) noexcept { return Box(ptr); }
 
 		Box(const Box& other) = delete;
 
@@ -98,7 +117,7 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() { delete ptr; }
+		~Box() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
 	};
 
 	/**
@@ -125,15 +144,16 @@ namespace base {
 			if (ptr == nullptr) CORE_PANIC("MBox was in null state, when non-null was required!");
 		}
 
-	public:
-		MBox() = default;
-		MBox(std::nullptr_t){};
-
 		/**
 		 * @brief Constructs an MBox from a raw pointer.
 		 * @note It takes ownership of the pointer.
 		 */
 		explicit MBox(T* ptr) noexcept: ptr{ ptr } {}
+
+	public:
+		MBox() = default;
+		MBox(std::nullptr_t){};
+
 
 		MBox(const MBox& other) = delete;
 
@@ -160,6 +180,21 @@ namespace base {
 		 */
 		template<class U>
 		MBox& operator=(MBox<U>&& oth) noexcept {
+			delete ptr;
+			ptr     = std::move(oth).ptr;
+			oth.ptr = nullptr;
+			return *this;
+		}
+
+		/**
+		 * @brief Move assignment. The object previously pointed to by the Box is deleted.
+		 *
+		 * @tparam U
+		 * @param oth
+		 * @return MBox&
+		 */
+		template<class U>
+		MBox& operator=(Box<U>&& oth) noexcept {
 			delete ptr;
 			ptr     = std::move(oth).ptr;
 			oth.ptr = nullptr;
@@ -235,7 +270,7 @@ namespace base {
 			return Box<T>(output);
 		}
 
-		~MBox() { delete ptr; }
+		~MBox() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
 	};
 
 	// Deduction guide for constructing a MBox from a Box:
@@ -243,8 +278,8 @@ namespace base {
 	MBox(Box<U>&&) noexcept -> MBox<U>;
 
 	template<class T, class... Args>
-	inline Box<T> box(Args&&... args) {
-		return Box<T>(new T(std::forward<Args>(args)...));
+	inline Box<T> makeBox(Args&&... args) {
+		return Box<T>::fromPointer(new T(std::forward<Args>(args)...));
 	}
 
 	template<class T>
@@ -256,7 +291,7 @@ namespace base {
 
 // global namespace export:
 using base::Box;
-using base::box;
 using base::CBox;
+using base::makeBox;
 using base::MBox;
 using base::MCBox;

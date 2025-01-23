@@ -27,6 +27,7 @@
 
 #include "parser_state.hpp"
 #include "common_elements.hpp"
+#include "parser_ref.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
 #include "base_element.hpp"
@@ -34,12 +35,11 @@
 
 #include <concepts>
 
-#include "parser_ref.hpp"
-
 namespace tpc {
 	using lang_def::Keyword;
-	using lang_def::Operator;
+	using lang_def::NamedOperator;
 	using lang_def::Special;
+	using lexer::Operator;
 
 	void nullAwareDprint(Identifier, std::ostream& out);
 	void nullAwareDprint(OptionalIdentifier, std::ostream& out);
@@ -49,6 +49,14 @@ namespace tpc {
 
 	template<typename T>
 	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
+		if (!ref)
+			out << "\"<nullptr>\"";
+		else
+			ref->debugPrint(out);
+	}
+
+	template<typename T>
+	void nullAwareDprint(const MBox<T>& ref, std::ostream& out) {
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else
@@ -251,7 +259,7 @@ namespace tpc {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected operator `" + lang_def::operatorToStr(expected).str() + "` here.";
+			return "Expected operator `" + expected.str() + "` here.";
 		}
 
 	public:

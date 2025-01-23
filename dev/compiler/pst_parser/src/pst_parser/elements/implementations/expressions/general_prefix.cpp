@@ -1,0 +1,16 @@
+#include "preamble.hpp"
+
+namespace pst::expr {
+	MBox<ExprElement> GeneralPrefix::parse(LangParserState& state, i64 length) {
+		if (!checkLength(state, length)) return nullptr;
+
+		if (!state[0].isOperator()) return Lower::parse(state, length);
+
+		auto out = makeBox<GeneralPrefix>(state.getPosition(), state[0].getValue());
+
+		state.parse(out).eatOne();
+		state.parse(out).with(&out->expr, parse, length - 1);
+
+		return out;
+	}
+}

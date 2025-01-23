@@ -17,13 +17,13 @@ namespace pst {
 		AliasStarError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	ParserRef<Alias> Alias::parse(LangParserState& state) {
+	MBox<Alias> Alias::parse(LangParserState& state) {
 		auto position = state.getPosition();
-		auto out      = makeRef<Alias>(position);
+		auto out      = makeBox<Alias>(position);
 
 		if (!assertStmtChoice<Alias>(state, state[0].is(Keyword::Alias))) return nullptr;
 
-		state.parse(out).all(Keyword::Alias, &out->name, Operator::Assign, &out->points_to);
+		state.parse(out).all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
 
 		if (out->points_to->getStar())
 			state.log(base::make_unique<AliasStarError>(out->source_position));
@@ -43,5 +43,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Alias::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitAlias(*this); }
+	void Alias::acceptVisitor(PstVisitor& visitor) const { visitor.visitAlias(*this); }
 }

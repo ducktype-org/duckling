@@ -7,23 +7,34 @@
 				},
 				"condition": {
 					"Round Group Expression": {
-						"Expression": [
-							{
-								"Identifier": "a"
-							},
-							{
-								"Operator": "+"
-							},
-							{
-								"Identifier": "b"
-							},
-							{
-								"Operator": ">"
-							},
-							{
-								"NumLiteral": "0"
-							},
-						]
+						"Comparison Chain": {
+							"sub-expressions": [
+								{
+									"Binary Operator": {
+										"left_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "a"
+												}
+											}
+										},
+										"operator": "+",
+										"right_expr": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "b"
+												}
+											}
+										}
+									}
+								},
+								{
+									"Value Expr": {
+										"number": "0"
+									}
+								}
+							]
+						}
 					}
 				},
 				"body": {
@@ -31,17 +42,21 @@
 						"Code Block": [
 							{
 								"Expr Stmt": {
-									"Expression": [
-										{
-											"Identifier": "c"
+									"Assignment Expr": {
+										"assigned variables": {
+											"Identifier Expression": {
+												"name": {
+													"Name": "c"
+												}
+											}
 										},
-										{
-											"Operator": "="
-										},
-										{
-											"NumLiteral": "4.25"
-										},
-									]
+										"assignment type": "=",
+										"assigned value": {
+											"Value Expr": {
+												"number": "4.25"
+											}
+										}
+									}
 								}
 							},
 						]
@@ -53,23 +68,34 @@
 							"name": "<ANONYMOUS>",
 							"condition": {
 								"Round Group Expression": {
-									"Expression": [
-										{
-											"Identifier": "a"
-										},
-										{
-											"Operator": "+"
-										},
-										{
-											"Identifier": "b"
-										},
-										{
-											"Operator": "=="
-										},
-										{
-											"NumLiteral": "0"
-										},
-									]
+									"Comparison Chain": {
+										"sub-expressions": [
+											{
+												"Binary Operator": {
+													"left_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "a"
+															}
+														}
+													},
+													"operator": "+",
+													"right_expr": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "b"
+															}
+														}
+													}
+												}
+											},
+											{
+												"Value Expr": {
+													"number": "0"
+												}
+											}
+										]
+									}
 								}
 							},
 							"body": {
@@ -77,17 +103,21 @@
 									"Code Block": [
 										{
 											"Expr Stmt": {
-												"Expression": [
-													{
-														"Identifier": "c"
+												"Assignment Expr": {
+													"assigned variables": {
+														"Identifier Expression": {
+															"name": {
+																"Name": "c"
+															}
+														}
 													},
-													{
-														"Operator": "="
-													},
-													{
-														"NumLiteral": "4.30"
-													},
-												]
+													"assignment type": "=",
+													"assigned value": {
+														"Value Expr": {
+															"number": "4.30"
+														}
+													}
+												}
 											}
 										},
 									]
@@ -96,20 +126,26 @@
 							"else body": {
 								"Code Block or Statement": {
 									"Expr Stmt": {
-										"Expression": [
-											{
-												"Identifier": "c"
+										"Assignment Expr": {
+											"assigned variables": {
+												"Identifier Expression": {
+													"name": {
+														"Name": "c"
+													}
+												}
 											},
-											{
-												"Operator": "="
-											},
-											{
-												"Operator": "-"
-											},
-											{
-												"NumLiteral": "1"
-											},
-										]
+											"assignment type": "=",
+											"assigned value": {
+												"Prefix Operator": {
+													"operator": "-",
+													"expression": {
+														"Value Expr": {
+															"number": "1"
+														}
+													}
+												}
+											}
+										}
 									}
 								}
 							}

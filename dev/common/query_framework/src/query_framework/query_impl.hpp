@@ -11,124 +11,138 @@
 #include <base/defer.hpp>
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/ref.hpp>
+#include <base/exceptions.hpp>
+#include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 
-#include "acd.hpp"
 #include "query_int.hpp"
-#include "dep_graph.hpp"
-#include "query_id_provider.hpp"  // IWYU pragma: export
-#include "logs.hpp"
-#include "node_making.hpp"
 
-namespace query {
+#include "detail/acd.hpp"
+#include "detail/dep_graph.hpp"
+#include "detail/query_id_provider.hpp"  // IWYU pragma: export
+#include "detail/logs.hpp"
+#include "detail/node_making.hpp"
 
-	namespace detail {
+#include "query_cache_macros.hpp"  // IWYU pragma: export
 
-		/**
-		 * @brief ContextType is type of a special object
-		 * that query implementation use to perform three key operations:
-		 * 	* call other query
-		 *  * log
-		 *  * report compiler error
-		 *
-		 * @FUTURE: there exist a concept of "custom context" types as
-		 * a way to hack-in the query model. This however will most likely be
-		 * discarded.
-		 */
-		struct ContextType final {
-		private:
-			NodeID my_node;
+namespace query::detail {
+	/**
+	 * @brief ContextType is type of a special object
+	 * that query implementation use to perform three key operations:
+	 * 	* call other query
+	 *  * log
+	 *  * report compiler error
+	 *
+	 * @FUTURE: there exist a concept of "custom context" types as
+	 * a way to hack-in the query model. This however will most likely be
+	 * discarded.
+	 */
+	struct ContextType final {
+	private:
+		NodeID my_node;
+		bool   active = true;
 
-			ContextType(NodeID my_node): my_node(my_node){};
-			friend struct ContextMaker;
+		ContextType(NodeID my_node): my_node(my_node){};
+		friend struct ContextMaker;
 
-		public:
-			// @TODO: add currently engaged query sanity check to context operations
+	public:
+		// @TODO: Make the context (and thus the logger) be propagated through query calls,
+		// so that all queries run on the same file / in the same compilation thread / whatever
+		// use a single, *non-static* logger object.
+		static dia::Logger logger;
 
-			// @TODO: Make the context (and thus the logger) be propagated through query calls,
-			// so that all queries run on the same file / in the same compilation thread / whatever
-			// use a single, *non-static* logger object.
-			static dia::Logger logger;
+		ContextType(const ContextType&) = delete;
+		ContextType(ContextType&&)      = delete;
 
-			ContextType(const ContextType&) = delete;
-			ContextType(ContextType&&)      = delete;
+		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
-			template<typename OthQuery>
-			auto query(typename OthQuery::QKey key) -> decltype(auto) {
-				NodeID dep_id = makeNodeID(OthQuery::id, key);
-				dep_graph::addDependency(my_node, dep_id);
+		template<typename OthQuery>
+		auto query(typename OthQuery::QKey key) -> decltype(auto) {
+			assertActive();
+			NodeID dep_id = makeNodeID(OthQuery::id, key);
+			dep_graph::addDependency(my_node, dep_id);
 
-				return OthQuery::internal_query(key, my_node);
-			}
+			this->active = false;
+			defer(this->active = true);
 
-			/**
-			 * Log message to be shown to the user.
-			 * @param message The dia::Message to be logged.
-			 */
-			void log(base::unique_ptr<dia::Message> message) { logger.log(std::move(message)); }
-		};
-
-		inline dia::Logger ContextType::logger{};
-
-		/**
-		 * @brief Internal helper struct used to create context
-		 */
-		struct ContextMaker final {
-			static auto make(NodeID my_node) { return ContextType(my_node); }
-		};
-
-		/**
-		 * @brief Internal function implementing the call to a query.
-		 *
-		 * @tparam QueryImplType Implementation Struct of a Query to call.
-		 * @param key Query key
-		 * @param from node id of caller
-		 * @return QueryImplType::QResult
-		 */
-		template<typename QueryImplType>
-		auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
-			typename QueryImplType::QResult {
-			log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Enter.\n"));
-
-			if (auto v = QueryImplType::load(key)) {
-				// @FUTURE: Add ACD check here...
-				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Cached. Done.\n"
-				));
-
-				// @todo: This might bind & to a const&, via std::move "creating" &&.
-				// It should works for all cases in our codebase,
-				// but I'm not sure if it will work always and if it is
-				// standardized behaviour.
-				return std::move(v.value().data);
-			} else {
-				auto node_id = makeNodeID(QueryImplType::QueryType::id, key);
-				auto context = ContextMaker::make(node_id);
-
-				// @FUTURE: provide legit acd here
-				ACD acd;
-
-				// prolog:
-				dep_graph::setEntry(node_id, from);
-
-				// Use of defer here makes it also called when an exception is thrown.
-				defer(dep_graph::setExit(node_id));
-
-				log(base::strConcat(
-					"[QUERY \"", QueryImplType::QueryType::name, "\"]: Calculating.\n"
-				));
-
-				// calculation:
-				auto&& result
-					= QueryImplType::store(key, QueryImplType::provide(context, key), acd);
-
-				// epilog:
-				log(base::strConcat("[QUERY \"", QueryImplType::QueryType::name, "\"]: Done.\n"));
-
-				return result;
-			}
+			return OthQuery::internal_query(key, my_node);
 		}
 
+		/**
+		 * Log message to be shown to the user.
+		 * @param message The dia::Message to be logged.
+		 */
+		void log(base::unique_ptr<dia::Message> message) {
+			assertActive();
+			logger.log(std::move(message));
+		}
+	};
+
+	inline dia::Logger ContextType::logger{};
+
+	/**
+	 * @brief Internal helper struct used to create context
+	 */
+	struct ContextMaker final {
+		static auto make(NodeID my_node) { return ContextType(my_node); }
+	};
+
+	/**
+	 * @brief Internal function implementing the call to a query.
+	 *
+	 * @tparam QueryImplType Implementation Struct of a Query to call.
+	 * @param key Query key
+	 * @param from node id of caller
+	 * @return QueryImplType::QResult
+	 */
+	template<typename QueryImplType>
+	auto standardQueryEntry(typename QueryImplType::QKey key, NodeID from) ->
+		typename QueryImplType::QResult {
+		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
+
+		if (auto v = QueryImplType::load(key)) {
+			// @FUTURE: Add ACD check here...
+			QUERY_DEBUG_LOG(
+				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
+			);
+
+			// @todo: This might bind & to a const&, via std::move "creating" &&.
+			// It should works for all cases in our codebase,
+			// but I'm not sure if it will work always and if it is
+			// standardized behaviour.
+			return std::move(v.value().data);
+		} else {
+			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
+			auto context = ContextMaker::make(node_id);
+
+			// @FUTURE: provide legit acd here
+			ACD acd;
+
+
+			// Use of defer here makes it also called when an exception is thrown.
+			// it is before setEntry, because setEntry can throw on cycle
+			// @TODO: in the future we might want to guarantee that query operation are no-throw
+			// apart from panics and similar stuff.
+			// We for sure need more control of what happens if query operation throws.
+			defer(dep_graph::setExit(node_id));
+
+			// prolog:
+			dep_graph::setEntry(node_id, from);
+
+			QUERY_DEBUG_LOG(
+				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
+			);
+
+			// calculation:
+			auto&& result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+
+			// epilog:
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
+
+			return result;
+		}
 	}
 
 	/**
@@ -167,7 +181,8 @@ namespace query {
  * @param PResult Type returned by the Provide method
  */
 #define IMPLEMENT_QUERY(query_type, PResult) \
-	ImplementationOf_##query_type final: public query::QueryImplementation<query_type, PResult>
+	ImplementationOf_##query_type final:     \
+		  public query::detail::QueryImplementation<query_type, PResult>
 
 /**
  * @brief This is an internal query, and shouldn't be used directly. It used by
@@ -184,10 +199,12 @@ namespace query {
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
 	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
 	static_assert(                                                                                  \
-		(not std::is_reference_v<type::QResult>)                                                    \
-			or (std::is_lvalue_reference_v<type::QResult>                                           \
-	            and std::is_const_v<std::remove_reference_t<type::QResult>>),                       \
-		"Query result type should be either non-reference or const lvalue reference"                \
+		not std::is_reference_v<type::QResult>,                                                     \
+		"Query result type should not be a reference (use CRef instead)"                            \
+	);                                                                                              \
+	static_assert(                                                                                  \
+		not std::is_reference_v<type::PResult>,                                                     \
+		"Provider result type should not be a reference (use CRef instead)"                         \
 	);                                                                                              \
 	static_assert(                                                                                  \
 		std::is_same_v<                                                                             \
@@ -210,51 +227,3 @@ namespace query {
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
 	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
-
-/**
- * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::HashMap in a way that references to them are unstable.
- * @future: change it to component, when proper query-component system will be introduced
- */
-#define QUERY_AUTO_CACHE_PRESULT_UNSTABLE_REF                                                  \
-	static inline base::                                                                       \
-		HashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>            \
-				cache;                                                                         \
-	static auto load(const QKey& key) -> LoadResult {                                          \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
-		return {};                                                                             \
-	}                                                                                          \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
-		cache.put(key, { std::move(res), acd });                                               \
-		return cache.at(key).data;                                                             \
-	}
-
-/**
- * @brief Macro defining typical hash based cache for fast prototyping.
- * It caches PResults using base::StableHashMap in a way that references to them are stable.
- * @future: change it to component, when proper query-component system will be introduced
- */
-#define QUERY_AUTO_CACHE_PRESULT_STABLE_REF                                                    \
-	static inline base::                                                                       \
-		StableHashMap<QKey, query::CacheEntry<PResult>, ::base::PerfectHashFunctor<QKey>>      \
-				cache;                                                                         \
-	static auto load(const QKey& key) -> LoadResult {                                          \
-		if (auto&& copy = cache.atMaybe(key)) { return QResWithACD{ copy->data, copy->acd }; } \
-		return {};                                                                             \
-	}                                                                                          \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {               \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });                     \
-		return cache.at(key).data;                                                             \
-	}
-
-
-/**
- * @brief Macro defining empty storing and loading for when providing fresh result
- * is expected to be faster than trying to look it up in a cache.
- */
-#define QUERY_AUTO_NO_CACHE                                                     \
-	static auto store(const QKey&, PResult res, const query::ACD&) -> QResult { \
-		return QResult{ std::move(res) };                                       \
-	}                                                                           \
-                                                                                \
-	static auto load(const QKey&) -> LoadResult { return {}; }
