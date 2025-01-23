@@ -20,11 +20,11 @@ namespace hashing {
 		u32                  state        = offset_basis;
 
 	protected:
-		void update_hash(const void* data, usize len) noexcept {
-			update_hash(static_cast<const char*>(data), len);
+		void updatehash(const void* data, usize len) noexcept {
+			updatehash(static_cast<const char*>(data), len);
 		}
 
-		constexpr void update_hash(const char* data, usize len) noexcept {
+		constexpr void updatehash(const char* data, usize len) noexcept {
 			for (usize i = 0; i < len; ++i) {
 				state ^= data[i];
 				state *= FNV_prime;
@@ -51,11 +51,11 @@ namespace hashing {
 		u64                  state        = offset_basis;
 
 	protected:
-		void update_hash(const void* data, usize len) noexcept {
-			update_hash(static_cast<const char*>(data), len);
+		void updatehash(const void* data, usize len) noexcept {
+			updatehash(static_cast<const char*>(data), len);
 		}
 
-		constexpr void update_hash(const char* data, usize len) noexcept {
+		constexpr void updatehash(const char* data, usize len) noexcept {
 			for (usize i = 0; i < len; ++i) {
 				state ^= data[i];
 				state *= FNV_prime;
@@ -81,17 +81,17 @@ namespace hashing {
 		std::vector<std::tuple<std::vector<char>, usize, type>> bytes;
 
 	protected:
-		void update_hash(const void* data, usize len) noexcept {
-			update_hash(static_cast<const char*>(data), len);
+		void updatehash(const void* data, usize len) noexcept {
+			updatehash(static_cast<const char*>(data), len);
 		}
 
-		constexpr void update_hash(const char* data, usize len, type type = type::other) noexcept {
+		constexpr void updatehash(const char* data, usize len, type type = type::other) noexcept {
 			bytes.emplace_back(std::vector<char>(data, data + len), len, type);
 		}
 
 		constexpr void add_hash_code(TypeHashCode hash) noexcept {
 			std::array arr = std::bit_cast<std::array<char, sizeof(hash)>, TypeHashCode>(hash);
-			update_hash(arr.data(), arr.size(), type::hash_code);
+			updatehash(arr.data(), arr.size(), type::hash_code);
 		}
 
 	public:

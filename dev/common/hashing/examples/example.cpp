@@ -37,9 +37,9 @@ struct type2 {
 	bool        b{ true };
 	std::string s{ "hello" };
 
-	friend constexpr void add_to_hash(hashing::hash_algorithm auto& h, const type2& t) noexcept {
-		add_to_hash(h, t.x);
-		if (t.b) add_to_hash(h, t.s);
+	friend constexpr void addToHash(hashing::hash_algorithm auto& h, const type2& t) noexcept {
+		addToHash(h, t.x);
+		if (t.b) addToHash(h, t.s);
 	}
 };
 

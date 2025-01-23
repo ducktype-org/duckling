@@ -42,13 +42,13 @@ struct S {
 	Z     o{ 1, 2.0f, { 1.0f, "hello" } };
 
 public:
-	friend constexpr void add_to_hash(hash_algorithm auto& h, const S& s) noexcept {
-		add_to_hash(h, s.x);
-		add_to_hash(h, s.y);
-		if (s.b) add_to_hash(h, s.z);
-		add_to_hash(h, s.m);
-		add_to_hash(h, s.n);
-		add_to_hash(h, s.o);
+	friend constexpr void addToHash(hash_algorithm auto& h, const S& s) noexcept {
+		addToHash(h, s.x);
+		addToHash(h, s.y);
+		if (s.b) addToHash(h, s.z);
+		addToHash(h, s.m);
+		addToHash(h, s.n);
+		addToHash(h, s.o);
 	}
 };
 
@@ -125,6 +125,10 @@ private:
 		assertTrue(m["hello"] == 42, "hello should be 42");
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
+
+	// void betterCoverage() [
+
+	// ]
 };
 
 TESTER_COMMON_MAIN("/common/hashing/tests/");

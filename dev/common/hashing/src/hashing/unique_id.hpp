@@ -21,7 +21,7 @@ namespace hashing {
 
 		public:
 			template<usize N>
-			consteval void update_hash(const char (&arr)[N]) {
+			consteval void updatehash(const char (&arr)[N]) {
 				for (usize i = 0; i < N; ++i) {
 					state ^= arr[i];
 					state *= FNV_prime;
@@ -41,7 +41,7 @@ namespace hashing {
 			template<usize N>
 			consteval Str(const char (&arr)[N]) {
 				Fnv1a_32_Consteval h;
-				h.update_hash(arr);
+				h.updatehash(arr);
 				hash_value.value = static_cast<u32>(h);
 			}
 
