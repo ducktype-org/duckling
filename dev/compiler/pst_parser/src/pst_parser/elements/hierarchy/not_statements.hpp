@@ -259,9 +259,9 @@ namespace pst {
 
 	/**
 	 * @brief Template for defining expression parsing entry points.
-	 * Its intended usage is to derive holder after this template: 
+	 * Its intended usage is to derive holder after this template:
 	 * `class Holder: ExprHolderTemplate<Holder, parser_fun, top_level>`
-	 * 
+	 *
 	 * @tparam Self - Class of the holder, used for the correct return type of parse.
 	 * @tparam parseFun - The parsing function that parses the inner expression.
 	 * @tparam TOP_LEVEL - Whether the holder holds a top-level expression, for example some lists
