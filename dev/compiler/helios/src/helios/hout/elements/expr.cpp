@@ -80,7 +80,7 @@ namespace compiler::helios::code {
 	BinaryOperatorExpr::BinaryOperatorExpr(
 		query::Context& ctx,
 		ScopeID         scope,
-		lexer::Operator op,
+		BuiltinBinary   operation,
 		base::Box<Expr> lhs,
 		base::Box<Expr> rhs
 	):
@@ -92,13 +92,34 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
-		  op(op),
+		  operation(operation),
 		  lhs(std::move(lhs)),
 		  rhs(std::move(rhs)) {}
 
 	void BinaryOperatorExpr::debugPrint(std::ostream& out) const {
+		// note: this might get more complex in the future
+
 		lhs->debugPrint(out);
-		out << base::strConcat(op.str());
+		switch (operation) {
+		case BuiltinBinary::IntegerAdd:
+			out << "+";
+			break;
+		case BuiltinBinary::IntegerSub:
+			out << "-";
+			break;
+		case BuiltinBinary::IntegerMul:
+			out << "*";
+			break;
+		case BuiltinBinary::IntegerDiv:
+			out << "/";
+			break;
+		case BuiltinBinary::IntegerMod:
+			out << "%";
+			break;
+		case BuiltinBinary::IntegerPow:
+			out << "**";
+			break;
+		}
 		rhs->debugPrint(out);
 	}
 
@@ -166,20 +187,18 @@ namespace compiler::helios::code {
 		  symbols(std::move(symbols)) {}
 
 	UnaryOperatorExpr::UnaryOperatorExpr(
-		ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr
+		ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr
 	):
 		  Expr(scope, expr->type_desc),
-		  op(op),
-		  prefix(prefix),
+		  operation(operation),
 		  expr(std::move(expr)) {}
 
 	void UnaryOperatorExpr::debugPrint(std::ostream& out) const {
-		if (prefix) {
-			out << op.str();
+		switch (operation) {
+		case BuiltinUnary::IntegerNegation:
+			out << "-";
 			expr->debugPrint(out);
-		} else {
-			expr->debugPrint(out);
-			out << op.str();
+			break;
 		}
 	}
 }

@@ -1,7 +1,19 @@
 {
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 111
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 16
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 6,
+					"sourceEnd": 15
+				},
 				"Dotted Name": {
 					"star": "false",
 					"names": [
@@ -19,7 +31,15 @@
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 19,
+				"sourceEnd": 38
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 25,
+					"sourceEnd": 37
+				},
 				"Dotted Name": {
 					"star": "true",
 					"names": [
@@ -34,7 +54,15 @@
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 41,
+				"sourceEnd": 51
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 47,
+					"sourceEnd": 50
+				},
 				"Dotted Name": {
 					"star": "false",
 					"names": [
@@ -46,7 +74,15 @@
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 54,
+				"sourceEnd": 67
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 60,
+					"sourceEnd": 66
+				},
 				"Dotted Name": {
 					"star": "false",
 					"names": [
@@ -67,7 +103,15 @@
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 70,
+				"sourceEnd": 91
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 76,
+					"sourceEnd": 90
+				},
 				"Dotted Name": {
 					"star": "false",
 					"names": [
@@ -85,7 +129,15 @@
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 94,
+				"sourceEnd": 111
+			},
 			"Using": {
+				"position": {
+					"sourceStart": 100,
+					"sourceEnd": 110
+				},
 				"Dotted Name": {
 					"star": "true",
 					"names": [

@@ -1,19 +1,39 @@
 {
+	"position": {
+		"sourceStart": 1,
+		"sourceEnd": 117
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 1,
+				"sourceEnd": 28
+			},
 			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 8,
+						"sourceEnd": 23
+					},
 					"function parameter list": [
 						{
+							"position": {
+								"sourceStart": 9,
+								"sourceEnd": 14
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "a"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 12,
+											"sourceEnd": 14
+										},
 										"Keyword Expression": {
 											"keyword": "i32"
 										}
@@ -22,12 +42,20 @@
 							}
 						},
 						{
+							"position": {
+								"sourceStart": 17,
+								"sourceEnd": 22
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "b"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 20,
+											"sourceEnd": 22
+										},
 										"Keyword Expression": {
 											"keyword": "f32"
 										}
@@ -39,26 +67,50 @@
 				},
 				"return": "unit",
 				"body": {
+					"position": {
+						"sourceStart": 27,
+						"sourceEnd": 28
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 27,
+							"sourceEnd": 28
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 31,
+				"sourceEnd": 62
+			},
 			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 38,
+						"sourceEnd": 57
+					},
 					"function parameter list": [
 						{
+							"position": {
+								"sourceStart": 39,
+								"sourceEnd": 44
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "a"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 42,
+											"sourceEnd": 44
+										},
 										"Keyword Expression": {
 											"keyword": "i32"
 										}
@@ -67,17 +119,29 @@
 							}
 						},
 						{
+							"position": {
+								"sourceStart": 47,
+								"sourceEnd": 56
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "b"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 50,
+											"sourceEnd": 52
+										},
 										"Keyword Expression": {
 											"keyword": "f32"
 										}
 									},
 									"initial": {
+										"position": {
+											"sourceStart": 56,
+											"sourceEnd": 56
+										},
 										"Value Expr": {
 											"number": "0"
 										}
@@ -89,26 +153,50 @@
 				},
 				"return": "unit",
 				"body": {
+					"position": {
+						"sourceStart": 61,
+						"sourceEnd": 62
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 61,
+							"sourceEnd": 62
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 65,
+				"sourceEnd": 97
+			},
 			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 72,
+						"sourceEnd": 92
+					},
 					"function parameter list": [
 						{
+							"position": {
+								"sourceStart": 73,
+								"sourceEnd": 78
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "a"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 76,
+											"sourceEnd": 78
+										},
 										"Keyword Expression": {
 											"keyword": "f32"
 										}
@@ -117,17 +205,29 @@
 							}
 						},
 						{
+							"position": {
+								"sourceStart": 81,
+								"sourceEnd": 91
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "b"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 84,
+											"sourceEnd": 86
+										},
 										"Keyword Expression": {
 											"keyword": "i32"
 										}
 									},
 									"initial": {
+										"position": {
+											"sourceStart": 90,
+											"sourceEnd": 91
+										},
 										"Value Expr": {
 											"number": "42"
 										}
@@ -139,26 +239,50 @@
 				},
 				"return": "unit",
 				"body": {
+					"position": {
+						"sourceStart": 96,
+						"sourceEnd": 97
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 96,
+							"sourceEnd": 97
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 100,
+				"sourceEnd": 117
+			},
 			"Function": {
 				"name": {
 					"Name": "foo"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 107,
+						"sourceEnd": 112
+					},
 					"function parameter list": [
 						{
+							"position": {
+								"sourceStart": 108,
+								"sourceEnd": 111
+							},
 							"Function Parameter": {
 								"Function Parameter": {
 									"name": {
 										"Name": "a"
 									},
 									"type": {
+										"position": {
+											"sourceStart": 111,
+											"sourceEnd": 111
+										},
 										"Identifier Expression": {
 											"name": {
 												"Name": "A"
@@ -172,7 +296,15 @@
 				},
 				"return": "unit",
 				"body": {
+					"position": {
+						"sourceStart": 116,
+						"sourceEnd": 117
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 116,
+							"sourceEnd": 117
+						},
 						"Code Block": []
 					}
 				}
