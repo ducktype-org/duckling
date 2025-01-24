@@ -1,17 +1,37 @@
 {
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 45
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 45
+			},
 			"For": {
 				"name": "<ANONYMOUS>",
 				"identifier": {
 					"Name": "a"
 				},
 				"type": {
+					"position": {
+						"sourceStart": 7,
+						"sourceEnd": 10
+					},
 					"Top Level Expression": {
 						"expr": {
+							"position": {
+								"sourceStart": 7,
+								"sourceEnd": 10
+							},
 							"Comma Expr": {
 								"sub-expressions": [
 									{
+										"position": {
+											"sourceStart": 7,
+											"sourceEnd": 7
+										},
 										"Identifier Expression": {
 											"name": {
 												"Name": "T"
@@ -19,6 +39,10 @@
 										}
 									},
 									{
+										"position": {
+											"sourceStart": 10,
+											"sourceEnd": 10
+										},
 										"Identifier Expression": {
 											"name": {
 												"Name": "U"
@@ -31,10 +55,22 @@
 					}
 				},
 				"iterable": {
+					"position": {
+						"sourceStart": 15,
+						"sourceEnd": 27
+					},
 					"Top Level Expression": {
 						"expr": {
+							"position": {
+								"sourceStart": 15,
+								"sourceEnd": 27
+							},
 							"Chain Expression": {
-								"literal": {
+								"atom": {
+									"position": {
+										"sourceStart": 15,
+										"sourceEnd": 15
+									},
 									"Identifier Expression": {
 										"name": {
 											"Name": "x"
@@ -43,6 +79,10 @@
 								},
 								"chain": [
 									{
+										"position": {
+											"sourceStart": 16,
+											"sourceEnd": 17
+										},
 										"Access Expression": {
 											"type": ".",
 											"name": {
@@ -51,15 +91,35 @@
 										}
 									},
 									{
+										"position": {
+											"sourceStart": 18,
+											"sourceEnd": 27
+										},
 										"Call Expression": {
 											"type": "[]",
 											"arguments": {
+												"position": {
+													"sourceStart": 19,
+													"sourceEnd": 26
+												},
 												"call list": [
 													{
+														"position": {
+															"sourceStart": 19,
+															"sourceEnd": 23
+														},
 														"Top Level Expression": {
 															"expr": {
+																"position": {
+																	"sourceStart": 19,
+																	"sourceEnd": 23
+																},
 																"Binary Operator": {
 																	"left_expr": {
+																		"position": {
+																			"sourceStart": 19,
+																			"sourceEnd": 19
+																		},
 																		"Identifier Expression": {
 																			"name": {
 																				"Name": "c"
@@ -68,6 +128,10 @@
 																	},
 																	"operator": "+",
 																	"right_expr": {
+																		"position": {
+																			"sourceStart": 23,
+																			"sourceEnd": 23
+																		},
 																		"Identifier Expression": {
 																			"name": {
 																				"Name": "d"
@@ -79,8 +143,16 @@
 														}
 													},
 													{
+														"position": {
+															"sourceStart": 26,
+															"sourceEnd": 26
+														},
 														"Top Level Expression": {
 															"expr": {
+																"position": {
+																	"sourceStart": 26,
+																	"sourceEnd": 26
+																},
 																"Identifier Expression": {
 																	"name": {
 																		"Name": "w"
@@ -99,12 +171,32 @@
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 29,
+						"sourceEnd": 45
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 29,
+							"sourceEnd": 45
+						},
 						"Code Block": [
 							{
+								"position": {
+									"sourceStart": 35,
+									"sourceEnd": 43
+								},
 								"Expr Stmt": {
+									"position": {
+										"sourceStart": 35,
+										"sourceEnd": 42
+									},
 									"Chain Expression": {
-										"literal": {
+										"atom": {
+											"position": {
+												"sourceStart": 35,
+												"sourceEnd": 39
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "print"
@@ -113,13 +205,29 @@
 										},
 										"chain": [
 											{
+												"position": {
+													"sourceStart": 40,
+													"sourceEnd": 42
+												},
 												"Call Expression": {
 													"type": "[]",
 													"arguments": {
+														"position": {
+															"sourceStart": 41,
+															"sourceEnd": 41
+														},
 														"call list": [
 															{
+																"position": {
+																	"sourceStart": 41,
+																	"sourceEnd": 41
+																},
 																"Top Level Expression": {
 																	"expr": {
+																		"position": {
+																			"sourceStart": 41,
+																			"sourceEnd": 41
+																		},
 																		"Identifier Expression": {
 																			"name": {
 																				"Name": "a"

@@ -18,6 +18,9 @@
 
 namespace pst {
 
+	/**
+	 * @brief Declaration of a single function argument.
+	 */
 	class FunParam final: public NotStmt {
 		tpc::Identifier                           name;
 		MBox<UniversalExprHolder>                 type;
@@ -53,6 +56,11 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 
+	/**
+	 * @brief Simple dotted name that is Identifiers separated by dots potentially ended by `.*`
+	 *
+	 * used for imports
+	 */
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
 		bool                         star = false;
@@ -86,6 +94,9 @@ namespace pst {
 		~DottedName() final = default;
 	};
 
+	/**
+	 * @brief Code Block that contains statements.
+	 */
 	class CodeBlock final: public NotStmt {
 		std::vector<MBox<Stmt>> statements;
 
@@ -111,6 +122,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Class Block that contains Class statements.
+	 */
 	class ClassBlock final: public NotStmt {
 		std::vector<MBox<ClassStmt>> statements;
 
@@ -137,6 +151,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Code Block or Statement.
+	 */
 	class CodeBlockOrStmt final: public NotStmt {
 		std::variant<MBox<Stmt>, MBox<CodeBlock>> content;
 
@@ -166,6 +183,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Expression surrounded by parenthesis.
+	 */
 	class RoundGroupExpr final: public NotStmt {
 		MBox<CommaExprHolder> expr = nullptr;
 
@@ -190,7 +210,7 @@ namespace pst {
 	};
 
 	/**
-	 * @brief Common root for expression sub-elements
+	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
 		const i64 precedence;

@@ -26,13 +26,16 @@ namespace lang_def {
 		precedence.put({ NamedOperator::DoublePlus, OperatorType::UnaryRight }, 1);
 		precedence.put({ NamedOperator::Minus, OperatorType::UnaryRight }, 1);
 
-		precedence.put({ NamedOperator::Multiply, OperatorType::Binary }, 2);
-		precedence.put({ NamedOperator::Divide, OperatorType::Binary }, 2);
+		precedence.put({ NamedOperator::Exponentiate, OperatorType::Binary }, 2);
 
-		precedence.put({ NamedOperator::Plus, OperatorType::Binary }, 3);
-		precedence.put({ NamedOperator::Minus, OperatorType::Binary }, 3);
+		precedence.put({ NamedOperator::Multiply, OperatorType::Binary }, 3);
+		precedence.put({ NamedOperator::Divide, OperatorType::Binary }, 3);
+		precedence.put({ NamedOperator::Remainder, OperatorType::Binary }, 3);
 
-		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 4);
+		precedence.put({ NamedOperator::Plus, OperatorType::Binary }, 4);
+		precedence.put({ NamedOperator::Minus, OperatorType::Binary }, 4);
+
+		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 5);
 
 
 		associativity.put(
@@ -48,10 +51,18 @@ namespace lang_def {
 		);
 
 		associativity.put(
+			{ NamedOperator::Exponentiate, OperatorType::Binary },
+			OperatorAssociativity::RightToLeft
+		);
+
+		associativity.put(
 			{ NamedOperator::Multiply, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 		associativity.put(
 			{ NamedOperator::Divide, OperatorType::Binary }, OperatorAssociativity::LeftToRight
+		);
+		associativity.put(
+			{ NamedOperator::Remainder, OperatorType::Binary }, OperatorAssociativity::LeftToRight
 		);
 
 		associativity.put(

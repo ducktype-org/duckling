@@ -102,6 +102,84 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
 			}
 
+			/**
+			 * If valid builtin exist, returns it.
+			 * Otherwise returns None.
+			 */
+			base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Box<Expr> lhs, Box<Expr> rhs) {
+				// note: this is mock that works only for very simple int op int.
+				// @todo: make it smarter?
+				// @TODO: this hole section could be moved to a separate file
+				// // when refactoring it remember about unaryBuiltin
+
+				auto lhs_type = lhs->type_desc;
+				auto rhs_type = lhs->type_desc;
+
+				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
+				bool is_rhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
+
+				if (not is_lhs_integer or not is_rhs_integer) {
+					// @TODO: report an error?
+					// no builtins for non-integers for now:
+					return {};
+				}
+
+				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
+				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
+
+				// we only do the most simplest version here:
+				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
+				    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
+					// we don't have builtins for this case for now:
+					return {};
+				}
+
+				// only few things supported for now:
+
+				// @TODO: change to base::map when possible
+				const static std::map<base::StrID, BuiltinBinary> operators
+					= { { base::StrID("+"), BuiltinBinary::IntegerAdd },
+					    { base::StrID("-"), BuiltinBinary::IntegerSub },
+					    { base::StrID("*"), BuiltinBinary::IntegerMul },
+					    { base::StrID("/"), BuiltinBinary::IntegerDiv },
+					    { base::StrID("%"), BuiltinBinary::IntegerMod },
+					    { base::StrID("**"), BuiltinBinary::IntegerPow } };
+
+				if (operators.contains(op)) {
+					return makeBox<BinaryOperatorExpr>(
+						ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs)
+					);
+				} else {
+					return {};
+				}
+			}
+
+			/**
+			 * If valid builtin exist, returns it.
+			 * Otherwise returns None.
+			 */
+			base::Optional<Box<Expr>> unaryBuiltin(base::StrID op, Box<Expr> expr) {
+				// note: this is mock that works only for very simple int op int.
+				// when refactoring it remember about binaryBuiltin
+
+				auto expr_type = expr->type_desc;
+
+				if (expr_type.getType().getKind() != tsh::Kind::Integral) {
+					// we don't have builtins for this case for now:
+					return {};
+				}
+
+				// @TODO: change to base::map when possible
+				const static std::map<base::StrID, BuiltinUnary> operators = {
+					{ base::StrID("-"), BuiltinUnary::IntegerNegation },
+				};
+
+				if (operators.contains(op))
+					return makeBox<UnaryOperatorExpr>(scope, operators.at(op), std::move(expr));
+				else
+					return {};
+			}
+
 			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
 				// handle variants:
 				if (stmt.getOperator().str() == "|") {
@@ -130,33 +208,47 @@ namespace compiler::helios::code {
 					return;
 				}
 
-
 				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
 				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
 
+				// @todo: make failure more explicit...
 				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
 
 				auto lhs = std::move(lhs_res).value();
 				auto rhs = std::move(rhs_res).value();
 
-				// @todo here we should type check,
-				// and make function call / builtin binary operator
-				node = makeBox<BinaryOperatorExpr>(
-					ctx, scope, stmt.getOperator(), std::move(lhs), std::move(rhs)
-				);
+				// @todo here we should:
+				// * lookup for user defined operators
+				// * type check
+				// * make function call
+				// For now we support just builtins
+
+				// if no function call is found, we try to use builtin operators:
+
+				auto builtin = binaryBuiltin(stmt.getOperator(), std::move(lhs), std::move(rhs));
+				if (builtin.has_value()) {
+					node = std::move(builtin).value();
+					return;
+				} else {
+					ctx.log(base::make_unique<
+							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+						stmt.getSourcePosition(), "No builtin operator found"
+					));
+					// failed
+				}
 			}
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
 
-				auto literal_expr = fromPST(ctx, stmt.getLiteral());
-				if (!literal_expr) {
+				auto atom_expr = fromPST(ctx, stmt.getAtom());
+				if (!atom_expr) {
 					// Report an error?
 					return;
 				}
 
 				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
-				literal_expr.value()->acceptVisitor(resulting_symbol_vis);
+				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
 
 				CORE_ASSERT(resulting_symbol_vis.symbols, "Failed to get symbols");
 
@@ -327,25 +419,37 @@ namespace compiler::helios::code {
 				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
 			}
 
-			void visitSuffixOperator(const pst::expr::SuffixOperator& stmt) override {
-				// @NOTE: This is a mockup
-				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptExprVisitor(vis);
-				if_opt_some(vis.node, expr) {
-					node = makeBox<UnaryOperatorExpr>(
-						scope, stmt.getOperator(), false, std::move(expr)
-					);
-				}
+			void visitSuffixOperator(const pst::expr::SuffixOperator&) override {
+				// note: here we will have to compile things like `a++`, `a--`, `T?`.
+				throw base::NotYetImplemented(
+					"Suffix operators are not yet implemented in HOUT, since there are any for now"
+				);
 			}
 
 			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
 				// @NOTE: This is a mockup
-				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getExpr()->acceptExprVisitor(vis);
-				if_opt_some(vis.node, expr) {
-					node = makeBox<UnaryOperatorExpr>(
-						scope, stmt.getOperator(), true, std::move(expr)
-					);
+				auto inner = fromPST(ctx, stmt.getExpr());
+				if (inner.hasError()) return;  // failed
+
+				// @todo here we should:
+				// * lookup for user defined operators
+				// * type check
+				// * make function call
+				// For now we support just builtins
+
+				// if no function call is found, we try to use builtin operators:
+
+				auto builtin = unaryBuiltin(stmt.getOperator().value, std::move(inner.value()));
+
+				if (builtin.has_value()) {
+					node = std::move(builtin).value();
+					return;
+				} else {
+					ctx.log(base::make_unique<
+							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+						stmt.getSourcePosition(), "No builtin operator found"
+					));
+					// failed
 				}
 			}
 		};

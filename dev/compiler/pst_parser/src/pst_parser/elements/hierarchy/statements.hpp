@@ -63,6 +63,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Using statement
+	 */
 	class Using final: public Stmt {
 		MBox<DottedName> names;
 
@@ -96,6 +99,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Statement that is an expression.
+	 */
 	class ExprStmt final: public Stmt {
 		MBox<ExprElement> expr;
 
@@ -122,6 +128,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor&) const override;
 	};
 
+	/**
+	 * @brief Alias statement.
+	 */
 	class Alias final: public Stmt {
 		tpc::Identifier  name;
 		MBox<DottedName> points_to;
@@ -182,7 +191,11 @@ namespace pst {
 		}
 	};
 
-	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
+	/**
+	 * @brief Const variable declaration.
+	 *
+	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
+	 */
 	class Const final: public Stmt {
 		tpc::Identifier       name;
 		MBox<CommaExprHolder> type;

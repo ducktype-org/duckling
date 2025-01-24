@@ -99,6 +99,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Class constructor element.
+	 */
 	class Constructor final: public ClassSpecial {
 		MBox<ParamList> params = nullptr;
 		MBox<InitList>  inits  = nullptr;
@@ -124,6 +127,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class destructor element.
+	 */
 	class Destructor final: public ClassSpecial {
 		MBox<CodeBlock> body = nullptr;
 
@@ -142,6 +148,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class method element.
+	 */
 	class Method final: public ClassStmt {
 		tpc::Identifier                       name;
 		MBox<ParamList>                       params = nullptr;
@@ -178,6 +187,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class field element.
+	 */
 	class Field final: public ClassStmt {
 		bool                                  is_mutable = true;
 		tpc::Identifier                       name;
