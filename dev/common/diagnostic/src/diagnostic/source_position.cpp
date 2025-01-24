@@ -136,6 +136,7 @@ namespace dia {
 	}
 
 	bool SourcePosition::isFileEnd() const {
+		// EOF is always (last_char, last_char)
 		return source_end == source_file->getChars().size() - 1;
 	}
 }
