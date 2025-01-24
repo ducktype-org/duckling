@@ -5,13 +5,12 @@
 namespace pst {
 	MBox<AtrArgList> AtrArgList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
-			ExprElement,
+			UniversalExprHolder,
 			AtrArgList,
 			false,
 			lexer::Token::BracketType::Round,
 			detail::Conditions::isComma,
 			detail::Conditions::isSentinel,
-			detail::NameGetters::attributeArgList,
-			UniversalExpr>(state);
+			detail::NameGetters::attributeArgList>(state);
 	}
 }

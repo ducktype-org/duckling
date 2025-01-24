@@ -60,7 +60,9 @@ namespace compiler::helios::test_utils {
 			}
 
 		public:
-			void visitConst(const pst::Const& stmt) override { setExprTree(stmt.getValue()); }
+			void visitConst(const pst::Const& stmt) override {
+				setExprTree(stmt.getValue()->getExpr());
+			}
 		};
 
 		auto            pst_stmt = stmt(sym);
@@ -79,7 +81,9 @@ namespace compiler::helios::test_utils {
 			}
 
 		public:
-			void visitVariable(const pst::Variable& stmt) override { setExprTree(stmt.getValue()); }
+			void visitVariable(const pst::Variable& stmt) override {
+				setExprTree(stmt.getValue()->getExpr());
+			}
 		};
 
 		auto            pst_stmt = stmt(sym);
