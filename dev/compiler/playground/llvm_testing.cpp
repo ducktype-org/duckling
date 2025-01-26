@@ -8,7 +8,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
+#include <backends/wyvern/llvm_backend.hpp>
 
 int main(int argc, const char* argv[]) {
 	// @TODO: add to helios init
