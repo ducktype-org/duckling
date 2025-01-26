@@ -22,7 +22,7 @@ namespace hashing {
 		template<typename Self, typename CheckT>
 		struct Acc: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len)
-				requires requires { Acc{}.std::remove_cvref_t<Self>::updatehash(data, len); } {}
+				requires requires { Acc{}.std::remove_cvref_t<Self>::updateHash(data, len); } {}
 		};
 
 		template<typename Self>
@@ -33,15 +33,15 @@ namespace hashing {
 	}
 
 	template<typename T>
-	concept has_updatehash_void
+	concept has_updateHash_void
 		= requires(T t, void* data, usize len) { detail::Acc<T, void>{}.check(data, len); };
 
 	template<typename T>
-	concept has_updatehash_char
+	concept has_updateHash_char
 		= requires(T t, char* data, usize len) { detail::Acc<T, char>{}.check(data, len); };
 
 	template<typename T>
-	concept has_updatehash = has_updatehash_void<T> || has_updatehash_char<T>;
+	concept has_updateHash = has_updateHash_void<T> || has_updateHash_char<T>;
 
 	template<typename Self, typename T>
 	constexpr bool is_hash_code_aware
@@ -50,28 +50,28 @@ namespace hashing {
 
 	class CallOverloads {
 	public:
-		template<has_updatehash_void Self>
+		template<has_updateHash_void Self>
 		auto&& operator()(this Self&& self, const void* data, usize len) noexcept {
-			std::forward<Self>(self).updatehash(data, len);
+			std::forward<Self>(self).updateHash(data, len);
 			return std::forward<Self>(self);
 		}
 
-		template<has_updatehash_char Self>
+		template<has_updateHash_char Self>
 		constexpr auto&& operator()(this Self&& self, const char* data, usize len) noexcept {
-			std::forward<Self>(self).updatehash(data, len);
+			std::forward<Self>(self).updateHash(data, len);
 			return std::forward<Self>(self);
 		}
 
-		template<has_updatehash Self, typename T>
+		template<has_updateHash Self, typename T>
 		requires(std::has_unique_object_representations_v<T>)
 		constexpr auto&& operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (is_hash_code_aware<Self, T>) {
 				std::forward<Self>(self).add_hash_code(t);
-			} else if constexpr (has_updatehash_char<Self>) {
+			} else if constexpr (has_updateHash_char<Self>) {
 				std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
-				std::forward<Self>(self).updatehash(arr.data(), arr.size());
+				std::forward<Self>(self).updateHash(arr.data(), arr.size());
 			} else {
-				std::forward<Self>(self).updatehash(std::addressof(t), sizeof(t));
+				std::forward<Self>(self).updateHash(std::addressof(t), sizeof(t));
 			}
 			return std::forward<Self>(self);
 		}

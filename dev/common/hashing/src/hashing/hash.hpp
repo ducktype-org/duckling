@@ -10,12 +10,12 @@ namespace hashing {
 	// this is a template overload for the 'addToHash' function
 	// if a friend function overload exists for the type, it will be used
 	// this one serves as a fallback and a place where specializations for
-	// types that are not ours can be added like built-in types
+	// types that are not ours can be added (like the built-in types)
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void addToHash(HashAlgorithm& h, const T& t) {
 		// for most types we only want to add to hash some subset of their subobjects (bases + members)
 		// this can be done easily by defining `hash_decompose` friend function that
-		// lists subobjects in an order we want to hash them
+		// lists subobjects in an order in which we want to hash them
 		if constexpr (detail::can_hash_decompose<T>) {
 			std::apply([&](auto&&... args) { (addToHash(h, args), ...); }, hash_decompose(t));
 		}

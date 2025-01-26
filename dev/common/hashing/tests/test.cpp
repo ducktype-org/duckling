@@ -97,13 +97,13 @@ private:
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		constexpr auto res1 = Fnv1a_32{}(4);
 		assertTrue(
-			has_update_hash_char<Fnv1a_64>, "Fnv1a_64 should have update_hash(char*, usize)"
+			has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)"
 		);
 		constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
 		constexpr auto res3 = static_cast<std::string>(DebugHash{}("hello", 5)).size();
 		assertTrue(
 			is_explicitly_convertible_to<decltype(res1), u32>,
-			"Fnv1a_32 should be convertible to u32 "
+			"Fnv1a_32 should be convertible to u32"
 		);
 		assertTrue(
 			is_explicitly_convertible_to<decltype(res2), u64>,
@@ -126,9 +126,9 @@ private:
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
 
-	// void betterCoverage() [
-
-	// ]
+	// void betterCoverage() {
+	
+	// }
 };
 
 TESTER_COMMON_MAIN("/common/hashing/tests/");
