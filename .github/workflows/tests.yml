@@ -129,6 +129,10 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
+      - name: run llvm test
+        working-directory: ${{ env.WORKSPACE }}
+        run: ${{ env.BUILD_DIR }}/bin/llvm_test
+
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- test
