@@ -172,7 +172,7 @@ namespace compiler::mir {
 		};
 
 	public:
-		BlockBuilder(usize vector_index): id(vector_index){};
+		BlockBuilder(usize vector_index): id(vector_index) {}
 
 		[[nodiscard]]
 		Block build() const {
@@ -273,14 +273,27 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		LocalRef addLocal(helios::SymID helios_id) {
-			auto key = local_list.emplaceBack(MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-				scope(helios_id) });
+		LocalRef addLocal(const helios::SymID helios_id) {
+			const auto key = local_list.emplaceBack(
+				MirLocal{ helios_id,
+			              ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+							  "Handling ERRORS in MIR is not supported yet..."
+						  ),
+			              scope(helios_id) }
+			);
 			return local_list.getRef(key).value();
+		}
+
+		/**
+		 * Finds the location of a local variable in the function. Does not check the global scope.
+		 * @param helios_id The HELIoS symbol ID of the local variable.
+		 * @return The local variable reference, if found.
+		 */
+		[[nodiscard]]
+		LocalMRef findLocal(const helios::SymID helios_id) const {
+			for (const auto& local: local_list)
+				if (local->helios_id == helios_id) return local.ref().toMRef();
+			return {};
 		}
 
 		[[nodiscard]]
@@ -380,11 +393,13 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(Instruction{ Operation::Assign,
-					                                          { local },
-					                                          { expr_result.value },
-					                                          { flagConstruct(local) },
-					                                          stmt.lifetime_scope });
+					local_construction_hole.fill(
+						Instruction{ Operation::Assign,
+					                 { local },
+					                 { expr_result.value },
+					                 { flagConstruct(local) },
+					                 stmt.lifetime_scope }
+					);
 
 					output({ expr_result.begin });
 					return;
@@ -393,6 +408,27 @@ namespace compiler::mir {
 			}
 
 			CORE_UNREACHABLE();
+		}
+
+		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
+			const auto target_variable = function.findLocal(stmt.helios_symbol).toOpt();
+			// TODO: #448 Search for location in global scope as well.
+			CORE_ASSERT(
+				target_variable.has_value(),
+				"Variable not found. This should have been handled in HELIoS."
+			);
+
+			auto target_location          = target_variable.value();
+			auto target_construction_hole = continuation->addHole();
+			auto expr_result              = lowerExpr(*stmt.new_value, continuation, function);
+
+			target_construction_hole.fill(
+				Instruction{ Operation::Assign,
+			                 { target_location },
+			                 { expr_result.value },
+			                 { flagConstruct(target_location) },
+			                 stmt.lifetime_scope }
+			);
 		}
 	};
 
