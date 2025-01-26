@@ -62,14 +62,30 @@ namespace compiler::helios::code {
 		SymID helios_symbol;
 
 		VariableStmt(
-			ScopeID                         scope,
+			const ScopeID                   scope,
 			base::Optional<base::Box<Expr>> initial_value,
-			tsh::TypeDesc<>                 type,
-			SymID                           helios_symbol
+			const tsh::TypeDesc<>&          type,
+			const SymID                     helios_symbol
 		):
 			  Stmt(scope),
 			  initial_value(std::move(initial_value)),
 			  type(type),
+			  helios_symbol(helios_symbol) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents `a = ..;` statement in HOUT
+	 */
+	struct AssignmentStmt final: public Stmt {
+		Box<Expr> new_value;
+		SymID     helios_symbol;
+
+		AssignmentStmt(const ScopeID scope, base::Box<Expr> new_value, const SymID helios_symbol):
+			  Stmt(scope),
+			  new_value(std::move(new_value)),
 			  helios_symbol(helios_symbol) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
