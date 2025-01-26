@@ -32,7 +32,7 @@ namespace pst {
 	}
 
 	void LangElement::setLastToken(dia::SourcePosition pos) {
-		if (pos.getEnd() > source_position.getEnd())
+		if (not pos.isFileEnd() && pos.getEnd() > source_position.getEnd())
 			source_position = dia::SourcePosition(source_position, pos.getEnd());
 	}
 

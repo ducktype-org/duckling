@@ -19,31 +19,39 @@
 						"sourceStart": 7,
 						"sourceEnd": 10
 					},
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"position": {
-									"sourceStart": 7,
-									"sourceEnd": 7
-								},
-								"Identifier Expression": {
-									"name": {
-										"Name": "T"
-									}
-								}
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 7,
+								"sourceEnd": 10
 							},
-							{
-								"position": {
-									"sourceStart": 10,
-									"sourceEnd": 10
-								},
-								"Identifier Expression": {
-									"name": {
-										"Name": "U"
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"position": {
+											"sourceStart": 7,
+											"sourceEnd": 7
+										},
+										"Identifier Expression": {
+											"name": {
+												"Name": "T"
+											}
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 10,
+											"sourceEnd": 10
+										},
+										"Identifier Expression": {
+											"name": {
+												"Name": "U"
+											}
+										}
 									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"iterable": {
@@ -51,91 +59,115 @@
 						"sourceStart": 15,
 						"sourceEnd": 27
 					},
-					"Chain Expression": {
-						"atom": {
+					"Top Level Expression": {
+						"expr": {
 							"position": {
 								"sourceStart": 15,
-								"sourceEnd": 15
+								"sourceEnd": 27
 							},
-							"Identifier Expression": {
-								"name": {
-									"Name": "x"
-								}
-							}
-						},
-						"chain": [
-							{
-								"position": {
-									"sourceStart": 16,
-									"sourceEnd": 17
-								},
-								"Access Expression": {
-									"type": ".",
-									"name": {
-										"Name": "b"
+							"Chain Expression": {
+								"atom": {
+									"position": {
+										"sourceStart": 15,
+										"sourceEnd": 15
+									},
+									"Identifier Expression": {
+										"name": {
+											"Name": "x"
+										}
 									}
-								}
-							},
-							{
-								"position": {
-									"sourceStart": 18,
-									"sourceEnd": 27
 								},
-								"Call Expression": {
-									"type": "[]",
-									"arguments": {
+								"chain": [
+									{
 										"position": {
-											"sourceStart": 19,
-											"sourceEnd": 26
+											"sourceStart": 16,
+											"sourceEnd": 17
 										},
-										"call list": [
-											{
+										"Access Expression": {
+											"type": ".",
+											"name": {
+												"Name": "b"
+											}
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 18,
+											"sourceEnd": 27
+										},
+										"Call Expression": {
+											"type": "[]",
+											"arguments": {
 												"position": {
 													"sourceStart": 19,
-													"sourceEnd": 23
+													"sourceEnd": 26
 												},
-												"Binary Operator": {
-													"left_expr": {
+												"call list": [
+													{
 														"position": {
 															"sourceStart": 19,
-															"sourceEnd": 19
+															"sourceEnd": 23
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "c"
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 19,
+																	"sourceEnd": 23
+																},
+																"Binary Operator": {
+																	"left_expr": {
+																		"position": {
+																			"sourceStart": 19,
+																			"sourceEnd": 19
+																		},
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "c"
+																			}
+																		}
+																	},
+																	"operator": "+",
+																	"right_expr": {
+																		"position": {
+																			"sourceStart": 23,
+																			"sourceEnd": 23
+																		},
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "d"
+																			}
+																		}
+																	}
+																}
 															}
 														}
 													},
-													"operator": "+",
-													"right_expr": {
+													{
 														"position": {
-															"sourceStart": 23,
-															"sourceEnd": 23
+															"sourceStart": 26,
+															"sourceEnd": 26
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "d"
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 26,
+																	"sourceEnd": 26
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "w"
+																	}
+																}
 															}
 														}
-													}
-												}
-											},
-											{
-												"position": {
-													"sourceStart": 26,
-													"sourceEnd": 26
-												},
-												"Identifier Expression": {
-													"name": {
-														"Name": "w"
-													}
-												}
-											},
-										]
+													},
+												]
+											}
+										}
 									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"body": {
@@ -190,9 +222,17 @@
 																	"sourceStart": 41,
 																	"sourceEnd": 41
 																},
-																"Identifier Expression": {
-																	"name": {
-																		"Name": "a"
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 41,
+																			"sourceEnd": 41
+																		},
+																		"Identifier Expression": {
+																			"name": {
+																				"Name": "a"
+																			}
+																		}
 																	}
 																}
 															},

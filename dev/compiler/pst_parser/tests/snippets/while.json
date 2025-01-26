@@ -21,67 +21,75 @@
 							"sourceStart": 6,
 							"sourceEnd": 20
 						},
-						"Comparison Chain": {
-							"sub-expressions": [
-								{
-									"position": {
-										"sourceStart": 6,
-										"sourceEnd": 10
-									},
-									"Binary Operator": {
-										"left_expr": {
+						"Top Level Expression": {
+							"expr": {
+								"position": {
+									"sourceStart": 6,
+									"sourceEnd": 20
+								},
+								"Comparison Chain": {
+									"sub-expressions": [
+										{
 											"position": {
 												"sourceStart": 6,
-												"sourceEnd": 6
-											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "a"
-												}
-											}
-										},
-										"operator": "+",
-										"right_expr": {
-											"position": {
-												"sourceStart": 10,
 												"sourceEnd": 10
 											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "b"
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 6,
+														"sourceEnd": 6
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "a"
+														}
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"position": {
+														"sourceStart": 10,
+														"sourceEnd": 10
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "b"
+														}
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 14,
+												"sourceEnd": 20
+											},
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 14,
+														"sourceEnd": 14
+													},
+													"Value Expr": {
+														"number": "4"
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"position": {
+														"sourceStart": 18,
+														"sourceEnd": 20
+													},
+													"Value Expr": {
+														"number": "0.8"
+													}
 												}
 											}
 										}
-									}
-								},
-								{
-									"position": {
-										"sourceStart": 14,
-										"sourceEnd": 20
-									},
-									"Binary Operator": {
-										"left_expr": {
-											"position": {
-												"sourceStart": 14,
-												"sourceEnd": 14
-											},
-											"Value Expr": {
-												"number": "4"
-											}
-										},
-										"operator": "+",
-										"right_expr": {
-											"position": {
-												"sourceStart": 18,
-												"sourceEnd": 20
-											},
-											"Value Expr": {
-												"number": "0.8"
-											}
-										}
-									}
+									]
 								}
-							]
+							}
 						}
 					}
 				},
