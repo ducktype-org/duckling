@@ -61,7 +61,6 @@ duck_add_test(base perfect_hash_test tests/perfect_hash_test.cpp
 duck_add_test(base box_ref_tests tests/box_ref_tests.cpp
         USES Base)
 
-
 add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)
 
@@ -96,4 +95,7 @@ add_example(variant_visit_example src/base/examples/variant_visit_example.cpp
         USES Base)
 
 duck_add_test(base bits_and_bytes_test tests/bits_and_bytes_test.cpp
+        USES Base)
+
+duck_add_test(base is_complete_test tests/is_complete_test.cpp
         USES Base)

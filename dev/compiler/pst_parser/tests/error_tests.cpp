@@ -85,125 +85,132 @@ class PSTErrorTests: public tester::TestSuite {
 		assertTrue(example(), example.message());
 	}
 
-	Example<pst::Alias, true>  simpleAlias{ "alias sqrt=std.math.sqrt" };
-	Example<pst::Alias, false> aliasStar{ "alias math=std.math.*" };
+	Example<pst::Alias, true>  simple_alias{ "alias sqrt=std.math.sqrt" };
+	Example<pst::Alias, false> alias_star{ "alias math=std.math.*" };
 
-	Example<pst::Attribute, true> simpleAttr{ "@pretty(5)" };
+	Example<pst::Attribute, true> simple_attr{ "@pretty(5)" };
 
-	Example<pst::Block, true>  simpleBlock{ "block {}" };
-	Example<pst::Block, false> noBlock{ "block;" };
-	Example<pst::Block, false> noBlockEof{ "block" };
+	Example<pst::Block, true>  simple_block{ "block {}" };
+	Example<pst::Block, false> no_block{ "block;" };
+	Example<pst::Block, false> no_block_eof{ "block" };
 
-	Example<pst::CodeBlockOrStmt, true> justBlock{ "{}" };
-	Example<pst::CodeBlockOrStmt, true> justStmt{ "x=y;" };
+	Example<pst::CodeBlockOrStmt, true> just_block{ "{}" };
+	Example<pst::CodeBlockOrStmt, true> just_stmt{ "x=y;" };
 
-	Example<pst::CodeBlock, true>  simpleCodeBlock{ "{}" };
-	Example<pst::CodeBlock, false> noCodeBlock{ "x=y;" };
-	Example<pst::CodeBlock, false> noCodeBlockEof{ "" };
+	Example<pst::CodeBlock, true>  simple_code_block{ "{}" };
+	Example<pst::CodeBlock, false> no_code_block{ "x=y;" };
+	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
-	Example<pst::Const, true>  simpleConst{ "const x: i32 = 5" };
-	Example<pst::Const, false> noNameConst{ "const: i32 = 5" };
-	Example<pst::Const, false> noTypeConst{ "const x:= 5" };
-	Example<pst::Const, false> noValueConst{ "const x: i32=;" };
-	Example<pst::Const, false> noValueConstEof{ "const x: i32=" };
-	Example<pst::Const, false> noEqualsConst{ "const x: i32" };
+	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
+	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
+	Example<pst::Const, false> no_type_const{ "const x:= 5" };
+	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
+	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
+	Example<pst::Const, false> no_equals_const{ "const x: i32" };
 
-	Example<pst::DottedName, true>  simpleDotted{ "std.a.b.*;" };
-	Example<pst::DottedName, false> badDotted{ "std.a.b. .*" };
+	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*;" };
+	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };
 
-	Example<pst::Const, false> badStmtChoice{ "block {}" };
+	Example<pst::Const, false> bad_stmt_choice{ "block {}" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleExpr{ "x + y" };
-	Example<pst::ExprElement, true, pst::UniversalExpr>  blockExpr{ "x + {return 2 * x;}" };
-	Example<pst::ExprElement, false, pst::UniversalExpr> badTokenExpr{ "\"" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_expr{ "x + y" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  block_expr{ "x + {return 2 * x;}" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_token_expr{ "\"" };
 
-	Example<pst::Fun, true>  simpleFunction1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
-	Example<pst::Fun, true>  simpleFunction2{ "fun foo(x: i32, y: i32 = 1) = {}" };
-	Example<pst::Fun, false> badFunction{ "fun foo(x: i32, y) = {}" };
+	Example<pst::Fun, true>  simple_function1{ "fun foo(x: i32, y: i32) -> (i32, i32) = {}" };
+	Example<pst::Fun, true>  simple_function2{ "fun foo(x: i32, y: i32 = 1) = {}" };
+	Example<pst::Fun, false> bad_function{ "fun foo(x: i32, y) = {}" };
 
-	Example<pst::If, true> simpleIf{ "if (a == b) {c = d;}" };
-	Example<pst::If, true> simpleIfElse{ "if (a == b) {c = d;} else {c = e;}" };
-	Example<pst::If, true> simpleIfElseNoBlocks{ "if (a == b) c = d; else c = e;" };
+	Example<pst::If, true> simple_if{ "if (a == b) {c = d;}" };
+	Example<pst::If, true> simple_if_else{ "if (a == b) {c = d;} else {c = e;}" };
+	Example<pst::If, true> simple_if_else_no_blocks{ "if (a == b) c = d; else c = e;" };
 
-	Example<pst::Import, true> simpleImport{ "import std.math.sqrt as sqrt" };
+	Example<pst::Import, true> simple_import{ "import std.math.sqrt as sqrt" };
 
-	Example<pst::Namespace, true> simpleNamespace{ "namespace name {}" };
+	Example<pst::Namespace, true> simple_namespace{ "namespace name {}" };
 
-	Example<pst::RoundGroupExpr, true>  simpleRoundGroup{ "(a + b)" };
-	Example<pst::RoundGroupExpr, false> badRoundGroup{ "a + b" };
+	Example<pst::RoundGroupExpr, true>  simple_round_group{ "(a + b)" };
+	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
-	Example<pst::Stmt, true>  simpleStmt{ "x = a + b;" };
-	Example<pst::Stmt, false> badStmt{ "x = a + b" };
+	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
 
-	Example<pst::TopLevel, true> simpleTopLevel{ "fun foo() = {}" };
+	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
 
-	Example<pst::Using, true> simpleUsing{ "using std.math" };
+	Example<pst::Using, true> simple_using{ "using std.math" };
 
-	Example<pst::For, true>  simpleFor{ "for(a in a.b(x, y)) {}" };
-	Example<pst::For, true>  simpleTypedFor{ "for(a: T, U in a + c) {}" };
-	Example<pst::For, false> emptyTypeFor{ "for(a: in a + c) {}" };
-	Example<pst::For, false> noInFor{ "for(a a + c) {}" };
+	Example<pst::For, true>  simple_for{ "for(a in a.b(x, y)) {}" };
+	Example<pst::For, true>  simple_typed_for{ "for(a: T, U in a + c) {}" };
+	Example<pst::For, false> empty_type_for{ "for(a: in a + c) {}" };
+	Example<pst::For, false> no_in_for{ "for(a a + c) {}" };
 
-	Example<pst::Class, true>  simpleClass{ "class x{}" };
-	Example<pst::Class, true>  complicatedClass{ "class x extends y implements z:{}, d:{T} {}" };
-	Example<pst::Class, false> emptyExtendsClass{ "class x extends {}" };
-	Example<pst::Class, false> emptyExtendsClass2{ "class x extends implements z {}" };
-	Example<pst::Class, false> multipleExtendsClass{ "class x extends y, z {}" };
+	Example<pst::Class, true>  simple_class{ "class x{}" };
+	Example<pst::Class, true>  complicated_class{ "class x extends y implements z:{}, d:{T} {}" };
+	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
+	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
+	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };
 
-	ClassStmtExample<pst::AccessBlock, true>  publicAccessBlock{ "public {}" };
-	ClassStmtExample<pst::AccessBlock, true>  privateAccessBlock{ "private {}" };
-	ClassStmtExample<pst::AccessBlock, true>  protectedAccessBlock{ "protected {}" };
-	ClassStmtExample<pst::AccessBlock, false> multiSpecifierBlock{ "public private {}" };
+	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
+	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
+	ClassStmtExample<pst::AccessBlock, true>  protected_access_block{ "protected {}" };
+	ClassStmtExample<pst::AccessBlock, false> multi_specifier_block{ "public private {}" };
 
-	ClassStmtExample<pst::Field, true>  simpleField{ "x: i32 = 5" };
-	ClassStmtExample<pst::Field, true>  simpleSpecifiedField{ "public static x: i32 = 5" };
-	ClassStmtExample<pst::Field, false> badField{ "x = 5" };
-	ClassStmtExample<pst::Field, false> badField2{ "x : = 5" };
+	ClassStmtExample<pst::Field, true>  simple_field{ "x: i32 = 5" };
+	ClassStmtExample<pst::Field, true>  simple_specified_field{ "public static x: i32 = 5" };
+	ClassStmtExample<pst::Field, false> bad_field{ "x = 5" };
+	ClassStmtExample<pst::Field, false> bad_field2{ "x : = 5" };
 
-	ClassStmtExample<pst::Method, true> simpleMethod{
+	ClassStmtExample<pst::Method, true> simple_method{
 		"fun foo(x: i32, y: i32) -> (i32, i32) = {}"
 	};
 
-	ClassStmtExample<pst::Constructor, true> defaultConstructor{ "name(x: i32) = {}", "name" };
-	ClassStmtExample<pst::Constructor, true> namedConstructor{ "name.from_pair(p: (i32, i32)) = {}",
-		                                                       "name" };
-	ClassStmtExample<pst::Constructor, true> initConstructor{
+	ClassStmtExample<pst::Constructor, true> default_constructor{ "name(x: i32) = {}", "name" };
+	ClassStmtExample<pst::Constructor, true> named_constructor{
+		"name.from_pair(p: (i32, i32)) = {}", "name"
+	};
+	ClassStmtExample<pst::Constructor, true> init_constructor{
 		"name.init(x: i32, y: i32): z(x, y) = {}", "name"
 	};
-	ClassStmtExample<pst::Constructor, false> badConstructor1{
+	ClassStmtExample<pst::Constructor, false> bad_constructor1{
 		"name.(x: i32, y: i32): z(x, y) = {}", "name"
 	};
-	ClassStmtExample<pst::Constructor, false> badConstructor2{ "name.(x: i32, y: i32) -> i32 = {}",
-		                                                       "name" };
+	ClassStmtExample<pst::Constructor, false> bad_constructor2{ "name.(x: i32, y: i32) -> i32 = {}",
+		                                                        "name" };
 
-	ClassStmtExample<pst::Destructor, true>  simpleDestructor{ "name.destroy() = {}", "name" };
-	ClassStmtExample<pst::Destructor, false> nonEmptyDestructor{ "name.destroy(x: i32) = {}",
-		                                                         "name" };
+	ClassStmtExample<pst::Destructor, true>  simple_destructor{ "name.destroy() = {}", "name" };
+	ClassStmtExample<pst::Destructor, false> non_empty_destructor{ "name.destroy(x: i32) = {}",
+		                                                           "name" };
 
 	// @todo Some weird position bug for later
 	// Example<pst::Variable, true> simpleVariable{"var x: i32 = 5"};
 	// Example<pst::Variable, true> simpleLetVariable{"let x: i32 = 5"};
 
-	Example<pst::While, true> simpleWhile{ "while (x < 5) {}" };
+	Example<pst::While, true> simple_while{ "while (x < 5) {}" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleTernary{ "if 5 then x else y" };
-	Example<pst::ExprElement, false, pst::UniversalExpr> bad1Ternary{ "if if 5 then x else y" };
-	Example<pst::ExprElement, false, pst::UniversalExpr> bad2Ternary{ "+ if 5 then x else y" };
-	Example<pst::ExprElement, false, pst::UniversalExpr> bad3Ternary{ "if 5 else y" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_ternary{ "if 5 then x else y" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad1_ternary{
+		"if if 5 then x else y"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad2_ternary{
+		"+ if 5 then x else y"
+	};
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad3_ternary{ "if 5 else y" };
 
-	Example<pst::ExprStmt, true>  simpleAssign{ "x = y" };
-	Example<pst::ExprStmt, false> badAssign{ "x = y = z" };
+	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
+	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr>  simpleOperators{ "++ ++ 3 + 5 ++" };
-	Example<pst::ExprElement, false, pst::UniversalExpr> badOperators{ "++ ++ ++ ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr> simpleBlockExpr{ "x + {return 2;}" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x + {return 2;}" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr> simpleRoundExpr{ "x + (x, y)" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_round_expr{ "x + (x, y)" };
 
-	Example<pst::ExprElement, true, pst::UniversalExpr> simpleChainExpr{ "(x * t).y.z(4)[3]" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_chain_expr{
+		"(x * t).y.z(4)[3]"
+	};
 
-	Example<pst::ExprElement, true, pst::UniversalExpr> simpleTemplateExpr{
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_template_expr{
 		"(x * t).y:{x, y}.z:{}(4)[3]"
 	};
 
