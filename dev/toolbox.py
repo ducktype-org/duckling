@@ -37,12 +37,6 @@ BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
-        "scripts/downloads/clang-format",
-        "http://internal.ducktype.org/static/bin/clang-format",
-        auth=(DATA_USER, DATA_PASS),
-        after_download=[(callback_chmod, "clang-format", "u+x")],
-    ),
-    InternetFile(
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
         after_download=[
@@ -405,8 +399,8 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
-    default="clang-tidy-17",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-18 or clang-tidy",
+    default="clang-tidy-18",
 )
 @click.option(
     "-f",
@@ -414,7 +408,7 @@ def download_llvm(*args, **kwargs):
     "clang_format_path",
     prompt="clang-format path",
     help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="scripts/downloads/clang-format",
+    default="clang-format-18",
 )
 @click.option(
     "-b",
