@@ -7,12 +7,12 @@
 using namespace hashing;
 
 struct X {
-	int   x;
-	int   y;
-	float z;
+	int   x{};
+	int   y{};
+	float z{};
 
 public:
-	friend constexpr auto hash_decompose(const X& q) noexcept { return std::tie(q.x, q.y, q.z); }
+	friend constexpr auto hashDecompose(const X& q) noexcept { return std::tie(q.x, q.y, q.z); }
 };
 
 struct Y {
@@ -20,26 +20,26 @@ struct Y {
 	std::string s{};
 
 public:
-	friend constexpr auto hash_decompose(const Y& q) noexcept { return std::tie(q.f, q.s); }
+	friend constexpr auto hashDecompose(const Y& q) noexcept { return std::tie(q.f, q.s); }
 };
 
 struct Z {
-	int   x;
-	float y;
-	Y     z;
+	int   x{};
+	float y{};
+	Y     z{};
 
 public:
-	friend constexpr auto hash_decompose(const Z& q) noexcept { return std::tie(q.x, q.y, q.z); }
+	friend constexpr auto hashDecompose(const Z& q) noexcept { return std::tie(q.x, q.y, q.z); }
 };
 
 struct S {
-	int   x    = 5;
-	int   y[2] = { 1, 2 };
-	bool  b{};
-	float z{ 7.0f };
-	X     m{ 1, 2, 3.0f };
-	Y     n{ 1.0f, "hello" };
-	Z     o{ 1, 2.0f, { 1.0f, "hello" } };
+	int                x = 5;
+	std::array<int, 2> y = { 1, 2 };
+	bool               b{};
+	float              z{ 7.0f };
+	X                  m{ 1, 2, 3.0f };
+	Y                  n{ 1.0f, "hello" };
+	Z                  o{ 1, 2.0f, { 1.0f, "hello" } };
 
 public:
 	friend constexpr void addToHash(hash_algorithm auto& h, const S& s) noexcept {
@@ -81,12 +81,12 @@ public:
 
 private:
 	void hashCodeTest() {
-		assertTrue(type_hash_code<int> != type_hash_code<float>, "hash-codes should differ");
-		assertTrue(type_hash_code<double> != type_hash_code<char>, "hash-codes should differ");
-		assertTrue(type_hash_code<std::string> != type_hash_code<S>, "hash-codes should differ");
-		assertTrue(type_hash_code<X> == type_hash_code<X>, "hash-code should be the same");
+		assertTrue(TYPE_HASH_CODE<int> != TYPE_HASH_CODE<float>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<double> != TYPE_HASH_CODE<char>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<std::string> != TYPE_HASH_CODE<S>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<X> == TYPE_HASH_CODE<X>, "hash-code should be the same");
 		assertTrue(
-			is_explicitly_convertible_to<decltype(type_hash_code<Y>), u32>,
+			is_explicitly_convertible_to<decltype(TYPE_HASH_CODE<Y>), u32>,
 			"hash-code should be convertible to u32"
 		);
 	}
@@ -96,9 +96,7 @@ private:
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		constexpr auto res1 = Fnv1a_32{}(4);
-		assertTrue(
-			has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)"
-		);
+		assertTrue(has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)");
 		constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
 		constexpr auto res3 = static_cast<std::string>(DebugHash{}("hello", 5)).size();
 		assertTrue(
@@ -127,7 +125,7 @@ private:
 	}
 
 	// void betterCoverage() {
-	
+
 	// }
 };
 

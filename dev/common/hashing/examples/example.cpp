@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include <utility>
 #include <tuple>
-#include <iostream>
 
 #include <base/ints.hpp>
 #include <hashing/hash.hpp>
@@ -27,7 +26,7 @@ struct type1 {
 	int         capacity{ 42 };
 	std::string s{ "hello" };
 
-	friend constexpr auto hash_decompose(const type1& t) noexcept { return std::tie(t.size, t.s); }
+	friend constexpr auto hashDecompose(const type1& t) noexcept { return std::tie(t.size, t.s); }
 };
 
 // or for more fine-grained control we can define under which conditions, which subobjects/bytes
@@ -96,6 +95,6 @@ int main() {
 
 	// module also provides unique ids for types in compile time
 	// note that those can change between compilations
-	std::cout << static_cast<u32>(hashing::type_hash_code<int>) << ' '
-			  << static_cast<u32>(hashing::type_hash_code<type1>) << '\n';
+	std::cout << static_cast<u32>(hashing::TYPE_HASH_CODE<int>) << ' '
+			  << static_cast<u32>(hashing::TYPE_HASH_CODE<type1>) << '\n';
 }

@@ -15,9 +15,9 @@ namespace hashing {
 	class Fnv1a_32: public CallOverloads {
 		friend CallOverloads;
 
-		static constexpr u32 offset_basis = 2'166'136'261u;
-		static constexpr u32 FNV_prime    = (1u << 24) + (1u << 8) + 0x93u;
-		u32                  state        = offset_basis;
+		static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
+		static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
+		u32                  state        = OFFSET_BASIS;
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
@@ -27,7 +27,7 @@ namespace hashing {
 		constexpr void updateHash(const char* data, usize len) noexcept {
 			for (usize i = 0; i < len; ++i) {
 				state ^= data[i];
-				state *= FNV_prime;
+				state *= FNV_PRIME;
 			}
 		}
 
@@ -46,9 +46,9 @@ namespace hashing {
 	class Fnv1a_64: public CallOverloads {
 		friend CallOverloads;
 
-		static constexpr u64 offset_basis = 14'695'981'039'346'656'037ull;
-		static constexpr u64 FNV_prime    = (1ull << 40) + (1ull << 8) + 0xb3ull;
-		u64                  state        = offset_basis;
+		static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
+		static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
+		u64                  state        = OFFSET_BASIS;
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
@@ -58,7 +58,7 @@ namespace hashing {
 		constexpr void updateHash(const char* data, usize len) noexcept {
 			for (usize i = 0; i < len; ++i) {
 				state ^= data[i];
-				state *= FNV_prime;
+				state *= FNV_PRIME;
 			}
 		}
 
@@ -77,21 +77,21 @@ namespace hashing {
 	class DebugHash: public CallOverloads {
 		friend CallOverloads;
 
-		enum class type { hash_code, other };
-		std::vector<std::tuple<std::vector<char>, usize, type>> bytes;
+		enum class Type : std::uint8_t { HashCode, Other };
+		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
 			updateHash(static_cast<const char*>(data), len);
 		}
 
-		constexpr void updateHash(const char* data, usize len, type type = type::other) noexcept {
+		constexpr void updateHash(const char* data, usize len, Type type = Type::Other) noexcept {
 			bytes.emplace_back(std::vector<char>(data, data + len), len, type);
 		}
 
-		constexpr void add_hash_code(TypeHashCode hash) noexcept {
-			std::array arr = std::bit_cast<std::array<char, sizeof(hash)>, TypeHashCode>(hash);
-			updateHash(arr.data(), arr.size(), type::hash_code);
+		constexpr void addHashCode(TypeHashCode hash) noexcept {
+			auto arr = std::bit_cast<std::array<char, sizeof(hash)>, TypeHashCode>(hash);
+			updateHash(arr.data(), arr.size(), Type::HashCode);
 		}
 
 	public:
@@ -111,7 +111,7 @@ namespace hashing {
 				str += "line ";
 				std::string num_str;
 				do {
-					num_str += '0' + num % 10;
+					num_str += static_cast<char>(static_cast<usize>('0') + num % 10);
 					num /= 10;
 				} while (num != 0);
 				str += std::string(4 - num_str.size(), ' ');
@@ -130,7 +130,7 @@ namespace hashing {
 						if (line != 0) ret += '\n';
 						append_line_number(ret, line++);
 					}
-					if (i == pos) ret += (type == type::hash_code ? yellow : red);
+					if (i == pos) ret += (type == Type::HashCode ? yellow : red);
 					append_hex(ret, static_cast<std::byte>(b[j]));
 					ret += ' ';
 					if (i == pos) ret += reset;

@@ -44,7 +44,7 @@ namespace hashing {
 	concept has_updateHash = has_updateHash_void<T> || has_updateHash_char<T>;
 
 	template<typename Self, typename T>
-	constexpr bool is_hash_code_aware
+	constexpr bool IS_HASH_CODE_AWARE
 		= std::is_same_v<std::remove_cvref_t<T>, TypeHashCode>
 	   && requires(const TypeHashCode& hash) { detail::Hc_acc<Self>{}.check(hash); };
 
@@ -65,7 +65,7 @@ namespace hashing {
 		template<has_updateHash Self, typename T>
 		requires(std::has_unique_object_representations_v<T>)
 		constexpr auto&& operator()(this Self&& self, const T& t) noexcept {
-			if constexpr (is_hash_code_aware<Self, T>) {
+			if constexpr (IS_HASH_CODE_AWARE<Self, T>) {
 				std::forward<Self>(self).add_hash_code(t);
 			} else if constexpr (has_updateHash_char<Self>) {
 				std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
@@ -91,7 +91,7 @@ namespace hashing {
 		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
 
 		template<typename T>
-		concept can_hash_decompose = requires(const T& t) { hash_decompose(t); };
+		concept can_hashDecompose = requires(const T& t) { hashDecompose(t); };
 
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm& h, const T& t) {
@@ -102,9 +102,9 @@ namespace hashing {
 		template<typename HashAlgorithm, typename R>
 		concept is_range_with_hashable_elements
 			= hash_algorithm<HashAlgorithm> && std::ranges::input_range<R>
-			&& requires(HashAlgorithm& h, const R& t) {
-				addToHash(h, std::declval<std::ranges::range_value_t<R>>());
-		};
+		   && requires(HashAlgorithm& h, const R& t) {
+				  addToHash(h, std::declval<std::ranges::range_value_t<R>>());
+			  };
 
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_chars
