@@ -58,7 +58,7 @@ jobs:
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
-          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }}
+          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
       
       - name: Check installations
         run: |
@@ -119,6 +119,7 @@ jobs:
           cmake \
               -B ${{ env.BUILD_DIR }} \
               -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
+              -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \

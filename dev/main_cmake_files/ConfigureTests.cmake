@@ -42,6 +42,7 @@ if(ENABLE_COVERAGE)
 		COMMAND ${LCOV} --add-tracefile coverage_base.info 
 						--add-tracefile coverage_test.info 
 						--output-file coverage_unfiltered.info
+						--gcov-tool "${GCOV_PATH}"
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
 						--remove coverage_unfiltered.info 
@@ -49,6 +50,7 @@ if(ENABLE_COVERAGE)
 						"**/playground/**"
 						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
 						--output-file coverage.info
+						--gcov-tool "${GCOV_PATH}"
 		
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
