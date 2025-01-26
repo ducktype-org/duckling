@@ -134,4 +134,16 @@ namespace dia {
 		printer::StreamPrinter::printNL(content, res);
 		return res.str();
 	}
+
+	bool SourcePosition::isFileEnd() const {
+		// EOF is always (last_char, last_char)
+		return source_end == source_file->getChars().size() - 1;
+	}
+
+	void SourcePosition::printToJson(std::ostream& out) const {
+		out << "{";
+		out << R"("sourceStart": )" << getStart() << ", ";
+		out << R"("sourceEnd": )" << getEnd();
+		out << "}";
+	}
 }

@@ -60,7 +60,8 @@ namespace pst {
 	/**
 	 * @brief Class implements list.
 	 */
-	class ImplementsList final: public List<ExprElement, detail::NameGetters::inheritanceList> {
+	class ImplementsList final:
+		  public List<UniversalExprHolder, detail::NameGetters::inheritanceList> {
 	public:
 		explicit ImplementsList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -72,7 +73,8 @@ namespace pst {
 	/**
 	 * @brief Attribute argument list.
 	 */
-	class AtrArgList final: public List<ExprElement, detail::NameGetters::attributeArgList> {
+	class AtrArgList final:
+		  public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -86,7 +88,7 @@ namespace pst {
 	 *
 	 * @note It's probably going to be deprecated
 	 */
-	class InitList final: public List<ExprElement, detail::NameGetters::classInitList> {
+	class InitList final: public List<UniversalExprHolder, detail::NameGetters::classInitList> {
 	public:
 		explicit InitList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -98,7 +100,8 @@ namespace pst {
 	/**
 	 * @brief Call argument list.
 	 */
-	class CallList final: public List<ExprElement, detail::NameGetters::callList> {
+	class CallList final:
+		  public List<UniversalExprHolderLowerLevel, detail::NameGetters::callList> {
 	public:
 		explicit CallList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -110,7 +113,8 @@ namespace pst {
 	/**
 	 * @brief Template initialization list.
 	 */
-	class TemplateList final: public List<ExprElement, detail::NameGetters::templateList> {
+	class TemplateList final:
+		  public List<UniversalExprHolderLowerLevel, detail::NameGetters::templateList> {
 	public:
 		explicit TemplateList(const dia::SourcePosition& pos): List(pos) {}
 

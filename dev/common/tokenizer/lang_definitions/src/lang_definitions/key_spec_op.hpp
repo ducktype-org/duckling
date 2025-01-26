@@ -195,6 +195,8 @@ namespace lang_def {
 		DoubleMinus,
 		Multiply,
 		Divide,
+		Remainder,
+		Exponentiate,
 	};
 }
 

@@ -541,19 +541,26 @@ namespace compiler::helios {
 					return;
 				}
 				i64 lhs_value = lhs_result.value(), rhs_value = rhs_result.value();
-				if (expr.op.value == "+")
+				switch (expr.operation) {
+				case code::BuiltinBinary::IntegerAdd:
 					result = lhs_value + rhs_value;
-				else if (expr.op.value == "-")
+					break;
+				case code::BuiltinBinary::IntegerSub:
 					result = lhs_value - rhs_value;
-				else if (expr.op.value == "*")
+					break;
+				case code::BuiltinBinary::IntegerMul:
 					result = lhs_value * rhs_value;
-				else if (expr.op.value == "/")
+					break;
+				case code::BuiltinBinary::IntegerDiv:
 					result = lhs_value / rhs_value;
-				else if (expr.op.value == "%")
+					break;
+				case code::BuiltinBinary::IntegerMod:
 					result = lhs_value % rhs_value;
-				else if (expr.op.value == "**")
+					break;
+				case code::BuiltinBinary::IntegerPow:
 					result = std::pow(lhs_value, rhs_value);
-				else {
+					break;
+				default:
 					result = errors::HError(errors::Failed());
 					throw base::NotYetImplemented(
 						"Evaluation of different than '+-*/%**' binary operators is not "
@@ -566,11 +573,14 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.expr);
 				if (result.hasError()) return;
 				i64 result_value = result.value();
-				if (expr.op.value == "-" && expr.prefix)
+
+				switch (expr.operation) {
+				case code::BuiltinUnary::IntegerNegation:
 					result = -result_value;
-				else {
-					// Not implemented yet
+					break;
+				default:
 					result = errors::HError(errors::Failed());
+					break;
 				}
 			}
 
@@ -602,7 +612,7 @@ namespace compiler::helios {
 			const auto const_symbol
 				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
 
-			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue() });
+			auto eval = ctx.query<QueryHoutOfExpr>({ const_symbol->getValue()->getExpr() });
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
@@ -634,11 +644,17 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) final { setTypeOfSymbol(stmt.getType()); }
+			void visitConst(const pst::Const& stmt) final {
+				setTypeOfSymbol(stmt.getType()->getExpr());
+			}
 
-			void visitVariable(const pst::Variable& stmt) final { setTypeOfSymbol(stmt.getType()); }
+			void visitVariable(const pst::Variable& stmt) final {
+				setTypeOfSymbol(stmt.getType()->getExpr());
+			}
 
-			void visitField(const pst::Field& field) final { setTypeOfSymbol(field.getType()); }
+			void visitField(const pst::Field& field) final {
+				setTypeOfSymbol(field.getType()->getExpr());
+			}
 
 			void visitFun(const pst::Fun& fun) final {
 				auto params = fun.getParams();
@@ -660,7 +676,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>({ ret.value() });
+					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -684,7 +700,7 @@ namespace compiler::helios {
 			}
 
 			void visitFunParam(const pst::FunParam& param) final {
-				setTypeOfSymbol(param.getType());
+				setTypeOfSymbol(param.getType()->getExpr());
 			}
 		};
 
@@ -799,7 +815,7 @@ namespace compiler::helios {
 
 			if_opt_some(class_data_parser.implements, implements) {
 				for (auto&& interface: *implements) {
-					auto tp = ctx.query<EvalExprToType>({ interface });
+					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {

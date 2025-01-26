@@ -86,6 +86,14 @@ namespace dia {
 		[[nodiscard]]
 		tokenizer::BorrowFile getSource() const;
 
+		/**
+		 * @brief This checks exactly for position being EOF
+		 */
+		[[nodiscard]]
+		bool isFileEnd() const;
+
+		void printToJson(std::ostream&) const;
+
 	private:
 		usize                 source_start;  ///< Start of the range of characters in the file.
 		usize                 source_end;    ///< End of the range of characters in the file.
