@@ -6,7 +6,7 @@
 #include <helios/queries.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
+#include <backends/wyvern/llvm_backend.hpp>
 
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -54,4 +54,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/backends/llvm/tests/")
+TESTER_COMMON_MAIN("/compiler/backends/wyvern/tests/")

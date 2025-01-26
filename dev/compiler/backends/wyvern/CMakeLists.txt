@@ -1,6 +1,6 @@
 add_library(LLVMBackend
-        src/backends/llvm/detail/llvm_lowering.cpp
-        src/backends/llvm/detail/module_impl.cpp
+        src/backends/wyvern/detail/llvm_lowering.cpp
+        src/backends/wyvern/detail/module_impl.cpp
 )
 
 llvm_map_components_to_libnames(llvm_libs
@@ -16,5 +16,5 @@ target_link_libraries(LLVMBackend ${llvm_libs})
 
 make_module(LLVMBackend USES Base QueryFramework LIR llvm_helpers)
 
-duck_add_test(compiler llvm_test tests/llvm_test.cpp
+duck_add_test(compiler wyvern_test tests/wyvern_test.cpp
 	USES Base Tester LLVMBackend)
