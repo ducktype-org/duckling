@@ -6,6 +6,7 @@ on:
 
 env:
   CXX_COMPILER: g++-14
+  CC_COMPILER: gcc-14
   TIDY_VERSION: 18
 
 jobs:
@@ -25,7 +26,7 @@ jobs:
       - name: Create compile_commands
         run: |
          cd dev
-         cmake -DCMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+         cmake -DCMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} -DCMAKE_C_COMPILER=${{ env.CC_COMPILER }} -D BUILD_DOCS=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
          cd ..
         shell: bash
 
