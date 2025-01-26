@@ -58,7 +58,7 @@ jobs:
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
-          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} ${{ env.GCOV_PATH }}
+          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
       
       - name: Check installations
         run: |
