@@ -15,10 +15,10 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
 
 	void basicTest() {
-		if constexpr (IS_COMPLETE_V<IncompleteType>) fail("IncompleteType should be incomplete");
-		if constexpr (IS_COMPLETE_V<struct InlineIncompleteType>)
-			fail("InlineIncompleteType should be incomplete");
-		if constexpr (!IS_COMPLETE_V<CompleteType>) fail("CompleteType should be complete");
+		static_assert (IS_COMPLETE_V<IncompleteType>, "IncompleteType should be incomplete");
+		static_assert (IS_COMPLETE_V<struct InlineIncompleteType>,
+			"InlineIncompleteType should be incomplete");
+		static_assert (!IS_COMPLETE_V<CompleteType>, "CompleteType should be complete");
 	}
 };
 
