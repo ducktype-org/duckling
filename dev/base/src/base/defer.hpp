@@ -42,13 +42,10 @@ namespace detail {
  *
  * See tests/test.cpp for examples.
  */
-#define defer(code)                                                         \
-	_Pragma("GCC diagnostic push")                            				\
-    _Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"")  				\
-    ::detail::DeferHelper _{                                  				\
-        [&]() noexcept -> void { code; }                     			    \
-    };                                                        				\
-    _Pragma("GCC diagnostic pop")
-#if __cplusplus >= 202600L
-    #warning "Remove the pragmas above when upgrading to C++26"
+#define defer(code)                                                                        \
+	_Pragma("GCC diagnostic push") _Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"" \
+	)::detail::DeferHelper _{ [&]() noexcept -> void { code; } };                          \
+	_Pragma("GCC diagnostic pop")
+#if __cplusplus >= 202'600L
+	#warning "Remove the pragmas above when upgrading to C++26"
 #endif
