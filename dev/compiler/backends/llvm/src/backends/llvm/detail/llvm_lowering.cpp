@@ -192,8 +192,8 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations
-		) -> std::vector<llvm::Value*> {
+		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations)
+			-> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)

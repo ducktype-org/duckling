@@ -58,48 +58,47 @@ namespace pst {
 	public:
 		~PstExprVisitorEmpty() override = default;
 
-		void visitPrefixOperator([[maybe_unused]] const expr::PrefixOperator& stmt) override {};
+		void visitPrefixOperator([[maybe_unused]] const expr::PrefixOperator& stmt) override{};
 
-		void visitSuffixOperator([[maybe_unused]] const expr::SuffixOperator& stmt) override {};
+		void visitSuffixOperator([[maybe_unused]] const expr::SuffixOperator& stmt) override{};
 
-		void visitBinaryOperator([[maybe_unused]] const expr::BinaryOperator& stmt) override {};
+		void visitBinaryOperator([[maybe_unused]] const expr::BinaryOperator& stmt) override{};
 
-		void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) override {};
+		void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) override{};
 
-		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt) override {
-		};
+		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt
+		) override{};
 
-		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) override {
-		};
+		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt
+		) override{};
 
-		void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt) override {};
+		void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt) override{};
 
-		void visitAccess([[maybe_unused]] const expr::Access& stmt) override {};
+		void visitAccess([[maybe_unused]] const expr::Access& stmt) override{};
 
-		void visitCall([[maybe_unused]] const expr::Call& stmt) override {};
+		void visitCall([[maybe_unused]] const expr::Call& stmt) override{};
 
-		void visitChainExpr([[maybe_unused]] const expr::ChainExpr& stmt) override {};
+		void visitChainExpr([[maybe_unused]] const expr::ChainExpr& stmt) override{};
 
-		void visitRoundExpr([[maybe_unused]] const expr::RoundExpr& stmt) override {};
+		void visitRoundExpr([[maybe_unused]] const expr::RoundExpr& stmt) override{};
 
-		void visitBlockExpr([[maybe_unused]] const expr::BlockExpr& stmt) override {};
+		void visitBlockExpr([[maybe_unused]] const expr::BlockExpr& stmt) override{};
 
-		void visitComparisonChain([[maybe_unused]] const expr::ComparisonChain& stmt) override {};
+		void visitComparisonChain([[maybe_unused]] const expr::ComparisonChain& stmt) override{};
 
-		void visitTernary([[maybe_unused]] const expr::Ternary& stmt) override {};
+		void visitTernary([[maybe_unused]] const expr::Ternary& stmt) override{};
 
-		void visitComma([[maybe_unused]] const expr::Comma& stmt) override {};
+		void visitComma([[maybe_unused]] const expr::Comma& stmt) override{};
 
-		void visitAssignment([[maybe_unused]] const expr::Assignment& stmt) override {};
+		void visitAssignment([[maybe_unused]] const expr::Assignment& stmt) override{};
 	};
 
 /**
  * @brief Macro used to define PstExprVisitor methods
  */
-#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)               \
-	void visit##type([[maybe_unused]]                       \
-	                 const expr::type& stmt) override {     \
-		CORE_PANIC("PstExprVisitorPanicky visited " #type); \
+#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)                            \
+	void visit##type([[maybe_unused]] const expr::type& stmt) override { \
+		CORE_PANIC("PstExprVisitorPanicky visited " #type);              \
 	}
 
 	/**

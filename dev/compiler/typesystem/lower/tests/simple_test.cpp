@@ -48,7 +48,8 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(unit_layout()) {
-				variant_case(EmptyTypeLayout, l) { /* good */ }
+				variant_case(EmptyTypeLayout, l) { /* good */
+				}
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
 			test_printing(unit_layout, ctx);
@@ -69,7 +70,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(byte_sized_layout()) {
-					variant_case(IntegralTypeLayout, l) { /* good */ }
+					variant_case(IntegralTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
 				test_printing(byte_sized_layout, ctx);
@@ -88,7 +90,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(int_layout()) {
-					variant_case(IntegralTypeLayout, l) { /* good */ }
+					variant_case(IntegralTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
 				test_printing(int_layout, ctx);
@@ -107,7 +110,8 @@ private:
 					"Layout should have source type as constructed."
 				);
 				variant_match(float_layout()) {
-					variant_case(FloatTypeLayout, l) { /* good */ }
+					variant_case(FloatTypeLayout, l) { /* good */
+					}
 					variant_default { fail("Layout of float type should be float."); }
 				}
 				test_printing(float_layout, ctx);
@@ -124,7 +128,8 @@ private:
 				"Layout should have source type as constructed."
 			);
 			variant_match(functional_layout()) {
-				variant_case(FunctionalTypeLayout, l) { /* good */ }
+				variant_case(FunctionalTypeLayout, l) { /* good */
+				}
 				variant_default { fail("Layout of function type should be functional."); }
 			}
 			test_printing(functional_layout, ctx);

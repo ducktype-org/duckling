@@ -61,8 +61,7 @@ private:
 
 		auto inc = operatorAssociativity(NamedOperator::DoublePlus, OperatorType::UnaryRight);
 
-		[[maybe_unused]]
-		auto neg
+		[[maybe_unused]] auto neg
 			= operatorAssociativity(NamedOperator::Minus, OperatorType::UnaryRight);
 
 		auto exponentiate
@@ -70,22 +69,18 @@ private:
 
 		auto multiply = operatorAssociativity(NamedOperator::Multiply, OperatorType::Binary);
 
-		[[maybe_unused]]
-		auto divide
+		[[maybe_unused]] auto divide
 			= operatorAssociativity(NamedOperator::Divide, OperatorType::Binary);
 
-		[[maybe_unused]]
-		auto remainder
+		[[maybe_unused]] auto remainder
 			= operatorAssociativity(NamedOperator::Remainder, OperatorType::Binary);
 
 		auto add = operatorAssociativity(NamedOperator::Plus, OperatorType::Binary);
 
-		[[maybe_unused]]
-		auto subtract
+		[[maybe_unused]] auto subtract
 			= operatorAssociativity(NamedOperator::Minus, OperatorType::Binary);
 
-		[[maybe_unused]]
-		auto assign
+		[[maybe_unused]] auto assign
 			= operatorAssociativity(NamedOperator::Assign, OperatorType::Binary);
 
 		assertTrue(period == period_2, "Same operators have different associativity");

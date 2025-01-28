@@ -21,15 +21,24 @@ private:
 			ASSERT_EQUAL(opts.getArgs(), "");
 
 			assertThrows<clap::exceptions::HelpException>(
-				[&]() { parseOpts({ "./prog", "--help" }); }, "No help thrown"
+				[&]() {
+					parseOpts({ "./prog", "--help" });
+				},
+				"No help thrown"
 			);
 
 			assertThrows<clap::exceptions::HelpException>(
-				[&]() { parseOpts({ "./prog", "lex", "--help" }); }, "No help thrown"
+				[&]() {
+					parseOpts({ "./prog", "lex", "--help" });
+				},
+				"No help thrown"
 			);
 
 			assertThrows<clap::exceptions::HelpException>(
-				[&]() { parseOpts({ "./prog", "-h" }); }, "No help thrown"
+				[&]() {
+					parseOpts({ "./prog", "-h" });
+				},
+				"No help thrown"
 			);
 		}
 
