@@ -5,6 +5,8 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp> // For logger only, @TODO relax it #404
+#include <base/defer.hpp>
 
 int main(int argc, const char* argv[]) {
 	// @TODO: add to helios init
@@ -38,6 +40,14 @@ int main(int argc, const char* argv[]) {
 
 	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
+	defer({
+		// defer, so it runs, even if QueryTopLevelEntities panics/throws
+		if (query::Context::logger.messageCount() > 0) {
+			std::cerr << "Compilation errors logged in context: \n";
+			query::Context::logger.dumpLog(true, std::cerr);
+		}
+	});
+	
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 	std::cerr << top_level.debugPrint();
