@@ -109,7 +109,7 @@ namespace compiler::helios::code {
 			base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Box<Expr> lhs, Box<Expr> rhs) {
 				// note: this is mock that works only for very simple int op int.
 				// @todo: make it smarter?
-				// @TODO: this hole section could be moved to a separate file
+				// @TODO: this whole section could be moved to a separate file
 				// // when refactoring it remember about unaryBuiltin
 
 				auto lhs_type = lhs->type_desc;
