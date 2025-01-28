@@ -215,7 +215,8 @@ namespace compiler::lir {
 				const mir::Instruction&                                mir_instruction
 			) {
 				for (const auto& flag: mir_instruction.flags) {
-					[[maybe_unused]]  //< temporary for linter
+					[[maybe_unused]]
+					//< temporary for linter
 					auto lir_local
 						= getLocal(flag.local);
 
@@ -267,8 +268,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping"
-							  << "\n";
+					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
 				default:
 					throw base::NotYetImplemented("instruction in LowerToLirFunction");

@@ -18,8 +18,9 @@ namespace lexer {
 		Char(UChar32, u8, usize);
 
 		[[nodiscard]]
-		bool               is(icu::UnicodeSet&) const;
-		[[nodiscard]] bool is(UChar32) const;
+		bool is(icu::UnicodeSet&) const;
+		[[nodiscard]]
+		bool is(UChar32) const;
 		[[nodiscard]]
 		bool isInRange(UChar32 begin, UChar32 end) const;
 

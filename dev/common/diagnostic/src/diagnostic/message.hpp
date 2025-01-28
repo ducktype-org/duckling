@@ -483,7 +483,8 @@ namespace dia {
 		[[deprecated(
 			"Placeholder message should not be instantiated. "
 			"Make your own, specialised message class."
-		)]] PlaceholderMessage(const SourcePosition& source_position, std::string message):
+		)]]
+		PlaceholderMessage(const SourcePosition& source_position, std::string message):
 			  BASE_MESSAGE_CLASS(source_position),
 			  message(std::move(message)) {}
 
