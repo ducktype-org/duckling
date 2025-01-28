@@ -113,10 +113,10 @@ namespace compiler::helios::code {
 				// // when refactoring it remember about unaryBuiltin
 
 				auto lhs_type = lhs->type_desc;
-				auto rhs_type = lhs->type_desc;
+				auto rhs_type = rhs->type_desc;
 
 				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
-				bool is_rhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
+				bool is_rhs_integer = rhs_type.getType().getKind() == tsh::Kind::Integral;
 
 				if (not is_lhs_integer or not is_rhs_integer) {
 					// @TODO: report an error?
