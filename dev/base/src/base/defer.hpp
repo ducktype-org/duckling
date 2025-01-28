@@ -46,6 +46,6 @@ namespace detail {
  * See tests/test.cpp for examples.
  */
 #define defer(code)                                                         \
-	::detail::DeferHelper CONCAT_2(defer_custom_name_rJd7liva5_, __LINE__)( \
+	::detail::DeferHelper CONCAT_2(defer_custom_name_rJd7liva5_, __LINE__){ \
 		[&]() noexcept -> void { code; }                                    \
-	);
+	};

@@ -2,5 +2,6 @@
 fun foo() = {
     var a: i32 = 0 ;
     var b: i64 = 0;
-    a + b;
+    var δ: i64 = 0;
+    a + (2+3) + δ;
 }

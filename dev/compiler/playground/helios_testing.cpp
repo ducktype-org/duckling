@@ -8,7 +8,15 @@
 #include <query_framework/query_impl.hpp> // For logger only, @TODO relax it #404
 #include <base/defer.hpp>
 
-int main(int argc, const char* argv[]) {
+void printContextErrors() {
+	if (query::Context::logger.messageCount() > 0) {
+		std::cerr << "Compilation errors logged in context: \n";
+		query::Context::logger.dumpLog(true, std::cerr);
+	}
+	std::cerr.flush();
+}
+
+int notMain(int argc, const char* const* argv) {
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();
@@ -40,15 +48,22 @@ int main(int argc, const char* argv[]) {
 
 	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-	defer({
-		// defer, so it runs, even if QueryTopLevelEntities panics/throws
-		if (query::Context::logger.messageCount() > 0) {
-			std::cerr << "Compilation errors logged in context: \n";
-			query::Context::logger.dumpLog(true, std::cerr);
-		}
-	});
-	
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+	defer(printContextErrors());
 
+	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 	std::cerr << top_level.debugPrint();
+
+	return 0;
+}
+
+int main(int argc, const char* argv[]) {
+	// note: we need to catch exception here, 
+	// because otherwise stack unwinding might not happen,
+	// and defers might not be called.
+	try {
+		return notMain(argc, argv);
+	}
+	catch (std::exception& e) {
+		std::cerr << "exception was thrown: " << e.what() << '\n';
+	}
 }
