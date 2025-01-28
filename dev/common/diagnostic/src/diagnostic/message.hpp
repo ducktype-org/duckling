@@ -102,6 +102,9 @@ namespace dia {
 	 */
 	class Message {
 		SourcePosition                      source_position;
+		// @FIXME: note here is not defined:
+		// we can change it to box, and then add deleter specialization
+		// so it doesn't have to be.
 		std::vector<base::unique_ptr<Note>> notes{};
 		// @FIXME: should we include a `cause` field here?
 		// Do we expect to detect when an error is caused by another error?

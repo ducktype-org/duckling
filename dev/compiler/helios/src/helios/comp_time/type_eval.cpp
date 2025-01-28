@@ -1,10 +1,10 @@
-#include "comp_time.hpp"
-#include "elements/expr.hpp"
+#include "type_eval.hpp"
+#include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_impl.hpp>
 
-#include "elements/query_hout_of_expr.hpp"
-#include "visitors.hpp"
+#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <helios/hout/visitors.hpp>
 
 namespace compiler::helios {
 
