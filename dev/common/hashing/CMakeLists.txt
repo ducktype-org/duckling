@@ -1,6 +1,6 @@
 add_library(Hashing
     src/hashing/hash.hpp
-    src/hashing/unique_id.hpp
+    src/hashing/type_hash_code.hpp
 )
 
 make_module(Hashing USES Base Tester)

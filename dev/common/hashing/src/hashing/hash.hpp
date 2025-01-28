@@ -1,8 +1,8 @@
 #pragma once
 
-#include "unique_id.hpp"
-#include "hash_utils.hpp"
 #include "hashing_algorithms.hpp"
+#include "type_hash_code.hpp"
+
 
 namespace hashing {
 
@@ -50,7 +50,7 @@ namespace hashing {
 		}
 		// overload if range is contiguous and we can add its elements to the hash
 		else if constexpr (std::ranges::contiguous_range<T>
-		                   && requires(std::ranges::range_value_t<T> elem) {
+		                   && requires(std::ranges::range_value_t<T> elem) {					// @Taw3e8 @todo: replace with concept (can_add_to_hash)? (and other if constexprs here?)
 								  addToHash(h, elem);
 							  }) {
 			for (auto&& elem: t) addToHash(h, elem);
@@ -58,7 +58,7 @@ namespace hashing {
 		// some ranges will compare equal but keep their elements in unspecified order
 		else if constexpr (std::ranges::input_range<T>
 		                   && requires(
-							   std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res
+							   std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res		// @Taw3e8 @todo: ditto; and copyable hashAlgorithm?
 						   ) {
 								  addToHash(h, elem);
 								  {
@@ -66,9 +66,10 @@ namespace hashing {
 								  } -> std::same_as<typename HashAlgorithm::result_type>;
 								  addToHash(h, res);
 							  }) {
-			auto                                hash_copy = h;
+			// auto                                hash_copy = h;							// @Taw3e8 @todo: v chack this
 			typename HashAlgorithm::result_type result{};
 			for (auto&& elem: t) {
+				auto                                hash_copy = h;							// @Taw3e8 @todo: ^ this probably should be here?
 				addToHash(hash_copy, elem);
 				result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
 			}
@@ -92,7 +93,7 @@ namespace hashing {
 		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
-		constexpr result_type operator()(const T& t) const noexcept {
+		constexpr result_type operator()(const T& t) const noexcept {			// @Taw3e8 @todo: const detail::can_add_to_hash<HashAlgorithm> auto T& ? (and below)
 			HashAlgorithm h;
 			addToHash(h, t);
 

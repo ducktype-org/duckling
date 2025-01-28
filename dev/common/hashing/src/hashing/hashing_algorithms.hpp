@@ -6,8 +6,10 @@
 
 #include <base/ints.hpp>
 
-#include "unique_id.hpp"
-#include "hash_utils.hpp"
+#include "type_hash_code_def.hpp"
+#include "hash_algorithm_utils.hpp"
+#include "CallOverloads_utils.hpp"
+
 
 namespace hashing {
 
