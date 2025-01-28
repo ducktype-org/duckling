@@ -13,7 +13,6 @@ void printContextErrors() {
 		std::cerr << "Compilation errors logged in context: \n";
 		query::Context::logger.dumpLog(true, std::cerr);
 	}
-	std::cerr.flush();
 }
 
 int notMain(int argc, const char* const* argv) {
