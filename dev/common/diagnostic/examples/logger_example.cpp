@@ -1,14 +1,20 @@
 #include <diagnostic/logger.hpp>
 
 // Extend Error, Warning, or Info.
-class MessageRelevantToThisSituation: public Error {
+class MessageRelevantToThisSituation: public dia::Error {
 	// ...
 
 protected:
-	dia::Message::Domain getDomain() const override { /* ... */ }
+	[[nodiscard]]
+	dia::Message::Domain getDomain() const override {
+		// choose relevant domain:
+		return dia::Message::Domain::Misc;
+	}
 
+	[[nodiscard]]
 	std::string toStringBrief() const override {
-		// ...
+		// provide brief description of the error:
+		return "some example message";
 	}
 };
 
@@ -18,9 +24,12 @@ int main() {
 
 	// ...
 
-	dia::SourcePosition currentPosition = {... };
-	if (<check - if - error - in - current - position>)
-		logger.log(base::make_unique<MessageRelevantToThisSituation>(/* ... */));
+	// choose correct position:
+	dia::SourcePosition current_position = dia::SourcePosition::fakePosition();
+
+	// log message:
+	// some more info will often be passed to the constructor here.
+	logger.log(base::make_unique<MessageRelevantToThisSituation>(current_position));
 
 	// ...
 
