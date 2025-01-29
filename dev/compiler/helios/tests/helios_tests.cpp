@@ -65,8 +65,7 @@ private:
 		ASSERT_EQUAL(-3, getValue("B", root_scope));
 		ASSERT_EQUAL(-1, getValue("D", root_scope));
 		ASSERT_EQUAL(6, getValue("E", root_scope));
-		// @TODO: Test below disabled - parser currently does not support power operator.
-		// ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getValue("H2", root_scope));
 		ASSERT_EQUAL(1, getValue("T0", root_scope));
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
