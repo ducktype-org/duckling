@@ -5,7 +5,7 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp> // For logger only, @TODO relax it #404
+#include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
 #include <base/defer.hpp>
 
 void printContextErrors() {
@@ -56,13 +56,10 @@ int notMain(int argc, const char* const* argv) {
 }
 
 int main(int argc, const char* argv[]) {
-	// note: we need to catch exception here, 
+	// note: we need to catch exception here,
 	// because otherwise stack unwinding might not happen,
 	// and defers might not be called.
 	try {
 		return notMain(argc, argv);
-	}
-	catch (std::exception& e) {
-		std::cerr << "exception was thrown: " << e.what() << '\n';
-	}
+	} catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
 }
