@@ -31,7 +31,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.
 	 */
-	int getValue(const std::string_view chain, ScopeID scope);
+	i64 getValue(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
