@@ -124,6 +124,7 @@ namespace compiler::helios {
 		}
 
         QUERY_AUTO_CACHE_COPY
-
     };
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToInt);
 };

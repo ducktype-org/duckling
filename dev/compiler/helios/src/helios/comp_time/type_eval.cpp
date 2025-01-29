@@ -114,7 +114,8 @@ namespace compiler::helios {
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
-			// @TODO hout 2.0 (once it works) assert here that type of parsed expr is meta
+			// note: this assert might be changed to a compiler error in the future:
+			CORE_ASSERT(parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta, "Expression provided to EvalExprToType has non-meta type.");
 
 			return evalHoutExprToType(ctx, parsed.value().ref());
 		}
