@@ -19,11 +19,6 @@ namespace vm::api {
 
 	struct Running {};
 
-	struct PausedOnError {
-		std::string reason;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PausedOnError, reason);
-	};
-
 	struct WaitingForInput {};
 
 	struct NotStarted {};
@@ -35,12 +30,17 @@ namespace vm::api {
 	using ExecStatus = std::variant<
 		Running,
 		Paused,
-		PausedOnError,
 		WaitingForInput,
 		NotStarted,
 		ExecutionCompleted,
 		ExecutionStopped,
 		ExecutionPanicked>;
+
+	constexpr bool isStatusTerminal(const ExecStatus& status) {
+    return std::holds_alternative<ExecutionCompleted>(status) ||
+           std::holds_alternative<ExecutionStopped>(status) ||
+           std::holds_alternative<ExecutionPanicked>(status);
+	}
 
 	struct Executing {
 		ExecStatus exec_status;
@@ -61,6 +61,5 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

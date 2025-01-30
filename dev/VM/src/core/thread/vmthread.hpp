@@ -123,6 +123,10 @@ namespace vm {
 		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
 		std::atomic<bool> execution_request_break = false;
 
+		/**
+		 * @brief Message queue to send responses to the VMProcess.
+		 * @todo rewrite this to C++ futures
+		 */
 		BlockingQueue<ExecutionResponse> execution_response_queue;
 
 		bool waitForBrakepointResponse();

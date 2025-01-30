@@ -126,10 +126,7 @@ namespace vm {
 					if (!std::holds_alternative<api::Executing>(status)) return false;
 					auto exec_status = std::get<api::Executing>(status).exec_status;
 					return std::holds_alternative<api::Paused>(exec_status)
-					    || std::holds_alternative<api::PausedOnError>(exec_status)
-					    || std::holds_alternative<api::ExecutionStopped>(exec_status)
-					    || std::holds_alternative<api::ExecutionPanicked>(exec_status)
-					    || std::holds_alternative<api::ExecutionCompleted>(exec_status);
+					    || api::isStatusTerminal(exec_status);
 				});
 
 				if (!std::holds_alternative<api::Executing>(status))
