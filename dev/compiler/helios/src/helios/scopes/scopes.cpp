@@ -237,8 +237,8 @@ namespace compiler::helios {
 				= element.element->getParent().has_value()
 			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.element->getParent().value() })
 			        : ctx.query<QueryRootScopeOf>(
-						{ frontend::extendQueryModuleIDOfPST(ctx, element.element) }
-					);
+						  { frontend::extendQueryModuleIDOfPST(ctx, element.element) }
+					  );
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
@@ -506,8 +506,7 @@ namespace compiler::helios {
 					  << (iter_scope.ref->related_pst_element.has_value()
 			                  ? iter_scope.ref->related_pst_element.value()->elementType()
 			                  : "ROOT")
-					  << ")"
-					  << " -> ";
+					  << ")" << " -> ";
 
 			if (not parent(iter_scope).has_value()) break;
 			iter_scope = parent(iter_scope).value();
