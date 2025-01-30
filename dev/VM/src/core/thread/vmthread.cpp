@@ -146,7 +146,7 @@ namespace vm {
 
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
-#elif  USE_SWITCH_CASE
+#elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
 	#define DEF_OPCODE(opcode_name)                                     \

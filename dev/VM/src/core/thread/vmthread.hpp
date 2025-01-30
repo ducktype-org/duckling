@@ -6,6 +6,7 @@
 #include <api/data/response.hpp>
 #include <base/box.hpp>
 #include <base/optional.hpp>
+#include <base/ints.hpp>
 #include <condition_variable>
 #include <core/process/memory/memory.hpp>
 #include <core/process/memory/thread_stack.hpp>
@@ -24,8 +25,8 @@
  */
 
 namespace vm {
-	enum class ExecutionRequest { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
-	enum class ExecutionResponse {
+	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+	enum class ExecutionResponse : std::uint8_t {
 		Running,
 		Paused,
 		ExecutionStopped,

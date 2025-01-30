@@ -37,9 +37,9 @@ namespace vm::api {
 		ExecutionPanicked>;
 
 	constexpr bool isStatusTerminal(const ExecStatus& status) {
-    return std::holds_alternative<ExecutionCompleted>(status) ||
-           std::holds_alternative<ExecutionStopped>(status) ||
-           std::holds_alternative<ExecutionPanicked>(status);
+		return std::holds_alternative<ExecutionCompleted>(status)
+		    || std::holds_alternative<ExecutionStopped>(status)
+		    || std::holds_alternative<ExecutionPanicked>(status);
 	}
 
 	struct Executing {

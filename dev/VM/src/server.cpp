@@ -20,8 +20,8 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 
 template<class T, class E>
 crow::response toResponse(const cpp::result<T, E>& x) {
-	static auto convert
-		= []([[maybe_unused]] const auto& v) { return crow::response(200, nlohmann::json(v)); };
+	static auto convert = []([[maybe_unused]]
+	                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
 
 	if (x.has_value()) return convert(x.value());
 	return convertError(x.error());

@@ -19,7 +19,9 @@
 
 #define OPFUN_REF_ARGS                                                                        \
 	const Fix8Instruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
-		Frame *&frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
+		Frame *&frame [[maybe_unused]]                                                        \
+		,                                                                                     \
+		VMThread &thread [[maybe_unused]]
 
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 

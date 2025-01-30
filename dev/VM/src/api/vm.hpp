@@ -29,10 +29,10 @@ namespace vm::api {
 	 * When this function returns true, the program is running. If false, the state is undefined.
 	 * @return
 	 */
-	cpp::result<void, ApiError>                   resume(PID pid);
-	cpp::result<void, ApiError>                   step(PID pid);
+	cpp::result<void, ApiError> resume(PID pid);
+	cpp::result<void, ApiError> step(PID pid);
 	/**
-	 * @brief Wait for breakpoint hit. Used by tests. 
+	 * @brief Wait for breakpoint hit. Used by tests.
 	 */
 	cpp::result<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
@@ -47,7 +47,7 @@ namespace vm::api {
 
 	cpp::result<response::Output, ApiError> output(PID pid);
 
-	cpp::result<TypeCRef, ApiError>        getType(PID pid, const std::string& type_name);
-	cpp::result<response::Block, ApiError> getBlock(PID pid, u64 block_id);
+	cpp::result<TypeCRef, ApiError>               getType(PID pid, const std::string& type_name);
+	cpp::result<response::Block, ApiError>        getBlock(PID pid, u64 block_id);
 	cpp::result<response::CodePosition, ApiError> getCurrentPosition(PID pid);
 }
