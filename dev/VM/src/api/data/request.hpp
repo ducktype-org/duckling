@@ -31,7 +31,7 @@ namespace vm::api {
 
 		struct Step {};
 
-		struct WaitForPaused {};
+		struct WaitForBreakpoint {};
 
 		struct ExecutionPosition {};
 
@@ -66,7 +66,7 @@ namespace vm::api {
 		request::Run,
 		request::Join,
 		request::Step,
-		request::WaitForPaused,
+		request::WaitForBreakpoint,
 		request::ExecutionPosition>;
 
 	using IORequest

@@ -125,7 +125,7 @@ namespace vm {
 
 		BlockingQueue<ExecutionResponse> execution_response_queue;
 
-		bool waitForPausedResponse();
+		bool waitForBrakepointResponse();
 
 		bool waitForStoppedResponse();
 

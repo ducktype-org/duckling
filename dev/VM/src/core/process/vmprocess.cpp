@@ -120,7 +120,7 @@ namespace vm {
 			variant_case_novalue(api::request::ExecutionPosition) {
 				return getMainVMThread().getCurrentPosition();
 			}
-			variant_case_novalue(api::request::WaitForPaused) {
+			variant_case_novalue(api::request::WaitForBreakpoint) {
 				std::shared_lock lock(rw_status);
 				status_cv.wait(lock, [&] {
 					if (!std::holds_alternative<api::Executing>(status)) return false;

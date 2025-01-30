@@ -69,12 +69,12 @@ private:
 		auto pid = loadProgram("breakpoint.dbc");
 		vm::api::run(pid).expect("Run failed (1)");
 
-		auto execution_position = vm::api::waitForPaused(pid).expect("Wait for paused failed (1)");
+		auto execution_position = vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
 		assertEqual(3, execution_position.instr_number, "Line number is not correct");
 
 		vm::api::resume(pid).expect("Resume failed (1)");
 
-		execution_position = vm::api::waitForPaused(pid).expect("Wait for paused failed (1)");
+		execution_position = vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
 		assertEqual(7, execution_position.instr_number, "Line number is not correct");
 
 		vm::api::resume(pid).expect("Resume failed (2)");
@@ -90,7 +90,7 @@ private:
 
 		vm::api::run(pid).expect("Run failed (1)");
 
-		auto execution_position = vm::api::waitForPaused(pid).expect("Wait for paused failed (1)");
+		auto execution_position = vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
 		assertEqual(3, execution_position.instr_number, "Line number is not correct");
 
 		u64 line = stepAndGetLine(pid);
@@ -101,7 +101,7 @@ private:
 
 		vm::api::resume(pid).expect("Resume failed (1)");
 
-		execution_position = vm::api::waitForPaused(pid).expect("Wait for paused failed (2)");
+		execution_position = vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (2)");
 		assertEqual(7, execution_position.instr_number, "Line number is not correct (4)");
 
 		vm::api::resume(pid).expect("Resume failed (2)");

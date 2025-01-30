@@ -36,9 +36,9 @@ namespace vm::api {
 		    .map(ignoreResponse);
 	}
 
-	cpp::result<response::CodePosition, ApiError> waitForPaused(PID pid) {
+	cpp::result<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::WaitForPaused{}))
+		    .doRequest(api::makeExecutorRequest(pid, request::WaitForBreakpoint{}))
 		    .flat_map(mapOrWrongResponse<response::CodePosition>);
 	}
 

@@ -300,7 +300,7 @@ namespace vm {
 			execution_request_break = true;
 		}
 
-		return waitForPausedResponse();
+		return waitForBrakepointResponse();
 	}
 
 	bool VMThread::step() {
@@ -311,7 +311,7 @@ namespace vm {
 			pause_cv.notify_all();
 		}
 		if (waitForRunningResponse()) {
-			if (waitForPausedResponse()) return true;
+			if (waitForBrakepointResponse()) return true;
 		}
 		return false;
 	}
@@ -403,7 +403,7 @@ namespace vm {
 		    || ExecutionResponse::ExecutionPanicked == response;
 	}
 
-	bool VMThread::waitForPausedResponse() {
+	bool VMThread::waitForBrakepointResponse() {
 		return execution_response_queue.pop() == ExecutionResponse::Paused;
 	}
 

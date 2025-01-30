@@ -31,7 +31,7 @@ namespace vm::api {
 	 */
 	cpp::result<void, ApiError>                   resume(PID pid);
 	cpp::result<void, ApiError>                   step(PID pid);
-	cpp::result<response::CodePosition, ApiError> waitForPaused(PID pid);
+	cpp::result<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path);
 	cpp::result<void, ApiError> run(PID pid);
