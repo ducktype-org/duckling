@@ -139,12 +139,21 @@ namespace query::detail {
 			typename QueryImplType::PResult&& p_result =
 				QueryImplType::provide(context, key);
 			
-			typename QueryImplType::QResult&& q_result =
-				QueryImplType::store(key, std::move(p_result), acd);
+			// opcja 1:
+			// typename QueryImplType::QResult&& q_result =
+				// QueryImplType::store(key, std::move(p_result), acd);
+			// return typename QueryImplType::QResult(std::move(q_result));
 
 			// epilog:
-			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
+			// QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
 
+			// opcja 2: 
+			// return QueryImplType::store(key, std::move(p_result), acd);
+
+
+			// opcja 3:
+			typename QueryImplType::QResult q_result =
+				QueryImplType::store(key, std::move(p_result), acd);
 			return q_result;
 		}
 	}
