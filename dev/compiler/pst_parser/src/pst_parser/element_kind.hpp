@@ -42,6 +42,7 @@ namespace pst {
 
 		// Expressions:
 		ExprStmt,
+		RoundGroupExpr,
 
 		// for all expression elements:
 		ExprElement,

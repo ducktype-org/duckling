@@ -14,7 +14,7 @@
 #include <base/string_id.hpp>
 
 #include "meta.hpp"
-#include "lists.hpp"
+#include "lists.hpp" // clangd says its not used directly @todo #404
 
 namespace pst {
 
@@ -191,7 +191,7 @@ namespace pst {
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
-			this->element_kind = ElementKind::ExprWrapper;
+			this->element_kind = ElementKind::RoundGroupExpr;
 		}
 
 		static MBox<RoundGroupExpr> parse(LangParserState& state);
@@ -260,7 +260,8 @@ namespace pst {
 			return expr.ref();
 		}
 
-		virtual bool isTopLevel() = 0;
+		[[nodiscard]]
+		virtual bool isTopLevel() const = 0;
 	};
 
 	/**
@@ -300,7 +301,8 @@ namespace pst {
 			return out;
 		}
 
-		bool isTopLevel() override { return TOP_LEVEL; }
+		[[nodiscard]]
+		bool isTopLevel() const override { return TOP_LEVEL; }
 	};
 
 	/**

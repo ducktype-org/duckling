@@ -176,11 +176,15 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprElement:
-			// @todo: once we have top-expressions, this should be transparent for non-tops
-			return ElementScopeKind::Standard;
-
-		case pst::ElementKind::ExprWrapper:
 			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::ExprWrapper: {
+			auto as_expr_holder = dynamic_cast<const pst::ExprHolder*>(&*element);
+			if (as_expr_holder->isTopLevel())
+				return ElementScopeKind::Standard;
+			else
+				return ElementScopeKind::Transparent;
+		}
 
 		case pst::ElementKind::FunParam:
 		case pst::ElementKind::ParamList:
