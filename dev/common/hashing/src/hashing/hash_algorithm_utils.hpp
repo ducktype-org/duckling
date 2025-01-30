@@ -25,7 +25,7 @@ namespace hashing {
 	namespace detail {
 		template<typename HashAlgorithm, typename T>
 		concept can_add_to_hash = hash_algorithm<HashAlgorithm>
-		                       && requires(HashAlgorithm& h, const T& t) { addToHash(h, t); };			// @Taw3e8 @todo: remove this?
+		                       && requires(HashAlgorithm& h, const T& t) { addToHash(h, t); };
 
 		template<typename HashAlgorithm, typename T>
 		concept can_hash_directly
@@ -34,10 +34,26 @@ namespace hashing {
 		using std::hash;
 		template<typename T>
 		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
+///
+		template<typename T, template<typename...> typename Templ>
+		concept specialization_of = requires(T t) {
+			[]<typename... Args>(Templ<Args...>)
+				requires std::is_same_v<Templ<Args...>, T>;
+			{}(t);
+		};
 
 		template<typename T>
-		concept can_hashDecompose = requires(const T& t) { hashDecompose(t); };		// @Taw3e8 @todo: requirements on hashDecompose function
+		concept tuple_of_refs = requires(T t) {
+			[]<typename... Args>(std::tuple<Args...>)
+				requires std::is_same_v<std::tuple<Args...>, T> && (std::is_reference_v<Args> && ...)
+			{}(t);
+		};
 
+		template<typename T>
+		concept can_hashDecompose = requires(const T& t) {
+			{ hashDecompose(t) } -> tuple_of_refs;
+		};
+///
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm& h, const T& t) {
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);

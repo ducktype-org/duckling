@@ -101,7 +101,7 @@ namespace hashing {
 
 		DebugHash() = default;
 
-		explicit constexpr operator result_type() noexcept {
+		explicit constexpr operator result_type() noexcept {		// @Taw3e8 @todo: rewrite with ranges?
 			std::string ret;
 			usize       line = 0, pos = 0;
 
@@ -120,7 +120,7 @@ namespace hashing {
 				str += num_str;
 				str += ":    ";
 			};
-			auto append_hex = [](std::string& str, std::byte b) {
+			auto append_byte_hex = [](std::string& str, std::byte b) {
 				constexpr std::string_view hex = "0123456789ABCDEF";
 				str += hex[std::to_integer<unsigned>(b >> 4)];
 				str += hex[std::to_integer<unsigned>(b & std::byte{ 0xF })];
@@ -133,7 +133,7 @@ namespace hashing {
 						append_line_number(ret, line++);
 					}
 					if (i == pos) ret += (type == Type::HashCode ? yellow : red);
-					append_hex(ret, static_cast<std::byte>(b[j]));
+					append_byte_hex(ret, static_cast<std::byte>(b[j]));
 					ret += ' ';
 					if (i == pos) ret += reset;
 				}
