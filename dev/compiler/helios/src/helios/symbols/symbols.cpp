@@ -507,7 +507,7 @@ namespace compiler::helios {
 			return ctx.query<EvalExprToInt>({ const_symbol->getValue()->getExpr() });
 		}
 
-		QUERY_AUTO_CACHE_REF
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);

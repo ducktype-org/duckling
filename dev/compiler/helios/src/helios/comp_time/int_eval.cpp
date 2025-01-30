@@ -37,7 +37,7 @@ namespace compiler::helios {
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) final {
-				result = *ctx.query<QueryConstValueOf>(expr.symbol);
+				result = ctx.query<QueryConstValueOf>(expr.symbol);
 			}
 
 			void visitBinaryOperatorExpr(const code::BinaryOperatorExpr& expr) final {
@@ -113,7 +113,7 @@ namespace compiler::helios {
 			}
 
 			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {
-				result = *ctx.query<QueryConstValueOf>(expr.symbols.back());
+				result = ctx.query<QueryConstValueOf>(expr.symbols.back());
 			}
 		};
 
