@@ -92,12 +92,11 @@ namespace base::detail {
  *
  * Braces are IMPORTANT for the code to work properly
  */
-#define variant_match(value)                                                                    \
-	PUSH_DIAGNOSTIC                                                                             \
-	NO_SHADOW if (bool variant_match_stop = true) for (auto&& internal_value = (value);         \
-	                                                   variant_match_stop;                      \
-	                                                   variant_match_stop                       \
-	                                                   = false) switch (internal_value.index()) \
+#define variant_match(value)                                                               \
+	PUSH_DIAGNOSTIC                                                                        \
+	NO_SHADOW if (bool variant_match_stop                                                  \
+	              = true) for (auto&& internal_value = (value); variant_match_stop;        \
+	                           variant_match_stop    = false) switch (internal_value.index()) \
 		POP_DIAGNOSTIC
 
 #define variant_case(type, name)                                                                   \
