@@ -136,13 +136,16 @@ namespace query::detail {
 			);
 
 			// calculation:
-			typename QueryImplType::QResult&& result =
-				QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			typename QueryImplType::PResult&& p_result =
+				QueryImplType::provide(context, key);
+			
+			typename QueryImplType::QResult&& q_result =
+				QueryImplType::store(key, std::move(p_result), acd);
 
 			// epilog:
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
 
-			return result;
+			return q_result;
 		}
 	}
 
