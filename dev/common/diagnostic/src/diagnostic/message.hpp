@@ -144,7 +144,6 @@ namespace dia {
 		virtual ~Note() noexcept = default;
 	};
 
-
 	/**
 	 * @brief Abstract base class for storing diagnostic messages generated during the compilation
 	 * process.
