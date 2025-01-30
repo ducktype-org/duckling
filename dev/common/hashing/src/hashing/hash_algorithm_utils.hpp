@@ -35,8 +35,20 @@ namespace hashing {
 		template<typename T>
 		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
 
+
+		template<typename T, template<typename...> typename Templ>
+		struct is_specialization_of : std::false_type {};
+
+		template<template<typename...> typename Templ, typename... Args>
+		struct is_specialization_of<Templ<Args...>, Templ> : std::true_type {};
+
 		template<typename T>
-		concept can_hashDecompose = requires(const T& t) { hashDecompose(t); };		// @Taw3e8 @todo: requirements on hashDecompose function
+		concept is_tuple = is_specialization_of<std::remove_cvref_t<T>, std::tuple>::value;		
+
+		template<typename T>
+		concept can_hashDecompose = requires(const T& t) {
+			{ hashDecompose(t) } -> is_tuple;
+		};
 
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm& h, const T& t) {
