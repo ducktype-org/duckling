@@ -28,7 +28,7 @@ namespace vm {
 		  process_types(process.getTypeMetadata()) {}
 
 	/**
-	 * @brief Taill call written function that handles the execution pause request.
+	 * @brief Tail call written function that handles the execution pause request.
 	 */
 	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
@@ -48,7 +48,7 @@ namespace vm {
 	/**
 	 * @brief Saves all current execution state in thread memory.
 	 *
-	 * The opcodes functions in taill call mode passes some state values in the registers
+	 * The opcodes functions in tail call mode passes some state values in the registers
 	 * (in the function arguments). This functions saves them from the registers to the
 	 * current frame.
 	 */
@@ -121,9 +121,7 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
-#endif
-
-#ifdef USE_COMPUTED_GOTO
+#elif USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
 	#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
 	#include <code_data/opcodes_list.hpp>
@@ -148,9 +146,7 @@ namespace vm {
 
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
-#endif
-
-#ifdef USE_SWITCH_CASE
+#elif  USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
 	#define DEF_OPCODE(opcode_name)                                     \

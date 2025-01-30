@@ -7,9 +7,9 @@
  *
  * Motivation: each opcode that thread executes has its own function that is called to
  * perform the opcode operation. They are called "OpFuns". At the end of each
- * function, there is a call to `FUNCTION_CONT` macro that taill calls (in TC version)
+ * function, there is a call to `FUNCTION_CONT` macro that tail calls (in TC version)
  * to the next instruction. But in debug mode, if we want to step only one instruction,
- * we need OpFun that doesn't tail call to the next instruction.
+ * we need OpFun that doesn't tail call to the next instruction, but pauses the execution instead.
  *
  * This file has **two versions**. One is for the OpFuns implementation and the other is
  * for the debug version of the OpFuns (DebugOpFun), which is a copy of the OpFuns but
