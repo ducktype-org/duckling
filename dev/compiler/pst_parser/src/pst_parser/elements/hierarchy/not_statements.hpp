@@ -245,7 +245,7 @@ namespace pst {
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
-			this->element_kind = ElementKind::ExprWrapper;
+			this->element_kind = ElementKind::ExprHolder;
 		}
 
 		[[nodiscard]]

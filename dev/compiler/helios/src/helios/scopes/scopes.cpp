@@ -172,13 +172,14 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::ExprStmt:
-			// note: this will be needed for lifetimes
-			return ElementScopeKind::Standard;
-
-		case pst::ElementKind::ExprElement:
 			return ElementScopeKind::Transparent;
 
-		case pst::ElementKind::ExprWrapper: {
+		case pst::ElementKind::ExprElement:
+		case pst::ElementKind::RoundGroupExpr:
+			return ElementScopeKind::Transparent;
+
+		case pst::ElementKind::ExprHolder: {
+			// note: top expr creates a scope for lifetimes
 			auto as_expr_holder = dynamic_cast<const pst::ExprHolder*>(&*element);
 			if (as_expr_holder->isTopLevel())
 				return ElementScopeKind::Standard;
@@ -376,12 +377,10 @@ namespace compiler::helios {
 				auto              as_stmt = dynamic_cast<const pst::Stmt*>(&*base_element);
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
-			} else if (base_element->getElementKind() == pst::ElementKind::ExprElement) {
-				// @FIXME: change the way we check the condition, by comparing enum
-				// values instead of strings. Make the enum stringifiable.
+			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
 				return std::vector<SymID>{};
 			} else {
-				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr");
+				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr-holder");
 			}
 		}
 

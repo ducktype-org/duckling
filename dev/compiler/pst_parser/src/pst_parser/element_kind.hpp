@@ -47,8 +47,8 @@ namespace pst {
 		// for all expression elements:
 		ExprElement,
 
-		// for Expr wrappers like round group:
-		ExprWrapper,
+		// for all Expr holders:
+		ExprHolder,
 
 		// classes:
 		ClassField,
