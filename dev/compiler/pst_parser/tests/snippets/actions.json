@@ -46,9 +46,17 @@
 											"sourceStart": 22,
 											"sourceEnd": 22
 										},
-										"Identifier Expression": {
-											"name": {
-												"Name": "T"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 22,
+													"sourceEnd": 22
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "T"
+													}
+												}
 											}
 										}
 									}
@@ -66,48 +74,56 @@
 											"sourceStart": 36,
 											"sourceEnd": 44
 										},
-										"Chain Expression": {
-											"atom": {
+										"Top Level Expression": {
+											"expr": {
 												"position": {
 													"sourceStart": 36,
-													"sourceEnd": 36
+													"sourceEnd": 44
 												},
-												"Identifier Expression": {
-													"name": {
-														"Name": "a"
-													}
-												}
-											},
-											"chain": [
-												{
-													"position": {
-														"sourceStart": 37,
-														"sourceEnd": 42
-													},
-													"Access Expression": {
-														"type": ".",
-														"name": {
-															"Name": "close"
+												"Chain Expression": {
+													"atom": {
+														"position": {
+															"sourceStart": 36,
+															"sourceEnd": 36
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "a"
+															}
 														}
-													}
-												},
-												{
-													"position": {
-														"sourceStart": 43,
-														"sourceEnd": 44
 													},
-													"Call Expression": {
-														"type": "[]",
-														"arguments": {
+													"chain": [
+														{
 															"position": {
-																"sourceStart": 44,
+																"sourceStart": 37,
+																"sourceEnd": 42
+															},
+															"Access Expression": {
+																"type": ".",
+																"name": {
+																	"Name": "close"
+																}
+															}
+														},
+														{
+															"position": {
+																"sourceStart": 43,
 																"sourceEnd": 44
 															},
-															"call list": []
+															"Call Expression": {
+																"type": "[]",
+																"arguments": {
+																	"position": {
+																		"sourceStart": 44,
+																		"sourceEnd": 44
+																	},
+																	"call list": []
+																}
+															}
 														}
-													}
+													]
 												}
-											]
+											}
 										}
 									}
 								}
@@ -131,8 +147,16 @@
 												"sourceStart": 58,
 												"sourceEnd": 61
 											},
-											"Keyword Expression": {
-												"keyword": "true"
+											"Top Level Expression": {
+												"expr": {
+													"position": {
+														"sourceStart": 58,
+														"sourceEnd": 61
+													},
+													"Keyword Expression": {
+														"keyword": "true"
+													}
+												}
 											}
 										}
 									},
@@ -166,8 +190,16 @@
 																	"sourceStart": 77,
 																	"sourceEnd": 80
 																},
-																"Keyword Expression": {
-																	"keyword": "true"
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 77,
+																			"sourceEnd": 80
+																		},
+																		"Keyword Expression": {
+																			"keyword": "true"
+																		}
+																	}
 																}
 															}
 														},
@@ -194,9 +226,17 @@
 																					"sourceStart": 94,
 																					"sourceEnd": 94
 																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "A"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 94,
+																							"sourceEnd": 94
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "A"
+																							}
+																						}
 																					}
 																				}
 																			}
@@ -223,9 +263,17 @@
 																					"sourceStart": 120,
 																					"sourceEnd": 120
 																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "B"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 120,
+																							"sourceEnd": 120
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "B"
+																							}
+																						}
 																					}
 																				}
 																			}
@@ -252,9 +300,17 @@
 																					"sourceStart": 148,
 																					"sourceEnd": 148
 																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "A"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 148,
+																							"sourceEnd": 148
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "A"
+																							}
+																						}
 																					}
 																				}
 																			}
@@ -281,9 +337,17 @@
 																					"sourceStart": 175,
 																					"sourceEnd": 175
 																				},
-																				"Identifier Expression": {
-																					"name": {
-																						"Name": "B"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 175,
+																							"sourceEnd": 175
+																						},
+																						"Identifier Expression": {
+																							"name": {
+																								"Name": "B"
+																							}
+																						}
 																					}
 																				}
 																			}
@@ -310,8 +374,16 @@
 																					"sourceStart": 200,
 																					"sourceEnd": 202
 																				},
-																				"Value Expr": {
-																					"number": "123"
+																				"Top Level Expression": {
+																					"expr": {
+																						"position": {
+																							"sourceStart": 200,
+																							"sourceEnd": 202
+																						},
+																						"Value Expr": {
+																							"number": "123"
+																						}
+																					}
 																				}
 																			}
 																		}
@@ -338,8 +410,16 @@
 											"sourceStart": 222,
 											"sourceEnd": 223
 										},
-										"Value Expr": {
-											"number": "12"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 222,
+													"sourceEnd": 223
+												},
+												"Value Expr": {
+													"number": "12"
+												}
+											}
 										}
 									}
 								}

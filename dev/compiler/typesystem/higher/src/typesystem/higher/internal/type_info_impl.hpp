@@ -13,13 +13,6 @@
 #include <helios/symbols/symbols.hpp>
 
 namespace tsh::internal {
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
-
-	template<std::derived_from<TypeInfoImpl> T>
-	void pushType(base::unique_ptr<T>&& type) {
-		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
-	}
-
 	/**
 	 * @brief The TypeInfoImpl class and its subclasses are a heavy type implementation hierarchy.
 	 *
@@ -128,6 +121,13 @@ namespace tsh::internal {
 		 */
 		std::string representation = "UNNAMED";
 	};
+
+	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
+
+	template<std::derived_from<TypeInfoImpl> T>
+	void pushType(base::unique_ptr<T>&& type) {
+		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
+	}
 
 	class UnitInfoImpl final: public TypeInfoImpl {
 	public:

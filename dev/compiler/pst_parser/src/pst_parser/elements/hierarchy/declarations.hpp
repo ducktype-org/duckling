@@ -175,10 +175,10 @@ namespace pst {
 	 * @brief Variable declaration
 	 */
 	class Variable final: public Decl {
-		tpc::Identifier   name;
-		MBox<ExprElement> type     = nullptr;
-		MBox<ExprElement> value    = nullptr;
-		bool              is_const = true;
+		tpc::Identifier       name;
+		MBox<CommaExprHolder> type     = nullptr;
+		MBox<CommaExprHolder> value    = nullptr;
+		bool                  is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
@@ -191,12 +191,12 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getValue() const {
+		MCRef<ExprHolder> getValue() const {
 			return value.ref();
 		}
 
@@ -221,10 +221,10 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		tpc::Identifier                   name;
-		MBox<ParamList>                   params = nullptr;
-		base::Optional<MBox<ExprElement>> ret;
-		MBox<CodeBlockOrStmt>             body = nullptr;
+		tpc::Identifier                       name;
+		MBox<ParamList>                       params = nullptr;
+		base::Optional<MBox<CommaExprHolder>> ret;
+		MBox<CodeBlockOrStmt>                 body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
@@ -243,8 +243,8 @@ namespace pst {
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
-		base::Optional<MCRef<ExprElement>> getRet() const {
-			return ret.map([](const auto& v) { return v.ref(); });
+		base::Optional<MCRef<ExprHolder>> getRet() const {
+			return ret.map([](const auto& v) -> MCRef<ExprHolder> { return v.ref(); });
 		}
 
 		[[nodiscard]]
@@ -288,7 +288,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getCondition() const {
+		MCRef<ExprHolder> getCondition() const {
 			return condition->getExpr();
 		}
 
@@ -331,8 +331,8 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		tpc::Identifier         iterator;
-		MBox<ExprElement>       type     = nullptr;
-		MBox<ExprElement>       iterable = nullptr;
+		MBox<ForTypeExprHolder> type     = nullptr;
+		MBox<CommaExprHolder>   iterable = nullptr;
 		MBox<CodeBlockOrStmt>   body     = nullptr;
 
 	public:

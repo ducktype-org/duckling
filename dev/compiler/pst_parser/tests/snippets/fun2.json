@@ -34,8 +34,16 @@
 											"sourceStart": 12,
 											"sourceEnd": 14
 										},
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 12,
+													"sourceEnd": 14
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									}
 								}
@@ -56,8 +64,16 @@
 											"sourceStart": 20,
 											"sourceEnd": 22
 										},
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 20,
+													"sourceEnd": 22
+												},
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									}
 								}
@@ -111,8 +127,16 @@
 											"sourceStart": 42,
 											"sourceEnd": 44
 										},
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 42,
+													"sourceEnd": 44
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									}
 								}
@@ -133,8 +157,16 @@
 											"sourceStart": 50,
 											"sourceEnd": 52
 										},
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 50,
+													"sourceEnd": 52
+												},
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									},
 									"initial": {
@@ -142,8 +174,16 @@
 											"sourceStart": 56,
 											"sourceEnd": 56
 										},
-										"Value Expr": {
-											"number": "0"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 56,
+													"sourceEnd": 56
+												},
+												"Value Expr": {
+													"number": "0"
+												}
+											}
 										}
 									}
 								}
@@ -197,8 +237,16 @@
 											"sourceStart": 76,
 											"sourceEnd": 78
 										},
-										"Keyword Expression": {
-											"keyword": "f32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 76,
+													"sourceEnd": 78
+												},
+												"Keyword Expression": {
+													"keyword": "f32"
+												}
+											}
 										}
 									}
 								}
@@ -219,8 +267,16 @@
 											"sourceStart": 84,
 											"sourceEnd": 86
 										},
-										"Keyword Expression": {
-											"keyword": "i32"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 84,
+													"sourceEnd": 86
+												},
+												"Keyword Expression": {
+													"keyword": "i32"
+												}
+											}
 										}
 									},
 									"initial": {
@@ -228,8 +284,16 @@
 											"sourceStart": 90,
 											"sourceEnd": 91
 										},
-										"Value Expr": {
-											"number": "42"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 90,
+													"sourceEnd": 91
+												},
+												"Value Expr": {
+													"number": "42"
+												}
+											}
 										}
 									}
 								}
@@ -283,9 +347,17 @@
 											"sourceStart": 111,
 											"sourceEnd": 111
 										},
-										"Identifier Expression": {
-											"name": {
-												"Name": "A"
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 111,
+													"sourceEnd": 111
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "A"
+													}
+												}
 											}
 										}
 									}

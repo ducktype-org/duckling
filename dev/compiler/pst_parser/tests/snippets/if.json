@@ -23,49 +23,57 @@
 							"sourceStart": 10,
 							"sourceEnd": 18
 						},
-						"Comparison Chain": {
-							"sub-expressions": [
-								{
-									"position": {
-										"sourceStart": 10,
-										"sourceEnd": 14
-									},
-									"Binary Operator": {
-										"left_expr": {
+						"Top Level Expression": {
+							"expr": {
+								"position": {
+									"sourceStart": 10,
+									"sourceEnd": 18
+								},
+								"Comparison Chain": {
+									"sub-expressions": [
+										{
 											"position": {
 												"sourceStart": 10,
-												"sourceEnd": 10
+												"sourceEnd": 14
 											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "a"
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 10,
+														"sourceEnd": 10
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "a"
+														}
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"position": {
+														"sourceStart": 14,
+														"sourceEnd": 14
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "b"
+														}
+													}
 												}
 											}
 										},
-										"operator": "+",
-										"right_expr": {
+										{
 											"position": {
-												"sourceStart": 14,
-												"sourceEnd": 14
+												"sourceStart": 18,
+												"sourceEnd": 18
 											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "b"
-												}
+											"Value Expr": {
+												"number": "0"
 											}
 										}
-									}
-								},
-								{
-									"position": {
-										"sourceStart": 18,
-										"sourceEnd": 18
-									},
-									"Value Expr": {
-										"number": "0"
-									}
+									]
 								}
-							]
+							}
 						}
 					}
 				},
@@ -140,49 +148,57 @@
 										"sourceStart": 45,
 										"sourceEnd": 54
 									},
-									"Comparison Chain": {
-										"sub-expressions": [
-											{
-												"position": {
-													"sourceStart": 45,
-													"sourceEnd": 49
-												},
-												"Binary Operator": {
-													"left_expr": {
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 45,
+												"sourceEnd": 54
+											},
+											"Comparison Chain": {
+												"sub-expressions": [
+													{
 														"position": {
 															"sourceStart": 45,
-															"sourceEnd": 45
+															"sourceEnd": 49
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "a"
+														"Binary Operator": {
+															"left_expr": {
+																"position": {
+																	"sourceStart": 45,
+																	"sourceEnd": 45
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+															"operator": "+",
+															"right_expr": {
+																"position": {
+																	"sourceStart": 49,
+																	"sourceEnd": 49
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "b"
+																	}
+																}
 															}
 														}
 													},
-													"operator": "+",
-													"right_expr": {
+													{
 														"position": {
-															"sourceStart": 49,
-															"sourceEnd": 49
+															"sourceStart": 54,
+															"sourceEnd": 54
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "b"
-															}
+														"Value Expr": {
+															"number": "0"
 														}
 													}
-												}
-											},
-											{
-												"position": {
-													"sourceStart": 54,
-													"sourceEnd": 54
-												},
-												"Value Expr": {
-													"number": "0"
-												}
+												]
 											}
-										]
+										}
 									}
 								}
 							},

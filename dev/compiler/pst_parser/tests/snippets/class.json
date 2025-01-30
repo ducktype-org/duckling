@@ -35,9 +35,17 @@
 								"sourceStart": 35,
 								"sourceEnd": 37
 							},
-							"Identifier Expression": {
-								"name": {
-									"Name": "bbb"
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 35,
+										"sourceEnd": 37
+									},
+									"Identifier Expression": {
+										"name": {
+											"Name": "bbb"
+										}
+									}
 								}
 							}
 						},
@@ -46,9 +54,17 @@
 								"sourceStart": 40,
 								"sourceEnd": 43
 							},
-							"Identifier Expression": {
-								"name": {
-									"Name": "cccc"
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 40,
+										"sourceEnd": 43
+									},
+									"Identifier Expression": {
+										"name": {
+											"Name": "cccc"
+										}
+									}
 								}
 							}
 						},
@@ -75,8 +91,16 @@
 										"sourceStart": 51,
 										"sourceEnd": 53
 									},
-									"Keyword Expression": {
-										"keyword": "i32"
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 51,
+												"sourceEnd": 53
+											},
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
 									}
 								}
 							}
@@ -99,8 +123,16 @@
 										"sourceStart": 68,
 										"sourceEnd": 70
 									},
-									"Keyword Expression": {
-										"keyword": "i32"
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 68,
+												"sourceEnd": 70
+											},
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
 									}
 								},
 								"initial": {
@@ -108,8 +140,16 @@
 										"sourceStart": 74,
 										"sourceEnd": 74
 									},
-									"Value Expr": {
-										"number": "5"
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 74,
+												"sourceEnd": 74
+											},
+											"Value Expr": {
+												"number": "5"
+											}
+										}
 									}
 								}
 							}
@@ -144,8 +184,16 @@
 															"sourceStart": 90,
 															"sourceEnd": 92
 														},
-														"Keyword Expression": {
-															"keyword": "i64"
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 90,
+																	"sourceEnd": 92
+																},
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
 														}
 													}
 												}
@@ -166,9 +214,17 @@
 															"sourceStart": 98,
 															"sourceEnd": 100
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "yyy"
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 98,
+																	"sourceEnd": 100
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "yyy"
+																	}
+																}
 															}
 														}
 													}
@@ -225,9 +281,17 @@
 																				"sourceStart": 113,
 																				"sourceEnd": 113
 																			},
-																			"Identifier Expression": {
-																				"name": {
-																					"Name": "a"
+																			"Top Level Expression": {
+																				"expr": {
+																					"position": {
+																						"sourceStart": 113,
+																						"sourceEnd": 113
+																					},
+																					"Identifier Expression": {
+																						"name": {
+																							"Name": "a"
+																						}
+																					}
 																				}
 																			}
 																		},
@@ -276,8 +340,16 @@
 															"sourceStart": 140,
 															"sourceEnd": 142
 														},
-														"Keyword Expression": {
-															"keyword": "i64"
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 140,
+																	"sourceEnd": 142
+																},
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
 														}
 													}
 												}
@@ -290,8 +362,16 @@
 										"sourceStart": 148,
 										"sourceEnd": 150
 									},
-									"Keyword Expression": {
-										"keyword": "i64"
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 148,
+												"sourceEnd": 150
+											},
+											"Keyword Expression": {
+												"keyword": "i64"
+											}
+										}
 									}
 								},
 								"body": {
@@ -349,9 +429,17 @@
 														"sourceStart": 174,
 														"sourceEnd": 174
 													},
-													"Identifier Expression": {
-														"name": {
-															"Name": "y"
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 174,
+																"sourceEnd": 174
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "y"
+																}
+															}
 														}
 													}
 												}
@@ -410,8 +498,16 @@
 																			"sourceStart": 206,
 																			"sourceEnd": 208
 																		},
-																		"Keyword Expression": {
-																			"keyword": "i64"
+																		"Top Level Expression": {
+																			"expr": {
+																				"position": {
+																					"sourceStart": 206,
+																					"sourceEnd": 208
+																				},
+																				"Keyword Expression": {
+																					"keyword": "i64"
+																				}
+																			}
 																		}
 																	}
 																}
@@ -430,48 +526,64 @@
 																"sourceStart": 212,
 																"sourceEnd": 217
 															},
-															"Chain Expression": {
-																"atom": {
+															"Top Level Expression": {
+																"expr": {
 																	"position": {
 																		"sourceStart": 212,
-																		"sourceEnd": 214
+																		"sourceEnd": 217
 																	},
-																	"Identifier Expression": {
-																		"name": {
-																			"Name": "aaa"
-																		}
-																	}
-																},
-																"chain": [
-																	{
-																		"position": {
-																			"sourceStart": 215,
-																			"sourceEnd": 217
+																	"Chain Expression": {
+																		"atom": {
+																			"position": {
+																				"sourceStart": 212,
+																				"sourceEnd": 214
+																			},
+																			"Identifier Expression": {
+																				"name": {
+																					"Name": "aaa"
+																				}
+																			}
 																		},
-																		"Call Expression": {
-																			"type": "[]",
-																			"arguments": {
+																		"chain": [
+																			{
 																				"position": {
-																					"sourceStart": 216,
-																					"sourceEnd": 216
+																					"sourceStart": 215,
+																					"sourceEnd": 217
 																				},
-																				"call list": [
-																					{
+																				"Call Expression": {
+																					"type": "[]",
+																					"arguments": {
 																						"position": {
 																							"sourceStart": 216,
 																							"sourceEnd": 216
 																						},
-																						"Identifier Expression": {
-																							"name": {
-																								"Name": "c"
-																							}
-																						}
-																					},
-																				]
+																						"call list": [
+																							{
+																								"position": {
+																									"sourceStart": 216,
+																									"sourceEnd": 216
+																								},
+																								"Top Level Expression": {
+																									"expr": {
+																										"position": {
+																											"sourceStart": 216,
+																											"sourceEnd": 216
+																										},
+																										"Identifier Expression": {
+																											"name": {
+																												"Name": "c"
+																											}
+																										}
+																									}
+																								}
+																							},
+																						]
+																					}
+																				}
 																			}
-																		}
+																		]
 																	}
-																]
+																}
 															}
 														},
 													]
