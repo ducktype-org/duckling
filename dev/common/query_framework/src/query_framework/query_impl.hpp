@@ -135,26 +135,14 @@ namespace query::detail {
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
 			);
 
-			// calculation:
-			typename QueryImplType::PResult&& p_result =
-				QueryImplType::provide(context, key);
-			
-			// opcja 1:
-			// typename QueryImplType::QResult&& q_result =
-				// QueryImplType::store(key, std::move(p_result), acd);
-			// return typename QueryImplType::QResult(std::move(q_result));
-
 			// epilog:
-			// QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
-			// opcja 2: 
-			// return QueryImplType::store(key, std::move(p_result), acd);
-
-
-			// opcja 3:
-			typename QueryImplType::QResult q_result =
-				QueryImplType::store(key, std::move(p_result), acd);
-			return q_result;
+			// This is all at the end, with defer above, 
+			// to avoid false positive dangling reference warning.
+			// We can't do it move-less without using temporary
+			// lifetime extension, which causes the warning.
+			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 		}
 	}
 
