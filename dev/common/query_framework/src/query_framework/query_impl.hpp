@@ -136,7 +136,8 @@ namespace query::detail {
 			);
 
 			// calculation:
-			auto&& result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			typename QueryImplType::QResult&& result =
+				QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 
 			// epilog:
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
