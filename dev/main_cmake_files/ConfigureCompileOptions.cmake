@@ -1,7 +1,11 @@
 option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable builds" OFF)
 
+# disable compiler-specific extensions
+set(CMAKE_CXX_EXTENSIONS OFF)
+# require compiler to support C++ standard it is asked for
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-	# @TODO: decide of std++20 vs gnu++20
 	message("-- GNU compiler")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 

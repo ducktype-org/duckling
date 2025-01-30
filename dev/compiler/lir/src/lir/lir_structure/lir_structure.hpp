@@ -34,7 +34,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 
 // clang-format on
 
-
 namespace compiler::lir {
 	struct LirLocal;
 	struct Block;
