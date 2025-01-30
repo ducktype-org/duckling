@@ -136,9 +136,10 @@ namespace query::detail {
 			);
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
+			);
 
-			// This is all at the end, with defer above, 
+			// This is all at the end, with defer above,
 			// to avoid false positive dangling reference warning.
 			// We can't do it move-less without using temporary
 			// lifetime extension, which causes the warning.
