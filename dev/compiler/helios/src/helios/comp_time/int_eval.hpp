@@ -16,8 +16,8 @@ namespace compiler::helios {
 
 	/**
 	 * Query that comp-time evaluates an expresion.
-     * @note For now it only supports integer values,
-     * in the future we will introduce more generic CTV values.
+	 * @note For now it only supports integer values,
+	 * in the future we will introduce more generic CTV values.
 	 */
 	DECLARE_QUERY(EvalExprToInt, pst::GenericPSTQueryKey<pst::ExprElement>, IntEval_Result)
 }

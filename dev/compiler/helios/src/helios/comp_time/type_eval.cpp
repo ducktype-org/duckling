@@ -115,7 +115,10 @@ namespace compiler::helios {
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
 			// note: this assert might be changed to a compiler error in the future:
-			CORE_ASSERT(parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta, "Expression provided to EvalExprToType has non-meta type.");
+			CORE_ASSERT(
+				parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta,
+				"Expression provided to EvalExprToType has non-meta type."
+			);
 
 			return evalHoutExprToType(ctx, parsed.value().ref());
 		}

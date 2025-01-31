@@ -8,9 +8,8 @@
 #include <cmath>
 
 namespace compiler::helios {
-    struct IMPLEMENT_QUERY(EvalExprToInt, IntEval_Result) {
-
-        struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
+	struct IMPLEMENT_QUERY(EvalExprToInt, IntEval_Result) {
+		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
 			Context&                                  ctx;
 			errors::HResult<i64 COMMA errors::Failed> result;
 
@@ -117,14 +116,14 @@ namespace compiler::helios {
 			}
 		};
 
-        static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto eval = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (eval.hasError()) return errors::HError(errors::Failed());
 			return EvaluateHoutExprVisitor::evaluateExpr(ctx, *eval.value());
 		}
 
-        QUERY_AUTO_CACHE_COPY
-    };
+		QUERY_AUTO_CACHE_COPY
+	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToInt);
 };
