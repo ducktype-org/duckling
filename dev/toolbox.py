@@ -121,7 +121,7 @@ def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compi
     is_flag=True,
 )
 @click.option(
-    "-c",
+    "-x",
     "--cxx-compiler",
     prompt="C++ compiler path",
     help="A path to the C++ complier to compile with",
@@ -130,7 +130,7 @@ def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compi
     cls=default_compiler_from_ctx("cxx_compiler")
 )
 @click.option(
-    "-C",
+    "-c",
     "--cc-compiler",
     prompt="C compiler path",
     help="A path to the C complier to compile with",
