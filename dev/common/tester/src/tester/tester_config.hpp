@@ -1,8 +1,8 @@
 #pragma once
 
 #include <string>
-#include "base/ints.hpp"
-#include "clap/clap.hpp"
+#include <base/ints.hpp>
+#include <clap/clap.hpp>
 
 namespace tester {
 	struct TestConfig final {
