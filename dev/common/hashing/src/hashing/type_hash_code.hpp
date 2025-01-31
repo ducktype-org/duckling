@@ -35,26 +35,21 @@ namespace hashing {
 			}
 		};
 
-		// template<typename I>
-		// using default_hash_algorithm_for = std::conditional_t<std::same_as<I, u32>, Fnv1a_32, Fnv1a_64>;
-		template<typename I>
-		using default_hash_algorithm_for = Fnv1a_32_Consteval;
-
-		template<std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
+		template<std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 			requires std::convertible_to<typename HashAlgorithm::result_type, I>
 		struct StrToIntegral {
 			TypeHashCodeBase<I> hash_value;
 
 			consteval StrToIntegral(const std::string_view arr) {
 				HashAlgorithm h;
-				h.updateHash(arr);
+				h(arr.data(), arr.size());
 				hash_value.value = static_cast<typename HashAlgorithm::result_type>(h);
 			}
 
 			consteval operator TypeHashCodeBase<I>() const { return hash_value; }
 		};
 
-		template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
+		template<typename T, std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
 			return StrToIntegral<I, HashAlgorithm>{ __FUNCDNAME__ };
@@ -77,8 +72,4 @@ namespace hashing {
 	constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I>();
 
 
-}  // namespace hash
-
-
-
-
+}  // namespace hashing

@@ -22,10 +22,10 @@ namespace hashing {
 		std::is_convertible_v<T, typename T::result_type>;
 	};
 
+	template<hash_algorithm HashAlgorithm, typename T>
+	constexpr void addToHash(HashAlgorithm& h, const T& t);
+
 	namespace detail {
-		template<typename HashAlgorithm, typename T>
-		concept can_add_to_hash = hash_algorithm<HashAlgorithm>
-		                       && requires(HashAlgorithm& h, const T& t) { addToHash(h, t); };
 
 		template<typename HashAlgorithm, typename T>
 		concept can_hash_directly
@@ -38,7 +38,7 @@ namespace hashing {
 		template<typename T, template<typename...> typename Templ>
 		concept specialization_of = requires(T t) {
 			[]<typename... Args>(Templ<Args...>)
-				requires std::is_same_v<Templ<Args...>, T>;
+				requires std::is_same_v<Templ<Args...>, T>
 			{}(t);
 		};
 

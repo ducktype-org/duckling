@@ -145,4 +145,7 @@ namespace hashing {
 	};
 
 
-}  // namespace hash
+	template<typename I>
+	using default_hash_algorithm_for = std::conditional_t<std::same_as<I, u32>, Fnv1a_32, Fnv1a_64>;
+
+}  // namespace hashing

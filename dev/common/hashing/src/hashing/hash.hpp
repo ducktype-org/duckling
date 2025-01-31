@@ -1,5 +1,7 @@
 #pragma once
 
+#include <concepts>
+
 #include "hashing_algorithms.hpp"
 #include "type_hash_code.hpp"
 
@@ -8,7 +10,7 @@ namespace hashing {
 
 
 	// this is a template overload for the 'addToHash' function
-	// if a friend function overload exists for the type, it will be used
+	// if a friend function overload exists for the type, it will be used instead
 	// this one serves as a fallback and a place where specializations for
 	// types that are not ours can be added (like the built-in types)
 	template<hash_algorithm HashAlgorithm, typename T>
@@ -48,28 +50,20 @@ namespace hashing {
 		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
 			detail::hashRangeAsChars(h, t);
 		}
-		// overload if range is contiguous and we can add its elements to the hash
-		else if constexpr (std::ranges::contiguous_range<T>
-		                   && requires(std::ranges::range_value_t<T> elem) {					// @Taw3e8 @todo: replace with concept (can_add_to_hash)? (and other if constexprs here?)
-								  addToHash(h, elem);
-							  }) {
+		// overload if range is contiguous
+		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (auto&& elem: t) addToHash(h, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (std::ranges::input_range<T>
-		                   && requires(
-							   std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res		// @Taw3e8 @todo: ditto; and copyable hashAlgorithm?
-						   ) {
-								  addToHash(h, elem);
-								  {
-									  res ^= res
-								  } -> std::same_as<typename HashAlgorithm::result_type>;
-								  addToHash(h, res);
-							  }) {
-			// auto                                hash_copy = h;							// @Taw3e8 @todo: v chack this
+		else if constexpr (std::copy_constructible<HashAlgorithm> && std::ranges::input_range<T>				// @Taw3e8 @todo: concept
+			&& requires(std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res) {
+					{ res ^= res } -> std::same_as<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+				}) {
 			typename HashAlgorithm::result_type result{};
 			for (auto&& elem: t) {
-				auto                                hash_copy = h;							// @Taw3e8 @todo: ^ this probably should be here?
+				// note that this copy and hash finalization in cast may be expensive,
+				// if possible the type should get a dedicated addToHash overload
+				auto hash_copy = h;
 				addToHash(hash_copy, elem);
 				result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
 			}
@@ -93,7 +87,7 @@ namespace hashing {
 		using result_type = typename HashAlgorithm::result_type;
 
 		template<typename T>
-		constexpr result_type operator()(const T& t) const noexcept {			// @Taw3e8 @todo: const detail::can_add_to_hash<HashAlgorithm> auto T& ? (and below)
+		constexpr result_type operator()(const T& t) const noexcept {
 			HashAlgorithm h;
 			addToHash(h, t);
 
