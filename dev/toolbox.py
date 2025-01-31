@@ -327,9 +327,9 @@ def test_impl(build_dir, memcheck):
     "--memcheck",
     prompt="Memcheck",
     help="Whether or not to perform memcheck with valgrind",
-    type=bool,
+    type=click.BOOL,
     default=False,
-    is_flag=True,
+    show_default=True,
 )
 def test(*args, **kwargs):
     """Performs tests of the code"""
