@@ -15,34 +15,14 @@ namespace hashing {
 
 	namespace detail {
 
-		class Fnv1a_32_Consteval {
-			static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
-			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
-			u32                  state        = OFFSET_BASIS;
-
-		public:
-			consteval void updateHash(const std::string_view arr) {
-				for (auto&& c: arr) {
-					state ^= c;
-					state *= FNV_PRIME;
-				}
-			}
-
-			using result_type = u32;
-
-			consteval explicit operator result_type() noexcept {
-				return static_cast<result_type>(state);
-			}
-		};
-
 		template<std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 			requires std::convertible_to<typename HashAlgorithm::result_type, I>
 		struct StrToIntegral {
 			TypeHashCodeBase<I> hash_value;
 
-			consteval StrToIntegral(const std::string_view arr) {
+			consteval StrToIntegral(const std::string_view sv) {
 				HashAlgorithm h;
-				h(arr.data(), arr.size());
+				h(sv.data(), sv.size());
 				hash_value.value = static_cast<typename HashAlgorithm::result_type>(h);
 			}
 

@@ -11,16 +11,26 @@
 namespace hashing {
 
 
-	template<typename T>
-	concept hash_algorithm = requires {
-		std::is_object_v<T>;
-		std::is_constructible_v<T>;
-		std::is_destructible_v<T>;
+	template<typename From, typename To>
+	concept is_explicitly_convertible_to = requires(From f) { static_cast<To>(f); };
 
-		std::is_invocable_v<T, void*, usize> || std::is_invocable_v<T, char*, usize>;
-		typename T::result_type;
-		std::is_convertible_v<T, typename T::result_type>;
-	};
+	namespace detail {
+
+		template<typename T>
+		concept hash_algorithm_impl = 
+			std::is_object_v<T> &&
+			std::is_constructible_v<T> &&
+			std::is_destructible_v<T> &&
+			requires { typename T::result_type; } &&
+			(std::is_invocable_r_v<void, T, void*, usize> ||
+			std::is_invocable_r_v<void, T, char*, usize>) &&
+			is_explicitly_convertible_to<T, typename T::result_type>;
+
+	} // namespace detail
+
+	template<typename T>
+	concept hash_algorithm =
+		detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void addToHash(HashAlgorithm& h, const T& t);
@@ -31,16 +41,8 @@ namespace hashing {
 		concept can_hash_directly
 			= hash_algorithm<HashAlgorithm> && requires(HashAlgorithm& h, const T& t) { h(t); };
 
-		using std::hash;
 		template<typename T>
-		concept can_stdhash = requires(const T& t) { hash<T>{}(t); };
-
-		template<typename T, template<typename...> typename Templ>
-		concept specialization_of = requires(T t) {
-			[]<typename... Args>(Templ<Args...>)
-				requires std::is_same_v<Templ<Args...>, T>
-			{}(t);
-		};
+		concept can_stdhash = requires(const T& t) { std::hash<T>{}(t); };
 
 		template<typename T>
 		concept tuple_of_refs = requires(T t) {
@@ -55,17 +57,10 @@ namespace hashing {
 		};
 
 		template<hash_algorithm HashAlgorithm, typename T>
-		constexpr void hashAsChars(HashAlgorithm& h, const T& t) {
+		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
-			h(arr.data(), arr.size());
+			std::forward<HashAlgorithm>(h)(arr.data(), arr.size());
 		}
-
-		template<typename HashAlgorithm, typename R>
-		concept is_range_with_hashable_elements
-			= hash_algorithm<HashAlgorithm> && std::ranges::input_range<R>
-		   && requires(HashAlgorithm& h, const R& t) {
-				  addToHash(h, std::declval<std::ranges::range_value_t<R>>());
-			  };
 
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_chars
@@ -81,7 +76,8 @@ namespace hashing {
 			requires can_hash_range_as_chars<HashAlgorithm, R> {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
-	}
+		
+	} // namespace detail
 
 
 }  // namespace hashing

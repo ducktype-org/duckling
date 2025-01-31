@@ -8,26 +8,30 @@ namespace hashing {
 
 
 	namespace detail {
+
+		// updateHash should be protected
 		template<typename Self, typename CheckT>
-		struct Acc: public std::remove_cvref_t<Self> {
+		struct CheckAccessTo_updateHash: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len)
-				requires requires { Acc{}.std::remove_cvref_t<Self>::updateHash(data, len); } {}
+				requires requires { CheckAccessTo_updateHash{}.std::remove_cvref_t<Self>::updateHash(data, len); } {}
 		};
 
+		// addHashCode should be protected
 		template<typename Self>
-		struct Hc_acc: public std::remove_cvref_t<Self> {
+		struct CheckAccessTo_addHashCode: public std::remove_cvref_t<Self> {
 			void check(const TypeHashCode& hash)
-				requires requires { Hc_acc{}.std::remove_cvref_t<Self>::addHashCode(hash); } {}
+				requires requires { CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash); } {}
 		};
-	}
+
+	} // namespace detail
 
 	template<typename T>
 	concept has_updateHash_void
-		= requires(T t, void* data, usize len) { detail::Acc<T, void>{}.check(data, len); };
+		= requires(T t, void* data, usize len) { detail::CheckAccessTo_updateHash<T, void>{}.check(data, len); };
 
 	template<typename T>
 	concept has_updateHash_char
-		= requires(T t, char* data, usize len) { detail::Acc<T, char>{}.check(data, len); };
+		= requires(T t, char* data, usize len) { detail::CheckAccessTo_updateHash<T, char>{}.check(data, len); };
 
 	template<typename T>
 	concept has_updateHash = has_updateHash_void<T> || has_updateHash_char<T>;
@@ -35,7 +39,7 @@ namespace hashing {
 	template<typename Self, typename T>
 	constexpr bool IS_HASH_CODE_AWARE
 		= std::is_same_v<std::remove_cvref_t<T>, TypeHashCode>
-	   && requires(const TypeHashCode& hash) { detail::Hc_acc<Self>{}.check(hash); };
+	   && requires(const TypeHashCode& hash) { detail::CheckAccessTo_addHashCode<Self>{}.check(hash); };
 
 	class CallOverloads {
 	public:
