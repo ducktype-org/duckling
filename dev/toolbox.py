@@ -19,6 +19,7 @@ from scripts.py.toolbox.helpers import (
     default_compiler_from_ctx,
     infer_cc_compiler,
     infer_cxx_compiler,
+    check_if_compilers_are_compatible,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
@@ -57,6 +58,9 @@ def cli():
 
 
 def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
+
+    check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+
     bld = pathlib.Path(build_dir)
     if bld.exists():
         # Delete old cache

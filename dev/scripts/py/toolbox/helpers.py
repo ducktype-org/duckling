@@ -1,9 +1,9 @@
 import pathlib
 import subprocess as sp
 import sys
+import re
 
 import click
-
 
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
@@ -155,6 +155,8 @@ def infer_cc_compiler(ctx):
             cc_compiler = cxx_compiler.replace("clang++", "clang")
         elif "g++" in cxx_compiler:
             cc_compiler = cxx_compiler.replace("g++", "gcc")
+        elif "icpx" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("icpx", "icx")
         elif "icpc" in cxx_compiler:
             cc_compiler = cxx_compiler.replace("icpc", "icc")
         else:
@@ -175,6 +177,8 @@ def infer_cxx_compiler(ctx):
             cxx_compiler = cc_compiler.replace("clang", "clang++")
         elif "gcc" in cc_compiler:
             cxx_compiler = cc_compiler.replace("gcc", "g++")
+        elif "icx" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("icx", "icpx")
         elif "icc" in cc_compiler:
             cxx_compiler = cc_compiler.replace("icc", "icpc")
         else:
@@ -183,3 +187,32 @@ def infer_cxx_compiler(ctx):
         cxx_compiler = "g++"
 
     return cxx_compiler
+
+
+def get_program_version(prog):
+    version_out = sp.run([prog, '--version'], capture_output=True, text=True)
+    version_info = version_out.stdout.splitlines()[0]
+    match = re.search(r'(\d+(\.\d+)+)', version_info)
+    return match.group(0) if match else None
+
+
+def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
+    if cxx_compiler is None or cc_compiler is None:
+        exit_with_error("Couldn't get the compilers")
+
+    if (
+        ("clang" in cc_compiler and "clang++" not in cxx_compiler) or
+        ("gcc" in cc_compiler and "clang++" in cxx_compiler) or
+        ("gcc" in cc_compiler and "g++" not in cxx_compiler) or
+        ("icx" in cc_compiler and "icpx" not in cxx_compiler) or
+        ("icc" in cc_compiler and "icpc" not in cxx_compiler)
+    ):
+        exit_with_error(f"Compilers are not compatible: {cxx_compiler=}, {cc_compiler=}")
+
+    cxx_version = get_program_version(cxx_compiler)
+    cc_version = get_program_version(cc_compiler)
+
+    if cxx_version is None or cc_version is None:
+        exit_with_error("Couldn't get the version of the compilers")
+    elif cxx_version != cc_version:
+        exit_with_error(f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}")
