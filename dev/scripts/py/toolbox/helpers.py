@@ -3,7 +3,6 @@ import subprocess as sp
 import sys
 
 import click
-from click.core import ParameterSource
 
 
 def with_venv(cmd):
@@ -132,7 +131,7 @@ def make_pretty_command(command):
 
 # this class overrides the click.Option class, so it can get ctx
 # and infer and set the default value from other options
-def default_from_ctx(default_name):
+def default_compiler_from_ctx(default_name):
 
     class OptionDefaultFromCtx(click.Option):
 
@@ -147,6 +146,7 @@ def default_from_ctx(default_name):
 
 
 def infer_cc_compiler(ctx):
+    """Infer the default C compiler from the C++ compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
 
@@ -166,6 +166,7 @@ def infer_cc_compiler(ctx):
 
 
 def infer_cxx_compiler(ctx):
+    """Infer the default C++ compiler from the C compiler"""
     cc_compiler = ctx.params.get("cc_compiler")
     cxx_compiler = ctx.params.get("cxx_compiler")
 

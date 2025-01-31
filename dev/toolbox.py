@@ -16,7 +16,7 @@ from scripts.py.toolbox.helpers import (
     log_new_line,
     make_pretty_command,
     with_venv,
-    default_from_ctx,
+    default_compiler_from_ctx,
     infer_cc_compiler,
     infer_cxx_compiler,
 )
@@ -56,7 +56,7 @@ def cli():
     pass
 
 
-def setup_build_impl(ctx, build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
+def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
     bld = pathlib.Path(build_dir)
     if bld.exists():
         # Delete old cache
@@ -125,18 +125,18 @@ def setup_build_impl(ctx, build_dir, build_system, type, docs, cxx_compiler, cc_
     "--cxx-compiler",
     prompt="C++ compiler path",
     help="A path to the C++ complier to compile with",
-    # this overrides the click.Option class to use the default_from_ctx
+    # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
-    cls=default_from_ctx("cxx_compiler")
+    cls=default_compiler_from_ctx("cxx_compiler")
 )
 @click.option(
     "-C",
     "--cc-compiler",
     prompt="C compiler path",
     help="A path to the C complier to compile with",
-    # this overrides the click.Option class to use the default_from_ctx
+    # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
-    cls=default_from_ctx("cc_compiler"),
+    cls=default_compiler_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
@@ -154,7 +154,6 @@ def setup_build_impl(ctx, build_dir, build_system, type, docs, cxx_compiler, cc_
     default=False,
     is_flag=True,
 )
-@click.pass_context
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)
