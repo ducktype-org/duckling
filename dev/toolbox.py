@@ -16,6 +16,9 @@ from scripts.py.toolbox.helpers import (
     log_new_line,
     make_pretty_command,
     with_venv,
+    default_from_ctx,
+    infer_cc_compiler,
+    infer_cxx_compiler,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
@@ -53,7 +56,7 @@ def cli():
     pass
 
 
-def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
+def setup_build_impl(ctx, build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
     bld = pathlib.Path(build_dir)
     if bld.exists():
         # Delete old cache
@@ -68,7 +71,8 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
          -B {build_dir}
          -D CMAKE_BUILD_TYPE={type}
          -D BUILD_DOCS={'ON' if docs else 'OFF'}
-         -D CMAKE_CXX_COMPILER={compiler}
+         -D CMAKE_CXX_COMPILER={cxx_compiler}
+         -D CMAKE_C_COMPILER={cc_compiler}
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
          -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
@@ -118,10 +122,21 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
 )
 @click.option(
     "-c",
-    "--compiler",
-    prompt="Compiler path",
-    help="A path to the complier to compile with",
-    default="g++",
+    "--cxx-compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ complier to compile with",
+    # this overrides the click.Option class to use the default_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_from_ctx("cxx_compiler")
+)
+@click.option(
+    "-C",
+    "--cc-compiler",
+    prompt="C compiler path",
+    help="A path to the C complier to compile with",
+    # this overrides the click.Option class to use the default_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
@@ -139,6 +154,7 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
     default=False,
     is_flag=True,
 )
+@click.pass_context
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
     setup_build_impl(*args, **kwargs)

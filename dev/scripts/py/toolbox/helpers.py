@@ -3,6 +3,7 @@ import subprocess as sp
 import sys
 
 import click
+from click.core import ParameterSource
 
 
 def with_venv(cmd):
@@ -127,3 +128,57 @@ def make_pretty_command(command):
     while "  " in pretty_command:
         pretty_command = pretty_command.replace("  ", " ")
     return pretty_command
+
+
+# this class overrides the click.Option class, so it can get ctx
+# and infer and set the default value from other options
+def default_from_ctx(default_name):
+
+    class OptionDefaultFromCtx(click.Option):
+
+        def get_default(self, ctx, call = True):
+            if default_name == "cc_compiler":
+                self.default = infer_cc_compiler(ctx)
+            elif default_name == "cxx_compiler":
+                self.default = infer_cxx_compiler(ctx)
+            return super(OptionDefaultFromCtx, self).get_default(ctx, call)
+
+    return OptionDefaultFromCtx
+
+
+def infer_cc_compiler(ctx):
+    cc_compiler = ctx.params.get("cc_compiler")
+    cxx_compiler = ctx.params.get("cxx_compiler")
+
+    if not cc_compiler and cxx_compiler:
+        if "clang++" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("clang++", "clang")
+        elif "g++" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("g++", "gcc")
+        elif "icpc" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("icpc", "icc")
+        else:
+            cc_compiler = "gcc"
+    else:
+        cc_compiler = "gcc"
+
+    return cc_compiler
+
+
+def infer_cxx_compiler(ctx):
+    cc_compiler = ctx.params.get("cc_compiler")
+    cxx_compiler = ctx.params.get("cxx_compiler")
+
+    if not cxx_compiler and cc_compiler:
+        if "clang" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("clang", "clang++")
+        elif "gcc" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("gcc", "g++")
+        elif "icc" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("icc", "icpc")
+        else:
+            cxx_compiler = "g++"
+    else:
+        cxx_compiler = "g++"
+
+    return cxx_compiler
