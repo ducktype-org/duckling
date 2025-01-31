@@ -49,7 +49,7 @@ namespace hashing {
 	}  // namespace detail
 
 	template<typename T, std::integral I = u32>
-	constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I>();
+	static constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I>();
 
 
 }  // namespace hashing

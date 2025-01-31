@@ -23,12 +23,12 @@ namespace hashing {
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
-			updateHash(static_cast<const char*>(data), len);
+			updateHash(std::string_view{static_cast<const char*>(data), len});
 		}
 
-		constexpr void updateHash(const char* data, usize len) noexcept {
-			for (usize i = 0; i < len; ++i) {
-				state ^= data[i];
+		constexpr void updateHash(const std::string_view sv) noexcept {
+			for (auto&& c : sv) {
+				state ^= c;
 				state *= FNV_PRIME;
 			}
 		}
@@ -54,12 +54,12 @@ namespace hashing {
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
-			updateHash(static_cast<const char*>(data), len);
+			updateHash(std::string_view{static_cast<const char*>(data), len});
 		}
 
-		constexpr void updateHash(const char* data, usize len) noexcept {
-			for (usize i = 0; i < len; ++i) {
-				state ^= data[i];
+		constexpr void updateHash(const std::string_view sv) noexcept {
+			for (auto&& c : sv) {
+				state ^= c;
 				state *= FNV_PRIME;
 			}
 		}
@@ -84,16 +84,16 @@ namespace hashing {
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
-			updateHash(static_cast<const char*>(data), len);
+			updateHash(std::string_view{static_cast<const char*>(data), len});
 		}
 
-		constexpr void updateHash(const char* data, usize len, Type type = Type::Other) noexcept {
-			bytes.emplace_back(std::vector<char>(data, data + len), len, type);
+		constexpr void updateHash(const std::string_view sv, Type type = Type::Other) noexcept {
+			bytes.emplace_back(std::vector<char>(sv.begin(), sv.end()), sv.size(), type);
 		}
 
 		constexpr void addHashCode(TypeHashCode hash) noexcept {
 			auto arr = std::bit_cast<std::array<char, sizeof(hash)>, TypeHashCode>(hash);
-			updateHash(arr.data(), arr.size(), Type::HashCode);
+			updateHash(std::string_view{arr.data(), arr.size()}, Type::HashCode);
 		}
 
 	public:
