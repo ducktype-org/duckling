@@ -380,7 +380,9 @@ namespace compiler::helios {
 			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
 				return std::vector<SymID>{};
 			} else {
-				CORE_PANIC("Query symbols from scope of non-statement, non-codeblock and non-expr-holder");
+				CORE_PANIC(
+					"Query symbols from scope of non-statement, non-codeblock and non-expr-holder"
+				);
 			}
 		}
 

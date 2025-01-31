@@ -14,7 +14,7 @@
 #include <base/string_id.hpp>
 
 #include "meta.hpp"
-#include "lists.hpp" // clangd says its not used directly @todo #404
+#include "lists.hpp"  // clangd says its not used directly @todo #404
 
 namespace pst {
 
@@ -261,7 +261,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		virtual bool isTopLevel() const = 0;
+		virtual bool isTopLevel() const
+			= 0;
 	};
 
 	/**
@@ -302,7 +303,9 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isTopLevel() const override { return TOP_LEVEL; }
+		bool isTopLevel() const override {
+			return TOP_LEVEL;
+		}
 	};
 
 	/**
