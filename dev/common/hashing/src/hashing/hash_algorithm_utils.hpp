@@ -70,7 +70,7 @@ namespace hashing {
 			  };
 
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
-			requires can_hash_range_as_chars<HashAlgorithm, R>
+		requires can_hash_range_as_chars<HashAlgorithm, R>
 		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& t) {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
