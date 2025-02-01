@@ -30,9 +30,6 @@ namespace hashing {
 	template<typename T>
 	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
-	template<hash_algorithm HashAlgorithm, typename T>
-	constexpr void addToHash(HashAlgorithm& h, const T& t);
-
 	namespace detail {
 
 		template<typename HashAlgorithm, typename T>
