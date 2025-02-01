@@ -1,4 +1,7 @@
 #include <iostream>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 #include <tester/tester.hpp>
 #include <base/ints.hpp>
@@ -53,6 +56,13 @@ public:
 		addToHash(h, s.n);
 		addToHash(h, s.o);
 	}
+
+	friend bool operator<(const S& lhs, const S& rhs) noexcept {
+		return lhs.x < rhs.x;
+	}
+	friend bool operator==(const S& lhs, const S& rhs) noexcept {
+		return lhs.x == rhs.x;
+	}
 };
 
 namespace my_map {
@@ -92,32 +102,33 @@ public:
 
 private:
 	void hashCodeTest() {
-		// assertTrue(TYPE_HASH_CODE<int> != TYPE_HASH_CODE<float>, "hash-codes should differ");
-		// assertTrue(TYPE_HASH_CODE<double> != TYPE_HASH_CODE<char>, "hash-codes should differ");
-		// assertTrue(TYPE_HASH_CODE<std::string> != TYPE_HASH_CODE<S>, "hash-codes should differ");
-		// assertTrue(TYPE_HASH_CODE<X> == TYPE_HASH_CODE<X>, "hash-code should be the same");
-		// assertTrue(
-		// 	is_explicitly_convertible_to<decltype(TYPE_HASH_CODE<Y>), u32>,
-		// 	"hash-code should be convertible to u32"
-		// );
+		assertTrue(TYPE_HASH_CODE<int> != TYPE_HASH_CODE<float>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<double> != TYPE_HASH_CODE<char>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<std::string> != TYPE_HASH_CODE<S>, "hash-codes should differ");
+		assertTrue(TYPE_HASH_CODE<X> == TYPE_HASH_CODE<X>, "hash-code should be the same");
+		assertTrue(
+			is_explicitly_convertible_to<decltype(TYPE_HASH_CODE<Y>), u32>,
+			"hash-code should be convertible to u32"
+		);
 	}
 
 	void hashingAlgorithmsTest() {
-		// assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
-		// assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
-		// assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
-		// constexpr auto res1 = Fnv1a_32{}(4);
-		// assertTrue(has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*,
-		// usize)"); constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 }); constexpr auto res3 =
-		// static_cast<std::string>(DebugHash{}("hello", 5)).size(); assertTrue(
-		// 	is_explicitly_convertible_to<decltype(res1), u32>,
-		// 	"Fnv1a_32 should be convertible to u32"
-		// );
-		// assertTrue(
-		// 	is_explicitly_convertible_to<decltype(res2), u64>,
-		// 	" Fnv1a_64 should be convertible to u64"
-		// );
-		// assertTrue(res3 > 0, "DebugHash should return a non-empty string");
+		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
+		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
+		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
+		constexpr auto res1 = Fnv1a_32{}(4);
+		assertTrue(has_updateHash_void<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)");
+		constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
+		constexpr auto res3 = static_cast<std::string>(DebugHash{}(std::string_view{"hello"})).size();
+		assertTrue(
+			is_explicitly_convertible_to<decltype(res1), u32>,
+			"Fnv1a_32 should be convertible to u32"
+		);
+		assertTrue(
+			is_explicitly_convertible_to<decltype(res2), u64>,
+			" Fnv1a_64 should be convertible to u64"
+		);
+		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 	}
 
 	template<typename Alg>
@@ -314,6 +325,57 @@ private:
 		constexpr auto str_size = static_cast<std::string>(DebugHash{}(sv2)).size();
 		assertTrue(str_size == 187, "string should have 187 characters");
 
+		assertTrue(hash_algorithm<default_hash_algorithm_for<u32>>, "default_hash_algorithm_for<u32> should be a hashing algorithm");
+		assertTrue(hash_algorithm<default_hash_algorithm_for<u64>>, "default_hash_algorithm_for<u64> should be a hashing algorithm");
+
+		// hash.hpp
+		addToHash(h2, S{});															// S has addToHash overload
+		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
+		addToHash(h2, Z{});															// Z has hashDecompose overload
+		assertTrue(detail::can_hash_directly<decltype(h2), std::string_view>, "h2 should be able to hash std::string_view");
+		addToHash(h2, std::string_view{"wertyuiop"}); 								// can hash directly
+		addToHash(h2, 123.0f);													// hashing floating point
+		addToHash(h2, &sv);															// hashing pointer
+		addToHash(h2, nullptr);														// hashing nullptr
+		auto range = std::vector{9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0}
+		  | std::views::take(10);
+		assertTrue(detail::can_hash_range_as_chars<decltype(h2), decltype(range)>, "h2 should be able to hash range as chars");
+		addToHash(h2, range);														// hashing range as chars
+		std::vector<Y> vec_y = {{1.0f, "hello"}, {2.0f, "world"}, {3.0f, "!"}};
+		assertTrue(std::ranges::contiguous_range<decltype(vec_y)>, "vec_y should be a contiguous range");
+		addToHash(h2, vec_y);														// hashing contiguous range
+		my_map::unordered_map<int, int> m;
+		m[1] = 2;
+		m[3] = 4;
+		m[5] = 6;
+		assertTrue(detail::can_hash_range_with_unspecified_order<decltype(h2), decltype(m)>, "h2 should be able to hash range with unspecified order");
+		addToHash(h2, m);															// hashing range with unspecified order
+		std::variant<int, float, std::string> v = 42;
+		assertTrue(detail::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
+		addToHash(h2, v);															// hashing std::variant
+	
+		Hash hasher;
+		auto res1 = hasher(1.f);
+		auto res2 = hasher(2.f);
+		assertTrue(res1 != res2, "hashes should differ");
+		auto res3 = hasher(X{});
+		auto res4 = hasher(Y{});
+		assertTrue(res3 != res4, "hashes should differ");
+		assertTrue(hasher(S{}) == hasher(S{}), "hashes should be the same");
+		my_map::unordered_map<S, int> m2;
+		m2[S{}] = 42;
+		assertTrue(m2[S{}] == 42, "m2[S{}] should be 42");
+		m2[S{1, 2, 3}] = 77;
+		m2[S{5, 987}] = 33;
+		m2[S{1, 2, 3}] = 42;
+		assertTrue(m2[S{5, 987}] == 33, "m2[S{5}] should be 33");
+		assertTrue(m2[S{1, 2, 3}] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]");
+		
+		StatefulHash sh;
+		sh(1);
+		assertFalse(sh(123) == sh(123), "stete should change");
+		assertTrue(static_cast<u64>(sh) == StatefulHash{}(1, 123, 123), "state should be the same");
+		sh("124241", sv, X{}, S{});
 	}
 };
 

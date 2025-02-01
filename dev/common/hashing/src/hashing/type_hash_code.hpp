@@ -23,7 +23,7 @@ namespace hashing {
 
 			consteval StrToIntegral(const std::string_view sv) {
 				HashAlgorithm h;
-				h(sv.data(), sv.size());
+				h(sv);
 				hash_value.value = static_cast<typename HashAlgorithm::result_type>(h);
 			}
 

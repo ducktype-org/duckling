@@ -81,7 +81,7 @@ namespace hashing {
 			= std::copy_constructible<HashAlgorithm>
 			&& std::ranges::input_range<R>
 			&& requires(HashAlgorithm::result_type res) {
-				{ res ^= res } -> std::same_as<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+				{ res ^= res } -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
 			};
 
 	}  // namespace detail
