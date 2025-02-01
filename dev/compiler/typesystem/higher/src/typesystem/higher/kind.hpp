@@ -5,8 +5,7 @@
 
 #pragma once
 #include <base/exceptions.hpp>
-#include <sstream>
-#include "base/stringifyable_enum.hpp"
+#include <base/stringifyable_enum.hpp>
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
