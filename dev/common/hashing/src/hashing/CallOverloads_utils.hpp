@@ -4,7 +4,6 @@
 
 #include "type_hash_code_def.hpp"
 
-
 namespace hashing {
 
 
@@ -14,9 +13,10 @@ namespace hashing {
 		template<typename Self, typename CheckT>
 		struct CheckAccessTo_updateHash_ptr: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len) requires requires {
-				CheckAccessTo_updateHash_ptr<Self, CheckT>{}.std::remove_cvref_t<Self>::updateHash(data, len);
-			} && (!requires(Self self) { self.updateHash(data, len); })
-			{}
+				CheckAccessTo_updateHash_ptr<Self, CheckT>{}.std::remove_cvref_t<Self>::updateHash(
+					data, len
+				);
+			} && (!requires(Self self) { self.updateHash(data, len); }) {}
 		};
 
 		// addHashCode should be protected
@@ -52,19 +52,18 @@ namespace hashing {
 	concept has_updateHash = has_updateHash_void<T> || has_updateHash_sv<T>;
 
 	template<typename T, typename TypeHC>
-	concept has_addHashCode = specialization_of<TypeHC, TypeHashCodeBase>
-		&& requires(T t, TypeHC hash_code) {
-		detail::CheckAccessTo_addHashCode<T>{}.check(hash_code);
-	};
+	concept has_addHashCode
+		= specialization_of<TypeHC, TypeHashCodeBase> && requires(T t, TypeHC hash_code) {
+			  detail::CheckAccessTo_addHashCode<T>{}.check(hash_code);
+		  };
 
 	template<typename HashAlgorithm, typename Type>
 	static constexpr bool SHOULD_HASH_AS_HASH_CODE
-		= specialization_of<Type, TypeHashCodeBase>
-	   && has_addHashCode<HashAlgorithm, Type>;
+		= specialization_of<Type, TypeHashCodeBase> && has_addHashCode<HashAlgorithm, Type>;
 
 	// this is a utility class that adds operator() overloads if appropriate
 	// updateHash() functions are provided in the derived class
-	class CallOverloads {	
+	class CallOverloads {
 	public:
 		template<has_updateHash_void Self>
 		decltype(auto) operator()(this Self&& self, const void* data, const usize len) noexcept {
@@ -80,15 +79,15 @@ namespace hashing {
 
 		template<has_updateHash Self, typename T>
 		requires(
-			std::has_unique_object_representations_v<T> &&
-			!(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
+			std::has_unique_object_representations_v<T>
+			&& !(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
 		)
 		constexpr decltype(auto) operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (SHOULD_HASH_AS_HASH_CODE<Self, T>) {
 				std::forward<Self>(self).addHashCode(t);
 			} else if constexpr (has_updateHash_sv<Self>) {
 				std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
-				std::forward<Self>(self).updateHash(std::string_view{arr.data(), arr.size()});
+				std::forward<Self>(self).updateHash(std::string_view{ arr.data(), arr.size() });
 			} else {
 				std::forward<Self>(self).updateHash(std::addressof(t), sizeof(t));
 			}
