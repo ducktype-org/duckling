@@ -16,7 +16,7 @@ namespace hashing {
 				CheckAccessTo_updateHash_ptr<Self, CheckT>{}.std::remove_cvref_t<Self>::updateHash(
 					data, len
 				);
-			} && (!requires(Self self) { self.updateHash(data, len); }) {}
+			} && (not requires(Self self) { self.updateHash(data, len); }) {}
 		};
 
 		// addHashCode should be protected
@@ -24,7 +24,7 @@ namespace hashing {
 		struct CheckAccessTo_updateHash_sv: public std::remove_cvref_t<Self> {
 			void check(const std::string_view sv) requires requires {
 				CheckAccessTo_updateHash_sv<Self>{}.std::remove_cvref_t<Self>::updateHash(sv);
-			} && (!requires(Self self) { self.updateHash(sv); }) {}
+			} && (not requires(Self self) { self.updateHash(sv); }) {}
 		};
 
 		// addHashCode should be protected
@@ -33,7 +33,7 @@ namespace hashing {
 			template<specialization_of<TypeHashCodeBase> TypeHC>
 			void check(TypeHC hash) requires requires {
 				CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash);
-			} && (!requires(Self self) { self.addHashCode(hash); }) {}
+			} && (not requires(Self self) { self.addHashCode(hash); }) {}
 		};
 
 	}  // namespace detail
@@ -65,8 +65,11 @@ namespace hashing {
 	// updateHash() functions are provided in the derived class
 	class CallOverloads {
 	public:
+		// note that this one is not actually constexpr as updateHash() can't be in c++23 (it can in
+		// c++26)
 		template<has_updateHash_void Self>
-		decltype(auto) operator()(this Self&& self, const void* data, const usize len) noexcept {
+		constexpr decltype(auto
+		) operator()(this Self&& self, const void* data, const usize len) noexcept {
 			std::forward<Self>(self).updateHash(data, len);
 			return std::forward<Self>(self);
 		}
@@ -80,7 +83,7 @@ namespace hashing {
 		template<has_updateHash Self, typename T>
 		requires(
 			std::has_unique_object_representations_v<T>
-			&& !(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
+			&& not(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
 		)
 		constexpr decltype(auto) operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (SHOULD_HASH_AS_HASH_CODE<Self, T>) {

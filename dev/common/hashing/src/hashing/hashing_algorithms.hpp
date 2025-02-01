@@ -53,6 +53,7 @@ namespace hashing {
 		I state = OFFSET_BASIS;
 
 	protected:
+		// @C++26 constexpr (static_cast from void*)
 		void updateHash(const void* data, usize len) noexcept {
 			updateHash(std::string_view{ static_cast<const char*>(data), len });
 		}
@@ -86,6 +87,7 @@ namespace hashing {
 		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
 	protected:
+		// @C++26 constexpr (static_cast from void*)
 		void updateHash(const void* data, usize len) noexcept {
 			updateHash(std::string_view{ static_cast<const char*>(data), len });
 		}

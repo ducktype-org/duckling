@@ -109,6 +109,24 @@ public:
 	void updateHash(std::string_view) {}
 };
 
+struct type_with_bases: X, S {
+	int x{ 123 }, y{ 456 };
+
+	friend constexpr auto hashDecompose(const type_with_bases& t) {
+		using namespace hashing;
+		return std::tie(
+			// you can use getBase to get the bases
+			getBase<X>(t),
+			getBase<S>(t),
+			// or use getBases to get them in one tuple
+			getBases<X, S>(t),
+			// and the other members
+			t.x,
+			t.y
+		);
+	}
+};
+
 class HashingTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HashingTest
@@ -157,19 +175,25 @@ private:
 
 	template<typename Alg>
 	void hashTest() {
-		// Hash<Alg> hasher;
-		// assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
-		// constexpr auto res1 = hasher(X{});
-		// constexpr auto res2 = hasher(S{});
-		// assertTrue(res1 != res2, "hashes should differ");
-		// my_map::unordered_map<std::string, int> m;
-		// m["hello"] = 42;
-		// m["world"] = 7;
-		// assertTrue(m["hello"] == 42, "hello should be 42");
-		// assertTrue(m["world"] == 7, "world should be 7");
+		Hash<Alg> hasher;
+		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
+		constexpr auto res1 = hasher(X{});
+		constexpr auto res2 = hasher(S{});
+		assertTrue(res1 != res2, "hashes should differ");
+		my_map::unordered_map<std::string, int> m;
+		m["hello"] = 42;
+		m["world"] = 7;
+		assertTrue(m["hello"] == 42, "hello should be 42");
+		assertTrue(m["world"] == 7, "world should be 7");
 	}
 
 	void fullCoverageTest() {
+		static_assert(std::integral<u32>, "u32 should be integral");
+		static_assert(std::integral<u64>, "u64 should be integral");
+		static_assert(
+			std::integral<TypeHashCodeBase<>::value_type>, "value_type should be integral"
+		);
+
 		// type_hash_code_def.hpp
 		assertTrue(
 			std::is_same_v<TypeHashCode, TypeHashCodeBase<>>,
@@ -201,6 +225,11 @@ private:
 			hash_algorithm<std::function<void(char*, usize)>>,
 			"std::function could be a hashing algorithm"
 		);
+
+		// @Taw3e8 @todo: write thests here
+		Fnv1a_32 alsdjf;
+		addToHash(alsdjf, type_with_bases{});
+
 
 		assertTrue(detail::can_hash_directly<Fnv1a_32, int>, "Fnv1a_32 should be able to hash int");
 		assertTrue(
@@ -391,7 +420,8 @@ private:
 		);
 		addToHash(h2, std::string_view{ "wertyuiop" });  // can hash directly
 		addToHash(h2, 123.0f);                           // hashing floating point
-		addToHash(h2, &sv);                              // hashing pointer
+		X* xptr = nullptr;
+		addToHash(h2, xptr);                             // hashing pointer
 		addToHash(h2, nullptr);                          // hashing nullptr
 		auto range = std::vector{ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }
 		           | std::views::take(10);

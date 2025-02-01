@@ -30,6 +30,53 @@ namespace hashing {
 	template<typename T>
 	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
+	// returns a reference to the base of Derived
+	template<typename Base, std::derived_from<std::remove_cvref_t<Base>> Derived>
+	requires(not std::is_same_v<std::remove_cvref_t<Base>, std::remove_cvref_t<Derived>>)
+	constexpr const Base& getBase(const Derived& derived) noexcept {
+		return static_cast<const Base&>(derived);
+	}
+
+	namespace detail {
+
+		template<typename Derived, typename... Types>
+		class ObjectsToHash {
+		public:
+			ObjectsToHash(const Types&... types) noexcept: to_hash(types...) {}
+
+		private:
+			// @Taw3e8 @todo: check if those could work:
+			// template<typename..., typename D>
+			// friend auto& getBases(const D&) noexcept;
+			// friend auto& getBases<Types..., Derived>(const Derived&) noexcept;
+
+			friend constexpr auto hashDecompose(const ObjectsToHash& t) noexcept {
+				return t.to_hash;
+			}
+
+			std::tuple<const Types&...> to_hash;
+		};
+
+	}  // namespace detail
+
+	// returns a ObjectsToHash object that keeps a tuple of references that can be unpacked by
+	// addToHash()
+	template<typename... Bases, typename Derived>
+	requires requires {
+		requires(
+			(std::derived_from<std::remove_cvref_t<Derived>, std::remove_cvref_t<Bases>>) && ...
+		);
+		requires(
+			(not std::is_same_v<std::remove_cvref_t<Derived>, std::remove_cvref_t<Bases>>) && ...
+		);
+	} constexpr auto& getBases(const Derived& derived) noexcept {
+		// @Taw3e8 @todo:
+		// to be usable in std::tie this function has to return an lvalue reference
+		// so for now it creates/updates a static object per instance of Derived
+		static auto ret = detail::ObjectsToHash<Derived, Bases...>{ getBase<Bases>(derived)... };
+		return ret;
+	}
+
 	namespace detail {
 
 		template<typename HashAlgorithm, typename T>
@@ -54,7 +101,14 @@ namespace hashing {
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
-			std::forward<HashAlgorithm>(h)(arr.data(), arr.size());
+			if constexpr (requires {
+							  std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(),
+				                                                               arr.size() });
+						  }) {
+				std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(), arr.size() });
+			} else {
+				std::forward<HashAlgorithm>(h)(arr.data(), arr.size());
+			}
 		}
 
 		template<typename HashAlgorithm, typename R>

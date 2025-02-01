@@ -49,6 +49,24 @@ struct type2 {
 	}
 };
 
+struct type_with_bases: X, S {
+	int x{ 123 }, y{ 456 };
+
+	friend constexpr auto hashDecompose(const type_with_bases& t) {
+		using namespace hashing;
+		return std::tie(
+			// you can use getBase to get the bases
+			getBase<X>(t),
+			getBase<S>(t),
+			// or use getBases to get them in one tuple
+			getBases<X, S>(t),
+			// and the other members
+			t.x,
+			t.y
+		);
+	}
+};
+
 int main() {
 	using namespace hashing;
 
@@ -103,4 +121,6 @@ int main() {
 	// module also provides unique ids for types in compile time
 	// note that those can change between compilations
 	std::cout << hashing::TYPE_HASH_CODE<int> << ' ' << hashing::TYPE_HASH_CODE<type1> << '\n';
+
+	std::cout << "hash of type_with_bases: " << hashing::Hash{}(type_with_bases{}) << '\n';
 }
