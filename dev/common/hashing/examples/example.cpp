@@ -102,6 +102,5 @@ int main() {
 
 	// module also provides unique ids for types in compile time
 	// note that those can change between compilations
-	std::cout << hashing::TYPE_HASH_CODE<int> << ' '
-			  << hashing::TYPE_HASH_CODE<type1> << '\n';
+	std::cout << hashing::TYPE_HASH_CODE<int> << ' ' << hashing::TYPE_HASH_CODE<type1> << '\n';
 }

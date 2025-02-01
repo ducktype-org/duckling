@@ -44,14 +44,20 @@ namespace hashing {
 #endif
 		}
 
-		template<typename T, std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+		template<
+			typename T,
+			std::integral I        = u32,
+			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 		consteval auto uniqueId() {
 			return static_cast<TypeHashCodeBase<I, HashAlgorithm>>(uniqueString<T, I>());
 		}
 
 	}  // namespace detail
 
-	template<typename T, std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+	template<
+		typename T,
+		std::integral I        = u32,
+		typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 	static constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I>();
 
 
