@@ -424,11 +424,11 @@ private:
 		my_map::unordered_map<S, int> m2;
 		m2[S{}] = 42;
 		assertTrue(m2[S{}] == 42, "m2[S{}] should be 42");
-		m2[S{ 1, 2, 3 }] = 77;
-		m2[S{ 5, 987 }]  = 33;
-		m2[S{ 1, 2, 3 }] = 42;
-		assertTrue(m2[S{ 5, 987 }] == 33, "m2[S{5}] should be 33");
-		assertTrue(m2[S{ 1, 2, 3 }] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]");
+		m2[S{ 1, { 2, 3 } }] = 77;
+		m2[S{ 5, { 987 } }]  = 33;
+		m2[S{ 1, { 2, 3 } }] = 42;
+		assertTrue(m2[S{ 5, { 987 } }] == 33, "m2[S{5}] should be 33");
+		assertTrue(m2[S{ 1, { 2, 3 } }] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]");
 
 		StatefulHash sh;
 		sh(1);
