@@ -13,21 +13,27 @@ namespace hashing {
 		template<typename Self, typename CheckT>
 		struct CheckAccessTo_updateHash_ptr: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len)
-				requires requires { CheckAccessTo_updateHash_ptr{}.std::remove_cvref_t<Self>::updateHash(data, len); } {}
+				requires requires { CheckAccessTo_updateHash_ptr{}.std::remove_cvref_t<Self>::updateHash(data, len); } 
+				&& (!requires(const Self& self) { self.updateHash(data, len); })
+				{}
 		};
 
 		// addHashCode should be protected
 		template<typename Self>
 		struct CheckAccessTo_updateHash_sv: public std::remove_cvref_t<Self> {
 			void check(const std::string_view sv)
-				requires requires { CheckAccessTo_updateHash_sv{}.std::remove_cvref_t<Self>::addHashCode(sv); } {}
+				requires requires { CheckAccessTo_updateHash_sv{}.std::remove_cvref_t<Self>::addHashCode(sv); } 
+				&& (!requires(const Self& self) { self.updateHash(sv); })
+				{}
 		};
 
 		// addHashCode should be protected
 		template<typename Self>
 		struct CheckAccessTo_addHashCode: public std::remove_cvref_t<Self> {
 			void check(const TypeHashCode& hash)
-				requires requires { CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash); } {}
+				requires requires { CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash); } 
+				&& (!requires(const Self& self) { self.addHashCode(hash); })
+				{}
 		};
 
 	} // namespace detail

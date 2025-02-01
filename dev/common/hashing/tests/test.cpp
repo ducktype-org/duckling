@@ -76,11 +76,11 @@ class Check_2 {
 };
 class Check_3 {
 protected:
-	void updateHash(char*, usize) {}
+	void updateHash(void*, usize) {}
 };
 struct Check_4 {
 protected:
-	void updateHash(void*, usize) {}
+	void updateHash(std::string_view) {}
 };
 
 
@@ -203,7 +203,7 @@ private:
 		assertFalse(check_hashRangeAsChars<std::array<std::string, 3>>, "std::array<std::string, 3> should not be hashable as chars");
 
 		// CallOverloads_utils.hpp
-
+		assertFalse(has_updateHash_void<Check_1>, "Check_1 should not have updateHash(void*, usize)");
 	}
 };
 
