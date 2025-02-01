@@ -13,13 +13,43 @@
 
 namespace hashing {
 
+	
+	namespace detail {
 
-	class Fnv1a_32: public CallOverloads {
+		template<std::unsigned_integral I>
+		class Fnv1a_Constants {
+		protected:
+			static constexpr bool is_valid = false;
+			static constexpr I OFFSET_BASIS{};
+			static constexpr I FNV_PRIME{};
+		};
+
+		template<>
+		class Fnv1a_Constants<u32> {
+		protected:
+			static constexpr bool is_valid = true;
+			static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
+			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
+		};
+
+		template<>
+		class Fnv1a_Constants<u64> {
+		protected:
+			static constexpr bool is_valid = true;
+			static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
+			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
+		};
+		
+	} // namespace detail
+
+	template<std::unsigned_integral I>
+	class Fnv1a: public CallOverloads, protected detail::Fnv1a_Constants<I> {
+		static_assert(detail::Fnv1a_Constants<I>::is_valid, "Please provide Fnv1a constants for this type");
 		friend CallOverloads;
-
-		static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
-		static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
-		u32                  state        = OFFSET_BASIS;
+		using detail::Fnv1a_Constants<I>::OFFSET_BASIS;
+		using detail::Fnv1a_Constants<I>::FNV_PRIME;
+		
+		I state = OFFSET_BASIS;
 
 	protected:
 		void updateHash(const void* data, usize len) noexcept {
@@ -34,47 +64,19 @@ namespace hashing {
 		}
 
 	public:
-		using result_type = u32;
+		using result_type = I;
 
-		constexpr Fnv1a_32() = default;
+		constexpr Fnv1a() = default;
 
-		constexpr Fnv1a_32(u32 state): state(state) {}
-
-		constexpr explicit operator result_type() const noexcept {
-			return static_cast<result_type>(state);
-		}
-	};
-
-	class Fnv1a_64: public CallOverloads {
-		friend CallOverloads;
-
-		static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
-		static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
-		u64                  state        = OFFSET_BASIS;
-
-	protected:
-		void updateHash(const void* data, usize len) noexcept {
-			updateHash(std::string_view{ static_cast<const char*>(data), len });
-		}
-
-		constexpr void updateHash(const std::string_view sv) noexcept {
-			for (auto&& c: sv) {
-				state ^= c;
-				state *= FNV_PRIME;
-			}
-		}
-
-	public:
-		using result_type = u64;
-
-		constexpr Fnv1a_64() = default;
-
-		constexpr Fnv1a_64(u64 state): state(state) {}
+		constexpr Fnv1a(I state): state(state) {}
 
 		constexpr explicit operator result_type() const noexcept {
 			return static_cast<result_type>(state);
 		}
 	};
+
+	using Fnv1a_32 = Fnv1a<u32>;
+	using Fnv1a_64 = Fnv1a<u64>;
 
 	class DebugHash: public CallOverloads {
 		friend CallOverloads;
