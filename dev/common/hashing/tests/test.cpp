@@ -5,10 +5,15 @@
 
 #include <tester/tester.hpp>
 #include <base/ints.hpp>
-#include <hashing/hash.hpp>
-#include <hashing/hashing_algorithms.hpp>
 
-#include <stacktrace>
+#include <hashing/hash.hpp>
+#include <hashing/addToHash.hpp>
+#include <hashing/type_hash_code.hpp>
+#include <hashing/hashing_algorithms.hpp>
+#include <hashing/CallOverloads_utils.hpp>
+#include <hashing/hash_algorithm_utils.hpp>
+#include <hashing/type_hash_code_def.hpp>
+
 
 using namespace hashing;
 
