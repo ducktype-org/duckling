@@ -49,7 +49,7 @@ namespace hashing {
 			std::integral I        = u32,
 			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 		consteval auto uniqueId() {
-			return static_cast<TypeHashCodeBase<I, HashAlgorithm>>(uniqueString<T, I>());
+			return static_cast<TypeHashCodeBase<I>>(uniqueString<T, I, HashAlgorithm>());
 		}
 
 	}  // namespace detail
@@ -58,7 +58,7 @@ namespace hashing {
 		typename T,
 		std::integral I        = u32,
 		typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
-	static constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I>();
+	static constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I, HashAlgorithm>();
 
 
 }  // namespace hashing
