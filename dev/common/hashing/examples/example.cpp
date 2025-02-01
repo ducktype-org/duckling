@@ -66,7 +66,7 @@ int main() {
 
 	// by default the type's hash-code is appended to the hashed bytes so it's possible to
 	// differentiate between hashes of pair<int, int>{1, 2} and array<int, 2>{1, 2}, but
-	// if we want to this can be turned off
+	// if we want to, this can be turned off
 	struct type3 {
 		int x{ 123 }, y{ 456 };
 	};
@@ -102,6 +102,6 @@ int main() {
 
 	// module also provides unique ids for types in compile time
 	// note that those can change between compilations
-	std::cout << static_cast<u32>(hashing::TYPE_HASH_CODE<int>) << ' '
-			  << static_cast<u32>(hashing::TYPE_HASH_CODE<type1>) << '\n';
+	std::cout << hashing::TYPE_HASH_CODE<int> << ' '
+			  << hashing::TYPE_HASH_CODE<type1> << '\n';
 }

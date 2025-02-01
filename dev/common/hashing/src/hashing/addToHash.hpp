@@ -3,6 +3,7 @@
 #include <concepts>
 
 #include "type_hash_code.hpp"
+#include "hash_algorithm_utils.hpp"
 
 namespace hashing {
 
@@ -42,7 +43,7 @@ namespace hashing {
 		// it's likely that nullptr will have a trivial bit representation and has
 		// only one value so we hash it's hash-code instead
 		else if constexpr (std::is_null_pointer_v<T>) {
-			hash_algorithm(TYPE_HASH_CODE<T>);
+			hash_algorithm(TYPE_HASH_CODE<T, typename HashAlgorithm::result_type, HashAlgorithm>);
 		}
 		// overloads for ranges
 		// if the range is contiguous and its elements have unique representations we can
