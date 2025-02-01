@@ -57,25 +57,16 @@ namespace hashing {
 			for (auto&& elem: t) addToHash(hash_algorithm, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (std::copy_constructible<HashAlgorithm>
-		                   && std::ranges::input_range<T>  // @Taw3e8 @todo: concept
-		                   && requires(
-							   std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res
-						   ) {
-								  {
-									  res ^= res
-								  } -> std::same_as<
-										std::remove_cvref_t<typename HashAlgorithm::result_type>>;
-							  }) {
-			typename HashAlgorithm::result_type result{};
+		else if constexpr (detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
+			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
 				// note that this copy and hash finalization in cast may be expensive,
 				// if possible the type should get a dedicated addToHash overload
 				auto hash_copy = hash_algorithm;
 				addToHash(hash_copy, elem);
-				result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
+				combined_result ^= static_cast<typename HashAlgorithm::result_type>(hash_copy);
 			}
-			addToHash(hash_algorithm, result);
+			addToHash(hash_algorithm, combined_result);
 		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above

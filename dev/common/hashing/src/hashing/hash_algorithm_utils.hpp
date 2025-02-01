@@ -76,6 +76,14 @@ namespace hashing {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
 
+		template<typename HashAlgorithm, typename R>
+		concept can_hash_range_with_unspecified_order
+			= std::copy_constructible<HashAlgorithm>
+			&& std::ranges::input_range<R>
+			&& requires(HashAlgorithm::result_type res) {
+				{ res ^= res } -> std::same_as<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+			};
+
 	}  // namespace detail
 
 

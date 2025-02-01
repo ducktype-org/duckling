@@ -102,9 +102,9 @@ namespace hashing {
 	public:
 		using result_type = std::string;
 
-		DebugHash() = default;
+		constexpr DebugHash() = default;
 
-		explicit constexpr operator result_type() noexcept {  // @Taw3e8 @todo: rewrite with ranges?
+		explicit constexpr operator result_type() noexcept {
 			std::string ret;
 			usize       line = 0, pos = 0;
 

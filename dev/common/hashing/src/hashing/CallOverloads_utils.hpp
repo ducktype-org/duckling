@@ -67,7 +67,7 @@ namespace hashing {
 	class CallOverloads {	
 	public:
 		template<has_updateHash_void Self>
-		decltype(auto) operator()(this Self&& self, const void* data, usize len) noexcept {
+		decltype(auto) operator()(this Self&& self, const void* data, const usize len) noexcept {
 			std::forward<Self>(self).updateHash(data, len);
 			return std::forward<Self>(self);
 		}
@@ -79,7 +79,10 @@ namespace hashing {
 		}
 
 		template<has_updateHash Self, typename T>
-		requires(std::has_unique_object_representations_v<T>)
+		requires(
+			std::has_unique_object_representations_v<T> &&
+			!(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
+		)
 		constexpr decltype(auto) operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (SHOULD_HASH_AS_HASH_CODE<Self, T>) {
 				std::forward<Self>(self).addHashCode(t);

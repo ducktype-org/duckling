@@ -3,6 +3,7 @@
 #include <tester/tester.hpp>
 #include <base/ints.hpp>
 #include <hashing/hash.hpp>
+#include <hashing/hashing_algorithms.hpp>
 
 #include <stacktrace>
 
@@ -152,8 +153,8 @@ private:
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
-		std::array<Fnv1a_32, 3> arr;
-		assertFalse(hash_algorithm<decltype(arr)>, "array is not a hashing algorithm");
+		std::array<Fnv1a_32, 3> fnv_arr;
+		assertFalse(hash_algorithm<decltype(fnv_arr)>, "array is not a hashing algorithm");
 		assertFalse(
 			hash_algorithm<my_map::unordered_map<int, int>>,
 			"unordered_map is not a hashing algorithm"
@@ -279,7 +280,39 @@ private:
 		assertFalse(SHOULD_HASH_AS_HASH_CODE<DebugHash, int>, "int is not a TypeHashCode");
 
 		// hashing_algorithms.hpp
-		
+		Fnv1a_32 h2;
+		constexpr std::string_view sv = "hello";
+		assertTrue(std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32");
+		assertTrue(std::is_same_v<Fnv1a_64::result_type, u64>, "Fnv1a_64::result_type should be u64");
+		assertTrue(std::is_same_v<DebugHash::result_type, std::string>, "DebugHash::result_type should be std::string");
+		h2(static_cast<const void*>(sv.data()), sv.size());
+		h2(static_cast<void*>(s.data()), s.size());
+		h2(sv);
+		h2(std::array<char, 123>{});
+		Fnv1a_64 h3, h4{14'695'981'039'346'656'037ull};
+		[[maybe_unused]] auto discard = static_cast<decltype(h3)::result_type>(h3);
+		assertTrue(static_cast<u64>(h4) == static_cast<u64>(h4), "h3 and h4 should have been initialized with the same value");
+		h4(sv);
+		const auto& r = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+		h4(r);
+		auto h5 = h4;
+		assertTrue(static_cast<u64>(h5) == static_cast<u64>(h4), "casted h5 should be equal to casted h4");
+		h4(s.data(), s.size());
+		h5(s.data(), s.size());
+		h4(sv);
+		h5(sv);
+		h4(static_cast<const void*>(sv.data()), sv.size());
+		h5(static_cast<const void*>(sv.data()), sv.size());
+		assertTrue(static_cast<u64>(h4) == static_cast<u64>(h5), "casted h4 should be equal to casted h5");
+
+		DebugHash dh;
+		dh(s.data(), s.size());
+		dh(sv);
+		dh(std::array<char, 16>{});
+		dh(static_cast<const void*>(sv.data()), sv.size());
+		constexpr std::string_view sv2 = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
+		constexpr auto str_size = static_cast<std::string>(DebugHash{}(sv2)).size();
+		assertTrue(str_size == 187, "string should have 187 characters");
 
 	}
 };
