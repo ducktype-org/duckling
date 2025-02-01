@@ -19,7 +19,9 @@ namespace hashing {
 		// members) this can be done easily by defining `hashDecompose` friend function that lists
 		// subobjects in an order in which we want to hash them
 		if constexpr (detail::can_hashDecompose<T>) {
-			std::apply([&](auto&&... args) { (addToHash(hash_algorithm, args), ...); }, hashDecompose(t));
+			std::apply(
+				[&](auto&&... args) { (addToHash(hash_algorithm, args), ...); }, hashDecompose(t)
+			);
 		}
 		// if there is no user-defined specialization for hashDecompose nor addToHash, but the
 		// chosen hashing algorithm is able to hash the type directly, we can use it (for most
@@ -55,10 +57,16 @@ namespace hashing {
 			for (auto&& elem: t) addToHash(hash_algorithm, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (std::copy_constructible<HashAlgorithm> && std::ranges::input_range<T>				// @Taw3e8 @todo: concept
-			&& requires(std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res) {
-					{ res ^= res } -> std::same_as<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
-				}) {
+		else if constexpr (std::copy_constructible<HashAlgorithm>
+		                   && std::ranges::input_range<T>  // @Taw3e8 @todo: concept
+		                   && requires(
+							   std::ranges::range_value_t<T> elem, HashAlgorithm::result_type res
+						   ) {
+								  {
+									  res ^= res
+								  } -> std::same_as<
+										std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+							  }) {
 			typename HashAlgorithm::result_type result{};
 			for (auto&& elem: t) {
 				// note that this copy and hash finalization in cast may be expensive,

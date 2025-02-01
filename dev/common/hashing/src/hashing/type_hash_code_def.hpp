@@ -21,5 +21,12 @@ namespace hashing {
 
 	using TypeHashCode = TypeHashCodeBase<>;
 
+	template<typename T, template<typename...> typename Templ>
+	concept specialization_of = requires(T t) {
+		[]<typename... Args>(Templ<Args...>)
+			requires std::is_same_v<Templ<Args...>, T>
+		{}(t);
+	};
+
 
 }  // namespace hashing

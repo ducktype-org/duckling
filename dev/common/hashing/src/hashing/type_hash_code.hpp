@@ -15,9 +15,10 @@ namespace hashing {
 
 	namespace detail {
 
-		template<std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
-			requires std::convertible_to<typename HashAlgorithm::result_type, I>
-		struct StrToIntegral {
+		template<
+			std::integral I        = u32,
+			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+		requires std::convertible_to<typename HashAlgorithm::result_type, I> struct StrToIntegral {
 			TypeHashCodeBase<I> hash_value;
 
 			consteval StrToIntegral(const std::string_view sv) {
@@ -29,7 +30,10 @@ namespace hashing {
 			consteval operator TypeHashCodeBase<I>() const { return hash_value; }
 		};
 
-		template<typename T, std::integral I = u32, typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+		template<
+			typename T,
+			std::integral I        = u32,
+			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
 			return StrToIntegral<I, HashAlgorithm>{ __FUNCDNAME__ };

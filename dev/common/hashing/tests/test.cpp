@@ -4,6 +4,8 @@
 #include <base/ints.hpp>
 #include <hashing/hash.hpp>
 
+#include <stacktrace>
+
 using namespace hashing;
 
 struct X {
@@ -64,25 +66,14 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsChars = requires(T t) {
-	detail::hashRangeAsChars(Fnv1a_32{}, t);
-};
+concept check_hashRangeAsChars = requires(T t) { detail::hashRangeAsChars(Fnv1a_32{}, t); };
 
-struct Check_1 {
-	void updateHash(char*, usize) {}
-};
-class Check_2 {
-	void updateHash(void*, usize) {}
-};
-class Check_3 {
-protected:
-	void updateHash(void*, usize) {}
-};
-struct Check_4 {
-protected:
-	void updateHash(std::string_view) {}
-};
-
+struct Check_1 { void updateHash(void*, usize) {} };
+class Check_2 {	void updateHash(void*, usize) {} };
+class Check_3 { protected: void updateHash(void*, usize) {} };
+struct Check_4 { protected: void updateHash(std::string_view) {} };
+struct Check_5 { protected: void updateHash(char*, usize) {} };
+struct Check_6 { public: void updateHash(std::string_view) {} };
 
 class HashingTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -115,10 +106,9 @@ private:
 		// assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		// assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		// constexpr auto res1 = Fnv1a_32{}(4);
-		// assertTrue(has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)");
-		// constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
-		// constexpr auto res3 = static_cast<std::string>(DebugHash{}("hello", 5)).size();
-		// assertTrue(
+		// assertTrue(has_updateHash_char<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*,
+		// usize)"); constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 }); constexpr auto res3 =
+		// static_cast<std::string>(DebugHash{}("hello", 5)).size(); assertTrue(
 		// 	is_explicitly_convertible_to<decltype(res1), u32>,
 		// 	"Fnv1a_32 should be convertible to u32"
 		// );
@@ -145,38 +135,80 @@ private:
 
 	void fullCoverageTest() {
 		// type_hash_code_def.hpp
-		assertTrue(std::is_same_v<TypeHashCode, TypeHashCodeBase<>>, "TypeHashCode should be TypeHashCodeBase<>"); 
+		assertTrue(
+			std::is_same_v<TypeHashCode, TypeHashCodeBase<>>,
+			"TypeHashCode should be TypeHashCodeBase<>"
+		);
 		TypeHashCodeBase<u64> thcb1;
 		TypeHashCodeBase<u64> thcb2;
-		assertTrue(std::is_same_v<TypeHashCodeBase<u64>::value_type, u64>, "TypeHashCodeBase should have value_type");
-		static_cast<TypeHashCodeBase<u64>::value_type>(thcb1);
+		assertTrue(
+			std::is_same_v<TypeHashCodeBase<u64>::value_type, u64>,
+			"TypeHashCodeBase should have value_type"
+		);
+		[[maybe_unused]] auto _ = static_cast<TypeHashCodeBase<u64>::value_type>(thcb1);
 		assertTrue(thcb1 <= thcb2, "TypeHashCodeBase should be comparable");
-		
+
 		// hash_algorithm_utils.hpp
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
-		Fnv1a_32 arr[3];
+		std::array<Fnv1a_32, 3> arr;
 		assertFalse(hash_algorithm<decltype(arr)>, "array is not a hashing algorithm");
-		assertFalse(hash_algorithm<my_map::unordered_map<int, int>>, "unordered_map is not a hashing algorithm");
-		assertFalse(hash_algorithm<std::function<int(int)>>, "std::function is not a hashing algorithm");
-		assertTrue(hash_algorithm<std::function<void(char*, usize)>>, "std::function could be a hashing algorithm");
+		assertFalse(
+			hash_algorithm<my_map::unordered_map<int, int>>,
+			"unordered_map is not a hashing algorithm"
+		);
+		assertFalse(
+			hash_algorithm<std::function<int(int)>>, "std::function is not a hashing algorithm"
+		);
+		assertTrue(
+			hash_algorithm<std::function<void(char*, usize)>>,
+			"std::function could be a hashing algorithm"
+		);
 
 		assertTrue(detail::can_hash_directly<Fnv1a_32, int>, "Fnv1a_32 should be able to hash int");
-		assertTrue(detail::can_hash_directly<Fnv1a_64, std::array<int, 3>>, "Fnv1a_64 should be able to hash std::array<int, 3>");
-		assertFalse(detail::can_hash_directly<Fnv1a_32, std::string>, "Fnv1a_32 should not be able to hash std::string");
-		assertFalse(detail::can_hash_directly<Fnv1a_64, float>, "Fnv1a_64 should not be able to hash float");
+		assertTrue(
+			detail::can_hash_directly<Fnv1a_64, std::array<int, 3>>,
+			"Fnv1a_64 should be able to hash std::array<int, 3>"
+		);
+		assertTrue(
+			detail::can_hash_directly<Fnv1a_32, std::string>,
+			"Fnv1a_32 should not be able to hash std::string"
+		);
+		assertFalse(
+			detail::can_hash_directly<Fnv1a_64, float>, "Fnv1a_64 should not be able to hash float"
+		);
 
 		assertTrue(detail::can_stdhash<int>, "int should be hashable with std::hash");
-		assertTrue(detail::can_stdhash<std::string>, "std::string should be hashable with std::hash");
+		assertTrue(
+			detail::can_stdhash<std::string>, "std::string should be hashable with std::hash"
+		);
 		assertFalse(detail::can_stdhash<Z>, "Z should not be hashable with std::hash");
 
-		assertTrue(detail::tuple_of_refs<std::tuple<int&, float&>>, "std::tuple<int&, float&> should be a tuple of references");
-		assertTrue(detail::tuple_of_refs<std::tuple<const int&, std::string&>>, "std::tuple<const int&, std::string&> should be a tuple of references");
-		assertFalse(detail::tuple_of_refs<std::vector<int>>, "std::vector<int> should not be a tuple of references");
-		assertFalse(detail::tuple_of_refs<std::tuple<int, float>>, "std::tuple<int, float> should not be a tuple of references");
-		assertFalse(detail::tuple_of_refs<std::tuple<int, float&>>, "std::tuple<int, float&> should not be a tuple of references");
-		assertFalse(detail::tuple_of_refs<std::array<int, 3>>, "std::array<int, 3> should not be a tuple of references");
+		assertTrue(
+			detail::tuple_of_refs<std::tuple<int&, float&>>,
+			"std::tuple<int&, float&> should be a tuple of references"
+		);
+		assertTrue(
+			detail::tuple_of_refs<std::tuple<const int&, std::string&>>,
+			"std::tuple<const int&, std::string&> should be a tuple of references"
+		);
+		assertFalse(
+			detail::tuple_of_refs<std::vector<int>>,
+			"std::vector<int> should not be a tuple of references"
+		);
+		assertFalse(
+			detail::tuple_of_refs<std::tuple<int, float>>,
+			"std::tuple<int, float> should not be a tuple of references"
+		);
+		assertFalse(
+			detail::tuple_of_refs<std::tuple<int, float&>>,
+			"std::tuple<int, float&> should not be a tuple of references"
+		);
+		assertFalse(
+			detail::tuple_of_refs<std::array<int, 3>>,
+			"std::array<int, 3> should not be a tuple of references"
+		);
 
 		assertTrue(detail::can_hashDecompose<X>, "X should be hashDecomposable");
 		assertTrue(detail::can_hashDecompose<Y>, "Y should be hashDecomposable");
@@ -190,20 +222,65 @@ private:
 		detail::hashAsChars(h1, std::array{ 1, 2, 3 });
 
 		std::string s = "hello_long_string";
-		assertTrue(detail::can_hash_range_as_chars<Fnv1a_32, std::array<int, 3>>, "Fnv1a_32 should be able to hash as chars std::array<int, 3>");
-		assertTrue(detail::can_hash_range_as_chars<Fnv1a_64, std::string>, "Fnv1a_64 should be able to hash as chars std::string");
-		assertTrue(detail::can_hash_range_as_chars<Fnv1a_32, std::vector<int>>, "Fnv1a_32 should be able to hash as chars std::vector<int>");
-		assertFalse(detail::can_hash_range_as_chars<Fnv1a_64, std::map<int, int>>, "Fnv1a_64 should not be able to hash as chars std::map<int, int>");
-		assertFalse(detail::can_hash_range_as_chars<Fnv1a_32, std::array<std::string, 3>>, "Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>");
+		assertTrue(
+			detail::can_hash_range_as_chars<Fnv1a_32, std::array<int, 3>>,
+			"Fnv1a_32 should be able to hash as chars std::array<int, 3>"
+		);
+		assertTrue(
+			detail::can_hash_range_as_chars<Fnv1a_64, std::string>,
+			"Fnv1a_64 should be able to hash as chars std::string"
+		);
+		assertTrue(
+			detail::can_hash_range_as_chars<Fnv1a_32, std::vector<int>>,
+			"Fnv1a_32 should be able to hash as chars std::vector<int>"
+		);
+		assertFalse(
+			detail::can_hash_range_as_chars<Fnv1a_64, std::map<int, int>>,
+			"Fnv1a_64 should not be able to hash as chars std::map<int, int>"
+		);
+		assertFalse(
+			detail::can_hash_range_as_chars<Fnv1a_32, std::array<std::string, 3>>,
+			"Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>"
+		);
 
 		detail::hashRangeAsChars(h1, std::array{ 1, 2, 3 });
 		detail::hashRangeAsChars(h1, s);
 		detail::hashRangeAsChars(h1, std::vector{ 1, 2, 3 });
-		assertFalse(check_hashRangeAsChars<std::map<int, int>>, "std::map<int, int> should not be hashable as chars");
-		assertFalse(check_hashRangeAsChars<std::array<std::string, 3>>, "std::array<std::string, 3> should not be hashable as chars");
+		assertFalse(
+			check_hashRangeAsChars<std::map<int, int>>,
+			"std::map<int, int> should not be hashable as chars"
+		);
+		assertFalse(
+			check_hashRangeAsChars<std::array<std::string, 3>>,
+			"std::array<std::string, 3> should not be hashable as chars"
+		);
 
 		// CallOverloads_utils.hpp
-		assertFalse(has_updateHash_void<Check_1>, "Check_1 should not have updateHash(void*, usize)");
+		assertFalse(has_updateHash_void<Check_1>, "Check_1 has public updateHash(void*, usize)");
+		assertFalse(has_updateHash_void<Check_2>, "Check_2 has private updateHash(void*, usize)");
+		assertTrue(has_updateHash_void<Check_3>, "Check_3 has protected updateHash(void*, usize)");
+		assertFalse(has_updateHash_void<Check_4>, "Check_4 does not have updateHash(void*, usize)");
+		assertFalse(has_updateHash_void<Check_5>, "Check_5 does not have updateHash(void*, usize)");
+		assertFalse(has_updateHash_sv<Check_1>, "Check_1 does not have updateHash(std::string_view)");
+		assertTrue(has_updateHash_sv<Check_4>, "Check_4 has protected updateHash(std::string_view)");
+		assertFalse(has_updateHash_sv<Check_6>, "Check_6 does not have protected updateHash(std::string_view)");
+
+		assertFalse(has_updateHash<Check_1>, "Check_1 does not have updateHash");
+		assertFalse(has_updateHash<Check_2>, "Check_2 does not have updateHash");
+		assertTrue(has_updateHash<Check_3>, "Check_3 has updateHash");
+		assertTrue(has_updateHash<Check_4>, "Check_4 has updateHash");
+		assertFalse(has_updateHash<Check_5>, "Check_5 does not have updateHash");
+		assertFalse(has_updateHash<Check_6>, "Check_6 does not have updateHash");
+
+		assertFalse(SHOULD_HASH_AS_HASH_CODE<Check_1, int>, "Check_1 is not a hash algorithm");
+		assertFalse(SHOULD_HASH_AS_HASH_CODE<Fnv1a_32, int>, "int is not a TypeHashCode");
+		assertFalse(SHOULD_HASH_AS_HASH_CODE<Fnv1a_64, TypeHashCode>, "Fnv1a_64 does not have addHashCode");
+		assertTrue(SHOULD_HASH_AS_HASH_CODE<DebugHash, TypeHashCode>, "DebugHash has addHashCode");
+		assertFalse(SHOULD_HASH_AS_HASH_CODE<DebugHash, int>, "int is not a TypeHashCode");
+
+		// hashing_algorithms.hpp
+		
+
 	}
 };
 

@@ -7,6 +7,8 @@
 #include <array>
 #include <bit>
 
+#include <base/ints.hpp>
+
 
 namespace hashing {
 
@@ -17,20 +19,17 @@ namespace hashing {
 	namespace detail {
 
 		template<typename T>
-		concept hash_algorithm_impl = 
-			std::is_object_v<T> &&
-			std::is_constructible_v<T> &&
-			std::is_destructible_v<T> &&
-			requires { typename T::result_type; } &&
-			(std::is_invocable_r_v<void, T, void*, usize> ||
-			std::is_invocable_r_v<void, T, char*, usize>) &&
-			is_explicitly_convertible_to<T, typename T::result_type>;
+		concept hash_algorithm_impl
+			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
+		   && requires { typename T::result_type; }
+		   && (std::is_invocable_r_v<void, T, void*, usize>
+		       || std::is_invocable_r_v<void, T, char*, usize>)
+		   && is_explicitly_convertible_to<T, typename T::result_type>;
 
-	} // namespace detail
+	}  // namespace detail
 
 	template<typename T>
-	concept hash_algorithm =
-		detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
+	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void addToHash(HashAlgorithm& h, const T& t);
@@ -47,8 +46,8 @@ namespace hashing {
 		template<typename T>
 		concept tuple_of_refs = requires(T t) {
 			[]<typename... Args>(std::tuple<Args...>)
-				requires std::is_same_v<std::tuple<Args...>, T> && (std::is_reference_v<Args> && ...)
-			{}(t);
+				requires std::is_same_v<std::tuple<Args...>, T>
+			          && (std::is_reference_v<Args> && ...) {}(t);
 		};
 
 		template<typename T>
@@ -76,8 +75,8 @@ namespace hashing {
 			requires can_hash_range_as_chars<HashAlgorithm, R> {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
-		
-	} // namespace detail
+
+	}  // namespace detail
 
 
 }  // namespace hashing
