@@ -18,8 +18,12 @@ namespace hashing {
 			HashAlgorithm h;
 			addToHash(h, t);
 
-			if constexpr (AppendTypeHashCode) h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>);
-
+			if constexpr (AppendTypeHashCode) {
+				if constexpr (requires { h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>); })
+					h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>);
+				else
+					h(TYPE_HASH_CODE<T>);
+			}
 			return static_cast<result_type>(h);
 		}
 	};
@@ -35,15 +39,26 @@ namespace hashing {
 		constexpr result_type operator()(const T& t) noexcept {
 			addToHash(h, t);
 
-			if constexpr (AppendTypeHashCode) h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>);
-
+			if constexpr (AppendTypeHashCode) {
+				if constexpr (requires { h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>); })
+					h(TYPE_HASH_CODE<T, result_type, HashAlgorithm>);
+				else
+					h(TYPE_HASH_CODE<T>);
+			}
 			return static_cast<result_type>(h);
 		}
 
 		template<typename... Ts>
 		constexpr result_type operator()(const Ts&... ts) noexcept {
 			if constexpr (AppendTypeHashCode)
-				((addToHash(h, ts), h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)), ...);
+				if constexpr (requires {
+								  ((addToHash(h, ts),
+					                h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)),
+					               ...);
+							  })
+					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)), ...);
+				else
+					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts>)), ...);
 			else
 				(addToHash(h, ts), ...);
 

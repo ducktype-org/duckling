@@ -170,6 +170,12 @@ private:
 	}
 
 	void fullCoverageTest() {
+		static_assert(std::integral<u32>, "u32 should be integral");
+		static_assert(std::integral<u64>, "u64 should be integral");
+		static_assert(
+			std::integral<TypeHashCodeBase<>::value_type>, "value_type should be integral"
+		);
+
 		// type_hash_code_def.hpp
 		assertTrue(
 			std::is_same_v<TypeHashCode, TypeHashCodeBase<>>,
