@@ -16,36 +16,26 @@ namespace hashing {
 	namespace detail {
 
 		template<std::unsigned_integral I>
-		class Fnv1a_Constants {
-		protected:
-			static constexpr bool IS_VALID = false;
-			static constexpr I    OFFSET_BASIS{};
-			static constexpr I    FNV_PRIME{};
-		};
+		class Fnv1a_Constants;
 
 		template<>
 		class Fnv1a_Constants<u32> {
 		protected:
-			static constexpr bool IS_VALID     = true;
-			static constexpr u32  OFFSET_BASIS = 2'166'136'261u;
-			static constexpr u32  FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
+			static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
+			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
 		};
 
 		template<>
 		class Fnv1a_Constants<u64> {
 		protected:
-			static constexpr bool IS_VALID     = true;
-			static constexpr u64  OFFSET_BASIS = 14'695'981'039'346'656'037ull;
-			static constexpr u64  FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
+			static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
+			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
 		};
 
 	}  // namespace detail
 
 	template<std::unsigned_integral I>
 	class Fnv1a: public CallOverloads, protected detail::Fnv1a_Constants<I> {
-		static_assert(
-			detail::Fnv1a_Constants<I>::IS_VALID, "Please provide Fnv1a constants for this type"
-		);
 		friend CallOverloads;
 		using detail::Fnv1a_Constants<I>::OFFSET_BASIS;
 		using detail::Fnv1a_Constants<I>::FNV_PRIME;

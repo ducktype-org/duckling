@@ -67,6 +67,12 @@ namespace hashing {
 			}
 			addToHash(hash_algorithm, combined_result);
 		}
+		// if type supports std::tuple_size and std::get, we can use them to hash its members
+		else if constexpr (detail::supports_std_get<T>) {
+			[&]<std::size_t... I>(std::index_sequence<I...>) {
+				(addToHash(hash_algorithm, std::get<I>(t)), ...);
+			}(std::make_index_sequence<std::tuple_size_v<T>>{});
+		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above
 		else if constexpr (detail::can_stdhash<T>) {

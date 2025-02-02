@@ -49,21 +49,11 @@ struct type2 {
 	}
 };
 
-struct type_with_bases: X, S {
+struct type_with_bases: type1, type2 {
 	int x{ 123 }, y{ 456 };
 
 	friend constexpr auto hashDecompose(const type_with_bases& t) {
-		using namespace hashing;
-		return std::tie(
-			// you can use getBase to get the bases
-			getBase<X>(t),
-			getBase<S>(t),
-			// or use getBases to get them in one tuple
-			getBases<X, S>(t),
-			// and the other members
-			t.x,
-			t.y
-		);
+		return std::tie(hashing::getBase<type1>(t), hashing::getBase<type2>(t), t.x, t.y);
 	}
 };
 

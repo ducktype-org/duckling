@@ -114,16 +114,7 @@ struct type_with_bases: X, S {
 
 	friend constexpr auto hashDecompose(const type_with_bases& t) {
 		using namespace hashing;
-		return std::tie(
-			// you can use getBase to get the bases
-			getBase<X>(t),
-			getBase<S>(t),
-			// or use getBases to get them in one tuple
-			getBases<X, S>(t),
-			// and the other members
-			t.x,
-			t.y
-		);
+		return std::tie(getBase<X>(t), getBase<S>(t), t.x, t.y);
 	}
 };
 
@@ -227,9 +218,10 @@ private:
 		);
 
 		// @Taw3e8 @todo: write thests here
-		Fnv1a_32 alsdjf;
-		addToHash(alsdjf, type_with_bases{});
-
+		hashDecompose(type_with_bases{});
+		[[maybe_unused]]
+		bool b
+			= detail::supports_std_get<std::variant<float, int>>;
 
 		assertTrue(detail::can_hash_directly<Fnv1a_32, int>, "Fnv1a_32 should be able to hash int");
 		assertTrue(
@@ -465,11 +457,18 @@ private:
 		assertTrue(m2[S{ 5, { 987 } }] == 33, "m2[S{5}] should be 33");
 		assertTrue(m2[S{ 1, { 2, 3 } }] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]");
 
+		Hash{}(std::tuple{ 1, 2, 3 });
+		[[maybe_unused]] auto var1 = hasher(std::tuple{ 1, 2, 3 });
+		[[maybe_unused]] auto var2 = hasher(std::pair{ 1, 3 });
+		[[maybe_unused]] auto var3 = hasher(std::tuple<float, int, X, S>{ 1.0f, 2, X{}, S{} });
+
 		StatefulHash sh;
 		sh(1);
 		assertFalse(sh(123) == sh(123), "stete should change");
 		assertTrue(static_cast<u64>(sh) == StatefulHash{}(1, 123, 123), "state should be the same");
 		sh("124241", sv, X{}, S{});
+		sh(std::pair<int, S>{ 1, S{} });
+		sh(type_with_bases{});
 	}
 };
 
