@@ -101,8 +101,37 @@ namespace compiler::helios {
 			void visitUsing(const pst::Using&) override { empty = true; }
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
-				auto expr = ctx.query<QueryHoutOfExpr>({ MCRef<pst::ExprElement>(stmt.getExpr()) })
+				// @TODO: handle null here
+				auto inner_expr = stmt.getExpr().toOpt().value();
+
+				// here if we encounter an assignment expression
+				// we should create an assignment statement:
+				if (auto assignment = dynamic_cast<const pst::expr::Assignment*>(&*inner_expr)) {
+					CORE_ASSERT(assignment->getAssignmentType() == base::StrID("="), "Unsupported assignment type");
+
+					auto var = assignment->getVariables();
+					auto val = assignment->getValue();
+
+					auto lhs = ctx.query<QueryHoutOfExpr>({ var })
+					               .expect("Not handling errors here yet... (lhs)");
+
+					auto rhs = ctx.query<QueryHoutOfExpr>({ val })
+					               .expect("Not handling errors here yet... (rhs)");
+
+					// for now we only support lhs being an identifier:
+					// @TODO make it generic, see @470
+
+					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*var);
+
+					output(code::AssignmentStmt(scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol));
+					return;
+				}
+
+				// else just create an expression statement:
+
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })
 				                .expect("Not handling errors here yet... (ExprStmt)");
+
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
@@ -141,6 +170,7 @@ namespace compiler::helios {
 					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
 				);
 			}
+
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {
