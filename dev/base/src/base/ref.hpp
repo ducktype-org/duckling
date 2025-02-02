@@ -68,7 +68,7 @@ namespace base {
 
 		T* operator->() const noexcept { return get(); }
 
-		MRef<T> toMRef() const noexcept { return MRef<T>(ptr); }
+		MRef<T> toMRef() const noexcept { return MRef(ptr); }
 
 		// Comparison:
 

@@ -80,6 +80,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `a = ..;` statement in HOUT
 	 */
 	struct AssignmentStmt final: public Stmt {
+		// TODO: #469 Support arbitrary lvalues on the left.
 		Box<Expr> new_value;
 		SymID     helios_symbol;
 

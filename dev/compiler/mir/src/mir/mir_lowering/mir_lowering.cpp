@@ -279,13 +279,16 @@ namespace compiler::mir {
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
-				scope(helios_id) });
+				scope(helios_id),
+			});
 			return local_list.getRef(key).value();
 		}
 
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::TypeDesc<> type, const helios::ScopeID scope) {
-			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
+		LocalRef addTmp(const tsh::TypeInfo type, const helios::ScopeID scope) {
+			const auto type_desc
+				= tsh::TypeDesc<>{ type, tsh::ValueCategory{ tsh::PrimaryCategory::Temporary } };
+			const auto key = local_list.emplaceBack(MirLocal{ type_desc, scope });
 			return local_list.getRef(key).value();
 		}
 
@@ -295,10 +298,10 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		LocalMRef findLocal(const helios::SymID helios_id) const {
+		LocalRef findLocal(const helios::SymID helios_id) const {
 			for (const auto& local: local_list)
-				if (local->helios_id == helios_id) return local.ref().toMRef();
-			return {};
+				if (local->helios_id == helios_id) return local.ref();
+			CORE_PANIC("MIR Local not found");
 		}
 
 		[[nodiscard]]
@@ -319,7 +322,7 @@ namespace compiler::mir {
 	 * @brief Visitor that implements actual logic of lowering statements.
 	 * @note The result of the visitor is stored in out member.
 	 */
-	struct StmtBlockVisitor: hc::HoutStmtVisitor {
+	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
 		BlockBuilderRef continuation;
 
 		FunctionBuilder& function;
@@ -398,11 +401,13 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(Instruction{ Operation::Assign,
-					                                          { local },
-					                                          { expr_result.value },
-					                                          { flagConstruct(local) },
-					                                          stmt.lifetime_scope });
+					local_construction_hole.fill(Instruction{
+						Operation::Assign,
+						{ local },
+						{ expr_result.value },
+						{ flagConstruct(local) },
+						stmt.lifetime_scope,
+					});
 
 					output({ expr_result.begin });
 					return;
@@ -415,15 +420,20 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-			auto target_location          = function.findLocal(stmt.helios_symbol).toOpt().value();
-			auto target_construction_hole = continuation->addHole();
-			auto expr_result              = lowerExpr(*stmt.new_value, continuation, function);
+			// TODO: #469 Support arbitrary lvalues on the left.
+			auto target_location            = function.findLocal(stmt.helios_symbol).get();
+			auto target_construction_hole   = continuation->addHole();
+			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function);
 
-			target_construction_hole.fill(Instruction{ Operation::Assign,
-			                                           { target_location },
-			                                           { expr_result.value },
-			                                           { flagConstruct(target_location) },
-			                                           stmt.lifetime_scope });
+			target_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ target_location },
+				{ result },
+				{ flagConstruct(target_location) },
+				stmt.lifetime_scope,
+			});
+
+			output({ sub_continuation });
 		}
 	};
 
@@ -431,7 +441,7 @@ namespace compiler::mir {
 	 * @brief Visitor that implements actual logic of lowering expression.
 	 * @note The result of the visitor is stored in out member.
 	 */
-	struct ExprBlockVisitor: hc::HoutExprVisitor {
+	struct ExprBlockVisitor: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
 
 		base::Optional<ExprLowerRes> out;
@@ -460,8 +470,7 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirLocation{ function.findLocal(expr.symbol).toOpt().value() } }
-			);
+			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -473,21 +482,19 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type_desc   = std::get<LocalRef>(right_res.getVariant())->type;
-			const auto argument_type        = argument_type_desc.getType();
-			const auto temporary_category   = tsh::ValueCategory{ tsh::PrimaryCategory::Temporary };
-			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
-			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
-			const Operation operation  = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(
-				Instruction{
-					operation,
-					{ target_location },
-					{ left_res, right_res },
-					{ flagConstruct(target_location) },
-					expr.lifetime_scope,
-				}
+			const auto argument_type = locationType(right_res);
+			CORE_ASSERT(
+				argument_type == locationType(left_res), "Binary operator with different types"
 			);
+			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const Operation operation       = builtinBinaryToOperation(expr.operation);
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ left_res, right_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
 			output({ l_continuation, target_location });
 		}
 
@@ -497,13 +504,9 @@ namespace compiler::mir {
 			const auto [sub_continuation, sub_res] = lowerExpr(*expr.expr, continuation, function);
 
 			// Fill the hole with the unary operation.
-
-			const auto argument_type_desc   = std::get<LocalRef>(sub_res.getVariant())->type;
-			const auto argument_type        = argument_type_desc.getType();
-			const auto temporary_category   = tsh::ValueCategory{ tsh::PrimaryCategory::Temporary };
-			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
-			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
-			const Operation operation  = builtinUnaryToOperation(expr.operation);
+			const auto      argument_type   = locationType(sub_res);
+			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{ operation,
 			                                           { target_location },
 			                                           { sub_res },
@@ -561,6 +564,15 @@ namespace compiler::mir {
 			default:
 				CORE_UNREACHABLE();
 			}
+		}
+
+		/**
+		 * Get the type of a location, assuming that it is a local value.
+		 * @param location A MIR location which holds a local value.
+		 * @return The type of the local value.
+		 */
+		static tsh::TypeInfo locationType(const MirLocation location) {
+			return std::get<LocalRef>(location.getVariant())->type.getType();
 		}
 	};
 

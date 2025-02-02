@@ -9,9 +9,4 @@ namespace compiler::mir {
 	 * @brief Reference to MIR Local variable data.
 	 */
 	using LocalRef = CRef<MirLocal>;
-
-	/**
-	 * @brief Optional reference to MIR Local variable data.
-	 */
-	using LocalMRef = MCRef<MirLocal>;
 }
