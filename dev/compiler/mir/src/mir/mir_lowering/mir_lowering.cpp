@@ -242,7 +242,7 @@ namespace compiler::mir {
 		helios::SymID   helios_symbol;
 
 	public:
-		FunctionBuilder(query::Context& ctx, helios::SymID helios_symbol):
+		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
 			  ctx(ctx),
 			  helios_symbol(helios_symbol) {}
 
@@ -284,6 +284,12 @@ namespace compiler::mir {
 			return local_list.getRef(key).value();
 		}
 
+		[[nodiscard]]
+		LocalRef addTmp(const tsh::TypeDesc<> type, const helios::ScopeID scope) {
+			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
+			return local_list.getRef(key).value();
+		}
+
 		/**
 		 * Finds the location of a local variable in the function. Does not check the global scope.
 		 * @param helios_id The HELIoS symbol ID of the local variable.
@@ -314,7 +320,7 @@ namespace compiler::mir {
 	 * @brief Visitor that implements actual logic of lowering statements.
 	 * @note The result of the visitor is stored in out member.
 	 */
-	struct StmtBlockVisitor: public hc::HoutStmtVisitor {
+	struct StmtBlockVisitor: hc::HoutStmtVisitor {
 		BlockBuilderRef continuation;
 
 		FunctionBuilder& function;
@@ -411,14 +417,8 @@ namespace compiler::mir {
 		}
 
 		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
-			const auto target_variable = function.findLocal(stmt.helios_symbol).toOpt();
 			// TODO: #448 Search for location in global scope as well.
-			CORE_ASSERT(
-				target_variable.has_value(),
-				"Variable not found. This should have been handled in HELIoS."
-			);
-
-			auto target_location          = target_variable.value();
+			auto target_location          = function.findLocal(stmt.helios_symbol).toOpt().value();
 			auto target_construction_hole = continuation->addHole();
 			auto expr_result              = lowerExpr(*stmt.new_value, continuation, function);
 
@@ -436,7 +436,7 @@ namespace compiler::mir {
 	 * @brief Visitor that implements actual logic of lowering expression.
 	 * @note The result of the visitor is stored in out member.
 	 */
-	struct ExprBlockVisitor: public hc::HoutExprVisitor {
+	struct ExprBlockVisitor: hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
 
 		base::Optional<ExprLowerRes> out;
@@ -464,20 +464,65 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("type literal");
 		}
 
-		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
-			throw base::NotYetImplemented("identifier");
+		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			output(
+				{ continuation, MirLocation{ function.findLocal(expr.symbol).toOpt().value() } }
+			);
 		}
 
-		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override {
-			throw base::NotYetImplemented("binary operator");
+		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
+			// Construct the result of the expression in reverse.
+			auto target_construction_hole          = continuation->addHole();
+			const auto [r_continuation, right_res] = lowerExpr(*expr.rhs, continuation, function);
+			const auto [l_continuation, left_res]  = lowerExpr(*expr.lhs, r_continuation, function);
+
+			// Fill the hole with the binary operation.
+			// Assume (for now?) that the arguments are of the same type,
+			// and the result is of the same type as the arguments.
+			const auto argument_type_desc   = std::get<LocalRef>(right_res.getVariant())->type;
+			const auto argument_type        = argument_type_desc.getType();
+			const auto temporary_category   = tsh::ValueCategory{ tsh::PrimaryCategory::Temporary };
+			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
+			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
+			const Operation operation  = builtinBinaryToOperation(expr.operation);
+			target_construction_hole.fill(
+				Instruction{ operation,
+			                 { target_location },
+			                 { left_res, right_res },
+			                 { flagConstruct(target_location) },
+			                 expr.lifetime_scope }
+			);
+
+			output({ l_continuation, target_location });
 		}
 
-		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr&) override {
-			throw base::NotYetImplemented("unary operator");
+		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
+			// Construct the result of the expression in reverse.
+			auto target_construction_hole          = continuation->addHole();
+			const auto [sub_continuation, sub_res] = lowerExpr(*expr.expr, continuation, function);
+
+			// Fill the hole with the unary operation.
+
+			const auto argument_type_desc   = std::get<LocalRef>(sub_res.getVariant())->type;
+			const auto argument_type        = argument_type_desc.getType();
+			const auto temporary_category   = tsh::ValueCategory{ tsh::PrimaryCategory::Temporary };
+			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
+			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
+			const Operation operation  = builtinUnaryToOperation(expr.operation);
+			target_construction_hole.fill(
+				Instruction{ operation,
+			                 { target_location },
+			                 { sub_res },
+			                 { flagConstruct(target_location) },
+			                 expr.lifetime_scope }
+			);
+
+			output({ sub_continuation, target_location });
 		}
 
-		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
-			throw base::NotYetImplemented("parenthesis expr");
+		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
+			const auto inner_result = lowerExpr(*expr.inner, continuation, function);
+			output(inner_result);
 		}
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
@@ -490,6 +535,39 @@ namespace compiler::mir {
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+	private:
+		static Operation builtinBinaryToOperation(const helios::code::BuiltinBinary builtin) {
+			using enum helios::code::BuiltinBinary;
+			switch (builtin) {
+			case IntegerAdd:
+				return Operation::IntegerAdd;
+			case IntegerSub:
+				return Operation::IntegerSub;
+			case IntegerMul:
+				return Operation::IntegerMul;
+			case IntegerDiv:
+				return Operation::IntegerDiv;
+			case IntegerMod:
+				return Operation::IntegerMod;
+			case IntegerPow:
+				return Operation::IntegerPow;
+			case IntegerLt:
+				return Operation::IntegerLt;
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+
+		static Operation builtinUnaryToOperation(const helios::code::BuiltinUnary builtin) {
+			using enum helios::code::BuiltinUnary;
+			switch (builtin) {
+			case IntegerNegation:
+				return Operation::IntegerNeg;
+			default:
+				CORE_UNREACHABLE();
+			}
 		}
 	};
 

@@ -29,6 +29,13 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 	*/
 	IntegerAdd,
+	IntegerSub,
+	IntegerMul,
+	IntegerDiv,
+	IntegerMod,
+	IntegerPow,
+	IntegerLt,
+	IntegerNeg,
 
 	/** See readme.md for more info about destruct. */
 	Destruct,
@@ -92,24 +99,26 @@ namespace compiler::mir {
 	struct MirLocal final {
 		LocalID id;
 
-		// @TODO: type
-
-		// for now we just keep HELIOS id:
-		helios::SymID   helios_id;
+		// Locals without a helios_id are temporary.
+		base::Optional<helios::SymID> helios_id;
 		tsh::TypeDesc<> type;
 		helios::ScopeID lifetime_scope;
 
 	private:
-		// @note: making MirLocal from helios_id
-		// is a temporary solution.
-		// It will not work with temporary values for example.
-		// it might work poorly for template/generic instantiations.
+		// @note: Constructing MirLocal from helios_id
+		// might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+		MirLocal(const helios::SymID helios_id, const tsh::TypeDesc<> type, const helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
+
+		MirLocal(const tsh::TypeDesc<> type, const helios::ScopeID lifetime_scope):
+              id(LocalID::next()),
+              helios_id({}),
+              type(type),
+              lifetime_scope(lifetime_scope) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
