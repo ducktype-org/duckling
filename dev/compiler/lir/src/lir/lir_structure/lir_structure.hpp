@@ -21,10 +21,16 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 		@brief Placeholder.
 		@todo Some decisions here to be made about operations like that.
 	*//**
-		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 	*/
 	IntegerAdd,
+	IntegerSub,
+	IntegerMul,
+	IntegerDiv,
+	IntegerMod,
+	IntegerLt,
+	IntegerNeg,
 
 	ReturnVoid,
 	ReturnValue,
@@ -93,19 +99,23 @@ namespace compiler::lir {
 	 */
 	struct LirLocal final {
 		/**
-		 * @brief HELIOS id of the variable, if exist.
+		 * @brief HELIOS id of the variable, if exists.
 		 */
 		base::Optional<helios::SymID> helios_id;
 
-		// a copy of type-layout here might bu sub-optimal
+		// a copy of type-layout here might be suboptimal
 		tsl::TypeLayout layout;
 
 	private:
-		LirLocal(helios::SymID helios_id, tsl::TypeLayout layout):
+		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout):
 			  helios_id(helios_id),
 			  layout(std::move(layout)) {}
 
-		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
+		LirLocal(const helios::SymID helios_id, tsl::TypeLayout layout):
+			  helios_id(helios_id),
+			  layout(std::move(layout)) {}
+
+		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
 		friend Function;
 		friend LocalRef;
@@ -118,7 +128,7 @@ namespace compiler::lir {
 		/**
 		 * @brief Crates unique local with bool-type, and without
 		 * helios_id.
-		 * @note its used to create lifetime-flags
+		 * @note it's used to create lifetime-flags
 		 * @param ctx
 		 * @return LirLocal
 		 */
@@ -142,7 +152,9 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			Operation operation, base::Optional<LocalRef> output, std::vector<LirLocation> arguments
+			const Operation                operation,
+			const base::Optional<LocalRef> output,
+			std::vector<LirLocation>       arguments
 		):
 			  operation(operation),
 			  output(output),

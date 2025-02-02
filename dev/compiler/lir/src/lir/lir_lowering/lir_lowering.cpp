@@ -61,7 +61,7 @@ namespace compiler::lir {
 	 * @param mir_operation
 	 * @return Operation
 	 */
-	Operation mir2lirOperation(mir::Operation mir_operation) {
+	Operation mir2lirOperation(const mir::Operation mir_operation) {
 		switch (mir_operation) {
 		case mir::Operation::Assign:
 			return Operation::Assign;
@@ -73,6 +73,20 @@ namespace compiler::lir {
 			return Operation::Jump;
 		case mir::Operation::Branch:
 			return Operation::Branch;
+		case mir::Operation::IntegerAdd:
+			return Operation::IntegerAdd;
+		case mir::Operation::IntegerSub:
+			return Operation::IntegerSub;
+		case mir::Operation::IntegerMul:
+			return Operation::IntegerMul;
+		case mir::Operation::IntegerDiv:
+			return Operation::IntegerDiv;
+		case mir::Operation::IntegerMod:
+			return Operation::IntegerMod;
+		case mir::Operation::IntegerLt:
+			return Operation::IntegerLt;
+		case mir::Operation::IntegerNeg:
+			return Operation::IntegerNeg;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -215,7 +229,8 @@ namespace compiler::lir {
 				const mir::Instruction&                                mir_instruction
 			) {
 				for (const auto& flag: mir_instruction.flags) {
-					[[maybe_unused]]  //< temporary for linter
+					[[maybe_unused]]
+					//< temporary for linter
 					auto lir_local
 						= getLocal(flag.local);
 

@@ -33,7 +33,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	IntegerMul,
 	IntegerDiv,
 	IntegerMod,
-	IntegerPow,
 	IntegerLt,
 	IntegerNeg,
 

@@ -552,7 +552,8 @@ namespace compiler::mir {
 			case IntegerMod:
 				return Operation::IntegerMod;
 			case IntegerPow:
-				return Operation::IntegerPow;
+				// @fixme: Implement exponentiation as a function call.
+				throw base::NotYetImplemented("Exponentiation on variables");
 			case IntegerLt:
 				return Operation::IntegerLt;
 			default:
