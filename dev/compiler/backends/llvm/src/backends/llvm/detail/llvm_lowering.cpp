@@ -192,8 +192,8 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations
-		) -> std::vector<llvm::Value*> {
+		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations)
+			-> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
@@ -225,12 +225,88 @@ namespace compiler::backend_llvm {
 			}
 			case lir::Operation::Branch: {
 				// here for lir locals we need more stuff:
-				auto cond = lir2LLVMLocation(lir_instruction.arguments.at(0));
-				auto true_block
+				const auto cond = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto true_block
 					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
-				auto false_block
+				const auto false_block
 					= block_mapping[lir_instruction.arguments.at(2).get<lir::BlockRef>()];
 				builder.CreateCondBr(cond, true_block.get(), false_block.get());
+				break;
+			}
+			case lir::Operation::Assign: {
+				const auto output = lir_instruction.output.value();
+				const auto value  = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerAdd: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = builder.CreateAdd(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerSub: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = builder.CreateSub(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerMul: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = builder.CreateMul(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerDiv: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = tsh::IntegralInfo(lir_instruction.arguments.at(0)
+                                                         .get<lir::LocalRef>()
+                                                         ->layout.getSourceType())
+                                           .getSignedness()
+				                      ? builder.CreateSDiv(lhs, rhs)
+				                      : builder.CreateUDiv(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerMod: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = tsh::IntegralInfo(lir_instruction.arguments.at(0)
+                                                         .get<lir::LocalRef>()
+                                                         ->layout.getSourceType())
+                                           .getSignedness()
+				                      ? builder.CreateSRem(lhs, rhs)
+				                      : builder.CreateURem(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerLt: {
+				const auto output = lir_instruction.output.value();
+				const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));
+				const auto value  = tsh::IntegralInfo(lir_instruction.arguments.at(0)
+                                                         .get<lir::LocalRef>()
+                                                         ->layout.getSourceType())
+                                           .getSignedness()
+				                      ? builder.CreateICmpSLT(lhs, rhs)
+				                      : builder.CreateICmpULT(lhs, rhs);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
+			case lir::Operation::IntegerNeg: {
+				const auto output   = lir_instruction.output.value();
+				const auto argument = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto value    = builder.CreateNeg(argument);
+				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
 			default:
