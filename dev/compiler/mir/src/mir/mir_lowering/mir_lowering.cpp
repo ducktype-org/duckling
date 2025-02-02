@@ -274,13 +274,12 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		LocalRef addLocal(const helios::SymID helios_id) {
-			const auto key = local_list.emplaceBack(
-				MirLocal{ helios_id,
-			              ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-							  "Handling ERRORS in MIR is not supported yet..."
-						  ),
-			              scope(helios_id) }
-			);
+			const auto key = local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id) });
 			return local_list.getRef(key).value();
 		}
 
@@ -399,13 +398,11 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(
-						Instruction{ Operation::Assign,
-					                 { local },
-					                 { expr_result.value },
-					                 { flagConstruct(local) },
-					                 stmt.lifetime_scope }
-					);
+					local_construction_hole.fill(Instruction{ Operation::Assign,
+					                                          { local },
+					                                          { expr_result.value },
+					                                          { flagConstruct(local) },
+					                                          stmt.lifetime_scope });
 
 					output({ expr_result.begin });
 					return;
@@ -422,13 +419,11 @@ namespace compiler::mir {
 			auto target_construction_hole = continuation->addHole();
 			auto expr_result              = lowerExpr(*stmt.new_value, continuation, function);
 
-			target_construction_hole.fill(
-				Instruction{ Operation::Assign,
-			                 { target_location },
-			                 { expr_result.value },
-			                 { flagConstruct(target_location) },
-			                 stmt.lifetime_scope }
-			);
+			target_construction_hole.fill(Instruction{ Operation::Assign,
+			                                           { target_location },
+			                                           { expr_result.value },
+			                                           { flagConstruct(target_location) },
+			                                           stmt.lifetime_scope });
 		}
 	};
 
@@ -465,8 +460,7 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output(
-				{ continuation, MirLocation{ function.findLocal(expr.symbol).toOpt().value() } }
+			output({ continuation, MirLocation{ function.findLocal(expr.symbol).toOpt().value() } }
 			);
 		}
 
@@ -485,13 +479,11 @@ namespace compiler::mir {
 			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
 			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
 			const Operation operation  = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(
-				Instruction{ operation,
-			                 { target_location },
-			                 { left_res, right_res },
-			                 { flagConstruct(target_location) },
-			                 expr.lifetime_scope }
-			);
+			target_construction_hole.fill(Instruction{ operation,
+			                                           { target_location },
+			                                           { left_res, right_res },
+			                                           { flagConstruct(target_location) },
+			                                           expr.lifetime_scope });
 
 			output({ l_continuation, target_location });
 		}
@@ -509,13 +501,11 @@ namespace compiler::mir {
 			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
 			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
 			const Operation operation  = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(
-				Instruction{ operation,
-			                 { target_location },
-			                 { sub_res },
-			                 { flagConstruct(target_location) },
-			                 expr.lifetime_scope }
-			);
+			target_construction_hole.fill(Instruction{ operation,
+			                                           { target_location },
+			                                           { sub_res },
+			                                           { flagConstruct(target_location) },
+			                                           expr.lifetime_scope });
 
 			output({ sub_continuation, target_location });
 		}

@@ -116,7 +116,8 @@ namespace base {
 	public:
 		// Constructors from pointers:
 		MRef() = default;
-		MRef(std::nullptr_t){}
+
+		MRef(std::nullptr_t) {}
 
 		MRef(T* ptr): ptr{ ptr } {}
 

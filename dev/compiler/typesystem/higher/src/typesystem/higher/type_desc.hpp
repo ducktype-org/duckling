@@ -44,17 +44,17 @@ namespace tsh {
 		 */
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		TypeDesc(TypeDesc<OTHER_TYPE_INFO> other):
-			  typeInfo(other.getType()),
-			  valueCategory(other.getValueCategory()) {}
+			  type_info(other.getType()),
+			  value_category(other.getValueCategory()) {}
 
 		/**
 		 * @brief Constructs the TypeDesc directly from its contents.
-		 * @param typeInfo The source type description, from the TypeInfo hierarchy.
-		 * @param valueCategory The value category of the described value.
+		 * @param type_info The source type description, from the TypeInfo hierarchy.
+		 * @param value_category The value category of the described value.
 		 */
-		TypeDesc(TYPE_INFO typeInfo, const ValueCategory valueCategory = {}):
-			  typeInfo(typeInfo),
-			  valueCategory(valueCategory) {}
+		TypeDesc(TYPE_INFO type_info, const ValueCategory value_category = {}):
+			  type_info(type_info),
+			  value_category(value_category) {}
 
 		TypeDesc(const TypeDesc& other) = default;
 
@@ -64,7 +64,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		TYPE_INFO getType() const {
-			return typeInfo;
+			return type_info;
 		}
 
 		/**
@@ -73,7 +73,7 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		ValueCategory getValueCategory() const {
-			return valueCategory;
+			return value_category;
 		}
 
 		/**
@@ -91,8 +91,8 @@ namespace tsh {
 		template<std::derived_from<TypeInfo> OTHER_TYPE_INFO>
 		[[nodiscard]]
 		auto operator<=>(const TypeDesc<OTHER_TYPE_INFO>& other) const {
-			if (auto type_cmp = typeInfo <=> other.getType(); type_cmp != 0) return type_cmp;
-			return valueCategory <=> other.getValueCategory();
+			if (auto type_cmp = type_info <=> other.getType(); type_cmp != 0) return type_cmp;
+			return value_category <=> other.getValueCategory();
 		}
 
 		/**
@@ -110,7 +110,7 @@ namespace tsh {
 		}
 
 	private:
-		TYPE_INFO     typeInfo;
-		ValueCategory valueCategory;
+		TYPE_INFO     type_info;
+		ValueCategory value_category;
 	};
 }
