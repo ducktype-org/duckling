@@ -479,12 +479,15 @@ namespace compiler::mir {
 			const auto result_tmp_type_desc = tsh::TypeDesc{ argument_type, temporary_category };
 			const auto target_location = function.addTmp(result_tmp_type_desc, expr.lifetime_scope);
 			const Operation operation  = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{ operation,
-			                                           { target_location },
-			                                           { left_res, right_res },
-			                                           { flagConstruct(target_location) },
-			                                           expr.lifetime_scope });
-
+			target_construction_hole.fill(
+				Instruction{
+					operation,
+					{ target_location },
+					{ left_res, right_res },
+					{ flagConstruct(target_location) },
+					expr.lifetime_scope,
+				}
+			);
 			output({ l_continuation, target_location });
 		}
 
@@ -511,8 +514,7 @@ namespace compiler::mir {
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
-			const auto inner_result = lowerExpr(*expr.inner, continuation, function);
-			output(inner_result);
+			output(lowerExpr(*expr.inner, continuation, function));
 		}
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {

@@ -125,7 +125,7 @@ namespace compiler::mir {
 
 	base::StrID MirLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
-		return base::StrID(".tmp");
+		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
 	}
 
 	void MirLocation::debugPrint(std::ostream& output) const {

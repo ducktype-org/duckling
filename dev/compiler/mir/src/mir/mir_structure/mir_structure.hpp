@@ -98,7 +98,7 @@ namespace compiler::mir {
 	struct MirLocal final {
 		LocalID id;
 
-		// Locals without a helios_id are temporary.
+		// Locals without a helios_id are locals created for temporary values
 		base::Optional<helios::SymID> helios_id;
 		tsh::TypeDesc<>               type;
 		helios::ScopeID               lifetime_scope;
