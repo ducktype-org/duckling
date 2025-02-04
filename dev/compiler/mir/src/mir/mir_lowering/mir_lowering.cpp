@@ -416,8 +416,16 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+		}
+
+		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+		}
+
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
+			throw base::NotYetImplemented("type literal");
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
@@ -434,10 +442,6 @@ namespace compiler::mir {
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
 			throw base::NotYetImplemented("parenthesis expr");
-		}
-
-		void visitKeywordExpr(const hc::KeywordExpr&) override {
-			throw base::NotYetImplemented("keyword");
 		}
 
 		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {

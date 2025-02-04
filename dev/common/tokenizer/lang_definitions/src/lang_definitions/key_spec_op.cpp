@@ -19,8 +19,8 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 71>
-		lang_keywords_array{ {
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 72>
+		LANG_KEYWORDS_ARRAY{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
@@ -76,6 +76,7 @@ namespace lang_def {
 			{ Keyword::f32, "f32", KeywordFlags() },
 			{ Keyword::f64, "f64", KeywordFlags() },
 			{ Keyword::f80, "f80", KeywordFlags() },
+			{ Keyword::f128, "f128", KeywordFlags() },
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
 
@@ -103,7 +104,7 @@ namespace lang_def {
 			{ Keyword::This, "this", KeywordFlags() },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 17> bc_keywords_array{
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 17> BC_KEYWORDS_ARRAY{
 		{
 			{ Keyword::BCFunction, "function", KeywordFlags() },
 			{ Keyword::BCLocalSize, "local_size", KeywordFlags() },
@@ -129,7 +130,7 @@ namespace lang_def {
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
-	constexpr std::array<std::pair<Special, std::string_view>, 6> special_array{ {
+	constexpr std::array<std::pair<Special, std::string_view>, 6> SPECIAL_ARRAY{ {
 		{ Special::NotASpecial, "NotASpecial" },
 		{ Special::Semicolon, ";" },
 		{ Special::Comma, "," },
@@ -138,7 +139,7 @@ namespace lang_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 21> operator_array{ {
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 23> OPERATOR_ARRAY{ {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::PeriodStar, ".*" },
@@ -162,6 +163,8 @@ namespace lang_def {
 		{ NamedOperator::DoubleMinus, "--" },
 		{ NamedOperator::Multiply, "*" },
 		{ NamedOperator::Divide, "/" },
+		{ NamedOperator::Remainder, "%" },
+		{ NamedOperator::Exponentiate, "**" },
 	} };
 
 	// Distinct for all keyword modes:
@@ -189,41 +192,41 @@ namespace lang_def {
 		rev_keyword_map.put(Keyword::NotAKeyword, base::StrID("NotAKeyword"));
 		keyword_flags.put(Keyword::NotAKeyword, KeywordFlags());
 
-		for (auto [k, s, f]: lang_keywords_array) {
+		for (auto [k, s, f]: LANG_KEYWORDS_ARRAY) {
 			lang_keyword_map.put(makeStrID(s), k);
 			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
 		}
 
-		for (auto [k, s, f]: bc_keywords_array) {
+		for (auto [k, s, f]: BC_KEYWORDS_ARRAY) {
 			bc_keyword_map.put(makeStrID(s), k);
 			rev_keyword_map.put(k, makeStrID(s));
 			keyword_flags.put(k, f);
 		}
 
 		// specials:
-		for (auto [k, s]: special_array) {
+		for (auto [k, s]: SPECIAL_ARRAY) {
 			special_map.put(makeStrID(s), k);
 			rev_special_map.put(k, makeStrID(s));
 		}
 
 		// operators:
-		for (auto [k, s]: operator_array) {
+		for (auto [k, s]: OPERATOR_ARRAY) {
 			operator_map.put(makeStrID(s), k);
 			rev_operator_map.put(k, makeStrID(s));
 		}
 
 		// just to be safe for any future changes
 		// @TODO: move to same tests
-		CORE_ASSERT(lang_keywords_array.size() == lang_keyword_map.size(), "keyword map error");
+		CORE_ASSERT(LANG_KEYWORDS_ARRAY.size() == lang_keyword_map.size(), "keyword map error");
 		CORE_ASSERT(
-			special_array.size() == special_map.size()
-				&& special_array.size() == rev_special_map.size(),
+			SPECIAL_ARRAY.size() == special_map.size()
+				&& SPECIAL_ARRAY.size() == rev_special_map.size(),
 			"special map error"
 		);
 		CORE_ASSERT(
-			operator_array.size() == operator_map.size()
-				&& operator_array.size() == rev_operator_map.size(),
+			OPERATOR_ARRAY.size() == operator_map.size()
+				&& OPERATOR_ARRAY.size() == rev_operator_map.size(),
 			"operator map error"
 		);
 
@@ -271,22 +274,22 @@ namespace lang_def {
 
 	std::vector<Keyword> getKeywords() {
 		std::vector<Keyword> result;
-		result.reserve(lang_keywords_array.size());
-		for (const auto& [k, s, f]: lang_keywords_array) result.push_back(k);
+		result.reserve(LANG_KEYWORDS_ARRAY.size());
+		for (const auto& [k, s, f]: LANG_KEYWORDS_ARRAY) result.push_back(k);
 		return result;
 	}
 
 	std::vector<Special> getSpecials() {
 		std::vector<Special> result;
-		result.reserve(special_array.size());
-		for (const auto& [k, s]: special_array) result.push_back(k);
+		result.reserve(SPECIAL_ARRAY.size());
+		for (const auto& [k, s]: SPECIAL_ARRAY) result.push_back(k);
 		return result;
 	}
 
 	std::vector<NamedOperator> getOperators() {
 		std::vector<NamedOperator> result;
-		result.reserve(operator_array.size());
-		for (const auto& [k, s]: operator_array) result.push_back(k);
+		result.reserve(OPERATOR_ARRAY.size());
+		for (const auto& [k, s]: OPERATOR_ARRAY) result.push_back(k);
 		return result;
 	}
 }

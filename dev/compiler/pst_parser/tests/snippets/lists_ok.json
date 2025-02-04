@@ -1,199 +1,415 @@
 {
+	"position": {
+		"sourceStart": 2,
+		"sourceEnd": 141
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 2,
+				"sourceEnd": 20
+			},
 			"Function": {
 				"name": {
 					"Name": "A"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 7,
+						"sourceEnd": 8
+					},
 					"function parameter list": []
 				},
 				"return": {
-					"Keyword Expression": {
-						"keyword": "i32"
-					}
-				},
-				"body": {
-					"Code Block or Statement": {
-						"Code Block": []
-					}
-				}
-			}
-		},
-		{
-			"Function": {
-				"name": {
-					"Name": "A"
-				},
-				"parameters": {
-					"function parameter list": []
-				},
-				"return": {
-					"Binary Operator": {
-						"left_expr": {
-							"Value Expr": {
-								"number": "1"
-							}
-						},
-						"operator": "+",
-						"right_expr": {
-							"Value Expr": {
-								"number": "1"
+					"position": {
+						"sourceStart": 13,
+						"sourceEnd": 15
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 13,
+								"sourceEnd": 15
+							},
+							"Keyword Expression": {
+								"keyword": "i32"
 							}
 						}
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 19,
+						"sourceEnd": 20
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 19,
+							"sourceEnd": 20
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 22,
+				"sourceEnd": 42
+			},
 			"Function": {
 				"name": {
 					"Name": "A"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 27,
+						"sourceEnd": 28
+					},
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
+					"position": {
+						"sourceStart": 33,
+						"sourceEnd": 37
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 33,
+								"sourceEnd": 37
 							},
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
+							"Binary Operator": {
+								"left_expr": {
+									"position": {
+										"sourceStart": 33,
+										"sourceEnd": 33
+									},
+									"Value Expr": {
+										"number": "1"
+									}
+								},
+								"operator": "+",
+								"right_expr": {
+									"position": {
+										"sourceStart": 37,
+										"sourceEnd": 37
+									},
+									"Value Expr": {
+										"number": "1"
+									}
 								}
 							}
-						]
+						}
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 41,
+						"sourceEnd": 42
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 41,
+							"sourceEnd": 42
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 44,
+				"sourceEnd": 67
+			},
 			"Function": {
 				"name": {
 					"Name": "A"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 49,
+						"sourceEnd": 50
+					},
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
+					"position": {
+						"sourceStart": 55,
+						"sourceEnd": 62
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 55,
+								"sourceEnd": 62
 							},
-							{
-								"Binary Operator": {
-									"left_expr": {
-										"Value Expr": {
-											"number": "1"
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"position": {
+											"sourceStart": 55,
+											"sourceEnd": 57
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									},
-									"operator": "+",
-									"right_expr": {
-										"Value Expr": {
-											"number": "1"
+									{
+										"position": {
+											"sourceStart": 60,
+											"sourceEnd": 62
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									}
-								}
+								]
+							}
+						}
+					}
+				},
+				"body": {
+					"position": {
+						"sourceStart": 66,
+						"sourceEnd": 67
+					},
+					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 66,
+							"sourceEnd": 67
+						},
+						"Code Block": []
+					}
+				}
+			}
+		},
+		{
+			"position": {
+				"sourceStart": 69,
+				"sourceEnd": 104
+			},
+			"Function": {
+				"name": {
+					"Name": "A"
+				},
+				"parameters": {
+					"position": {
+						"sourceStart": 74,
+						"sourceEnd": 75
+					},
+					"function parameter list": []
+				},
+				"return": {
+					"position": {
+						"sourceStart": 80,
+						"sourceEnd": 99
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 80,
+								"sourceEnd": 99
 							},
-							{
-								"Round Group Expression": {
-									"inner_expr": {
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"position": {
+											"sourceStart": 80,
+											"sourceEnd": 82
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 85,
+											"sourceEnd": 89
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 85,
+													"sourceEnd": 85
+												},
+												"Value Expr": {
+													"number": "1"
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 89,
+													"sourceEnd": 89
+												},
+												"Value Expr": {
+													"number": "1"
+												}
+											}
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 92,
+											"sourceEnd": 96
+										},
+										"Round Group Expression": {
+											"inner_expr": {
+												"position": {
+													"sourceStart": 93,
+													"sourceEnd": 95
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "abc"
+													}
+												}
+											}
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 99,
+											"sourceEnd": 99
+										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "abc"
+												"Name": "x"
 											}
 										}
 									}
-								}
-							},
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "x"
-									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 103,
+						"sourceEnd": 104
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 103,
+							"sourceEnd": 104
+						},
 						"Code Block": []
 					}
 				}
 			}
 		},
 		{
+			"position": {
+				"sourceStart": 106,
+				"sourceEnd": 141
+			},
 			"Function": {
 				"name": {
 					"Name": "A"
 				},
 				"parameters": {
+					"position": {
+						"sourceStart": 111,
+						"sourceEnd": 112
+					},
 					"function parameter list": []
 				},
 				"return": {
-					"Comma Expr": {
-						"sub-expressions": [
-							{
-								"Keyword Expression": {
-									"keyword": "i32"
-								}
+					"position": {
+						"sourceStart": 117,
+						"sourceEnd": 136
+					},
+					"Top Level Expression": {
+						"expr": {
+							"position": {
+								"sourceStart": 117,
+								"sourceEnd": 136
 							},
-							{
-								"Binary Operator": {
-									"left_expr": {
-										"Value Expr": {
-											"number": "1"
+							"Comma Expr": {
+								"sub-expressions": [
+									{
+										"position": {
+											"sourceStart": 117,
+											"sourceEnd": 119
+										},
+										"Keyword Expression": {
+											"keyword": "i32"
 										}
 									},
-									"operator": "+",
-									"right_expr": {
-										"Value Expr": {
-											"number": "1"
+									{
+										"position": {
+											"sourceStart": 122,
+											"sourceEnd": 126
+										},
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 122,
+													"sourceEnd": 122
+												},
+												"Value Expr": {
+													"number": "1"
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 126,
+													"sourceEnd": 126
+												},
+												"Value Expr": {
+													"number": "1"
+												}
+											}
 										}
-									}
-								}
-							},
-							{
-								"Round Group Expression": {
-									"inner_expr": {
+									},
+									{
+										"position": {
+											"sourceStart": 129,
+											"sourceEnd": 133
+										},
+										"Round Group Expression": {
+											"inner_expr": {
+												"position": {
+													"sourceStart": 130,
+													"sourceEnd": 132
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "abc"
+													}
+												}
+											}
+										}
+									},
+									{
+										"position": {
+											"sourceStart": 136,
+											"sourceEnd": 136
+										},
 										"Identifier Expression": {
 											"name": {
-												"Name": "abc"
+												"Name": "x"
 											}
 										}
 									}
-								}
-							},
-							{
-								"Identifier Expression": {
-									"name": {
-										"Name": "x"
-									}
-								}
+								]
 							}
-						]
+						}
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 140,
+						"sourceEnd": 141
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 140,
+							"sourceEnd": 141
+						},
 						"Code Block": []
 					}
 				}

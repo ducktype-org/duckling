@@ -20,6 +20,10 @@ from scripts.py.toolbox.helpers import (
     log_new_line,
     make_singleline_command,
     with_venv,
+    default_compiler_from_ctx,
+    infer_cc_compiler,
+    infer_cxx_compiler,
+    check_if_compilers_are_compatible,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
@@ -41,12 +45,6 @@ BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
     InternetFile(
-        "scripts/downloads/clang-format",
-        "http://internal.ducktype.org/static/bin/clang-format",
-        auth=(DATA_USER, DATA_PASS),
-        after_download=[(callback_chmod, "clang-format", "u+x")],
-    ),
-    InternetFile(
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
         after_download=[
@@ -63,7 +61,10 @@ def cli():
     pass
 
 
-def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
+def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
+
+    check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+
     bld = pathlib.Path(build_dir)
     if bld.exists():
         # Delete old cache
@@ -78,7 +79,8 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
          -B {build_dir}
          -D CMAKE_BUILD_TYPE={type}
          -D BUILD_DOCS={'ON' if docs else 'OFF'}
-         -D CMAKE_CXX_COMPILER={compiler}
+         -D CMAKE_CXX_COMPILER={cxx_compiler}
+         -D CMAKE_C_COMPILER={cc_compiler}
          -D USE_CCACHE={'ON' if ccache else 'OFF'}
          -D ENABLE_COVERAGE={'true' if coverage else 'false'}
     """
@@ -127,11 +129,22 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
     is_flag=True,
 )
 @click.option(
+    "-x",
+    "--cxx-compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cxx_compiler")
+)
+@click.option(
     "-c",
-    "--compiler",
-    prompt="Compiler path",
-    help="A path to the complier to compile with",
-    default="g++",
+    "--cc-compiler",
+    prompt="C compiler path",
+    help="A path to the C complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
@@ -337,9 +350,9 @@ def test_impl(build_dir, memcheck):
     "--memcheck",
     prompt="Memcheck",
     help="Whether or not to perform memcheck with valgrind",
-    type=bool,
+    type=click.BOOL,
     default=False,
-    is_flag=True,
+    show_default=True,
 )
 def test(*args, **kwargs):
     """Performs tests of the code"""
@@ -409,8 +422,8 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
-    default="clang-tidy-17",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-18 or clang-tidy",
+    default="clang-tidy-18",
 )
 @click.option(
     "-f",
@@ -418,7 +431,7 @@ def download_llvm(*args, **kwargs):
     "clang_format_path",
     prompt="clang-format path",
     help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="scripts/downloads/clang-format",
+    default="clang-format-18",
 )
 @click.option(
     "-b",

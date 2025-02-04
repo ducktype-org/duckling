@@ -94,8 +94,7 @@ namespace query::detail {
 					<< "\"";
 				out << " Key " << k.hash.val << " :=>\n";
 				for (auto& dep: v.dependencies) {
-					out << spacing << "(Q: "
-						<< "\"" << dep.q_id.getName() << "\", "
+					out << spacing << "(Q: " << "\"" << dep.q_id.getName() << "\", "
 						<< "K: " << dep.hash.val << "),\n";
 				}
 				if (!v.dependencies.empty()) out << '\n';

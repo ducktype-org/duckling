@@ -1,9 +1,9 @@
 import pathlib
 import subprocess as sp
 import sys
+import re
 
 import click
-
 
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
@@ -143,3 +143,92 @@ def make_singleline_command(command: str, replace_newline_with=" ") -> str:
 
 def clamp_str(string, max_len=10, surround="`"):
     return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"
+
+
+# this class overrides the click.Option class, so it can get ctx
+# and infer and set the default value from other options
+def default_compiler_from_ctx(default_name):
+
+    class OptionDefaultFromCtx(click.Option):
+
+        def get_default(self, ctx, call = True):
+            if default_name == "cc_compiler":
+                self.default = infer_cc_compiler(ctx)
+            elif default_name == "cxx_compiler":
+                self.default = infer_cxx_compiler(ctx)
+            return super(OptionDefaultFromCtx, self).get_default(ctx, call)
+
+    return OptionDefaultFromCtx
+
+
+def infer_cc_compiler(ctx):
+    """Infer the default C compiler from the C++ compiler"""
+    cc_compiler = ctx.params.get("cc_compiler")
+    cxx_compiler = ctx.params.get("cxx_compiler")
+
+    if not cc_compiler and cxx_compiler:
+        if "clang++" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("clang++", "clang")
+        elif "g++" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("g++", "gcc")
+        elif "icpx" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("icpx", "icx")
+        elif "icpc" in cxx_compiler:
+            cc_compiler = cxx_compiler.replace("icpc", "icc")
+        else:
+            cc_compiler = "gcc"
+    else:
+        cc_compiler = "gcc"
+
+    return cc_compiler
+
+
+def infer_cxx_compiler(ctx):
+    """Infer the default C++ compiler from the C compiler"""
+    cc_compiler = ctx.params.get("cc_compiler")
+    cxx_compiler = ctx.params.get("cxx_compiler")
+
+    if not cxx_compiler and cc_compiler:
+        if "clang" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("clang", "clang++")
+        elif "gcc" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("gcc", "g++")
+        elif "icx" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("icx", "icpx")
+        elif "icc" in cc_compiler:
+            cxx_compiler = cc_compiler.replace("icc", "icpc")
+        else:
+            cxx_compiler = "g++"
+    else:
+        cxx_compiler = "g++"
+
+    return cxx_compiler
+
+
+def get_program_version(prog):
+    version_out = sp.run([prog, '--version'], capture_output=True, text=True)
+    version_info = version_out.stdout.splitlines()[0]
+    match = re.search(r'(\d+(\.\d+)+)', version_info)
+    return match.group(0) if match else None
+
+
+def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
+    if cxx_compiler is None or cc_compiler is None:
+        exit_with_error("Couldn't get the compilers")
+
+    if (
+        ("clang" in cc_compiler and "clang++" not in cxx_compiler) or
+        ("gcc" in cc_compiler and "clang++" in cxx_compiler) or
+        ("gcc" in cc_compiler and "g++" not in cxx_compiler) or
+        ("icx" in cc_compiler and "icpx" not in cxx_compiler) or
+        ("icc" in cc_compiler and "icpc" not in cxx_compiler)
+    ):
+        exit_with_error(f"Compilers are not compatible: {cxx_compiler=}, {cc_compiler=}")
+
+    cxx_version = get_program_version(cxx_compiler)
+    cc_version = get_program_version(cc_compiler)
+
+    if cxx_version is None or cc_version is None:
+        exit_with_error("Couldn't get the version of the compilers")
+    elif cxx_version != cc_version:
+        exit_with_error(f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}")

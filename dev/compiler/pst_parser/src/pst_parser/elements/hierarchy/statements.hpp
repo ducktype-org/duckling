@@ -63,6 +63,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Using statement
+	 */
 	class Using final: public Stmt {
 		MBox<DottedName> names;
 
@@ -96,6 +99,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Statement that is an expression.
+	 */
 	class ExprStmt final: public Stmt {
 		MBox<ExprElement> expr;
 
@@ -122,6 +128,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor&) const override;
 	};
 
+	/**
+	 * @brief Alias statement.
+	 */
 	class Alias final: public Stmt {
 		tpc::Identifier  name;
 		MBox<DottedName> points_to;
@@ -161,7 +170,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<MBox<ExprElement>> expr;
+		base::Optional<MBox<CommaExprHolder>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
@@ -177,16 +186,20 @@ namespace pst {
 		/**
 		 * @note Optional of MRef here is intentional
 		 */
-		base::Optional<MCRef<ExprElement>> getValue() const {
-			return expr.map([](const auto& e) { return e.ref(); });
+		base::Optional<MCRef<ExprHolder>> getValue() const {
+			return expr.map([](const auto& e) -> MCRef<ExprHolder> { return e.ref(); });
 		}
 	};
 
-	// TODO: Merge it with variable. Or perhaps make a new class DataStorage.
+	/**
+	 * @brief Const variable declaration.
+	 *
+	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
+	 */
 	class Const final: public Stmt {
-		tpc::Identifier   name;
-		MBox<ExprElement> type;
-		MBox<ExprElement> value;
+		tpc::Identifier       name;
+		MBox<CommaExprHolder> type;
+		MBox<CommaExprHolder> value;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
@@ -198,12 +211,12 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getValue() const {
+		MCRef<ExprHolder> getValue() const {
 			return value.ref();
 		}
 

@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
 		TESTER_ADD_TEST(testTypeOf);
+		TESTER_ADD_TEST(testKeywordLiterals);
 		TESTER_ADD_TEST(testFunctionParameters);
 
 		// this is at the end
@@ -64,8 +65,7 @@ private:
 		ASSERT_EQUAL(-3, getValue("B", root_scope));
 		ASSERT_EQUAL(-1, getValue("D", root_scope));
 		ASSERT_EQUAL(6, getValue("E", root_scope));
-		// @TODO: Test below disabled - parser currently does not support power operator.
-		// ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
+		ASSERT_EQUAL(std::numeric_limits<i32>::max(), getValue("MAX_I32", root_scope));
 		ASSERT_EQUAL(3, getValue("H2", root_scope));
 		ASSERT_EQUAL(1, getValue("T0", root_scope));
 		ASSERT_EQUAL(2, getValue("T1", root_scope));
@@ -252,7 +252,7 @@ private:
 			usize const_int_count = 0;
 			usize ident_count     = 0;
 
-			void visitLiteralValueExpr(const LiteralValueExpr&) override { const_int_count++; }
+			void visitLiteralIntExpr(const LiteralIntExpr&) override { const_int_count++; }
 
 			void visitIdentifierExpr(const IdentifierExpr&) override { ident_count++; }
 
@@ -309,23 +309,36 @@ private:
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/expressions")));
 
 		ASSERT_EQUAL(1, getValue("V1", root_scope));
-		ASSERT_EQUAL(31, getValue("V31", root_scope));
+		auto              sym_v1  = getChain("V1", root_scope).back();
+		auto              tree_v1 = getExprOfConst(sym_v1);
+		std::stringstream out_v1;
+		tree_v1->debugPrint(out_v1);
 
-		auto              sym1 = getChain("V31", root_scope).back();
-		std::stringstream out;
-		auto              tree1 = getExprOfConst(sym1);
-		tree1->debugPrint(out);
-		ASSERT_EQUAL("3+((5+9)*2)", out.str());
+		ASSERT_EQUAL(-1, getValue("VM1", root_scope));
+		auto              sym_vm1  = getChain("VM1", root_scope).back();
+		auto              tree_vm1 = getExprOfConst(sym_vm1);
+		std::stringstream out_vm1;
+		tree_vm1->debugPrint(out_vm1);
+
+		ASSERT_EQUAL(256, getValue("V256", root_scope));
+
+		auto              sym_v256 = getChain("V256", root_scope).back();
+		std::stringstream out_v256;
+		auto              tree_v256 = getExprOfConst(sym_v256);
+		tree_v256->debugPrint(out_v256);
+		ASSERT_EQUAL("(3+4-4*16/5%7)**8", out_v256.str());
 
 		ASSERT_EQUAL(12, getValue("V12", root_scope));
-		auto              sym2  = getChain("V12", root_scope).back();
-		auto              tree2 = getExprOfConst(sym2);
-		std::stringstream out2;
-		tree2->debugPrint(out2);
+		auto              sym_v12  = getChain("V12", root_scope).back();
+		auto              tree_v12 = getExprOfConst(sym_v12);
+		std::stringstream out_v12;
+		tree_v12->debugPrint(out_v12);
 
-		auto sym3       = getChain("N.V3", root_scope).back();
-		auto symV3_repr = base::strConcat("(Symbol V3 (", sym3.customPerfectHash(), "))");
-		ASSERT_EQUAL(base::strConcat(symV3_repr, "+", symV3_repr, "*", symV3_repr), out2.str());
+		auto sym_v3      = getChain("N.V3", root_scope).back();
+		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
+		ASSERT_EQUAL(
+			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
+		);
 	}
 
 	void testError() {
@@ -337,7 +350,7 @@ private:
 		try {
 			getValue("InvalidExpr", root_scope);
 			CORE_PANIC("Should throw.");
-		} catch (errors::Failed& err) {
+		} catch (base::NotYetImplemented& err) {
 			// Since this branch was chosen, everything worked well.
 		}
 
@@ -539,6 +552,84 @@ private:
 		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
 	}
 
+	void testKeywordLiterals() {
+		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
+
+		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
+		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
+		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, true });
+
+		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
+		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
+		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
+		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
+		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, false });
+
+		auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
+		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
+		auto f64_type = query::entryPoint<tsh::QueryFloatType>(64);
+
+		auto f80_type  = query::entryPoint<tsh::QueryFloatType>(80);
+		auto f128_type = query::entryPoint<tsh::QueryFloatType>(128);
+
+		auto char_type = query::entryPoint<tsh::QueryCharType>({});
+
+		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
+
+		// a simple way to get function scope through hout:
+		// @todo maybe we want to put in in helios_test_utils.hpp?
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		ASSERT_EQUAL(1, hout.functions.size());
+
+		// debug print test just for cov and to see if it does not throw:
+		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+
+		auto foo            = hout.functions.at(0);
+		auto foo_body_scope = foo.content.body->lifetime_scope;
+
+		// variable types:
+
+		ASSERT_EQUAL(i8_type, getTypeOf("v_i8", foo_body_scope));
+		ASSERT_EQUAL(i16_type, getTypeOf("v_i16", foo_body_scope));
+		ASSERT_EQUAL(i32_type, getTypeOf("v_i32", foo_body_scope));
+		ASSERT_EQUAL(i64_type, getTypeOf("v_i64", foo_body_scope));
+		ASSERT_EQUAL(i128_type, getTypeOf("v_i128", foo_body_scope));
+
+		ASSERT_EQUAL(u8_type, getTypeOf("v_u8", foo_body_scope));
+		ASSERT_EQUAL(u16_type, getTypeOf("v_u16", foo_body_scope));
+		ASSERT_EQUAL(u32_type, getTypeOf("v_u32", foo_body_scope));
+		ASSERT_EQUAL(u64_type, getTypeOf("v_u64", foo_body_scope));
+		ASSERT_EQUAL(u128_type, getTypeOf("v_u128", foo_body_scope));
+
+		ASSERT_EQUAL(f16_type, getTypeOf("v_f16", foo_body_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("v_f32", foo_body_scope));
+		ASSERT_EQUAL(f64_type, getTypeOf("v_f64", foo_body_scope));
+		ASSERT_EQUAL(f80_type, getTypeOf("v_f80", foo_body_scope));
+		ASSERT_EQUAL(f128_type, getTypeOf("v_f128", foo_body_scope));
+
+		ASSERT_EQUAL(char_type, getTypeOf("v_char", foo_body_scope));
+
+		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_t", foo_body_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_f", foo_body_scope));
+
+		// true, false literals:
+		auto true_expr  = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
+		auto false_expr = getExprOfVariable(getChain("v_bool_f", foo_body_scope).back());
+
+		auto true_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*true_expr);
+		auto false_expr_casted
+			= dynamic_cast<const compiler::helios::code::LiteralBoolExpr*>(&*false_expr);
+
+		ASSERT_TRUE(true_expr_casted != nullptr);
+		ASSERT_TRUE(false_expr_casted != nullptr);
+
+		ASSERT_EQUAL(true_expr_casted->value, true);
+		ASSERT_EQUAL(false_expr_casted->value, false);
+	}
+
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
 
@@ -611,8 +702,18 @@ private:
 				depth = scopeDepth(scope);
 
 				// it is just for cov mostly
+
+				// we redirect cerr to a stringstream to avoid printing a lot of stuff to console
+				// here:
+				std::cerr.flush();
+				std::stringstream buffer;
+				std::streambuf*   org_buffer = std::cerr.rdbuf(buffer.rdbuf());
+				defer(std::cerr.rdbuf(org_buffer));
+
 				// @TODO: make it not print to cerr, but to ostream or string:
 				scope.debugPrintScopeAndParents();
+
+				std::cerr.flush();
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}

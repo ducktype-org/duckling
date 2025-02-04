@@ -18,10 +18,13 @@
 
 namespace pst {
 
+	/**
+	 * @brief Declaration of a single function argument.
+	 */
 	class FunParam final: public NotStmt {
-		tpc::Identifier                   name;
-		MBox<ExprElement>                 type;
-		base::Optional<MBox<ExprElement>> initial;
+		tpc::Identifier                           name;
+		MBox<UniversalExprHolder>                 type;
+		base::Optional<MBox<UniversalExprHolder>> initial;
 
 	public:
 		explicit FunParam(const dia::SourcePosition& position): NotStmt(position) {
@@ -38,7 +41,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 
@@ -48,13 +51,16 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		base::Optional<MCRef<ExprElement>> getValue() const {
-			return initial.map([](const auto& v) { return v.ref(); });
-		}
+		base::Optional<MCRef<UniversalExprHolder>> getValue() const;
 
 		void acceptVisitor(PstVisitor& visitor) const final;
 	};
 
+	/**
+	 * @brief Simple dotted name that is Identifiers separated by dots potentially ended by `.*`
+	 *
+	 * used for imports
+	 */
 	class DottedName final: public NotStmt {
 		std::vector<tpc::Identifier> names;
 		bool                         star = false;
@@ -88,6 +94,9 @@ namespace pst {
 		~DottedName() final = default;
 	};
 
+	/**
+	 * @brief Code Block that contains statements.
+	 */
 	class CodeBlock final: public NotStmt {
 		std::vector<MBox<Stmt>> statements;
 
@@ -113,6 +122,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Class Block that contains Class statements.
+	 */
 	class ClassBlock final: public NotStmt {
 		std::vector<MBox<ClassStmt>> statements;
 
@@ -139,6 +151,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Code Block or Statement.
+	 */
 	class CodeBlockOrStmt final: public NotStmt {
 		std::variant<MBox<Stmt>, MBox<CodeBlock>> content;
 
@@ -168,8 +183,11 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Expression surrounded by parenthesis.
+	 */
 	class RoundGroupExpr final: public NotStmt {
-		MBox<ExprElement> expr = nullptr;
+		MBox<CommaExprHolder> expr = nullptr;
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
@@ -186,13 +204,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getExpr() const {
+		MCRef<ExprHolder> getExpr() const {
 			return expr.ref();
 		}
 	};
 
 	/**
-	 * @brief Common root for expression sub-elements
+	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
 		const i64 precedence;
@@ -219,21 +237,126 @@ namespace pst {
 	};
 
 	/**
-	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
-	 * top-level
+	 * @brief Class that keeps an expression with information whether it's a top-level expression.
 	 */
-	class UniversalExpr: public NotStmt {
+	class ExprHolder: public NotStmt {
+	protected:
+		MBox<ExprElement> expr;
+
 	public:
-		static MBox<ExprElement> parse(LangParserState& state);
-		UniversalExpr() = delete;
+		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
+			this->element_kind = ElementKind::ExprWrapper;
+		}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Top Level Expression";
+		}
+
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		MCRef<ExprElement> getExpr() const {
+			return expr.ref();
+		}
+
+		virtual bool isTopLevel() = 0;
 	};
 
 	/**
-	 * @brief Secondary entry point to expression parsing that allows comma expressions top-level.
+	 * @brief Collects different parsing entries.
 	 */
-	class CommaExpr: public NotStmt {
+	class ExprParserHelper {
 	public:
-		static MBox<ExprElement> parse(LangParserState& state);
-		CommaExpr() = delete;
+		ExprParserHelper() = delete;
+		static MBox<ExprElement> parseUniversal(LangParserState& state);
+		static MBox<ExprElement> parseComma(LangParserState& state);
+		static MBox<ExprElement> parseAssignment(LangParserState& state);
+		static MBox<ExprElement> parseForType(LangParserState& state);
+	};
+
+	using ExprParseFun = MBox<ExprElement>(LangParserState&);
+
+	/**
+	 * @brief Template for defining expression parsing entry points.
+	 * Its intended usage is to derive holder after this template:
+	 * `class Holder: ExprHolderTemplate<Holder, parser_fun, top_level>`
+	 *
+	 * @tparam Self - Class of the holder, used for the correct return type of parse.
+	 * @tparam parseFun - The parsing function that parses the inner expression.
+	 * @tparam TOP_LEVEL - Whether the holder holds a top-level expression, for example some lists
+	 * shouldn't.
+	 */
+	template<typename Self, ExprParseFun parseFun, bool TOP_LEVEL = true>
+	class ExprHolderTemplate: public ExprHolder {
+	public:
+		using ExprHolder::ExprHolder;
+
+		static MBox<Self> parse(LangParserState& state) {
+			auto position = state.getPosition();
+			auto out      = makeBox<Self>(position);
+
+			state.parse(out).with(&out->expr, parseFun);
+			return out;
+		}
+
+		bool isTopLevel() override { return TOP_LEVEL; }
+	};
+
+	/**
+	 * @brief The default entry point to expression parsing that doesn't allow comma expressions
+	 * top-level
+	 */
+	class UniversalExprHolder final:
+		  public ExprHolderTemplate<UniversalExprHolder, ExprParserHelper::parseUniversal, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalExprHolder() final = default;
+	};
+
+	/**
+	 * @brief The version of the default entry point that isn't top-level
+	 */
+	class UniversalExprHolderLowerLevel final:
+		  public ExprHolderTemplate<
+			  UniversalExprHolderLowerLevel,
+			  ExprParserHelper::parseUniversal,
+			  false> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~UniversalExprHolderLowerLevel() final = default;
+	};
+
+	/**
+	 * @brief Secondary entry point to expression parsing that allows comma expressions but doesn't
+	 * allow for assignment expressions top-level
+	 */
+	class CommaExprHolder final:
+		  public ExprHolderTemplate<CommaExprHolder, ExprParserHelper::parseComma, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~CommaExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Tertiary and most broad entry point to expression parsing that allows assignment
+	 * expressions top-level.
+	 */
+	class AssignmentExprHolder final:
+		  public ExprHolderTemplate<AssignmentExprHolder, ExprParserHelper::parseAssignment, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~AssignmentExprHolder() final = default;
+	};
+
+	/**
+	 * @brief Expression parsing entry point for type in for statement, i.e.:
+	 * `for (iter: this-expr in range) {...}`
+	 */
+	class ForTypeExprHolder final:
+		  public ExprHolderTemplate<ForTypeExprHolder, ExprParserHelper::parseForType, true> {
+	public:
+		using ExprHolderTemplate::ExprHolderTemplate;
+		~ForTypeExprHolder() final = default;
 	};
 }

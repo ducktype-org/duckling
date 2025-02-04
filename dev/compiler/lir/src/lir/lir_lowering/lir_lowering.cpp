@@ -128,6 +128,9 @@ namespace compiler::lir {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LirLocation{ integer.value };
 					}
+					variant_case(mir::MirBoolConst, boolean) {
+						return LirLocation{ boolean.value };
+					}
 					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
 						return LirLocation{ BlockRef(mir_to_lir_block.at(block)) };
@@ -264,8 +267,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping"
-							  << "\n";
+					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
 				default:
 					throw base::NotYetImplemented("instruction in LowerToLirFunction");

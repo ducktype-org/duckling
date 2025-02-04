@@ -207,7 +207,7 @@ namespace base {
 
 	// Deduction guide for constructing a MRef from a Ref:
 	template<class U>
-	MRef(Ref<U>&&) noexcept -> MRef<U>;
+	MRef(const Ref<U>&) noexcept -> MRef<U>;
 
 	template<class T>
 	using CRef = Ref<const T>;

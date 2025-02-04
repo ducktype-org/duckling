@@ -99,6 +99,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Class constructor element.
+	 */
 	class Constructor final: public ClassSpecial {
 		MBox<ParamList> params = nullptr;
 		MBox<InitList>  inits  = nullptr;
@@ -124,6 +127,9 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class destructor element.
+	 */
 	class Destructor final: public ClassSpecial {
 		MBox<CodeBlock> body = nullptr;
 
@@ -142,11 +148,14 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class method element.
+	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier                   name;
-		MBox<ParamList>                   params = nullptr;
-		base::Optional<MBox<ExprElement>> ret;
-		MBox<CodeBlock>                   body = nullptr;
+		tpc::Identifier                       name;
+		MBox<ParamList>                       params = nullptr;
+		base::Optional<MBox<CommaExprHolder>> ret;
+		MBox<CodeBlock>                       body = nullptr;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
@@ -178,11 +187,14 @@ namespace pst {
 		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class field element.
+	 */
 	class Field final: public ClassStmt {
-		bool                              is_mutable = true;
-		tpc::Identifier                   name;
-		MBox<ExprElement>                 type;
-		base::Optional<MBox<ExprElement>> init;
+		bool                                  is_mutable = true;
+		tpc::Identifier                       name;
+		MBox<CommaExprHolder>                 type;
+		base::Optional<MBox<CommaExprHolder>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
@@ -202,7 +214,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 

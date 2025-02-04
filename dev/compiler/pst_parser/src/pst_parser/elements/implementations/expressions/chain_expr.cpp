@@ -40,7 +40,7 @@ namespace pst::expr {
 
 		auto out = makeBox<ChainExpr>(state.getPosition());
 
-		state.parse(out).with(&out->literal, Lower::parse, +fwd);
+		state.parse(out).with(&out->atom, Lower::parse, +fwd);
 		length -= fwd;
 
 		while (length > 0) {
@@ -48,7 +48,8 @@ namespace pst::expr {
 			out->chain.emplace_back(nullptr);
 			if (state[0].is(lang_def::NamedOperator::Period)) {
 				state.parse(out).with(&out->chain.back(), Access::parse, +fwd);
-			} else if (state[0].isBracketGroup(lexer::Token::Round) || state[0].isBracketGroup(lexer::Token::Square)) {
+			} else if (state[0].isBracketGroup(lexer::Token::Round)
+			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
 			} else {
 				state.log(base::make_unique<BadChainExprError>(
@@ -65,8 +66,8 @@ namespace pst::expr {
 	void ChainExpr::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("literal": )";
-		nullAwareDprint(literal, out);
+		out << R"("atom": )";
+		nullAwareDprint(atom, out);
 		out << R"(, "chain": [)";
 		bool first = true;
 		for (auto& link: chain) {
@@ -93,7 +94,7 @@ namespace pst::expr {
 
 	const std::vector<MBox<ExprElement>>& Comma::getExpressions() const { return expressions; }
 
-	MCRef<ExprElement> ChainExpr::getLiteral() const { return literal.ref(); }
+	MCRef<ExprElement> ChainExpr::getAtom() const { return atom.ref(); }
 
 	const std::vector<MBox<ExprElement>>& ChainExpr::getChain() const { return chain; }
 

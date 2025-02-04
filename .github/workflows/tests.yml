@@ -17,6 +17,9 @@ env:
   CCACHE_DIR: ${{ github.workspace }}/dev/.ccache
   BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
+  CXX_COMPILER: g++-14
+  CC_COMPILER: gcc-14
+  GCOV_PATH: gcov-14
 
 jobs:
   build:
@@ -36,7 +39,7 @@ jobs:
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
-    timeout-minutes: 12  # (Per matrix run)
+    timeout-minutes: 16  # (Per matrix run)
 
     runs-on: ubuntu-24.04
 
@@ -47,9 +50,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov and LLVM
+      - name: Install lcov, LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov llvm llvm-dev
+
+      - name: Install GCC 14 and gcov-14
+        run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+          sudo apt update
+          sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
+      
+      - name: Check installations
+        run: |
+          ${{ env.CXX_COMPILER }} --version
+          ${{ env.CC_COMPILER }} --version
+          ${{ env.GCOV_PATH }} --version
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -103,7 +118,8 @@ jobs:
         run: |
           cmake \
               -B ${{ env.BUILD_DIR }} \
-              -D CMAKE_CXX_COMPILER=g++-13 \
+              -D CMAKE_CXX_COMPILER=${{ env.CXX_COMPILER }} \
+              -D CMAKE_C_COMPILER=${{ env.CC_COMPILER }} \
               -D BUILD_DOCS=OFF \
               -D CMAKE_BUILD_TYPE=${{ matrix.build-type }} \
               -D DOWNLOAD_UBUNTU_ICU_BUILD=ON \

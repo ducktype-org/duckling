@@ -3,7 +3,7 @@
 #include "../../hierarchy/not_statements.hpp"
 
 namespace pst::expr {
-	MBox<ExprElement> Literal::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> Atom::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		if (state[0].isKeyword()) {

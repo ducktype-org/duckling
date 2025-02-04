@@ -135,13 +135,15 @@ namespace query::detail {
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
 			);
 
-			// calculation:
-			auto&& result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
-
 			// epilog:
-			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
+			);
 
-			return result;
+			// This is all at the end, with defer above,
+			// to avoid false positive dangling reference warning.
+			// We can't do it move-less without using temporary
+			// lifetime extension, which causes the warning.
+			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -192,8 +194,9 @@ namespace query::detail {
  * @param pretty_name Pretty name of the Query
  */
 #define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-		-> type::QResult {                                                                          \
+	auto type::QueryType::internal_query(                                                           \
+		type::QKey key, ::query::detail::NodeID from                                                \
+	) -> type::QResult {                                                                            \
 		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
 	}                                                                                               \
 	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
