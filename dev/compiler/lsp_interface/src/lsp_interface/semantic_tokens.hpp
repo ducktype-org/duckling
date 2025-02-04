@@ -6,19 +6,15 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
-#include <filesystem/file.hpp>
-#include <pst_parser/elements/elements.hpp>  // toplevel only, @TODO: change it to something better
+#include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
 
 namespace lsp {
-	/**
-	 * @brief Class to handle semantic tokens for LSP purposes. Especially export them in JSON format.
-	 */
-	class SemanticToken {
-	public:
-		SemanticToken();
+	class ExportSemanticTokens{
+    public:
+		ExportSemanticTokens();
+    	int getSemanticTokens(MCRef<pst::LangElement>);
 	};
-
-    [[nodiscard]]
-    std::string getSemanticTokens(const fs::FilePath);
 }
