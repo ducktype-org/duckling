@@ -23,30 +23,13 @@ CONFIG_KEYS = {
 }
 
 
-# @dataclass
-# class Config:
-#     config_file: Path
-#     name: str
-#     env: dict
-#     variables: dict
-#     tests: list[dict]
-#     subtests: list[Self]
-#     parent: Optional[Self]
-#     fail_fast: bool
-#     time_out: int
-
-
-def get_config_dict(dir_with_config: Path, ext="yaml"):
-    config_file = dir_with_config / f"testconfig.{ext}"
+def get_config_dict(dir_with_config: Path):
+    config_file = dir_with_config / f"testconfig.yaml"
     if not config_file.exists():
         exit_with_error(f"Config file {config_file} does not exist")
 
     with open(config_file) as f:
-        match ext:
-            case "yaml":
-                config = yaml.safe_load(f.read())
-            case "toml":
-                config = tomllib.loads(f.read())
+            config = yaml.safe_load(f.read())
 
     config["_ConfigFile"] = config_file
     return config

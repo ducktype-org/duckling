@@ -204,9 +204,9 @@ def integration_tests(clean, dry, test_path, fail_fast, verbose, log_file):
     log_file = Path(log_file)
     if log_file.exists():
         if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size:
-            log_warning(f"File: {log_file} already exists and is NOT empty!")
+            log_warning(f"File: {log_file} already exists and is NOT empty! It will be overwritten!")
             inp = get_input(f"Continue anyway: [y/N] ").lower()
-            if inp in ["n", ""]:
+            if inp not in ["y"]:
                 exit_with_error("Exiting...")
         log_file.unlink()
         log_file = Path(log_file)
