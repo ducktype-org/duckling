@@ -26,6 +26,6 @@ Tests:
         RunArgs: "0.5"
         ExitCode: 0
       hello1:
-        RunArgs: "1"
+        RunArgs: "1.1"
       hello5:
         RunArgs: "5"

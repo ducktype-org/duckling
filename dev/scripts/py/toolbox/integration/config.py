@@ -8,6 +8,9 @@ from .utils import ExpressionFillError, VariableNotFound, check_resembles_builti
 
 from ..helpers import clamp_str, exit_with_error
 
+"""
+Allowed global builtin keys.
+"""
 CONFIG_KEYS = {
     "Name",
     "Description",
@@ -23,7 +26,10 @@ CONFIG_KEYS = {
 }
 
 
-def get_config_dict(dir_with_config: Path):
+def read_config_dict(dir_with_config: Path):
+    """
+    Reads a DIT config file from a directory.
+    """
     config_file = dir_with_config / f"testconfig.yaml"
     if not config_file.exists():
         exit_with_error(f"Config file {config_file} does not exist")
@@ -36,11 +42,15 @@ def get_config_dict(dir_with_config: Path):
 
 
 def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
+    """
+    Loads a DIT config from a `dir_with_config` recursively.
+    Does error checking and fills the config structure.
+    """
     dir_with_config = Path(dir_with_config)
     if not dir_with_config.exists():
         exit_with_error(f"Directory {dir_with_config.absolute()} does not exist")
 
-    config = get_config_dict(dir_with_config)
+    config = read_config_dict(dir_with_config)
 
     for var in config:
         check_resembles_builtin(var, CONFIG_KEYS)
@@ -72,6 +82,10 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
 
 
 def config_find_value(config: dict, key, default=None) -> Optional[dict]:
+    """
+    Looks for a `key` inside `config` and upon finding returns it.
+    If it doesn't find, then goes up tree inside the config structure.
+    """
     if key in config:
         return config[key]
 
@@ -83,7 +97,10 @@ def config_find_value(config: dict, key, default=None) -> Optional[dict]:
 VARIABLE_EXPRESSION = re.compile(r"@{(.*?)}")
 
 
-def config_fill_variables(config: dict, expr) -> str:
+def config_fill_variables(config: dict, expr: str) -> str:
+    """
+    Evaluates an expression based on config.
+    """
     ORIGINAL_EXPR = expr
     MAX_ITER = 10
 
@@ -103,14 +120,22 @@ def config_fill_variables(config: dict, expr) -> str:
     raise ExpressionFillError(clamp_str(ORIGINAL_EXPR, 100))
 
 
-def config_find_and_fill(config, key):
+def config_find_and_fill(config: dict, key: str) -> Optional[str]:
+    """
+    Finds a value of a `key` inside `config` and tries to evaluate
+    its expression.
+    """
     value = config_find_value(config, key)
     if value:
         return config_fill_variables(config, value)
     return value
 
 
-def config_get_name_path(config):
+def config_get_name_path(config: dict) -> str:
+    """
+    Builds a string representing a test tree up to `config`'s node.
+    An example would be "/tests/a/b/c".
+    """
     return (
         (config_get_name_path(parent) if (parent := config["_Parent"]) else "")
         + "/"

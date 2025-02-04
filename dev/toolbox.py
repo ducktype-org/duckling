@@ -546,7 +546,7 @@ def duck_linter(*args, **kwargs):
     "--test-path",
     type=str,
     default="",
-    help="Runs particular test(s), i.e `tests/C++` or `tests/C++/Case1`. Given string has to be a prefix of a test path, or it the path has to be it's prefix.",
+    help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
 )
 @click.option(
     "-f",
@@ -567,7 +567,7 @@ def duck_linter(*args, **kwargs):
     "--log-file",
     type=str,
     default=str(DEFAULT_LOG_FILE_PATH),
-    help="Path to a log file",
+    help="Path to a log file. A log file contains dumps of ",
 )
 def itest(*args, **kwargs):
     """Runs integration tests"""

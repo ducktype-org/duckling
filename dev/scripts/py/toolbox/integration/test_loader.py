@@ -12,8 +12,16 @@ from .config import (
 )
 
 
+"""
+Builtin keys allowed inside a Test.
+"""
 TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "Cases"}
-RUN_CASE_ALLOWED_KEYS = {
+
+
+"""
+Builtin keys allowed inside a Case.
+"""
+CASE_ALLOWED_KEYS = {
     "Name",
     "Input",
     "Output",
@@ -26,6 +34,11 @@ RUN_CASE_ALLOWED_KEYS = {
 
 @dataclass
 class Test:
+    """
+    Represents a DIT test.
+    Contains all the necessary data for running a Case.
+    """
+
     name: str
     description: Optional[str]
     run_cases: list[Case]
@@ -46,6 +59,12 @@ class Test:
 
 @dataclass
 class TestSet:
+    """
+    Represents a node inside DIT tree (a testconfig.yaml file).
+    It has links to other TestSet objects (subdirectories) and
+    has a list of tests specified in a given config.
+    """
+
     name: str
     subtests: list[Self]
     tests: list[Test]
@@ -58,10 +77,14 @@ class TestSet:
 
 
 def load_run_case(test_dict: dict, run_case_name: str) -> Case:
+    """
+    Creates a `Case` object from a test_dict.
+    """
+
     run_case_dict = test_dict["Cases"][run_case_name]
 
     for var in run_case_dict:
-        check_resembles_builtin(var, RUN_CASE_ALLOWED_KEYS)
+        check_resembles_builtin(var, CASE_ALLOWED_KEYS)
 
     io_data = [None, None, None]
     config_dir = test_dict["_Parent"]["_ConfigFile"].parent
@@ -81,6 +104,9 @@ def load_run_case(test_dict: dict, run_case_name: str) -> Case:
 
 
 def load_test(config: dict, test_name) -> Test:
+    """
+    Creates a `Test` object from a config.
+    """
     test_dict = config["Tests"][test_name]
     test_path = config_get_name_path(test_dict)
 
@@ -111,6 +137,9 @@ def load_test(config: dict, test_name) -> Test:
 
 
 def load_subtest(config: dict) -> TestSet:
+    """
+    Creates a `TestSet` object from a config.
+    """
     return TestSet(
         name=config["Name"],
         subtests=[load_subtest(subtest) for subtest in config.get("Subtests", [])],

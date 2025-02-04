@@ -23,7 +23,7 @@ Tests:
           string: "0 1 1 2 4 "
       simple-from-file:
         Input:
-          file: input_for_fib
+          file: input_for_fib.in
         Output:
           string: "0 1 1 2 3 "
       normal:

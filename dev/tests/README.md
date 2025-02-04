@@ -23,12 +23,17 @@ These folders have to contain `testconfig.yaml` at their roots.
 
 Variables are the core building block of DIT framework.
 They are **inherited down the tree**, meaning if we create a variable in
+
 `a/testconfig.yaml`:
+
 ```yaml
 our_variable: 5
 ```
+
 and `a/` has a subtests directory `b/`, then we can use a variable from up-tree as follows
+
 `a/b/testconfig.yaml`:
+
 ```yaml
 another_variable: "Our variable has value: @{our_variable}"
 ```
@@ -42,6 +47,7 @@ In order to write a test we have to specify a few keys. Let's assume `a/testconf
 the test tree. We can write a **test set** as follows
 
 `a/testconfig.yaml`:
+
 ```yaml
 Tests:
   test-shell-cat:
@@ -64,6 +70,7 @@ The above functionality allows us to specify multiple cases and test a program i
 ---
 
 Let's take a look at another example:
+
 ```yaml
 Run: "@{user_variable_here}"
 Tests:
@@ -83,7 +90,6 @@ Tests:
         Output:
           string: "Hello, world!"
 ```
-
 
 Everything works well, because **variables are lazily evaluated.**
 The value of a variable is evaluated at the last possible moment. This does not mean however, that all the variables are evaluated at the same time, nor that `Run` can be modified inside a test.
@@ -136,9 +142,16 @@ Case specific:
 - `string` - data is a literal
 - `run` - data is taken from stdout of a command specified here. Optional `compile` can be specified to first compile a program to run.
 
+## Note on cleaning
+
+Cleaning is **NOT** performed automatically after a test run. It is meant to be ran explicitly by the tester.
+
 ## High level notes
 
-This system is very flexible and requires some thought to be put into it in order for artifacts to work flawlessly.
-Some advice I can give includes:
-- When producing a single file binary, make its suffix `.bin`.
-- When producing multiple artifacts for a single binary, make a build command that writes everything to a */build/* directory.
+This system is very flexible, however it's not a build system!
+
+Some advice I can give related to working with build artifacts includes:
+
+- Use a build system!
+- If it's an overkill then when producing a single binary file, make its suffix `.bin`.
+- Otherwise, when producing multiple artifacts for a single binary, make a build command that writes everything to a */build/* directory.
