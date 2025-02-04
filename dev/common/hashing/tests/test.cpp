@@ -440,6 +440,8 @@ private:
 		assertTrue(detail::can_stdhash<decltype(v)>, "v should be hashable with std::hash");
 		addToHash(h2, v);  // hashing std::variant
 
+		addToHash(h2, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});
+
 		Hash hasher;
 		auto res1 = hasher(1.f);
 		auto res2 = hasher(2.f);

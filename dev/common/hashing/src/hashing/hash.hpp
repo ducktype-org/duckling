@@ -51,17 +51,18 @@ namespace hashing {
 
 		template<typename... Ts>
 		constexpr result_type operator()(const Ts&... ts) noexcept {
-			if constexpr (AppendTypeHashCode)
+			if constexpr (AppendTypeHashCode) {
 				if constexpr (requires {
-								  ((addToHash(h, ts),
-					                h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)),
-					               ...);
-							  })
 					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)), ...);
-				else
+				}) {
+					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts, result_type, HashAlgorithm>)), ...);
+				}
+				else {
 					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts>)), ...);
-			else
-				(addToHash(h, ts), ...);
+				}
+			} else {
+				addToHash(h, ts...);
+			}
 
 			return static_cast<result_type>(h);
 		}

@@ -84,5 +84,10 @@ namespace hashing {
 		}
 	}
 
+	template<hash_algorithm HashAlgorithm, typename... Ts>
+	constexpr void addToHash(HashAlgorithm& hash_algorithm, const Ts&... ts) {
+		(addToHash(hash_algorithm, ts), ...);
+	}
+
 
 }  // namespace hashing
