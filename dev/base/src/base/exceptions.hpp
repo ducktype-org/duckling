@@ -13,9 +13,12 @@
 
 #include <exception>
 #include <string>
-#include "str_utils.hpp"
+#include "str_utils.hpp" // IWYU pragma: export
 
 namespace base {
+
+	std::string getCurrentStackTrace();
+
 	/**
 	 * @brief Exception intended to replace c++ assert errors for additional functionalities.
 	 */
@@ -80,7 +83,7 @@ namespace base {
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
+#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what, "\nStacktrace:\n", ::base::getCurrentStackTrace())
 
 #define _THROW_PANIC(panic_title, what...)                \
 	throw base::Panic(                                    \

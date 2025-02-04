@@ -1,8 +1,16 @@
 #include "../exceptions.hpp"
 
 #include <ostream>
+#include <stacktrace>
 
 namespace base {
+
+	std::string getCurrentStackTrace() {
+		auto stack_trace = std::stacktrace::current();
+		std::stringstream to_str;
+		to_str << stack_trace;
+		return to_str.str();
+	}
 
 	Panic::Panic(std::string position, std::string reason):
 		  position(std::move(position)),
