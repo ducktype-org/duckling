@@ -65,8 +65,8 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
             test["Name"] = test_name
             test["_Parent"] = config
 
-            for run_case in test["RunCases"]:
-                test["RunCases"][run_case]["_Parent"] = config["Tests"][test_name]
+            for run_case in test["Cases"]:
+                test["Cases"][run_case]["_Parent"] = config["Tests"][test_name]
 
     return config
 

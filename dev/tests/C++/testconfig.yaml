@@ -1,23 +1,21 @@
 Name: "Tests of C++"
 
 compile_flags: "-O2 -std=c++23 -Wall"
-compile_args: "-o @{program_name}"
+compile_args: "-o @{program_name}.bin"
 
 Compile: "g++ @{program_name}.cpp @{compile_args} @{compile_flags}"
-Run: "./@{program_name}"
+Run: "./@{program_name}.bin"
 PostRun: "echo \"This is a post run message about @{program_name}!\""
 Clean: "rm @{program_name}"
 
 ExitCode: 0
 TimeOut: 10
 
-# SubTests = ["subpack1"]
-
 Tests:
   fib-tests:
     Name: "Custom name"
     program_name: "file_fib"
-    RunCases:
+    Cases:
       simple:
         Input:
           string: "5"

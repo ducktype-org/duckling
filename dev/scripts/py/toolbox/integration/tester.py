@@ -1,5 +1,5 @@
 from pathlib import Path
-from .runcase import RunCase
+from .case import Case
 from .test_loader import Test, TestSet, load_subtest
 
 from .utils import (
@@ -77,7 +77,7 @@ def log_test_out_differs(test, run_case, message, got, expected, log_file):
 
 
 def test_case(
-    test: Test, run_case: RunCase, dry: bool, verbose: bool, log_file: Path
+    test: Test, run_case: Case, dry: bool, verbose: bool, log_file: Path
 ) -> bool:
     if dry or verbose:
         # This command is supposed to replicate the behavior of running a test case,
@@ -185,8 +185,8 @@ def run_tests(
             ran_tests += 1
             if not test_success:
                 failed_tests.append(pth)
-            if fail_fast:
-                return failed_tests, ran_tests
+                if fail_fast:
+                    return failed_tests, ran_tests
 
     for subtests in tests.subtests:
         new_failed_tests, new_ran_tests = run_tests(
@@ -198,13 +198,15 @@ def run_tests(
     return failed_tests, ran_tests
 
 
-def integration_tests(clean, dry, test_path, fail_fast, verbose, log_file):
+def integration_tests_impl(clean, dry, test_path, fail_fast, verbose, log_file):
     log_info("Running integration tests...")
 
     log_file = Path(log_file)
     if log_file.exists():
-        if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size:
-            log_warning(f"File: {log_file} already exists and is NOT empty! It will be overwritten!")
+        if log_file.absolute() != DEFAULT_LOG_FILE_PATH and log_file.stat().st_size > 0:
+            log_warning(
+                f"File: {log_file} already exists and is NOT empty! It will be overwritten!"
+            )
             inp = get_input(f"Continue anyway: [y/N] ").lower()
             if inp not in ["y"]:
                 exit_with_error("Exiting...")

@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Optional, Self
 from ..helpers import exit_with_error
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
-from .runcase import RunCase, make_data_from_dict
+from .case import Case, make_data_from_dict
 from .config import (
     CONFIG_KEYS,
     config_find_and_fill,
@@ -12,7 +12,7 @@ from .config import (
 )
 
 
-TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "RunCases"}
+TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "Cases"}
 RUN_CASE_ALLOWED_KEYS = {
     "Name",
     "Input",
@@ -28,7 +28,7 @@ RUN_CASE_ALLOWED_KEYS = {
 class Test:
     name: str
     description: Optional[str]
-    run_cases: list[RunCase]
+    run_cases: list[Case]
     cwd: Path
 
     compile: str
@@ -57,8 +57,8 @@ class TestSet:
         return f"{self.name}: {len(self.tests)} tests"
 
 
-def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
-    run_case_dict = test_dict["RunCases"][run_case_name]
+def load_run_case(test_dict: dict, run_case_name: str) -> Case:
+    run_case_dict = test_dict["Cases"][run_case_name]
 
     for var in run_case_dict:
         check_resembles_builtin(var, RUN_CASE_ALLOWED_KEYS)
@@ -69,7 +69,7 @@ def load_run_case(test_dict: dict, run_case_name: str) -> RunCase:
         if io in run_case_dict:
             io_data[i] = make_data_from_dict(run_case_dict[io], config_dir)
 
-    return RunCase(
+    return Case(
         name=run_case_dict.get("Name", run_case_name),
         run_args=run_case_dict.get("RunArgs", ""),
         input=io_data[0],
@@ -87,8 +87,8 @@ def load_test(config: dict, test_name) -> Test:
     for var in test_dict:
         check_resembles_builtin(var, TEST_ALLOWED_KEYS)
 
-    if not "RunCases" in test_dict or not test_dict["RunCases"]:
-        exit_with_error(f"Test {test_path} has no RunCases.")
+    if not "Cases" in test_dict or not test_dict["Cases"]:
+        exit_with_error(f"Test {test_path} has no Cases.")
 
     try:
         return Test(
@@ -99,7 +99,7 @@ def load_test(config: dict, test_name) -> Test:
             post_run=config_find_and_fill(test_dict, "PostRun"),
             cwd=config["_ConfigFile"].parent,
             run_cases=[
-                load_run_case(test_dict, run_case) for run_case in test_dict["RunCases"]
+                load_run_case(test_dict, run_case) for run_case in test_dict["Cases"]
             ],
             clean=config_find_and_fill(test_dict, "Clean"),
             fail_fast=config_find_value(test_dict, "FailFast", default=False),

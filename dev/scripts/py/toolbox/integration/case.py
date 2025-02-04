@@ -69,7 +69,7 @@ def make_data_from_dict(data: dict, config_dir: Path) -> Data:
 
 
 @dataclass
-class RunCase:
+class Case:
     name: str
     run_args: str
     input: Optional[Data]

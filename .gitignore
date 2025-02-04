@@ -12,3 +12,7 @@ cmake-build-*/
 # Editor files:
 .vscode/
 compile_commands.json
+
+
+# Duckling integration tests
+*.bin

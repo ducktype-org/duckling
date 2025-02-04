@@ -9,7 +9,7 @@ import click
 
 from scripts.py.toolbox.integration.tester import (
     DEFAULT_LOG_FILE_PATH,
-    integration_tests,
+    integration_tests_impl,
 )
 from scripts.py.toolbox.helpers import (
     abort_if_false,
@@ -61,7 +61,9 @@ def cli():
     pass
 
 
-def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage):
+def setup_build_impl(
+    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage
+):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
 
@@ -135,7 +137,7 @@ def setup_build_impl(build_dir, build_system, type, docs, cxx_compiler, cc_compi
     help="A path to the C++ complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
-    cls=default_compiler_from_ctx("cxx_compiler")
+    cls=default_compiler_from_ctx("cxx_compiler"),
 )
 @click.option(
     "-c",
@@ -544,7 +546,7 @@ def duck_linter(*args, **kwargs):
     "--test-path",
     type=str,
     default="",
-    help="Runs particular test(s), i.e `tests/C++` or `tests/C++/RunCase1`. Given string has to be a prefix of a test path, or it the path has to be it's prefix.",
+    help="Runs particular test(s), i.e `tests/C++` or `tests/C++/Case1`. Given string has to be a prefix of a test path, or it the path has to be it's prefix.",
 )
 @click.option(
     "-f",
@@ -558,7 +560,7 @@ def duck_linter(*args, **kwargs):
     "--verbose",
     is_flag=True,
     default=False,
-    help="Prints some debug information about run cases",
+    help="Prints some debug information about test cases",
 )
 @click.option(
     "-l",
@@ -569,7 +571,7 @@ def duck_linter(*args, **kwargs):
 )
 def itest(*args, **kwargs):
     """Runs integration tests"""
-    integration_tests(*args, **kwargs)
+    integration_tests_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

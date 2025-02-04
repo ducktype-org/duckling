@@ -1,7 +1,7 @@
 Tests:
   test-shell-cat:
     Run: "cat"
-    RunCases:
+    Cases:
       hello-world:
         Input:
           string: "Hello, world!"
@@ -12,7 +12,7 @@ Tests:
         ExitCode: 1
   test-shell-echo:
     Run: "echo"
-    RunCases:
+    Cases:
       hello-world:
         RunArgs: '"Hello, world!"'
         Output:
@@ -21,7 +21,7 @@ Tests:
     Run: "sleep"
     TimeOut: 1
     ExitCode: 124  # 124 means "timed out"
-    RunCases:
+    Cases:
       hello0.5:
         RunArgs: "0.5"
         ExitCode: 0
