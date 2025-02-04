@@ -126,11 +126,13 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
             f"llvm_lib_{version}_{arch}",
         )
 
+
 def replace_special(command: str) -> str:
-    command = command.replace(f'\n', '\\n')
-    command = command.replace(f'\t', '\\t')
-    command = command.replace(f'\r', '\\r')
+    command = command.replace(f"\n", "\\n")
+    command = command.replace(f"\t", "\\t")
+    command = command.replace(f"\r", "\\r")
     return command
+
 
 def make_singleline_command(command: str, replace_newline_with=" ") -> str:
     pretty_command = command.replace("\n", replace_newline_with)
