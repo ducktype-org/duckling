@@ -14,7 +14,6 @@ Allowed global builtin keys.
 CONFIG_KEYS = {
     "Name",
     "Description",
-    "Env",
     "Tests",
     "Subtests",
     "Compile",

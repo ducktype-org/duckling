@@ -63,7 +63,7 @@ Tests:
 The code above when interpreted would execute a shell program `cat`.
 
 A test named `test-shell-cat` is specified inside `Tests`. It sets the `Run` variable and lists
-`hello-world` inside `Cases`. This means there only one case to run inside this test. Case is called `hello-world` and has `Input` and `Output` objects, that specify case's stdin and expected stdout respectively.
+`hello-world` inside `Cases`. This means there is only one case to run inside this test. Case is called `hello-world` and has `Input` and `Output` objects, that specify case's stdin and expected stdout respectively.
 
 The above functionality allows us to specify multiple cases and test a program in multiple different scenarios at once.
 
@@ -92,7 +92,7 @@ Tests:
 ```
 
 Everything works well, because **variables are lazily evaluated.**
-The value of a variable is evaluated at the last possible moment. This does not mean however, that all the variables are evaluated at the same time, nor that `Run` can be modified inside a test.
+The value of a variable is evaluated at the last possible moment. This does not mean however, that all the variables are evaluated at the same time, nor that `Run` can be modified inside a test **case**.
 Notice a little detail, we have given `RunArgs` to our `test-shell-echo`, because echo reads
 its data from arguments instead of stdin.
 
@@ -103,11 +103,10 @@ be `kebab-case` or `lower_case`.
 
 Here is a list of builtin variables and their meaning **depending on the context**:
 
-Meta variables:
+File variable (linked to a node in the test tree):
 
 - `Name` - Explicit name of a test set
 - `Description` - Description of a test set
-- `Env` - NOT IMPLEMENTED YET
 - `Tests` - A dict with test set
 - `Subtests` - A dict with sub tests of a config file - other nodes in the test tree.
 
