@@ -218,6 +218,7 @@ private:
 		);
 
 		// @Taw3e8 @todo: write thests here
+		Hash<Fnv1a_64, void>{}(1);
 		hashDecompose(type_with_bases{});
 		[[maybe_unused]]
 		bool b

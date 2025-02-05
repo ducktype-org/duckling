@@ -84,8 +84,8 @@ int main() {
 	};
 
 	std::cout << "different hashes:\n\t" << Hash{}(type3{}) << "\n\t" << Hash{}(type4{}) << '\n';
-	std::cout << "the same hashes:\n\t" << Hash<Fnv1a_64, false>{}(type3{}) << "\n\t"
-			  << Hash<Fnv1a_64, false>{}(type4{}) << '\n';
+	std::cout << "the same hashes:\n\t" << Hash<Fnv1a_64, void>{}(type3{}) << "\n\t"
+			  << Hash<Fnv1a_64, void>{}(type4{}) << '\n';
 
 	// we can also visualize the bytes that were hashed
 	std::cout << "notice 4 bytes starting from yellow ones, this is the type's hash-code:\n"
@@ -93,8 +93,8 @@ int main() {
 			  << Hash<DebugHash>{}(type4{}) << '\n';
 
 	std::cout << "here the type's hash-code is not appended:\n"
-			  << hashing::Hash<hashing::DebugHash, false>{}(type3{}) << '\n'
-			  << hashing::Hash<hashing::DebugHash, false>{}(type4{}) << '\n';
+			  << hashing::Hash<hashing::DebugHash, void>{}(type3{}) << '\n'
+			  << hashing::Hash<hashing::DebugHash, void>{}(type4{}) << '\n';
 
 	// there is also a stateful hash that can be used to Hash multiple objects together
 	hashing::StatefulHash<hashing::DebugHash> hasher2;
