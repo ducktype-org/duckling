@@ -25,7 +25,7 @@ class BashCommandError(Exception):
         self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
     ):
         super().__init__(
-            f"\n\tBash command `{command}` {f'executed at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
@@ -36,26 +36,59 @@ class BashCommandError(Exception):
         self.at = at
 
 
-def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
-    log_bash(cmd, file=click_file)
-    proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
-    stdout, stderr = proc.communicate()
+def exec_bash_command(
+    command: str,
+    cwd: pathlib.Path,
+    capture_output=False,
+    input: bytes | None = None,
+    exitcode=0,
+    dry: bool = False,
+    verbose: bool = False,
+    decode: bool = True,
+    log_to_file=sys.stdout,
+) -> tuple[bytes, bytes]:
+    """
+    This is the lowest level access to calling a bash command in toolbox.
+    """
+    if dry or verbose:
+        command = replace_special(command)
+        log_bash(f'cd "{cwd.absolute()}" && {command}', file=log_to_file)
+        if dry:
+            return bytes(), bytes()
 
-    if stdout is not None:
-        stdout = stdout.decode("UTF-8")
-    if stderr is not None:
-        stderr = stderr.decode("UTF-8")
+    proc = sp.Popen(
+        ["/bin/bash", "-c", command],
+        cwd=cwd,
+        stdin=sp.PIPE if input else None,
+        stdout=sp.PIPE if capture_output else None,
+        stderr=sp.PIPE if capture_output else None,
+    )
+    stdout, stderr = proc.communicate(input=input)
 
     status = proc.wait()
-    if status != 0:
-        raise BashCommandError(
-            cmd, status, stdout, stderr, at=pathlib.Path(cwd) if cwd != "." else None
-        )
+
+    # Check if there's a need for decoding
+    if status != exitcode or decode:
+        if stdout is not None:
+            stdout = stdout.decode("UTF-8")
+        if stderr is not None:
+            stderr = stderr.decode("UTF-8")
+
+    if status != exitcode:
+        raise BashCommandError(command, status, stdout, stderr, at=cwd)
+
     return stdout, stderr
 
 
-def bash_command_get_output(cmd, cwd=".", click_file=sys.stdout):
-    return bash_command(cmd, cwd, redirect=sp.PIPE, click_file=click_file)
+def bash_command(command: str, cwd: str = ".", log_file=sys.stdout):
+    log_bash(command, file=log_file)
+    exec_bash_command(command=command, cwd=cwd, log_to_file=log_file)
+
+
+def bash_command_get_output(command: str, cwd: str = ".", log_file=sys.stdout):
+    return exec_bash_command(
+        command=command, cwd=cwd, capture_output=True, log_to_file=log_file
+    )
 
 
 def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
@@ -138,17 +171,6 @@ def replace_special(command: str) -> str:
     command = command.replace("\t", "\\t")
     command = command.replace("\r", "\\r")
     return command
-
-
-def make_singleline_command(command: str, replace_newline_with=" ") -> str:
-    """
-    Makes a command composed of multiple lines into a single line.
-    Also replaces all double spaces with a single space.
-    """
-    pretty_command = command.replace("\n", replace_newline_with)
-    while "  " in pretty_command:
-        pretty_command = pretty_command.replace("  ", " ")
-    return pretty_command.lstrip().rstrip()
 
 
 def truncate_str(string, max_len=10, surround="`"):

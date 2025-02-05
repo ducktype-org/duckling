@@ -18,16 +18,12 @@ from scripts.py.toolbox.helpers import (
     get_llvm_strings,
     log_info,
     log_new_line,
-    make_singleline_command,
     with_venv,
     default_compiler_from_ctx,
-    infer_cc_compiler,
-    infer_cxx_compiler,
     check_if_compilers_are_compatible,
 )
 from scripts.py.toolbox.internet_file import (
     InternetFile,
-    callback_chmod,
     callback_move,
     callback_remove,
     callback_unTAR,
@@ -75,18 +71,19 @@ def setup_build_impl(
             shutil.rmtree(bld / pathlib.Path("CMakeFiles"))
         except FileNotFoundError:
             pass
-    cmd = f"""
-        cmake
-         -G "{build_system}"
-         -B {build_dir}
-         -D CMAKE_BUILD_TYPE={type}
-         -D BUILD_DOCS={'ON' if docs else 'OFF'}
-         -D CMAKE_CXX_COMPILER={cxx_compiler}
-         -D CMAKE_C_COMPILER={cc_compiler}
-         -D USE_CCACHE={'ON' if ccache else 'OFF'}
-         -D ENABLE_COVERAGE={'true' if coverage else 'false'}
-    """
-    cmd = make_singleline_command(cmd)
+    cmd = " ".join(
+        [
+            f"cmake",
+            f'-G "{build_system}"',
+            f"-B {build_dir}",
+            f"-D CMAKE_BUILD_TYPE={type}",
+            f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
+            f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
+            f"-D CMAKE_C_COMPILER={cc_compiler}",
+            f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
+            f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+        ]
+    )
 
     log_info("Setting up a build folder...")
     if docs:
@@ -532,7 +529,7 @@ def duck_linter(*args, **kwargs):
     "--clean",
     is_flag=True,
     default=False,
-    help="Runs `Clean` command on every test",
+    help="Runs `Clean` command on every test. If passed, no tests are ran.",
 )
 @click.option(
     "-d",
@@ -543,7 +540,7 @@ def duck_linter(*args, **kwargs):
 )
 @click.option(
     "-t",
-    "--test-path",
+    "--filter",
     type=str,
     default="",
     help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
@@ -567,7 +564,7 @@ def duck_linter(*args, **kwargs):
     "--log-file",
     type=str,
     default=str(DEFAULT_LOG_FILE_PATH),
-    help="Path to a log file. A log file contains dumps of ",
+    help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
 )
 def itest(*args, **kwargs):
     """Runs integration tests"""

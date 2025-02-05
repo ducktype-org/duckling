@@ -2,7 +2,7 @@ from pathlib import Path
 from .test_loader import Case, Test, TestNode, load_tests
 
 from .utils import (
-    exec_command,
+    dit_exec_command,
     print_failure,
     print_success,
     write_log,
@@ -15,7 +15,6 @@ from ..helpers import (
     log_bash,
     log_info,
     log_warning,
-    make_singleline_command,
     replace_special,
 )
 
@@ -24,7 +23,7 @@ DEFAULT_LOG_FILE_PATH = Path("/tmp/toolbox-tester.log")
 
 def run_test(
     test: Test,
-    test_path: str,
+    filter: str,
     dry: bool,
     fail_fast: bool,
     verbose: bool,
@@ -35,9 +34,9 @@ def run_test(
     """
     success = True
     if test.compile:
-        exec_command(test.compile, cwd=test.cwd, dry=dry, verbose=verbose)
+        dit_exec_command(test.compile, cwd=test.cwd, dry=dry, verbose=verbose)
     for i, case in enumerate(test.cases):
-        if not case.name.startswith(test_path):
+        if not case.name.startswith(filter):
             continue
         log_info(f"Run [{i + 1}/{len(test)}] - {case.name}")
         try:
@@ -81,45 +80,31 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
     """
     Runs a test case from `Case` object.
     """
-    if dry or verbose:
-        # This command is supposed to replicate the behavior of running a test case,
-        # however this command is not executed directly in order to have more control over
-        # what fails and what does not.
-        command = (
-            f"{case.input.get_command() + ' | ' if case.input else ''}"
-            f"timeout {case.timeout}s {test.run} {case.run_args}"
-        )
-        if out := case.expected_output:
-            command += f" > >(diff <({out.get_command()}) -)"
-        if err := case.expected_err:
-            command += f" 2> >(diff <({err.get_command()}) -)"
-
-        command = replace_special(command)
-        command = make_singleline_command(command)
-        log_bash(f'cd "{test.cwd.absolute()}" && {command}')
-        if test.post_run:
-            log_bash(f'cd "{test.cwd.absolute()}" && {replace_special(test.post_run)}')
-
-        if dry:
-            return ""
-
-    # get input
+    # Get input.
     test_input = bytes()
     if case.input:
-        test_input, _ = exec_command(case.input.get_command(), cwd=test.cwd)
+        if dry or verbose:
+            log_info("Getting input...")
+        test_input, _ = dit_exec_command(case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose)
 
-    # run test
-    test_output, test_err = exec_command(
+    # Run test.
+    if dry or verbose:
+        log_info("Running the test case...")
+    test_output, test_err = dit_exec_command(
         f"timeout {case.timeout}s {test.run} {case.run_args}",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
+        dry=dry,
+        verbose=verbose
     )
 
-    # compare test and expected output
+    # Compare test and expected output.
     if case.expected_output:
-        test_expected_output, _ = exec_command(
-            case.expected_output.get_command(), cwd=test.cwd
+        if dry or verbose:
+            log_info("Getting the expected output...")
+        test_expected_output, _ = dit_exec_command(
+            case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
         if test_output != test_expected_output:
             log_test_out_differs(
@@ -132,10 +117,12 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
             )
             return f"Stdouts do not match."
 
-    # compare test and expected err
+    # Compare test and expected err.
     if case.expected_err:
-        test_expected_err, _ = exec_command(
-            case.expected_err.get_command(), cwd=test.cwd
+        if dry or verbose:
+            log_info("Getting the expected err...")
+        test_expected_err, _ = dit_exec_command(
+            case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
         if test_err != test_expected_err:
             log_test_out_differs(
@@ -148,9 +135,13 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
             )
             return f"Stderrs do not match."
 
-    # post run
+    # Post run.
     if test.post_run:
-        exec_command(test.post_run, test.cwd, redirect=False, input=test_output)
+        if dry or verbose:
+            log_info("Executing post run command...")
+        dit_exec_command(
+            test.post_run, test.cwd, capture_output=False, input=test_output, verbose=verbose, dry=dry
+        )
 
     return ""
 
@@ -161,8 +152,12 @@ def clean_test(test: Test, dry: bool, verbose: bool):
     """
     try:
         if test.clean:
-            exec_command(
-                test.clean, cwd=test.cwd, redirect=False, dry=dry, verbose=verbose
+            dit_exec_command(
+                test.clean,
+                cwd=test.cwd,
+                capture_output=False,
+                dry=dry,
+                verbose=verbose,
             )
     except BashCommandError:
         log_warning(f"Cleaning has (partially) failed on {test.name}.")
@@ -170,7 +165,7 @@ def clean_test(test: Test, dry: bool, verbose: bool):
 
 def run_tests(
     tests: TestNode,
-    test_path: str,
+    filter: str,
     tree: list[str],
     clean: bool,
     dry: bool,
@@ -197,7 +192,7 @@ def run_tests(
         # This is tricky, as normally it would be enough to check for the prefix
         # like `pth.startswith(test_path)`, but names of test **cases** are not included
         # in the tree list of nodes, but can be in `test_path`, so we have to this both ways.
-        if not path.startswith(test_path) and not test_path.startswith(path):
+        if not path.startswith(filter) and not filter.startswith(path):
             continue
 
         if clean:
@@ -206,7 +201,7 @@ def run_tests(
         else:
             log_info(f"Testing: {path}")
             test_success = run_test(
-                test, test_path[len(path) + 1 :], dry, fail_fast, verbose, log_file
+                test, filter[len(path) + 1 :], dry, fail_fast, verbose, log_file
             )
             ran_tests += 1
             if not test_success:
@@ -214,9 +209,9 @@ def run_tests(
                 if fail_fast:
                     return failed_tests, ran_tests
 
-    for subtests in tests.subtests:
+    for subtest in tests.subtests:
         new_failed_tests, new_ran_tests = run_tests(
-            subtests, test_path, tree.copy(), clean, dry, fail_fast, verbose, log_file
+            subtest, filter, tree.copy(), clean, dry, fail_fast, verbose, log_file
         )
         failed_tests += new_failed_tests
         ran_tests += new_ran_tests
@@ -227,7 +222,7 @@ def run_tests(
 def integration_tests_impl(
     clean: bool,
     dry: bool,
-    test_path: str,
+    filter: str,
     fail_fast: bool,
     verbose: bool,
     log_file: str,
@@ -249,10 +244,10 @@ def integration_tests_impl(
         log_file.unlink()
         log_file = Path(log_file)
 
-    test_set = load_tests("tests")
+    test_set = load_tests("integration_tests")
 
     failed_tests, ran_tests = run_tests(
-        test_set, test_path, [], clean, dry, fail_fast, verbose, log_file
+        test_set, filter, [], clean, dry, fail_fast, verbose, log_file
     )
 
     if dry:

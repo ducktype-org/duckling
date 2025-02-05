@@ -1,35 +1,27 @@
 from .classes import Case, Test, TestNode
 from ..helpers import exit_with_error
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
-from .io_data import IOData, make_data_from_dict
+from .io_data import make_data_from_dict
 from .config import (
-    GLOBAL_CONFIG_KEYS,
-    config_find_and_fill,
+    GENERAL_VARIABLES,
+    config_find_and_eval,
     config_find_value,
     config_get_name_path,
     load_config,
 )
-from keys import *
+from .keys import *
 
 
 """
 Builtin keys allowed inside a Test.
 """
-TEST_ALLOWED_KEYS = {*GLOBAL_CONFIG_KEYS, CASES}
+TEST_ALLOWED_KEYS = {*GENERAL_VARIABLES, NAME, DESCRIPTION, CASES, PARENT}
 
 
 """
 Builtin keys allowed inside a Case.
 """
-CASE_ALLOWED_KEYS = {
-    NAME,
-    INPUT,
-    OUTPUT,
-    ERR,
-    RUN_ARGS,
-    TIME_OUT,
-    EXIT_CODE,
-}
+CASE_ALLOWED_KEYS = {NAME, INPUT, OUTPUT, ERR, RUN_ARGS, TIME_OUT, EXIT_CODE, PARENT}
 
 
 def _make_case(test_dict: dict, case_name: str) -> Case:
@@ -76,12 +68,12 @@ def _make_test(config: dict, test_name) -> Test:
         return Test(
             name=test_dict.get(NAME, test_name),
             description=test_dict.get(DESCRIPTION),
-            compile=config_find_and_fill(test_dict, COMPILE),
-            run=config_find_and_fill(test_dict, RUN),
-            post_run=config_find_and_fill(test_dict, POST_RUN),
+            compile=config_find_and_eval(test_dict, COMPILE),
+            run=config_find_and_eval(test_dict, RUN),
+            post_run=config_find_and_eval(test_dict, POST_RUN),
             cwd=config[CONFIG_FILE].parent,
             cases=[_make_case(test_dict, case) for case in test_dict[CASES]],
-            clean=config_find_and_fill(test_dict, CLEAN),
+            clean=config_find_and_eval(test_dict, CLEAN),
             fail_fast=config_find_value(test_dict, FAIL_FAST, default=False),
         )
     except (VariableNotFound, ExpressionFillError) as e:
@@ -96,7 +88,7 @@ def _make_test_node(config: dict) -> TestNode:
     """
     return TestNode(
         name=config[NAME],
-        subtests=[_make_test_node(subtest) for subtest in config.get(SUBTESTS, [])],
+        subtests=[_make_test_node(subdir) for subdir in config.get(SUBDIRS, [])],
         tests=[_make_test(config, test) for test in config.get(TESTS, [])],
     )
 

@@ -1,7 +1,7 @@
 NAME = "Name"
 DESCRIPTION = "Description"
 TESTS = "Tests"
-SUBTESTS = "Subtests"
+SUBDIRS = "Subdirs"
 COMPILE = "Compile"
 RUN = "Run"
 CLEAN = "Clean"

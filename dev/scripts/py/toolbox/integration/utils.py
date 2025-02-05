@@ -1,8 +1,10 @@
 from pathlib import Path
+import pathlib
 import sys
 from ..helpers import (
     BashCommandError,
     click_log,
+    exec_bash_command,
     exit_with_error,
     log_bash,
     replace_special,
@@ -23,7 +25,7 @@ def check_resembles_builtin(name: str, builtin_set: set[str]):
             exit_with_error(
                 f"Incorrect spelling of '{name}' in config file. Consider: '{key}'"
             )
-    if name[0].isupper():
+    if any(c.isupper() for c in name):
         exit_with_error(
             f"Unknown builtin `{name}`. Variables should be in snake_case or kebab-case."
         )
@@ -52,44 +54,25 @@ def print_failure(msg, file=sys.stdout):
     click_log("FAIL", msg, fg="red", file=file)
 
 
-def exec_command(
-    cmd,
-    cwd: Path,
-    redirect=True,
+def dit_exec_command(
+    command: str,
+    cwd: pathlib.Path,
+    capture_output=True,
     input: bytes | None = None,
     exitcode=0,
     dry: bool = False,
     verbose: bool = False,
 ) -> tuple[bytes, bytes]:
-    """
-    Similar to `bash_command_get_output` as it executes a bash command and returns the result.
-    It has more features than the aforementioned command, as it supports input redirection,
-    can expect a custom exitcode and supports dry and verbose runs.
-    """
-    if dry or verbose:
-        cmd = replace_special(cmd)
-        log_bash(f'cd "{cwd.absolute()}" && {cmd}')
-        if dry:
-            return bytes(), bytes()
-
-    proc = sp.Popen(
-        ["/bin/bash", "-c", cmd],
+    return exec_bash_command(
+        command=command,
         cwd=cwd,
-        stdin=sp.PIPE if input else None,
-        stdout=sp.PIPE if redirect else None,
-        stderr=sp.PIPE if redirect else None,
+        capture_output=capture_output,
+        input=input,
+        exitcode=exitcode,
+        dry=dry,
+        verbose=verbose,
+        decode=False,
     )
-    stdout, stderr = proc.communicate(input=input)
-
-    status = proc.wait()
-    if status != exitcode:
-        if stdout is not None:
-            stdout = stdout.decode("UTF-8")
-        if stderr is not None:
-            stderr = stderr.decode("UTF-8")
-        raise BashCommandError(cmd, status, stdout, stderr, at=cwd)
-
-    return stdout, stderr
 
 
 def write_log(msg, log_file):

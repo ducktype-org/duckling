@@ -123,7 +123,7 @@ def clang_tidy_on(
             f"{clang_tidy_path} -p {build_folder} --format-style file --config-file .clang-tidy"
             f' --line-filter="[{{"name": "{file}", "lines": {file_diffs}}}]"'
             f" --extra-arg=-std=c++23 {file}",
-            click_file=log_file,
+            log_file=log_file,
         )
         if tidy_out:
             log_warning(f"clang-tidy output: \n{tidy_out}", file=log_file)
@@ -148,7 +148,7 @@ def clang_format_on(
     lines = [f"--lines={start}:{stop}" for start, stop in file_diffs]
     format_out, format_err = bash_command_get_output(
         f"{clang_format_path}" " -style=file --dry-run" f" {' '.join(lines)} {file}",
-        click_file=log_file,
+        log_file=log_file,
     )
 
     # Print data returned by clang-format
@@ -190,7 +190,7 @@ def simulate_cpp_linter(
     threads: int,
     branch: str,
     all: bool,
-    no_merge_base: bool
+    no_merge_base: bool,
 ):
     build_folder = pathlib.Path(build)
     if not build_folder.exists():

@@ -2,7 +2,7 @@ import abc
 from pathlib import Path
 
 from ..helpers import bash_command, truncate_str
-from keys import *
+from .keys import *
 
 
 class IOData(abc.ABC):
@@ -76,6 +76,22 @@ def make_data_from_dict(data: dict, config_dir: Path) -> IOData:
     - String
     - Run (+ Compile if needed)
     """
+
+    # Special test for Andrzej
+    present = set()
+    if FILE in data:
+        present.add(FILE)
+    if STRING in data:
+        present.add(STRING)
+    if RUN in data:
+        present.add(RUN)
+
+    if len(present) > 1:
+        raise ValueError("Should contain only one of the following: " + str(present))
+
+    if COMPILE in data and not RUN in data:
+        raise ValueError(f"Missing `{RUN}` in {IODataFromProgram.__name__}: {data}")
+
     if FILE in data:
         path = config_dir / Path(data[FILE])
         if not path.exists():
@@ -83,9 +99,7 @@ def make_data_from_dict(data: dict, config_dir: Path) -> IOData:
         return IODataFromFile(data[FILE])
     elif STRING in data:
         return IODataFromString(data[STRING])
-    elif RUN in data or COMPILE in data:
-        if not RUN in data:
-            raise ValueError(f"Missing `{RUN}` in {IODataFromProgram.__name__}: {data}")
+    elif RUN in data:
         return IODataFromProgram(data.get(COMPILE, ""), data[RUN])
     else:
         raise ValueError("Invalid data dictionary: " + str(data))

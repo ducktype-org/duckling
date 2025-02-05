@@ -18,24 +18,24 @@ Tests:
     Cases:
       simple:
         Input:
-          string: "5"
+          String: "5"
         Output:
-          string: "0 1 1 2 4 "
+          String: "0 1 1 2 4 "
       simple-from-file:
         Input:
-          file: input_for_fib.in
+          File: input_for_fib.in
         Output:
-          string: "0 1 1 2 3 "
+          String: "0 1 1 2 3 "
       normal:
         Name: "Up to 100"
         Input:
-          string: "100"
+          String: "100"
         Output:
-          run: "python3 gen_fibs.py 100"
+          Run: "python3 gen_fibs.py 100"
       large:
         Name: "Up to 100000"
         Input:
-          string: 100000
+          String: 100000
         Err:
-          string: "Too large\n"
+          String: "Too large\n"
         ExitCode: 1

@@ -4,9 +4,9 @@ Tests:
     Cases:
       hello-world:
         Input:
-          string: "Hello, world!"
+          String: "Hello, world!"
         Output:
-          string: "Hello, world!"
+          String: "Hello, world!"
       error-no-file:
         RunArgs: inexistent-file
         ExitCode: 1
@@ -16,7 +16,7 @@ Tests:
       hello-world:
         RunArgs: '"Hello, world!"'
         Output:
-          string: "Hello, world!\n"
+          String: "Hello, world!\n"
   test-timeout:
     Run: "sleep"
     TimeOut: 1

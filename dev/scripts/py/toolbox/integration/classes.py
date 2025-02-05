@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Self
@@ -10,6 +9,7 @@ from .io_data import IOData
 class Case:
     """
     Test's Case object that represents data needed to run a test case.
+    All variables are evaluated.
     """
 
     name: str
@@ -25,7 +25,8 @@ class Case:
 class Test:
     """
     Represents a DIT test.
-    Contains all the necessary data for running a Case.
+    Contains all the necessary data for running a Test.
+    All variables are evaluated.
     """
 
     name: str
@@ -50,7 +51,7 @@ class Test:
 class TestNode:
     """
     Represents a node inside DIT tree (a testconfig.yaml file).
-    It has links to other TestNode objects (subdirectories) and
+    It has links to other TestNode objects (its subdirectories) and
     has a list of tests specified in a given config.
     """
 

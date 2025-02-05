@@ -1,12 +1,12 @@
 from pathlib import Path
 import re
-from typing import Optional
+from typing import Any, Optional
 import yaml
 
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
 from ..helpers import truncate_str, exit_with_error
-from keys import *
+from .keys import *
 
 """
 General variable keys.
@@ -21,14 +21,16 @@ GENERAL_VARIABLES = {
 }
 
 """
-Allowed global builtin keys.
+Keys allowed in global context.
 """
 GLOBAL_CONFIG_KEYS = {
     NAME,
     DESCRIPTION,
     TESTS,
-    SUBTESTS,
-    *GENERAL_VARIABLES
+    SUBDIRS,
+    PARENT,
+    CONFIG_FILE,
+    *GENERAL_VARIABLES,
 }
 
 
@@ -64,15 +66,15 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     config[PARENT] = parent
     config[NAME] = config.get(NAME, dir_with_config.stem)
 
-    if not (SUBTESTS in config or TESTS in config):
+    if not (SUBDIRS in config or TESTS in config):
         exit_with_error(
-            f"Config file {config[CONFIG_FILE]} does not contain any {TESTS} or {SUBTESTS}"
+            f"Config file {config[CONFIG_FILE]} does not contain any {TESTS} or {SUBDIRS}"
         )
 
-    if SUBTESTS in config:
-        config[SUBTESTS] = [
-            load_config(dir_with_config / subtest, parent=config)
-            for subtest in config[SUBTESTS]
+    if SUBDIRS in config:
+        config[SUBDIRS] = [
+            load_config(dir_with_config / subdir, parent=config)
+            for subdir in config[SUBDIRS]
         ]
 
     if TESTS in config:
@@ -87,7 +89,7 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     return config
 
 
-def config_find_value(config: dict, key: str, default=None) -> Optional[dict]:
+def config_find_value(config: dict, key: str, default=None) -> Optional[Any]:
     """
     Looks for a `key` inside `config` and upon finding returns it.
     If it doesn't find, then goes up tree inside the config structure.
@@ -103,11 +105,11 @@ def config_find_value(config: dict, key: str, default=None) -> Optional[dict]:
 VARIABLE_EXPRESSION = re.compile(r"@{(.*?)}")
 
 
-def config_fill_variables(config: dict, expr: str) -> str:
+def config_eval_variables(config: dict, expr: str) -> str:
     """
-    Evaluates an expression based on config.
+    Evaluates `@{...}` expression inside `expr` based on config.
     """
-    ORIGINAL_EXPR = expr
+    original_expr = expr
     MAX_ITER = 10
 
     def repl_var(matchobj):
@@ -123,17 +125,18 @@ def config_fill_variables(config: dict, expr: str) -> str:
         if not VARIABLE_EXPRESSION.search(expr):
             return expr
 
-    raise ExpressionFillError(truncate_str(ORIGINAL_EXPR, 100))
+    raise ExpressionFillError(truncate_str(original_expr, 100))
 
 
-def config_find_and_fill(config: dict, key: str) -> Optional[str]:
+def config_find_and_eval(config: dict, key: str) -> Optional[str]:
     """
     Finds a value of a `key` inside `config` and tries to evaluate
     its expression.
     """
     value = config_find_value(config, key)
     if value:
-        return config_fill_variables(config, value)
+        assert type(value) is str, "Cannot evaluate non-str."
+        return config_eval_variables(config, value)
     return value
 
 

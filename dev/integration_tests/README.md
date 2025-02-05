@@ -1,6 +1,6 @@
-# Duckling integration test framework
+# Duckling Integration Test framework
 
-This README is a guide to Duckling integration test (DIT) framework.
+This README is a guide to Duckling Integration Test (DIT) framework.
 
 ## Test folder structure
 
@@ -11,12 +11,12 @@ file has to link to other directories with `testconfig.yaml`.
 Other directories can be listed as follows:
 
 ```yaml
-Subtests:
+Subdirs:
     - C++
     - bash
 ```
 
-This means that directories `C++/` and `bash/` are now considered a part of DIT test tree.
+This means that subdirectories `C++/` and `bash/` are now considered a part of DIT test tree.
 These folders have to contain `testconfig.yaml` at their roots.
 
 ## Basic variables
@@ -79,22 +79,24 @@ Tests:
     Cases:
       hello-world:
         Input:
-          string: "Hello, world!"
+          String: "Hello, world!"
         Output:
-          string: "Hello, world!"
+          String: "Hello, world!"
   test-shell-echo:
     user_variable_here: "echo"
     Cases:
       hello-world:
         RunArgs: '"Hello, world!"'
         Output:
-          string: "Hello, world!"
+          String: "Hello, world!"
 ```
 
 Everything works well, because **variables are lazily evaluated.**
 The value of a variable is evaluated at the last possible moment. This does not mean however, that all the variables are evaluated at the same time, nor that `Run` can be modified inside a test **case**.
 Notice a little detail, we have given `RunArgs` to our `test-shell-echo`, because echo reads
 its data from arguments instead of stdin.
+
+Variables can be shadowed.
 
 ## Builtin variables
 
@@ -103,12 +105,12 @@ be `kebab-case` or `lower_case`.
 
 Here is a list of builtin variables and their meaning **depending on the context**:
 
-File variable (linked to a node in the test tree):
+Config file variables (linked to a node in the test tree, not inherited):
 
 - `Name` - Explicit name of a test set
 - `Description` - Description of a test set
 - `Tests` - A dict with test set
-- `Subtests` - A dict with sub tests of a config file - other nodes in the test tree.
+- `Subtests` - A dict with sub tests of a config file - sub nodes in the test tree. These have to be direct subdirectories of a parent directory of the config file.
 
 General variables (not tied to any context):
 
@@ -137,14 +139,14 @@ Case specific:
 
 `Input`, `Output`, `Err` inside a case can be specified as follows:
 
-- `file` - data is taken from a given file path. DIT paths are always **relative to the current test set's config file**.
-- `string` - data is a literal
-- `run` - data is taken from stdout of a command specified here.
-- Optional `compile` can be specified to first compile a program to run.
+- `File` - data is taken from a given file path. DIT paths are always **relative to the current test set's config file**.
+- `String` - data is a literal
+- `Run` - data is taken from stdout of a command specified here.
+- `Compile` - [Optional] - can be specified to first compile a program to run.
 
 ## Note on cleaning
 
-Cleaning is **NOT** performed automatically after a test run. It is meant to be ran explicitly by the tester.
+Cleaning is **NOT** performed automatically after a test run nor before. It is meant to be ran explicitly by the tester.
 
 ## High level notes
 
