@@ -7,6 +7,11 @@ from ..helpers import bash_command, clamp_str
 
 
 class Data(abc.ABC):
+    """
+    This object represents test's IO, like input, expected output, expected err.
+    It is a abstract base class and is not meant to be used directly.
+    """
+
     @abc.abstractmethod
     def get_command(self) -> str:
         """A shell command to write the data to stdout"""
@@ -17,6 +22,9 @@ class Data(abc.ABC):
 
 
 class DataFromFile(Data):
+    """
+    Test's IO from File.
+    """
     def __init__(self, file: Path):
         self.file = file
 
@@ -28,6 +36,9 @@ class DataFromFile(Data):
 
 
 class DataFromString(Data):
+    """
+    Test's IO in a form of a string literal.
+    """
     def __init__(self, string: str):
         self.string = string
 
@@ -39,6 +50,9 @@ class DataFromString(Data):
 
 
 class DataFromProgram(Data):
+    """
+    Test's IO in a form of a (compiled) program.
+    """
     def __init__(self, compile: str, run: str):
         self.compile = compile
         self.run = run
@@ -53,6 +67,13 @@ class DataFromProgram(Data):
 
 
 def make_data_from_dict(data: dict, config_dir: Path) -> Data:
+    """
+    Constructs a Data object from dict depending on a config.
+    Supported types include:
+    - file
+    - string
+    - run (+ compile if needed)
+    """
     if "file" in data:
         path = config_dir / Path(data["file"])
         if not path.exists():
@@ -70,6 +91,9 @@ def make_data_from_dict(data: dict, config_dir: Path) -> Data:
 
 @dataclass
 class Case:
+    """
+    Test's Case object that represents data needed to run a test case.
+    """
     name: str
     run_args: str
     input: Optional[Data]

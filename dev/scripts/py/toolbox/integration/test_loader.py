@@ -9,6 +9,7 @@ from .config import (
     config_find_and_fill,
     config_find_value,
     config_get_name_path,
+    load_config,
 )
 
 
@@ -41,7 +42,7 @@ class Test:
 
     name: str
     description: Optional[str]
-    run_cases: list[Case]
+    cases: list[Case]
     cwd: Path
 
     compile: str
@@ -54,7 +55,7 @@ class Test:
         return f"{self.name}: {self.description if self.description else ''}"
 
     def __len__(self) -> int:
-        return len(self.run_cases)
+        return len(self.cases)
 
 
 @dataclass
@@ -76,34 +77,34 @@ class TestSet:
         return f"{self.name}: {len(self.tests)} tests"
 
 
-def load_run_case(test_dict: dict, run_case_name: str) -> Case:
+def make_case(test_dict: dict, case_name: str) -> Case:
     """
     Creates a `Case` object from a test_dict.
     """
 
-    run_case_dict = test_dict["Cases"][run_case_name]
+    case_dict = test_dict["Cases"][case_name]
 
-    for var in run_case_dict:
+    for var in case_dict:
         check_resembles_builtin(var, CASE_ALLOWED_KEYS)
 
     io_data = [None, None, None]
     config_dir = test_dict["_Parent"]["_ConfigFile"].parent
     for i, io in enumerate(["Input", "Output", "Err"]):
-        if io in run_case_dict:
-            io_data[i] = make_data_from_dict(run_case_dict[io], config_dir)
+        if io in case_dict:
+            io_data[i] = make_data_from_dict(case_dict[io], config_dir)
 
     return Case(
-        name=run_case_dict.get("Name", run_case_name),
-        run_args=run_case_dict.get("RunArgs", ""),
+        name=case_dict.get("Name", case_name),
+        run_args=case_dict.get("RunArgs", ""),
         input=io_data[0],
         expected_output=io_data[1],
         expected_err=io_data[2],
-        expected_exitcode=config_find_value(run_case_dict, "ExitCode", default=0),
-        timeout=config_find_value(run_case_dict, "TimeOut", default=1),
+        expected_exitcode=config_find_value(case_dict, "ExitCode", default=0),
+        timeout=config_find_value(case_dict, "TimeOut", default=1),
     )
 
 
-def load_test(config: dict, test_name) -> Test:
+def make_test(config: dict, test_name) -> Test:
     """
     Creates a `Test` object from a config.
     """
@@ -124,8 +125,8 @@ def load_test(config: dict, test_name) -> Test:
             run=config_find_and_fill(test_dict, "Run"),
             post_run=config_find_and_fill(test_dict, "PostRun"),
             cwd=config["_ConfigFile"].parent,
-            run_cases=[
-                load_run_case(test_dict, run_case) for run_case in test_dict["Cases"]
+            cases=[
+                make_case(test_dict, case) for case in test_dict["Cases"]
             ],
             clean=config_find_and_fill(test_dict, "Clean"),
             fail_fast=config_find_value(test_dict, "FailFast", default=False),
@@ -136,12 +137,19 @@ def load_test(config: dict, test_name) -> Test:
         )
 
 
-def load_subtest(config: dict) -> TestSet:
+def make_subtest(config: dict) -> TestSet:
     """
     Creates a `TestSet` object from a config.
     """
     return TestSet(
         name=config["Name"],
-        subtests=[load_subtest(subtest) for subtest in config.get("Subtests", [])],
-        tests=[load_test(config, test) for test in config.get("Tests", [])],
+        subtests=[make_subtest(subtest) for subtest in config.get("Subtests", [])],
+        tests=[make_test(config, test) for test in config.get("Tests", [])],
     )
+
+def load_tests(config_dir: str) -> TestSet:
+    """
+    Loads tests from `config_dir` directory.
+    """
+    config = load_config(config_dir)
+    return make_subtest(config)

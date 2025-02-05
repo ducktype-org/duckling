@@ -128,13 +128,22 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
 
 
 def replace_special(command: str) -> str:
-    command = command.replace(f"\n", "\\n")
-    command = command.replace(f"\t", "\\t")
-    command = command.replace(f"\r", "\\r")
+    """
+    Replaces special chars like '\n' or '\t' to '\\n' and '\\t'.
+
+    This helps with readability of eg. program output.
+    """
+    command = command.replace("\n", "\\n")
+    command = command.replace("\t", "\\t")
+    command = command.replace("\r", "\\r")
     return command
 
 
 def make_singleline_command(command: str, replace_newline_with=" ") -> str:
+    """
+    Makes a command composed of multiple lines into a single line.
+    Also replaces all double spaces with a single space.
+    """
     pretty_command = command.replace("\n", replace_newline_with)
     while "  " in pretty_command:
         pretty_command = pretty_command.replace("  ", " ")
@@ -142,6 +151,9 @@ def make_singleline_command(command: str, replace_newline_with=" ") -> str:
 
 
 def clamp_str(string, max_len=10, surround="`"):
+    """
+    Clamps a string and adds `surround` char around the string. If string is longer than `max_len` does string[:max_len] + surround + '...'.
+    """
     return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"
 
 

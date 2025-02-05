@@ -1,6 +1,6 @@
 from pathlib import Path
 from .case import Case
-from .test_loader import Test, TestSet, load_subtest
+from .test_loader import Test, TestSet, load_tests, make_subtest
 
 from .utils import (
     exec_command,
@@ -35,40 +35,46 @@ def run_test(
     verbose: bool,
     log_file: Path,
 ) -> bool:
+    """
+    Runs a test from `Test` object.
+    """
     success = True
     if test.compile:
         exec_command(test.compile, cwd=test.cwd, dry=dry, verbose=verbose)
-    for i, run_case in enumerate(test.run_cases):
-        if not run_case.name.startswith(test_path):
+    for i, case in enumerate(test.cases):
+        if not case.name.startswith(test_path):
             continue
-        log_info(f"Run [{i + 1}/{len(test)}] - {run_case.name}")
+        log_info(f"Run [{i + 1}/{len(test)}] - {case.name}")
         try:
-            if err := test_case(test, run_case, dry, verbose, log_file):
+            if err := run_case(test, case, dry, verbose, log_file):
                 print_failure(
-                    f"Case `{test.name}/{run_case.name}` has failed because: {err}"
+                    f"Case `{test.name}/{case.name}` has failed because: {err}"
                 )
                 success = False
             else:
                 if not dry:
-                    print_success(f"Case `{test.name}/{run_case.name}` passed")
+                    print_success(f"Case `{test.name}/{case.name}` passed")
         except BashCommandError as e:
             if e.exit_code == 124:
                 print_failure(
-                    f"Case `{test.name}/{run_case.name}` has timed out after {run_case.timeout} second(s)."
+                    f"Case `{test.name}/{case.name}` has timed out after {case.timeout} second(s)."
                 )
             else:
-                print_failure(f"Case `{test.name}/{run_case.name}` has failed.")
-            write_log(f"{test.name}/{run_case.name} has failed:\n{''.join(e.args)}\n")
+                print_failure(f"Case `{test.name}/{case.name}` has failed.")
+            write_log(f"{test.name}/{case.name} has failed:\n{''.join(e.args)}\n")
             success = False
             if fail_fast:
                 break
     return success
 
 
-def log_test_out_differs(test, run_case, message, got, expected, log_file):
+def log_test_out_differs(test, case, message, got, expected, log_file):
+    """
+    Used to dump program's incorrect output.
+    """
     write_log(
         (
-            f"{test.name}/{run_case.name}: {message}\n"
+            f"{test.name}/{case.name}: {message}\n"
             f"[GOT]:\n{got.decode('UTF-8')}\n"
             f"[EXPECTED]:\n{expected.decode('UTF-8')}\n"
         ),
@@ -76,20 +82,21 @@ def log_test_out_differs(test, run_case, message, got, expected, log_file):
     )
 
 
-def test_case(
-    test: Test, run_case: Case, dry: bool, verbose: bool, log_file: Path
-) -> bool:
+def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -> bool:
+    """
+    Runs a test case from `Case` object.
+    """
     if dry or verbose:
         # This command is supposed to replicate the behavior of running a test case,
-        # but this command is not executed directly in order to have more control over
+        # however this command is not executed directly in order to have more control over
         # what fails and what does not.
         command = (
-            f"{run_case.input.get_command() + ' | ' if run_case.input else ''}"
-            f"timeout {run_case.timeout}s {test.run} {run_case.run_args}"
+            f"{case.input.get_command() + ' | ' if case.input else ''}"
+            f"timeout {case.timeout}s {test.run} {case.run_args}"
         )
-        if out := run_case.expected_err:
+        if out := case.expected_err:
             command += f" > >(diff <({out.get_command()}) -)"
-        if err := run_case.expected_err:
+        if err := case.expected_err:
             command += f" 2> >(diff <({err.get_command()}) -)"
 
         command = replace_special(command)
@@ -103,26 +110,26 @@ def test_case(
 
     # get input
     test_input = bytes()
-    if run_case.input:
-        test_input, _ = exec_command(run_case.input.get_command(), cwd=test.cwd)
+    if case.input:
+        test_input, _ = exec_command(case.input.get_command(), cwd=test.cwd)
 
     # run test
     test_output, test_err = exec_command(
-        f"timeout {run_case.timeout}s {test.run} {run_case.run_args}",
+        f"timeout {case.timeout}s {test.run} {case.run_args}",
         cwd=test.cwd,
         input=test_input,
-        exitcode=run_case.expected_exitcode,
+        exitcode=case.expected_exitcode,
     )
 
     # compare test and expected output
-    if run_case.expected_output:
+    if case.expected_output:
         test_expected_output, _ = exec_command(
-            run_case.expected_output.get_command(), cwd=test.cwd
+            case.expected_output.get_command(), cwd=test.cwd
         )
         if test_output != test_expected_output:
             log_test_out_differs(
                 test,
-                run_case,
+                case,
                 "Stdouts do not match.",
                 test_output,
                 test_expected_output,
@@ -131,14 +138,14 @@ def test_case(
             return f"Stdouts do not match."
 
     # compare test and expected err
-    if run_case.expected_err:
+    if case.expected_err:
         test_expected_err, _ = exec_command(
-            run_case.expected_err.get_command(), cwd=test.cwd
+            case.expected_err.get_command(), cwd=test.cwd
         )
         if test_err != test_expected_err:
             log_test_out_differs(
                 test,
-                run_case,
+                case,
                 "Stderrs do not match.",
                 test_err,
                 test_expected_err,
@@ -153,7 +160,10 @@ def test_case(
     return ""
 
 
-def clean_test(test, dry: bool, verbose: bool):
+def clean_test(test: Test, dry: bool, verbose: bool):
+    """
+    Performs cleaning on a test.
+    """
     try:
         if test.clean:
             exec_command(
@@ -164,27 +174,48 @@ def clean_test(test, dry: bool, verbose: bool):
 
 
 def run_tests(
-    tests: TestSet, test_path: str, tree, clean, dry, fail_fast, verbose, log_file: Path
+    tests: TestSet,
+    test_path: str,
+    tree: list[str],
+    clean: bool,
+    dry: bool,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: Path,
 ) -> list[str]:
+    """
+    A recursive function for running all tests.
+    A single call executes all tests in a given tree node.
+
+    Each tree node is a `testconfig.yaml` file.
+    `tree` variable is used to store the names of the nodes on the
+    path to the current node in the tree.
+
+    """
     tree.append(tests.name)
     failed_tests = []
     ran_tests = 0
 
     for test in tests.tests:
-        pth = "/".join(tree + [test.name])
-        if not pth.startswith(test_path) and not test_path.startswith(pth):
+        path = "/".join(tree + [test.name])
+
+        # This is tricky, as normally it would be enough to check for the prefix
+        # like `pth.startswith(test_path)`, but names of test **cases** are not included
+        # in the tree list of nodes, but can be in `test_path`, so we have to this both ways.
+        if not path.startswith(test_path) and not test_path.startswith(path):
             continue
+
         if clean:
-            log_info(f"Cleaning: {pth}")
+            log_info(f"Cleaning: {path}")
             clean_test(test, dry, verbose)
         else:
-            log_info(f"Testing: {pth}")
+            log_info(f"Testing: {path}")
             test_success = run_test(
-                test, test_path[len(pth) + 1 :], dry, fail_fast, verbose, log_file
+                test, test_path[len(path) + 1 :], dry, fail_fast, verbose, log_file
             )
             ran_tests += 1
             if not test_success:
-                failed_tests.append(pth)
+                failed_tests.append(path)
                 if fail_fast:
                     return failed_tests, ran_tests
 
@@ -198,7 +229,10 @@ def run_tests(
     return failed_tests, ran_tests
 
 
-def integration_tests_impl(clean, dry, test_path, fail_fast, verbose, log_file):
+def integration_tests_impl(clean: bool, dry: bool, test_path: str, fail_fast: bool, verbose: bool, log_file: str):
+    """
+    The driver function of Duckling Integration Tests framework.
+    """
     log_info("Running integration tests...")
 
     log_file = Path(log_file)
@@ -213,8 +247,7 @@ def integration_tests_impl(clean, dry, test_path, fail_fast, verbose, log_file):
         log_file.unlink()
         log_file = Path(log_file)
 
-    config = load_config("tests")
-    test_set = load_subtest(config)
+    test_set = load_tests("tests")
 
     failed_tests, ran_tests = run_tests(
         test_set, test_path, [], clean, dry, fail_fast, verbose, log_file

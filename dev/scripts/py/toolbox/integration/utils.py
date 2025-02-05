@@ -11,6 +11,10 @@ import subprocess as sp
 
 
 def check_resembles_builtin(name: str, builtin_set: set[str]):
+    """
+    Checks whether `name`, which is a variable name, is a misspelling of a builtin from a set of builtins.
+    Also checks whether a variable follows the correct naming convention.
+    """
     if name in builtin_set:
         return
 
@@ -56,7 +60,12 @@ def exec_command(
     exitcode=0,
     dry: bool = False,
     verbose: bool = False,
-):
+) -> tuple[bytes, bytes]:
+    """
+    Similar to `bash_command_get_output` as it executes a bash command and returns the result.
+    It has more features than the aforementioned command, as it supports input redirection,
+    can expect a custom exitcode and supports dry and verbose runs.
+    """
     if dry or verbose:
         cmd = replace_special(cmd)
         log_bash(f'cd "{cwd.absolute()}" && {cmd}')
@@ -84,5 +93,8 @@ def exec_command(
 
 
 def write_log(msg, log_file):
+    """
+    Dumps a `msg` message into a log file `log_file`.
+    """
     with open(log_file, "a") as f:
         print(">>>" + msg + f"{'-' * 50}", file=f)
