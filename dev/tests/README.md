@@ -110,7 +110,7 @@ File variable (linked to a node in the test tree):
 - `Tests` - A dict with test set
 - `Subtests` - A dict with sub tests of a config file - other nodes in the test tree.
 
-Global variables:
+General variables (not tied to any context):
 
 - `Compile` - Command executed before running a test. Executed once per test.
 - `Run` - Required - Command executed in order to run a test case.
@@ -132,14 +132,15 @@ Case specific:
 - `Input` - Stdin passed to a program.
 - `Output` - Expected stdout of a program.
 - `Err` - Expected stderr of a program.
-- `RunArgs` - Arguments passed to a test case
+- `RunArgs` - Arguments passed to a program.
 - Additionally: `TimeOut`, `ExitCode` as above.
 
 `Input`, `Output`, `Err` inside a case can be specified as follows:
 
 - `file` - data is taken from a given file path. DIT paths are always **relative to the current test set's config file**.
 - `string` - data is a literal
-- `run` - data is taken from stdout of a command specified here. Optional `compile` can be specified to first compile a program to run.
+- `run` - data is taken from stdout of a command specified here.
+- Optional `compile` can be specified to first compile a program to run.
 
 ## Note on cleaning
 
