@@ -1,8 +1,8 @@
 #pragma once
 
 #include <listener/listener.hpp>
-#include "events/memory_event.hpp"
-#include "events/function_call_event.hpp"
+#include <events/memory_event.hpp>
+#include <events/function_call_event.hpp>
 #include "../services.hpp"
 
 namespace vm {
