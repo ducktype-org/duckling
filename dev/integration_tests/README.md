@@ -55,9 +55,9 @@ Tests:
     Cases:
       hello-world:
         Input:
-          string: "Hello, world!"
+          String: "Hello, world!"
         Output:
-          string: "Hello, world!"
+          String: "Hello, world!"
 ```
 
 The code above when interpreted would execute a shell program `cat`.
