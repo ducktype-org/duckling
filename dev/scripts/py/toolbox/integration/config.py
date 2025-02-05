@@ -6,7 +6,7 @@ import yaml
 
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
-from ..helpers import clamp_str, exit_with_error
+from ..helpers import trucate_str, exit_with_error
 
 """
 Allowed global builtin keys.
@@ -34,7 +34,7 @@ def read_config_dict(dir_with_config: Path):
         exit_with_error(f"Config file {config_file} does not exist")
 
     with open(config_file) as f:
-            config = yaml.safe_load(f.read())
+        config = yaml.safe_load(f.read())
 
     config["_ConfigFile"] = config_file
     return config
@@ -116,7 +116,7 @@ def config_fill_variables(config: dict, expr: str) -> str:
         if not VARIABLE_EXPRESSION.search(expr):
             return expr
 
-    raise ExpressionFillError(clamp_str(ORIGINAL_EXPR, 100))
+    raise ExpressionFillError(trucate_str(ORIGINAL_EXPR, 100))
 
 
 def config_find_and_fill(config: dict, key: str) -> Optional[str]:

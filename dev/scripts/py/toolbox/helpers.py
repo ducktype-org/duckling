@@ -150,9 +150,9 @@ def make_singleline_command(command: str, replace_newline_with=" ") -> str:
     return pretty_command.lstrip().rstrip()
 
 
-def clamp_str(string, max_len=10, surround="`"):
+def truncate_str(string, max_len=10, surround="`"):
     """
-    Clamps a string and adds `surround` char around the string. If string is longer than `max_len` does string[:max_len] + surround + '...'.
+    Truncate a string and adds `surround` char around the string. If string is longer than `max_len` does string[:max_len] + surround + '...'.
     """
     return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"
 

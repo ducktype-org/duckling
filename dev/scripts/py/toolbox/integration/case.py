@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
-from ..helpers import bash_command, clamp_str
+from ..helpers import bash_command, trucate_str
 
 
 class Data(abc.ABC):
@@ -25,6 +25,7 @@ class DataFromFile(Data):
     """
     Test's IO from File.
     """
+
     def __init__(self, file: Path):
         self.file = file
 
@@ -39,6 +40,7 @@ class DataFromString(Data):
     """
     Test's IO in a form of a string literal.
     """
+
     def __init__(self, string: str):
         self.string = string
 
@@ -46,13 +48,14 @@ class DataFromString(Data):
         return f'echo -ne "{self.string}"'
 
     def __str__(self) -> str:
-        return f'String: "{clamp_str(self.string)}"'
+        return f'String: "{trucate_str(self.string)}"'
 
 
 class DataFromProgram(Data):
     """
     Test's IO in a form of a (compiled) program.
     """
+
     def __init__(self, compile: str, run: str):
         self.compile = compile
         self.run = run
@@ -94,6 +97,7 @@ class Case:
     """
     Test's Case object that represents data needed to run a test case.
     """
+
     name: str
     run_args: str
     input: Optional[Data]

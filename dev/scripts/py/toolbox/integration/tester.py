@@ -94,7 +94,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
             f"{case.input.get_command() + ' | ' if case.input else ''}"
             f"timeout {case.timeout}s {test.run} {case.run_args}"
         )
-        if out := case.expected_err:
+        if out := case.expected_output:
             command += f" > >(diff <({out.get_command()}) -)"
         if err := case.expected_err:
             command += f" 2> >(diff <({err.get_command()}) -)"
