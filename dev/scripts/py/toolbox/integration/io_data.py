@@ -1,12 +1,11 @@
 import abc
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
-from ..helpers import bash_command, trucate_str
+from ..helpers import bash_command, truncate_str
+from keys import *
 
 
-class Data(abc.ABC):
+class IOData(abc.ABC):
     """
     This object represents test's IO, like input, expected output, expected err.
     It is a abstract base class and is not meant to be used directly.
@@ -21,7 +20,7 @@ class Data(abc.ABC):
         """Type of the data"""
 
 
-class DataFromFile(Data):
+class IODataFromFile(IOData):
     """
     Test's IO from File.
     """
@@ -36,7 +35,7 @@ class DataFromFile(Data):
         return f"File: {self.file}"
 
 
-class DataFromString(Data):
+class IODataFromString(IOData):
     """
     Test's IO in a form of a string literal.
     """
@@ -48,10 +47,10 @@ class DataFromString(Data):
         return f'echo -ne "{self.string}"'
 
     def __str__(self) -> str:
-        return f'String: "{trucate_str(self.string)}"'
+        return f'String: "{truncate_str(self.string)}"'
 
 
-class DataFromProgram(Data):
+class IODataFromProgram(IOData):
     """
     Test's IO in a form of a (compiled) program.
     """
@@ -69,39 +68,24 @@ class DataFromProgram(Data):
         return f"Program: {self.run}"
 
 
-def make_data_from_dict(data: dict, config_dir: Path) -> Data:
+def make_data_from_dict(data: dict, config_dir: Path) -> IOData:
     """
-    Constructs a Data object from dict depending on a config.
+    Constructs a IOData object from dict depending on a config.
     Supported types include:
-    - file
-    - string
-    - run (+ compile if needed)
+    - File
+    - String
+    - Run (+ Compile if needed)
     """
-    if "file" in data:
-        path = config_dir / Path(data["file"])
+    if FILE in data:
+        path = config_dir / Path(data[FILE])
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path.absolute()}")
-        return DataFromFile(data["file"])
-    elif "string" in data:
-        return DataFromString(data["string"])
-    elif "run" in data or "compile" in data:
-        if not "run" in data:
-            raise ValueError(f"Missing `run` in DataFromProgram: {data}")
-        return DataFromProgram(data.get("compile", ""), data["run"])
+        return IODataFromFile(data[FILE])
+    elif STRING in data:
+        return IODataFromString(data[STRING])
+    elif RUN in data or COMPILE in data:
+        if not RUN in data:
+            raise ValueError(f"Missing `{RUN}` in {IODataFromProgram.__name__}: {data}")
+        return IODataFromProgram(data.get(COMPILE, ""), data[RUN])
     else:
         raise ValueError("Invalid data dictionary: " + str(data))
-
-
-@dataclass
-class Case:
-    """
-    Test's Case object that represents data needed to run a test case.
-    """
-
-    name: str
-    run_args: str
-    input: Optional[Data]
-    expected_exitcode: int
-    expected_output: Optional[Data]
-    expected_err: Optional[Data]
-    timeout: int

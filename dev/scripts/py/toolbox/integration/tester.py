@@ -1,16 +1,11 @@
 from pathlib import Path
-from .case import Case
-from .test_loader import Test, TestSet, load_tests, make_subtest
+from .test_loader import Case, Test, TestNode, load_tests
 
 from .utils import (
     exec_command,
     print_failure,
     print_success,
     write_log,
-)
-
-from .config import (
-    load_config,
 )
 
 from ..helpers import (
@@ -174,7 +169,7 @@ def clean_test(test: Test, dry: bool, verbose: bool):
 
 
 def run_tests(
-    tests: TestSet,
+    tests: TestNode,
     test_path: str,
     tree: list[str],
     clean: bool,
@@ -229,7 +224,14 @@ def run_tests(
     return failed_tests, ran_tests
 
 
-def integration_tests_impl(clean: bool, dry: bool, test_path: str, fail_fast: bool, verbose: bool, log_file: str):
+def integration_tests_impl(
+    clean: bool,
+    dry: bool,
+    test_path: str,
+    fail_fast: bool,
+    verbose: bool,
+    log_file: str,
+):
     """
     The driver function of Duckling Integration Tests framework.
     """

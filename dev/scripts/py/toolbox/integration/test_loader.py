@@ -1,135 +1,88 @@
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Optional, Self
+from .classes import Case, Test, TestNode
 from ..helpers import exit_with_error
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
-from .case import Case, make_data_from_dict
+from .io_data import IOData, make_data_from_dict
 from .config import (
-    CONFIG_KEYS,
+    GLOBAL_CONFIG_KEYS,
     config_find_and_fill,
     config_find_value,
     config_get_name_path,
     load_config,
 )
+from keys import *
 
 
 """
 Builtin keys allowed inside a Test.
 """
-TEST_ALLOWED_KEYS = {*CONFIG_KEYS, "Cases"}
+TEST_ALLOWED_KEYS = {*GLOBAL_CONFIG_KEYS, CASES}
 
 
 """
 Builtin keys allowed inside a Case.
 """
 CASE_ALLOWED_KEYS = {
-    "Name",
-    "Input",
-    "Output",
-    "Err",
-    "RunArgs",
-    "TimeOut",
-    "ExitCode",
+    NAME,
+    INPUT,
+    OUTPUT,
+    ERR,
+    RUN_ARGS,
+    TIME_OUT,
+    EXIT_CODE,
 }
 
 
-@dataclass
-class Test:
-    """
-    Represents a DIT test.
-    Contains all the necessary data for running a Case.
-    """
-
-    name: str
-    description: Optional[str]
-    cases: list[Case]
-    cwd: Path
-
-    compile: str
-    run: str
-    post_run: str
-    fail_fast: bool
-    clean: str
-
-    def __str__(self) -> str:
-        return f"{self.name}: {self.description if self.description else ''}"
-
-    def __len__(self) -> int:
-        return len(self.cases)
-
-
-@dataclass
-class TestSet:
-    """
-    Represents a node inside DIT tree (a testconfig.yaml file).
-    It has links to other TestSet objects (subdirectories) and
-    has a list of tests specified in a given config.
-    """
-
-    name: str
-    subtests: list[Self]
-    tests: list[Test]
-
-    def test_count(self):
-        return len(self.tests) + sum(testset.test_count() for testset in self.subtests)
-
-    def __str__(self) -> str:
-        return f"{self.name}: {len(self.tests)} tests"
-
-
-def make_case(test_dict: dict, case_name: str) -> Case:
+def _make_case(test_dict: dict, case_name: str) -> Case:
     """
     Creates a `Case` object from a test_dict.
     """
 
-    case_dict = test_dict["Cases"][case_name]
+    case_dict = test_dict[CASES][case_name]
 
     for var in case_dict:
         check_resembles_builtin(var, CASE_ALLOWED_KEYS)
 
     io_data = [None, None, None]
-    config_dir = test_dict["_Parent"]["_ConfigFile"].parent
-    for i, io in enumerate(["Input", "Output", "Err"]):
+    config_dir = test_dict[PARENT][CONFIG_FILE].parent
+    for i, io in enumerate([INPUT, OUTPUT, ERR]):
         if io in case_dict:
             io_data[i] = make_data_from_dict(case_dict[io], config_dir)
 
     return Case(
-        name=case_dict.get("Name", case_name),
-        run_args=case_dict.get("RunArgs", ""),
+        name=case_dict.get(NAME, case_name),
+        run_args=case_dict.get(RUN_ARGS, ""),
         input=io_data[0],
         expected_output=io_data[1],
         expected_err=io_data[2],
-        expected_exitcode=config_find_value(case_dict, "ExitCode", default=0),
-        timeout=config_find_value(case_dict, "TimeOut", default=1),
+        expected_exitcode=config_find_value(case_dict, EXIT_CODE, default=0),
+        timeout=config_find_value(case_dict, TIME_OUT, default=1),
     )
 
 
-def make_test(config: dict, test_name) -> Test:
+def _make_test(config: dict, test_name) -> Test:
     """
     Creates a `Test` object from a config.
     """
-    test_dict = config["Tests"][test_name]
+    test_dict = config[TESTS][test_name]
     test_path = config_get_name_path(test_dict)
 
     for var in test_dict:
         check_resembles_builtin(var, TEST_ALLOWED_KEYS)
 
-    if not "Cases" in test_dict or not test_dict["Cases"]:
+    if not CASES in test_dict or not test_dict[CASES]:
         exit_with_error(f"Test {test_path} has no Cases.")
 
     try:
         return Test(
-            name=test_dict.get("Name", test_name),
-            description=test_dict.get("Description"),
-            compile=config_find_and_fill(test_dict, "Compile"),
-            run=config_find_and_fill(test_dict, "Run"),
-            post_run=config_find_and_fill(test_dict, "PostRun"),
-            cwd=config["_ConfigFile"].parent,
-            cases=[
-                make_case(test_dict, case) for case in test_dict["Cases"]
-            ],
-            clean=config_find_and_fill(test_dict, "Clean"),
-            fail_fast=config_find_value(test_dict, "FailFast", default=False),
+            name=test_dict.get(NAME, test_name),
+            description=test_dict.get(DESCRIPTION),
+            compile=config_find_and_fill(test_dict, COMPILE),
+            run=config_find_and_fill(test_dict, RUN),
+            post_run=config_find_and_fill(test_dict, POST_RUN),
+            cwd=config[CONFIG_FILE].parent,
+            cases=[_make_case(test_dict, case) for case in test_dict[CASES]],
+            clean=config_find_and_fill(test_dict, CLEAN),
+            fail_fast=config_find_value(test_dict, FAIL_FAST, default=False),
         )
     except (VariableNotFound, ExpressionFillError) as e:
         exit_with_error(
@@ -137,19 +90,20 @@ def make_test(config: dict, test_name) -> Test:
         )
 
 
-def make_subtest(config: dict) -> TestSet:
+def _make_test_node(config: dict) -> TestNode:
     """
-    Creates a `TestSet` object from a config.
+    Creates a `TestNode` object from a config.
     """
-    return TestSet(
-        name=config["Name"],
-        subtests=[make_subtest(subtest) for subtest in config.get("Subtests", [])],
-        tests=[make_test(config, test) for test in config.get("Tests", [])],
+    return TestNode(
+        name=config[NAME],
+        subtests=[_make_test_node(subtest) for subtest in config.get(SUBTESTS, [])],
+        tests=[_make_test(config, test) for test in config.get(TESTS, [])],
     )
 
-def load_tests(config_dir: str) -> TestSet:
+
+def load_tests(config_dir: str) -> TestNode:
     """
     Loads tests from `config_dir` directory.
     """
     config = load_config(config_dir)
-    return make_subtest(config)
+    return _make_test_node(config)

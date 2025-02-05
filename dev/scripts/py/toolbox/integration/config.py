@@ -1,42 +1,49 @@
 from pathlib import Path
 import re
-import tomllib
 from typing import Optional
 import yaml
 
 from .utils import ExpressionFillError, VariableNotFound, check_resembles_builtin
 
-from ..helpers import trucate_str, exit_with_error
+from ..helpers import truncate_str, exit_with_error
+from keys import *
+
+"""
+General variable keys.
+"""
+GENERAL_VARIABLES = {
+    COMPILE,
+    RUN,
+    CLEAN,
+    POST_RUN,
+    TIME_OUT,
+    EXIT_CODE,
+}
 
 """
 Allowed global builtin keys.
 """
-CONFIG_KEYS = {
-    "Name",
-    "Description",
-    "Tests",
-    "Subtests",
-    "Compile",
-    "Run",
-    "Clean",
-    "PostRun",
-    "TimeOut",
-    "ExitCode",
+GLOBAL_CONFIG_KEYS = {
+    NAME,
+    DESCRIPTION,
+    TESTS,
+    SUBTESTS,
+    *GENERAL_VARIABLES
 }
 
 
-def read_config_dict(dir_with_config: Path):
+def _read_config_file(dir_with_config: Path) -> dict:
     """
     Reads a DIT config file from a directory.
     """
-    config_file = dir_with_config / f"testconfig.yaml"
+    config_file = dir_with_config / "testconfig.yaml"
     if not config_file.exists():
         exit_with_error(f"Config file {config_file} does not exist")
 
     with open(config_file) as f:
         config = yaml.safe_load(f.read())
 
-    config["_ConfigFile"] = config_file
+    config[CONFIG_FILE] = config_file
     return config
 
 
@@ -49,38 +56,38 @@ def load_config(dir_with_config: str, parent: Optional[dict] = None) -> dict:
     if not dir_with_config.exists():
         exit_with_error(f"Directory {dir_with_config.absolute()} does not exist")
 
-    config = read_config_dict(dir_with_config)
+    config = _read_config_file(dir_with_config)
 
     for var in config:
-        check_resembles_builtin(var, CONFIG_KEYS)
+        check_resembles_builtin(var, GLOBAL_CONFIG_KEYS)
 
-    config["_Parent"] = parent
-    config["Name"] = config.get("Name", dir_with_config.stem)
+    config[PARENT] = parent
+    config[NAME] = config.get(NAME, dir_with_config.stem)
 
-    if not ("Subtests" in config or "Tests" in config):
+    if not (SUBTESTS in config or TESTS in config):
         exit_with_error(
-            f"Config file {config["_ConfigFile"]} does not contain any Tests or Subtests"
+            f"Config file {config[CONFIG_FILE]} does not contain any {TESTS} or {SUBTESTS}"
         )
 
-    if "Subtests" in config:
-        config["Subtests"] = [
+    if SUBTESTS in config:
+        config[SUBTESTS] = [
             load_config(dir_with_config / subtest, parent=config)
-            for subtest in config["Subtests"]
+            for subtest in config[SUBTESTS]
         ]
 
-    if "Tests" in config:
-        for test_name in config["Tests"]:
-            test = config["Tests"][test_name]
-            test["Name"] = test_name
-            test["_Parent"] = config
+    if TESTS in config:
+        for test_name in config[TESTS]:
+            test = config[TESTS][test_name]
+            test[NAME] = test_name
+            test[PARENT] = config
 
-            for case in test["Cases"]:
-                test["Cases"][case]["_Parent"] = config["Tests"][test_name]
+            for case in test[CASES]:
+                test[CASES][case][PARENT] = config[TESTS][test_name]
 
     return config
 
 
-def config_find_value(config: dict, key, default=None) -> Optional[dict]:
+def config_find_value(config: dict, key: str, default=None) -> Optional[dict]:
     """
     Looks for a `key` inside `config` and upon finding returns it.
     If it doesn't find, then goes up tree inside the config structure.
@@ -88,8 +95,8 @@ def config_find_value(config: dict, key, default=None) -> Optional[dict]:
     if key in config:
         return config[key]
 
-    if config["_Parent"]:
-        return config_find_value(config["_Parent"], key, default=default)
+    if config[PARENT]:
+        return config_find_value(config[PARENT], key, default=default)
     return default
 
 
@@ -116,7 +123,7 @@ def config_fill_variables(config: dict, expr: str) -> str:
         if not VARIABLE_EXPRESSION.search(expr):
             return expr
 
-    raise ExpressionFillError(trucate_str(ORIGINAL_EXPR, 100))
+    raise ExpressionFillError(truncate_str(ORIGINAL_EXPR, 100))
 
 
 def config_find_and_fill(config: dict, key: str) -> Optional[str]:
@@ -136,7 +143,7 @@ def config_get_name_path(config: dict) -> str:
     An example would be "/tests/a/b/c".
     """
     return (
-        (config_get_name_path(parent) if (parent := config["_Parent"]) else "")
+        (config_get_name_path(parent) if (parent := config[PARENT]) else "")
         + "/"
-        + config["Name"]
+        + config[NAME]
     )
