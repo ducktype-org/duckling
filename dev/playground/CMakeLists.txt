@@ -4,6 +4,7 @@ add_executable(clap_playground clap_playground.cpp)
 add_executable(count_tokens_cpp count_tokens_cpp.cpp)
 add_executable(count_tokens_duckling count_tokens_duckling.cpp)
 add_executable(fs_parser_playground fs_parser_playground.cpp)
+add_executable(stack_trace_test stack_trace_test.cpp)
 
 target_link_libraries(panic_playground Base)
 target_link_libraries(clap_playground Base Clap Printer)

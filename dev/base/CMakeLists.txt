@@ -12,6 +12,7 @@ add_library(Base
 # @TODO: unicode dependency might not be optional.
 # Think of a way to "break" it
 make_module(Base USES)
+target_link_libraries(Base "-lstdc++exp")
 
 duck_add_test(base strongly_typed_int_tests tests/strongly_typed_int_test.cpp
         USES Base)

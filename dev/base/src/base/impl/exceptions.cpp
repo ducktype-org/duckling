@@ -54,3 +54,4 @@ namespace base {
 	const char* NotYetImplemented::what() const noexcept { return message.data(); }
 
 }
+
