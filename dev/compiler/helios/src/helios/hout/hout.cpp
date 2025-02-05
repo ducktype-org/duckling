@@ -73,7 +73,7 @@ namespace compiler::helios {
 	HOUTGlobalData::HOUTGlobalData(SymID symbol, query::Context& ctx):
 		  helios_symbol(symbol),
 		  original_name(name(symbol)),
-		  value(ctx.query<QueryConstValueOf>(symbol)->expect(
+		  value(ctx.query<QueryConstValueOf>(symbol).expect(
 			  "Handling errors in HOUT is not supported yet"
 		  )),
 		  type(ctx.query<QueryTypeOfSymbol>(symbol)->expect(
