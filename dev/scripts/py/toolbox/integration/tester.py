@@ -12,10 +12,8 @@ from ..helpers import (
     BashCommandError,
     exit_with_error,
     get_input,
-    log_bash,
     log_info,
     log_warning,
-    replace_special,
 )
 
 DEFAULT_LOG_FILE_PATH = Path("/tmp/toolbox-tester.log")

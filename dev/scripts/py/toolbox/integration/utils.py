@@ -1,15 +1,10 @@
-from pathlib import Path
 import pathlib
 import sys
 from ..helpers import (
-    BashCommandError,
     click_log,
     exec_bash_command,
     exit_with_error,
-    log_bash,
-    replace_special,
 )
-import subprocess as sp
 
 
 def check_resembles_builtin(name: str, builtin_set: set[str]):
