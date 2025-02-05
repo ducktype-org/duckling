@@ -1,6 +1,6 @@
 #include "diagnostic_converters.hpp"
-#include "logger.hpp"
-#include "token_file/file.hpp"
+
+#include <token_file/file.hpp>
 
 #include <sstream>
 #include <iomanip>

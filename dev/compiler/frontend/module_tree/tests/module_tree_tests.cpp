@@ -1,6 +1,6 @@
 #include <tester/tester.hpp>
-#include "frontend/module_tree/module_tree.hpp"
-#include "frontend/module_tree/queries.hpp"
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <query_framework/query_entry_point.hpp>
 
 using namespace compiler::frontend;
