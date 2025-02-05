@@ -253,6 +253,9 @@ def integration_tests_impl(clean: bool, dry: bool, test_path: str, fail_fast: bo
         test_set, test_path, [], clean, dry, fail_fast, verbose, log_file
     )
 
+    if dry:
+        return
+
     if failed_tests:
         num_failed = len(failed_tests)
         failed_tests = map(lambda x: " - " + x, failed_tests)
@@ -260,5 +263,5 @@ def integration_tests_impl(clean: bool, dry: bool, test_path: str, fail_fast: bo
             f"{'(Fail fast) ' if fail_fast else ''}{num_failed}/{ran_tests} tests failed:\n{'\n'.join(failed_tests)}\n"
             + f"Please see log file '{log_file.absolute()}' for more info."
         )
-    elif not clean and not dry:
+    elif not clean:
         print_success(f"All [{ran_tests}/{ran_tests}] have run successfully!")
