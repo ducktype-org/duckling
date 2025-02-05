@@ -93,7 +93,7 @@ The actual specializations or partial specializations are a bit of a mess to kee
 Hashing objects
 ===============
 
-abc
+There main utility for hashing objects is the `Hash` class template. 
 
 
 Adding new hashing algorithms

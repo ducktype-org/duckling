@@ -15,18 +15,20 @@ namespace hashing {
 
 	namespace detail {
 
-		template<std::unsigned_integral I>
+		template<typename I>
 		class Fnv1a_Constants;
 
-		template<>
-		class Fnv1a_Constants<u32> {
+		template<typename I>
+		requires (sizeof(I) <= sizeof(u32))
+		class Fnv1a_Constants<I> {
 		protected:
 			static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
 			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
 		};
 
-		template<>
-		class Fnv1a_Constants<u64> {
+		template<typename I>
+		requires (sizeof(I) > sizeof(u32))
+		class Fnv1a_Constants<I> {
 		protected:
 			static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
 			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
