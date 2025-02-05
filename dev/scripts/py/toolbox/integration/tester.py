@@ -106,7 +106,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
         test_expected_output, _ = dit_exec_command(
             case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
-        if test_output != test_expected_output:
+        if not dry and test_output != test_expected_output:
             log_test_out_differs(
                 test,
                 case,
@@ -124,7 +124,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
         test_expected_err, _ = dit_exec_command(
             case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
-        if test_err != test_expected_err:
+        if not dry and test_err != test_expected_err:
             log_test_out_differs(
                 test,
                 case,
