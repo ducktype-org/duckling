@@ -17,6 +17,12 @@
 		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
 		Frame *IF_NOT_TC(&) frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
 
+#define OPFUN_REF_ARGS                                                                        \
+	const Fix8Instruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
+		Frame *&frame [[maybe_unused]]                                                        \
+		,                                                                                     \
+		VMThread &thread [[maybe_unused]]
+
 #define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
 
 namespace {
@@ -26,7 +32,7 @@ namespace {
 	 *
 	 * @return constexpr u16
 	 */
-	constexpr u16 count_op_cases() {
+	constexpr u16 countOpCases() {
 		u16 count = 0;
 #define DEF_OPCODE(opcode) count++;
 #include "opcodes_list.hpp"
@@ -46,13 +52,14 @@ namespace vm {
 	struct Fix8Instruction;
 
 	class OpFuns;
-	using OpFun = void(OPFUN_ARGS);
+	using OpFun      = void(OPFUN_ARGS);
+	using DebugOpFun = void(OPFUN_REF_ARGS);
 
 
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
-	constexpr u16 OP_CASES_COUNT = count_op_cases();
+	constexpr u16 OP_CASES_COUNT = countOpCases();
 
 #ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
@@ -85,15 +92,43 @@ namespace vm {
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 
+#define DEF_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+
+		// NOLINTBEGIN(readability-identifier-naming)
+		// Opcodes utilities functions (named the simmiliar way as all OpFuns)
+		static OpFun handle_execution_break;
+		static OpFun save_execution_state;
+		// NOLINTEND(readability-identifier-naming)
+
 		/**
 		 * @brief A mapping between opcode ids and function pointers.
 		 *
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
-		static constexpr std::array<OpFun*, OP_CASES_COUNT> opfuns{
+		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define DEF_OPCODE(opcode) op_##opcode,
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
 		};
+
+		/**
+		 * @brief A mapping between opcode ids and debug function pointers.
+		 */
+		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
+#define DEF_OPCODE(opcode) op_debug_##opcode,
+#include "opcodes_list.hpp"
+#undef DEF_OPCODE
+		};
+
+		/**
+		 * @brief Get the Opcode from the OpFun pointer.
+		 */
+		static u16 getOpcodeFromOpFun(OpFun* fun) {
+			for (u16 i = 0; i < OP_CASES_COUNT; i++)
+				if (OPFUNS.at(i) == fun) return i;
+			return 0;
+		}
 	};
 }  // namespace vm
