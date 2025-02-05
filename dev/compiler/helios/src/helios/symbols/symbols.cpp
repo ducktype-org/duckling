@@ -503,7 +503,7 @@ namespace compiler::helios {
 			const auto const_symbol
 				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
 
-			return ctx.query<EvalExprToInt>({ const_symbol->getValue()->getExpr() });
+			return ctx.query<EvalExprToI64>({ const_symbol->getValue()->getExpr() });
 		}
 
 		QUERY_AUTO_CACHE_COPY

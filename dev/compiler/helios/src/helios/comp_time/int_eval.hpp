@@ -19,5 +19,5 @@ namespace compiler::helios {
 	 * @note For now it only supports integer values,
 	 * in the future we will introduce more generic CTV values.
 	 */
-	DECLARE_QUERY(EvalExprToInt, pst::GenericPSTQueryKey<pst::ExprElement>, IntEval_Result)
+	DECLARE_QUERY(EvalExprToI64, pst::GenericPSTQueryKey<pst::ExprElement>, IntEval_Result)
 }

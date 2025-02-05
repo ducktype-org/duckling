@@ -8,7 +8,7 @@
 #include <cmath>
 
 namespace compiler::helios {
-	struct IMPLEMENT_QUERY(EvalExprToInt, IntEval_Result) {
+	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
 			Context&                                  ctx;
 			errors::HResult<i64 COMMA errors::Failed> result;
@@ -125,5 +125,5 @@ namespace compiler::helios {
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToInt);
+	QUERY_IMPLEMENTATION_BOILERPLATE(EvalExprToI64);
 };
