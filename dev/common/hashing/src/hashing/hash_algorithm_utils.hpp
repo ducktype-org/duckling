@@ -1,7 +1,8 @@
 #pragma once
 
-#include <concepts>
 #include <type_traits>
+#include <string_view>
+#include <concepts>
 #include <utility>
 #include <ranges>
 #include <array>
@@ -23,7 +24,7 @@ namespace hashing {
 			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
 		   && requires { typename T::result_type; }
 		   && (std::is_invocable_r_v<void, T, void*, usize>
-		       || std::is_invocable_r_v<void, T, char*, usize>)
+		       || std::is_invocable_r_v<void, T, std::string_view>)
 		   && is_explicitly_convertible_to<T, typename T::result_type>;
 
 	}  // namespace detail
@@ -99,6 +100,7 @@ namespace hashing {
 
 		template<typename T>
 		concept supports_std_get = requires {
+			std::tuple_size<T>::value;
 			[]<std::size_t... Is>(std::index_sequence<Is...>) requires requires {
 				(std::get<Is>(std::declval<T>()), ...);
 			} {}(std::make_index_sequence<std::tuple_size<T>::value>{});

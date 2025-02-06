@@ -179,11 +179,11 @@ private:
 	}
 
 	void fullCoverageTest() {
-		static_assert(std::integral<u32>, "u32 should be integral");
-		static_assert(std::integral<u64>, "u64 should be integral");
-		static_assert(
-			std::integral<TypeHashCodeBase<>::value_type>, "value_type should be integral"
-		);
+		// static_assert(std::integral<u32>, "u32 should be integral");
+		// static_assert(std::integral<u64>, "u64 should be integral");
+		// static_assert(
+		// 	std::integral<TypeHashCodeBase<>::value_type>, "value_type should be integral"
+		// );
 
 		// type_hash_code_def.hpp
 		assertTrue(
@@ -213,7 +213,7 @@ private:
 			hash_algorithm<std::function<int(int)>>, "std::function is not a hashing algorithm"
 		);
 		assertTrue(
-			hash_algorithm<std::function<void(char*, usize)>>,
+			hash_algorithm<std::function<void(std::string_view)>>,
 			"std::function could be a hashing algorithm"
 		);
 

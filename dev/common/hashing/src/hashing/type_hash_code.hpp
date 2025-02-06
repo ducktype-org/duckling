@@ -14,9 +14,7 @@ namespace hashing {
 
 	namespace detail {
 
-		template<
-			std::integral I        = u32,
-			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+		template<std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
 		requires std::convertible_to<typename HashAlgorithm::result_type, I> struct StrToIntegral {
 			TypeHashCodeBase<I> hash_value;
 
@@ -32,7 +30,7 @@ namespace hashing {
 		template<
 			typename,
 			std::integral I        = u32,
-			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
 			return StrToIntegral<I, HashAlgorithm>{ __FUNCDNAME__ };
@@ -47,7 +45,7 @@ namespace hashing {
 		template<
 			typename T,
 			std::integral I        = u32,
-			typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval auto uniqueId() {
 			return static_cast<TypeHashCodeBase<I>>(uniqueString<T, I, HashAlgorithm>());
 		}
@@ -57,7 +55,7 @@ namespace hashing {
 	template<
 		typename T,
 		std::integral I        = u32,
-		typename HashAlgorithm = ::hashing::default_hash_algorithm_for<I>>
+		typename HashAlgorithm = default_hash_algorithm_for<I>>
 	static constexpr TypeHashCodeBase<I> TYPE_HASH_CODE = detail::uniqueId<T, I, HashAlgorithm>();
 
 

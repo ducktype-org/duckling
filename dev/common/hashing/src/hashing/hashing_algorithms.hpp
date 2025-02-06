@@ -1,8 +1,14 @@
 #pragma once
 
+#include <string_view>
 #include <type_traits>
+#include <concepts>
 #include <ranges>
 #include <vector>
+#include <string>
+#include <tuple>
+#include <array>
+#include <bit>
 
 #include <base/ints.hpp>
 
@@ -15,20 +21,18 @@ namespace hashing {
 
 	namespace detail {
 
-		template<typename I>
+		template<std::integral I>
 		class Fnv1a_Constants;
 
-		template<typename I>
-		requires (sizeof(I) <= sizeof(u32))
-		class Fnv1a_Constants<I> {
+		template<std::integral I>
+		requires(sizeof(I) <= sizeof(u32)) class Fnv1a_Constants<I> {
 		protected:
 			static constexpr u32 OFFSET_BASIS = 2'166'136'261u;
 			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
 		};
 
-		template<typename I>
-		requires (sizeof(I) > sizeof(u32))
-		class Fnv1a_Constants<I> {
+		template<std::integral I>
+		requires(sizeof(I) > sizeof(u32)) class Fnv1a_Constants<I> {
 		protected:
 			static constexpr u64 OFFSET_BASIS = 14'695'981'039'346'656'037ull;
 			static constexpr u64 FNV_PRIME    = (1ull << 40) + (1ull << 8) + 0xb3ull;
@@ -141,6 +145,8 @@ namespace hashing {
 			return ret;
 		}
 	};
+
+	using DefaultHashAlgorithm = Fnv1a_64;
 
 	template<typename I>
 	using default_hash_algorithm_for

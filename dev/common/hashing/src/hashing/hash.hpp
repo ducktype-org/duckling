@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <concepts>
 
 #include "hashing_algorithms.hpp"
@@ -26,8 +27,6 @@ namespace hashing {
 		};
 
 	}  // namespace detail
-
-	using DefaultHashAlgorithm = Fnv1a_64;
 
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,

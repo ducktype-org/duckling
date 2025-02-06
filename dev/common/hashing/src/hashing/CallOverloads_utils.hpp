@@ -1,6 +1,12 @@
 #pragma once
 
+#include <type_traits>
+#include <string_view>
 #include <concepts>
+#include <utility>
+#include <memory>
+#include <array>
+#include <bit>
 
 #include "type_hash_code_def.hpp"
 
@@ -19,7 +25,7 @@ namespace hashing {
 			} && (not requires(Self self) { self.updateHash(data, len); }) {}
 		};
 
-		// addHashCode should be protected
+		// updateHash should be protected
 		template<typename Self>
 		struct CheckAccessTo_updateHash_sv: public std::remove_cvref_t<Self> {
 			void check(const std::string_view sv) requires requires {

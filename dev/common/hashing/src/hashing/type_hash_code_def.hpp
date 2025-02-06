@@ -1,5 +1,6 @@
 #pragma once
 
+#include <type_traits>
 #include <concepts>
 
 #include <base/ints.hpp>
