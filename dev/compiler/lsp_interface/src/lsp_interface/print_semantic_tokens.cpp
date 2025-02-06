@@ -2,6 +2,7 @@
 #include <pst_parser/pst.hpp>
 #include <base/variant.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <lexer/token.hpp>
 
 #include <string>
 #include <vector>

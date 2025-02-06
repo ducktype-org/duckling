@@ -13,12 +13,15 @@
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
+#include <base/variant.hpp>
 
 #include "cli.hpp"
 #include "server.hpp"
 #include "config.hpp"
 
 #include "export_keywords.hpp"
+#include "semantic_tokens.hpp"
+#include "utils.hpp"
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -165,9 +168,14 @@ void server(i32 port) {
 			const auto        file   = files.at(path);
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
-			std::stringstream ss;
-			// if (pst.getLogger().bad()) pst.getLogger().dumpLog(true, ss);
-			return crow::response(200, ss.str());
+
+			if (pst.getLogger().bad()) {
+				std::stringstream ss;
+				pst.getLogger().dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
+			
+			return crow::response(200, getSemanticTokens(pst.getRootElement()));
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);
