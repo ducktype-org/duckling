@@ -40,6 +40,8 @@ namespace hashing {
 
 	}  // namespace detail
 
+	// FNV-1a hash algorithm, fast and simple with reasonably good distribution
+	// though not meant for cryptographic purposes
 	template<std::unsigned_integral I>
 	class Fnv1a: public CallOverloads, protected detail::Fnv1a_Constants<I> {
 		friend CallOverloads;
@@ -76,6 +78,8 @@ namespace hashing {
 	using Fnv1a_32 = Fnv1a<u32>;
 	using Fnv1a_64 = Fnv1a<u64>;
 
+	// hash algorithm that keeps the bytes of the hashed objects
+	// and can be converted to a string that represents the bytes in hex
 	class DebugHash: public CallOverloads {
 		friend CallOverloads;
 
@@ -111,7 +115,8 @@ namespace hashing {
 			constexpr std::string_view red    = "\033[1;31m";
 			constexpr std::string_view reset  = "\033[0m";
 
-			auto append_line_number = [](std::string& str, usize num) {
+			// stringstream is not usable in constexpr
+			static constexpr auto append_line_number = [](std::string& str, usize num) {
 				str += "line ";
 				std::string num_str;
 				do {
@@ -122,8 +127,8 @@ namespace hashing {
 				str += num_str;
 				str += ":    ";
 			};
-			auto append_byte_hex = [](std::string& str, std::byte b) {
-				constexpr std::string_view hex = "0123456789ABCDEF";
+			static constexpr auto append_byte_hex = [](std::string& str, std::byte b) {
+				constexpr static std::string_view hex = "0123456789ABCDEF";
 				str += hex[std::to_integer<unsigned>(b >> 4)];
 				str += hex[std::to_integer<unsigned>(b & std::byte{ 0xF })];
 			};

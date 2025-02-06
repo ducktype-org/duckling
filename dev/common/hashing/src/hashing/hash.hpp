@@ -18,9 +18,11 @@ namespace hashing {
 		template<class T>
 		concept has_value_type = requires { typename T::value_type; };
 
+		// primary template handles types that do not have a nested value_type member:
 		template<class TypeHC>
 		struct enable_TypeHC_value_type {};
 
+		// specialization that adds TypeHC_value_type
 		template<has_value_type TypeHC>
 		struct enable_TypeHC_value_type<TypeHC> {
 			using TypeHC_value_type = TypeHC::value_type;
@@ -28,10 +30,11 @@ namespace hashing {
 
 	}  // namespace detail
 
+	// callable object that hashes objects and appends their type codes
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
 		detail::TypeHC_or_void TypeHC        = TypeHashCode>
-	class Hash: detail::enable_TypeHC_value_type<TypeHC> {
+	class Hash: public detail::enable_TypeHC_value_type<TypeHC> {
 	public:
 		static constexpr bool AppendTypeHashCode = not std::is_void_v<TypeHC>;
 		using result_type                        = typename HashAlgorithm::result_type;
@@ -53,10 +56,12 @@ namespace hashing {
 		}
 	};
 
+	// callable object that hashes objects and appends their type codes
+	// keeps the state between calls
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
 		detail::TypeHC_or_void TypeHC        = TypeHashCode>
-	class StatefulHash: detail::enable_TypeHC_value_type<TypeHC> {
+	class StatefulHash: public detail::enable_TypeHC_value_type<TypeHC> {
 		HashAlgorithm h{};
 
 	public:

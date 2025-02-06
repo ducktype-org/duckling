@@ -45,6 +45,11 @@ namespace hashing {
 		else if constexpr (std::is_null_pointer_v<T>) {
 			detail::hashAsChars(hash_alg, t);
 		}
+		// if the range is contiguous and its elements have unique representations we can
+		// treat it as a segment of memory and hash it directly
+		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
+			detail::hashRangeAsChars(hash_alg, t);
+		}
 		// if type supports std::tuple_size and std::get, we can use them to get and hash its
 		// members
 		else if constexpr (detail::supports_std_get<T>) {
@@ -52,12 +57,7 @@ namespace hashing {
 				(addToHash(hash_alg, std::get<I>(t)), ...);
 			}(std::make_index_sequence<std::tuple_size_v<T>>{});
 		}
-		// overloads for ranges
-		// if the range is contiguous and its elements have unique representations we can
-		// treat it as a segment of memory and hash it directly
-		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
-			detail::hashRangeAsChars(hash_alg, t);
-		}
+		// other overloads for ranges
 		// overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (auto&& elem: t) addToHash(hash_alg, elem);
@@ -85,7 +85,7 @@ namespace hashing {
 		}
 	}
 
-	// variadic overload of addToHash()
+	// variadic overload of template addToHash()
 	template<hash_algorithm HashAlgorithm, typename... Ts>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const Ts&... ts) {
 		(addToHash(hash_alg, ts), ...);

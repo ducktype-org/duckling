@@ -76,8 +76,8 @@ class C: public Base1 {
         if (t.b > 0) {
             addToHash(h, t.s);
         }
-        // or add some other data
-        addToHash(h, addSomePadding(), t.a + t.b, s, size(), orAddSomeSalt());
+        // or add other data
+        addToHash(h, addSomePadding(), (t.a + t.b), s, size(), orAddSomeSalt());
     }
 }
 ~~~~~

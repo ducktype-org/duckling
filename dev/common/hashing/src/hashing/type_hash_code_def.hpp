@@ -8,6 +8,7 @@
 namespace hashing {
 
 
+	// base class for type hash codes of any length
 	template<std::integral I = u32>
 	struct TypeHashCodeBase {
 		using value_type = I;
@@ -21,7 +22,8 @@ namespace hashing {
 
 	using TypeHashCode = TypeHashCodeBase<>;
 
-	// note: this concept works only for templates that have no non-type template parameters
+	// checks if the type is a specialization of a given template
+	// note: this concept works only for templates that have only type template parameters
 	template<typename T, template<typename...> typename Templ>
 	concept specialization_of = requires(T t) {
 		[]<typename... Args>(Templ<Args...>) requires std::is_same_v<Templ<Args...>, T> {}(t);
