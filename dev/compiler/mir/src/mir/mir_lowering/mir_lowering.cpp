@@ -421,7 +421,7 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
 			// TODO: #469 Support arbitrary lvalues on the left.
-			auto target_location            = function.findLocal(stmt.helios_symbol).get();
+			auto target_location            = function.findLocal(stmt.helios_symbol);
 			auto target_construction_hole   = continuation->addHole();
 			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function);
 
@@ -429,7 +429,7 @@ namespace compiler::mir {
 				Operation::Assign,
 				{ target_location },
 				{ result },
-				{ flagConstruct(target_location) },
+				{},
 				stmt.lifetime_scope,
 			});
 
@@ -507,11 +507,13 @@ namespace compiler::mir {
 			const auto      argument_type   = locationType(sub_res);
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{ operation,
-			                                           { target_location },
-			                                           { sub_res },
-			                                           { flagConstruct(target_location) },
-			                                           expr.lifetime_scope });
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ sub_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
 
 			output({ sub_continuation, target_location });
 		}
@@ -572,7 +574,7 @@ namespace compiler::mir {
 		 * @return The type of the local value.
 		 */
 		static tsh::TypeInfo locationType(const MirLocation location) {
-			return std::get<LocalRef>(location.getVariant())->type.getType();
+			return location.get<LocalRef>()->type.getType();
 		}
 	};
 

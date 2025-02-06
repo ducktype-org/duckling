@@ -107,23 +107,30 @@ namespace compiler::helios {
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:
 				if (auto assignment = dynamic_cast<const pst::expr::Assignment*>(&*inner_expr)) {
-					CORE_ASSERT(assignment->getAssignmentType() == base::StrID("="), "Unsupported assignment type");
+					CORE_ASSERT(
+						assignment->getAssignmentType() == base::StrID("="),
+						"Unsupported assignment type"
+					);
 
 					auto var = assignment->getVariables();
 					auto val = assignment->getValue();
 
-					auto lhs = ctx.query<QueryHoutOfExpr>({ var })
-					               .expect("Not handling errors here yet... (lhs)");
+					auto lhs = ctx.query<QueryHoutOfExpr>({ var }).expect(
+						"Not handling errors here yet... (lhs)"
+					);
 
-					auto rhs = ctx.query<QueryHoutOfExpr>({ val })
-					               .expect("Not handling errors here yet... (rhs)");
+					auto rhs = ctx.query<QueryHoutOfExpr>({ val }).expect(
+						"Not handling errors here yet... (rhs)"
+					);
 
 					// for now we only support lhs being an identifier:
 					// @TODO make it generic, see @470
 
 					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
 
-					output(code::AssignmentStmt(scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol));
+					output(code::AssignmentStmt(
+						scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol
+					));
 					return;
 				}
 
@@ -170,7 +177,6 @@ namespace compiler::helios {
 					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
 				);
 			}
-
 		};
 
 		struct HOUTFunctionMaker final: public pst::PstVisitorPanicky {

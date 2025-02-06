@@ -201,27 +201,31 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-#define LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(op)                           \
-	const auto output = lir_instruction.output.value();                    \
-	const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0)); \
-	const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1)); \
-	const auto value  = builder.Create##op(lhs, rhs);                      \
-	builder.CreateStore(value, local_register_map[output].get());          \
-	break;
+#define LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(op)                               \
+	{                                                                          \
+		const auto output = lir_instruction.output.value();                    \
+		const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0)); \
+		const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1)); \
+		const auto value  = builder.Create##op(lhs, rhs);                      \
+		builder.CreateStore(value, local_register_map[output].get());          \
+		break;                                                                 \
+	}
 
-#define LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(opS, opU)                                    \
-	const auto output = lir_instruction.output.value();                                    \
-	const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));                 \
-	const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));                 \
-	const auto value                                                                       \
-		= tsh::IntegralInfo(                                                               \
-			  lir_instruction.arguments.at(0).get<lir::LocalRef>()->layout.getSourceType() \
-		  )                                                                                \
-	              .getSignedness()                                                         \
-	        ? builder.Create##opS(lhs, rhs)                                                \
-	        : builder.Create##opU(lhs, rhs);                                               \
-	builder.CreateStore(value, local_register_map[output].get());                          \
-	break;
+#define LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(opS, opU)                                        \
+	{                                                                                          \
+		const auto output = lir_instruction.output.value();                                    \
+		const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));                 \
+		const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));                 \
+		const auto value                                                                       \
+			= tsh::IntegralInfo(                                                               \
+				  lir_instruction.arguments.at(0).get<lir::LocalRef>()->layout.getSourceType() \
+			  )                                                                                \
+		              .getSignedness()                                                         \
+		        ? builder.Create##opS(lhs, rhs)                                                \
+		        : builder.Create##opU(lhs, rhs);                                               \
+		builder.CreateStore(value, local_register_map[output].get());                          \
+		break;                                                                                 \
+	}
 
 		/**
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
@@ -230,22 +234,23 @@ namespace compiler::backend_llvm {
 		void lir2LLVMInstruction(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
+			using enum lir::Operation;
 			switch (lir_instruction.operation) {
-			case lir::Operation::ReturnVoid: {
+			case ReturnVoid: {
 				builder.CreateRetVoid();
 				break;
 			}
-			case lir::Operation::ReturnValue: {
+			case ReturnValue: {
 				builder.CreateRet(lir2LLVMLocation(lir_instruction.arguments.at(0)));
 				break;
 			}
-			case lir::Operation::Jump: {
+			case Jump: {
 				builder.CreateBr(
 					block_mapping[lir_instruction.arguments.at(0).get<lir::BlockRef>()].get()
 				);
 				break;
 			}
-			case lir::Operation::Branch: {
+			case Branch: {
 				// here for lir locals we need more stuff:
 				const auto cond = lir2LLVMLocation(lir_instruction.arguments.at(0));
 				const auto true_block
@@ -255,31 +260,25 @@ namespace compiler::backend_llvm {
 				builder.CreateCondBr(cond, true_block.get(), false_block.get());
 				break;
 			}
-			case lir::Operation::Assign: {
+			case Assign: {
 				const auto output = lir_instruction.output.value();
 				const auto value  = lir2LLVMLocation(lir_instruction.arguments.at(0));
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
-			case lir::Operation::IntegerAdd: {
+			case IntegerAdd:
 				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Add)
-			}
-			case lir::Operation::IntegerSub: {
+			case IntegerSub:
 				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Sub)
-			}
-			case lir::Operation::IntegerMul: {
+			case IntegerMul:
 				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Mul)
-			}
-			case lir::Operation::IntegerDiv: {
+			case IntegerDiv:
 				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(SDiv, UDiv)
-			}
-			case lir::Operation::IntegerMod: {
+			case IntegerMod:
 				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(SRem, URem)
-			}
-			case lir::Operation::IntegerLt: {
+			case IntegerLt:
 				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(ICmpSLT, ICmpULT)
-			}
-			case lir::Operation::IntegerNeg: {
+			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
 				const auto argument = lir2LLVMLocation(lir_instruction.arguments.at(0));
 				const auto value    = builder.CreateNeg(argument);
