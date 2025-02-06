@@ -50,7 +50,7 @@ def run_test(
         except BashCommandError as e:
             if e.exit_code == 124:
                 print_failure(
-                    f"Case `{test.name}/{case.name}` has timed out after {case.timeout} second(s). (Process has exited with exit code 124.)"
+                    f"Case `{test.name}/{case.name}` has failed with exit code 124 - likely timed out after {case.timeout} second(s)."
                 )
             else:
                 print_failure(f"Case `{test.name}/{case.name}` has failed.")
