@@ -193,7 +193,8 @@ private:
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
 
-	constexpr u64 constexprTestHelper() const {
+	[[nodiscard]]
+	static constexpr u64 constexprTestHelper() {
 		constexpr auto         r1 = Hash<Fnv1a_32>{}(876'543);
 		constexpr auto         r2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
 		constexpr auto         r3 = TYPE_HASH_CODE<int>;
@@ -201,13 +202,12 @@ private:
 		constexpr auto         r5 = TypeHashCodeBase<u16>{ 234 };
 		constexpr auto         r6 = Hash{}(S{});
 		StatefulHash<Fnv1a_64> h;
-		h(123, 345.f, "hello", S{});
+		h(123, 345.f, std::string_view{ "hello" }, S{});
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 
 	void constexprTest() {
 		constexpr auto res = constexprTestHelper();
-		static_assert(res == 6'094'927'752'008'332'709ull, "res should be 6094927752008332709");
 		assertTrue(res == 6'094'927'752'008'332'709ull, "res should be 6094927752008332709");
 	}
 

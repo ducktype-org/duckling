@@ -28,6 +28,19 @@ namespace hashing {
 			using TypeHC_value_type = TypeHC::value_type;
 		};
 
+		// checks if type hash code can be added to the hash algorithm
+		// (protects from invalid instantiations outside of the immediate context)
+		template<typename T, typename TypeHC, typename HashAlgorithm>
+		concept can_get_type_hash_code = requires(HashAlgorithm& h) {
+			typename TypeHC::value_type;
+			uniqueString<T, typename TypeHC::value_type, HashAlgorithm>();
+			static_cast<TypeHashCodeBase<typename TypeHC::value_type>>(
+				std::declval<StrToIntegral<typename TypeHC::value_type, HashAlgorithm>>()
+			);
+			detail::uniqueId<T, typename TypeHC::value_type, HashAlgorithm>();
+			h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
+		};
+
 	}  // namespace detail
 
 	/**
@@ -47,9 +60,7 @@ namespace hashing {
 			addToHash(h, t);
 
 			if constexpr (APPEND_TYPE_HASH_CODE) {
-				if constexpr (requires {
-								  h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
-							  })
+				if constexpr (detail::can_get_type_hash_code<T, TypeHC, HashAlgorithm>)
 					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
 				else
 					h(TYPE_HASH_CODE<T>);
@@ -77,9 +88,7 @@ namespace hashing {
 			addToHash(h, t);
 
 			if constexpr (APPEND_TYPE_HASH_CODE) {
-				if constexpr (requires {
-								  h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
-							  })
+				if constexpr (detail::can_get_type_hash_code<T, TypeHC, HashAlgorithm>)
 					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
 				else
 					h(TYPE_HASH_CODE<T>);
@@ -90,14 +99,7 @@ namespace hashing {
 		template<typename... Ts>
 		constexpr result_type operator()(const Ts&... ts) noexcept {
 			if constexpr (APPEND_TYPE_HASH_CODE) {
-				if constexpr (requires {
-								  ((addToHash(h, ts),
-					                h(TYPE_HASH_CODE<
-										Ts,
-										typename TypeHC::value_type,
-										HashAlgorithm>)),
-					               ...);
-							  }) {
+				if constexpr ((detail::can_get_type_hash_code<Ts, TypeHC, HashAlgorithm> && ...)) {
 					((addToHash(h, ts),
 					  h(TYPE_HASH_CODE<Ts, typename TypeHC::value_type, HashAlgorithm>)),
 					 ...);

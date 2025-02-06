@@ -155,7 +155,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(typeHashCodeDefTest);
 		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
-		TESTER_ADD_TEST(CallOverloadsUtilsTest);
+		TESTER_ADD_TEST(callOverloadsUtilsTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
 		TESTER_ADD_TEST(hashTest);
@@ -297,7 +297,7 @@ private:
 		);
 	}
 
-	void CallOverloadsUtilsTest() {
+	void callOverloadsUtilsTest() {
 		assertFalse(has_updateHash_void<Check_1>, "Check_1 has public updateHash(void*, usize)");
 		assertFalse(has_updateHash_void<Check_2>, "Check_2 has private updateHash(void*, usize)");
 		assertTrue(has_updateHash_void<Check_3>, "Check_3 has protected updateHash(void*, usize)");
