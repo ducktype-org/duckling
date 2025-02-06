@@ -5,7 +5,7 @@ This README is a guide to Duckling Integration Test (DIT) framework.
 ## Test folder structure
 
 DIT tests are composed in a tree-like structure.
-At the root of `tests/` directory a top-level `testconfig.yaml` file is found.
+At the root of `integration_tests/` directory a top-level `testconfig.yaml` file is found.
 Any tests have to be written either directly inside this file, or this
 file has to link to other directories with `testconfig.yaml`.
 Other directories can be listed as follows:
