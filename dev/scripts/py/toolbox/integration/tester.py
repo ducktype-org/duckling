@@ -3,6 +3,7 @@ from .test_loader import Case, Test, TestNode, load_tests
 
 from .utils import (
     dit_exec_command,
+    log_info_if_needed,
     print_failure,
     print_success,
     write_log,
@@ -49,7 +50,7 @@ def run_test(
         except BashCommandError as e:
             if e.exit_code == 124:
                 print_failure(
-                    f"Case `{test.name}/{case.name}` has timed out after {case.timeout} second(s)."
+                    f"Case `{test.name}/{case.name}` has timed out after {case.timeout} second(s). (Process has exited with exit code 124.)"
                 )
             else:
                 print_failure(f"Case `{test.name}/{case.name}` has failed.")
@@ -81,26 +82,25 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
     # Get input.
     test_input = bytes()
     if case.input:
-        if dry or verbose:
-            log_info("Getting input...")
-        test_input, _ = dit_exec_command(case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose)
+        log_info_if_needed("Getting input", dry, verbose)
+        test_input, _ = dit_exec_command(
+            case.input.get_command(), cwd=test.cwd, dry=dry, verbose=verbose
+        )
 
     # Run test.
-    if dry or verbose:
-        log_info("Running the test case...")
+    log_info_if_needed("Running the test case...", dry, verbose)
     test_output, test_err = dit_exec_command(
         f"timeout {case.timeout}s {test.run} {case.run_args}",
         cwd=test.cwd,
         input=test_input,
         exitcode=case.expected_exitcode,
         dry=dry,
-        verbose=verbose
+        verbose=verbose,
     )
 
     # Compare test and expected output.
     if case.expected_output:
-        if dry or verbose:
-            log_info("Getting the expected output...")
+        log_info_if_needed("Getting the expected output...", dry, verbose)
         test_expected_output, _ = dit_exec_command(
             case.expected_output.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
@@ -117,8 +117,7 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
 
     # Compare test and expected err.
     if case.expected_err:
-        if dry or verbose:
-            log_info("Getting the expected err...")
+        log_info_if_needed("Getting the expected err...", dry, verbose)
         test_expected_err, _ = dit_exec_command(
             case.expected_err.get_command(), cwd=test.cwd, verbose=verbose, dry=dry
         )
@@ -135,10 +134,14 @@ def run_case(test: Test, case: Case, dry: bool, verbose: bool, log_file: Path) -
 
     # Post run.
     if test.post_run:
-        if dry or verbose:
-            log_info("Executing post run command...")
+        log_info_if_needed("Executing post run command...", dry, verbose)
         dit_exec_command(
-            test.post_run, test.cwd, capture_output=False, input=test_output, verbose=verbose, dry=dry
+            test.post_run,
+            test.cwd,
+            capture_output=False,
+            input=test_output,
+            verbose=verbose,
+            dry=dry,
         )
 
     return ""

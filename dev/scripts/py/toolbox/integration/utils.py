@@ -4,6 +4,7 @@ from ..helpers import (
     click_log,
     exec_bash_command,
     exit_with_error,
+    log_info,
 )
 
 
@@ -76,3 +77,7 @@ def write_log(msg, log_file):
     """
     with open(log_file, "a") as f:
         print(">>>" + msg + f"{'-' * 50}", file=f)
+
+def log_info_if_needed(msg: str, dry: bool, verbose: bool):
+    if dry or verbose:
+        log_info(msg)
