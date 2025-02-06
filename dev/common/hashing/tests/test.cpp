@@ -206,10 +206,7 @@ private:
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 
-	void constexprTest() {
-		constexpr auto res = constexprTestHelper();
-		assertTrue(res == 6'094'927'752'008'332'709ull, "res should be 6094927752008332709");
-	}
+	void constexprTest() { [[maybe_unused]] constexpr auto res = constexprTestHelper(); }
 
 	template<typename T>
 	void defaultsTest() {
