@@ -8,8 +8,38 @@
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/ref.hpp>
+#include <base/ints.hpp>
 
 #include <string>
+
+// clang-format off
+MAKE_STRINGIFYABLE_ENUM(lsp, i32, Type,
+	Namespace,
+	Class,
+	Enum,
+	Interface,
+	Struct,
+	TypeParameter,
+	Type,
+	Parameter,
+	Variable,
+	Property,
+	EnumMember,
+	Decorator,
+	Event,
+	Function,
+	Method,
+	Macro,
+	Label,
+	Comment,
+	String,
+	Keyword,
+	Number,
+	Regexp,
+	Operator,
+	Unknown
+)
+// clang-format on
 
 namespace lsp {
 	class SemanticToken;
@@ -17,45 +47,19 @@ namespace lsp {
 	class SemanticToken {
 	public:
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
-		enum class Type {
-			Namespace,
-			Class,
-			Enum,
-			Interface,
-			Struct,
-			TypeParameter,
-			Type,
-			Parameter,
-			Variable,
-			Property,
-			EnumMember,
-			Decorator,
-			Event,
-			Function,
-			Method,
-			Macro,
-			Label,
-			Comment,
-			String,
-			Keyword,
-			Number,
-			Regexp,
-			Operator,
-			Unknown
-		};
 
-		SemanticToken(lexer::Token);
+		SemanticToken(lexer::Token&);
 
 		static Type translateType(lexer::Token::Type);
 
 		std::string toJSON();
 
 	private:
-		lexer::Token sourceToken;
-		int          ine;
-		int          startCharacter;
-		int          length;
-		Type         type;
+		lexer::Token& sourceToken;
+		int           line;
+		int           startCharacter;
+		int           length;
+		Type          type;
 		// @TODO token modifiers
 	};
 

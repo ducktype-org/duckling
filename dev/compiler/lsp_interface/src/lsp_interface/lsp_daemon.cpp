@@ -19,9 +19,9 @@
 #include "server.hpp"
 #include "config.hpp"
 
+#include "utils.hpp"
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
-#include "utils.hpp"
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -175,7 +175,7 @@ void server(i32 port) {
 				return crow::response(200, ss.str());
 			};
 			
-			return crow::response(200, getSemanticTokens(pst.getRootElement()));
+			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);

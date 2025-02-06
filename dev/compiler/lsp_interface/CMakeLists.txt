@@ -1,5 +1,3 @@
 add_executable(lsp_daemon src/lsp_interface/lsp_daemon.cpp src/lsp_interface/export_keywords.cpp)
-add_executable(semantic_tokens src/lsp_interface/print_semantic_tokens.cpp)
 
 target_link_libraries(lsp_daemon PUBLIC base64 Base Lexer PstParser Crow Clap LibVM)
-target_link_libraries(semantic_tokens Filesystem PstParser)

@@ -12,14 +12,13 @@
 #include <string>
 #include <map>
 
-// MAKE_STRINGIFYABLE_ENUM(lsp, SemanticToken, Type)
-
 namespace lsp {
-    SemanticToken::SemanticToken(pst::LangElement::SubToken source):
-        line(source->getPosition().getStartLineColumn().first),
-        startCharacter(source->getPosition().getStartLineColumn().second),
-        length(source->getPosition().getEnd() - source->getPosition().getStart() + 1),
-        type(translateType(source->getType())) {}
+    SemanticToken::SemanticToken(lexer::Token& source):
+        sourceToken(source),
+        line(source.getPosition().getStartLineColumn().first),
+        startCharacter(source.getPosition().getStartLineColumn().second),
+        length(source.getPosition().getEnd() - source.getPosition().getStart() + 1),
+        type(translateType(source.getType())) {}
 
     Type SemanticToken::translateType(lexer::Token::Type type) {
         using lTT = lexer::Token::Type;
@@ -27,7 +26,7 @@ namespace lsp {
         switch (type) {
             case lTT::Keyword:         return sT::Keyword;
             // case lTT::Identifier: return;
-            case lTT::NumLiteral:      return st::Number;
+            case lTT::NumLiteral:      return sT::Number;
             case lTT::String:          return sT::String;
             case lTT::FormattedString: return sT::String;
             // case lTT::BracketGroup: return;
@@ -44,9 +43,9 @@ namespace lsp {
     std::string SemanticToken::toJSON() {
         std::map<std::string, std::string> result;
 
-        result["line"]           = std::to_str(this.line);
-        result["startCharacter"] = std::to_string(this.startCharacter);
-        result["length"]         = std::to_string(this.length);
+        result["line"]           = std::to_string(this->line);
+        result["startCharacter"] = std::to_string(this->startCharacter);
+        result["length"]         = std::to_string(this->length);
         result["tokenType"]      = ""; // @TODO MAKE_STRINGIFYABLE_ENUM?
         result["tokenModifiers"] = "0"; // @TODO
 
@@ -58,7 +57,8 @@ namespace lsp {
             variant_match(sub) {
                 variant_case(pst::LangElement::SubToken, token) {
                     // add token to list
-                    tokenList.push_back(SemanticToken(token));
+                    SemanticToken semanticToken = SemanticToken((lexer::Token&) token);
+                    tokenList.push_back(semanticToken);
                 }
                 variant_case(pst::LangElement::ConstChild, child) {
                     // recursive token generation
@@ -66,7 +66,7 @@ namespace lsp {
                 }
             }
         }
-    };
+    }
 
     std::string getSemanticTokens(MCRef<pst::LangElement> element) {
         std::vector<SemanticToken> tokens;
@@ -78,5 +78,5 @@ namespace lsp {
         }
 
         return jsonList(tokenStrings);
-    };
+    }
 }
