@@ -11,10 +11,12 @@
 namespace hashing {
 
 
-	// this is a template overload for the 'addToHash' function
-	// if a friend function overload exists for the type, it will be used instead
-	// this one serves as a fallback and a place where specializations for
-	// types that are not ours can be added (like the built-in types)
+	/**
+	 * this is a template overload for the 'addToHash' function
+	 * if a friend function overload exists for the type, it will be used instead
+	 * this one serves as a fallback and a place where specializations for
+	 * types that are not ours can be added (like the built-in types)
+	 */
 	template<hash_algorithm HashAlgorithm, typename T>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
 		// for most types we only want to add to hash some subset of their subobjects (bases +
@@ -85,7 +87,9 @@ namespace hashing {
 		}
 	}
 
-	// variadic overload of template addToHash()
+	/**
+	 * variadic overload of template addToHash()
+	 */
 	template<hash_algorithm HashAlgorithm, typename... Ts>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const Ts&... ts) {
 		(addToHash(hash_alg, ts), ...);

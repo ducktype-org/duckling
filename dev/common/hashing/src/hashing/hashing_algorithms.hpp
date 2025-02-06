@@ -40,8 +40,10 @@ namespace hashing {
 
 	}  // namespace detail
 
-	// FNV-1a hash algorithm, fast and simple with reasonably good distribution
-	// though not meant for cryptographic purposes
+	/**
+	 * FNV-1a hash algorithm, fast and simple with reasonably good distribution
+	 * though not meant for cryptographic purposes
+	 */
 	template<std::unsigned_integral I>
 	class Fnv1a: public CallOverloads, protected detail::Fnv1a_Constants<I> {
 		friend CallOverloads;
@@ -78,8 +80,10 @@ namespace hashing {
 	using Fnv1a_32 = Fnv1a<u32>;
 	using Fnv1a_64 = Fnv1a<u64>;
 
-	// hash algorithm that keeps the bytes of the hashed objects
-	// and can be converted to a string that represents the bytes in hex
+	/**
+	 * hash algorithm that keeps the bytes of the hashed objects
+	 * and can be converted to a string that represents the bytes in hex
+	 */
 	class DebugHash: public CallOverloads {
 		friend CallOverloads;
 

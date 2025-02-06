@@ -32,7 +32,9 @@ namespace hashing {
 	template<typename T>
 	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
-	// returns a reference to one of the Bases of Derived
+	/**
+	 * returns a reference to one of the Bases of Derived
+	 */
 	template<typename Base, std::derived_from<std::remove_cvref_t<Base>> Derived>
 	requires(not std::is_same_v<std::remove_cvref_t<Base>, std::remove_cvref_t<Derived>>)
 	constexpr const Base& getBase(const Derived& derived) noexcept {
@@ -41,7 +43,9 @@ namespace hashing {
 
 	namespace detail {
 
-		// checks if the hash algorithm can handle the type directly
+		/**
+		 * checks if the hash algorithm can handle the type directly
+		 */
 		template<typename HashAlgorithm, typename T>
 		concept can_hash_directly
 			= hash_algorithm<HashAlgorithm> && requires(HashAlgorithm& h, const T& t) { h(t); };
@@ -56,13 +60,18 @@ namespace hashing {
 			          && (std::is_reference_v<Args> && ...) {}(t);
 		};
 
-		// checks if hashDecompose() can be called on the type and if it returns a tuple of references
+		/**
+		 * checks if hashDecompose() can be called on the type and if it returns a tuple of
+		 * references
+		 */
 		template<typename T>
 		concept can_hashDecompose = requires(const T& t) {
 			{ hashDecompose(t) } -> tuple_of_refs;
 		};
 
-		// hashes an object as a sequence of chars in constexpr
+		/**
+		 * hashes an object as a sequence of chars in constexpr
+		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
@@ -76,7 +85,9 @@ namespace hashing {
 			}
 		}
 
-		// checks if a range can be hashed as a contiguous sequence of memory
+		/**
+		 * checks if a range can be hashed as a contiguous sequence of memory
+		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_chars
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
@@ -86,14 +97,18 @@ namespace hashing {
 			        std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 			  };
 
-		// hashes a range as a contiguous sequence of memory
+		/**
+		 * hashes a range as a contiguous sequence of memory
+		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_chars<HashAlgorithm, R>
 		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& t) {
 			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
 		}
 
-		// checks if a range that may have unspecified order of elements can be hashed
+		/**
+		 * checks if a range that may have unspecified order of elements can be hashed
+		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_with_unspecified_order
 			= std::copy_constructible<HashAlgorithm> && std::ranges::input_range<R>
@@ -104,7 +119,9 @@ namespace hashing {
 				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
 			  };
 
-		// checks if the type is tuple-like i.e. supports std::tuple_size and std::get
+		/**
+		 * checks if the type is tuple-like i.e. supports std::tuple_size and std::get
+		 */
 		template<typename T>
 		concept supports_std_get = requires {
 			std::tuple_size<T>::value;

@@ -15,7 +15,9 @@ namespace hashing {
 
 	namespace detail {
 
-		// utility class for testing if updateHash is protected
+		/**
+		 * utility class for testing if updateHash is protected
+		 */
 		template<typename Self, typename CheckT>
 		struct CheckAccessTo_updateHash_ptr: public std::remove_cvref_t<Self> {
 			void check(CheckT* data, usize len) requires requires {
@@ -25,7 +27,9 @@ namespace hashing {
 			} && (not requires(Self self) { self.updateHash(data, len); }) {}
 		};
 
-		// utility class for testing if updateHash is protected
+		/**
+		 * utility class for testing if updateHash is protected
+		 */
 		template<typename Self>
 		struct CheckAccessTo_updateHash_sv: public std::remove_cvref_t<Self> {
 			void check(const std::string_view sv) requires requires {
@@ -33,7 +37,9 @@ namespace hashing {
 			} && (not requires(Self self) { self.updateHash(sv); }) {}
 		};
 
-		// utility class for testing if addHashCode is protected
+		/**
+		 *  utility class for testing if addHashCode is protected
+		 */
 		template<typename Self>
 		struct CheckAccessTo_addHashCode: public std::remove_cvref_t<Self> {
 			template<specialization_of<TypeHashCodeBase> TypeHC>
@@ -44,13 +50,17 @@ namespace hashing {
 
 	}  // namespace detail
 
-	// chechs if the type has protected updateHash(void*, usize) function
+	/**
+	 * chechs if the type has protected updateHash(void*, usize) function
+	 */
 	template<typename T>
 	concept has_updateHash_void = requires(T t, void* data, usize len) {
 		detail::CheckAccessTo_updateHash_ptr<T, void>{}.check(data, len);
 	};
 
-	// chechs if the type has protected updateHash(std::string_view) function
+	/**
+	 * chechs if the type has protected updateHash(std::string_view) function
+	 */
 	template<typename T>
 	concept has_updateHash_sv = requires(T t, std::string_view sv) {
 		detail::CheckAccessTo_updateHash_sv<T>{}.check(sv);
@@ -59,20 +69,26 @@ namespace hashing {
 	template<typename T>
 	concept has_updateHash = has_updateHash_void<T> || has_updateHash_sv<T>;
 
-	// checks if the type has protected addHashCode function for the given hash code type
+	/**
+	 * checks if the type has protected addHashCode function for the given hash code type
+	 */
 	template<typename T, typename TypeHC>
 	concept has_addHashCode
 		= specialization_of<TypeHC, TypeHashCodeBase> && requires(T t, TypeHC hash_code) {
 			  detail::CheckAccessTo_addHashCode<T>{}.check(hash_code);
 		  };
 
-	// checks if the type should be hashed as a hash code
+	/**
+	 * checks if the type should be hashed as a hash code
+	 */
 	template<typename HashAlgorithm, typename Type>
 	static constexpr bool SHOULD_HASH_AS_HASH_CODE
 		= specialization_of<Type, TypeHashCodeBase> && has_addHashCode<HashAlgorithm, Type>;
 
-	// this is a utility class that adds operator() overloads to hashing algorithms
-	// if appropriate updateHash() functions are provided in the derived class
+	/**
+	 * this is a utility class that adds operator() overloads to hashing algorithms
+	 * if appropriate updateHash() functions are provided in the derived class
+	 */
 	class CallOverloads {
 	public:
 		// note that this one is not actually constexpr as updateHash() can't be in c++23 (it can in

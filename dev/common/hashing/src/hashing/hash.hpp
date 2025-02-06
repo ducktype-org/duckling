@@ -30,21 +30,23 @@ namespace hashing {
 
 	}  // namespace detail
 
-	// callable object that hashes objects and appends their type codes
+	/**
+	 * callable type that hashes objects appending their type codes
+	 */
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
 		detail::TypeHC_or_void TypeHC        = TypeHashCode>
 	class Hash: public detail::enable_TypeHC_value_type<TypeHC> {
 	public:
-		static constexpr bool AppendTypeHashCode = not std::is_void_v<TypeHC>;
-		using result_type                        = typename HashAlgorithm::result_type;
+		static constexpr bool APPEND_TYPE_HASH_CODE = not std::is_void_v<TypeHC>;
+		using result_type                           = typename HashAlgorithm::result_type;
 
 		template<typename T>
 		constexpr result_type operator()(const T& t) const noexcept {
 			HashAlgorithm h{};
 			addToHash(h, t);
 
-			if constexpr (AppendTypeHashCode) {
+			if constexpr (APPEND_TYPE_HASH_CODE) {
 				if constexpr (requires {
 								  h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
 							  })
@@ -56,8 +58,10 @@ namespace hashing {
 		}
 	};
 
-	// callable object that hashes objects and appends their type codes
-	// keeps the state between calls
+	/**
+	 * callable type that hashes objects appending their type codes
+	 * keeps the state between calls
+	 */
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
 		detail::TypeHC_or_void TypeHC        = TypeHashCode>
@@ -65,14 +69,14 @@ namespace hashing {
 		HashAlgorithm h{};
 
 	public:
-		static constexpr bool AppendTypeHashCode = not std::is_void_v<TypeHC>;
-		using result_type                        = typename HashAlgorithm::result_type;
+		static constexpr bool APPEND_TYPE_HASH_CODE = not std::is_void_v<TypeHC>;
+		using result_type                           = typename HashAlgorithm::result_type;
 
 		template<typename T>
 		constexpr result_type operator()(const T& t) noexcept {
 			addToHash(h, t);
 
-			if constexpr (AppendTypeHashCode) {
+			if constexpr (APPEND_TYPE_HASH_CODE) {
 				if constexpr (requires {
 								  h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
 							  })
@@ -85,7 +89,7 @@ namespace hashing {
 
 		template<typename... Ts>
 		constexpr result_type operator()(const Ts&... ts) noexcept {
-			if constexpr (AppendTypeHashCode) {
+			if constexpr (APPEND_TYPE_HASH_CODE) {
 				if constexpr (requires {
 								  ((addToHash(h, ts),
 					                h(TYPE_HASH_CODE<

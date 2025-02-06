@@ -34,13 +34,15 @@ public:
 	friend constexpr auto hashDecompose(const Y& q) noexcept { return std::tie(q.f, q.s); }
 };
 
-struct Z : Y{
+struct Z: Y {
 	int   x{};
 	float y{};
 	Y     z{};
 
 public:
-	friend constexpr auto hashDecompose(const Z& q) noexcept { return std::tie(q.x, q.y, q.z, getBase<Y>(q)); }
+	friend constexpr auto hashDecompose(const Z& q) noexcept {
+		return std::tie(q.x, q.y, q.z, getBase<Y>(q));
+	}
 };
 
 struct S {
@@ -50,7 +52,7 @@ struct S {
 	float              z{ 7.0f };
 	X                  m{ 1, 2, 3.0f };
 	Y                  n{ 1.0f, "hello" };
-	Z                  o{{}, 1, 2.0f, { 1.0f, "hello" } };
+	Z                  o{ {}, 1, 2.0f, { 1.0f, "hello" } };
 
 public:
 	friend constexpr void addToHash(hash_algorithm auto& h, const S& s) noexcept {
@@ -119,19 +121,29 @@ struct type_with_bases: X, S {
 };
 
 struct algo {
-    using result_type = u32;
-    void updateHash(void*, usize) {}
-    void updateHash(int) {}
-    void operator()(void*, usize) const {}
-    operator u32() const { return 0; }
+	using result_type = u32;
+
+	void updateHash(void*, usize) {}
+
+	void updateHash(int) {}
+
+	void operator()(void*, usize) const {}
+
+	operator u32() const { return 0; }
 };
+
 struct algo2: public CallOverloads {
-    using result_type = u32;
-    void updateHash(void*, usize) {}
-    void updateHash(int) {}
-    void operator()(void*, usize) const {}
-    void operator()(int) const {}
-    operator u32() const { return 0; }
+	using result_type = u32;
+
+	void updateHash(void*, usize) {}
+
+	void updateHash(int) {}
+
+	void operator()(void*, usize) const {}
+
+	void operator()(int) const {}
+
+	operator u32() const { return 0; }
 };
 
 class HashingTest: public tester::TestSuite {
@@ -141,16 +153,16 @@ class HashingTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-        TESTER_ADD_TEST(type_hash_code_def_test);
-        TESTER_ADD_TEST(hash_algorithm_utils_test);
-        TESTER_ADD_TEST(CallOverloads_utils_test);
-        TESTER_ADD_TEST(hashing_algorithms_test);
-        TESTER_ADD_TEST(addToHash_test);
-        TESTER_ADD_TEST(hash_test);
+		TESTER_ADD_TEST(typeHashCodeDefTest);
+		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
+		TESTER_ADD_TEST(CallOverloadsUtilsTest);
+		TESTER_ADD_TEST(hashingAlgorithmsTest);
+		TESTER_ADD_TEST(addToHashTest);
+		TESTER_ADD_TEST(hashTest);
 	}
 
 private:
-    void type_hash_code_def_test() {
+	void typeHashCodeDefTest() {
 		static_assert(std::integral<u32>, "u32 should be integral");
 		static_assert(std::integral<u64>, "u64 should be integral");
 		static_assert(
@@ -168,14 +180,14 @@ private:
 		);
 		[[maybe_unused]] auto _ = static_cast<TypeHashCodeBase<u64>::value_type>(thcb1);
 		assertTrue(thcb1 <= thcb2, "TypeHashCodeBase should be comparable");
-    }
+	}
 
-    void hash_algorithm_utils_test() {
+	void hashAlgorithmUtilsTest() {
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		static_assert(hash_algorithm<algo>, "algo should be a hashing algorithm");
-        std::array<Fnv1a_32, 3> fnv_arr;
+		std::array<Fnv1a_32, 3> fnv_arr;
 		assertFalse(hash_algorithm<decltype(fnv_arr)>, "array is not a hashing algorithm");
 		assertFalse(
 			hash_algorithm<my_map::unordered_map<int, int>>,
@@ -188,10 +200,10 @@ private:
 			hash_algorithm<std::function<void(std::string_view)>>,
 			"std::function could be a hashing algorithm"
 		);
-        assertTrue(
-            std::is_same_v<decltype(getBase<X>(type_with_bases{})), const X&>,
-            "getBase<X>(type_with_bases{}) should return const X&"
-        );
+		assertTrue(
+			std::is_same_v<decltype(getBase<X>(type_with_bases{})), const X&>,
+			"getBase<X>(type_with_bases{}) should return const X&"
+		);
 
 		assertTrue(detail::can_hash_directly<Fnv1a_32, int>, "Fnv1a_32 should be able to hash int");
 		assertTrue(
@@ -247,8 +259,8 @@ private:
 		Fnv1a_64 h1;
 		detail::hashAsChars(h1, 42.0f);
 		detail::hashAsChars(h1, std::array{ 1, 2, 3 });
-        detail::hashAsChars(algo{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
-        
+		detail::hashAsChars(algo{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
+
 
 		std::string s = "hello_long_string";
 		assertTrue(
@@ -283,9 +295,9 @@ private:
 			check_hashRangeAsChars<std::array<std::string, 3>>,
 			"std::array<std::string, 3> should not be hashable as chars"
 		);
-    }
+	}
 
-    void CallOverloads_utils_test() {
+	void CallOverloadsUtilsTest() {
 		assertFalse(has_updateHash_void<Check_1>, "Check_1 has public updateHash(void*, usize)");
 		assertFalse(has_updateHash_void<Check_2>, "Check_2 has private updateHash(void*, usize)");
 		assertTrue(has_updateHash_void<Check_3>, "Check_3 has protected updateHash(void*, usize)");
@@ -316,15 +328,15 @@ private:
 		);
 		assertTrue(SHOULD_HASH_AS_HASH_CODE<DebugHash, TypeHashCode>, "DebugHash has addHashCode");
 		assertFalse(SHOULD_HASH_AS_HASH_CODE<DebugHash, int>, "int is not a TypeHashCode");
-        DebugHash h;
-        h(TypeHashCode{});
-        algo2 a2;
-        a2(123);
-    }
+		DebugHash h;
+		h(TypeHashCode{});
+		algo2 a2;
+		a2(123);
+	}
 
-    void hashing_algorithms_test() {
+	void hashingAlgorithmsTest() {
 		Fnv1a_32                   h2;
-        [[maybe_unused]] Fnv1a_64  qwe{123};
+		[[maybe_unused]] Fnv1a_64  qwe{ 123 };
 		constexpr std::string_view sv = "hello";
 		assertTrue(
 			std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32"
@@ -336,7 +348,7 @@ private:
 			std::is_same_v<DebugHash::result_type, std::string>,
 			"DebugHash::result_type should be std::string"
 		);
-        std::string s = "qwertyuiopasdfghjk";
+		std::string s = "qwertyuiopasdfghjk";
 		h2(static_cast<const void*>(sv.data()), sv.size());
 		h2(static_cast<void*>(s.data()), s.size());
 		h2(sv);
@@ -381,38 +393,40 @@ private:
 			hash_algorithm<default_hash_algorithm_for<u64>>,
 			"default_hash_algorithm_for<u64> should be a hashing algorithm"
 		);
-    }
+	}
 
-    void addToHash_test() {
-        Fnv1a_32 h;
-        addToHash(h, Z{});
-        addToHash(h, 42);
-        addToHash(h, 42.0f);
-        char* ptr1 = nullptr;
-        const int* const ptr2 = nullptr;
-        S s{};
-        auto memptr = &S::y;
-        addToHash(h, ptr1);
-        addToHash(h, ptr2);
-        addToHash(h, memptr);
-        addToHash(h, nullptr);
-        addToHash(h, std::tuple{ 1, 2, 3 });
-        addToHash(h, std::pair{ 1, 3 });
-        addToHash(h, std::tuple<float, int, X, S>{ 1.0f, 2, X{}, S{} });
-        std::array arr = std::array<S, 3>{ S{}, S{}, S{} };
-        addToHash(h, arr);
-        std::map<int, int> m;
-        m[1] = 2; m[3] = 4; m[5] = 6;
-        addToHash(h, m);
-        std::variant<int, float, std::string> v = 42;
-        addToHash(h, v);
+	void addToHashTest() {
+		Fnv1a_32 h;
+		addToHash(h, Z{});
+		addToHash(h, 42);
+		addToHash(h, 42.0f);
+		char*            ptr1 = nullptr;
+		const int* const ptr2 = nullptr;
+		S                s{};
+		auto             memptr = &S::y;
+		addToHash(h, ptr1);
+		addToHash(h, ptr2);
+		addToHash(h, memptr);
+		addToHash(h, nullptr);
+		addToHash(h, std::tuple{ 1, 2, 3 });
+		addToHash(h, std::pair{ 1, 3 });
+		addToHash(h, std::tuple<float, int, X, S>{ 1.0f, 2, X{}, S{} });
+		std::array arr = std::array<S, 3>{ S{}, S{}, S{} };
+		addToHash(h, arr);
+		std::map<int, int> m;
+		m[1] = 2;
+		m[3] = 4;
+		m[5] = 6;
+		addToHash(h, m);
+		std::variant<int, float, std::string> v = 42;
+		addToHash(h, v);
 
-        addToHash(h, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});
-        addToHash(h, std::pair{ 1, 3 }, 123, 12.f, X{}, S{});
-    }
+		addToHash(h, std::tuple{ 1, 2, 3 }, 123, 12.f, X{}, S{});
+		addToHash(h, std::pair{ 1, 3 }, 123, 12.f, X{}, S{});
+	}
 
-    void hash_test() {
-        Fnv1a_32 h2;
+	void hashTest() {
+		Fnv1a_32 h2;
 		addToHash(h2, S{});  // S has addToHash overload
 		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
 		addToHash(h2, Z{});  // Z has hashDecompose overload
@@ -478,7 +492,7 @@ private:
 		sh(1);
 		assertFalse(sh(123) == sh(123), "stete should change");
 		assertTrue(static_cast<u64>(sh) == StatefulHash{}(1, 123, 123), "state should be the same");
-        std::string_view sv = "dsfjsalfjfa salfjfalsdfj";
+		std::string_view sv = "dsfjsalfjfa salfjfalsdfj";
 		sh("124241", sv, X{}, S{});
 		sh(std::pair<int, S>{ 1, S{} });
 		sh(type_with_bases{});

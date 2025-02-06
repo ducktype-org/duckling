@@ -118,6 +118,14 @@ struct type_with_bases: X, S {
 	}
 };
 
+struct type3 {
+	int x{ 123 }, y{ 456 };
+};
+
+struct type4 {
+	std::array<int, 2> a{ 123, 456 };
+};
+
 class HashingTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HashingTest
@@ -129,9 +137,9 @@ public:
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
 		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
-		TESTER_ADD_TEST(constexpr_test);
-		TESTER_ADD_TEST(defaults_test<Fnv1a_32>);
-		TESTER_ADD_TEST(defaults_test<Fnv1a_64>);
+		TESTER_ADD_TEST(constexprTest);
+		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
+		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
 	}
 
 private:
@@ -164,6 +172,11 @@ private:
 			" Fnv1a_64 should be convertible to u64"
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
+		DebugHash dh;
+		dh("hello 1234567890");
+
+		Hash<DebugHash, TypeHashCode>{}(type3{});
+		// Hash<DebugHash>{}(type4{});
 	}
 
 	template<typename Alg>
@@ -180,37 +193,33 @@ private:
 		assertTrue(m["world"] == 7, "world should be 7");
 	}
 
-	constexpr u64 constexpr_test_helper() const {
-		constexpr auto r1 = Hash<Fnv1a_32>{}(876543);
-		constexpr auto r2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
-		constexpr auto r3 = TYPE_HASH_CODE<int>;
-		constexpr auto r4 = TypeHashCode{23};
-		constexpr auto r5 = TypeHashCodeBase<u16>{234};
-		constexpr auto r6 = Hash{}(S{});
+	constexpr u64 constexprTestHelper() const {
+		constexpr auto         r1 = Hash<Fnv1a_32>{}(876'543);
+		constexpr auto         r2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
+		constexpr auto         r3 = TYPE_HASH_CODE<int>;
+		constexpr auto         r4 = TypeHashCode{ 23 };
+		constexpr auto         r5 = TypeHashCodeBase<u16>{ 234 };
+		constexpr auto         r6 = Hash{}(S{});
 		StatefulHash<Fnv1a_64> h;
 		h(123, 345.f, "hello", S{});
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 
-	void constexpr_test() {
-		constexpr auto res = constexpr_test_helper();
-		static_assert(res == 6094927752008332709ull, "res should be 6094927752008332709");
-		assertTrue(res == 6094927752008332709ull, "res should be 6094927752008332709");
+	void constexprTest() {
+		constexpr auto res = constexprTestHelper();
+		static_assert(res == 6'094'927'752'008'332'709ull, "res should be 6094927752008332709");
+		assertTrue(res == 6'094'927'752'008'332'709ull, "res should be 6094927752008332709");
 	}
 
 	template<typename T>
-	void defaults_test() {
+	void defaultsTest() {
 		StatefulHash<T, TypeHashCodeBase<u16>> h;
 		h(123, 345.f, "hello", S{});
-		static_assert(requires{
-			typename decltype(h)::TypeHC_value_type;
-		});
+		static_assert(requires { typename decltype(h)::TypeHC_value_type; });
 		Hash<T, void> h2;
 		h2(123);
 		h2(std::string_view{ "hello" });
-		static_assert(not requires{
-			typename decltype(h2)::TypeHC_value_type;
-		});
+		static_assert(not requires { typename decltype(h2)::TypeHC_value_type; });
 	}
 };
 
