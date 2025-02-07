@@ -1,4 +1,6 @@
 #include "vmprocess.hpp"
+#include <api/data/response.hpp>
+#include <api/data/status.hpp>
 #include <api/data/core_operation_error.hpp>
 #include <base/exceptions.hpp>
 #include <core/process/memory/memory.hpp>
@@ -8,6 +10,8 @@
 #include <mutex>
 #include <base/variant.hpp>
 #include <api/data/request.hpp>
+#include <shared_mutex>
+#include <variant>
 
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
@@ -16,26 +20,19 @@ namespace vm {
 
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
-	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
-		std::unique_lock lock(rwStatus);
-		// @TODO: check if status change is legal
-		status = event;
-		status_cv.notify_all();
-	}
-
 	api::ProcStatus VMProcess::getStatus() {
-		std::shared_lock lock(rwStatus);
+		std::shared_lock lock(rw_status);
 		return status;
 	}
 
 	cpp::result<api::Response, api::LoadProgramError>
 		VMProcess::loadProgram(const fs::FilePath& path) {
-		std::unique_lock lock(rwGlobal);
+		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
 		auto code_result = preprocessor.getCode(path);
 
 		if (code_result.has_value()) {
-			loadedCode = base::Optional(code_result.value());
+			loaded_code = base::Optional(code_result.value());
 			return api::Response(api::response::Empty());
 		} else {
 			return cpp::failure(api::LoadProgramError{ code_result.error() });
@@ -43,14 +40,13 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::run() {
-		std::unique_lock lock(rwGlobal);
-		if (getMainVMThread().exec_thread)
-			return cpp::failure(api::CoreOperationError{ api::RunError{} }
-			);  // @TODO: change to more verbose error handling
-		if (!loadedCode.has_value())
+		std::unique_lock lock(rw_global);
+		if (!loaded_code.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
-		getMainVMThread().prestart();
-		getMainVMThread().initThread(Ref(&*loadedCode));
+
+		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_code));
+		if (!response) return cpp::failure(api::CoreOperationError{ api::RunError{} });
+
 		return api::Response(api::response::Empty());
 	}
 
@@ -83,9 +79,14 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::stop() {
-		getMainVMThread().stop();
+		auto response = getMainVMThread().stop();
 		(void) join();
 		getMainVMThread().exec_thread.reset();
+
+		// @TODO: make two different "stop" functions, one that throws error if program panicked
+		if (!response)
+			return cpp::failure(api::CoreOperationError{
+				api::OtherError{ "unexpected status response" } });
 		return api::response::Empty{};
 	}
 
@@ -95,16 +96,20 @@ namespace vm {
 			variant_case_novalue(api::request::Run) { return run(); }
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
-				getMainVMThread().pause();
-				return api::Response(api::response::Empty());
+				auto response = getMainVMThread().pause();
+				if (!response) return cpp::failure(api::CoreOperationError{ api::PauseError{} });
+				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case_novalue(api::request::Resume) {
-				getMainVMThread().resume();
+				auto response = getMainVMThread().resume();
+				if (!response) return cpp::failure(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
-				getMainVMThread().step();
-				return api::Response(api::response::Empty());
+				auto response = getMainVMThread().step();
+				if (!response)
+					return cpp::failure(api::CoreOperationError{ api::OtherError{ "step error" } });
+				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
 				return loadProgram(load_request.filename).map_error([](auto err) {
@@ -112,6 +117,29 @@ namespace vm {
 				});
 			}
 			variant_case_novalue(api::request::Stop) { return stop(); }
+			variant_case_novalue(api::request::ExecutionPosition) {
+				return getMainVMThread().getCurrentPosition();
+			}
+			variant_case_novalue(api::request::WaitForBreakpoint) {
+				std::shared_lock lock(rw_status);
+				status_cv.wait(lock, [&] {
+					if (!std::holds_alternative<api::Executing>(status)) return false;
+					auto exec_status = std::get<api::Executing>(status).exec_status;
+					return std::holds_alternative<api::Paused>(exec_status)
+					    || api::isStatusTerminal(exec_status);
+				});
+
+				if (!std::holds_alternative<api::Executing>(status))
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status response" } });
+
+				auto exec_status = std::get<api::Executing>(status).exec_status;
+				if (!std::holds_alternative<api::Paused>(exec_status))
+					return cpp::failure(api::CoreOperationError{
+						api::OtherError{ "unexpected status response" } });
+
+				return getMainVMThread().getCurrentPosition();
+			}
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -119,7 +147,8 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::DataRequest& request) {
-		std::shared_lock lock(rwStatus);
+		api::ProcStatus status = getStatus();
+
 		if (!std::holds_alternative<api::Executing>(status)) {
 			if (std::holds_alternative<api::Parsing>(status)
 			    || std::holds_alternative<api::TypeAnalysis>(status)) {
@@ -127,8 +156,9 @@ namespace vm {
 					"Cannot do memory request while parsing or analyzing types" } });
 			}
 		}
-		api::ExecStatus execStatus = std::get<api::Executing>(status).exec_status;
-		if (std::holds_alternative<api::Running>(execStatus))
+
+		api::ExecStatus exec_status = std::get<api::Executing>(status).exec_status;
+		if (std::holds_alternative<api::Running>(exec_status))
 			return cpp::fail(api::CoreOperationError{
 				api::OtherError{ "Cannot do memory request while program is running" } });
 		cpp::result<api::Response, api::CoreOperationError> response;
@@ -207,5 +237,13 @@ namespace vm {
 			return cpp::failure(api::CoreOperationError{ api::AttachDetachError{} });
 		io_redirecter.reset();
 		return api::Response(api::response::Empty());
+	}
+
+	void VMProcess::onEvent(const api::ProcStatus& event) noexcept {
+		{
+			std::unique_lock<std::shared_mutex> lock(rw_status);
+			status = event;
+		}
+		status_cv.notify_all();
 	}
 }
