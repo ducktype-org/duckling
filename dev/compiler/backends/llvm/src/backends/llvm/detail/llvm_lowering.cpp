@@ -207,7 +207,7 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-#define LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(op)                               \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                               \
 	{                                                                          \
 		const auto output = lir_instruction.output.value();                    \
 		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder); \
@@ -215,22 +215,6 @@ namespace compiler::backend_llvm {
 		const auto value  = builder.Create##op(lhs, rhs);                      \
 		builder.CreateStore(value, local_register_map[output].get());          \
 		break;                                                                 \
-	}
-
-#define LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(opS, opU)                                        \
-	{                                                                                          \
-		const auto output = lir_instruction.output.value();                                    \
-		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);                 \
-		const auto rhs    = lirLocation2LLVM(lir_instruction.arguments.at(1), builder);                 \
-		const auto value                                                                       \
-			= tsh::IntegralInfo(                                                               \
-				  lir_instruction.arguments.at(0).get<lir::LocalRef>()->layout.getSourceType() \
-			  )                                                                                \
-		              .getSignedness()                                                         \
-		        ? builder.Create##opS(lhs, rhs)                                                \
-		        : builder.Create##opU(lhs, rhs);                                               \
-		builder.CreateStore(value, local_register_map[output].get());                          \
-		break;                                                                                 \
 	}
 
 		/**
@@ -273,17 +257,23 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case IntegerAdd:
-				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Add)
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Add)
 			case IntegerSub:
-				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Sub)
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Sub)
 			case IntegerMul:
-				LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(Mul)
-			case IntegerDiv:
-				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(SDiv, UDiv)
-			case IntegerMod:
-				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(SRem, URem)
-			case IntegerLt:
-				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(ICmpSLT, ICmpULT)
+				LIR_2_LLVM_BINARY_OPERATION_CASE(Mul)
+			case IntegerUDiv:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(UDiv)
+			case IntegerSDiv:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(SDiv)
+			case IntegerUMod:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(URem)
+			case IntegerSMod:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(SRem)
+			case IntegerULt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpULT)
+			case IntegerSLt:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
 				const auto argument = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);

@@ -23,13 +23,18 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	*//**
 		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+
+		Some operations are sign-sensitive and are prefixed with U or S, e.g. UDiv and SDiv.
 	*/
 	IntegerAdd,
 	IntegerSub,
 	IntegerMul,
-	IntegerDiv,
-	IntegerMod,
-	IntegerLt,
+	IntegerUDiv,
+	IntegerSDiv,
+	IntegerUMod,
+	IntegerSMod,
+	IntegerULt,
+	IntegerSLt,
 	IntegerNeg,
 
 	ReturnVoid,

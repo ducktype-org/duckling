@@ -58,10 +58,11 @@ namespace compiler::lir {
 	 * @brief Maps MIR operation to LIR operation for those
 	 * that have direct counterpart.
 	 *
-	 * @param mir_operation
+	 * @param mir_operation The MIR operation to convert.
+	 * @param signed_version Whether to use a signed version of the operation, if relevant.
 	 * @return Operation
 	 */
-	Operation mir2lirOperation(const mir::Operation mir_operation) {
+	Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
 		switch (mir_operation) {
 		case mir::Operation::Assign:
 			return Operation::Assign;
@@ -80,11 +81,11 @@ namespace compiler::lir {
 		case mir::Operation::IntegerMul:
 			return Operation::IntegerMul;
 		case mir::Operation::IntegerDiv:
-			return Operation::IntegerDiv;
+			return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
 		case mir::Operation::IntegerMod:
-			return Operation::IntegerMod;
+			return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
 		case mir::Operation::IntegerLt:
-			return Operation::IntegerLt;
+			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
 		// @TODO: add more cases
@@ -251,6 +252,18 @@ namespace compiler::lir {
 				}
 			}
 
+			static bool isArgSigned(const mir::MirLocation location) {
+				variant_match(location.getVariant()) {
+					variant_case(mir::LocalRef, local) {
+						const auto arg_type = local->type.getType();
+						return arg_type.getKind() == tsh::Kind::Integral
+						   and tsh::IntegralInfo(arg_type).getSignedness();
+					}
+					variant_default { return false; }
+				}
+				CORE_UNREACHABLE();
+			}
+
 			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
@@ -280,10 +293,13 @@ namespace compiler::lir {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 
-					auto output = getLocal(mir_instruction.output.value());
-					auto args   = getLocations(mir_instruction.arguments);
+					auto       output             = getLocal(mir_instruction.output.value());
+					auto       args               = getLocations(mir_instruction.arguments);
+					const auto use_signed_version = isArgSigned(mir_instruction.arguments.at(0));
 					curr_block->instructions.emplace_back(
-						mir2lirOperation(mir_instruction.operation), output, std::move(args)
+						mir2lirOperation(mir_instruction.operation, use_signed_version),
+						output,
+						std::move(args)
 					);
 					return curr_block;
 				}
@@ -305,7 +321,7 @@ namespace compiler::lir {
 			 */
 			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
 				// @TODO
-				// curr_block alfredy in order
+				// curr_block already in order
 				CORE_ASSERT(
 					mir::isTerminating(mir_terminator.operation),
 					"non-Terminator in lowerTerminator"
@@ -320,7 +336,7 @@ namespace compiler::lir {
 				case mir::Operation::Branch: {
 					auto args              = getLocations(mir_terminator.arguments);
 					curr_block->terminator = Instruction{
-						mir2lirOperation(mir_terminator.operation), {}, std::move(args)
+						mir2lirOperation(mir_terminator.operation, false), {}, std::move(args)
 					};
 					break;
 				}

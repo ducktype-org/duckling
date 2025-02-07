@@ -1,11 +1,12 @@
 fun main() -> i64 = {
-    var a : i64 = 3;           # 3
-    let b : i64 = 2;           # 2
-    a = a + b;                 # 5
-    var c : i64 = a - 2 * 7;   # -9
-    c = -c;                    # 9
-    var d : i64 = c / 2;       # 4
-    d = d * 16;                # 64
+    0;                              # 0, ExprStmt
+    var a : i64 = 3;                # 3
+    let b : i64 = 2;                # 2
+    a = a + b;                      # 5
+    var c : i64 = a - 2 * (1 + 6);  # -9
+    c = -c;                         # 9
+    var d : i64 = c / 2;            # 4
+    d = d * 16;                     # 64
     # ^ Change this to d ** 3 when exponentiation is implemented.
-    return a % 7;              # 1
+    return a % 7;                   # 1
 }
