@@ -697,20 +697,25 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
-			auto pst = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
+			auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
 
 			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
 				ASSERT_TRUE(expr->isTopLevel());
 				auto scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
-				
+
 				// this can't be auto because of recursive lambda
-				std::function<void(CRef<pst::LangElement>)> sub_test_expr = [&](CRef<pst::LangElement> inner_expr) -> void {
-					auto inner_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
+				std::function<void(CRef<pst::LangElement>)> sub_test_expr
+					= [&](CRef<pst::LangElement> inner_expr) -> void {
+					auto inner_scope
+						= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
 					ASSERT_EQUAL(scope, inner_scope);
 
 					for (auto sub_inner: inner_expr->viewSubElements()) {
 						variant_match(sub_inner) {
-							variant_case(pst::LangElement::ConstChild, sub_expr) { sub_test_expr(sub_expr); message("a"); }
+							variant_case(pst::LangElement::ConstChild, sub_expr) {
+								sub_test_expr(sub_expr);
+								message("a");
+							}
 							variant_default {}
 						}
 					}
@@ -719,15 +724,12 @@ private:
 				sub_test_expr(expr);
 			};
 
-			auto all_expr_holders =
-				pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement().toOpt().value());
+			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
+				pst->getRootElement().toOpt().value()
+			);
 
-			for (auto expr_holder: all_expr_holders) {
-				test_expr(expr_holder);
-			}
+			for (auto expr_holder: all_expr_holders) test_expr(expr_holder);
 		});
-
-
 	}
 
 	void scopeParentsAndDepthTests() {
