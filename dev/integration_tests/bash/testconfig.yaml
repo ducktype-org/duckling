@@ -1,0 +1,31 @@
+Tests:
+  test-shell-cat:
+    Run: "cat"
+    Cases:
+      hello-world:
+        Input:
+          String: "Hello, world!"
+        Output:
+          String: "Hello, world!"
+      error-no-file:
+        RunArgs: inexistent-file
+        ExitCode: 1
+  test-shell-echo:
+    Run: "echo"
+    Cases:
+      hello-world:
+        RunArgs: '"Hello, world!"'
+        Output:
+          String: "Hello, world!\n"
+  test-timeout:
+    Run: "sleep"
+    TimeOut: 1
+    ExitCode: 124  # 124 means "timed out"
+    Cases:
+      hello0.5:
+        RunArgs: "0.5"
+        ExitCode: 0
+      hello1:
+        RunArgs: "1.1"
+      hello5:
+        RunArgs: "5"
