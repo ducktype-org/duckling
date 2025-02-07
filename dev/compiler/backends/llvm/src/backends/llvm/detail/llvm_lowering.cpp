@@ -41,8 +41,8 @@ namespace compiler::backend_llvm {
 	/**
 	 * @brief Returns reference to the llvm context.
 	 * @note as per https://llvm.org/doxygen/classllvm_1_1LLVMContext.html#details
-	 * singe context can't be used my multiple threads.
-	 * @note as of 9.11.2024 i did not find the reason, to have more then one context per thread,
+	 * single context can't be used my multiple threads.
+	 * @note as of 9.11.2024 I did not find the reason, to have more than one context per thread,
 	 * hence this function.
 	 *
 	 * @return llvm::LLVMContext&
@@ -80,17 +80,13 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
-			variant_default { CORE_PANIC("Type not handled yet."); }
+			variant_default { CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())); }
 		}
 		CORE_UNREACHABLE();
 	}
 
-	auto voidFunType(llvm::LLVMContext& context) {
-		return llvm::FunctionType::get(voidType(context), {}, false);
-	}
-
-	auto intFunType(llvm::LLVMContext& context) {
-		return llvm::FunctionType::get(i32Type(context), {}, false);
+	auto getFunType(llvm::LLVMContext& context, const tsl::TypeLayout& return_type) {
+		return llvm::FunctionType::get(typeFromLayout(context, return_type), {}, false);
 	}
 
 	/**
@@ -174,17 +170,22 @@ namespace compiler::backend_llvm {
 		 * @brief Maps LIRLocation to LLVM Value.
 		 * @note In llvm a lot of things can be treated as values, and
 		 * its based on inheritance.
-		 * @param lir_location
+		 * @param lir_location The LirLocation to convert into an LLVM Value.
+		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
 		 * @return llvm::Value*
 		 */
-		auto lir2LLVMLocation(const lir::LirLocation& lir_location) -> llvm::Value* {
+		auto lirLocation2LLVM(const lir::LirLocation& lir_location, llvm::IRBuilder<>& builder)
+			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) { return llvm::ConstantInt::get(i64Type(context), value); }
-				variant_case(bool, value) {
-					return llvm::ConstantInt::get(i1Type(context), value ? 1 : 0);
-				}
+				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LocalRef, lir_local) {
-					return local_register_map[lir_local].get();
+					// We store local values behind pointers to stack-allocated memory.
+					// We need to load them before using them.
+					const auto local_ptr = local_register_map[lir_local].get();
+					return builder.CreateLoad(
+						typeFromLayout(getLLVMContext(), lir_local->layout), local_ptr
+					);
 				}
 				variant_case(lir::BlockRef, lir_block) { return block_mapping[lir_block].get(); }
 				variant_default { CORE_PANIC("unknown lir location type"); }
@@ -192,20 +193,21 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations
+		auto lirLocationList2LLVM(
+			const std::vector<lir::LirLocation>& lir_locations, llvm::IRBuilder<>& builder
 		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
-				llvm_locations.push_back(lir2LLVMLocation(lir_location));
+				llvm_locations.push_back(lirLocation2LLVM(lir_location, builder));
 			return llvm_locations;
 		}
 
 #define LIR_2_LLVM_BINARY_SIGN_AGNOSTIC_CASE(op)                               \
 	{                                                                          \
 		const auto output = lir_instruction.output.value();                    \
-		const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0)); \
-		const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1)); \
+		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder); \
+		const auto rhs    = lirLocation2LLVM(lir_instruction.arguments.at(1), builder); \
 		const auto value  = builder.Create##op(lhs, rhs);                      \
 		builder.CreateStore(value, local_register_map[output].get());          \
 		break;                                                                 \
@@ -214,8 +216,8 @@ namespace compiler::backend_llvm {
 #define LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(opS, opU)                                        \
 	{                                                                                          \
 		const auto output = lir_instruction.output.value();                                    \
-		const auto lhs    = lir2LLVMLocation(lir_instruction.arguments.at(0));                 \
-		const auto rhs    = lir2LLVMLocation(lir_instruction.arguments.at(1));                 \
+		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);                 \
+		const auto rhs    = lirLocation2LLVM(lir_instruction.arguments.at(1), builder);                 \
 		const auto value                                                                       \
 			= tsh::IntegralInfo(                                                               \
 				  lir_instruction.arguments.at(0).get<lir::LocalRef>()->layout.getSourceType() \
@@ -241,7 +243,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case ReturnValue: {
-				builder.CreateRet(lir2LLVMLocation(lir_instruction.arguments.at(0)));
+				builder.CreateRet(lirLocation2LLVM(lir_instruction.arguments.at(0), builder));
 				break;
 			}
 			case Jump: {
@@ -252,7 +254,7 @@ namespace compiler::backend_llvm {
 			}
 			case Branch: {
 				// here for lir locals we need more stuff:
-				const auto cond = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto cond = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto true_block
 					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
 				const auto false_block
@@ -262,7 +264,7 @@ namespace compiler::backend_llvm {
 			}
 			case Assign: {
 				const auto output = lir_instruction.output.value();
-				const auto value  = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto value  = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
@@ -280,7 +282,7 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_SIGN_SENSITIVE_CASE(ICmpSLT, ICmpULT)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
-				const auto argument = lir2LLVMLocation(lir_instruction.arguments.at(0));
+				const auto argument = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
@@ -302,7 +304,7 @@ namespace compiler::backend_llvm {
 		llvm::Function* createFunction() {
 			// this also adds the function to the module:
 			llvm::Function* fun = llvm::Function::Create(
-				voidFunType(context),
+				getFunType(context, lir_function->return_type_layout),
 				llvm::Function::ExternalLinkage,
 				lir_function->name.strView(),
 				*module

@@ -342,7 +342,11 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				return Function{
-					key.function->name, std::move(blocks), std::move(locals), std::move(block_order)
+					key.function->name,
+					ctx.query<tsl::QueryTypeLayout>(key.function->return_type),
+					std::move(blocks),
+					std::move(locals),
+					std::move(block_order),
 				};
 			}
 		};

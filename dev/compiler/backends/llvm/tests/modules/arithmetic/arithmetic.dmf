@@ -1,4 +1,4 @@
-fun main() = {
+fun main() -> i64 = {
     var a : i64 = 3;           # 3
     let b : i64 = 2;           # 2
     a = a + b;                 # 5

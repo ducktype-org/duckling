@@ -34,13 +34,11 @@ private:
 
 			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
 
+			// debug print for coverage only:
 			llvm_module.debugPrint();
 
 			// this is were the main part ot test is:
 			assertTrue(llvm_module.verify(), "LLVM module verification failed");
-
-			// debug print for coverage only:
-			llvm_module.debugPrint();
 		});
 	}
 

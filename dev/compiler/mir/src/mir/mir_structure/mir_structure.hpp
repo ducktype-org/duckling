@@ -3,6 +3,7 @@
 #include <vector>
 #include <variant>
 #include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/types.hpp>
 #include <typesystem/higher/type_desc.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
@@ -286,6 +287,7 @@ namespace compiler::mir {
 	 */
 	struct Function final {
 		base::StrID                  name;
+		tsh::TypeInfo                return_type;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -307,6 +309,7 @@ namespace compiler::mir {
 
 		Function(
 			base::StrID                  name,
+			tsh::TypeInfo                return_type,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,

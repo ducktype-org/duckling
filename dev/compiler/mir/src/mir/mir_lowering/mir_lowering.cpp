@@ -16,6 +16,7 @@ namespace compiler::mir {
 
 	Function::Function(
 		base::StrID                  name,
+		tsh::TypeInfo                return_type,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -23,6 +24,7 @@ namespace compiler::mir {
 		helios::SymID                helios_id
 	):
 		  name(name),
+		  return_type(return_type),
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
 		  entry_block(entry_block),
@@ -254,12 +256,16 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			return Function{ name.value(),
-				             std::move(blocks),
-				             std::move(local_list),
-				             entry_block.value()->getID(),
-				             top_lifetime_scope.value(),
-				             helios_symbol };
+			const auto function_return_type
+				= tsh::FunctionInfo(ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
+			                            ->expect("Handling errors in HOUT is not supported yet"))
+			          .getResultType();
+
+			return Function{
+				name.value(),          function_return_type,         std::move(blocks),
+				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				helios_symbol,
+			};
 		}
 
 		void setName(base::StrID name) {

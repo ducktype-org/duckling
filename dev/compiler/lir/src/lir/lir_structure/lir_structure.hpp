@@ -175,10 +175,11 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		// @TODO: store type of the function
-
 		// @TODO: is this name mangled somehow:?
 		base::StrID name;
+
+		// @TODO: Perhaps we want to store the whole type of the function here?
+		tsl::TypeLayout return_type_layout;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LirLocal> local_list;
