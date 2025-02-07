@@ -66,9 +66,7 @@ namespace compiler::backend_llvm {
 
 	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
 		variant_match(layout()) {
-			variant_case_novalue(tsl::EmptyTypeLayout) {
-				return llvm::Type::getVoidTy(context);
-			}
+			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
 			}
@@ -84,7 +82,11 @@ namespace compiler::backend_llvm {
 					CORE_PANIC("Float size different than 32 or 64 not implemented yet.");
 				}
 			}
-			variant_default { CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())); }
+			variant_default {
+				CORE_PANIC(
+					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				);
+			}
 		}
 		CORE_UNREACHABLE();
 	}
@@ -207,14 +209,14 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                               \
-	{                                                                          \
-		const auto output = lir_instruction.output.value();                    \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                            \
+	{                                                                                   \
+		const auto output = lir_instruction.output.value();                             \
 		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder); \
 		const auto rhs    = lirLocation2LLVM(lir_instruction.arguments.at(1), builder); \
-		const auto value  = builder.Create##op(lhs, rhs);                      \
-		builder.CreateStore(value, local_register_map[output].get());          \
-		break;                                                                 \
+		const auto value  = builder.Create##op(lhs, rhs);                               \
+		builder.CreateStore(value, local_register_map[output].get());                   \
+		break;                                                                          \
 	}
 
 		/**

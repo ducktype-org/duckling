@@ -279,15 +279,13 @@ namespace compiler::mir {
 		}
 
 		LocalRef addLocal(const helios::SymID helios_id) {
-			const auto key = local_list.emplaceBack(
-				MirLocal{
-					helios_id,
-					ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-						"Handling ERRORS in MIR is not supported yet..."
-					),
-					scope(helios_id),
-				}
-			);
+			const auto key = local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id),
+			});
 			return local_list.getRef(key).value();
 		}
 
@@ -340,9 +338,7 @@ namespace compiler::mir {
 		}
 
 		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			for (const auto& body_stmt : stmt.body.statements) {
-				body_stmt->acceptVisitor(*this);
-			}
+			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
 		}
 	};
 
@@ -429,15 +425,13 @@ namespace compiler::mir {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(
-						Instruction{
-							Operation::Assign,
-							{ local },
-							{ expr_result.value },
-							{ flagConstruct(local) },
-							stmt.lifetime_scope,
-						}
-					);
+					local_construction_hole.fill(Instruction{
+						Operation::Assign,
+						{ local },
+						{ expr_result.value },
+						{ flagConstruct(local) },
+						stmt.lifetime_scope,
+					});
 
 					output({ expr_result.begin });
 					return;
@@ -455,15 +449,13 @@ namespace compiler::mir {
 			auto target_construction_hole   = continuation->addHole();
 			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function);
 
-			target_construction_hole.fill(
-				Instruction{
-					Operation::Assign,
-					{ target_location },
-					{ result },
-					{},
-					stmt.lifetime_scope,
-				}
-			);
+			target_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ target_location },
+				{ result },
+				{},
+				stmt.lifetime_scope,
+			});
 
 			output({ sub_continuation });
 		}
@@ -521,15 +513,13 @@ namespace compiler::mir {
 			);
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(
-				Instruction{
-					operation,
-					{ target_location },
-					{ left_res, right_res },
-					{ flagConstruct(target_location) },
-					expr.lifetime_scope,
-				}
-			);
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ left_res, right_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
 			output({ l_continuation, target_location });
 		}
 
@@ -542,15 +532,13 @@ namespace compiler::mir {
 			const auto      argument_type   = locationType(sub_res, function.getContext());
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(
-				Instruction{
-					operation,
-					{ target_location },
-					{ sub_res },
-					{ flagConstruct(target_location) },
-					expr.lifetime_scope,
-				}
-			);
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ sub_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
 
 			output({ sub_continuation, target_location });
 		}
@@ -657,9 +645,7 @@ namespace compiler::mir {
 
 		// @TODO: add parameters to list of locals
 		LocalVarCollectionVisitor visitor{ function_builder };
-		for (const auto& stmt: function.content.body->statements) {
-			stmt->acceptVisitor(visitor);
-		}
+		for (const auto& stmt: function.content.body->statements) stmt->acceptVisitor(visitor);
 
 		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
