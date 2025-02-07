@@ -10,6 +10,7 @@
 #include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
+#include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <type_traits>
@@ -47,6 +48,7 @@ public:
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(testKeywordLiterals);
 		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -688,6 +690,44 @@ private:
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
 			}
 		});
+	}
+
+	void testExprScopes() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/expr_scopes")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
+			auto pst = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
+
+			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
+				ASSERT_TRUE(expr->isTopLevel());
+				auto scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
+				
+				// this can't be auto because of recursive lambda
+				std::function<void(CRef<pst::LangElement>)> sub_test_expr = [&](CRef<pst::LangElement> inner_expr) -> void {
+					auto inner_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
+					ASSERT_EQUAL(scope, inner_scope);
+
+					for (auto sub_inner: inner_expr->viewSubElements()) {
+						variant_match(sub_inner) {
+							variant_case(pst::LangElement::ConstChild, sub_expr) { sub_test_expr(sub_expr); message("a"); }
+							variant_default {}
+						}
+					}
+				};
+
+				sub_test_expr(expr);
+			};
+
+			auto all_expr_holders =
+				pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement().toOpt().value());
+
+			for (auto expr_holder: all_expr_holders) {
+				test_expr(expr_holder);
+			}
+		});
+
+
 	}
 
 	void scopeParentsAndDepthTests() {
