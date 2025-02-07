@@ -124,7 +124,7 @@ namespace compiler::helios {
 					);
 
 					// for now we only support lhs being an identifier:
-					// @TODO make it generic, see @470
+					// @TODO #470: make it generic.
 
 					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
 

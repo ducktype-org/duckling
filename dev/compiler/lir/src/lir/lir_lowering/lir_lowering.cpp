@@ -269,7 +269,14 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
-				case mir::Operation::Assign: {
+				case mir::Operation::Assign:
+				case mir::Operation::IntegerAdd:
+				case mir::Operation::IntegerSub:
+				case mir::Operation::IntegerMul:
+				case mir::Operation::IntegerDiv:
+				case mir::Operation::IntegerMod:
+				case mir::Operation::IntegerLt:
+				case mir::Operation::IntegerNeg: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 

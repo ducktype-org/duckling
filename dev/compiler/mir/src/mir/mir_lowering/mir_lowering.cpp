@@ -272,15 +272,16 @@ namespace compiler::mir {
 			top_lifetime_scope.emplace(scope);
 		}
 
-		[[nodiscard]]
 		LocalRef addLocal(const helios::SymID helios_id) {
-			const auto key = local_list.emplaceBack(MirLocal{
-				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
-				scope(helios_id),
-			});
+			const auto key = local_list.emplaceBack(
+				MirLocal{
+					helios_id,
+					ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+						"Handling ERRORS in MIR is not supported yet..."
+					),
+					scope(helios_id),
+				}
+			);
 			return local_list.getRef(key).value();
 		}
 
@@ -315,6 +316,21 @@ namespace compiler::mir {
 		void setEntry(BlockBuilderRef block) {
 			CORE_ASSERT(entry_block.empty(), "Entry block already set.");
 			entry_block.emplace(block);
+		}
+
+		query::Context& getContext() { return ctx; }
+	};
+
+	/**
+	 * @brief Visitor that collects all local variables in the function.
+	 */
+	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorEmpty {
+		FunctionBuilder& function;
+
+		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
+
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			function.addLocal(stmt.helios_symbol);
 		}
 	};
 
@@ -394,20 +410,22 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			auto local                   = function.addLocal(stmt.helios_symbol);
+			auto local                   = function.findLocal(stmt.helios_symbol);
 			auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(Instruction{
-						Operation::Assign,
-						{ local },
-						{ expr_result.value },
-						{ flagConstruct(local) },
-						stmt.lifetime_scope,
-					});
+					local_construction_hole.fill(
+						Instruction{
+							Operation::Assign,
+							{ local },
+							{ expr_result.value },
+							{ flagConstruct(local) },
+							stmt.lifetime_scope,
+						}
+					);
 
 					output({ expr_result.begin });
 					return;
@@ -425,13 +443,15 @@ namespace compiler::mir {
 			auto target_construction_hole   = continuation->addHole();
 			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function);
 
-			target_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ target_location },
-				{ result },
-				{},
-				stmt.lifetime_scope,
-			});
+			target_construction_hole.fill(
+				Instruction{
+					Operation::Assign,
+					{ target_location },
+					{ result },
+					{},
+					stmt.lifetime_scope,
+				}
+			);
 
 			output({ sub_continuation });
 		}
@@ -482,19 +502,22 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type = locationType(right_res);
+			const auto argument_type = locationType(right_res, function.getContext());
 			CORE_ASSERT(
-				argument_type == locationType(left_res), "Binary operator with different types"
+				argument_type == locationType(left_res, function.getContext()),
+				"Binary operator with different types"
 			);
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ left_res, right_res },
-				{ flagConstruct(target_location) },
-				expr.lifetime_scope,
-			});
+			target_construction_hole.fill(
+				Instruction{
+					operation,
+					{ target_location },
+					{ left_res, right_res },
+					{ flagConstruct(target_location) },
+					expr.lifetime_scope,
+				}
+			);
 			output({ l_continuation, target_location });
 		}
 
@@ -504,16 +527,18 @@ namespace compiler::mir {
 			const auto [sub_continuation, sub_res] = lowerExpr(*expr.expr, continuation, function);
 
 			// Fill the hole with the unary operation.
-			const auto      argument_type   = locationType(sub_res);
+			const auto      argument_type   = locationType(sub_res, function.getContext());
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
-			target_construction_hole.fill(Instruction{
-				operation,
-				{ target_location },
-				{ sub_res },
-				{ flagConstruct(target_location) },
-				expr.lifetime_scope,
-			});
+			target_construction_hole.fill(
+				Instruction{
+					operation,
+					{ target_location },
+					{ sub_res },
+					{ flagConstruct(target_location) },
+					expr.lifetime_scope,
+				}
+			);
 
 			output({ sub_continuation, target_location });
 		}
@@ -571,10 +596,18 @@ namespace compiler::mir {
 		/**
 		 * Get the type of a location, assuming that it is a local value.
 		 * @param location A MIR location which holds a local value.
+		 * @param ctx The query context for TypeInfo generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::TypeInfo locationType(const MirLocation location) {
-			return location.get<LocalRef>()->type.getType();
+		static tsh::TypeInfo locationType(const MirLocation location, query::Context& ctx) {
+			auto location_variant = location.getVariant();
+			if (std::holds_alternative<MirIntegerConst>(location_variant))
+				return ctx.query<tsh::QueryIntegralType>({ 64 });
+			if (std::holds_alternative<MirBoolConst>(location_variant))
+				return ctx.query<tsh::QueryBoolType>({});
+			if (std::holds_alternative<LocalRef>(location_variant))
+				return location.get<LocalRef>()->type.getType();
+			CORE_UNREACHABLE();
 		}
 	};
 
@@ -610,7 +643,11 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
-		// @TODO: add parameters do list od locals
+		// @TODO: add parameters to list of locals
+		for (const auto& stmt: function.content.body->statements) {
+			LocalVarCollectionVisitor visitor{ function_builder };
+			stmt->acceptVisitor(visitor);
+		}
 
 		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();

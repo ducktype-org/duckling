@@ -59,6 +59,16 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD_PANIC(AssignmentStmt);
 	};
 
+	class HoutStmtVisitorEmpty: public HoutStmtVisitor {
+	public:
+		HOUT_VISITOR_METHOD_EMPTY(ReturnStmt);
+		HOUT_VISITOR_METHOD_EMPTY(VoidReturnStmt);
+		HOUT_VISITOR_METHOD_EMPTY(ExprStmt);
+		HOUT_VISITOR_METHOD_EMPTY(IfStmt);
+		HOUT_VISITOR_METHOD_EMPTY(VariableStmt);
+		HOUT_VISITOR_METHOD_EMPTY(AssignmentStmt);
+	};
+
 	class HoutExprVisitorPanicky: public HoutExprVisitor {
 	public:
 		HOUT_VISITOR_METHOD_PANIC(LiteralIntExpr);

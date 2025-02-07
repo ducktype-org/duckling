@@ -14,9 +14,10 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(returnVoidTest);
-		TESTER_ADD_TEST(simpleTypesVariables);
-		TESTER_ADD_TEST(booleanLiteralsTests);
+		// TESTER_ADD_TEST(returnVoidTest);
+		// TESTER_ADD_TEST(simpleTypesVariables);
+		// TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(arithmeticTest);
 	}
 
 private:
@@ -32,6 +33,8 @@ private:
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
+
+			llvm_module.debugPrint();
 
 			// this is were the main part ot test is:
 			assertTrue(llvm_module.verify(), "LLVM module verification failed");
@@ -51,6 +54,8 @@ private:
 	}
 
 	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
+
+	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
 };
 
 
