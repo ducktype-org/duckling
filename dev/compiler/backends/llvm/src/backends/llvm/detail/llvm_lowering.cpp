@@ -10,6 +10,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Type.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 LLVM_INCLUDE_END()
 
@@ -65,6 +66,9 @@ namespace compiler::backend_llvm {
 
 	auto typeFromLayout(llvm::LLVMContext& context, const tsl::TypeLayout& layout) -> llvm::Type* {
 		variant_match(layout()) {
+			variant_case_novalue(tsl::EmptyTypeLayout) {
+				return llvm::Type::getVoidTy(context);
+			}
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
 			}
@@ -319,6 +323,8 @@ namespace compiler::backend_llvm {
 					lir2LLVMInstruction(instruction, builder);
 				lir2LLVMInstruction(block->terminator, builder);
 			}
+
+			EliminateUnreachableBlocks(*fun);
 
 			return fun;
 		}

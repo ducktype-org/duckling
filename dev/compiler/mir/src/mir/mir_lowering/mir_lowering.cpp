@@ -308,7 +308,7 @@ namespace compiler::mir {
 		LocalRef findLocal(const helios::SymID helios_id) const {
 			for (const auto& local: local_list)
 				if (local->helios_id == helios_id) return local.ref();
-			CORE_PANIC("MIR Local not found");
+			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
 		}
 
 		[[nodiscard]]
@@ -337,6 +337,12 @@ namespace compiler::mir {
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			function.addLocal(stmt.helios_symbol);
+		}
+
+		void visitIfStmt(const helios::code::IfStmt& stmt) override {
+			for (const auto& body_stmt : stmt.body.statements) {
+				body_stmt->acceptVisitor(*this);
+			}
 		}
 	};
 
@@ -650,8 +656,8 @@ namespace compiler::mir {
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
 		// @TODO: add parameters to list of locals
+		LocalVarCollectionVisitor visitor{ function_builder };
 		for (const auto& stmt: function.content.body->statements) {
-			LocalVarCollectionVisitor visitor{ function_builder };
 			stmt->acceptVisitor(visitor);
 		}
 

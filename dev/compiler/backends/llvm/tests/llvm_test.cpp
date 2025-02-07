@@ -14,9 +14,9 @@ class LLVMBackendTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(returnVoidTest);
-		// TESTER_ADD_TEST(simpleTypesVariables);
-		// TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(returnVoidTest);
+		TESTER_ADD_TEST(simpleTypesVariables);
+		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
 	}
 
