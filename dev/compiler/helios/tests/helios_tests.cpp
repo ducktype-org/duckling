@@ -701,25 +701,26 @@ private:
 
 			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
 				ASSERT_TRUE(expr->isTopLevel());
-				auto expected_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
+				auto expected_scope
+					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
 
 				// this can't be auto because of recursive lambda
-				std::function<void(CRef<pst::LangElement>)> sub_test_expr
-					= [&](CRef<pst::LangElement> inner_expr) {
-					auto inner_scope
-						= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
-					ASSERT_EQUAL(expected_scope, inner_scope);
+				std::function<void(CRef<pst::LangElement>)> sub_test_expr =
+					[&](CRef<pst::LangElement> inner_expr) {
+						auto inner_scope
+							= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
+						ASSERT_EQUAL(expected_scope, inner_scope);
 
-					for (auto sub_inner: inner_expr->viewSubElements()) {
-						variant_match(sub_inner) {
-							variant_case(pst::LangElement::ConstChild, sub_expr) {
-								sub_test_expr(sub_expr);
-								message("a");
+						for (auto sub_inner: inner_expr->viewSubElements()) {
+							variant_match(sub_inner) {
+								variant_case(pst::LangElement::ConstChild, sub_expr) {
+									sub_test_expr(sub_expr);
+									message("a");
+								}
+								variant_default {}
 							}
-							variant_default {}
 						}
-					}
-				};
+					};
 
 				sub_test_expr(expr);
 			};
@@ -734,8 +735,7 @@ private:
 				if (expr_holder->isTopLevel()) {
 					// test all sub elements:
 					test_expr(expr_holder);
-				}
-				else {
+				} else {
 					// test that element has a top-expr parent
 					auto element = expr_holder->getParent().value();
 
