@@ -46,7 +46,7 @@ namespace exec {
 		Block(Block&&)      = default;
 
 		// @TODO: this constructor should be private.
-		explicit Block(Data&& data): data(std::move(data)) {};
+		explicit Block(Data&& data): data(std::move(data)){};
 	};
 
 	struct Pointer {
