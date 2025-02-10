@@ -31,11 +31,11 @@
  */
 
 namespace lsp {
+	using Box;
+	using makeBox;
 	using dia::SourcePosition;
 	using std::string;
 	using std::vector;
-	using tpc::makeRef;
-	using tpc::ParserRef;
 
 	inline tpc::Identifier default_tpc_identifier() { return tpc::Identifier{ base::StrID() }; }
 
@@ -90,9 +90,9 @@ namespace lsp {
 	template<LSPElementSubclass T>
 	class LSPList: public LSPNotStmt {
 	public:
-		std::vector<ParserRef<T>> elements = {};
-		LSPList()                          = default;
-		virtual ~LSPList()                 = default;
+		std::vector<Box<T>> elements = {};
+		LSPList()                    = default;
+		virtual ~LSPList()           = default;
 
 		void lsp_print(std::ostream& out) override;
 
@@ -112,16 +112,16 @@ namespace lsp {
 
 	class LSPImport: public LSPStmt {
 	public:
-		ParserRef<LSPDottedName> names;
-		tpc::Identifier          alias = default_tpc_identifier();
-		LSPImport()                    = default;
-		virtual ~LSPImport()           = default;
+		Box<LSPDottedName> names;
+		tpc::Identifier    alias = default_tpc_identifier();
+		LSPImport()              = default;
+		virtual ~LSPImport()     = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPUsing: public LSPStmt {
 	public:
-		ParserRef<LSPDottedName> names;
+		Box<LSPDottedName> names;
 		LSPUsing()          = default;
 		virtual ~LSPUsing() = default;
 		void lsp_print(std::ostream& out) override;
@@ -129,8 +129,8 @@ namespace lsp {
 
 	class LSPAlias: public LSPStmt {
 	public:
-		tpc::Identifier          name = default_tpc_identifier();
-		ParserRef<LSPDottedName> points_to;
+		tpc::Identifier    name = default_tpc_identifier();
+		Box<LSPDottedName> points_to;
 		LSPAlias()          = default;
 		virtual ~LSPAlias() = default;
 		void lsp_print(std::ostream& out) override;
@@ -138,23 +138,22 @@ namespace lsp {
 
 	class LSPCodeBlock: public LSPNotStmt {
 	public:
-		vector<ParserRef<LSPStmt>> statements = {};
-		LSPCodeBlock()                        = default;
-		virtual ~LSPCodeBlock()               = default;
+		vector<Box<LSPStmt>> statements = {};
+		LSPCodeBlock()                  = default;
+		virtual ~LSPCodeBlock()         = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPCodeBlockOrStmt: public LSPNotStmt {
 	public:
-		std::variant<ParserRef<LSPStmt>, ParserRef<LSPCodeBlock>> content
-			= static_cast<ParserRef<LSPStmt>>(nullptr);
-		LSPCodeBlockOrStmt() = default;
+		std::variant<Box<LSPStmt>, Box<LSPCodeBlock>> content = static_cast<Box<LSPStmt>>(nullptr);
+		LSPCodeBlockOrStmt()                                  = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPRoundGroupExpr: public LSPNotStmt {
 	public:
-		ParserRef<LSPExpr> expr      = nullptr;
+		Box<LSPExpr> expr            = nullptr;
 		LSPRoundGroupExpr()          = default;
 		virtual ~LSPRoundGroupExpr() = default;
 		void lsp_print(std::ostream& out) override;
@@ -176,10 +175,10 @@ namespace lsp {
 		};
 
 		struct Group {
-			GroupType          type     = GroupType::RoundGroup;
-			ParserRef<LSPExpr> expr     = nullptr;
-			SourcePosition     position = SourcePosition::fakePosition();
-			void               lsp_print(std::ostream&);
+			GroupType      type     = GroupType::RoundGroup;
+			Box<LSPExpr>   expr     = nullptr;
+			SourcePosition position = SourcePosition::fakePosition();
+			void           lsp_print(std::ostream&);
 		};
 
 		struct Operator {
@@ -210,13 +209,13 @@ namespace lsp {
 
 	class LSPAction: public LSPStmt {
 	public:
-		std::optional<ParserRef<LSPExpr>> expr = std::nullopt;
-		LSPAction()                            = default;
+		std::optional<Box<LSPExpr>> expr = std::nullopt;
+		LSPAction()                      = default;
 		void parametrizedLSPPrint(
-			std::ostream&                            out,
-			const std::optional<ParserRef<LSPExpr>>& action,
-			std::string_view                         name,
-			const std::string&                       preposition
+			std::ostream&                      out,
+			const std::optional<Box<LSPExpr>>& action,
+			std::string_view                   name,
+			const std::string&                 preposition
 		) const;
 		virtual ~LSPAction() = default;
 		void lsp_print(std::ostream& out) override;
@@ -274,11 +273,11 @@ namespace lsp {
 
 	class LSPConst: public LSPStmt {
 	public:
-		tpc::Identifier    name  = default_tpc_identifier();
-		ParserRef<LSPExpr> type  = nullptr;
-		ParserRef<LSPExpr> value = nullptr;
-		LSPConst()               = default;
-		virtual ~LSPConst()      = default;
+		tpc::Identifier name  = default_tpc_identifier();
+		Box<LSPExpr>    type  = nullptr;
+		Box<LSPExpr>    value = nullptr;
+		LSPConst()            = default;
+		virtual ~LSPConst()   = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
@@ -298,28 +297,28 @@ namespace lsp {
 
 	class LSPTopLevel: public LSPDecl {
 	public:
-		vector<ParserRef<LSPStmt>> statements = {};
-		LSPTopLevel()                         = default;
-		virtual ~LSPTopLevel()                = default;
+		vector<Box<LSPStmt>> statements = {};
+		LSPTopLevel()                   = default;
+		virtual ~LSPTopLevel()          = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPNamespace: public LSPDecl {
 	public:
-		tpc::Identifier         name = default_tpc_identifier();
-		ParserRef<LSPCodeBlock> body = nullptr;
-		LSPNamespace()               = default;
-		virtual ~LSPNamespace()      = default;
+		tpc::Identifier   name  = default_tpc_identifier();
+		Box<LSPCodeBlock> body  = nullptr;
+		LSPNamespace()          = default;
+		virtual ~LSPNamespace() = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPStruct: public LSPDecl {
 	public:
-		tpc::Identifier            name  = default_tpc_identifier();
-		vector<ParserRef<LSPExpr>> bases = {};
-		ParserRef<LSPCodeBlock>    body  = nullptr;
-		LSPStruct()                      = default;
-		virtual ~LSPStruct()             = default;
+		tpc::Identifier      name  = default_tpc_identifier();
+		vector<Box<LSPExpr>> bases = {};
+		Box<LSPCodeBlock>    body  = nullptr;
+		LSPStruct()                = default;
+		virtual ~LSPStruct()       = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
@@ -328,11 +327,11 @@ namespace lsp {
 
 	class LSPFun: public LSPDecl {
 	public:
-		tpc::Identifier               name   = default_tpc_identifier();
-		ParserRef<LSPParamList>       params = nullptr;
-		ParserRef<LSPRetList>         rets   = nullptr;
-		ParserRef<LSPCodeBlockOrStmt> body   = nullptr;
-		LSPFun()                             = default;
+		tpc::Identifier         name   = default_tpc_identifier();
+		Box<LSPParamList>       params = nullptr;
+		Box<LSPRetList>         rets   = nullptr;
+		Box<LSPCodeBlockOrStmt> body   = nullptr;
+		LSPFun()                       = default;
 
 		virtual ~LSPFun() = default;
 		void lsp_print(std::ostream& out) override;
@@ -340,11 +339,11 @@ namespace lsp {
 
 	class LSPVariable: public LSPDecl {
 	public:
-		tpc::Identifier    name     = default_tpc_identifier();
-		ParserRef<LSPExpr> type     = nullptr;
-		ParserRef<LSPExpr> value    = nullptr;
-		bool               is_const = true;
-		LSPVariable()               = default;
+		tpc::Identifier name     = default_tpc_identifier();
+		Box<LSPExpr>    type     = nullptr;
+		Box<LSPExpr>    value    = nullptr;
+		bool            is_const = true;
+		LSPVariable()            = default;
 
 		virtual ~LSPVariable() = default;
 		void lsp_print(std::ostream& out) override;
@@ -353,7 +352,7 @@ namespace lsp {
 	class LSPBlock: public LSPCodeDecl {
 	public:
 		tpc::OptionalIdentifier optional_name = tpc::OptionalIdentifier();
-		ParserRef<LSPCodeBlock> code_block    = nullptr;
+		Box<LSPCodeBlock>       code_block    = nullptr;
 		LSPBlock()                            = default;
 		virtual ~LSPBlock()                   = default;
 		void lsp_print(std::ostream& out) override;
@@ -361,22 +360,22 @@ namespace lsp {
 
 	class LSPIf: public LSPCodeDecl {
 	public:
-		ParserRef<LSPRoundGroupExpr>  condition     = nullptr;
-		tpc::OptionalIdentifier       optional_name = tpc::OptionalIdentifier();
-		ParserRef<LSPCodeBlockOrStmt> body          = nullptr;
-		ParserRef<LSPCodeBlockOrStmt> else_body     = nullptr;
-		LSPIf()                                     = default;
-		virtual ~LSPIf()                            = default;
+		Box<LSPRoundGroupExpr>  condition     = nullptr;
+		tpc::OptionalIdentifier optional_name = tpc::OptionalIdentifier();
+		Box<LSPCodeBlockOrStmt> body          = nullptr;
+		Box<LSPCodeBlockOrStmt> else_body     = nullptr;
+		LSPIf()                               = default;
+		virtual ~LSPIf()                      = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
 	class LSPWhile: public LSPCodeDecl {
 	public:
-		ParserRef<LSPRoundGroupExpr>  condition     = nullptr;
-		tpc::OptionalIdentifier       optional_name = tpc::OptionalIdentifier();
-		ParserRef<LSPCodeBlockOrStmt> body          = nullptr;
-		LSPWhile()                                  = default;
-		virtual ~LSPWhile()                         = default;
+		Box<LSPRoundGroupExpr>  condition     = nullptr;
+		tpc::OptionalIdentifier optional_name = tpc::OptionalIdentifier();
+		Box<LSPCodeBlockOrStmt> body          = nullptr;
+		LSPWhile()                            = default;
+		virtual ~LSPWhile()                   = default;
 		void lsp_print(std::ostream& out) override;
 	};
 
@@ -384,10 +383,10 @@ namespace lsp {
 
 	class LSPAttribute: public LSPStmt {
 	public:
-		tpc::Identifier       name = default_tpc_identifier();
-		ParserRef<LSPArgList> args = nullptr;
-		LSPAttribute()             = default;
-		virtual ~LSPAttribute()    = default;
+		tpc::Identifier name    = default_tpc_identifier();
+		Box<LSPArgList> args    = nullptr;
+		LSPAttribute()          = default;
+		virtual ~LSPAttribute() = default;
 		void lsp_print(std::ostream& out) override;
 	};
 }

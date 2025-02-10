@@ -6,7 +6,7 @@
 namespace lsp {
 
 	template<class T>
-	void nullAwareLspPrint(const tpc::ParserRef<T>& ref, std::ostream& out) {
+	void nullAwareLspPrint(const Box<T>& ref, std::ostream& out) {
 		if (ref)
 			ref->lsp_print(out);
 		else
@@ -253,10 +253,10 @@ namespace lsp {
 	}
 
 	void LSPAction::parametrizedLSPPrint(
-		std::ostream&                            out,
-		const std::optional<ParserRef<LSPExpr>>& action,
-		const std::string_view                   name,
-		const std::string&                       preposition
+		std::ostream&                      out,
+		const std::optional<Box<LSPExpr>>& action,
+		const std::string_view             name,
+		const std::string&                 preposition
 	) const {
 		out << "{\"" << name << "\" : {";
 		if (action) {

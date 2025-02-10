@@ -35,6 +35,4 @@ namespace tpc {
 	ParserRef<T> makeRef(Args&&... args) {
 		return ParserRef<T>(new T(std::forward<Args>(args)...));
 	}
-
-
 }

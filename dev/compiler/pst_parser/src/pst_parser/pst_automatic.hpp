@@ -9,7 +9,7 @@
  * location and skips it, otherwise it logs an error
  *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If
  * There is no identifier next it doesn't do anything
- *  - for ParserRef<T>* it calls the parser of T object into the specified location
+ *  - for Box<T>* it calls the parser of T object into the specified location
  *
  * The optional argument ignorable additionally allows to control behaviour in case of error.
  * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.

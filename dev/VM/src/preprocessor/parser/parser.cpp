@@ -10,7 +10,6 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/tpc.hpp>
 #include <base/maps.hpp>
 #include <variant>
@@ -27,7 +26,7 @@ namespace assemble {
 		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
 
-	enum class OpCodeArgType { arg, local, imm };
+	enum class OpCodeArgType { Arg, Local, Imm };
 
 	struct OpCodeNumArg {
 		OpCodeArgType type;
@@ -159,8 +158,8 @@ namespace assemble {
 	};
 
 	struct Type: AsmElement {
-		TypeData                    datatype;
-		static tpc::ParserRef<Type> parse(F8ParserState& state);
+		TypeData          datatype;
+		static MBox<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			out << "type: ";
@@ -173,8 +172,8 @@ namespace assemble {
 		base::StrID               opcode_name;
 		std::vector<OpCodeAnyArg> args;
 
-		static tpc::ParserRef<OpCode> parse(F8ParserState& state) {
-			auto out = tpc::makeRef<OpCode>();
+		static Box<OpCode> parse(F8ParserState& state) {
+			auto out = makeBox<OpCode>();
 
 			tpc::Identifier identifier1;
 			state.parse().one(&identifier1);
@@ -198,7 +197,7 @@ namespace assemble {
 				case lexer::Token::Type::NumLiteral:
 					try {
 						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::imm, base::strIDToNum(state.tokens().next().getValue()) }
+							OpCodeArgType::Imm, base::strIDToNum(state.tokens().next().getValue()) }
 						);
 					} catch (std::logic_error& e) {
 						state.err.failAndLog(
@@ -253,11 +252,11 @@ namespace assemble {
 	};
 
 	struct ByteCode: AsmElement {
-		std::vector<tpc::ParserRef<OpCode>> opcodes;
-		base::Map<base::StrID, usize>       label_position;
+		std::vector<Box<OpCode>>      opcodes;
+		base::Map<base::StrID, usize> label_position;
 
-		static tpc::ParserRef<ByteCode> parse(F8ParserState& state) {
-			auto out = tpc::makeRef<ByteCode>();
+		static Box<ByteCode> parse(F8ParserState& state) {
+			auto out = makeBox<ByteCode>();
 
 			while (state.notEmpty()) {
 				if (state.tryEat(lang_def::Keyword::BCLabel)) {
@@ -315,17 +314,17 @@ namespace assemble {
 		~ByteCode() override = default;
 	};
 
-	constexpr usize size_t_max = (usize) (-1);
+	constexpr usize SIZE_T_MAX = (usize) (-1);
 
 	struct Func: AsmElement {
-		tpc::Identifier          name;
-		usize                    arg_size      = size_t_max;
-		usize                    next_arg_size = size_t_max;
-		usize                    local_size    = size_t_max;
-		usize                    ret_size      = size_t_max;
-		tpc::ParserRef<ByteCode> code;
+		tpc::Identifier name;
+		usize           arg_size      = SIZE_T_MAX;
+		usize           next_arg_size = SIZE_T_MAX;
+		usize           local_size    = SIZE_T_MAX;
+		usize           ret_size      = SIZE_T_MAX;
+		MBox<ByteCode>   code;
 
-		static tpc::ParserRef<Func> parse(F8ParserState& state);
+		static MBox<Func> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			out << "function {\n";
@@ -341,10 +340,10 @@ namespace assemble {
 	};
 
 	struct ParsedCode: AsmElement {
-		std::vector<tpc::ParserRef<Func>> functions;
-		std::vector<tpc::ParserRef<Type>> types;
+		std::vector<Box<Func>> functions;
+		std::vector<Box<Type>> types;
 
-		static tpc::ParserRef<ParsedCode> parse(F8ParserState& state);
+		static Box<ParsedCode> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			for (auto& type: types) {
@@ -361,8 +360,8 @@ namespace assemble {
 		~ParsedCode() override = default;
 	};
 
-	tpc::ParserRef<Func> Func::parse(F8ParserState& state) {
-		auto out = tpc::makeRef<Func>();
+	MBox<Func> Func::parse(F8ParserState& state) {
+		auto out = makeBox<Func>();
 
 		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
@@ -379,7 +378,7 @@ namespace assemble {
 			switch (next.asKeyword()) {
 			case lang_def::Keyword::BCArgSize: {
 				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->arg_size != size_t_max)
+				if (out->arg_size != SIZE_T_MAX)
 					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
 				auto value = state.tokens().next();
 
@@ -400,7 +399,7 @@ namespace assemble {
 			}
 			case lang_def::Keyword::BCNextArgSize: {
 				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->next_arg_size != size_t_max) {
+				if (out->next_arg_size != SIZE_T_MAX) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
 					);
@@ -427,7 +426,7 @@ namespace assemble {
 
 			case lang_def::Keyword::BCLocalSize: {
 				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->local_size != size_t_max)
+				if (out->local_size != SIZE_T_MAX)
 					state.err.failAndLog(state.getPosition(), "local_size duplicate");
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
@@ -449,7 +448,7 @@ namespace assemble {
 
 			case lang_def::Keyword::BCRetSize: {
 				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->ret_size != size_t_max)
+				if (out->ret_size != SIZE_T_MAX)
 					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral()) {
@@ -498,20 +497,20 @@ namespace assemble {
 
 		state.goUpAndSkip();
 
-		if (out->local_size == size_t_max) state.fail(0, "Local size not set");
-		if (out->arg_size == size_t_max) state.fail(0, "Arg size not set");
-		if (out->next_arg_size == size_t_max) state.fail(0, "Next arg size not set");
-		if (out->ret_size == size_t_max) state.fail(0, "Ret size not set");
+		if (out->local_size == SIZE_T_MAX) state.fail(0, "Local size not set");
+		if (out->arg_size == SIZE_T_MAX) state.fail(0, "Arg size not set");
+		if (out->next_arg_size == SIZE_T_MAX) state.fail(0, "Next arg size not set");
+		if (out->ret_size == SIZE_T_MAX) state.fail(0, "Ret size not set");
 
 		return out;
 	}
 
-	tpc::ParserRef<Type> Type::parse(F8ParserState& state) {
+	MBox<Type> Type::parse(F8ParserState& state) {
 		if (!state.tryEat(lang_def::Keyword::BCType)) {
 			state.err.failAndLog(state.ctokens().peek().getPosition(), "expected keyword 'type'");
 			return nullptr;
 		};
-		auto out = tpc::makeRef<Type>();
+		auto out = makeBox<Type>();
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
@@ -650,16 +649,16 @@ namespace assemble {
 		return out;
 	}
 
-	tpc::ParserRef<ParsedCode> ParsedCode::parse(F8ParserState& state) {
-		auto out = tpc::makeRef<ParsedCode>();
+	Box<ParsedCode> ParsedCode::parse(F8ParserState& state) {
+		auto out = makeBox<ParsedCode>();
 
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state);
-				if (type != nullptr) out->types.emplace_back(std::move(type));
+				if (type) out->types.emplace_back(std::move(type).toOptBox().value());
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state);
-				if (func != nullptr) out->functions.emplace_back(std::move(func));
+				if (func) out->functions.emplace_back(std::move(func).toOptBox().value());
 			} else {
 				state.fail(0, "Unexpected keyword");
 				return out;
@@ -671,10 +670,10 @@ namespace assemble {
 
 	struct CodeContainer {
 		// @TODO: https://github.com/ducktype-org/rift-poc-zpp1/issues/70
-		bool                       ok    = true;
-		std::string                error = "";
-		tpc::ParserRef<ParsedCode> code;
-		void                       print(std::ostream&);
+		bool             ok    = true;
+		std::string      error = "";
+		MBox<ParsedCode> code;
+		void             print(std::ostream&);
 	};
 
 	CodeContainer parseFile(const fs::FilePath& path) {
@@ -682,8 +681,9 @@ namespace assemble {
 		tpc::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 
-		auto maybeContent = path.getContentSafe();
-		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
+		auto maybe_content = path.getContentSafe();
+		if (maybe_content.has_error())
+			return CodeContainer{ false, maybe_content.error(), nullptr };
 
 		Box<tokenizer::TokenFile> file = lexer::tokenizeFile(path);
 
@@ -695,7 +695,7 @@ namespace assemble {
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
-		tpc::ParserRef<ParsedCode> out = ParsedCode::parse(state);
+		Box<ParsedCode> out = ParsedCode::parse(state);
 
 		std::stringstream err_stream;
 		log.dumpLog(false, err_stream);
@@ -817,14 +817,13 @@ namespace assemble {
 		}
 	}
 
-	vm::FuncData
-		changeFuncToFuncData(const tpc::ParserCBorrowRef<Func>& func, vm::TypeMetadata& types) {
-		vm::FuncData funcData;
-		funcData.ret_size      = 0;
-		funcData.arg_size      = func->arg_size;
-		funcData.next_arg_size = func->next_arg_size;
-		funcData.stack_size    = func->local_size;
-		funcData.ret_size      = func->ret_size;
+	vm::FuncData changeFuncToFuncData(CRef<Func> func, vm::TypeMetadata& types) {
+		vm::FuncData func_data;
+		func_data.ret_size      = 0;
+		func_data.arg_size      = func->arg_size;
+		func_data.next_arg_size = func->next_arg_size;
+		func_data.stack_size    = func->local_size;
+		func_data.ret_size      = func->ret_size;
 
 		for (auto& op: func->code->opcodes) {
 			// calculate type arguments:
@@ -864,7 +863,7 @@ namespace assemble {
 
 
 #ifdef USE_TAIL_CALLS
-			funcData.bc.emplace_back(vm::Fix8Instruction{
+			func_data.bc.emplace_back(vm::Fix8Instruction{
 				.opfun = vm::OpFuns::OPFUNS.at(nameToOpcodeValue(op->opcode_name)),
 				.arg0  = static_cast<i32>(arg_0),
 				.arg1  = static_cast<i32>(arg_1) });
@@ -872,13 +871,13 @@ namespace assemble {
 
 // #else breaks clang-format for some reason (?)
 #ifndef USE_TAIL_CALLS
-			funcData.bc.emplace_back(vm::Fix8Instruction{
+			func_data.bc.emplace_back(vm::Fix8Instruction{
 				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
 				.arg0   = static_cast<i32>(arg_0),
 				.arg1   = static_cast<i32>(arg_1) });
 #endif
 		}
-		return funcData;
+		return func_data;
 	}
 
 	// @TODO: this function returns errors as string, in the future `StreamPrinter` like object
@@ -902,8 +901,7 @@ namespace assemble {
 		instructions_code.main_id = main_id;
 
 		for (auto& func: code.code->functions) {
-			instructions_code.functions.emplace_back(
-				changeFuncToFuncData(func.borrow(), type_metadata)
+			instructions_code.functions.emplace_back(changeFuncToFuncData(func.ref(), type_metadata)
 			);
 		}
 		assertTailcallsSignatures(instructions_code.functions);
