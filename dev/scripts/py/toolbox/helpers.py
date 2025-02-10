@@ -38,7 +38,7 @@ class BashCommandError(Exception):
 
 def exec_bash_command(
     command: str,
-    cwd: pathlib.Path,
+    cwd: str | pathlib.Path,
     capture_output=False,
     input: bytes | None = None,
     exitcode=0,
@@ -50,6 +50,8 @@ def exec_bash_command(
     """
     This is the lowest level access to calling a bash command in toolbox.
     """
+    if isinstance(cwd, str):
+        cwd = pathlib.Path(cwd)
     if dry or verbose:
         command = replace_special(command)
         log_bash(f'cd "{cwd.absolute()}" && {command}', file=log_to_file)
