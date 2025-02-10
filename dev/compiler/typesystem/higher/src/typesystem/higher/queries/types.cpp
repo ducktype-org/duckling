@@ -108,9 +108,8 @@ namespace tsh {
 
 			if (!cache.contains({ size, signedness })) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(makeBox<ErrorBadIntegralSize>(
-					dia::SourcePosition::fakePosition(), size
-				));
+				context.log(makeBox<ErrorBadIntegralSize>(dia::SourcePosition::fakePosition(), size)
+				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at({ 128, signedness });
 			}
@@ -169,9 +168,7 @@ namespace tsh {
 
 			if (!cache.contains(size)) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(
-					makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size)
-				);
+				context.log(makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);
 			}
@@ -200,7 +197,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			const auto pointer_pimpl = new internal::PointerInfoImpl{ key };
-			pushType(base::unique_ptr(pointer_pimpl));
+			pushType(Box<internal::PointerInfoImpl>::fromPointer(pointer_pimpl));
 			return pointer_pimpl;
 		}
 
@@ -212,7 +209,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleInfo::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto tuple_pimpl = new internal::TupleInfoImpl{ key.components };
-			pushType(base::unique_ptr(tuple_pimpl));
+			pushType(Box<internal::TupleInfoImpl>::fromPointer(tuple_pimpl));
 			return tuple_pimpl;
 		}
 
@@ -223,9 +220,9 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto Variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
-			pushType(base::unique_ptr(Variant_pimpl));
-			return Variant_pimpl;
+			const auto variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
+			pushType(Box<internal::VariantInfoImpl>::fromPointer(variant_pimpl));
+			return variant_pimpl;
 		}
 
 		QUERY_AUTO_CACHE_CONSTRUCT
@@ -238,7 +235,7 @@ namespace tsh {
 			const auto [params, result, pure, free] = key;
 			const auto function_pimpl
 				= new internal::FunctionInfoImpl{ params, result, pure, free };
-			pushType(base::unique_ptr(function_pimpl));
+			pushType(Box<internal::FunctionInfoImpl>::fromPointer(function_pimpl));
 			return function_pimpl;
 		}
 
@@ -250,7 +247,7 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo::Pimpl) {
 		static auto provide(Context&, QKey key) -> PResult {
 			const auto class_pimpl = new internal::ClassInfoImpl{ key };
-			pushType(base::unique_ptr(class_pimpl));
+			pushType(Box<internal::ClassInfoImpl>::fromPointer(class_pimpl));
 			return class_pimpl;
 		}
 

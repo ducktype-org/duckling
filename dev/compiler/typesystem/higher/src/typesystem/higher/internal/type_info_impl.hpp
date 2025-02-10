@@ -122,11 +122,11 @@ namespace tsh::internal {
 		std::string representation = "UNNAMED";
 	};
 
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
+	std::vector<Box<const TypeInfoImpl>>& getTypes();
 
 	template<std::derived_from<TypeInfoImpl> T>
-	void pushType(base::unique_ptr<T>&& type) {
-		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
+	void pushType(Box<T>&& type) {
+		getTypes().emplace_back(std::move(type));
 	}
 
 	class UnitInfoImpl final: public TypeInfoImpl {
