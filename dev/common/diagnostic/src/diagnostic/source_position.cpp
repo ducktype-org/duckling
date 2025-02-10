@@ -70,7 +70,9 @@ namespace dia {
 		return res;
 	}
 
-	SourcePosition::SourcePosition(MRef<tokenizer::TokenFile> source_file, const usize source_start):
+	SourcePosition::SourcePosition(
+		MRef<tokenizer::TokenFile> source_file, const usize source_start
+	):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
@@ -95,12 +97,12 @@ namespace dia {
 
 	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
 		return (source_file != nullptr) ? source_file->getLineColumn(source_start)
-		                         : std::make_pair(usize(0), usize(0));
+		                                : std::make_pair(usize(0), usize(0));
 	}
 
 	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
 		return (source_file != nullptr) ? source_file->getLineColumn(source_end)
-		                         : std::make_pair(usize(0), usize(0));
+		                                : std::make_pair(usize(0), usize(0));
 	}
 
 	usize SourcePosition::getStart() const { return source_start; }

@@ -1,6 +1,7 @@
 
 #include "parser.hpp"
 #include <code_data/opcodes.hpp>
+#include <cstdint>
 #include <lexer/lexer.hpp>
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
@@ -26,7 +27,7 @@ namespace assemble {
 		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
 
-	enum class OpCodeArgType { Arg, Local, Imm };
+	enum class OpCodeArgType: std::uint8_t { Arg, Local, Imm };
 
 	struct OpCodeNumArg {
 		OpCodeArgType type;
@@ -322,7 +323,7 @@ namespace assemble {
 		usize           next_arg_size = SIZE_T_MAX;
 		usize           local_size    = SIZE_T_MAX;
 		usize           ret_size      = SIZE_T_MAX;
-		MBox<ByteCode>   code;
+		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);
 

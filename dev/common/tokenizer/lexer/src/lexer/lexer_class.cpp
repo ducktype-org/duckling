@@ -226,7 +226,8 @@ namespace lexer {
 			else
 				decLiteralHandler(output);
 		} else {
-			if (not peek().is(Class::whitespace)) logger.log(makeBox<TokenStartError>(source_start));
+			if (not peek().is(Class::whitespace))
+				logger.log(makeBox<TokenStartError>(source_start));
 			next();
 		}
 	}
@@ -305,7 +306,8 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 		std::string         message;
-		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), source_position));
+		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), source_position)
+		);
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -313,8 +315,8 @@ namespace lexer {
 	}
 
 	void Lexer::specialHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
+		usize begin        = where;
+		usize end          = where;
 		auto  source_start = currentPosition();
 
 		next();
@@ -336,7 +338,8 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
+		);
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -382,14 +385,15 @@ namespace lexer {
 		dia::SourcePosition source_position(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
+		);
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
 		auto  source_start = currentPosition();
-		bool  closed      = true;
+		bool  closed       = true;
 
 		next();
 		while (!peek().is('"')) {
@@ -398,7 +402,7 @@ namespace lexer {
 			} else if (isEOL()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
 				dia::SourcePosition eol_pos = currentPosition();
-				auto                error  = makeBox<UnclosedStringEolError>(err_pos);
+				auto                error   = makeBox<UnclosedStringEolError>(err_pos);
 				error->addNote(makeBox<UnclosedStringEolError::EolLocationNote>(eol_pos));
 				logger.log(std::move(error));
 				closed = false;

@@ -42,7 +42,9 @@ namespace dia {
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
 		SourcePosition(MRef<tokenizer::TokenFile> source_file, usize source_start);
-		SourcePosition(MRef<tokenizer::TokenFile> source_file, usize source_start, usize source_end);
+		SourcePosition(
+			MRef<tokenizer::TokenFile> source_file, usize source_start, usize source_end
+		);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize source_end);
 

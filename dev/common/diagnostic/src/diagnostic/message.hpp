@@ -82,7 +82,7 @@
 #include <printer/printer_content.hpp>
 #include <concepts>
 
-#include "base/box.hpp"
+#include <base/box.hpp>
 #include "source_position.hpp"
 
 namespace dia {
