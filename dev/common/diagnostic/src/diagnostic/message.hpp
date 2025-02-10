@@ -82,6 +82,7 @@
 #include <printer/printer_content.hpp>
 #include <concepts>
 
+#include "base/box.hpp"
 #include "source_position.hpp"
 
 namespace dia {
@@ -158,8 +159,8 @@ namespace dia {
 	 * an arbitrary number of Notes, which provide additional, helpful information.
 	 */
 	class Message {
-		SourcePosition                      source_position;
-		std::vector<base::unique_ptr<Note>> notes{};
+		SourcePosition         source_position;
+		std::vector<Box<Note>> notes{};
 		// @FIXME: should we include a `cause` field here?
 		// Do we expect to detect when an error is caused by another error?
 
@@ -288,16 +289,16 @@ namespace dia {
 		 * @return The notes added to this Message.
 		 */
 		[[nodiscard]]
-		const std::vector<base::unique_ptr<Note>>& getNotes() const {
+		const std::vector<Box<Note>>& getNotes() const {
 			return notes;
 		}
 
 		/**
 		 * @brief Add a Note to this Message.
 		 *
-		 * @param note_ptr A base::unique_ptr to the Note to be added.
+		 * @param note_ptr A Box to the Note to be added.
 		 */
-		void addNote(base::unique_ptr<Note> note_ptr) { notes.emplace_back(note_ptr.release()); }
+		void addNote(Box<Note> note_ptr) { notes.emplace_back(std::move(note_ptr)); }
 
 		virtual ~Message() noexcept = default;
 	};
@@ -311,19 +312,18 @@ namespace dia {
 	 * and C++ does not support static virtual methods.
 	 */
 	template<typename Converter>
-	concept DiagnosticToPrinterConverter = requires(
-		base::c_borrow_ptr<Message> message, base::c_borrow_ptr<Note> note, bool detailed
-	) {
-		{
-			Converter::toPrinterContents(message, detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-		{
-			Converter::toPrinterContents(note, detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-		{
-			Converter::listToPrinterContents(std::vector<base::c_borrow_ptr<Message>>(), detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-	};
+	concept DiagnosticToPrinterConverter
+		= requires(CRef<Message> message, CRef<Note> note, bool detailed) {
+			  {
+				  Converter::toPrinterContents(message, detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+			  {
+				  Converter::toPrinterContents(note, detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+			  {
+				  Converter::listToPrinterContents(std::vector<CRef<Message>>(), detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+		  };
 
 	/**
 	 * @brief Abstract base class for storing errors generated during the compilation process.
@@ -491,7 +491,7 @@ namespace dia {
 		}
 
 		static auto make(const SourcePosition& source_position, std::string message) {
-			return base::make_unique<PlaceholderMessage>(source_position, std::move(message));
+			return makeBox<PlaceholderMessage>(source_position, std::move(message));
 		}
 	};
 }

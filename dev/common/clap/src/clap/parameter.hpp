@@ -62,7 +62,7 @@ namespace clap {
 		 * @return Value parser pointer, that may be null.
 		 */
 		[[nodiscard]]
-		const ValueParser* getValueParser() const;
+		MRef<const ValueParser> getValueParser() const;
 		/**
 		 * @return The necessity of a parameter.
 		 */
@@ -78,8 +78,7 @@ namespace clap {
 
 		// If a ConfigParameter has a ValueParser, then
 		// it means it's not a flag.
-		// Using pointer here, because of polymorphism.
-		base::unique_ptr<ValueParser> value_parser;
+		MBox<ValueParser> value_parser;
 
 		ParameterNecessity parameter_necessity;
 	};

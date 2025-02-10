@@ -61,14 +61,14 @@ namespace clap {
 		 * @param parameter value parser created like: clap::StringParser::make().
 		 * @return A reference to self.
 		 */
-		Clap&& addPositional(base::unique_ptr<ValueParser> parameter);
+		Clap&& addPositional(Box<ValueParser> parameter);
 
 		/**
 		 * Sets the default value parser for the Clap. Might be a nullptr.
 		 * @param parser A value parser to be used.
 		 * @return A reference to self.
 		 */
-		Clap&& setDefaultParser(base::unique_ptr<ValueParser> parser);
+		Clap&& setDefaultParser(MBox<ValueParser> parser);
 
 		/**
 		 * Adds a standard help flag functionality.
@@ -92,7 +92,7 @@ namespace clap {
 		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
-		base::borrow_ptr<const ValueParser> getDefaultValueParser() const;
+		MRef<const ValueParser> getDefaultValueParser() const;
 
 		/**
 		 * Named parameters are built with clap::ParamBuilder. They are addressed with
@@ -106,12 +106,12 @@ namespace clap {
 		 * @return A list of positional parameters (their value parsers).
 		 */
 		[[nodiscard]]
-		const std::vector<base::unique_ptr<ValueParser>>& getPositionalParameters() const;
+		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
 
 	private:
-		base::unique_ptr<ValueParser>              default_value_parser;
-		std::vector<base::unique_ptr<ValueParser>> positional_parameters;
-		std::vector<Parameter>                     parameters;
+		MBox<ValueParser>              default_value_parser;
+		std::vector<Box<ValueParser>> positional_parameters;
+		std::vector<Parameter>        parameters;
 
 		/**
 		 * Validates the result accordingly to the Clap's specification, invokes

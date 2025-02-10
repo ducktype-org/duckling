@@ -108,7 +108,7 @@ namespace tsh {
 
 			if (!cache.contains({ size, signedness })) {
 				// @FIXME: provide proper SourcePosition.
-				context.log(base::make_unique<ErrorBadIntegralSize>(
+				context.log(makeBox<ErrorBadIntegralSize>(
 					dia::SourcePosition::fakePosition(), size
 				));
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
@@ -170,7 +170,7 @@ namespace tsh {
 			if (!cache.contains(size)) {
 				// @FIXME: provide proper SourcePosition.
 				context.log(
-					base::make_unique<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size)
+					makeBox<ErrorBadFloatSize>(dia::SourcePosition::fakePosition(), size)
 				);
 				// @TODO: maybe change to some ErrorType, instead of a "best guess".
 				return &cache.at(128);

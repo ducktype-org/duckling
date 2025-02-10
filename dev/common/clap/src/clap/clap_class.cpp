@@ -3,13 +3,14 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
+#include <base/box.hpp>
 #include "clap.hpp"
+#include "clap/value_parser.hpp"
 #include "param_builder.hpp"
 #include "exceptions.hpp"
 #include <base/variant.hpp>
 #include <base/str_utils.hpp>
 #include <cctype>
-#include <iostream>
 
 /**
  * Basic helper functions.
@@ -298,18 +299,18 @@ namespace clap {
 		return st.result;
 	}
 
-	base::borrow_ptr<const ValueParser> Clap::getDefaultValueParser() const {
-		return base::borrow_ptr(default_value_parser.get());
+	MRef<const ValueParser> Clap::getDefaultValueParser() const {
+		return default_value_parser.ref();
 	}
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 
-	Clap&& Clap::addPositional(base::unique_ptr<ValueParser> parameter) {
+	Clap&& Clap::addPositional(Box<ValueParser> parameter) {
 		positional_parameters.push_back(std::move(parameter));
 		return std::move(*this);
 	}
 
-	Clap&& Clap::setDefaultParser(base::unique_ptr<ValueParser> parser) {
+	Clap&& Clap::setDefaultParser(MBox<ValueParser> parser) {
 		default_value_parser = std::move(parser);
 		return std::move(*this);
 	}
@@ -344,7 +345,7 @@ namespace clap {
 		}
 	}
 
-	Clap::Clap() { default_value_parser = StringParser::make(); }
+	Clap::Clap(): default_value_parser(StringParser::make()) {}
 
 	Clap&& Clap::addHelpFlag() {
 		return add(ParamBuilder::ofFlag()
@@ -354,7 +355,7 @@ namespace clap {
 		               .build());
 	}
 
-	const std::vector<base::unique_ptr<ValueParser>>& Clap::getPositionalParameters() const {
+	const std::vector<Box<ValueParser>>& Clap::getPositionalParameters() const {
 		return positional_parameters;
 	}
 }  // clap

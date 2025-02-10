@@ -44,7 +44,7 @@ namespace query::detail {
 		NodeID my_node;
 		bool   active = true;
 
-		ContextType(NodeID my_node): my_node(my_node){};
+		ContextType(NodeID my_node): my_node(my_node) {};
 		friend struct ContextMaker;
 
 	public:
@@ -74,7 +74,7 @@ namespace query::detail {
 		 * Log message to be shown to the user.
 		 * @param message The dia::Message to be logged.
 		 */
-		void log(base::unique_ptr<dia::Message> message) {
+		void log(Box<dia::Message> message) {
 			assertActive();
 			logger.log(std::move(message));
 		}

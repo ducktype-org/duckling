@@ -230,7 +230,7 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(base::make_unique<
+					ctx.log(makeBox<
 							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
 						stmt.getSourcePosition(), "No builtin operator found"
 					));
@@ -445,7 +445,7 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(base::make_unique<
+					ctx.log(makeBox<
 							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
 						stmt.getSourcePosition(), "No builtin operator found"
 					));

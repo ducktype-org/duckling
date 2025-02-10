@@ -163,7 +163,7 @@ namespace lexer {
 		for (usize i = 0; i < bytes.size(); i++) {
 			// Check if valid ascii byte
 			if ((bytes[i] & byte{ 0b10000000u }) != byte{ 0 }) {
-				log.log(base::make_unique<AsciiByteError>(file, i + 1, (usize) bytes[i]));
+				log.log(makeBox<AsciiByteError>(file, i + 1, (usize) bytes[i]));
 				continue;
 			}
 			out.emplace_back(UChar32(bytes[i]), u8{ 1 }, i);
@@ -182,9 +182,8 @@ namespace lexer {
 		while (pos < bytes.size()) {
 			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log.log(base::make_unique<Utf8UnexpectedContinuationError>(
-					file, pos + 1, (usize) bytes[pos]
-				));
+				log.log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos])
+				);
 				pos++;
 				continue;
 			}
@@ -204,8 +203,7 @@ namespace lexer {
 				size = 4;
 				value &= 0b00000111;
 			} else {
-				log.log(base::make_unique<Utf8BadByteStartError>(file, pos + 1, (usize) bytes[pos])
-				);
+				log.log(makeBox<Utf8BadByteStartError>(file, pos + 1, (usize) bytes[pos]));
 				pos++;
 				continue;
 			}
@@ -216,7 +214,7 @@ namespace lexer {
 			     new_pos++) {
 				if ((bytes[new_pos] & byte{ 0b11000000u }) != byte{ 0b10000000 }) {
 					are_bytes_ok = false;
-					log.log(base::make_unique<Utf8BadNonContinuationError>(
+					log.log(makeBox<Utf8BadNonContinuationError>(
 						file, new_pos + 1, (usize) bytes[new_pos], pos + 1
 					));
 					size = new_pos - pos;
@@ -232,7 +230,7 @@ namespace lexer {
 			}
 
 			if (pos + size - 1 >= bytes.size()) {
-				log.log(base::make_unique<Utf8BadEofError>(file, bytes.size(), pos + 1));
+				log.log(makeBox<Utf8BadEofError>(file, bytes.size(), pos + 1));
 				pos = bytes.size();
 				continue;
 			}
@@ -240,7 +238,7 @@ namespace lexer {
 			// Check if value is a valid unicode code point
 			if (!U_IS_UNICODE_CHAR(value)
 			    || (U_GET_GC_MASK(value) & (U_GC_CN_MASK | U_GC_CO_MASK | U_GC_CS_MASK))) {
-				log.log(base::make_unique<Utf8UndefinedCodepointError>(file, pos + 1, value));
+				log.log(makeBox<Utf8UndefinedCodepointError>(file, pos + 1, value));
 				pos += size;
 				continue;
 			}

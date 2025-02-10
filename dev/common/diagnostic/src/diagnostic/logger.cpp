@@ -10,12 +10,10 @@ namespace dia {
 
 	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
 
-	void Logger::log(
-		base::unique_ptr<Message> message_ptr, const bool detailed, const bool immediately_dump
-	) {
+	void Logger::log(Box<Message> message_ptr, const bool detailed, const bool immediately_dump) {
 		if (immediately_dump) {
 			printer::StreamPrinter::print(
-				DiagnosticToUserConverter::toPrinterContents(message_ptr.borrow(), detailed)
+				DiagnosticToUserConverter::toPrinterContents(message_ptr.ref(), detailed)
 			);
 			printer::StreamPrinter::newline(2);
 		}
@@ -32,13 +30,14 @@ namespace dia {
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		constexpr auto borrower = [](const base::unique_ptr<Message>& message
-		                          ) -> base::c_borrow_ptr<Message> { return message.borrow(); };
+		constexpr auto borrower = [](const Box<Message>& message) -> CRef<Message> {
+			return message.ref();
+		};
 
 		auto messages = std::ranges::join_view(message_log);
-		auto borrowed = std::ranges::transform_view(messages, borrower);
+		auto refed = std::ranges::transform_view(messages, borrower);
 
-		printer::StreamPrinter::print(Converter::listToPrinterContents(borrowed, detailed), stream);
+		printer::StreamPrinter::print(Converter::listToPrinterContents(refed, detailed), stream);
 	}
 
 	template void Logger::dumpLog<DiagnosticToUserConverter>(bool, std::ostream&) const;
@@ -81,7 +80,7 @@ namespace dia {
 	};
 
 	void Logger::failAndLog(const SourcePosition& position, std::string_view message) {
-		log(base::make_unique<ObsoleteErrorWithPositionAndString>(position, message));
+		log(makeBox<ObsoleteErrorWithPositionAndString>(position, message));
 	}
 
 	class ObsoleteErrorWithString final: public Error {
@@ -106,7 +105,7 @@ namespace dia {
 	};
 
 	void Logger::failAndLog(const std::string& message) {
-		log(base::make_unique<ObsoleteErrorWithString>(message));
+		log(makeBox<ObsoleteErrorWithString>(message));
 	}
 
 	void Logger::clear() {

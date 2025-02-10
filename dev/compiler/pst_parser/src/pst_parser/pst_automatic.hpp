@@ -56,7 +56,7 @@ namespace pst {
 		 */
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
-				state.log(base::make_unique<tpc::BadKeywordError>(state.getPosition(), key));
+				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -69,7 +69,7 @@ namespace pst {
 		 */
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
-				state.log(base::make_unique<tpc::BadSpecialError>(state.getPosition(), spec));
+				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -82,7 +82,7 @@ namespace pst {
 		 */
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
-				state.log(base::make_unique<tpc::BadOperatorError>(state.getPosition(), op));
+				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -95,7 +95,7 @@ namespace pst {
 		 */
 		void one(tpc::Keyword* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isKeyword()) {
-				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
 				if (!ignorable) state.tokens().next();
 				return;
@@ -110,7 +110,7 @@ namespace pst {
 		 */
 		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;

@@ -92,7 +92,7 @@ namespace tpc {
 		 */
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
-				state.log(base::make_unique<BadKeywordError>(state.getPosition(), key));
+				state.log(makeBox<BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -103,7 +103,7 @@ namespace tpc {
 		 */
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
-				state.log(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+				state.log(makeBox<BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -114,7 +114,7 @@ namespace tpc {
 		 */
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
-				state.log(base::make_unique<BadOperatorError>(state.getPosition(), op));
+				state.log(makeBox<BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -125,7 +125,7 @@ namespace tpc {
 		 */
 		void one(Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(base::make_unique<NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;

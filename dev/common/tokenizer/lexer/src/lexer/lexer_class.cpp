@@ -104,7 +104,7 @@ namespace lexer {
 			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
 		):
 			  dia::Error(start_pos) {
-			addNote(base::make_unique<EndBlock>(expected_pos, closing_bracket));
+			addNote(makeBox<EndBlock>(expected_pos, closing_bracket));
 		}
 
 		class EndBlock final: public dia::NoteWithPosition {
@@ -226,8 +226,7 @@ namespace lexer {
 			else
 				decLiteralHandler(output);
 		} else {
-			if (not peek().is(Class::whitespace))
-				logger.log(base::make_unique<TokenStartError>(sourceStart));
+			if (not peek().is(Class::whitespace)) logger.log(makeBox<TokenStartError>(sourceStart));
 			next();
 		}
 	}
@@ -265,7 +264,7 @@ namespace lexer {
 		skip(2);  // "#{"
 		while (true) {
 			if (isEOF()) {
-				logger.log(base::make_unique<UnclosedCommentError>(opening));
+				logger.log(makeBox<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
 			} else if (isBlockCommentEnd()) {
@@ -399,14 +398,14 @@ namespace lexer {
 			} else if (isEOL()) {
 				dia::SourcePosition errPos(sourceStart, where - 1);
 				dia::SourcePosition eolPos = currentPosition();
-				auto                error  = base::make_unique<UnclosedStringEolError>(errPos);
-				error->addNote(base::make_unique<UnclosedStringEolError::EolLocationNote>(eolPos));
+				auto                error  = makeBox<UnclosedStringEolError>(errPos);
+				error->addNote(makeBox<UnclosedStringEolError::EolLocationNote>(eolPos));
 				logger.log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
 				dia::SourcePosition errPos(sourceStart, where - 1);
-				logger.log(base::make_unique<UnclosedStringEofError>(errPos));
+				logger.log(makeBox<UnclosedStringEofError>(errPos));
 				closed = false;
 				break;
 			} else {
@@ -450,14 +449,10 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			logger.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
-			);
+			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		} else {
-			logger.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
-			);
+			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		}
 
