@@ -685,7 +685,7 @@ namespace assemble {
 		auto maybeContent = path.getContentSafe();
 		if (maybeContent.has_error()) return CodeContainer{ false, maybeContent.error(), nullptr };
 
-		tokenizer::OwnFile file = lexer::tokenizeFile(path);
+		Box<tokenizer::TokenFile> file = lexer::tokenizeFile(path);
 
 		const lexer::TokenData& td = file->getTokenData();
 

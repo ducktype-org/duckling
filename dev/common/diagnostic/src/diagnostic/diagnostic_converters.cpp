@@ -235,7 +235,7 @@ namespace dia {
 	) {
 		auto source_position
 			= note_ptr->getSourcePosition().value_or(parent_message->getSourcePosition());
-		auto source_uri = source_position.getSource().get()
+		auto source_uri = (source_position.getSource() != nullptr)
 		                    ? source_position.getSource()->getPath().uri()
 		                    : "file:///dev/null";
 		auto range      = sourcePositionToLspJson(source_position);

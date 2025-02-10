@@ -10,7 +10,8 @@
 namespace lexer {
 
 	namespace detail {
-		std::string decodeError(tokenizer::BorrowFile file, usize byte, const std::string& reason) {
+		std::string
+			decodeError(Ref<tokenizer::TokenFile> file, usize byte, const std::string& reason) {
 			std::stringstream res;
 			res << "In file: " << file->getPath().strView() << "\nAt byte " << byte << ": "
 				<< reason;
@@ -23,11 +24,11 @@ namespace lexer {
 	 */
 	class DecodingError: public dia::Error {
 	private:
-		tokenizer::BorrowFile file;
-		usize                 byte;
+		Ref<tokenizer::TokenFile> file;
+		usize                     byte;
 
 	public:
-		DecodingError(tokenizer::BorrowFile file, usize byte):
+		DecodingError(Ref<tokenizer::TokenFile> file, usize byte):
 			  dia::Error(dia::SourcePosition::fakePosition()),
 			  file(std::move(file)),
 			  byte(byte) {}
@@ -52,7 +53,7 @@ namespace lexer {
 		usize bad_byte;
 
 	public:
-		AsciiByteError(tokenizer::BorrowFile file, usize byte, usize bad_byte):
+		AsciiByteError(Ref<tokenizer::TokenFile> file, usize byte, usize bad_byte):
 			  DecodingError(file, byte),
 			  bad_byte(bad_byte) {}
 
@@ -67,7 +68,7 @@ namespace lexer {
 		usize bad_byte;
 
 	public:
-		Utf8UnexpectedContinuationError(tokenizer::BorrowFile file, usize byte, usize bad_byte):
+		Utf8UnexpectedContinuationError(Ref<tokenizer::TokenFile> file, usize byte, usize bad_byte):
 			  DecodingError(file, byte),
 			  bad_byte(bad_byte) {}
 
@@ -83,7 +84,7 @@ namespace lexer {
 		usize bad_byte;
 
 	public:
-		Utf8BadByteStartError(tokenizer::BorrowFile file, usize byte, usize bad_byte):
+		Utf8BadByteStartError(Ref<tokenizer::TokenFile> file, usize byte, usize bad_byte):
 			  DecodingError(file, byte),
 			  bad_byte(bad_byte) {}
 
@@ -101,7 +102,7 @@ namespace lexer {
 
 	public:
 		Utf8BadNonContinuationError(
-			tokenizer::BorrowFile file, usize byte, usize bad_byte, usize code_point_start
+			Ref<tokenizer::TokenFile> file, usize byte, usize bad_byte, usize code_point_start
 		):
 			  DecodingError(file, byte),
 			  bad_byte(bad_byte),
@@ -123,7 +124,7 @@ namespace lexer {
 		usize code_point_start;
 
 	public:
-		Utf8BadEofError(tokenizer::BorrowFile file, usize byte, usize code_point_start):
+		Utf8BadEofError(Ref<tokenizer::TokenFile> file, usize byte, usize code_point_start):
 			  DecodingError(file, byte),
 			  code_point_start(code_point_start) {}
 
@@ -141,7 +142,7 @@ namespace lexer {
 		UChar32 value;
 
 	public:
-		Utf8UndefinedCodepointError(tokenizer::BorrowFile file, usize byte, UChar32 value):
+		Utf8UndefinedCodepointError(Ref<tokenizer::TokenFile> file, usize byte, UChar32 value):
 			  DecodingError(file, byte),
 			  value(value) {}
 
@@ -157,7 +158,7 @@ namespace lexer {
 	};
 
 	template<>
-	CharArray decode<fs::US_ASCII>(tokenizer::BorrowFile file, dia::Logger& log) {
+	CharArray decode<fs::US_ASCII>(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
 		auto      bytes = file->getContent().view();
 		CharArray out;
 		for (usize i = 0; i < bytes.size(); i++) {
@@ -174,7 +175,7 @@ namespace lexer {
 	}
 
 	template<>
-	CharArray decode<fs::UTF8>(tokenizer::BorrowFile file, dia::Logger& log) {
+	CharArray decode<fs::UTF8>(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
 		auto      bytes = file->getContent().view();
 		CharArray out;
 
