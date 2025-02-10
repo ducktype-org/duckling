@@ -192,8 +192,8 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations
-		) -> std::vector<llvm::Value*> {
+		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations)
+			-> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
@@ -283,5 +283,18 @@ namespace compiler::backend_llvm {
 
 		Box<ModuleImpl> module_impl = makeBox<ModuleImpl>(std::move(module));
 		return Module{ std::move(module_impl) };
+	}
+
+	auto initModule() -> Box<ModuleImpl> {
+		init();
+		llvm::LLVMContext& context = getLLVMContext();
+
+		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
+		return makeBox<ModuleImpl>(std::move(module));
+	}
+
+	void addFunctionToModule(Ref<llvm::Module> module, CRef<lir::Function> lir_function) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), lir_function, module };
+		lir2llvm.createFunction();
 	}
 }

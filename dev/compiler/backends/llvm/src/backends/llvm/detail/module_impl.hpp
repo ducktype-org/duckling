@@ -14,11 +14,8 @@ namespace compiler::backend_llvm {
 
 		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
 
-		[[nodiscard]]
-		bool verify() const;
-
-		void debugPrint() const;
-
 		~ModuleImpl();
+
+		friend struct Module;
 	};
 }

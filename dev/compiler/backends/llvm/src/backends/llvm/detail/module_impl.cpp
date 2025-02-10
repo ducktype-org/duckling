@@ -1,4 +1,5 @@
 #include "module_impl.hpp"
+#include "llvm_lowering.hpp"
 #include "../llvm_backend.hpp"
 
 #include <iostream>
@@ -15,20 +16,18 @@ namespace base::extend {
 
 namespace compiler::backend_llvm {
 
-	bool Module::verify() const { return impl->verify(); }
+	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
+		backend_llvm::addFunctionToModule(impl->module.refMut(), lir_function);
+	}
 
-	void Module::debugPrint() const { return impl->debugPrint(); }
-
-	bool ModuleImpl::verify() const {
-		// @TODO: does it verify all functions?
+	bool Module::verify() const { 
 		std::cerr << "LLVMVerification: \n";
-		bool error_found = llvm::verifyModule(*module, &llvm::errs());
+		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
 		std::cerr << "\n";
-
 		return not error_found;
 	}
 
-	void ModuleImpl::debugPrint() const { module->print(llvm::errs(), nullptr); }
+	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
 
 	Module::~Module()         = default;
 	ModuleImpl::~ModuleImpl() = default;

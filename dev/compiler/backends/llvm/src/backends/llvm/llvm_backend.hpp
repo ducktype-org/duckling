@@ -32,6 +32,8 @@ namespace compiler::backend_llvm {
 	public:
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
+		void addFunctionToModule(CRef<lir::Function> lir_function);
+
 		void debugPrint() const;
 
 		[[nodiscard]]
