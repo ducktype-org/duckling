@@ -27,7 +27,7 @@ namespace assemble {
 		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
 
-	enum class OpCodeArgType: std::uint8_t { Arg, Local, Imm };
+	enum class OpCodeArgType : std::uint8_t { Arg, Local, Imm };
 
 	struct OpCodeNumArg {
 		OpCodeArgType type;
