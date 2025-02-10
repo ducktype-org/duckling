@@ -579,7 +579,7 @@ namespace tsh::internal {
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static inline Kind STATIC_KIND = Kind::Class;
+		static constexpr Kind STATIC_KIND = Kind::Class;
 
 		[[nodiscard]]
 		const TypeInterface& getInterface(query::Context& ctx) const override;
@@ -596,8 +596,8 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const {
-			return getBaseClassType(ctx).map([](ClassInfo classInfo) {
-				return classInfo.getSymbol();
+			return getBaseClassType(ctx).map([](ClassInfo class_info) {
+				return class_info.getSymbol();
 			});
 		}
 

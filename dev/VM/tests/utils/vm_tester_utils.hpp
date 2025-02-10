@@ -11,7 +11,7 @@
 class VmTestSuite: public tester::TestSuite {
 public:
 	VmTestSuite(tester ::TestConfig&& config, std::string_view name):
-		  tester::TestSuite(std::move(config), name){};
+		  tester::TestSuite(std::move(config), name) {};
 
 protected:
 	void runTestOnVm(

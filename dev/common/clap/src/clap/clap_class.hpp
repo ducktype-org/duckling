@@ -109,7 +109,7 @@ namespace clap {
 		const std::vector<Box<ValueParser>>& getPositionalParameters() const;
 
 	private:
-		MBox<ValueParser>              default_value_parser;
+		MBox<ValueParser>             default_value_parser;
 		std::vector<Box<ValueParser>> positional_parameters;
 		std::vector<Parameter>        parameters;
 

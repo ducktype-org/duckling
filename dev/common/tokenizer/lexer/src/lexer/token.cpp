@@ -205,7 +205,7 @@ namespace lexer {
 	TokenData::TokenData(TokenData&& oth) noexcept:
 		  tokens(std::move(oth.tokens)),
 		  bof_sentinel(std::move(oth.bof_sentinel)),
-		  eof_sentinel(std::move(oth.eof_sentinel)){};
+		  eof_sentinel(std::move(oth.eof_sentinel)) {};
 
 	TokenData::~TokenData() = default;
 }

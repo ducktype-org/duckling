@@ -41,7 +41,7 @@ namespace fs {
 			  content(std::move(content)) {}
 
 	public:
-		FileContent(): content(nullptr){};
+		FileContent(): content(nullptr) {};
 		FileContent(const FileContent&) = default;
 		FileContent(FileContent&&)      = default;
 

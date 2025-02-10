@@ -30,12 +30,11 @@ namespace dia {
 		// Perhaps we will change it to showing all messages in order of appearance
 		// in the source code, or maybe we will choose a completely separate strategy.
 		// @TODO: resolve the above.
-		constexpr auto borrower = [](const Box<Message>& message) -> CRef<Message> {
-			return message.ref();
-		};
+		constexpr auto borrower
+			= [](const Box<Message>& message) -> CRef<Message> { return message.ref(); };
 
 		auto messages = std::ranges::join_view(message_log);
-		auto refed = std::ranges::transform_view(messages, borrower);
+		auto refed    = std::ranges::transform_view(messages, borrower);
 
 		printer::StreamPrinter::print(Converter::listToPrinterContents(refed, detailed), stream);
 	}

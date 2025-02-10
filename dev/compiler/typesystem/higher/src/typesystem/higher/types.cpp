@@ -187,11 +187,11 @@ namespace tsh {
 		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
-			const Kind        originalKind = p->getKind();
-			const Kind        targetKind   = TYPE_INFO::Impl::STATIC_KIND;
+			const Kind        original_kind = p->getKind();
+			const Kind        target_kind   = TYPE_INFO::Impl::STATIC_KIND;
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
-			   << base::enumToStr(originalKind).str() << " to " << base::enumToStr(targetKind).str()
-			   << " was attempted.";
+			   << base::enumToStr(original_kind).str() << " to "
+			   << base::enumToStr(target_kind).str() << " was attempted.";
 			throw base::LogicError{ ss.str() };
 		}
 		return result;
