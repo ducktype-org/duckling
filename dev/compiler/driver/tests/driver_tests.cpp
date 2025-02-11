@@ -1,11 +1,7 @@
-#include "query_framework/query_entry_point.hpp"
+#include <query_framework/query_entry_point.hpp>
 #include <helios/hout/hout.hpp>
 #include <tester/tester.hpp>
 
-#include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <driver/driver.hpp>
 
