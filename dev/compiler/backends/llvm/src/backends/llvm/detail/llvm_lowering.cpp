@@ -272,12 +272,12 @@ namespace compiler::backend_llvm {
 	};
 
 	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
-		auto module_impl = initModule("test");
+		auto module_impl = initModuleImpl(base::StrID("test"));
 		addFunctionToModule(module_impl->module.refMut(), lir_function);
 		return Module{ std::move(module_impl) };
 	}
 
-	auto initModule(base::StrID module_id) -> Box<ModuleImpl> {
+	auto initModuleImpl(base::StrID module_id) -> Box<ModuleImpl> {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 

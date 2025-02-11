@@ -49,6 +49,11 @@ namespace compiler::driver {
 	public:
 		BackendDriver(CRef<Options> options): options(options) {}
 
+		/**
+		 * @brief Compile given the LIR functions and module data to the backend module.
+		 * Outputs the module value.
+		 * @param module_data
+		 */
 		virtual void compile(BackendModuleData& module_data) = 0;
 
 		virtual ~BackendDriver() = default;

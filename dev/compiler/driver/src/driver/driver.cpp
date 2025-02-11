@@ -10,7 +10,7 @@ namespace compiler::driver {
 		case BackendType::DuckBC:
 			return base::makeBox<DuckBCBackendDriver>(options);
 		default:
-			throw base::LogicError("Unknown backend type");
+			CORE_PANIC("Wrong enum value");
 		}
 	}
 
@@ -18,15 +18,14 @@ namespace compiler::driver {
 		backend_llvm::Module mod(lir_module.module_id);
 		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
 
-		if (not mod.verify()) throw base::LogicError("LLVM module verification failed");
+		if (not mod.verify()) CORE_PANIC("LLVM module verification failed");
 
 		std::cerr << "LLVM module compiled successfully\n";
+		// This is the only way for not to output the module to the file
 		mod.debugPrint();
 	}
-	
-	void Driver::compileHOUTUnit(
-		base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id
-	) {
+
+	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;
 		functions.reserve(hout_unit->functions.size());
 

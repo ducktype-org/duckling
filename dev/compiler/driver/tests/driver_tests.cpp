@@ -1,3 +1,4 @@
+#include "query_framework/query_entry_point.hpp"
 #include <helios/hout/hout.hpp>
 #include <tester/tester.hpp>
 
@@ -18,18 +19,15 @@ public:
 private:
 	void simpleFunctionsTest() {
 		using namespace compiler;
-		helios::HOUTUnit top_level;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module
-				= ctx.query<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
-			top_level = ctx.query<helios::QueryTopLevelEntities>(module);
-		});
+		auto module
+			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
+		helios::HOUTUnit top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::Driver driver({ .backend_type = driver::BackendType::LLVM,
 		                        .output_file  = base::StrID("output") });
 
 		// This method can fail on module verification
-		driver.compileHOUTUnit(&top_level, frontend::ModuleID());
+		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));
 	}
 };
 
