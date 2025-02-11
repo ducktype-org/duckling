@@ -1,10 +1,12 @@
+#include <token_parser_core/parser_ref.hpp>
+
 #include "lsp_elements.hpp"
 #include "../../../../../base/src/base/ints.hpp"
 
 namespace lsp {
 
 	template<class T>
-	void nullAwareLspPrint(const MBox<T>& ref, std::ostream& out) {
+	void nullAwareLspPrint(const tpc::ParserRef<T>& ref, std::ostream& out) {
 		if (ref)
 			ref->lsp_print(out);
 		else
@@ -251,10 +253,10 @@ namespace lsp {
 	}
 
 	void LSPAction::parametrizedLSPPrint(
-		std::ostream&                      out,
-		const std::optional<Box<LSPExpr>>& action,
-		const std::string_view             name,
-		const std::string&                 preposition
+		std::ostream&                            out,
+		const std::optional<ParserRef<LSPExpr>>& action,
+		const std::string_view                   name,
+		const std::string&                       preposition
 	) const {
 		out << "{\"" << name << "\" : {";
 		if (action) {

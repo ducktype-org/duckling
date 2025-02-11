@@ -3,12 +3,12 @@
  * For each new class, a pair of constructors has to be written.
  *
  * For example, for DottedName:
- * Box<lsp::LSPDottedName> DottedName::dottedNameFromPST()
+ * ParserRef<lsp::LSPDottedName> DottedName::dottedNameFromPST()
  * and
- * Box<lsp::LSPNotStmt> DottedName::notStmtFromPST()
+ * ParserRef<lsp::LSPNotStmt> DottedName::notStmtFromPST()
  *
  * As DottedName inherits from NotStmt, we have to create constructors for instances of
- * Box<lsp::LSPDottedName> and Box<lsp::LSPNotStmt>.
+ * ParserRef<lsp::LSPDottedName> and ParserRef<lsp::LSPNotStmt>.
 
  * @note This file is currently not compiled and because the corrsponding method
  * declarations were deleted for merging purposes. It might be added back in some different way.
@@ -22,7 +22,7 @@
 #include "../elements/elements.hpp"
 #include "lsp_elements.hpp"
 
-using makeBox;
+using tpc::makeRef;
 
 
 // namespace pst {
@@ -31,7 +31,7 @@ using makeBox;
 // 		void fillAction(
 // 			lsp::LSPAction&                        action,
 // 			const dia::SourcePosition&             position,
-// 			const base::Optional<Box<Expr>>& expr
+// 			const base::Optional<ParserRef<Expr>>& expr
 // 		) {
 // 			action.position = position;
 // 			action.kind     = lsp::StmtKind::Action;
@@ -39,24 +39,24 @@ using makeBox;
 // 		}
 // 	}
 
-// 	Box<lsp::LSPDottedName> DottedName::dottedNameFromPST() const {
+// 	ParserRef<lsp::LSPDottedName> DottedName::dottedNameFromPST() const {
 // 		auto& res = *new lsp::LSPDottedName();
 // 		res.star  = this->star;
 // 		for (auto& name: this->names) res.names.push_back(name);
 // 		return makeRef<lsp::LSPDottedName>(&res);
 // 	}
 
-// 	Box<lsp::LSPNotStmt> DottedName::notStmtFromPST() const { return dottedNameFromPST(); }
+// 	ParserRef<lsp::LSPNotStmt> DottedName::notStmtFromPST() const { return dottedNameFromPST(); }
 
-// 	Box<lsp::LSPStmt> Stmt::stmtFromPST() const {
+// 	ParserRef<lsp::LSPStmt> Stmt::stmtFromPST() const {
 // 		throw(std::runtime_error("stmtFromPST not implemented"));
 // 	}
 
-// 	Box<lsp::LSPNotStmt> NotStmt::notStmtFromPST() const {
+// 	ParserRef<lsp::LSPNotStmt> NotStmt::notStmtFromPST() const {
 // 		throw(std::runtime_error("notStmtFromPST not implemented"));
 // 	}
 
-// 	Box<lsp::LSPAttribute> Attribute::attributeFromPST() const {
+// 	ParserRef<lsp::LSPAttribute> Attribute::attributeFromPST() const {
 // 		lsp::LSPAttribute& res = *new lsp::LSPAttribute;
 // 		res.position           = this->getSourcePosition();
 // 		res.name               = this->name;
@@ -66,9 +66,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPAttribute>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Attribute::stmtFromPST() const { return attributeFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Attribute::stmtFromPST() const { return attributeFromPST(); }
 
-// 	Box<lsp::LSPImport> Import::importFromPST() const {
+// 	ParserRef<lsp::LSPImport> Import::importFromPST() const {
 // 		lsp::LSPImport& res = *new lsp::LSPImport;
 // 		res.position        = this->getSourcePosition();
 // 		res.alias           = this->alias;
@@ -77,9 +77,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPImport>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Import::stmtFromPST() const { return importFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Import::stmtFromPST() const { return importFromPST(); }
 
-// 	Box<lsp::LSPUsing> Using::usingFromPST() const {
+// 	ParserRef<lsp::LSPUsing> Using::usingFromPST() const {
 // 		lsp::LSPUsing& res = *new lsp::LSPUsing;
 // 		res.position       = this->getSourcePosition();
 // 		if (this->names) res.names = this->names->dottedNameFromPST();
@@ -87,9 +87,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPUsing>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Using::stmtFromPST() const { return usingFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Using::stmtFromPST() const { return usingFromPST(); }
 
-// 	Box<lsp::LSPAlias> Alias::aliasFromPST() const {
+// 	ParserRef<lsp::LSPAlias> Alias::aliasFromPST() const {
 // 		lsp::LSPAlias& res = *new lsp::LSPAlias;
 // 		res.position       = this->getSourcePosition();
 // 		res.name           = this->name;
@@ -98,9 +98,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPAlias>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Alias::stmtFromPST() const { return aliasFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Alias::stmtFromPST() const { return aliasFromPST(); }
 
-// 	Box<lsp::LSPCodeBlock> CodeBlock::codeBlockFromPST() const {
+// 	ParserRef<lsp::LSPCodeBlock> CodeBlock::codeBlockFromPST() const {
 // 		lsp::LSPCodeBlock& res = *new lsp::LSPCodeBlock;
 // 		res.position           = this->getSourcePosition();
 // 		for (auto& stmt: this->statements)
@@ -108,38 +108,38 @@ using makeBox;
 // 		return makeRef<lsp::LSPCodeBlock>(&res);
 // 	}
 
-// 	Box<lsp::LSPNotStmt> CodeBlock::notStmtFromPST() const { return codeBlockFromPST(); }
+// 	ParserRef<lsp::LSPNotStmt> CodeBlock::notStmtFromPST() const { return codeBlockFromPST(); }
 
-// 	Box<lsp::LSPCodeBlockOrStmt> CodeBlockOrStmt::codeBlockOrStmtFromPST() const {
+// 	ParserRef<lsp::LSPCodeBlockOrStmt> CodeBlockOrStmt::codeBlockOrStmtFromPST() const {
 // 		lsp::LSPCodeBlockOrStmt& res = *new lsp::LSPCodeBlockOrStmt;
 // 		res.position                 = this->getSourcePosition();
 // 		variant_match(content) {
-// 			variant_case(Box<Stmt>, stmt) {
+// 			variant_case(ParserRef<Stmt>, stmt) {
 // 				if (stmt) res.content = stmt->stmtFromPST();
 // 			}
-// 			variant_case(Box<CodeBlock>, codeBlock) {
+// 			variant_case(ParserRef<CodeBlock>, codeBlock) {
 // 				if (codeBlock) res.content = codeBlock->codeBlockFromPST();
 // 			}
 // 		}
 // 		return makeRef<lsp::LSPCodeBlockOrStmt>(&res);
 // 	}
 
-// 	Box<lsp::LSPNotStmt> CodeBlockOrStmt::notStmtFromPST() const {
+// 	ParserRef<lsp::LSPNotStmt> CodeBlockOrStmt::notStmtFromPST() const {
 // 		return codeBlockOrStmtFromPST();
 // 	}
 
-// 	Box<lsp::LSPRoundGroupExpr> RoundGroupExpr::roundGroupExprFromPST() const {
+// 	ParserRef<lsp::LSPRoundGroupExpr> RoundGroupExpr::roundGroupExprFromPST() const {
 // 		lsp::LSPRoundGroupExpr& res = *new lsp::LSPRoundGroupExpr;
 // 		res.position                = this->getSourcePosition();
 // 		if (this->expr) res.expr = this->expr->exprFromPST();
 // 		return makeRef<lsp::LSPRoundGroupExpr>(&res);
 // 	}
 
-// 	Box<lsp::LSPNotStmt> RoundGroupExpr::notStmtFromPST() const {
+// 	ParserRef<lsp::LSPNotStmt> RoundGroupExpr::notStmtFromPST() const {
 // 		return roundGroupExprFromPST();
 // 	}
 
-// 	Box<lsp::LSPExpr> Expr::exprFromPST() const {
+// 	ParserRef<lsp::LSPExpr> Expr::exprFromPST() const {
 // 		lsp::LSPExpr& res = *new lsp::LSPExpr();
 // 		for (auto& elem: this->elements) {
 // 			variant_match(elem) {
@@ -170,73 +170,73 @@ using makeBox;
 // 		return makeRef<lsp::LSPExpr>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Expr::stmtFromPST() const { return exprFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Expr::stmtFromPST() const { return exprFromPST(); }
 
-// 	Box<lsp::LSPAction> Action::actionFromPST() const {
+// 	ParserRef<lsp::LSPAction> Action::actionFromPST() const {
 // 		lsp::LSPAction& res = *new lsp::LSPAction;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPAction>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Action::stmtFromPST() const { return actionFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Action::stmtFromPST() const { return actionFromPST(); }
 
-// 	Box<lsp::LSPReturn> Return::returnFromPST() const {
+// 	ParserRef<lsp::LSPReturn> Return::returnFromPST() const {
 // 		lsp::LSPReturn& res = *new lsp::LSPReturn;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPReturn>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Return::actionFromPST() const { return returnFromPST(); }
+// 	ParserRef<lsp::LSPAction> Return::actionFromPST() const { return returnFromPST(); }
 
-// 	Box<lsp::LSPBreak> Break::breakFromPST() const {
+// 	ParserRef<lsp::LSPBreak> Break::breakFromPST() const {
 // 		lsp::LSPBreak& res = *new lsp::LSPBreak;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPBreak>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Break::actionFromPST() const { return breakFromPST(); }
+// 	ParserRef<lsp::LSPAction> Break::actionFromPST() const { return breakFromPST(); }
 
-// 	Box<lsp::LSPContinue> Continue::continueFromPST() const {
+// 	ParserRef<lsp::LSPContinue> Continue::continueFromPST() const {
 // 		lsp::LSPContinue& res = *new lsp::LSPContinue;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPContinue>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Continue::actionFromPST() const { return continueFromPST(); }
+// 	ParserRef<lsp::LSPAction> Continue::actionFromPST() const { return continueFromPST(); }
 
-// 	Box<lsp::LSPRedo> Redo::redoFromPST() const {
+// 	ParserRef<lsp::LSPRedo> Redo::redoFromPST() const {
 // 		lsp::LSPRedo& res = *new lsp::LSPRedo;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPRedo>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Redo::actionFromPST() const { return redoFromPST(); }
+// 	ParserRef<lsp::LSPAction> Redo::actionFromPST() const { return redoFromPST(); }
 
-// 	Box<lsp::LSPRestart> Restart::restartFromPST() const {
+// 	ParserRef<lsp::LSPRestart> Restart::restartFromPST() const {
 // 		lsp::LSPRestart& res = *new lsp::LSPRestart;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPRestart>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Restart::actionFromPST() const { return restartFromPST(); }
+// 	ParserRef<lsp::LSPAction> Restart::actionFromPST() const { return restartFromPST(); }
 
-// 	Box<lsp::LSPDefer> Defer::deferFromPST() const {
+// 	ParserRef<lsp::LSPDefer> Defer::deferFromPST() const {
 // 		lsp::LSPDefer& res = *new lsp::LSPDefer;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPDefer>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Defer::actionFromPST() const { return deferFromPST(); }
+// 	ParserRef<lsp::LSPAction> Defer::actionFromPST() const { return deferFromPST(); }
 
-// 	Box<lsp::LSPThrow> Throw::throwFromPST() const {
+// 	ParserRef<lsp::LSPThrow> Throw::throwFromPST() const {
 // 		lsp::LSPThrow& res = *new lsp::LSPThrow;
 // 		fillAction(res, this->getSourcePosition(), this->expr);
 // 		return makeRef<lsp::LSPThrow>(&res);
 // 	}
 
-// 	Box<lsp::LSPAction> Throw::actionFromPST() const { return throwFromPST(); }
+// 	ParserRef<lsp::LSPAction> Throw::actionFromPST() const { return throwFromPST(); }
 
-// 	Box<lsp::LSPConst> Const::constFromPST() const {
+// 	ParserRef<lsp::LSPConst> Const::constFromPST() const {
 // 		lsp::LSPConst& res = *new lsp::LSPConst;
 // 		res.position       = this->getSourcePosition();
 // 		res.name           = this->name;
@@ -246,27 +246,27 @@ using makeBox;
 // 		return makeRef<lsp::LSPConst>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Const::stmtFromPST() const { return constFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Const::stmtFromPST() const { return constFromPST(); }
 
-// 	Box<lsp::LSPDecl> Decl::declFromPST() const {
+// 	ParserRef<lsp::LSPDecl> Decl::declFromPST() const {
 // 		lsp::LSPDecl& res = *new lsp::LSPDecl;
 // 		res.position      = this->getSourcePosition();
 // 		res.kind          = lsp::StmtKind::Decl;
 // 		return makeRef<lsp::LSPDecl>(&res);
 // 	}
 
-// 	Box<lsp::LSPStmt> Decl::stmtFromPST() const { return declFromPST(); }
+// 	ParserRef<lsp::LSPStmt> Decl::stmtFromPST() const { return declFromPST(); }
 
-// 	Box<lsp::LSPCodeDecl> CodeDecl::codeDeclFromPST() const {
+// 	ParserRef<lsp::LSPCodeDecl> CodeDecl::codeDeclFromPST() const {
 // 		lsp::LSPCodeDecl& res = *new lsp::LSPCodeDecl;
 // 		res.position          = this->getSourcePosition();
 // 		res.kind              = lsp::StmtKind::CodeDecl;
 // 		return makeRef<lsp::LSPCodeDecl>(&res);
 // 	}
 
-// 	Box<lsp::LSPDecl> CodeDecl::declFromPST() const { return codeDeclFromPST(); }
+// 	ParserRef<lsp::LSPDecl> CodeDecl::declFromPST() const { return codeDeclFromPST(); }
 
-// 	Box<lsp::LSPTopLevel> TopLevel::topLevelFromPST() const {
+// 	ParserRef<lsp::LSPTopLevel> TopLevel::topLevelFromPST() const {
 // 		lsp::LSPTopLevel& res = *new lsp::LSPTopLevel;
 // 		res.position          = this->getSourcePosition();
 // 		res.kind              = lsp::StmtKind::TopLevel;
@@ -275,9 +275,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPTopLevel>(&res);
 // 	}
 
-// 	Box<lsp::LSPDecl> TopLevel::declFromPST() const { return topLevelFromPST(); }
+// 	ParserRef<lsp::LSPDecl> TopLevel::declFromPST() const { return topLevelFromPST(); }
 
-// 	Box<lsp::LSPBlock> Block::blockFromPST() const {
+// 	ParserRef<lsp::LSPBlock> Block::blockFromPST() const {
 // 		lsp::LSPBlock& res = *new lsp::LSPBlock;
 // 		res.position       = this->getSourcePosition();
 // 		res.optional_name  = this->optional_name;
@@ -286,9 +286,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPBlock>(&res);
 // 	}
 
-// 	Box<lsp::LSPCodeDecl> Block::codeDeclFromPST() const { return blockFromPST(); }
+// 	ParserRef<lsp::LSPCodeDecl> Block::codeDeclFromPST() const { return blockFromPST(); }
 
-// 	Box<lsp::LSPNamespace> Namespace::namespaceFromPST() const {
+// 	ParserRef<lsp::LSPNamespace> Namespace::namespaceFromPST() const {
 // 		lsp::LSPNamespace& res = *new lsp::LSPNamespace;
 // 		res.position           = this->getSourcePosition();
 // 		res.name               = this->name;
@@ -297,9 +297,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPNamespace>(&res);
 // 	}
 
-// 	Box<lsp::LSPDecl> Namespace::declFromPST() const { return namespaceFromPST(); }
+// 	ParserRef<lsp::LSPDecl> Namespace::declFromPST() const { return namespaceFromPST(); }
 
-// 	Box<lsp::LSPStruct> Struct::structFromPST() const {
+// 	ParserRef<lsp::LSPStruct> Struct::structFromPST() const {
 // 		lsp::LSPStruct& res = *new lsp::LSPStruct;
 // 		res.position        = this->getSourcePosition();
 // 		res.name            = this->name;
@@ -310,9 +310,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPStruct>(&res);
 // 	}
 
-// 	Box<lsp::LSPDecl> Struct::declFromPST() const { return structFromPST(); }
+// 	ParserRef<lsp::LSPDecl> Struct::declFromPST() const { return structFromPST(); }
 
-// 	Box<lsp::LSPFun> Fun::funFromPST() const {
+// 	ParserRef<lsp::LSPFun> Fun::funFromPST() const {
 // 		auto* res     = new lsp::LSPFun;
 // 		res->position = this->getSourcePosition();
 // 		res->name     = this->name;
@@ -332,9 +332,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPFun>(res);
 // 	}
 
-// 	Box<lsp::LSPDecl> Fun::declFromPST() const { return funFromPST(); }
+// 	ParserRef<lsp::LSPDecl> Fun::declFromPST() const { return funFromPST(); }
 
-// 	Box<lsp::LSPVariable> Variable::variableFromPST() const {
+// 	ParserRef<lsp::LSPVariable> Variable::variableFromPST() const {
 // 		auto* res     = new lsp::LSPVariable;
 // 		res->position = this->getSourcePosition();
 // 		res->name     = this->name;
@@ -345,9 +345,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPVariable>(res);
 // 	}
 
-// 	Box<lsp::LSPDecl> Variable::declFromPST() const { return variableFromPST(); }
+// 	ParserRef<lsp::LSPDecl> Variable::declFromPST() const { return variableFromPST(); }
 
-// 	Box<lsp::LSPIf> If::ifFromPST() const {
+// 	ParserRef<lsp::LSPIf> If::ifFromPST() const {
 // 		lsp::LSPIf& res = *new lsp::LSPIf;
 // 		res.position    = this->getSourcePosition();
 // 		if (this->condition) res.condition = this->condition->roundGroupExprFromPST();
@@ -357,9 +357,9 @@ using makeBox;
 // 		return makeRef<lsp::LSPIf>(&res);
 // 	}
 
-// 	Box<lsp::LSPCodeDecl> If::codeDeclFromPST() const { return ifFromPST(); }
+// 	ParserRef<lsp::LSPCodeDecl> If::codeDeclFromPST() const { return ifFromPST(); }
 
-// 	Box<lsp::LSPWhile> While::whileFromPST() const {
+// 	ParserRef<lsp::LSPWhile> While::whileFromPST() const {
 // 		lsp::LSPWhile& res = *new lsp::LSPWhile;
 // 		res.position       = this->getSourcePosition();
 // 		if (this->condition) res.condition = this->condition->roundGroupExprFromPST();
@@ -369,6 +369,6 @@ using makeBox;
 // 		return makeRef<lsp::LSPWhile>(&res);
 // 	}
 
-// 	Box<lsp::LSPCodeDecl> While::codeDeclFromPST() const { return whileFromPST(); }
+// 	ParserRef<lsp::LSPCodeDecl> While::codeDeclFromPST() const { return whileFromPST(); }
 
 // }
