@@ -30,6 +30,8 @@ namespace compiler::backend_llvm {
 		Box<ModuleImpl> impl;
 
 	public:
+		Module(std::string_view module_id);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void addFunctionToModule(CRef<lir::Function> lir_function);

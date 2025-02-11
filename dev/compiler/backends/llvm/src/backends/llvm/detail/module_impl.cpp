@@ -15,12 +15,13 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
+	Module::Module(std::string_view module_id): impl(initModule(module_id)) {}
 
 	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
 		backend_llvm::addFunctionToModule(impl->module.refMut(), lir_function);
 	}
 
-	bool Module::verify() const { 
+	bool Module::verify() const {
 		std::cerr << "LLVMVerification: \n";
 		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
 		std::cerr << "\n";

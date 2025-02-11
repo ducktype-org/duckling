@@ -4,7 +4,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 
 namespace compiler::backend_llvm {
-	auto initModule() -> Box<ModuleImpl>;
-    
+	auto initModule(std::string_view module_id) -> Box<ModuleImpl>;
+
 	void addFunctionToModule(Ref<llvm::Module> module, CRef<lir::Function> lir_function);
 }

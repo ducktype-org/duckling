@@ -13,6 +13,7 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
+#include "llvm_lowering.hpp"
 #include "../llvm_backend.hpp"
 #include "module_impl.hpp"
 
@@ -192,8 +193,8 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations)
-			-> std::vector<llvm::Value*> {
+		auto lir2LLVMLocationList(const std::vector<lir::LirLocation>& lir_locations
+		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
@@ -271,25 +272,16 @@ namespace compiler::backend_llvm {
 	};
 
 	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
-		init();
-		llvm::LLVMContext& context = getLLVMContext();
-
-		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
-
-		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
-
-		// this implicitly adds the function to the module:
-		lir2llvm.createFunction();
-
-		Box<ModuleImpl> module_impl = makeBox<ModuleImpl>(std::move(module));
+		auto module_impl = initModule("test");
+		addFunctionToModule(module_impl->module.refMut(), lir_function);
 		return Module{ std::move(module_impl) };
 	}
 
-	auto initModule() -> Box<ModuleImpl> {
+	auto initModule(std::string_view module_id) -> Box<ModuleImpl> {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
+		Box<llvm::Module> module = makeBox<llvm::Module>(module_id, context);
 		return makeBox<ModuleImpl>(std::move(module));
 	}
 

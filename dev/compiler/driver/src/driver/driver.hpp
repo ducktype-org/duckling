@@ -1,54 +1,69 @@
 #pragma once
 
-#include "backends/llvm/llvm_backend.hpp"
-#include "base/ref.hpp"
-#include "lir/lir_lowering/lir_lowering.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
-#include "mir/mir_lowering/mir_lowering.hpp"
-#include "query_framework/query_entry_point.hpp"
+#include "base/box.hpp"
+#include "frontend/module_tree/module_tree.hpp"
+#include <backends/llvm/llvm_backend.hpp>
+#include <base/ref.hpp>
+#include <base/string_id.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <base/ints.hpp>
 #include <helios/hout/hout.hpp>
 
 namespace compiler::driver {
 	enum class BackendType { LLVM, DuckBC };
 
+	struct LIRModule {
+		frontend::ModuleID               module_id;
+		std::vector<CRef<lir::Function>> functions;
+	};
+
+	struct Options {
+		BackendType backend_type;
+		base::StrID output_file;
+	};
+
+	class BackendStrategy {
+		CRef<Options> options;
+
+	public:
+		BackendStrategy(CRef<Options> options): options(options) {}
+
+		virtual void compile(LIRModule& lir_module) = 0;
+
+		virtual ~BackendStrategy() = default;
+	};
+
+	class LLVMBackendStrategy: public BackendStrategy {
+	public:
+		LLVMBackendStrategy(CRef<Options> options): BackendStrategy(options) {}
+
+		void compile(LIRModule& lir_module) override;
+	};
+
+	class DuckBCBackendStrategy: public BackendStrategy {
+	public:
+		DuckBCBackendStrategy(CRef<Options> options): BackendStrategy(options) {}
+
+		void compile(LIRModule&) override {
+			// Not implemented
+		}
+	};
+
+	Box<BackendStrategy> createBackendStrategy(CRef<Options> options);
+
 	class Driver final {
 	public:
-		Driver(BackendType backend_type);
+		Driver(Options options):
+			  options(options),
+			  backend_driver(createBackendStrategy(&options)) {}
 
-		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit) {
-            switch (backend_type) {
-                case BackendType::LLVM:
-                    compileLLVM(hout_unit);
-                    return;
-                case BackendType::DuckBC:
-                    compileDuckBC(hout_unit);
-                    return;
-            }
-        }
+		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, frontend::ModuleID module_id);
 
 	private:
-		BackendType backend_type;
-        
-        auto getLIRFunctions(base::CRef<helios::HOUTUnit> hout_unit) -> std::vector<CRef<lir::Function>> {
-            std::vector<CRef<lir::Function>> functions;
-            functions.reserve(hout_unit->functions.size());
-
-            for (const auto& hout_function: hout_unit->functions) {
-                auto mir_function = query::entryPoint<mir::LowerToMirFunction>({ hout_function });
-                auto lir_function = query::entryPoint<lir::LowerToLirFunction>({ mir_function });
-                functions.push_back(lir_function);
-            }
-
-            return functions;
-        }
-
-        void compileLLVM(base::CRef<helios::HOUTUnit> hout_unit) {
-            backend_llvm::Module mod;
-        }
-
-        void compileDuckBC(base::CRef<helios::HOUTUnit>) {
-            // Not implemented
-        }
+		Options              options;
+		Box<BackendStrategy> backend_driver;
 	};
 }
