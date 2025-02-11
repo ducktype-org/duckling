@@ -27,6 +27,8 @@ private:
 
 		driver::Driver driver({ .backend_type = driver::BackendType::LLVM,
 		                        .output_file  = base::StrID("output") });
+
+		// This method can fail on module verification
 		driver.compileHOUTUnit(&top_level, frontend::ModuleID());
 	}
 };

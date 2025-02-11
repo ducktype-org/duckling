@@ -3,23 +3,24 @@
 
 namespace compiler::driver {
 
-	Box<BackendStrategy> createBackendStrategy(CRef<Options> options) {
+	Box<BackendDriver> createBackendStrategy(CRef<Options> options) {
 		switch (options->backend_type) {
 		case BackendType::LLVM:
-			return base::makeBox<LLVMBackendStrategy>(options);
+			return base::makeBox<LLVMBackendDriver>(options);
 		case BackendType::DuckBC:
-			return base::makeBox<DuckBCBackendStrategy>(options);
+			return base::makeBox<DuckBCBackendDriver>(options);
 		default:
 			throw base::LogicError("Unknown backend type");
 		}
 	}
 
-	void LLVMBackendStrategy::compile(LIRModule& lir_module) {
+	void LLVMBackendDriver::compile(LIRModule& lir_module) {
 		backend_llvm::Module mod("module_" + std::to_string(lir_module.module_id.asInt()));
 		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
 
 		if (not mod.verify()) throw base::LogicError("LLVM module verification failed");
 
+		std::cerr << "LLVM module compiled successfully\n";
 		mod.debugPrint();
 	}
 
