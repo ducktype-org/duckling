@@ -48,6 +48,8 @@ namespace tpc {
 
 	template<typename T>
 	void nullAwareDprint(const Box<T>& ref, std::ostream& out) {
+		// This templates's logic is very weird...
+		// It implies that if not bool(*ref) then <nullptr> else dprint...
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else

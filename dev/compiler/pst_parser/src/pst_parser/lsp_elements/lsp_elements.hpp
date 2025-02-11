@@ -7,10 +7,9 @@
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/parser_ref.hpp>
-
 
 #include <base/string_id.hpp>
+#include <base/box.hpp>
 
 #include <base/variant.hpp>
 #include <iostream>
@@ -31,8 +30,6 @@
  */
 
 namespace lsp {
-	using Box;
-	using makeBox;
 	using dia::SourcePosition;
 	using std::string;
 	using std::vector;
