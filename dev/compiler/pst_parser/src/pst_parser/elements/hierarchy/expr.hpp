@@ -523,7 +523,7 @@ namespace pst {
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
 		public:
-			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {};
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
 
 			[[nodiscard]]
 			std::string elementType() const override {

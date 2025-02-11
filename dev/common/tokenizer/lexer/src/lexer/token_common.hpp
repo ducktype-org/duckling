@@ -11,8 +11,8 @@ namespace lexer {
 		const base::StrID value;
 
 		Operator() = delete;
-		Operator(const base::StrID id): value(id) {};
-		Operator(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)) {};
+		Operator(const base::StrID id): value(id){};
+		Operator(const lang_def::NamedOperator op): value(lang_def::operatorToStr(op)){};
 		Operator(const Operator&) = default;
 
 		operator base::StrID() { return value; }
@@ -44,8 +44,8 @@ namespace lexer {
 		const base::StrID value;
 
 		Value();
-		Value(const base::StrID id): value(id) {};
-		Value(const std::string& str): value(base::StrID(str.c_str())) {};
+		Value(const base::StrID id): value(id){};
+		Value(const std::string& str): value(base::StrID(str.c_str())){};
 		Value(const Value&) = default;
 
 		operator base::StrID() { return value; }

@@ -44,7 +44,7 @@ namespace query::detail {
 		NodeID my_node;
 		bool   active = true;
 
-		ContextType(NodeID my_node): my_node(my_node) {};
+		ContextType(NodeID my_node): my_node(my_node){};
 		friend struct ContextMaker;
 
 	public:

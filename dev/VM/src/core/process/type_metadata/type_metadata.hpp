@@ -22,7 +22,7 @@ namespace vm {
 
 		TypeMetadataState state;
 
-		TypeMetadata(): state(TypeMetadataState::AddingTypes) {};
+		TypeMetadata(): state(TypeMetadataState::AddingTypes){};
 
 	public:
 		TypeRef addType(Type&& type);

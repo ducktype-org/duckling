@@ -155,7 +155,7 @@ namespace base {
 
 	public:
 		MBox() = default;
-		MBox(std::nullptr_t) {};
+		MBox(std::nullptr_t){};
 
 
 		MBox(const MBox& other) = delete;
