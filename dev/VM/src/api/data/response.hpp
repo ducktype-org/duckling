@@ -1,8 +1,10 @@
 #pragma once
 
-#include "status.hpp"
+#include <core/process/memory/block.hpp>
 #include <core/process/type_metadata/type.hpp>
+#include "status.hpp"
 
+// NOLINTBEGIN(readability-identifier-naming)
 template<>
 struct nlohmann::adl_serializer<base::RawView> {
 	static void to_json(json& j, const base::RawView& e) { j = e.stringView(); }
@@ -11,6 +13,17 @@ struct nlohmann::adl_serializer<base::RawView> {
 		CORE_PANIC("Parsing data from JSON into base::RawView is not supported (yet).");
 	}
 };
+
+template<>
+struct nlohmann::adl_serializer<vm::BlockID> {
+	static void to_json(json& j, const vm::BlockID& e) { j = std::to_string(static_cast<u64>(e)); }
+
+	static void from_json(const json& j, vm::BlockID& e) {
+		e = static_cast<vm::BlockID>(std::stoull(j.get<std::string>()));
+	}
+};
+
+// NOLINTEND(readability-identifier-naming)
 
 namespace vm::api {
 	namespace response {
@@ -25,8 +38,25 @@ namespace vm::api {
 			base::RawView data;
 			NLOHMANN_DEFINE_TYPE_INTRUSIVE(Block, data);
 		};
+
+		struct BlockIDs {
+			std::vector<BlockID> ids;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(BlockIDs, ids);
+		};
+
+		struct CodePosition {
+			u64 function_id;
+			u64 instr_number;
+			NLOHMANN_DEFINE_TYPE_INTRUSIVE(CodePosition, instr_number, function_id);
+		};
 	}
 
-	using Response
-		= std::variant<ProcStatus, response::Output, response::Block, TypeCRef, response::Empty>;
+	using Response = std::variant<
+		ProcStatus,
+		response::Output,
+		response::Block,
+		TypeCRef,
+		response::Empty,
+		response::BlockIDs,
+		response::CodePosition>;
 }

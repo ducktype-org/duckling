@@ -33,6 +33,8 @@ int main(int argc, char** argv) {
 		// error is lost somewhere on api-vcpu path
 		vm::api::run(process_pid).expect("Run error");
 
-		[[maybe_unused]] auto join_result = vm::api::join(process_pid);
+		[[maybe_unused]]
+		auto join_result
+			= vm::api::join(process_pid);
 	}
 }

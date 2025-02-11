@@ -1,10 +1,10 @@
-#include "comp_time.hpp"
-#include "elements/expr.hpp"
+#include "type_eval.hpp"
+#include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_impl.hpp>
 
-#include "elements/query_hout_of_expr.hpp"
-#include "visitors.hpp"
+#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <helios/hout/visitors.hpp>
 
 namespace compiler::helios {
 
@@ -114,7 +114,11 @@ namespace compiler::helios {
 			auto parsed = ctx.query<QueryHoutOfExpr>({ key.element });
 			if (parsed.hasError()) return errors::HError(parsed.error());
 
-			// @TODO hout 2.0 (once it works) assert here that type of parsed expr is meta
+			// note: this assert might be changed to a compiler error in the future:
+			CORE_ASSERT(
+				parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta,
+				"Expression provided to EvalExprToType has non-meta type."
+			);
 
 			return evalHoutExprToType(ctx, parsed.value().ref());
 		}

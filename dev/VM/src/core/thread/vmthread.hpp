@@ -1,7 +1,12 @@
 #pragma once
 
+#include "blocking_queue.hpp"
+
+#include <api/data/core_operation_error.hpp>
+#include <api/data/response.hpp>
 #include <base/box.hpp>
 #include <base/optional.hpp>
+#include <base/ints.hpp>
 #include <condition_variable>
 #include <core/process/memory/memory.hpp>
 #include <core/process/memory/thread_stack.hpp>
@@ -19,9 +24,16 @@
  * For now only single threaded execution is suported
  */
 
-
 namespace vm {
-	enum class ExecutionStrategy { Normal, StepByStep, Paused, Stoped };
+	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+	enum class ExecutionResponse : std::uint8_t {
+		Running,
+		Paused,
+		ExecutionStopped,
+		ExecutionCompleted,
+		ExecutionPanicked
+	};
+
 	struct Frame;
 
 	class VMProcess;
@@ -40,23 +52,27 @@ namespace vm {
 	 */
 	constexpr u64 STACK_LENGTH = FRAME_COUNT * 256;
 
-	// This structure holds pointers to `frame_stack` and `local_stack_reserved`
-	// vectors for fast access during runtime. `frame_stack` is a vector of frames,
-	// that we use like a stack. Top of the stack is saved in the `frame` argument
-	// passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
-	// one continuous block of memory, from which every function gets it's own chunk. It also
-	// behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
-	// is kept to remember where the top of the stack currently is.
+	/**
+	 * @brief This structure holds pointers to `frame_stack` and `local_stack_reserved`
+	 * vectors for fast access during runtime. `frame_stack` is a vector of frames,
+	 * that we use like a stack. Top of the stack is saved in the `frame` argument
+	 * passed inside opcode functions, which is also the current frame. `local_stack_reserved` is
+	 * one continuous block of memory, from which every function gets it's own chunk. It also
+	 * behaves like a stack, but can be moved forward by many bytes, so `local_stack_top`
+	 * is kept to remember where the top of the stack currently is.
+	 */
 	struct RuntimeData {
-		Frame*     frame_stack_base;  // Pointer to the first frame from `frame_stack` vector.
-		Frame*     frame_stack_end;   // Pointer to the first value not allocated.
-		std::byte* local_stack_base;  // Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_top;   // Pointer to the place, where new stack should start.
-		std::byte* local_stack_end;   // Pointer to the first value not allocated.
+		Frame* frame_stack_base;      /// Pointer to the first frame from `frame_stack` vector.
+		Frame* frame_stack_end;       /// Pointer to the first value not allocated.
+		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
+		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
+		std::byte* local_stack_top;   /// Pointer to the place, where new stack should start.
+		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
 
 		RuntimeData(Ref<ThreadStack> stack):
 			  frame_stack_base(stack->getFrameStack()->data()),
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
+			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
 			  local_stack_top(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
@@ -80,7 +96,7 @@ namespace vm {
 		/**
 		 * This is currently duplicated inside VCPUStatus
 		 */
-		api::ExecStatus status;
+		api::ExecStatus status = api::NotStarted{};
 
 		/**
 		 * @brief Process link as well as some of it's resources.
@@ -92,31 +108,37 @@ namespace vm {
 
 		// This might change:
 		std::condition_variable pause_cv;
-		/**
-		 * @brief Mutex that controls access to `is_running` and `execution_strategy`.
-		 *
-		 * When the supervisor thread (external api) wants to change the execution strategy, it has
-		 * to lock this mutex. The Execution Thread running in a loop will first check the
-		 * `is_running` flag every instruction, and if it is false, it will wait on `pause_cv` until
-		 * it is notified by the supervisor thread.
-		 */
-		std::mutex        external_api_mutex;
-		ExecutionStrategy execution_strategy = ExecutionStrategy::Stoped;
-		// @todo change to atomic_flag
-		std::atomic<bool> is_running = false;
 
-		// This function is marked as cold, because, well, it is cold, but
-		// the compiler did not figure this out on its own, hence the
-		// attribute. In short, this makes the compiler emit assembly with
-		// the assumption this method is rarely called. Testing has shown this
-		// speeds things up significantly.
-		[[gnu::cold]]
-		void handleExecutionStrategy();
 		/**
-		 * @brief This function is called to check the `is_running` atomic bool.
-		 * If it is false, it will call `handleExecutionStrategy`.
+		 * @brief Mutex responsible for setting the execution_request and execution_request_break
+		 * flags.
+		 *
+		 * This flags are used to signal the requests from the VMProcess to the VMThread to perform
+		 * an action like pause, resume, stop.
+		 *
+		 * As an optimization, when the VMThread is running and VMProcess want to break its
+		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
+		 * true, so the running VMThread can only check this flag first and not aquire the mutex.
 		 */
-		void handleExecutionStrategyIfNeeded();
+		std::mutex        execution_request_mutex;
+		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
+		std::atomic<bool> execution_request_break = false;
+
+		/**
+		 * @brief Message queue to send responses to the VMProcess.
+		 * @todo rewrite this to C++ futures
+		 */
+		BlockingQueue<ExecutionResponse> execution_response_queue;
+
+		bool waitForBrakepointResponse();
+
+		bool waitForStoppedResponse();
+
+		bool waitForRunningResponse();
+
+		void respondExecutionRequest(ExecutionResponse response);
+
+		void executeOneStep();
 
 		/**
 		 * @brief @TODO:
@@ -142,52 +164,62 @@ namespace vm {
 		 */
 		u64 internalCallMain(const FuncData&);
 
-		// @TODO add some thread data in the future
-
-		void setStatus(vm::api::ExecStatus status);
+		void setProcessStatus(const vm::api::ExecStatus& status);
 
 	public:
 		VMThread(VMProcess& process);
 
+		void breakActiveExecution();
+
+		void handlePausedExecution(std::unique_lock<std::mutex>&);
+
+		void handleBreakpoint();
+
 		/**
-		 * @brief Pause the execution of a program (by Supervisor)
-		 * Set execution status to paused.
+		 * @brief Creates new thread that runs the code in the Executor service.
+		 * Blocks until the thread is running.
+		 * @param code
+		 * @return true if the thread was successfully created and the program is running
+		 */
+		bool initThreadAndRun(Ref<const vm::Code> code);
+
+		/**
+		 * @brief Pauses the execution of a program.
+		 * Sets the status to paused and waits for the execution thread to respond.
 		 * "Assumes execution status is `running`"
-		 *
-		 * This function should return only when the execution is paused
-		 * This function may be called at any state of the execution
 		 * @return true if and only if program was in the running state and was successfully paused
 		 */
 		bool pause();
 
 		/**
-		 * @brief Resume the execution of a program (by Supervisor)
-		 * Set execution status to `running`.
+		 * @brief Resumes the execution of a program.
+		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 *
-		 * Function should return only when the execution is resumed
-		 * This function may be called at any state of the execution
 		 * @return true if and only if program was in the paused state and was successfully resumed
 		 */
 		bool resume();
 
+		/**
+		 * @brief Execute one step of the program.
+		 * Valid only when the VM is paused.
+		 * Waits for the program to perform one step and pause.
+		 * @return true if the program successfully performed one step and paused
+		 */
 		bool step();
 
 		/**
-		 * @brief Force kill the execution of a thread.
-		 * Called from the process.
+		 * @brief End the execution of a program.
+		 * Waits for the execution thread to responde.
+		 * @return true if the program is in the end stopped.
 		 */
-		void stop();
-
-		void prestart();
-
-		void initThread(Ref<const vm::Code> code);
+		bool stop();
 
 		/**
-		 * @brief Called on coreThread
-		 * coreThread is `main` exec thread
+		 * @brief Run the program.
 		 */
 		void run(Ref<const Code>);
+
+		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
@@ -195,13 +227,14 @@ namespace vm {
 		void waitUntilNotPausedAndCondition(
 			std::unique_lock<std::mutex>& lock, Condition condition
 		) {
-			pause_cv.wait(lock, [this, &condition] { return !isPaused() && condition(); });
+			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
 
 		void notifyPaused();
 
-		bool isPaused();
-		bool isAlive();
+
+		bool isPauseRequested();
+		bool isTerminateRequested();
 
 		friend class VMProcess;
 		friend class OpFuns;

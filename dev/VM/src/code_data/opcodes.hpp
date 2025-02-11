@@ -32,7 +32,6 @@ namespace vm {
 #define DEF_OPCODE(opcode) opcode,
 #include "opcodes_list.hpp"
 #undef DEF_OPCODE
-		COUNT,
 	};
 	const std::map<std::string, OpcodeFix8> str_to_OpcodeFix8{
 #define DEF_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
