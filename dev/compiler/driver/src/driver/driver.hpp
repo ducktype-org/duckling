@@ -28,7 +28,7 @@ namespace compiler::driver {
 	 */
 	struct Options {
 		BackendType backend_type;
-		base::StrID output_file; /// just a mock-up for now
+		base::StrID output_file;  /// just a mock-up for now
 	};
 
 	/**
@@ -76,9 +76,7 @@ namespace compiler::driver {
 	 */
 	class Driver final {
 	public:
-		Driver(Options options):
-			  options(options),
-			  backend_driver(createBackendDriver(&options)) {}
+		Driver(Options options): options(options), backend_driver(createBackendDriver(&options)) {}
 
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
 
