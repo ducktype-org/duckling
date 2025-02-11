@@ -15,7 +15,7 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
-	Module::Module(std::string_view module_id): impl(initModule(module_id)) {}
+	Module::Module(base::StrID module_id): impl(initModule(module_id)) {}
 
 	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
 		backend_llvm::addFunctionToModule(impl->module.refMut(), lir_function);

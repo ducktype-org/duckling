@@ -1,7 +1,7 @@
 /**
  * @file driver.hpp
  * @author Wojciech Rzepliński
- * @brief Main compilation driver, manages the compilation process across all layers.
+ * @brief Main module driver, currently compiles HOUT-Unit to LLVM Module.
  */
 #pragma once
 
@@ -25,8 +25,8 @@ namespace compiler::driver {
 	 * @brief The last intermediate representation of the module before the backends.
 	 * It will be fed to the backends to generate the final output.
 	 */
-	struct LIRModule {
-		frontend::ModuleID               module_id;
+	struct BackendModuleData {
+		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
 	};
 
@@ -49,7 +49,7 @@ namespace compiler::driver {
 	public:
 		BackendDriver(CRef<Options> options): options(options) {}
 
-		virtual void compile(LIRModule& lir_module) = 0;
+		virtual void compile(BackendModuleData& module_data) = 0;
 
 		virtual ~BackendDriver() = default;
 	};
@@ -58,23 +58,22 @@ namespace compiler::driver {
 	public:
 		LLVMBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(LIRModule& lir_module) override;
+		void compile(BackendModuleData& module_data) override;
 	};
 
 	class DuckBCBackendDriver: public BackendDriver {
 	public:
 		DuckBCBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(LIRModule&) override {
-			// Not implemented
+		void compile(BackendModuleData&) override {
+			throw base::NotYetImplemented("compilation for BC driver");
 		}
 	};
 
 	Box<BackendDriver> createBackendStrategy(CRef<Options> options);
 
 	/**
-	 * @brief Main compilation driver.
-	 * It will manage the compilation process across all layers.
+	 * @brief Main compilation driver of the HOUTUnit to backend module.
 	 */
 	class Driver final {
 	public:
@@ -82,7 +81,7 @@ namespace compiler::driver {
 			  options(options),
 			  backend_driver(createBackendStrategy(&options)) {}
 
-		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, frontend::ModuleID module_id);
+		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
 
 	private:
 		Options            options;

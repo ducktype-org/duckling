@@ -14,8 +14,8 @@ namespace compiler::driver {
 		}
 	}
 
-	void LLVMBackendDriver::compile(LIRModule& lir_module) {
-		backend_llvm::Module mod("module_" + std::to_string(lir_module.module_id.asInt()));
+	void LLVMBackendDriver::compile(BackendModuleData& lir_module) {
+		backend_llvm::Module mod(lir_module.module_id);
 		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
 
 		if (not mod.verify()) throw base::LogicError("LLVM module verification failed");
@@ -23,9 +23,9 @@ namespace compiler::driver {
 		std::cerr << "LLVM module compiled successfully\n";
 		mod.debugPrint();
 	}
-
+	
 	void Driver::compileHOUTUnit(
-		base::CRef<helios::HOUTUnit> hout_unit, frontend::ModuleID module_id
+		base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id
 	) {
 		std::vector<CRef<lir::Function>> functions;
 		functions.reserve(hout_unit->functions.size());
@@ -36,8 +36,8 @@ namespace compiler::driver {
 			functions.push_back(lir_function);
 		}
 
-		LIRModule lir_module{ .module_id = module_id, .functions = functions };
+		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
-		backend_driver->compile(lir_module);
+		backend_driver->compile(module_data);
 	}
 }

@@ -30,7 +30,7 @@ namespace compiler::backend_llvm {
 		Box<ModuleImpl> impl;
 
 	public:
-		Module(std::string_view module_id);
+		Module(base::StrID module_id);
 
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 

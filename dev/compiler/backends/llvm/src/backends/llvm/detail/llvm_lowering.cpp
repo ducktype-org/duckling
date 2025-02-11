@@ -277,11 +277,11 @@ namespace compiler::backend_llvm {
 		return Module{ std::move(module_impl) };
 	}
 
-	auto initModule(std::string_view module_id) -> Box<ModuleImpl> {
+	auto initModule(base::StrID module_id) -> Box<ModuleImpl> {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::Module> module = makeBox<llvm::Module>(module_id, context);
+		Box<llvm::Module> module = makeBox<llvm::Module>(module_id.str(), context);
 		return makeBox<ModuleImpl>(std::move(module));
 	}
 
