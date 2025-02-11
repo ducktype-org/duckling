@@ -1,9 +1,14 @@
 #include "driver.hpp"
 #include <base/exceptions.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <backends/llvm/llvm_backend.hpp>
 
 namespace compiler::driver {
 
-	Box<BackendDriver> createBackendStrategy(CRef<Options> options) {
+	Box<BackendDriver> createBackendDriver(CRef<Options> options) {
 		switch (options->backend_type) {
 		case BackendType::LLVM:
 			return base::makeBox<LLVMBackendDriver>(options);

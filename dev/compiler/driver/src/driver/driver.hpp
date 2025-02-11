@@ -6,16 +6,9 @@
 #pragma once
 
 #include <base/box.hpp>
-#include <frontend/module_tree/module_tree.hpp>
-#include <backends/llvm/llvm_backend.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
-#include <cstdint>
-#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <base/ints.hpp>
 #include <helios/hout/hout.hpp>
 
 namespace compiler::driver {
@@ -35,13 +28,14 @@ namespace compiler::driver {
 	 */
 	struct Options {
 		BackendType backend_type;
-		base::StrID output_file;
+		base::StrID output_file; /// just a mock-up for now
 	};
 
 	/**
 	 * @brief Backend strategy interface.
 	 * Backends will have unique logic for compiling the module, so they only need to implement
 	 * `compile` method.
+	 * @todo for future, see if we can just make "Module" interface with 'add_function'-like methods
 	 */
 	class BackendDriver {
 		CRef<Options> options;  // NOLINT: Currently unused
@@ -75,7 +69,7 @@ namespace compiler::driver {
 		}
 	};
 
-	Box<BackendDriver> createBackendStrategy(CRef<Options> options);
+	Box<BackendDriver> createBackendDriver(CRef<Options> options);
 
 	/**
 	 * @brief Main compilation driver of the HOUTUnit to backend module.
@@ -84,7 +78,7 @@ namespace compiler::driver {
 	public:
 		Driver(Options options):
 			  options(options),
-			  backend_driver(createBackendStrategy(&options)) {}
+			  backend_driver(createBackendDriver(&options)) {}
 
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
 
