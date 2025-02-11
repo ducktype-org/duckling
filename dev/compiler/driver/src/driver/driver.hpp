@@ -5,8 +5,8 @@
  */
 #pragma once
 
-#include "base/box.hpp"
-#include "frontend/module_tree/module_tree.hpp"
+#include <base/box.hpp>
+#include <frontend/module_tree/module_tree.hpp>
 #include <backends/llvm/llvm_backend.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
