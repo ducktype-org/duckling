@@ -20,6 +20,7 @@ namespace hashing {
 		 */
 		template<typename Self, typename CheckT>
 		struct CheckAccessTo_updateHash_ptr: public std::remove_cvref_t<Self> {
+			// should be callable from derived class but not from outside
 			void check(CheckT* data, usize len) requires requires {
 				CheckAccessTo_updateHash_ptr<Self, CheckT>{}.std::remove_cvref_t<Self>::updateHash(
 					data, len
@@ -32,6 +33,7 @@ namespace hashing {
 		 */
 		template<typename Self>
 		struct CheckAccessTo_updateHash_sv: public std::remove_cvref_t<Self> {
+			// should be callable from derived class but not from outside
 			void check(const std::string_view sv) requires requires {
 				CheckAccessTo_updateHash_sv<Self>{}.std::remove_cvref_t<Self>::updateHash(sv);
 			} && (not requires(Self self) { self.updateHash(sv); }) {}
@@ -42,6 +44,7 @@ namespace hashing {
 		 */
 		template<typename Self>
 		struct CheckAccessTo_addHashCode: public std::remove_cvref_t<Self> {
+			// should be callable from derived class but not from outside
 			template<specialization_of<TypeHashCodeBase> TypeHC>
 			void check(TypeHC hash) requires requires {
 				CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash);

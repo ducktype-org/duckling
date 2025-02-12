@@ -176,7 +176,7 @@ private:
 		dh("hello 1234567890");
 
 		Hash<DebugHash, TypeHashCode>{}(type3{});
-		// Hash<DebugHash>{}(type4{});
+		Hash<DebugHash>{}(type4{});
 	}
 
 	template<typename Alg>
@@ -203,6 +203,16 @@ private:
 		constexpr auto         r6 = Hash{}(S{});
 		StatefulHash<Fnv1a_64> h;
 		h(123, 345.f, std::string_view{ "hello" }, S{});
+
+		Fnv1a_32 h2;
+		h2("hello");
+		Fnv1a_32{}("hello");
+		Hash{}("hello");
+		StatefulHash{}("hello");
+		StatefulHash h3;
+		h3("hello");
+		h3(123, 345.f, "hello", S{});
+
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 

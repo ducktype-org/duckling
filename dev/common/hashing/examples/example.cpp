@@ -113,4 +113,14 @@ int main() {
 	std::cout << hashing::TYPE_HASH_CODE<int> << ' ' << hashing::TYPE_HASH_CODE<type1> << '\n';
 
 	std::cout << "hash of type_with_bases: " << hashing::Hash{}(type_with_bases{}) << '\n';
+
+
+	// different hash code types
+	std::cout << hashing::Hash<hashing::DebugHash, void>{}(42) << '\n'
+			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u32>>{}(42) << '\n'
+			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u64>>{}(42) << '\n';
+
+	std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
+		42, 3.14, "hello", std::pair<std::string, char>{ "abc", 'x' }
+	) << '\n';
 }

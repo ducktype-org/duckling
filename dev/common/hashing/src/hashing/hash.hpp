@@ -44,7 +44,12 @@ namespace hashing {
 	}  // namespace detail
 
 	/**
-	 * callable type that hashes objects appending their type codes
+	 * @brief Callable type that obtains a hash for an object it is called with
+	 * together with it's type code using the specified hash algorithm
+	 *
+	 * @tparam HashAlgorithm Hashing algorithm to use
+	 * @tparam TypeHC Type of the hash code that should be appended to the hash
+	 * or void if the type code should not be appended
 	 */
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
@@ -62,6 +67,8 @@ namespace hashing {
 			if constexpr (APPEND_TYPE_HASH_CODE) {
 				if constexpr (detail::can_get_type_hash_code<T, TypeHC, HashAlgorithm>)
 					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
+				else if constexpr (detail::can_get_type_hash_code<T, TypeHC, DefaultHashAlgorithm>)
+					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, DefaultHashAlgorithm>);
 				else
 					h(TYPE_HASH_CODE<T>);
 			}
@@ -70,8 +77,14 @@ namespace hashing {
 	};
 
 	/**
-	 * callable type that hashes objects appending their type codes
-	 * keeps the state between calls
+	 * @brief Callable type that obtains hash values for sequences of objects it is called with
+	 * Type keeps the state between calls, so next objects can be appended
+	 * Casting to result_type of the hash algorithm yields the hash value corresponding to the
+	 * current state
+	 *
+	 * @tparam HashAlgorithm Hashing algorithm to use
+	 * @tparam TypeHC Type of the hash code that should be appended to the hash
+	 * or void if the type code should not be appended
 	 */
 	template<
 		hash_algorithm         HashAlgorithm = DefaultHashAlgorithm,
@@ -102,6 +115,12 @@ namespace hashing {
 				if constexpr ((detail::can_get_type_hash_code<Ts, TypeHC, HashAlgorithm> && ...)) {
 					((addToHash(h, ts),
 					  h(TYPE_HASH_CODE<Ts, typename TypeHC::value_type, HashAlgorithm>)),
+					 ...);
+				} else if constexpr ((detail::
+				                          can_get_type_hash_code<Ts, TypeHC, DefaultHashAlgorithm>
+				                      && ...)) {
+					((addToHash(h, ts),
+					  h(TYPE_HASH_CODE<Ts, typename TypeHC::value_type, DefaultHashAlgorithm>)),
 					 ...);
 				} else {
 					((addToHash(h, ts), h(TYPE_HASH_CODE<Ts>)), ...);

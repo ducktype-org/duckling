@@ -124,10 +124,15 @@ namespace hashing {
 		 */
 		template<typename T>
 		concept supports_std_get = requires {
+			// don't remove this line and don't change to std::tuple_size_v
+			// if std::tuple_size_v is ill-formed, the fail may happen not in the immediate context
+			// of the concept check which may omit SFINAE
 			std::tuple_size<T>::value;
+
 			[]<std::size_t... Is>(std::index_sequence<Is...>) requires requires {
 				(std::get<Is>(std::declval<T>()), ...);
-			} {}(std::make_index_sequence<std::tuple_size<T>::value>{});
+			} {}(std::make_index_sequence<std::tuple_size<T>::value>{}
+			);  // don't change to std::tuple_size_v
 		};
 
 	}  // namespace detail

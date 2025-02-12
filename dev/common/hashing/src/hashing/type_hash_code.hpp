@@ -42,7 +42,7 @@ namespace hashing {
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
 			return StrToIntegral<I, HashAlgorithm>{ __FUNCDNAME__ };
-#elifndef __PRETTY_FUNCTION__
+#elif defined(__GNUC__) || defined(__clang__)
 			return StrToIntegral<I, HashAlgorithm>{ __PRETTY_FUNCTION__ };
 #else
 	#error "Please provide a unique string for each type"
