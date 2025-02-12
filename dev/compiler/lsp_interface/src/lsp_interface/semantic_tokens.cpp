@@ -46,7 +46,7 @@ namespace lsp {
         result["line"]           = std::to_string(this->line);
         result["startCharacter"] = std::to_string(this->startCharacter);
         result["length"]         = std::to_string(this->length);
-        result["tokenType"]      = ""; // @TODO MAKE_STRINGIFYABLE_ENUM?
+        result["tokenType"]      = base::enumToStr(this->type).strView();
         result["tokenModifiers"] = "0"; // @TODO
 
         return jsonDict(result);
