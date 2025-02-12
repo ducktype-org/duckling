@@ -10,34 +10,44 @@ namespace vm::api {
 
 	struct TypeAnalysis {};
 
-	struct Panicked {
+	struct ExecutionPanicked {
 		std::exception exception;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Panicked, exception);
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, exception);
 	};
 
 	struct Paused {};
 
 	struct Running {};
 
-	struct PausedOnError {
-		std::string reason;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(PausedOnError, reason);
-	};
-
 	struct WaitingForInput {};
 
 	struct NotStarted {};
 
-	using ExecStatus
-		= std::variant<Panicked, Running, Paused, PausedOnError, WaitingForInput, NotStarted>;
+	struct ExecutionCompleted {};
+
+	struct ExecutionStopped {};
+
+	using ExecStatus = std::variant<
+		Running,
+		Paused,
+		WaitingForInput,
+		NotStarted,
+		ExecutionCompleted,
+		ExecutionStopped,
+		ExecutionPanicked>;
+
+	constexpr bool isStatusTerminal(const ExecStatus& status) {
+		return std::holds_alternative<ExecutionCompleted>(status)
+		    || std::holds_alternative<ExecutionStopped>(status)
+		    || std::holds_alternative<ExecutionPanicked>(status);
+	}
 
 	struct Executing {
 		ExecStatus exec_status;
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::Executing, exec_status);
 	};
 
-	using ProcStatus
-		= std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Panicked, Executing>;
+	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
 }
 
 
@@ -50,5 +60,6 @@ JSON_REGISTER_TYPE_WITH_NAME(vm::api::NotStarted, "NotStarted")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Paused, "Paused")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Running, "Running")
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::Executing, "Executing")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::Panicked, "Panicked")
-JSON_REGISTER_TYPE_WITH_NAME(vm::api::PausedOnError, "PausedOnError")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionPanicked, "ExecutionPanicked")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionCompleted, "ExecutionCompleted")
+JSON_REGISTER_TYPE_WITH_NAME(vm::api::ExecutionStopped, "ExecutionStopped")

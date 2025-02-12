@@ -5,6 +5,7 @@ import re
 
 import click
 
+
 def with_venv(cmd):
     if not pathlib.Path(".venv").exists():
         exit_with_error('.venv does not exits. Use "./toolbox.py setup-venv"')
@@ -20,9 +21,11 @@ def exit_with_error(msg):
 
 
 class BashCommandError(Exception):
-    def __init__(self, command: str, exit_code, stdout, stderr):
+    def __init__(
+        self, command: str, exit_code, stdout, stderr, at: pathlib.Path = None
+    ):
         super().__init__(
-            f"\n\tBash command `{command}` has failed with a an exit code: {exit_code}, because:\n"
+            f"\n\tBash command `{command}` {f'\n\texecuted at `{at.absolute()}` ' if at else ''}\n\thas failed with an exit code: {exit_code}, because:\n"
             + f"[STDOUT]:{"\n" + stdout if stdout else ""}\n"
             + f"[STDERR]:{"\n" + stderr if stderr else ""}"
         )
@@ -30,26 +33,64 @@ class BashCommandError(Exception):
         self.exit_code = exit_code
         self.stdout = stdout
         self.stderr = stderr
+        self.at = at
 
 
-def bash_command(cmd, cwd=".", redirect=None, click_file=sys.stdout):
-    log_bash(cmd, file=click_file)
-    proc = sp.Popen(["/bin/bash", "-c", cmd], cwd=cwd, stdout=redirect, stderr=redirect)
-    stdout, stderr = proc.communicate()
+def exec_bash_command(
+    command: str,
+    cwd: str | pathlib.Path,
+    capture_output=False,
+    input: bytes | None = None,
+    exitcode=0,
+    dry: bool = False,
+    verbose: bool = False,
+    decode: bool = True,
+    log_to_file=sys.stdout,
+) -> tuple[bytes, bytes]:
+    """
+    This is the lowest level access to calling a bash command in toolbox.
+    """
+    if isinstance(cwd, str):
+        cwd = pathlib.Path(cwd)
+    if dry or verbose:
+        command = replace_special(command)
+        log_bash(f'cd "{cwd.absolute()}" && {command}', file=log_to_file)
+        if dry:
+            return bytes(), bytes()
 
-    if stdout is not None:
-        stdout = stdout.decode("UTF-8")
-    if stderr is not None:
-        stderr = stderr.decode("UTF-8")
+    proc = sp.Popen(
+        ["/bin/bash", "-c", command],
+        cwd=cwd,
+        stdin=sp.PIPE if input else None,
+        stdout=sp.PIPE if capture_output else None,
+        stderr=sp.PIPE if capture_output else None,
+    )
+    stdout, stderr = proc.communicate(input=input)
 
     status = proc.wait()
-    if status != 0:
-        raise BashCommandError(cmd, status, stdout, stderr)
+
+    # Check if there's a need for decoding
+    if status != exitcode or decode:
+        if stdout is not None:
+            stdout = stdout.decode("UTF-8")
+        if stderr is not None:
+            stderr = stderr.decode("UTF-8")
+
+    if status != exitcode:
+        raise BashCommandError(command, status, stdout, stderr, at=cwd)
+
     return stdout, stderr
 
 
-def bash_command_get_output(cmd, cwd=".", click_file=sys.stdout):
-    return bash_command(cmd, cwd, redirect=sp.PIPE, click_file=click_file)
+def bash_command(command: str, cwd: str = ".", log_file=sys.stdout):
+    log_bash(command, file=log_file)
+    exec_bash_command(command=command, cwd=cwd, log_to_file=log_file)
+
+
+def bash_command_get_output(command: str, cwd: str = ".", log_file=sys.stdout):
+    return exec_bash_command(
+        command=command, cwd=cwd, capture_output=True, log_to_file=log_file
+    )
 
 
 def click_log(prefix, msg, fg, bold=False, nl=True, file=sys.stdout):
@@ -122,11 +163,23 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
         )
 
 
-def make_pretty_command(command):
-    pretty_command = command.replace("\n", " ")
-    while "  " in pretty_command:
-        pretty_command = pretty_command.replace("  ", " ")
-    return pretty_command
+def replace_special(command: str) -> str:
+    """
+    Replaces special chars like '\n' or '\t' to '\\n' and '\\t'.
+
+    This helps with readability of eg. program output.
+    """
+    command = command.replace("\n", "\\n")
+    command = command.replace("\t", "\\t")
+    command = command.replace("\r", "\\r")
+    return command
+
+
+def truncate_str(string, max_len=10, surround="`"):
+    """
+    Truncate a string and adds `surround` char around the string. If string is longer than `max_len` does string[:max_len] + surround + '...'.
+    """
+    return f"{surround}{string[:max_len] + (f'{surround}...' if len(string) > max_len else surround)}"
 
 
 # this class overrides the click.Option class, so it can get ctx
@@ -135,7 +188,7 @@ def default_compiler_from_ctx(default_name):
 
     class OptionDefaultFromCtx(click.Option):
 
-        def get_default(self, ctx, call = True):
+        def get_default(self, ctx, call=True):
             if default_name == "cc_compiler":
                 self.default = infer_cc_compiler(ctx)
             elif default_name == "cxx_compiler":
@@ -190,9 +243,9 @@ def infer_cxx_compiler(ctx):
 
 
 def get_program_version(prog):
-    version_out = sp.run([prog, '--version'], capture_output=True, text=True)
+    version_out = sp.run([prog, "--version"], capture_output=True, text=True)
     version_info = version_out.stdout.splitlines()[0]
-    match = re.search(r'(\d+(\.\d+)+)', version_info)
+    match = re.search(r"(\d+(\.\d+)+)", version_info)
     return match.group(0) if match else None
 
 
@@ -201,13 +254,15 @@ def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
         exit_with_error("Couldn't get the compilers")
 
     if (
-        ("clang" in cc_compiler and "clang++" not in cxx_compiler) or
-        ("gcc" in cc_compiler and "clang++" in cxx_compiler) or
-        ("gcc" in cc_compiler and "g++" not in cxx_compiler) or
-        ("icx" in cc_compiler and "icpx" not in cxx_compiler) or
-        ("icc" in cc_compiler and "icpc" not in cxx_compiler)
+        ("clang" in cc_compiler and "clang++" not in cxx_compiler)
+        or ("gcc" in cc_compiler and "clang++" in cxx_compiler)
+        or ("gcc" in cc_compiler and "g++" not in cxx_compiler)
+        or ("icx" in cc_compiler and "icpx" not in cxx_compiler)
+        or ("icc" in cc_compiler and "icpc" not in cxx_compiler)
     ):
-        exit_with_error(f"Compilers are not compatible: {cxx_compiler=}, {cc_compiler=}")
+        exit_with_error(
+            f"Compilers are not compatible: {cxx_compiler=}, {cc_compiler=}"
+        )
 
     cxx_version = get_program_version(cxx_compiler)
     cc_version = get_program_version(cc_compiler)
@@ -215,4 +270,6 @@ def check_if_compilers_are_compatible(cxx_compiler, cc_compiler):
     if cxx_version is None or cc_version is None:
         exit_with_error("Couldn't get the version of the compilers")
     elif cxx_version != cc_version:
-        exit_with_error(f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}")
+        exit_with_error(
+            f"Compiler versions are not compatible: {cxx_version=}, {cc_version=}"
+        )

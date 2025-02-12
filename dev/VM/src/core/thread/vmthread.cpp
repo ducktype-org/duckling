@@ -1,4 +1,5 @@
 
+#include <mutex>
 #include <utility>
 #include <cstring>
 #include <base/ints.hpp>
@@ -11,448 +12,77 @@
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
 #include <core/process/memory/pointer.hpp>
+#include <api/data/response.hpp>
+#include <api/data/status.hpp>
+#include <base/variant.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
+#include "opcodes_functions.hpp"
+#include "opcodes_functions_debug.hpp"
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
 		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()) {
-		// @TODO: not loaded status
-		setStatus(api::NotStarted{});
-	}
+		  process_types(process.getTypeMetadata()) {}
 
-	void VMThread::handleExecutionStrategy() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Paused) setStatus(api::Paused{});
-		pause_cv.wait(lock, [this] { return execution_strategy != ExecutionStrategy::Paused; });
-		setStatus(api::Running{});
-		if (execution_strategy == ExecutionStrategy::Stoped) throw KillProcessException{};
-		if (execution_strategy == ExecutionStrategy::StepByStep)
-			execution_strategy = ExecutionStrategy::Paused;
-	}
-
-	[[gnu::always_inline]]
-	inline void VMThread::handleExecutionStrategyIfNeeded() {
-		if (is_running) return;
-		handleExecutionStrategy();
-	}
-
-	template<typename T>
-	[[gnu::always_inline]]
-	inline static T& derefStack(std::byte* stack, i64 position) {
-		return *(reinterpret_cast<T*>(&stack[position]));
-	}
-
-	// NOTE: functions that implement opcodes (opfunctions) must be done this way:
-	//
-	// RETURN_TYPE OpFuns::op_<opcode_name>(OPFUN_ARGS) {
-	//  {
-	//    <function_body>
-	//  }
-	//  OPFUN_CONT(<step>);
-	// }
-	//
-	// Function body must be seperated from the scope of OPFUN_CONT to make sure
-	// that all its destructors have been called before invoking next tail call.
-	// Otherwise, the compiler may get confused and may schedule destructors from
-	// the body after the next tail call, which then becomes a regular function
-	// call and may cause the stack to explode.
-
-	// `op_exit` is the only opcode without the `OPFUN_CONT` or `OPFUN_CONT_CHECK_STRATEGY` macro.
-	// This means, every other will jump to the next instruction at the end of it with
-	// `OPFUN_CONT`/`OPFUN_CONT_CHECK_STRATEGY`, so the the only way to end execution is to use this
-	// opcode. It also requires different macro surrounding the function call in the computed goto's
-	// and switch case, because in those approaches we can't end execution from within the function,
-	// but we have to add some instructions on the outside of it. Hence we use the `OP_CASE_END`
-	// macro that adds `goto End` instruction, residing after opcode function, inside interpeter
-	// loop.
-	RETURN_TYPE OpFuns::op_exit(OPFUN_ARGS) { IF_TC(return;) }
-
-	RETURN_TYPE OpFuns::op_handle_strategy(OPFUN_ARGS) {
-		{ thread.handleExecutionStrategy(); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_l64_imm(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_l64_l64(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_cmov_l64_l64(OPFUN_ARGS) {
+	/**
+	 * @brief Tail call written function that handles the execution pause request.
+	 */
+	RETURN_TYPE OpFuns::handle_execution_break(OPFUN_ARGS) {
 		{
-			if (frame->flags.flag)
-				derefStack<u64>(local_stack, instr->arg0)
-					= derefStack<u64>(local_stack, instr->arg1);
+			save_execution_state(instr, local_stack, frame, thread);
+
+			thread.breakActiveExecution();
+
+			// Restore current registers and flow, because
+			// they could be changed when doing "step by step" execution.
+			frame       = thread.runtime_data.frame_stack_current;
+			instr       = frame->instr;
+			local_stack = frame->local_stack;
 		}
 		OPFUN_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::op_mov_l64_r0(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_r0_l64(OPFUN_ARGS) {
-		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_add_l64_l64(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) += derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_add_l64_imm(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) += instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_sub_l64_l64(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) -= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_sub_l64_imm(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) -= instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mul_l64_imm(OPFUN_ARGS) {
+	/**
+	 * @brief Saves all current execution state in thread memory.
+	 *
+	 * The opcodes functions in tail call mode passes some state values in the registers
+	 * (in the function arguments). This functions saves them from the registers to the
+	 * current frame.
+	 */
+	RETURN_TYPE OpFuns::save_execution_state(OPFUN_ARGS) {
 		{
-			// @TODO: check types
-			derefStack<u64>(local_stack, instr->arg0) *= instr->arg1;
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mod_l64_imm(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) %= instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mod_l64_l64(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) %= derefStack<u64>(local_stack, instr->arg1); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_div_l64_imm(OPFUN_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) /= instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_cmpEq_l64_l64(OPFUN_ARGS) {
-		{
-			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                 == derefStack<u64>(local_stack, instr->arg1);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_cmpEq_l64_imm(OPFUN_ARGS) {
-		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_cmpG_l64_l64(OPFUN_ARGS) {
-		{
-			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                  > derefStack<u64>(local_stack, instr->arg1);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_cmpG_l64_imm(OPFUN_ARGS) {
-		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_jmpRel_label(OPFUN_ARGS) {
-		{ instr += instr->arg0; }
-		OPFUN_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::op_jmpRelIf_label(OPFUN_ARGS) {
-		{
-			if (frame->flags.flag) instr += instr->arg0;
-		}
-		OPFUN_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::op_jmpRelNotIf_label(OPFUN_ARGS) {
-		{
-			if (!frame->flags.flag) instr += instr->arg0;
-		}
-		OPFUN_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_l64_arg64(OPFUN_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, instr->arg1); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_lptr_argptr(OPFUN_ARGS) {
-		{
-			derefStack<Pointer>(local_stack, instr->arg0)
-				= derefStack<Pointer>(frame->args, instr->arg1);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_getFstArg_l64(OPFUN_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, 0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_getFstArg_lptr(OPFUN_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = derefStack<Pointer>(frame->args, 0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_setFstArg_l64(OPFUN_ARGS) {
-		{ derefStack<i64>(frame->next_args, 0) = derefStack<i64>(local_stack, instr->arg0); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_setFstArg_lptr(OPFUN_ARGS) {
-		{
-			derefStack<Pointer>(frame->next_args, 0)
-				= derefStack<Pointer>(local_stack, instr->arg0);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_arg64_l64(OPFUN_ARGS) {
-		{
-			derefStack<i64>(frame->next_args, instr->arg0)
-				= derefStack<i64>(local_stack, instr->arg1);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_mov_argptr_lptr(OPFUN_ARGS) {
-		{
-			derefStack<Pointer>(frame->next_args, instr->arg0)
-				= derefStack<Pointer>(local_stack, instr->arg1);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_call_func(OPFUN_ARGS) {
-		{
-			// We have to change variables passed in the arguments (OPFUN_ARGS). After this
-			// function: `instr` should be pointer to the instruction in the new function, `frame`
-			// should be pointer to the next frame, `local_stack` should be pointer to the local
-			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
-			// the frame of the caller.
-			auto& runtime_data = thread.runtime_data;
-
 			// Save current registers and flow.
-			frame->instr       = instr + 1;
-			frame->local_stack = local_stack;
-
-			// Prepare new frame.
-			auto* prev_frame = frame;
-			frame++;
-			i32 function_id = instr->arg0;
-			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
-			frame->args = prev_frame->next_args;
-
-			// Update values passed as arguments.
-			instr = thread.executing_code->functions[function_id].bc.data();
-
-			u64 local_stack_size = thread.executing_code->functions[function_id].stack_size;
-			local_stack          = runtime_data.local_stack_top;
-			runtime_data.local_stack_top += local_stack_size;
-
-			frame->next_args = runtime_data.local_stack_top;
-			runtime_data.local_stack_top
-				+= thread.executing_code->functions[function_id].next_arg_size;
-
-			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
+			frame->instr                            = instr;
+			frame->local_stack                      = local_stack;
+			thread.runtime_data.frame_stack_current = frame;
 		}
-		// After acquiring the `executing_code` of the new function we have instruction pointer
-		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
-		// would mean that we skipped the first instruction. That's why we move forward zero
-		// instructions. For future returns, the first instruction that should be executed after
-		// call is saved on frame so that op_ret's have to move forward zero instructions after
-		// restoring `instr` from frame.
-		OPFUN_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::op_ret_tailcall(OPFUN_ARGS) {
-		{
-			auto function_id = instr->arg0;
+	/**
+	 * @brief Main debug function that executes one step of the program.
+	 */
+	void VMThread::executeOneStep() {
+		Frame*     frame       = runtime_data.frame_stack_current;
+		std::byte* local_stack = frame->local_stack;
+		auto*      instr       = frame->instr;
 
-			instr = thread.executing_code->functions[function_id].bc.data();
-
-			swap(frame->args, frame->next_args);
-		}
-		OPFUN_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::op_ret_l64(OPFUN_ARGS) {
-		{
-			// @TODO: refactor op_rets to reduce code duplication
-
-			// We have to update values passed in arguments.
-			// Old `instr` and `local_stack` are stored on the previous frame.
-			// Previous frame is just before current frame in the array, so that
-			// substracting one from the pointer will give us the previous frame.
-			// The `instr`, `local_stack` and `frame` values should be restored from the previous
-			// call stack frame.
-			u64 ret_val = derefStack<u64>(local_stack, instr->arg0);
-
-			frame--;
-
-			frame->regs.p64_reg_0               = ret_val;
-			thread.runtime_data.local_stack_top = local_stack;
-
-			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		OPFUN_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::op_ret_imm(OPFUN_ARGS) {
-		{
-			// For explanation go to op_ret_l64.
-			frame--;
-
-			frame->regs.p64_reg_0               = instr->arg0;
-			thread.runtime_data.local_stack_top = local_stack;
-
-			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		OPFUN_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::op_init_type(OPFUN_ARGS) {
-		{
-			auto type     = thread.process_types.getType(vm::TypeID(instr->arg0));
-			auto data_ptr = local_stack + frame->local_stack_head;
-			auto block    = thread.process_memory.allocateStack(type, data_ptr);
-			frame->block_stack.push_back(block);
-			frame->local_stack_head += type->getSize();
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_deinit(OPFUN_ARGS) {
-		{
-			auto block = frame->block_stack.back();
-			auto type  = thread.process_memory.getBlockType(block);
-			frame->block_stack.pop_back();
-			thread.process_memory.freeBlock(block);
-			frame->local_stack_head -= type->getSize();
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_input_l64(OPFUN_ARGS) {
-		{
-			thread.setStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0)
-				= thread.process.getIO().getInput<i64>(thread);
-			thread.setStatus(api::Running{});
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_output_l64(OPFUN_ARGS) {
-		{ thread.process.getIO().writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_nop(OPFUN_ARGS) { OPFUN_CONT(1); }
-
-	RETURN_TYPE OpFuns::op_ext_l64(OPFUN_ARGS) {
-		CORE_PANIC("ext_l64 not consumed by previous instruction");
-	}
-
-	RETURN_TYPE OpFuns::op_alloc_lptr_type(OPFUN_ARGS) {
-		{
-			auto type  = thread.process_types.getType(vm::TypeID(instr->arg1));
-			auto block = thread.process_memory.allocateHeap(type);
-			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_free_lptr(OPFUN_ARGS) {
-		{
-			thread.process_memory.freeBlock(derefStack<Pointer>(local_stack, instr->arg0).getBlock()
-			);
-		}
-		OPFUN_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::op_load_l64_lptr_ofs(OPFUN_ARGS) {
-		constexpr const uint8_t view_size = 8;
-		int                     next      = 1;
-		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = Memory::getPointerData(pointer, view_size);
-			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
+		auto opcode = OpFuns::getOpcodeFromOpFun(instr->opfun);
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
+		auto opcode = static_cast<u16>(instr->opcode);
 #endif
 
-			// @TODO: this assert degrades performance by 5-10%
-			// CORE_ASSERT(view.size() == view_size, "bad type");
+		// Execute the instruction by calling the debug opcode function.
+		OpFuns::DEBUG_OPFUNS.at(opcode)(instr, local_stack, frame, *this);
 
-			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
-		}
-		OPFUN_CONT(next);
+		runtime_data.frame_stack_current = frame;
+		frame->local_stack               = local_stack;
+		frame->instr                     = instr;
 	}
 
-	RETURN_TYPE OpFuns::op_store_lptr_l64_ofs(OPFUN_ARGS) {
-		constexpr const uint8_t view_size = 8;
-		int                     next      = 1;
-		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = Memory::getPointerData(pointer, view_size);
-			u64  idx     = 0;
-#ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#endif
-
-			// @TODO: this assert degrades performance by 5-10%
-			// CORE_ASSERT(view.size() == view_size, "bad type");
-
-			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
-		}
-		OPFUN_CONT(next);
-	}
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -460,7 +90,8 @@ namespace vm {
 	#pragma GCC push_options
 	#pragma GCC optimize("-fno-crossjumping")
 #endif
-
+	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
+	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
 	u64 VMThread::internalCallMain(const FuncData& main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
@@ -490,34 +121,63 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
-#else
-	// Computed gotos labels:
-	#ifdef USE_COMPUTED_GOTO
+#elif USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
-		#define DEF_OPCODE(opcode) LABEL_PTR(opcode),
-		#include <code_data/opcodes_list.hpp>
-		#undef DEF_OPCODE
+	#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
 		};
-	#endif
 
-		IF_NOT_CG(while (true)) {
-			IF_CG(DISPATCH_OPCODE());
+		goto* opcode_label[static_cast<u64>(instr->opcode)];
 
-			if constexpr (!IGNORE_EXECUTION_STRATEGY) handleExecutionStrategyIfNeeded();
-
-			IF_NOT_CG(switch (static_cast<OpcodeFix8>(instr->opcode))) {
-	#define DEF_OPCODE(opcode)     OP_CASE(opcode)
-	#define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
+	#define DEF_OPCODE(opcode_name)                                         \
+		LABEL_##opcode_name: {                                              \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+			goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+		}
+	#define DEF_OPCODE_END(opcode_name)                                     \
+		LABEL_##opcode_name: {                                              \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+			goto End;                                                       \
+		}
 	#include <code_data/opcodes_list.hpp>
 	#undef DEF_OPCODE
 	#undef DEF_OPCODE_END
-				IF_NOT_CG(default : { CORE_PANIC("Unknown operator:", u64(instr->opcode)); })
+
+	End:
+		return runtime_data.frame_stack_base->regs.p64_reg_0;
+#elif USE_SWITCH_CASE
+		while (true) {
+			switch (static_cast<OpcodeFix8>(instr->opcode)) {
+	#define DEF_OPCODE(opcode_name)                                     \
+	case OpcodeFix8::opcode_name: {                                     \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+		break;                                                          \
+	}
+	#define DEF_OPCODE_END(opcode_name)                                 \
+	case OpcodeFix8::opcode_name: {                                     \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
+		goto End;                                                       \
+	}
+	#include <code_data/opcodes_list.hpp>
+	#undef DEF_OPCODE
+	#undef DEF_OPCODE_END
+
+			default: {
+				CORE_PANIC("Unknown operator:", u64(instr->opcode));
+			}
 			}
 		}
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
+
 #endif
 	}
+
+	// internalCallMain end
+
+	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
+	// NOLINTEND(cppcoreguidelines-avoid-goto)
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -525,90 +185,177 @@ namespace vm {
 	#pragma GCC pop_options
 #endif
 
+	/**
+	 * @brief Handles execution request when `execution_request_break` bool is set.
+	 * Used from the thread loop.
+	 */
+	void VMThread::breakActiveExecution() {
+		std::unique_lock lock(execution_request_mutex);
+		switch (execution_request) {
+		case ExecutionRequest::Pause:
+			respondExecutionRequest(ExecutionResponse::Paused);
+			handlePausedExecution(lock);
+			execution_request_break = false;
+			break;
+
+		case ExecutionRequest::Stop:
+			throw KillProcessException{};
+
+		default:
+			CORE_PANIC("unexpected execution status");
+		}
+	}
+
+	/**
+	 * @brief Main function of the VMThread "debug" mode, where the step by step execution can take
+	 * place. After each step the execution status is set to `paused` and the VMThread waits for the
+	 * next command. Mutex "execution_request_mutex" is held when the VM is executing the code.
+	 *
+	 * @param lock
+	 */
+	void VMThread::handlePausedExecution(std::unique_lock<std::mutex>& lock) {
+		while (true) {
+			pause_cv.wait(lock, [this] { return execution_request != ExecutionRequest::Pause; });
+
+			switch (execution_request) {
+			case ExecutionRequest::Resume: {
+				execution_request = ExecutionRequest::NoRequest;
+				respondExecutionRequest(ExecutionResponse::Running);
+				return;
+			}
+			case ExecutionRequest::Stop: {
+				throw KillProcessException{};
+			}
+			case ExecutionRequest::ExecuteOneStep: {
+				respondExecutionRequest(ExecutionResponse::Running);
+
+				executeOneStep();
+
+				execution_request = ExecutionRequest::Pause;
+				respondExecutionRequest(ExecutionResponse::Paused);
+				break;
+			}
+			default:
+				CORE_PANIC("resumed with paused status");
+			}
+		}
+	}
+
+	/**
+	 * @brief Function to be called when the VMThread hits a breakpoint.
+	 */
+	void VMThread::handleBreakpoint() {
+		std::unique_lock lock(execution_request_mutex);
+		setProcessStatus(api::Paused{});
+		execution_request = ExecutionRequest::Pause;
+		this->handlePausedExecution(lock);
+	}
+
+	/**
+	 * @brief Starts the execution of the program.
+	 */
 	void VMThread::run(Ref<const Code> code) {
-		// @TODO: ensure correct status
-
-		setStatus(api::Running{});
-
+		respondExecutionRequest(ExecutionResponse::Running);
 		executing_code = code;
 		try {
 			internalCallMain(executing_code->functions[code->main_id]);
-			setStatus(api::NotStarted{});
-		} catch (KillProcessException) { setStatus(api::NotStarted{}); }
-	}
-
-	void VMThread::prestart() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped) {
-			is_running         = true;
-			execution_strategy = ExecutionStrategy::Normal;
+			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
+		} catch (KillProcessException) {
+			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
 		}
 	}
 
-	void VMThread::stop() {
-		std::unique_lock lock(external_api_mutex);
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::Stoped;
+	bool VMThread::stop() {
+		{
+			std::unique_lock lock(execution_request_mutex);
+
+			execution_request       = ExecutionRequest::Stop;
+			execution_request_break = true;
+		}
 		pause_cv.notify_all();
+
+		return waitForStoppedResponse();
 	}
 
 	bool VMThread::resume() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Normal) {
-			return false;
+		{
+			std::unique_lock lock(execution_request_mutex);
+
+			execution_request = ExecutionRequest::Resume;
 		}
-		is_running         = true;
-		execution_strategy = ExecutionStrategy::Normal;
 		pause_cv.notify_all();
-		return true;
+
+		return waitForRunningResponse();
 	}
 
 	bool VMThread::pause() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped
-		    || execution_strategy == ExecutionStrategy::Paused) {
-			return false;
-		} else if (execution_strategy == ExecutionStrategy::StepByStep) {
-			return true;
+		{
+			std::unique_lock lock(execution_request_mutex);
+
+			execution_request       = ExecutionRequest::Pause;
+			execution_request_break = true;
 		}
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::Paused;
-		std::cout << "Set strategy to paused\n";
-		return true;
+
+		return waitForBrakepointResponse();
 	}
 
 	bool VMThread::step() {
-		std::unique_lock lock(external_api_mutex);
-		if (execution_strategy == ExecutionStrategy::Stoped)
-			return false;
-		else if (execution_strategy != ExecutionStrategy::Paused)
-			return true;
-		is_running         = false;
-		execution_strategy = ExecutionStrategy::StepByStep;
-		pause_cv.notify_all();
-		return true;
+		{
+			std::unique_lock lock(execution_request_mutex);
+
+			execution_request = ExecutionRequest::ExecuteOneStep;
+			pause_cv.notify_all();
+		}
+		if (waitForRunningResponse()) {
+			if (waitForBrakepointResponse()) return true;
+		}
+		return false;
 	}
 
-	void VMThread::setStatus(vm::api::ExecStatus new_status) {
-		// @TODO: check if change is legal
-		this->status = std::move(new_status);
-		process.onEvent(api::Executing{ status });
+	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+		variant_match(status) {
+			variant_case_novalue(api::Paused) {
+				auto frame = runtime_data.frame_stack_current;
+				auto instr = frame->instr;
+
+				for (size_t index = 0; index < executing_code->functions.size(); ++index) {
+					const auto& func = executing_code->functions[index];
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
+						return api::Response(api::response::CodePosition{
+							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+					}
+				}
+			}
+			variant_default {
+				return cpp::failure(api::CoreOperationError{
+					api::OtherError{ "wrong execution status while reading current position" } });
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
-	bool VMThread::isPaused() {
-		std::unique_lock lock(external_api_mutex);
-		return execution_strategy == ExecutionStrategy::Paused;
+	void VMThread::setProcessStatus(const vm::api::ExecStatus& new_status) {
+		status = new_status;
+		process.onEvent(api::Executing{ new_status });
 	}
 
-	bool VMThread::isAlive() {
-		std::unique_lock lock(external_api_mutex);
-		return execution_strategy != ExecutionStrategy::Stoped;
+	bool VMThread::isPauseRequested() {
+		std::unique_lock lock(execution_request_mutex);
+		return execution_request == ExecutionRequest::Pause;
+	}
+
+	bool VMThread::isTerminateRequested() {
+		std::unique_lock lock(execution_request_mutex);
+		return execution_request == ExecutionRequest::Stop;
 	}
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	void VMThread::initThread(Ref<const vm::Code> code) {
+	bool VMThread::initThreadAndRun(Ref<const vm::Code> code) {
+		if (exec_thread)  // there is already a thread running
+			return false;
+
 		exec_thread = std::thread([this, code] {
 			try {
 				run(code);
@@ -616,8 +363,47 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				process.onEvent(api::ProcStatus{ api::Panicked{ e } });
+				respondExecutionRequest(ExecutionResponse::ExecutionPanicked);
 			}
 		});
+		return waitForRunningResponse();
+	}
+
+	void VMThread::respondExecutionRequest(ExecutionResponse response) {
+		switch (response) {
+		case ExecutionResponse::Running:
+			setProcessStatus(api::Running{});
+			break;
+		case ExecutionResponse::Paused:
+			setProcessStatus(api::Paused{});
+			break;
+		case ExecutionResponse::ExecutionStopped:
+			setProcessStatus(api::ExecutionStopped{});
+			break;
+		case ExecutionResponse::ExecutionCompleted:
+			setProcessStatus(api::ExecutionCompleted{});
+			break;
+		case ExecutionResponse::ExecutionPanicked:
+			setProcessStatus(api::ExecutionPanicked{});
+			break;
+		default:
+			CORE_PANIC("unexpected execution response");
+		}
+		execution_response_queue.push(response);
+	}
+
+	bool VMThread::waitForStoppedResponse() {
+		auto response = execution_response_queue.pop();
+		return ExecutionResponse::ExecutionStopped == response
+		    || ExecutionResponse::ExecutionCompleted == response
+		    || ExecutionResponse::ExecutionPanicked == response;
+	}
+
+	bool VMThread::waitForBrakepointResponse() {
+		return execution_response_queue.pop() == ExecutionResponse::Paused;
+	}
+
+	bool VMThread::waitForRunningResponse() {
+		return execution_response_queue.pop() == ExecutionResponse::Running;
 	}
 }  // namespace vm

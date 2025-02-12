@@ -260,7 +260,6 @@ components:
       oneOf:
       - $ref: '#/components/schemas/Running'
       - $ref: '#/components/schemas/Paused'
-      - $ref: '#/components/schemas/PausedOnError'
       - $ref: '#/components/schemas/WaitingForInput'
       - $ref: '#/components/schemas/NotStarted'
       discriminator:
@@ -269,13 +268,6 @@ components:
       type: object
     Paused:
       type: object
-    PausedOnError:
-      type: object
-      required:
-      - reason
-      properties:
-        reason:
-          type: string
     WaitingForInput:
       type: object
     NotStarted:

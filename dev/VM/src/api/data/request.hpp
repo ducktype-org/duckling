@@ -31,6 +31,10 @@ namespace vm::api {
 
 		struct Step {};
 
+		struct WaitForBreakpoint {};
+
+		struct ExecutionPosition {};
+
 		struct TypeMetadata {
 			std::string type_name;
 		};
@@ -61,7 +65,9 @@ namespace vm::api {
 		request::Stop,
 		request::Run,
 		request::Join,
-		request::Step>;
+		request::Step,
+		request::WaitForBreakpoint,
+		request::ExecutionPosition>;
 
 	using IORequest
 		= std::variant<request::Input, request::Output, request::Attach, request::Detach>;
