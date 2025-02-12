@@ -299,9 +299,7 @@ namespace clap {
 		return st.result;
 	}
 
-	MRef<const ValueParser> Clap::getDefaultValueParser() const {
-		return default_value_parser.ref();
-	}
+	MCRef<ValueParser> Clap::getDefaultValueParser() const { return default_value_parser.ref(); }
 
 	const std::vector<Parameter>& Clap::getParameters() const { return parameters; }
 

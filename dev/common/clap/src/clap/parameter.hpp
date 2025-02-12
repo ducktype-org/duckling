@@ -62,7 +62,7 @@ namespace clap {
 		 * @return Value parser pointer, that may be null.
 		 */
 		[[nodiscard]]
-		MRef<const ValueParser> getValueParser() const;
+		MCRef<ValueParser> getValueParser() const;
 		/**
 		 * @return The necessity of a parameter.
 		 */

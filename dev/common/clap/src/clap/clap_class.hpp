@@ -92,7 +92,7 @@ namespace clap {
 		 * @return A pointer to the parser. Might be nullptr.
 		 */
 		[[nodiscard]]
-		MRef<const ValueParser> getDefaultValueParser() const;
+		MCRef<ValueParser> getDefaultValueParser() const;
 
 		/**
 		 * Named parameters are built with clap::ParamBuilder. They are addressed with
