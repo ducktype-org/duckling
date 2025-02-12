@@ -113,7 +113,7 @@ namespace hashing {
 		template<has_updateHash Self, typename T>
 		requires(
 			std::has_unique_object_representations_v<T>
-			&& not(has_updateHash_sv<Self> && std::is_same_v<std::remove_cvref_t<T>, std::string_view>)
+			&& not(has_updateHash_sv<Self> && std::convertible_to<T, std::string_view> && not std::same_as<std::remove_cvref_t<T>, char*>)
 		)
 		constexpr decltype(auto) operator()(this Self&& self, const T& t) noexcept {
 			if constexpr (SHOULD_HASH_AS_HASH_CODE<Self, T>) {

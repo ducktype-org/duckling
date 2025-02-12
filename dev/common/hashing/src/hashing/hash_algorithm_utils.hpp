@@ -23,8 +23,7 @@ namespace hashing {
 		concept hash_algorithm_impl
 			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
 		   && requires { typename T::result_type; }
-		   && (std::is_invocable_r_v<void, T, void*, usize>
-		       || std::is_invocable_r_v<void, T, std::string_view>)
+		   && (std::is_invocable_v<T, void*, usize> || std::is_invocable_v<T, std::string_view>)
 		   && is_explicitly_convertible_to<T, typename T::result_type>;
 
 	}  // namespace detail
