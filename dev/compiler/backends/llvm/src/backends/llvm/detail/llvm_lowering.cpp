@@ -92,6 +92,7 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(llvm::LLVMContext& context, const tsl::TypeLayout& return_type) {
+		// @TODO: #486 - process function argument types
 		return llvm::FunctionType::get(typeFromLayout(context, return_type), {}, false);
 	}
 
@@ -174,8 +175,15 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * @brief Maps LIRLocation to LLVM Value.
+		 *
+		 * This function may generate new LLVM instructions if necessary. For example,
+		 * when loading the value of a local variable (which we store behind a pointer
+		 * to the stack), we need to generate a load instruction.
+		 * Moreover, this load instruction has to be generated with each use, because
+		 * the value of the variable may change between uses.
+		 *
 		 * @note In llvm a lot of things can be treated as values, and
-		 * its based on inheritance.
+		 * it's based on inheritance.
 		 * @param lir_location The LirLocation to convert into an LLVM Value.
 		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
 		 * @return llvm::Value*

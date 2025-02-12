@@ -116,10 +116,6 @@ namespace compiler::lir {
 			  helios_id(helios_id),
 			  layout(std::move(layout)) {}
 
-		LirLocal(const helios::SymID helios_id, tsl::TypeLayout layout):
-			  helios_id(helios_id),
-			  layout(std::move(layout)) {}
-
 		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
 		friend Function;

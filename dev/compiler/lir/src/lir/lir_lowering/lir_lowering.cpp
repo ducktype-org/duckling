@@ -254,6 +254,7 @@ namespace compiler::lir {
 
 			static bool isArgSigned(const mir::MirLocation location) {
 				variant_match(location.getVariant()) {
+					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {
 						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral

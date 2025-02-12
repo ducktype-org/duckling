@@ -304,6 +304,7 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		LocalRef findLocal(const helios::SymID helios_id) const {
+			// @TODO: Optimise into a hashmap.
 			for (const auto& local: local_list)
 				if (local->helios_id == helios_id) return local.ref();
 			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
@@ -326,9 +327,10 @@ namespace compiler::mir {
 	};
 
 	/**
-	 * @brief Visitor that collects all local variables in the function.
+	 * @brief Visitor that collects all local variables in the function and adds them directly to
+	 * the FunctionBuilder.
 	 */
-	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorEmpty {
+	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
 		FunctionBuilder& function;
 
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
@@ -340,6 +342,16 @@ namespace compiler::mir {
 		void visitIfStmt(const helios::code::IfStmt& stmt) override {
 			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
 		}
+
+		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
+
+		void visitReturnStmt(const helios::code::ReturnStmt&) override {}
+
+		void visitVoidReturnStmt(const helios::code::VoidReturnStmt&) override {}
+
+		void visitExprStmt(const helios::code::ExprStmt&) override {}
+
+		void visitAssignmentStmt(const helios::code::AssignmentStmt&) override {}
 	};
 
 	/**
@@ -600,13 +612,14 @@ namespace compiler::mir {
 		 * @return The type of the local value.
 		 */
 		static tsh::TypeInfo locationType(const MirLocation location, query::Context& ctx) {
-			auto location_variant = location.getVariant();
-			if (std::holds_alternative<MirIntegerConst>(location_variant))
-				return ctx.query<tsh::QueryIntegralType>({ 64 });
-			if (std::holds_alternative<MirBoolConst>(location_variant))
-				return ctx.query<tsh::QueryBoolType>({});
-			if (std::holds_alternative<LocalRef>(location_variant))
-				return location.get<LocalRef>()->type.getType();
+			variant_match(location.getVariant()) {
+				variant_case_novalue(MirIntegerConst) {
+					return ctx.query<tsh::QueryIntegralType>({ 64 });
+				}
+				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
+				variant_case(LocalRef, local) { return local->type.getType(); }
+				variant_default { CORE_UNREACHABLE(); }
+			}
 			CORE_UNREACHABLE();
 		}
 	};
