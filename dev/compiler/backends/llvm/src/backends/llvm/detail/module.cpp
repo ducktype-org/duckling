@@ -14,10 +14,10 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
-	Module::Module(base::StrID module_id): impl(makeBox<ModuleImpl>(initLLVMModule(module_id))) {}
+	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
 	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
-		addFunctionToLLVMModule(impl->module.refMut(), lir_function);
+		addFunctionToModuleImpl(impl.refMut(), lir_function);
 	}
 
 	bool Module::verify() const {
