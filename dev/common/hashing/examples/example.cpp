@@ -6,10 +6,10 @@
 #include <base/ints.hpp>
 
 #include <hashing/hash.hpp>
-#include <hashing/addToHash.hpp>
+#include <hashing/add_to_hash.hpp>
 #include <hashing/type_hash_code.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/CallOverloads_utils.hpp>
+#include <hashing/call_overloads_utils.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/type_hash_code_def.hpp>
 

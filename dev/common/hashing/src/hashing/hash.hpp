@@ -5,7 +5,7 @@
 
 #include "hashing_algorithms.hpp"
 #include "type_hash_code.hpp"
-#include "addToHash.hpp"
+#include "add_to_hash.hpp"
 
 namespace hashing {
 
