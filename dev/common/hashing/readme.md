@@ -98,7 +98,7 @@ The module provides two ways of hashing objects: by using either `Hash` or `Stat
 `Hash`
 ------
 
-This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. Note that it is 
+This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. Note that it is not necessary to add hash codes after every subobject, as changing any of them will change the hash code of the whole object.
 
 The simplest way to use it is without specifying any template parameters.
 With it's defaults it can be used as a drop-in replacement for `std::hash`:
@@ -136,7 +136,7 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
     </body>
     </html>
 
-* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeHashCodeBase` or the type `void`. Shorter hash codes of may be desired when hashing many small objects. If `void` is used, no bytes are appended after the object.
+* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeHashCodeBase` or the type `void`. Shorter hash codes may be desired when hashing many small objects as for them hash codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
 
 Using different hashing algorithms:
 ~~~~~cpp
@@ -231,12 +231,13 @@ As stated before algorithm has to be organized into three stages:
 
 After the setup it should be possible to call stages 2 and 3 multiple times in any order.
 
-CallOverloads utility
----------------------
+CallOverloads utility class
+---------------------------
 
-This is a class that, when derived from publicly, adds call operator overloads to the derived class.
+This class is meant to make implementing hashing algorithms easier by adding call operator overloads to the derived class.
 
-To use it, our class should have a protected member function `updateHash(void*, usize)` or `updateHash(std::string_view)` which will be called by the call operator. It also shouldn't be final.
+To use this utility our hashing algorithm should derive from it. Our class should also have a protected member function `updateHash(void*, usize)` or `updateHash(std::string_view)` which will be called by the call operator. It also shouldn't be final.
 It can also have a protected member function `addHashCode(any TypeHashCode)` which will be called if matching `TypeHashCode` is passed.
 When possible call operator will be constexpr.
-Class also adds optimal overloads for types which values have unique representations in memory.
+
+Class also adds overloads for types which values have unique representations in memory hashing their bytes directly as bytes and if possible in compile time.
