@@ -43,7 +43,8 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * checks if the hash algorithm can handle the type directly
+		 * checks if the hash algorithm can hash the type directly (i.e. it has an operator() that
+		 * accepts the type)
 		 */
 		template<typename HashAlgorithm, typename T>
 		concept can_hash_directly
@@ -73,6 +74,10 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
+			static_assert(
+				std::has_unique_object_representations_v<T>,
+				"hashAsChars can only be used on types with unique object representations"
+			);
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
 			if constexpr (requires {
 							  std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(),
@@ -86,6 +91,8 @@ namespace hashing {
 
 		/**
 		 * checks if a range can be hashed as a contiguous sequence of memory
+		 * (i.e. its elements are in a contiguous memory block, have unique object representations
+		 * and size is known)
 		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_as_chars
