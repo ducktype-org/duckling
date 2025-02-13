@@ -1,0 +1,35 @@
+[project]
+name = "ducknest"
+version = "0.1.0"
+description = "Package registry for Duckling"
+readme = "README.md"
+authors = [
+    { name = "Ignacy Gębuś", email = "ig448499@students.mimuw.edu.pl" },
+    { name = "Tymoteusz Kucharek", email = "tk448520@students.mimuw.edu.pl" },
+    { name = "Stanisław Wiśniewski", email = "sw448598@students.mimuw.edu.pl" },
+    { name = "Artur Wojtuszkiewicz", email = "aw448602@students.mimuw.edu.pl" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "common",
+]
+
+[project.scripts]
+ducknest = "ducknest:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+common = { path = "../common", editable = true }
+
+[tool.pyright]
+venvPath = "./"
+venv = ".venv/"
+typeCheckingMode = "strict"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+]
