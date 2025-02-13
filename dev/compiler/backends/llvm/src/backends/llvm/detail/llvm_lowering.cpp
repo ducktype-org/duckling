@@ -330,18 +330,22 @@ namespace compiler::backend_llvm {
 		}
 	};
 
-	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
+	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
+		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
+		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
 
-		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
-
-		// this implicitly adds the function to the module:
+	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
+	}
 
-		Box<ModuleImpl> module_impl = makeBox<ModuleImpl>(std::move(module));
+	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
+		auto module_impl = initModuleImpl(base::StrID("test"));
+		addFunctionToModuleImpl(module_impl.refMut(), lir_function);
 		return Module{ std::move(module_impl) };
 	}
 }

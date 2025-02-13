@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/box.hpp>
 #include "llvm_includes/module.hpp"
+#include <base/box.hpp>
 
 namespace compiler::backend_llvm {
 
@@ -14,11 +14,8 @@ namespace compiler::backend_llvm {
 
 		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
 
-		[[nodiscard]]
-		bool verify() const;
+		~ModuleImpl() = default;
 
-		void debugPrint() const;
-
-		~ModuleImpl();
+		friend struct Module;
 	};
 }
