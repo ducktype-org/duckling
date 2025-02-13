@@ -68,6 +68,8 @@ namespace base {
 
 		T* operator->() const noexcept { return get(); }
 
+		MRef<T> toMRef() const noexcept { return MRef(ptr); }
+
 		// Comparison:
 
 		template<class U>
@@ -114,7 +116,8 @@ namespace base {
 	public:
 		// Constructors from pointers:
 		MRef() = default;
-		MRef(std::nullptr_t){};
+
+		MRef(std::nullptr_t) {}
 
 		MRef(T* ptr): ptr{ ptr } {}
 
