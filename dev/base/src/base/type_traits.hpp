@@ -47,8 +47,9 @@ namespace base {
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
+	 * @note This concept works only for templates that have only type template parameters
 	 */
-	template<template<typename...> class Template, typename T>
+	template<typename T, template<typename...> class Template>
 	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
 
 	/**

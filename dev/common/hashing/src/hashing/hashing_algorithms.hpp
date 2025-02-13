@@ -100,7 +100,7 @@ namespace hashing {
 			bytes.emplace_back(std::vector<char>(sv.begin(), sv.end()), sv.size(), type);
 		}
 
-		template<specialization_of<TypeHashCodeBase> TypeHC>
+		template<base::IsInstantiationOf<TypeHashCodeBase> TypeHC>
 		constexpr void addHashCode(TypeHC hash) noexcept {
 			auto arr = std::bit_cast<std::array<char, sizeof(TypeHC)>, TypeHC>(hash);
 			updateHash(std::string_view{ arr.data(), arr.size() }, Type::HashCode);

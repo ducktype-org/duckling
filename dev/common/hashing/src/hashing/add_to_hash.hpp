@@ -11,6 +11,13 @@
 namespace hashing {
 
 
+	namespace detail {
+
+		static constexpr bool ALLOW_STD_HASH = true;
+		static constexpr bool ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER = true;
+
+	} // namespace detail
+
 	/**
 	 * this is a template overload for the 'addToHash' function
 	 * if a friend function overload exists for the type, it will be used instead
@@ -35,7 +42,7 @@ namespace hashing {
 		else if constexpr (std::is_floating_point_v<T>) {
 			// IEEE 754 floating point numbers have multiple representations of 0:
 			// -0.0 == 0.0, but they should have the same hash
-			auto t_copy = auto{ t };
+			auto t_copy = t;
 			if (t_copy == 0) t_copy = 0;
 			detail::hashAsChars(hash_alg, t_copy);
 		}
@@ -65,7 +72,7 @@ namespace hashing {
 			for (auto&& elem: t) addToHash(hash_alg, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
+		else if constexpr (detail::ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
 			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
 				// note that this copy and hash finalization in cast may be expensive,
@@ -78,7 +85,7 @@ namespace hashing {
 		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above
-		else if constexpr (detail::can_stdhash<T>) {
+		else if constexpr (detail::ALLOW_STD_HASH && detail::can_stdhash<T>) {
 			addToHash(hash_alg, std::hash<T>{}(t));
 		} else {
 			static_assert(

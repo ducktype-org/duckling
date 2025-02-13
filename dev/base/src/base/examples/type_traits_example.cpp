@@ -17,8 +17,8 @@ struct G {
 };
 
 int main() {
-	std::cout << base::IsInstantiationOf<int, Q> << "\n";              // false
-	std::cout << base::IsInstantiationOf<Q<int>, Q> << "\n";           // true
+	std::cout << base::IsInstantiationOf<Q, int> << "\n";              // false
+	std::cout << base::IsInstantiationOf<Q, Q<int>> << "\n";           // true
 
 	std::cout << base::IsNumber<int> << "\n";                          // true
 	std::cout << base::IsNumber<float> << "\n";                        // true

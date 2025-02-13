@@ -3,6 +3,8 @@
 #include <type_traits>
 #include <concepts>
 
+#include <base/type_traits.hpp>
+
 #include "hashing_algorithms.hpp"
 #include "type_hash_code.hpp"
 #include "add_to_hash.hpp"
@@ -13,7 +15,7 @@ namespace hashing {
 	namespace detail {
 
 		template<typename T>
-		concept TypeHC_or_void = std::is_void_v<T> || specialization_of<T, TypeHashCodeBase>;
+		concept TypeHC_or_void = std::is_void_v<T> || base::IsInstantiationOf<T, TypeHashCodeBase>;
 
 		template<class T>
 		concept has_value_type = requires { typename T::value_type; };

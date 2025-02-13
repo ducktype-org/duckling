@@ -8,6 +8,8 @@
 #include <array>
 #include <bit>
 
+
+
 #include "type_hash_code_def.hpp"
 
 namespace hashing {
@@ -45,7 +47,7 @@ namespace hashing {
 		template<typename Self>
 		struct CheckAccessTo_addHashCode: public std::remove_cvref_t<Self> {
 			// should be callable from derived class but not from outside
-			template<specialization_of<TypeHashCodeBase> TypeHC>
+			template<base::IsInstantiationOf<TypeHashCodeBase> TypeHC>
 			void check(TypeHC hash) requires requires {
 				CheckAccessTo_addHashCode{}.std::remove_cvref_t<Self>::addHashCode(hash);
 			} && (not requires(Self self) { self.addHashCode(hash); }) {}
@@ -77,7 +79,7 @@ namespace hashing {
 	 */
 	template<typename T, typename TypeHC>
 	concept has_addHashCode
-		= specialization_of<TypeHC, TypeHashCodeBase> && requires(T t, TypeHC hash_code) {
+		= base::IsInstantiationOf<TypeHC, TypeHashCodeBase> && requires(T t, TypeHC hash_code) {
 			  detail::CheckAccessTo_addHashCode<T>{}.check(hash_code);
 		  };
 
@@ -86,7 +88,7 @@ namespace hashing {
 	 */
 	template<typename HashAlgorithm, typename Type>
 	static constexpr bool SHOULD_HASH_AS_HASH_CODE
-		= specialization_of<Type, TypeHashCodeBase> && has_addHashCode<HashAlgorithm, Type>;
+		= base::IsInstantiationOf<Type, TypeHashCodeBase> && has_addHashCode<HashAlgorithm, Type>;
 
 	/**
 	 * this is a utility class that adds operator() overloads to hashing algorithms
