@@ -42,7 +42,7 @@ namespace hashing {
 			static_cast<TypeHashCodeBase<typename TypeHC::value_type>>(
 				std::declval<StrToIntegral<typename TypeHC::value_type, HashAlgorithm>>()
 			);
-			detail::uniqueId<T, typename TypeHC::value_type, HashAlgorithm>();
+			detail::getIDFromUniqueString<T, typename TypeHC::value_type, HashAlgorithm>();
 			h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
 		};
 
