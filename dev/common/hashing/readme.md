@@ -35,7 +35,7 @@ Inside the function all you have to do is to tell which bases/fields are part of
 For example, `string` type should pass its `data` and `size` but not `capacity` as it is not visible in the comparisons.
 
 To list all subfields simply return `std::tie` of all of them in order in which you would like them to be added to hash.
-To pass bases you can use `getBase<Base>(t)` which additionally checks if you are actually casting to the base class.
+To pass base subobjects you can use `getBase<Base>(t)` which casts `t` to the `Base` class and additionally checks if what you are casting to is actually a base class.
 
 ~~~~~cpp
 class C : public Base1, public Base2 {
@@ -82,9 +82,12 @@ class C: public Base1, public Base2 {
 Adding type to `addToHash()` template fallback
 ----------------------------------------------
 
-Sometimes, you may want to hash an object whose definition you don’t have access to, such as certain types from the standard library. In such cases you can add a 'specialization' to the `addToHash()` function template in `addToHash.hpp`.
+Sometimes, you may want to hash an object whose definition you don’t have access to, such as certain types from the standard library. In such cases you can add a 'specialization' to the `addToHash()` function template in [add_to_hash.hpp](src/hashing/add_to_hash.hpp).
 
-The actual specializations or partial specializations are a bit of a mess to keep track of and maintain (there are a lot of interactions to consider), so instead we are using a single template with `if constexpr` conditions. If the type you want to hash is not covered already by this template, you can add a new condition there. All you have to do is to choose an appropriate place and specific enough condition so that it won't interfere with other types.
+The actual specializations or partial specializations are a bit of a mess to keep track of and maintain - if there are many partial/full specializations interactions between them and their plecement (assuming we would like to place them in different files) would have to be considered which is often bug-prone.
+Instead we are using a single template (in [add_to_hash.hpp](src/hashing/add_to_hash.hpp)) with `if constexpr` conditions, which are much better structured as the conditions are clearly visible.
+
+If the type you want to hash is not covered already by this template, you can add a new condition there. All you have to do is to choose an appropriate place and specific enough condition so that it won't interfere with other types.
 
 
 Obtaining hashes
@@ -95,7 +98,7 @@ The module provides two ways of hashing objects: by using either `Hash` or `Stat
 `Hash`
 ------
 
-This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code which allows to distinguish hashes of objects with the same binary representations but of different types.
+This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. Note that it is 
 
 The simplest way to use it is without specifying any template parameters.
 With it's defaults it can be used as a drop-in replacement for `std::hash`:
@@ -224,7 +227,7 @@ As stated before algorithm has to be organized into three stages:
 
 1) setting up the initial state - this should happen in the constructor
 2) hashing bytes - should be done in the call operator. After receiving the bytes to hash, the algorithm should update its state.
-3) finalizing the hash - this should be done in the conversion operator to the `result_type`.
+3) finalizing the hash - this should be done in the conversion operator to the `result_type` marked `explicit`, algorithm should convert it's internal state to the hash value and return it without changing it's state in the process
 
 After the setup it should be possible to call stages 2 and 3 multiple times in any order.
 
