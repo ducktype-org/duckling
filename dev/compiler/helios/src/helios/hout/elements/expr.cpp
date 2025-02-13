@@ -119,6 +119,9 @@ namespace compiler::helios::code {
 		case BuiltinBinary::IntegerPow:
 			out << "**";
 			break;
+		case BuiltinBinary::IntegerLt:
+			out << "<";
+			break;
 		}
 		rhs->debugPrint(out);
 	}
