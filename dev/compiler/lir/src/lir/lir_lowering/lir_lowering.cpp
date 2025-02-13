@@ -296,6 +296,11 @@ namespace compiler::lir {
 
 					auto       output             = getLocal(mir_instruction.output.value());
 					auto       args               = getLocations(mir_instruction.arguments);
+
+					// It is assumed that all arguments of a built-in function are of the same exact
+					// type, and thus also have the same sign (if that matters). Any conversions
+					// should have been handled by HELIoS.
+					// @TODO: Refine this check.
 					const auto use_signed_version = isArgSigned(mir_instruction.arguments.at(0));
 					curr_block->instructions.emplace_back(
 						mir2lirOperation(mir_instruction.operation, use_signed_version),
