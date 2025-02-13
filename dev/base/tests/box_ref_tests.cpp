@@ -445,6 +445,9 @@ private:
 			ASSERT_EQUAL(a_ref_2.toOpt(), a_ref_1.toOpt());
 			ASSERT_EQUAL(a_ref_1.toOpt(), Ref(&a));
 			ASSERT_TRUE(a_ref_1 == a_ref_2);
+
+			MRef<LiveCounter> a_ref_4 = a_ref_1.toOpt().value().toMRef();
+			ASSERT_TRUE(a_ref_1 == a_ref_4);
 		}
 		ASSERT_EQUAL(LiveCounter::count, 0);
 
