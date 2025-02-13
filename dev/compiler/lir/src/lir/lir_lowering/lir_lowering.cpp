@@ -294,8 +294,8 @@ namespace compiler::lir {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 
-					auto       output             = getLocal(mir_instruction.output.value());
-					auto       args               = getLocations(mir_instruction.arguments);
+					auto output = getLocal(mir_instruction.output.value());
+					auto args   = getLocations(mir_instruction.arguments);
 
 					// It is assumed that all arguments of a built-in function are of the same exact
 					// type, and thus also have the same sign (if that matters). Any conversions
