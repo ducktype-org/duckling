@@ -30,8 +30,11 @@ namespace hashing {
 			using TypeHC_value_type = TypeHC::value_type;
 		};
 
-		// checks if type hash code can be added to the hash algorithm
-		// (protects from invalid instantiations outside of the immediate context)
+		/**
+		 * Checks if a given type hash code can be hashed by the given hash algorithm
+		 * (it also protects from invalid instantiations outside of the immediate context
+		 * that could cause a compilation error by omitting SFINAE)
+		 */
 		template<typename T, typename TypeHC, typename HashAlgorithm>
 		concept can_get_type_hash_code = requires(HashAlgorithm& h) {
 			typename TypeHC::value_type;
@@ -105,6 +108,8 @@ namespace hashing {
 			if constexpr (APPEND_TYPE_HASH_CODE) {
 				if constexpr (detail::can_get_type_hash_code<T, TypeHC, HashAlgorithm>)
 					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, HashAlgorithm>);
+				else if constexpr (detail::can_get_type_hash_code<T, TypeHC, DefaultHashAlgorithm>)
+					h(TYPE_HASH_CODE<T, typename TypeHC::value_type, DefaultHashAlgorithm>);
 				else
 					h(TYPE_HASH_CODE<T>);
 			}

@@ -9,7 +9,6 @@
 #include <bit>
 
 
-
 #include "type_hash_code_def.hpp"
 
 namespace hashing {

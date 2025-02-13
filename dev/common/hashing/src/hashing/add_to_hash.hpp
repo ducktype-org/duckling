@@ -13,10 +13,10 @@ namespace hashing {
 
 	namespace detail {
 
-		static constexpr bool ALLOW_STD_HASH = true;
+		static constexpr bool ALLOW_STD_HASH                              = true;
 		static constexpr bool ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER = true;
 
-	} // namespace detail
+	}  // namespace detail
 
 	/**
 	 * this is a template overload for the 'addToHash' function
@@ -72,7 +72,8 @@ namespace hashing {
 			for (auto&& elem: t) addToHash(hash_alg, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (detail::ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
+		else if constexpr (detail::ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER
+		                   && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
 			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
 				// note that this copy and hash finalization in cast may be expensive,
