@@ -666,6 +666,21 @@ namespace pst {
 				return "Assignment Expr";
 			}
 
+			[[nodiscard]]
+			MCRef<ExprElement> getVariables() const {
+				return variables.ref();
+			}
+
+			[[nodiscard]]
+			base::StrID getAssignmentType() const {
+				return type;
+			}
+
+			[[nodiscard]]
+			MCRef<ExprElement> getValue() const {
+				return value.ref();
+			}
+
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Assignment() override = default;
