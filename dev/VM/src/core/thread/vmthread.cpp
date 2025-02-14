@@ -254,7 +254,7 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(Ref<const Code> code) {
+	void VMThread::run(CRef<Code> code) {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_code = code;
 		try {
@@ -352,7 +352,7 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(Ref<const vm::Code> code) {
+	bool VMThread::initThreadAndRun(CRef<vm::Code> code) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 

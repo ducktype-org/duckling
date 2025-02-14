@@ -29,7 +29,7 @@ int main() {
 
 	// log message:
 	// some more info will often be passed to the constructor here.
-	logger.log(base::make_unique<MessageRelevantToThisSituation>(current_position));
+	logger.log(makeBox<MessageRelevantToThisSituation>(current_position));
 
 	// ...
 

@@ -90,9 +90,8 @@ namespace tsh {
 			= ReferenceConstructionRecord{ underlying_type, ref_kind, leaking, nullable, unique };
 
 		if (!references.contains(ref_record)) {
-			auto reference
-				= base::make_unique<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
-			references.put(ref_record, ReferenceInfo(reference.get()));
+			auto reference = makeBox<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
+			references.put(ref_record, ReferenceInfo(reference.refMut().get()));
 			pushType(std::move(reference));
 		}
 
@@ -188,11 +187,11 @@ namespace tsh {
 		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
-			const Kind        originalKind = p->getKind();
-			const Kind        targetKind   = TYPE_INFO::Impl::staticKind;
+			const Kind        original_kind = p->getKind();
+			const Kind        target_kind   = TYPE_INFO::Impl::STATIC_KIND;
 			ss << "Type cast between TypeInfo kinds failed. A cast from "
-			   << base::enumToStr(originalKind).str() << " to " << base::enumToStr(targetKind).str()
-			   << " was attempted.";
+			   << base::enumToStr(original_kind).str() << " to "
+			   << base::enumToStr(target_kind).str() << " was attempted.";
 			throw base::LogicError{ ss.str() };
 		}
 		return result;

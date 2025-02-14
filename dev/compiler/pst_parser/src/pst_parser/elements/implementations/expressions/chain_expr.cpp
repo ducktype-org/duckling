@@ -52,7 +52,7 @@ namespace pst::expr {
 			           || state[0].isBracketGroup(lexer::Token::Square)) {
 				state.parse(out).with(&out->chain.back(), Call::parse, +fwd);
 			} else {
-				state.log(base::make_unique<BadChainExprError>(
+				state.log(makeBox<BadChainExprError>(
 					dia::SourcePosition(state.getPosition(), state.getPosition(fwd - 1).getEnd())
 				));
 				fastForward(state, fwd);

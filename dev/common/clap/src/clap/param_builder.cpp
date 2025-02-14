@@ -10,9 +10,8 @@
 
 namespace clap {
 
-	ParamBuilder ParamBuilder::ofValue(base::unique_ptr<ValueParser> value_parser) {
+	ParamBuilder ParamBuilder::ofValue(Box<ValueParser> value_parser) {
 		ParamBuilder builder;
-		if (value_parser == nullptr) throw ParamBuilderException("ValueParser is null!");
 		builder.value_parser = std::move(value_parser);
 		return builder;
 	}
@@ -51,7 +50,7 @@ namespace clap {
 
 	ParamBuilder& ParamBuilder::required() {
 		parameter_necessity = ParameterNecessity(Required());
-		if (value_parser == nullptr) throw ParamBuilderException("Flag cannot be required!");
+		if (!value_parser) throw ParamBuilderException("Flag cannot be required!");
 		return *this;
 	}
 

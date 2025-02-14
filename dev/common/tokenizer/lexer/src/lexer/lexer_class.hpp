@@ -23,7 +23,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(tokenizer::BorrowFile);
+		explicit Lexer(Ref<tokenizer::TokenFile>);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -49,7 +49,7 @@ namespace lexer {
 		[[nodiscard]]
 		const Char& peek(usize fwd = 0) const;
 		[[nodiscard]]
-		bool tryRawValue(char rawValue, usize fwd = 0) const;
+		bool tryRawValue(char raw_value, usize fwd = 0) const;
 		/**@}*/
 
 		/**
@@ -106,11 +106,11 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPosition() const;
 
-		usize                 where = 0;  ///< Current position in file
-		tokenizer::BorrowFile file;
-		dia::Logger&          logger;
-		const CharArray&      char_array;
-		Tokens                tokens;
+		usize                     where = 0;  ///< Current position in file
+		Ref<tokenizer::TokenFile> file;
+		dia::Logger&              logger;
+		const CharArray&          char_array;
+		Tokens                    tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug

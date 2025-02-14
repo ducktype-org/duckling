@@ -32,7 +32,7 @@ namespace pst::expr {
 					found = true;
 					place = i;
 				} else {
-					state.log(base::make_unique<MultipleAssignmentError>(pos));
+					state.log(makeBox<MultipleAssignmentError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}

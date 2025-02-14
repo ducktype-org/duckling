@@ -38,7 +38,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 		};
 
 		explicit ErrorInQuery1(const dia::SourcePosition& source_position): Error(source_position) {
-			addNote(base::make_unique<NoteInQuery1>());
+			addNote(makeBox<NoteInQuery1>());
 		}
 
 	protected:
@@ -60,8 +60,8 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		// Log something, with example file path.
-		context.log(base::make_unique<InfoInQuery1>(dia::SourcePosition::fakePosition()));
-		context.log(base::make_unique<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
+		context.log(makeBox<InfoInQuery1>(dia::SourcePosition::fakePosition()));
+		context.log(makeBox<ErrorInQuery1>(dia::SourcePosition::fakePosition()));
 		return SquareValue(context, key);
 	}
 

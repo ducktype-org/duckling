@@ -230,10 +230,11 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(base::make_unique<
-							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-						stmt.getSourcePosition(), "No builtin operator found"
-					));
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+							stmt.getSourcePosition(), "No builtin operator found"
+						)
+					);
 					// failed
 				}
 			}
@@ -445,10 +446,11 @@ namespace compiler::helios::code {
 					node = std::move(builtin).value();
 					return;
 				} else {
-					ctx.log(base::make_unique<
-							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-						stmt.getSourcePosition(), "No builtin operator found"
-					));
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+							stmt.getSourcePosition(), "No builtin operator found"
+						)
+					);
 					// failed
 				}
 			}

@@ -45,7 +45,7 @@ namespace clap {
 		 * @param value_parser Value parser to be used to parse the value of the parameter.
 		 * @return A new object of class ParamBuilder.
 		 */
-		static ParamBuilder ofValue(base::unique_ptr<ValueParser> value_parser);
+		static ParamBuilder ofValue(Box<ValueParser> value_parser);
 		/**
 		 * Creates a new ParamBuilder object to build a flag.
 		 * @return A new object of class ParamBuilder.
@@ -123,7 +123,7 @@ namespace clap {
 		base::Optional<base::RawView> short_description;
 		base::Optional<base::RawView> long_description;
 
-		base::unique_ptr<ValueParser> value_parser;
+		MBox<ValueParser> value_parser;
 
 		base::Optional<ParameterNecessity> parameter_necessity;
 	};
