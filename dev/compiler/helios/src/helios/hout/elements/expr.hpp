@@ -133,6 +133,8 @@ namespace compiler::helios::code {
 		IntegerDiv,
 		IntegerMod,
 		IntegerPow,
+
+		IntegerLt,  //< Less than
 	};
 
 	/**

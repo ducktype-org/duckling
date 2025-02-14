@@ -10,6 +10,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(ExprStmt)
 	STMT_VISITOR(IfStmt)
 	STMT_VISITOR(VariableStmt)
+	STMT_VISITOR(AssignmentStmt)
 
 	namespace {
 		constexpr usize INDENT_SIZE = 4;
@@ -61,4 +62,12 @@ namespace compiler::helios::code {
 
 		out << ";\n";
 	}
+
+	void AssignmentStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << name(helios_symbol).strView();
+		out << " = ";
+		new_value->debugPrint(out);
+	}
+
 }
