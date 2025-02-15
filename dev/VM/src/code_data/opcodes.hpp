@@ -29,13 +29,13 @@
 
 namespace vm {
 	enum class OpcodeFix8 : u16 {
-#define DEF_OPCODE(opcode) opcode,
+#define HANDLE_OPCODE(opcode) opcode,
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 	};
-	const std::map<std::string, OpcodeFix8> str_to_OpcodeFix8{
-#define DEF_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
+	const std::map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
+#define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 	};
 }

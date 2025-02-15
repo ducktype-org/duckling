@@ -1,10 +1,7 @@
 /**
  * @file opcodes_list.hpp
  * @brief Contains a list of all DuckBC opcodes. Can be used for generating
- * repetetive code based on list of opcodes, #DEF_OPCODE and
- * #DEF_OPCODE_END macros.
- *
- * Use #DEF_OPCODE_END if the opcode is supposed to terminate the executor.
+ * repetitive code based on list of opcodes.
  *
  * Suppose you want to automatically generate a whole VM
  * switch-case loop. Instead of listing all cases by hand and worrying
@@ -14,30 +11,53 @@
  *   OP_CASE(foo)
  *   OP_CASE(bar)
  *   ...
- *   OP_CASE_END(baz)
  * }
  * ```
- * you can just define macros #DEF_OPCODE, #DEF_OPCODE_END and include this
+ * you can just define macros #DEF_OPCODE and include this
  * header like so:
  * ```cpp
  * switch (opcode) {
  *   #define DEF_OPCODE(opcode)     OP_CASE(opcode)
- *   #define DEF_OPCODE_END(opcode) OP_CASE_END(opcode)
  *   #include <code_data/opcodes_list.hpp>
  *   #undef DEF_OPCODE
- *   #undef DEF_OPCODE_END
  * }
  * ```
+ *
+ * There are other macros for cases where you want to know
+ * what arguments the opcode has - HANDLE_OPCODE_#ARGS,
+ * where # is the number of arguments.
+ * You can define them similarly to the above example.
+ *
+ * You can also override the `DEF_OPCODE` macro for
+ * even higher control.
  */
+
+#ifndef HANDLE_OPCODE
+#define DEFAULT_HANDLE_OPCODE
+#define HANDLE_OPCODE(opcode)
+#endif
+
+#ifndef HANDLE_OPCODE_0ARGS
+#define DEFAULT_HANDLE_OPCODE_0ARGS
+#define HANDLE_OPCODE_0ARGS(opcode) HANDLE_OPCODE(opcode)
+#endif
+
+#ifndef HANDLE_OPCODE_1ARGS
+#define DEFAULT_HANDLE_OPCODE_1ARGS
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) HANDLE_OPCODE(opcode)
+#endif
+
+#ifndef HANDLE_OPCODE_2ARGS
+#define DEFAULT_HANDLE_OPCODE_2ARGS
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) HANDLE_OPCODE(opcode)
+#endif
 
 #ifndef DEF_OPCODE
 #define DEFAULT_DEF_OPCODE
-#define DEF_OPCODE(opcode)
-#endif
-
-#ifndef DEF_OPCODE_END
-#define DEFAULT_DEF_OPCODE_END
-#define DEF_OPCODE_END(opcode) DEF_OPCODE(opcode)
+#define GET_MACRO(_opcode, _1, _2, NAME, ...) NAME
+#define DEF_OPCODE(...)                                                                   \
+	GET_MACRO(__VA_ARGS__, HANDLE_OPCODE_2ARGS, HANDLE_OPCODE_1ARGS, HANDLE_OPCODE_0ARGS) \
+	(__VA_ARGS__)
 #endif
 
 DEF_OPCODE(mov_l64_imm)
@@ -120,16 +140,31 @@ DEF_OPCODE(store_lptr_l64_ofs)
 DEF_OPCODE(ext_l64)
 
 // terminates execution
-DEF_OPCODE_END(exit)
+DEF_OPCODE(exit)
 
 DEF_OPCODE(breakpoint)
 
-#ifdef DEFAULT_DEF_OPCODE
-#undef DEFAULT_DEF_OPCODE
-#undef DEF_OPCODE
+#ifdef HANDLE_OPCODE
+#undef DEFAULT_HANDLE_OPCODE
+#undef HANDLE_OPCODE
 #endif
 
-#ifdef DEFAULT_DEF_OPCODE_END
-#undef DEFAULT_DEF_OPCODE_END
-#undef DEF_OPCODE_END
+#ifdef HANDLE_OPCODE_0ARGS
+#undef DEFAULT_HANDLE_OPCODE_0ARGS
+#undef HANDLE_OPCODE_0ARGS
+#endif
+
+#ifdef HANDLE_OPCODE_1ARGS
+#undef DEFAULT_HANDLE_OPCODE_1ARGS
+#undef HANDLE_OPCODE_1ARGS
+#endif
+
+#ifdef HANDLE_OPCODE_2ARGS
+#undef DEFAULT_HANDLE_OPCODE_2ARGS
+#undef HANDLE_OPCODE_2ARGS
+#endif
+
+#ifdef DEF_OPCODE
+#undef DEFAULT_DEF_OPCODE
+#undef DEF_OPCODE
 #endif

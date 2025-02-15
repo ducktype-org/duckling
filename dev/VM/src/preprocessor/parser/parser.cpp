@@ -774,7 +774,7 @@ namespace assemble {
 
 	u16 nameToOpcodeValue(base::StrID str) {
 		try {
-			return static_cast<u16>(vm::str_to_OpcodeFix8.at(str.str()));
+			return static_cast<u16>(vm::STR_TO_OPCODE_FIX8.at(str.str()));
 		} catch (std::out_of_range& err) {
 			// @TODO: better errors
 			CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
