@@ -87,7 +87,7 @@ namespace base {
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what, "\nStacktrace:\n")
+#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
 
 #define _THROW_PANIC(panic_title, what...)                \
 	throw base::Panic(                                    \
