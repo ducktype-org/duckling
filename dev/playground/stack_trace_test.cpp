@@ -1,8 +1,7 @@
-#include <stacktrace>
+#include <base/exceptions.hpp>
 #include <iostream>
 
 int main() {
-    std::string stack_trace = std::to_string(std::stacktrace::current());
-    std::cout << stack_trace << '\n';
+    std::cout << base::getCurrentStackTrace() << '\n';
     return 0;
 }

@@ -5,4 +5,4 @@ add_library(Driver
 make_module(Driver USES Base QueryFramework HELIOS MIR LIR LLVMBackend)
 
 duck_add_test(compiler driver_test tests/driver_tests.cpp
-	USES Driver)
+	USES Base Driver)

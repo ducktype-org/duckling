@@ -28,7 +28,9 @@ namespace base {
 		what_str.clear();
 		what_str += "Unexpected compiler error occurred:\n";
 		what_str += getPosition() + ":\n";
-		what_str += reason + ":\n";
+		what_str += reason + ":\n\n";
+		what_str +=  "Stacktrace:\n";
+		what_str += getCurrentStackTrace();
 	}
 
 	const std::string& Panic::getPosition() const { return position; }

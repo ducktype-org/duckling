@@ -16,7 +16,11 @@
 #include "str_utils.hpp" // IWYU pragma: export
 
 namespace base {
-
+	
+	/**
+	 * Generates a stack trace, in the form of string.
+	 * Currently used only in Panic, but can be usefull for debug.
+	 */
 	std::string getCurrentStackTrace();
 
 	/**
@@ -83,7 +87,7 @@ namespace base {
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what, "\nStacktrace:\n", ::base::getCurrentStackTrace())
+#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what, "\nStacktrace:\n")
 
 #define _THROW_PANIC(panic_title, what...)                \
 	throw base::Panic(                                    \

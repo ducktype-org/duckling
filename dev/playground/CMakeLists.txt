@@ -7,6 +7,7 @@ add_executable(fs_parser_playground fs_parser_playground.cpp)
 add_executable(stack_trace_test stack_trace_test.cpp)
 
 target_link_libraries(panic_playground Base)
+target_link_libraries(stack_trace_test Base)
 target_link_libraries(clap_playground Base Clap Printer)
 target_link_libraries(clap_example_cat Base Clap)
 target_link_libraries(fs_parser_playground Base ModuleTree Clap)
