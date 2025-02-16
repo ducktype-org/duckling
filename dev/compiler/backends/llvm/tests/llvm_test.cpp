@@ -17,6 +17,7 @@ public:
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(arithmeticTest);
 	}
 
 private:
@@ -33,11 +34,11 @@ private:
 
 			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
 
-			// this is were the main part ot test is:
-			assertTrue(llvm_module.verify(), "LLVM module verification failed");
-
 			// debug print for coverage only:
 			llvm_module.debugPrint();
+
+			// this is were the main part ot test is:
+			assertTrue(llvm_module.verify(), "LLVM module verification failed");
 		});
 	}
 
@@ -51,6 +52,8 @@ private:
 	}
 
 	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
+
+	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
 };
 
 

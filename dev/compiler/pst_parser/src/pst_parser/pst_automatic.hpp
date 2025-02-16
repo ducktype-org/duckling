@@ -9,7 +9,7 @@
  * location and skips it, otherwise it logs an error
  *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If
  * There is no identifier next it doesn't do anything
- *  - for ParserRef<T>* it calls the parser of T object into the specified location
+ *  - for Box<T>* it calls the parser of T object into the specified location
  *
  * The optional argument ignorable additionally allows to control behaviour in case of error.
  * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.
@@ -56,7 +56,7 @@ namespace pst {
 		 */
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
-				state.log(base::make_unique<tpc::BadKeywordError>(state.getPosition(), key));
+				state.log(makeBox<tpc::BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -69,7 +69,7 @@ namespace pst {
 		 */
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
-				state.log(base::make_unique<tpc::BadSpecialError>(state.getPosition(), spec));
+				state.log(makeBox<tpc::BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -82,7 +82,7 @@ namespace pst {
 		 */
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
-				state.log(base::make_unique<tpc::BadOperatorError>(state.getPosition(), op));
+				state.log(makeBox<tpc::BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) state.tokens().next();
 			} else {
 				el->addToken(state[-1]);
@@ -95,7 +95,7 @@ namespace pst {
 		 */
 		void one(tpc::Keyword* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isKeyword()) {
-				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				*result = Keyword::NotAKeyword;
 				if (!ignorable) state.tokens().next();
 				return;
@@ -110,7 +110,7 @@ namespace pst {
 		 */
 		void one(tpc::Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(base::make_unique<tpc::NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;

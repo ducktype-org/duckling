@@ -51,11 +51,8 @@ namespace pst {
 
 	template<typename Type>
 	bool assertStmtChoice(LangParserState& state, bool good) {
-		if (!good) {
-			state.log(
-				base::make_unique<BadStatementChoice<Type>>(state.ctokens().peek().getPosition())
-			);
-		}
+		if (!good)
+			state.log(makeBox<BadStatementChoice<Type>>(state.ctokens().peek().getPosition()));
 		return good;
 	}
 }

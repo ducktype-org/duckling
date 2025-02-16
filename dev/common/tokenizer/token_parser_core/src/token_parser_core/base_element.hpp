@@ -9,7 +9,7 @@ namespace tpc {
 	 * @brief Base class for implementations of AST nodes
 	 *
 	 * Things that can parse themself should have this method:
-	 *  - static ParserRef<Element> parse(LangParserState& state);
+	 *  - static Box<Element> parse(LangParserState& state);
 	 */
 
 	class Element {

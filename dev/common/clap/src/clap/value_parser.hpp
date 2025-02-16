@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <base/box.hpp>
 #include <any>
 #include <base/smart_pointers.hpp>
 #include <base/exceptions.hpp>
@@ -36,7 +37,7 @@ namespace clap {
 
 	/**
 	 * An interface class for all other parsers.
-	 * Each parser should be stored inside a base::unique_ptr and should accept
+	 * Each parser should be stored inside a Box and should accept
 	 * custom name as a constructor parameter.
 	 */
 	class ValueParser {
@@ -82,8 +83,8 @@ namespace clap {
 
 	public:
 		template<class... Args>
-		static base::unique_ptr<StringParser> make(Args&&... args) {
-			return base::make_unique<StringParser>(std::forward<Args>(args)...);
+		static Box<StringParser> make(Args&&... args) {
+			return makeBox<StringParser>(std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]
@@ -104,8 +105,8 @@ namespace clap {
 
 	public:
 		template<class... Args>
-		static base::unique_ptr<IntParser> make(Args&&... args) {
-			return base::make_unique<IntParser>(std::forward<Args>(args)...);
+		static Box<IntParser> make(Args&&... args) {
+			return makeBox<IntParser>(std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]
@@ -130,8 +131,8 @@ namespace clap {
 		};
 
 		template<class... Args>
-		static base::unique_ptr<RangeParser> make(Args&&... args) {
-			return base::make_unique<RangeParser>(std::forward<Args>(args)...);
+		static Box<RangeParser> make(Args&&... args) {
+			return makeBox<RangeParser>(std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]
@@ -161,8 +162,8 @@ namespace clap {
 			  file_regex(std::move(regex)) {}
 
 		template<class... Args>
-		static base::unique_ptr<FileParser> make(Args&&... args) {
-			return base::make_unique<FileParser>(std::forward<Args>(args)...);
+		static Box<FileParser> make(Args&&... args) {
+			return makeBox<FileParser>(std::forward<Args>(args)...);
 		}
 
 		[[nodiscard]]

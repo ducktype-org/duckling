@@ -24,7 +24,7 @@ namespace pst::expr {
 		        && (state[0].isBracketGroup(lexer::Token::Round)
 		            || state[0].isBracketGroup(lexer::Token::Square)))) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(base::make_unique<BadCallError>(
+			state.log(makeBox<BadCallError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

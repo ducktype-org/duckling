@@ -9,10 +9,12 @@ More information about files and directories can be found in the Doxygen documen
 # Module overview:
 
 - \subpage config-module
+- \subpage driver-module
 - \subpage exec-module
 - \subpage frontend-module
 - \subpage helios-module
 - \subpage pst-parser-module
+- \subpage lir
 - \subpage mir
 - \subpage duckling-snippets-readme
 - \subpage typesystem-module

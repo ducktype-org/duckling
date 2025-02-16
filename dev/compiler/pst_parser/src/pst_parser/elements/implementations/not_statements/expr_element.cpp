@@ -26,7 +26,7 @@ namespace pst {
 	bool ExprElement::checkLength(LangParserState& state, i64 length) {
 		if (length <= 0) {
 			// Empty expression error
-			state.log(base::make_unique<EmptyExprError>(state.getPosition()));
+			state.log(makeBox<EmptyExprError>(state.getPosition()));
 			fastForward(state, length);
 			return false;
 		}
