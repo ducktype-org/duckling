@@ -1,19 +1,20 @@
 #include "../exceptions.hpp"
 
 #include <ostream>
+#include <version>
 
-// #ifdef __cpp_lib_stacktrace
+#ifdef __cpp_lib_stacktrace
 	#include <stacktrace>
-// #endif
+#endif
 
 namespace base {
 
 	std::string getCurrentStackTrace() {
-		// #ifdef __cpp_lib_stacktrace
+		#ifdef __cpp_lib_stacktrace
 			return std::to_string(std::stacktrace::current());
-		// #else
-			return "Stack trace is not supported in this compiler.";
-		// #endif
+		#else
+			return "Stack trace is not supported in this compiler and/or system.";
+		#endif
 	}
 
 	Panic::Panic(std::string position, std::string reason):
