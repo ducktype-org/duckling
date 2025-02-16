@@ -22,7 +22,7 @@ namespace pst {
 		auto out      = makeBox<RoundGroupExpr>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Round)) {
-			state.log(base::make_unique<RoundExprStartError>(state.getPosition()));
+			state.log(makeBox<RoundExprStartError>(state.getPosition()));
 			return nullptr;
 		}
 

@@ -22,7 +22,7 @@ namespace pst::expr {
 
 		if (length != 2) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(base::make_unique<BadTemplateError>(
+			state.log(makeBox<BadTemplateError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}

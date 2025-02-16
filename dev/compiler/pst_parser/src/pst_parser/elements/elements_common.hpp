@@ -93,13 +93,13 @@ namespace pst::detail {
 	};
 
 	/**
-	 * @brief Borrow Iterator for Containers of ParserRef (like std::vector<ParserRef<T> >).
-	 * It is needed because ParserRef beeing base::unique_ptr cannot be "copied".
+	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T> >).
+	 * It is needed because Box beeing base::unique_ptr cannot be "copied".
 	 * This iterator returns ParserCBorrowRef when dereferenced
 	 * which is a wrapper for base::borrow_ptr.
 	 *
 	 * @tparam ParserElement Element contained in the reference
-	 * @tparam Container Container that of parserRefs to the @p ParserElement .
+	 * @tparam Container Container that of Boxs to the @p ParserElement .
 	 */
 	template<class ParserElement, class Container>
 	class ForwardBorrowIterator {

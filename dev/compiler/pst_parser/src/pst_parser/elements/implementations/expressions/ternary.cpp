@@ -63,24 +63,24 @@ namespace pst::expr {
 		for (i64 i = 0; i < length; i++) {
 			if (state[i].is(Keyword::If)) {
 				if (if_found) {
-					state.log(base::make_unique<MultipleTernaryError>(pos));
+					state.log(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (i != 0) {
-					state.log(base::make_unique<ImproperTernaryError>(pos));
+					state.log(makeBox<ImproperTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (!if_found) if_found = true;
 			} else if (state[i].is(Keyword::Then)) {
 				if (!if_found) {
-					state.log(base::make_unique<PartialTernaryError>(pos));
+					state.log(makeBox<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (then_found) {
-					state.log(base::make_unique<MultipleTernaryError>(pos));
+					state.log(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -90,12 +90,12 @@ namespace pst::expr {
 				}
 			} else if (state[i].is(Keyword::Else)) {
 				if (!if_found || !then_found) {
-					state.log(base::make_unique<PartialTernaryError>(pos));
+					state.log(makeBox<PartialTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
 				if (else_found) {
-					state.log(base::make_unique<MultipleTernaryError>(pos));
+					state.log(makeBox<MultipleTernaryError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -107,7 +107,7 @@ namespace pst::expr {
 		}
 		if (!if_found) return Lower::parse(state, length);
 		if (if_found && !else_found) {
-			state.log(base::make_unique<PartialTernaryError>(pos));
+			state.log(makeBox<PartialTernaryError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
