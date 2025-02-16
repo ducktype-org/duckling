@@ -24,4 +24,4 @@ llvm_map_components_to_libnames(llvm_libs
     Support
     nativecodegen)
 target_include_directories(llvm_example PRIVATE ${LLVM_INCLUDE_DIRS})
-target_link_libraries(llvm_example ${llvm_libs} llvm_helpers)
+target_link_libraries(llvm_example ${llvm_libs} LLVMHelpers)

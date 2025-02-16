@@ -22,3 +22,5 @@ target_link_libraries(helios_testing Base ModuleTree Clap HELIOS)
 target_link_libraries(mir_testing Base ModuleTree Clap HELIOS QueryFramework MIR PstParser)
 target_link_libraries(lir_testing Base ModuleTree Clap HELIOS QueryFramework MIR PstParser LIR)
 target_link_libraries(llvm_testing Base ModuleTree Clap HELIOS QueryFramework MIR PstParser LIR LLVMBackend)
+target_link_libraries(llvm_testing "-lstdc++exp")
+

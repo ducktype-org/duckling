@@ -12,9 +12,9 @@ llvm_map_components_to_libnames(llvm_libs
     Support
     nativecodegen)
 target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
-target_link_libraries(LLVMBackend ${llvm_libs})
 
-make_module(LLVMBackend USES Base QueryFramework LIR llvm_helpers)
+make_module(LLVMBackend USES Base QueryFramework LIR LLVMHelpers ${llvm_libs})
+# target_link_libraries(LLVMBackend ${llvm_libs})
 
 duck_add_test(compiler llvm_test tests/llvm_test.cpp
-	USES Base Tester LLVMBackend)
+	USES Base Tester LLVMBackend "-lstdc++exp")
