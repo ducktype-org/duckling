@@ -58,7 +58,7 @@ def cli():
 
 
 def setup_build_impl(
-    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage
+    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, gcov_version, ccache, coverage
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -80,6 +80,7 @@ def setup_build_impl(
             f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
             f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
             f"-D CMAKE_C_COMPILER={cc_compiler}",
+            f"-D GCOV_VERSION={gcov_version}",
             f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
             f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
         ]
@@ -143,7 +144,7 @@ def setup_build_impl(
     help="A path to the C complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
-    cls=default_compiler_from_ctx("cc_compiler"),
+     cls=default_compiler_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
@@ -160,6 +161,13 @@ def setup_build_impl(
     type=bool,
     default=False,
     is_flag=True,
+)
+# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options) 
+@click.option(
+    "--gcov-version",
+    prompt="GCOV version",
+    help="GCOV version that will be passed to find_program in CMAKE",
+    default="gcov-14",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""

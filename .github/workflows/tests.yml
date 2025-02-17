@@ -110,7 +110,8 @@ jobs:
         id: cmake-flags
         # Env here is used for readability only
         env:
-          flags: ${{ env.COVERAGE_ENABLED == 'true' && '-D ENABLE_COVERAGE=ON' || '' }}
+          flags:
+            ${{ env.COVERAGE_ENABLED == 'true' && '-D ENABLE_COVERAGE=ON -D GCOV_VERSION=${{env.GCOV_PATH}}' || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
