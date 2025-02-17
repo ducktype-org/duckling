@@ -13,7 +13,7 @@ if(ENABLE_COVERAGE)
 		message(FATAL_ERROR "GCOV_VERSION is not set.")
 	endif()
 
-	find_program(GCOV_PATH GCOV_VERSION REQUIRED)
+	find_program(GCOV_PATH ${GCOV_VERSION} REQUIRED)
 	
 	message(STATUS "GCOV path: ${GCOV_PATH}")
 
