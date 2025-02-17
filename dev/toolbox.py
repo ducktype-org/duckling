@@ -144,7 +144,7 @@ def setup_build_impl(
     help="A path to the C complier to compile with",
     # this overrides the click.Option class to use the default_compiler_from_ctx
     # instead, so it can get ctx and infer and set the default value
-     cls=default_compiler_from_ctx("cc_compiler"),
+    cls=default_compiler_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
