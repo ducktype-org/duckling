@@ -19,7 +19,7 @@ env:
   IF_MAIN_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main'}}
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
-  GCOV_PATH: gcov-14
+  GCOV_VERSION: gcov-14
 
 jobs:
   build:
@@ -64,7 +64,7 @@ jobs:
         run: |
           ${{ env.CXX_COMPILER }} --version
           ${{ env.CC_COMPILER }} --version
-          ${{ env.GCOV_PATH }} --version
+          ${{ env.GCOV_VERSION }} --version
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
@@ -111,7 +111,7 @@ jobs:
         # Env here is used for readability only
         env:
           flags:
-            ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', env.GCOV_PATH) || '' }}
+            ${{ env.COVERAGE_ENABLED == 'true' && format('-D ENABLE_COVERAGE=ON -D GCOV_VERSION={0}', env.GCOV_VERSION) || '' }}
         run: echo flags=${{ env.flags }} >> $GITHUB_OUTPUT
 
       - name: Configure CMake
