@@ -1,3 +1,5 @@
+#pragma once
+
 namespace lexer::detail {
 	class ICUDeinit final {
 	public:
