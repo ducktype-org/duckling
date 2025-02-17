@@ -6,8 +6,15 @@ endfunction()
 
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
+	
 	find_program(LCOV lcov REQUIRED)
-	find_program(GCOV_PATH gcov-14 REQUIRED)
+
+	if (NOT GCOV_VERSION)
+		message(FATAL_ERROR "GCOV_VERSION is not set.")
+	endif()
+
+	find_program(GCOV_PATH ${GCOV_VERSION} REQUIRED)
+	
 	message(STATUS "GCOV path: ${GCOV_PATH}")
 
 	find_program(GENHTML genhtml REQUIRED)
