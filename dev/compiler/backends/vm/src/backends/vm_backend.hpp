@@ -10,6 +10,6 @@ namespace compiler::backend_vm {
 
 		[[nodiscard]] std::string serialize() const;
         private:
-        std::vector<
+        // std::vector<
 	};
 }

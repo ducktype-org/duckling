@@ -97,7 +97,7 @@ namespace vm {
 #undef HANDLE_OPCODE
 
 		// NOLINTBEGIN(readability-identifier-naming)
-		// Opcodes utilities functions (named the simmiliar way as all OpFuns)
+		// Opcodes utilities functions (named the similar way as all OpFuns)
 		static OpFun handle_execution_break;
 		static OpFun save_execution_state;
 		// NOLINTEND(readability-identifier-naming)

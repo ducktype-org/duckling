@@ -5,7 +5,7 @@
 #pragma once
 
 #include <base/ints.hpp>
-#include <map>
+#include <unordered_map>
 
 /**
  * Opcodes names conventions:
@@ -33,7 +33,8 @@ namespace vm {
 #include "opcodes_list.hpp"
 #undef HANDLE_OPCODE
 	};
-	const std::map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
+	// @TODO: Add constructors to base::HashMap to allow usage of base::HashMap here.
+	const std::unordered_map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
 #define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
 #include "opcodes_list.hpp"
 #undef HANDLE_OPCODE

@@ -1,8 +1,12 @@
 
 #include "parser.hpp"
+#include "base/exceptions.hpp"
+#include "base/type_traits.hpp"
+#include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>
 #include <cstdint>
 #include <lexer/lexer.hpp>
+#include <limits>
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
 #include <base/optional.hpp>
@@ -13,6 +17,7 @@
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/tpc.hpp>
 #include <base/maps.hpp>
+#include <utility>
 #include <variant>
 #include <base/variant.hpp>
 #include <base/string_id.hpp>
@@ -27,27 +32,9 @@ namespace assemble {
 		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
 
-	enum class OpCodeArgType : std::uint8_t { Arg, Local, Imm };
-
-	struct OpCodeNumArg {
-		OpCodeArgType type;
-		i64           value;
-	};
-
-	struct OpCodeLabelArg {
-		i64         value;
-		bool        type_value;
-		base::StrID label_name;
-	};
-
-	using OpCodeAnyArg = std::variant<OpCodeNumArg, OpCodeLabelArg>;
-
-	/// TODO: delete redundant using (the same as in type.hpp)
-	using TypeSize = u64;
-
 	struct PrimitiveType {
 		base::StrID name;
-		TypeSize    size{};
+		usize       size{};
 
 		void dprint(std::ostream& out) const {
 			out << "primitive {\n";
@@ -72,7 +59,7 @@ namespace assemble {
 	struct StaticTableType {
 		base::StrID name;
 		base::StrID inner;
-		TypeSize    table_size;
+		usize       table_size;
 
 		void dprint(std::ostream& out) const {
 			out << "static_table {\n";
@@ -169,9 +156,104 @@ namespace assemble {
 		}
 	};
 
+	namespace opargs_parsers {
+		template<class T, class K>
+		T parseInt(F8ParserState& state) {
+			try {
+				return base::strIDToNum<T>(state.tokens().next().getValue());
+			} catch (std::logic_error& e) {
+				CORE_PANIC(base::strConcat(
+					"not a valid number for `", base::typeName<K>(), "`: ", state[0].getValue()
+				));
+			}
+		}
+
+		base::StrID parseStr(F8ParserState& state) {
+			tpc::Identifier identifier;
+			state.parse().one(&identifier);
+			return identifier.value;
+		}
+
+		template<class T>
+		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
+
+		template<IsOpCodeArg ArgType>
+		auto parseArg(F8ParserState& state) -> ArgType;
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::ImmediateI64 {
+			return { parseInt<i64, vm::opargs::ImmediateI64>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackOffset {
+			return { parseInt<i64, vm::opargs::StackOffset>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::ArgsOffset {
+			return { parseInt<i64, vm::opargs::ArgsOffset>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
+			return { parseStr(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::FunctionName {
+			return { parseStr(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
+			return { parseStr(state) };
+		}
+
+		std::vector<vm::opargs::OpCodeArg> parseOpCode0Args(F8ParserState& state) { return {}; }
+
+		template<IsOpCodeArg Arg0>
+		std::vector<vm::opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
+			auto arg0 = parseArg<Arg0>(state);
+			return { arg0 };
+		}
+
+		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
+		std::vector<vm::opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
+			auto arg0 = parseArg<Arg0>(state);
+			if (!state.tryEat(lang_def::Special::Comma))
+				state.fail(0, base::strConcat("Expected comma here"));
+			auto arg1 = parseArg<Arg1>(state);
+			return { arg0, arg1 };
+		}
+
+#define HANDLE_OPCODE_0ARGS(opcode) \
+	auto parseOpCode_##opcode(F8ParserState& state) { return parseOpCode0Args(state); }
+
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) \
+	auto parseOpCode_##opcode(F8ParserState& state) { return parseOpCode1Args<arg0_type>(state); }
+
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)     \
+	auto parseOpCode_##opcode(F8ParserState& state) {         \
+		return parseOpCode2Args<arg0_type, arg1_type>(state); \
+	}
+
+#include <code_data/opcodes_list.hpp>
+
+#undef HANDLE_OPCODE_0ARGS
+#undef HANDLE_OPCODE_1ARGS
+#undef HANDLE_OPCODE_2ARGS
+
+#define HANDLE_OPCODE(opcode) std::make_pair(std::string(#opcode), parseOpCode_##opcode),
+		const std::unordered_map OP_CODE_TO_OP_CODE_PARSER = {
+#include <code_data/opcodes_list.hpp>
+		};
+#undef HANDLE_OPCODE
+	}
+
 	struct OpCode: AsmElement {
-		base::StrID               opcode_name;
-		std::vector<OpCodeAnyArg> args;
+		base::StrID                        opcode_name;
+		std::vector<vm::opargs::OpCodeArg> args;
 
 		static Box<OpCode> parse(F8ParserState& state) {
 			auto out = makeBox<OpCode>();
@@ -179,58 +261,17 @@ namespace assemble {
 			tpc::Identifier identifier1;
 			state.parse().one(&identifier1);
 			out->opcode_name = identifier1.value;
+			std::cout << out->opcode_name.strView() << '\n';
 
-			if (state[0].is(lang_def::Special::Semicolon)) {
-				state.parse().one(lang_def::Special::Semicolon);
-				return out;
-			}
+			if (!opargs_parsers::OP_CODE_TO_OP_CODE_PARSER.contains(out->opcode_name.str()))
+				state.fail(-1, base::strConcat("Unknown opcode: ", out->opcode_name));
 
+			out->args = opargs_parsers::OP_CODE_TO_OP_CODE_PARSER.at(out->opcode_name.str())(state);
 
-			while (state.notEmpty()) {
-				switch (state[0].getType()) {
-				case lexer::Token::Type::Identifier: {
-					tpc::Identifier identifier2;
-					state.parse().one(&identifier2);
+			if (!state.tryEat(lang_def::Special::Semicolon))
+				state.fail(0, base::strConcat("Expected semicolon here"));
 
-					out->args.emplace_back(OpCodeLabelArg{ 0, false, identifier2.value });
-					break;
-				}
-				case lexer::Token::Type::NumLiteral:
-					try {
-						out->args.emplace_back(OpCodeNumArg{
-							OpCodeArgType::Imm, base::strIDToNum(state.tokens().next().getValue()) }
-						);
-					} catch (std::logic_error& e) {
-						state.err.failAndLog(
-							state.getPosition(),
-							base::strConcat("not a number: ", state[0].getValue())
-						);
-						state.tokens().skip();
-					}
-					break;
-				default:
-					state.err.failAndLog(
-						state.getPosition(),
-						base::strConcat("incorrect token1: ", state[0].getValue())
-					);
-					state.tokens().skip();
-				}
-
-				if (state.ctokens().peek().is(lang_def::Special::Semicolon)) {
-					state.parse().one(lang_def::Special::Semicolon);
-					break;
-				}
-
-				if (state.ctokens().peek().is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.err.failAndLog(
-						state.getPosition(),
-						base::strConcat("incorrect token2: ", state[0].getValue())
-					);
-					state.tokens().skip();
-				}
-			}
+			std::cout << "Worked...\n";
 
 			return out;
 		}
@@ -239,10 +280,21 @@ namespace assemble {
 			out << "        " << opcode_name.view().stringView() << " ";
 			for (auto& arg: args) {
 				variant_match(arg) {
-					variant_case(OpCodeNumArg, num_arg) { out << num_arg.value << " "; }
-					variant_case(OpCodeLabelArg, label_arg) {
-						out << label_arg.label_name.strView() << " (" << label_arg.value << ")"
-							<< " ";
+					variant_case(vm::opargs::ImmediateI64, num_arg) { out << num_arg.value << " "; }
+					variant_case(vm::opargs::StackOffset, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::ArgsOffset, args_offset_arg) {
+						out << args_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::Type, type_arg) {
+						out << type_arg.type_name.strView() << " ";
+					}
+					variant_case(vm::opargs::FunctionName, function_name_arg) {
+						out << function_name_arg.function_name.strView() << " ";
+					}
+					variant_case(vm::opargs::Label, label_arg) {
+						out << label_arg.label_name.strView() << " ";
 					}
 				}
 			}
@@ -280,29 +332,6 @@ namespace assemble {
 				}
 			}
 
-			for (i32 i = 0; i < out->opcodes.size(); i++) {
-				for (auto& opcode: out->opcodes[i]->args) {
-					variant_match(opcode) {
-						variant_case(OpCodeLabelArg, label) {
-							auto it = out->label_position.find(label.label_name);
-							if (it != out->label_position.end()) {
-								label.value      = static_cast<i64>(it->second) - i - 1;
-								label.type_value = false;
-							} else {
-								// @TODO: not failing here allow for "type arguments"
-								// This setup should be changed in the future.
-								label.type_value = true;
-
-								// state.err.failAndLog(
-								// 	state.ctokens().peek().getPosition(),
-								// 	base::strConcat("Nonexistent label: ",
-								//                      std::get<OpCodeLabelArg>(opcode).value));
-							}
-						}
-					}
-				}
-			}
-
 			return out;
 		}
 
@@ -315,7 +344,7 @@ namespace assemble {
 		~ByteCode() override = default;
 	};
 
-	constexpr usize SIZE_T_MAX = (usize) (-1);
+	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
 
 	struct Func: AsmElement {
 		tpc::Identifier name;
@@ -383,11 +412,10 @@ namespace assemble {
 					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
 				auto value = state.tokens().next();
 
-				if (!value.isNumLiteral()) {
+				if (!value.isNumLiteral())
 					state.err.failAndLog(
 						state.getPosition(), "arg_size argument is not num-literal"
 					);
-				}
 				try {
 					out->arg_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
@@ -430,11 +458,10 @@ namespace assemble {
 				if (out->local_size != SIZE_T_MAX)
 					state.err.failAndLog(state.getPosition(), "local_size duplicate");
 				auto value = state.tokens().next();
-				if (!value.isNumLiteral()) {
+				if (!value.isNumLiteral())
 					state.err.failAndLog(
 						state.getPosition(), "local_size argument is not num-literal"
 					);
-				}
 				try {
 					out->local_size = strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
@@ -452,11 +479,10 @@ namespace assemble {
 				if (out->ret_size != SIZE_T_MAX)
 					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
-				if (!value.isNumLiteral()) {
+				if (!value.isNumLiteral())
 					state.err.failAndLog(
 						state.getPosition(), "ret_size argument is not num-literal"
 					);
-				}
 				try {
 					out->ret_size = base::strIDToNum(value.getValue());
 				} catch (std::logic_error& e) {
@@ -525,7 +551,7 @@ namespace assemble {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				out->datatype
-					= PrimitiveType{ name, static_cast<TypeSize>(strIDToNum(value.getValue())) };
+					= PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
 			}
 			break;
 		}
@@ -546,10 +572,9 @@ namespace assemble {
 				if (!size.isNumLiteral()) {
 					state.err.failAndLog(state.getPosition(), "expected number");
 				} else {
-					out->datatype
-						= StaticTableType{ name,
-						                   type_name.getValue(),
-						                   static_cast<TypeSize>(strIDToNum(size.getValue())) };
+					out->datatype = StaticTableType{
+						name, type_name.getValue(), static_cast<usize>(strIDToNum(size.getValue()))
+					};
 				}
 			}
 			break;
@@ -793,12 +818,15 @@ namespace assemble {
 #endif
 					CORE_ASSERT(
 						func.arg_size == func.next_arg_size,
-						"Invalid Tailcall! Caller signature must have arg_size equal to "
+						"Invalid Tailcall! Caller signature must have arg_size "
+						"equal "
+						"to "
 						"next_arg_size"
 					);
 					CORE_ASSERT(
 						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
-						"Invalid Tailcall! Called function signature must have arg_size == "
+						"Invalid Tailcall! Called function signature must have "
+						"arg_size == "
 						"next_arg_size"
 					);
 					CORE_ASSERT(
@@ -818,7 +846,44 @@ namespace assemble {
 		}
 	}
 
-	vm::FuncData changeFuncToFuncData(CRef<Func> func, vm::TypeMetadata& types) {
+	i64 getOpCodeArgValue(
+		const std::vector<Box<Func>>& functions,
+		const vm::TypeMetadata&       types,
+		CRef<Func>                    current_func,
+		usize                         instruction_index,
+		const vm::opargs::OpCodeArg&  opcode_arg
+	) {
+		variant_match(opcode_arg) {
+			variant_case(vm::opargs::ImmediateI64, imm) return imm.value;
+			variant_case(vm::opargs::StackOffset, offset) return offset.offset;
+			variant_case(vm::opargs::ArgsOffset, offset) return offset.offset;
+			variant_case(vm::opargs::Type, type_arg) {
+				auto type_obj = types.getTypeByName(type_arg.type_name);
+				if (type_obj) return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
+				CORE_PANIC(base::strConcat("Nonexistent type: ", type_arg.type_name));
+			}
+			variant_case(vm::opargs::FunctionName, name) {
+				for (i64 i = 0; i < functions.size(); i++)
+					if (functions[i]->name == name.function_name) return i;
+				CORE_PANIC(base::strConcat("Nonexistent function: ", name.function_name));
+			}
+			variant_case(vm::opargs::Label, label) {
+				auto it = current_func->code->label_position.find(label.label_name);
+				if (it != current_func->code->label_position.end()) {
+					// We have to calculate the
+					// difference instead of absolute jump position,
+					// because our instruction counter is a pointer.
+					return static_cast<i64>(it->second) - instruction_index - 1;
+				}
+				CORE_PANIC(base::strConcat("Nonexistent label: ", label.label_name));
+			}
+		}
+		CORE_UNREACHABLE();
+	}
+
+	vm::FuncData changeFuncToFuncData(
+		const std::vector<Box<Func>>& functions, CRef<Func> func, vm::TypeMetadata& types
+	) {
 		vm::FuncData func_data;
 		func_data.ret_size      = 0;
 		func_data.arg_size      = func->arg_size;
@@ -826,38 +891,21 @@ namespace assemble {
 		func_data.stack_size    = func->local_size;
 		func_data.ret_size      = func->ret_size;
 
-		for (auto& op: func->code->opcodes) {
-			// calculate type arguments:
-			for (auto& arg: op->args) {
-				variant_match(arg) {
-					variant_case(OpCodeLabelArg, label) {
-						if (label.type_value) {
-							auto type = types.getTypeByName(label.label_name);
-							if (!type.has_value()) {
-								std::cerr << "Wrong type name! " << label.label_name.strView()
-										  << "\n";
-								label.value = 0;
-							} else {
-								label.value = static_cast<i64>(u64(type.value()->getID()));
-							}
-						}
-					}
-				}
-			}
-
-			i64 arg_0 = 0;
-			i64 arg_1 = 0;
+		for (i64 op_idx = 0; op_idx < func->code->opcodes.size(); op_idx++) {
+			auto&& op    = func->code->opcodes[op_idx];
+			i64    arg_0 = 0;
+			i64    arg_1 = 0;
 			switch (op->args.size()) {
 			case 0: {
 				break;
 			}
 			case 1: {
-				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
+				arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0]);
 				break;
 			}
 			case 2: {
-				std::visit([&arg_0](auto& arg) { arg_0 = arg.value; }, op->args[0]);
-				std::visit([&arg_1](auto& arg) { arg_1 = arg.value; }, op->args[1]);
+				arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0]);
+				arg_1 = getOpCodeArgValue(functions, types, func, op_idx, op->args[1]);
 				break;
 			}
 			}
@@ -881,8 +929,9 @@ namespace assemble {
 		return func_data;
 	}
 
-	// @TODO: this function returns errors as string, in the future `StreamPrinter` like object
-	// should be returned, that can produce both human readable and json error output
+	// @TODO: this function returns errors as string, in the future `StreamPrinter`
+	// like object should be returned, that can produce both human readable and json
+	// error output
 	cpp::result<vm::Code, std::string>
 		getCode(CodeContainer& code, vm::TypeMetadata& type_metadata) {
 		if (!code.ok) return cpp::failure(code.error);
@@ -901,10 +950,10 @@ namespace assemble {
 		if (main_id == SIZE_MAX) return cpp::failure("error: No main.");
 		instructions_code.main_id = main_id;
 
-		for (auto& func: code.code->functions) {
-			instructions_code.functions.emplace_back(changeFuncToFuncData(func.ref(), type_metadata)
+		for (auto& func: code.code->functions)
+			instructions_code.functions.emplace_back(
+				changeFuncToFuncData(code.code->functions, func.ref(), type_metadata)
 			);
-		}
 		assertTailcallsSignatures(instructions_code.functions);
 
 		return instructions_code;
