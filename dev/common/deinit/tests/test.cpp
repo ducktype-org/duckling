@@ -34,6 +34,6 @@ int main() {
 	deinit::registerForDeinit(testFunction(6));
 	deinit::registerForDeinit([&]() {
 		CORE_ASSERT(counter == 6, "Test failed at the end.");
-		std::cout << "Test passed!" << std::endl;
+		std::cout << "Test passed!\n";
 	});
 }

@@ -12,14 +12,15 @@ namespace deinit {
 
 /**
  * Helper macro that can be used as:
- * REGISTER_FUNC_FOR_DEINIT(function_name);
- * in global scope to register function_name to be called after main.
- * @important This macro should be used in cpp files, to avoid duplication.
- * @note for technical reasons the macro should be used at most once per line.
+ * REGISTER_FUNC_FOR_DEINIT(function_name)
+ * to register function_name to be called after main.
+ * @note This macro should only be used in global/namespace scope. 
+ * @note This macro should only be used in cpp files, to avoid duplication.
+ * @note For technical reasons the macro should be used at most once per line.
  */
 #define REGISTER_FUNC_FOR_DEINIT(function_name)                               \
 	namespace {                                                               \
-		int CONCAT_2(deinit_helper_JG8MG9, __LINE__) = []() noexcept -> int { \
+		int CONCAT_2(deinit_helper_JG8MG9_, __LINE__) = []() noexcept -> int { \
 			::deinit::registerForDeinit(function_name);                       \
 			return 0;                                                         \
 		}();                                                                  \

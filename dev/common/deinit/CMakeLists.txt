@@ -4,6 +4,5 @@ add_library(Deinit
 
 make_module(Deinit USES Base)
 
-
 duck_add_test(common deinit_test tests/test.cpp
 	USES Base Deinit)
