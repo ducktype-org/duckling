@@ -23,7 +23,7 @@ function fib {
         mov_l64_r0          8;
 
         # tmp2 = fib(n - 2)
-        sub_l64_imm         0, 1;
+        sub_l64_imm         0, 0.15;
         setFstArg_l64       0;
         call_func           fib;
         mov_l64_r0          0;

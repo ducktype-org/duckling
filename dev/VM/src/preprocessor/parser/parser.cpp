@@ -3,6 +3,7 @@
 #include "base/exceptions.hpp"
 #include "base/type_traits.hpp"
 #include "diagnostic/logger.hpp"
+#include "diagnostic/message.hpp"
 #include "diagnostic/source_position.hpp"
 #include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>
@@ -19,6 +20,7 @@
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/tpc.hpp>
 #include <base/maps.hpp>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <base/variant.hpp>
@@ -175,13 +177,20 @@ namespace assemble {
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseInt(F8ParserState& state) {
+			auto token = state.tokens().next();
 			try {
-				return base::strIDToNum<T>(state.tokens().next().getValue());
-			} catch (std::logic_error& e) {
-				CORE_PANIC(base::strConcat(
-					"not a valid number for `", base::typeName<K>(), "`: ", state[0].getValue()
-				));
-			}
+				usize  pos    = 0;
+				auto&& str    = token.getValue().str();
+				T      result = std::stoi(str, &pos);
+				// Check if the number was fully parsed
+				if (pos == str.length()) return result;
+			} catch (std::logic_error& e) {}
+
+			state.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>>(
+				token.getPosition(),
+				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+			));
+			return T{ 0 };
 		}
 
 		base::StrID parseStr(F8ParserState& state) {
@@ -294,7 +303,7 @@ namespace assemble {
 				} else if (!logged) {
 					logged = true;
 					state.log(makeBox<vm::parser::UnknownOpCodeError>(
-						state.getPosition(0), identifier1.value
+						state.getPosition(), identifier1.value
 					));
 				}
 			}
@@ -678,7 +687,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = VariantType{ name, alternatives };
+			out->datatype = VariantType{ .name = name, .variant_alternatives = alternatives };
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
@@ -705,7 +714,7 @@ namespace assemble {
 			state.goUpAndSkip();
 			tpc::Identifier result;
 			state.parse().one(&result);
-			out->datatype = FunctionType{ name, arguments, result };
+			out->datatype = FunctionType{ .name = name, .parameters = arguments, .result = result };
 			break;
 		}
 		default: {
