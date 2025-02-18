@@ -142,7 +142,7 @@ namespace tpc {
 		void one(OptionalIdentifier* result, bool = false) {
 			if (state.ctokens().peek().isIdentifier()) {
 				result->position = state.getPosition();
-				result->value = state.tokens().next().getValue();
+				result->value    = state.tokens().next().getValue();
 			}
 		}
 
