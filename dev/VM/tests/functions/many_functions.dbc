@@ -46,7 +46,7 @@ function add1110 {
         getFstArg_l64    		8;
 
         setFstArg_l64       8;
-        call_func           1;
+        call_func           add1100;
         mov_l64_r0          8;
 
         add_l64_l64    0,   8;
@@ -66,7 +66,7 @@ function main {
         input_l64           0;
         setFstArg_l64       0;
 
-        call_func          	2;
+        call_func          	add1110;
 
         mov_l64_r0          0;
         output_l64          0;
