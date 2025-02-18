@@ -65,17 +65,17 @@ namespace base {
 		constexpr Data& operator[](Key pos) { return *data.at(static_cast<usize>(pos)); }
 
 		constexpr const Data& operator[](Key pos) const {
-			return *data.at(static_cast<usize>(pos));
+			return *data.at(static_cast<const usize>(pos));
 		}
 
 		Optional<RefT> getRef(Key pos) noexcept {
-			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].refMut();
+			if (static_cast<const usize>(pos) >= size()) return {};
+			return data[static_cast<const usize>(pos)].refMut();
 		}
 
 		Optional<CRefT> getCRef(Key pos) const noexcept {
-			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].ref();
+			if (static_cast<const usize>(pos) >= size()) return {};
+			return data[static_cast<const usize>(pos)].ref();
 		}
 
 		constexpr Key pushBack(const Data& value) {

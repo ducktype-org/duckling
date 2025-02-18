@@ -148,11 +148,12 @@ namespace lexer {
 
 		[[nodiscard]]
 		std::string reason() const override {
+			CORE_ASSERT(value >= 0, "If value is negative, then conversion of value bellow will result in underflow");
 			return base::strConcat(
 				"UTF-8 decoding error: ",
 				"Codepoint undefined in the Unicode standard encountered starting here ",
 				"with value of ",
-				base::toHexString(value)
+				base::toHexString(usize(value))
 			);
 		}
 	};
@@ -243,8 +244,9 @@ namespace lexer {
 				pos += size;
 				continue;
 			}
-
-			out.emplace_back(value, u8(size), pos);
+			
+			CORE_ASSERT(size <= std::numeric_limits<uint8_t>::max(), "Bad conversion");
+			out.emplace_back(value, u8(uint8_t(size)), pos);
 			pos += size;
 		}
 		// Add eof value
