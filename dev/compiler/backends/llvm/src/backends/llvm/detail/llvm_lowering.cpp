@@ -49,9 +49,11 @@ namespace compiler::backend_llvm {
 		// but we don't use it here in favor of deinit module.
 		//
 		// Note from LLVM docs:
-		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs. 
+		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
+		// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
 		llvm::llvm_shutdown();
 	}
+
 	REGISTER_FUNC_FOR_DEINIT(deinit);
 
 	/**
