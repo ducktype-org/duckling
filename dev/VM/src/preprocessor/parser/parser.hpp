@@ -6,6 +6,6 @@
 #include <core/process/type_metadata/type_metadata.hpp>
 
 namespace assemble {
-	cpp::result<vm::Code, std::string>
+	std::expected<vm::Code, std::string>
 		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata);
 }

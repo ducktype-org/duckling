@@ -34,9 +34,9 @@ namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
 	FilePath FilePath::getDefaultTempPath() {
-		static FilePath tempDirectoryPath
+		static FilePath temp_directory_path
 			= createTempFilePathObj(std::filesystem::temp_directory_path());
-		return tempDirectoryPath;
+		return temp_directory_path;
 	}
 
 	std::filesystem::path FilePath::genTempPathInMe(std::string_view custom_name) const {
@@ -105,9 +105,9 @@ namespace fs {
 		return file_content;
 	}
 
-	cpp::result<FileContent, std::string> FilePath::getContentSafe() const {
+	std::expected<FileContent, std::string> FilePath::getContentSafe() const {
 		if (!exists(path)) {
-			return cpp::fail(base::strConcat(
+			return std::unexpected(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));
 		}

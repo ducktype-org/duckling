@@ -165,4 +165,5 @@ DEF_OPCODE(breakpoint)
 #ifdef DEF_OPCODE
 #undef DEFAULT_DEF_OPCODE
 #undef DEF_OPCODE
+#undef GET_MACRO
 #endif

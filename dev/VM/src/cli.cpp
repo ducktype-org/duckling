@@ -1,10 +1,24 @@
 #include <api/api.hpp>
 #include "cli.hpp"
+#include "api/data/core_operation_error.hpp"
+#include "api/data/load_program_error.hpp"
+#include "base/variant.hpp"
 #include <iostream>
 #include <json/json.hpp>
+#include <variant>
 
 std::string convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return "Wrong response";
+	if (std::holds_alternative<vm::api::CoreOperationError>(apiError)) {
+		variant_match(apiError) {
+			variant_case(vm::api::CoreOperationError, core) {
+				variant_match(core) {
+					variant_case(vm::api::LoadProgramError, load) {
+						return nlohmann::json(load.why);
+					}
+				}
+			}
+		}
+	}
 	return nlohmann::json(apiError);
 }
 
