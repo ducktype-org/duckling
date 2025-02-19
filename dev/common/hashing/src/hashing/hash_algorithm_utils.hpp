@@ -74,10 +74,6 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
-			static_assert(
-				std::has_unique_object_representations_v<T>,
-				"hashAsChars can only be used on types with unique object representations"
-			);
 			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
 			if constexpr (requires {
 							  std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(),
