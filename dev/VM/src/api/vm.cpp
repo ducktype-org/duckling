@@ -4,7 +4,7 @@
 #include "vm.hpp"
 
 namespace vm::api {
-	void ignoreResponse([[maybe_unused]] const Response& response) {};
+	void ignoreResponse([[maybe_unused]] const Response& response) {}
 
 	template<class T>
 	cpp::result<T, ApiError> mapOrWrongResponse(const Response& response) {
