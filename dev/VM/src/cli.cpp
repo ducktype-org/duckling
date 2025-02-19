@@ -8,18 +8,7 @@
 #include <variant>
 
 std::string convertError(const vm::api::ApiError& api_error) {
-	if (std::holds_alternative<vm::api::CoreOperationError>(api_error)) {
-		variant_match(api_error) {
-			variant_case(vm::api::CoreOperationError, core) {
-				variant_match(core) {
-					variant_case(vm::api::LoadProgramError, load) {
-						return nlohmann::json(load.why);
-					}
-				}
-			}
-		}
-	}
-	return nlohmann::json(api_error);
+	return nlohmann::to_string(nlohmann::json(api_error));
 }
 
 template<class T, class E>
