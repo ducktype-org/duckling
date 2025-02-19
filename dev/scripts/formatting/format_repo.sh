@@ -8,7 +8,7 @@ cd "$(dirname "$0")"/../../ || exit 1
 files=$(./scripts/list_files.sh)
 
 # Find binary
-clang_format=clang-format-18
+clang_format=clang-format-19
 if [[ $1 ]]; then
     clang_format=$1
 fi
