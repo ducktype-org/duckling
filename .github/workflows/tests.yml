@@ -140,18 +140,6 @@ jobs:
             ${{ env.CCACHE_DIR }}
           key: ${{ steps.restore-cache-build.outputs.cache-primary-key }}
 
-      - name: Test
-        working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
-
-      - name: Test Coverage
-        id: test-coverage
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
-
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -177,6 +165,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }}  # This env variable is used by the GH tool.
           REPO: ${{ github.repository }}
+
+      - name: Test
+        working-directory: ${{ env.BUILD_DIR }}
+        run: cmake --build ${{ env.BUILD_DIR }} -- test
+
+      - name: Test Coverage
+        id: test-coverage
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -- coverage
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+
 
   coverage:
     needs: [build]
