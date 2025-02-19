@@ -8,6 +8,15 @@
 #include <variant>
 
 std::string convertError(const vm::api::ApiError& api_error) {
+	variant_match(api_error) {
+		variant_case(vm::api::CoreOperationError, core) {
+			variant_match(core) {
+				variant_case(vm::api::LoadProgramError, load) {
+					return load.why;
+				}
+			}
+		}
+	}
 	return nlohmann::to_string(nlohmann::json(api_error));
 }
 
