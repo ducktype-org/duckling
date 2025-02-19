@@ -7,7 +7,7 @@ on:
 env:
   CXX_COMPILER: g++-14
   CC_COMPILER: gcc-14
-  TIDY_VERSION: 18
+  TIDY_VERSION: 19
 
 jobs:
   cpp-linter:
