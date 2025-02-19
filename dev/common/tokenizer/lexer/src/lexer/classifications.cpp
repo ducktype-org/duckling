@@ -194,6 +194,9 @@ namespace lexer {
 		SIMPLE_INIT_GUARD_END
 	}
 
+	/**
+	 * A wrapper around u_cleanup macro
+	 */
 	void cleanupICU() { u_cleanup(); }
-	REGISTER_FUNC_FOR_DEINIT(cleanupICU)
+	RUN_BEFORE_MAIN(cleanupICU());
 }

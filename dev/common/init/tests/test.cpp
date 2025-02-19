@@ -11,6 +11,8 @@ namespace {
 	int counter = 0;
 }
 
+
+
 auto testFunction(int val) {
 	return [val]() {
 		counter += 1;
