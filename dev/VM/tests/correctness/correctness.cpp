@@ -6,12 +6,12 @@ class VmCorrectnessTests: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(test_tailcall);
 		TESTER_ADD_TEST(test_ackermann_old);
 		TESTER_ADD_TEST(test_ackermann_new);
 		TESTER_ADD_TEST(test_collatz);
 		TESTER_ADD_TEST(test_fib_iter);
 		TESTER_ADD_TEST(test_fib_rec);
-		TESTER_ADD_TEST(test_tailcall);
 	}
 
 private:
