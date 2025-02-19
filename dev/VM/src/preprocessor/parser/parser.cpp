@@ -342,7 +342,7 @@ namespace assemble {
 		using AsmElement::AsmElement;
 
 		std::vector<Box<OpCode>>    opcodes;
-		base::Map<base::StrID, u32> label_position;
+		base::Map<base::StrID, usize> label_position;
 
 		static Box<ByteCode> parse(F8ParserState& state) {
 			auto out = makeBox<ByteCode>(state.getPosition());
@@ -915,9 +915,12 @@ namespace assemble {
 					// We have to calculate the
 					// difference instead of absolute jump position,
 					// because our instruction counter is a pointer.
-					return static_cast<i64>(it->second) - instruction_index - 1;
+					return static_cast<i64>(it->second) - static_cast<i64>(instruction_index) - 1;
 				}
-				CORE_PANIC(base::strConcat("Nonexistent label: ", label.label_name));
+				log.log(
+					makeBox<vm::parser::InvalidLabel>(opcode_arg.position, "Label does not exist.")
+				);
+				return 0;
 			}
 		}
 		CORE_UNREACHABLE();
