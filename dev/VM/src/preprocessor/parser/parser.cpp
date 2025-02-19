@@ -1,10 +1,10 @@
 
 #include "parser.hpp"
-#include "base/exceptions.hpp"
-#include "base/type_traits.hpp"
-#include "diagnostic/logger.hpp"
-#include "diagnostic/message.hpp"
-#include "diagnostic/source_position.hpp"
+#include <base/exceptions.hpp>
+#include <base/type_traits.hpp>
+#include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/source_position.hpp>
 #include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>
 #include <cstdint>
@@ -27,7 +27,7 @@
 #include <base/string_id.hpp>
 #include <expected>
 #include "errors.hpp"
-#include "lexer/token.hpp"
+#include <lexer/token.hpp>
 
 namespace assemble {
 
