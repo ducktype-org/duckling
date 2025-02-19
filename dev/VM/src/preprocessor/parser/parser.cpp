@@ -341,7 +341,7 @@ namespace assemble {
 	struct ByteCode: AsmElement {
 		using AsmElement::AsmElement;
 
-		std::vector<Box<OpCode>>    opcodes;
+		std::vector<Box<OpCode>>      opcodes;
 		base::Map<base::StrID, usize> label_position;
 
 		static Box<ByteCode> parse(F8ParserState& state) {
