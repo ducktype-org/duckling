@@ -186,7 +186,7 @@ namespace assemble {
 				if (pos == str.length()) return result;
 			} catch (std::logic_error& e) {}
 
-			state.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Parser>>(
+			state.log(makeBox<vm::parser::InvalidLiteral>(
 				token.getPosition(),
 				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
 			));
@@ -341,8 +341,8 @@ namespace assemble {
 	struct ByteCode: AsmElement {
 		using AsmElement::AsmElement;
 
-		std::vector<Box<OpCode>>      opcodes;
-		base::Map<base::StrID, usize> label_position;
+		std::vector<Box<OpCode>>    opcodes;
+		base::Map<base::StrID, u32> label_position;
 
 		static Box<ByteCode> parse(F8ParserState& state) {
 			auto out = makeBox<ByteCode>(state.getPosition());

@@ -26,7 +26,7 @@ namespace vm::parser {
 	};
 
 	class InvalidLabel final: public dia::Error {
-		std::string_view reason;
+		base::StrID reason;
 
 	protected:
 		[[nodiscard]]
@@ -42,7 +42,7 @@ namespace vm::parser {
 
 		InvalidLabel(dia::SourcePosition pos, std::string_view reason):
 			  dia::Error(pos),
-			  reason(reason) {}
+			  reason(base::StrID(reason.data())) {}
 	};
 
 	class RepeatedLabelNote final: public dia::NoteWithPosition {
@@ -100,7 +100,7 @@ namespace vm::parser {
 	};
 
 	class InvalidType final: public dia::Error {
-		std::string_view reason;
+		base::StrID reason;
 
 	protected:
 		[[nodiscard]]
@@ -116,11 +116,11 @@ namespace vm::parser {
 
 		InvalidType(dia::SourcePosition pos, std::string_view reason):
 			  dia::Error(pos),
-			  reason(reason) {}
+			  reason(base::StrID(reason.data())) {}
 	};
 
 	class InvalidFunction final: public dia::Error {
-		std::string_view reason;
+		base::StrID reason;
 
 	protected:
 		[[nodiscard]]
@@ -136,28 +136,26 @@ namespace vm::parser {
 
 		InvalidFunction(dia::SourcePosition pos, std::string_view reason):
 			  dia::Error(pos),
-			  reason(reason) {}
+			  reason(base::StrID(reason.data())) {}
 	};
 
-	// class FileError final: public dia::Error {
-	// 	std::string           err;
-	// 	std::filesystem::path path;
+	class InvalidLiteral final: public dia::Error {
+		base::StrID reason;
 
-	// protected:
-	// 	[[nodiscard]]
-	// 	std::string toStringBrief() const override {
-	// 		return base::strConcat("Problem with a file `", path.c_str(), "`, reason: ", err);
-	// 	}
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat("Invalid literal: ", reason);
+		}
 
-	// public:
-	// 	[[nodiscard]]
-	// 	Domain getDomain() const override {
-	// 		return Domain::Parser;
-	// 	}
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
 
-	// 	FileError(dia::SourcePosition pos, fs::FilePath& file, std::string err):
-	// 		  dia::Error(pos),
-	// 		  err(std::move(err)),
-	// 		  path(file.absolutePath()) {}
-	// };
+		InvalidLiteral(dia::SourcePosition pos, std::string_view reason):
+			  dia::Error(pos),
+			  reason(base::StrID(reason.data())) {}
+	};
 }

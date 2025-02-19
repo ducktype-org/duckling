@@ -7,9 +7,9 @@
 #include <json/json.hpp>
 #include <variant>
 
-std::string convertError(const vm::api::ApiError& apiError) {
-	if (std::holds_alternative<vm::api::CoreOperationError>(apiError)) {
-		variant_match(apiError) {
+std::string convertError(const vm::api::ApiError& api_error) {
+	if (std::holds_alternative<vm::api::CoreOperationError>(api_error)) {
+		variant_match(api_error) {
 			variant_case(vm::api::CoreOperationError, core) {
 				variant_match(core) {
 					variant_case(vm::api::LoadProgramError, load) {
@@ -19,7 +19,7 @@ std::string convertError(const vm::api::ApiError& apiError) {
 			}
 		}
 	}
-	return nlohmann::json(apiError);
+	return nlohmann::json(api_error);
 }
 
 template<class T, class E>
