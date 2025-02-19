@@ -1,5 +1,5 @@
 add_subdirectory(clap)
-add_subdirectory(deinit)
+add_subdirectory(init)
 add_subdirectory(diagnostic)
 add_subdirectory(filesystem)
 add_subdirectory(json)

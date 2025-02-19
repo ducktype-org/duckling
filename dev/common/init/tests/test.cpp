@@ -3,7 +3,7 @@
  * we are not using Tester framework here.
  */
 
-#include <deinit/deinit.hpp>
+#include <init/init.hpp>
 #include <base/exceptions.hpp>
 #include <iostream>
 

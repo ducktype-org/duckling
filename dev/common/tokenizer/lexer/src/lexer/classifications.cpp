@@ -2,7 +2,7 @@
 
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
-#include <deinit/deinit.hpp>
+#include <init/init.hpp>
 
 #include <unicode/utypes.h>
 #include <unicode/errorcode.h>

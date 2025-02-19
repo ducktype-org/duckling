@@ -19,9 +19,10 @@ LLVM_INCLUDE_END()
 
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <deinit/deinit.hpp>
+#include <init/init.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
+#include <base/maps.hpp>
 #include <base/maps.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
@@ -40,7 +41,7 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
 
-	void deinit() {
+	void llvmDeinit() {
 		// I'm not sure if this is a proper/stable
 		// way to clean up llvm, but it works.
 		// If it ever breaks, a quick-fix is just to comment it out
@@ -54,7 +55,7 @@ namespace compiler::backend_llvm {
 		llvm::llvm_shutdown();
 	}
 
-	REGISTER_FUNC_FOR_DEINIT(deinit);
+	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
 	/**
 	 * @brief Returns reference to the llvm context.
