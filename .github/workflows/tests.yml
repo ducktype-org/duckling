@@ -83,8 +83,8 @@ jobs:
 
       # Cache local branch and on miss fallback to main branch's cache. In case
       # main branch misses, fallback to any branch's cache.
-      - name: Restore Cache build
-        id: restore-cache-build
+      - name: Restore build cache
+        id: restore-build-cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -131,15 +131,6 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
-      # Manually cache the build before testing.
-      - name: Save Cache build
-        id: save-cache-build
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ env.CCACHE_DIR }}
-          key: ${{ steps.restore-cache-build.outputs.cache-primary-key }}
-
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -165,6 +156,15 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }}  # This env variable is used by the GH tool.
           REPO: ${{ github.repository }}
+
+      # Manually cache the build before testing, but **after** cleaning.
+      - name: Save build cache
+        id: save-build-cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
