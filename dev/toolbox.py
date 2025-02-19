@@ -162,7 +162,7 @@ def setup_build_impl(
     default=False,
     is_flag=True,
 )
-# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options) 
+# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
 @click.option(
     "--gcov-version",
     prompt="GCOV version",
@@ -429,16 +429,16 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-18 or clang-tidy",
-    default="clang-tidy-18",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
 )
 @click.option(
     "-f",
     "--format",
     "clang_format_path",
     prompt="clang-format path",
-    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="clang-format-18",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
 )
 @click.option(
     "-b",
