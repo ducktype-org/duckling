@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     if: github.event.pull_request.draft == false
-    
+
     strategy:
       matrix:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
@@ -59,7 +59,7 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
           sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
-      
+
       - name: Check installations
         run: |
           ${{ env.CXX_COMPILER }} --version
@@ -83,9 +83,9 @@ jobs:
 
       # Cache local branch and on miss fallback to main branch's cache. In case
       # main branch misses, fallback to any branch's cache.
-      - name: Cache build
-        id: cache-build
-        uses: actions/cache@v4
+      - name: Restore Cache build
+        id: restore-cache-build
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -130,6 +130,15 @@ jobs:
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
+
+      # Manually cache the build before testing.
+      - name: Save Cache build
+        id: save-cache-build
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-cache-build.outputs.cache-primary-key }}
 
       - name: Test
         working-directory: ${{ env.BUILD_DIR }}
