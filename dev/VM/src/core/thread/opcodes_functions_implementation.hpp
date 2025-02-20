@@ -26,6 +26,7 @@
  * `opcodes_functions_utils.hpp`.
  */
 
+#include "base/exceptions.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
@@ -464,6 +465,10 @@ namespace vm {
 			local_stack = frame->local_stack;
 		}
 		FUNCTION_CONT(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(label)(FUNCTION_ARGS) {
+		CORE_PANIC("Handling label should not be possible.");
 	}
 }
 

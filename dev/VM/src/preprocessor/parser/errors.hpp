@@ -5,6 +5,19 @@
 #include <diagnostic/message.hpp>
 
 namespace vm::parser {
+	class ExpectedSemicolonAfterError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected `;` after here";
+		}
+
+	public:
+		[[nodiscard]] Domain getDomain() const override { return Domain::Parser; }
+
+		ExpectedSemicolonAfterError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	class UnknownOpCodeError final: public dia::Error {
 		base::StrID opcode;
 

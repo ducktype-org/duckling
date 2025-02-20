@@ -3,25 +3,18 @@
  * @brief Contains a list of all DuckBC opcodes. Can be used for generating
  * repetitive code based on list of opcodes.
  *
- * Suppose you want to automatically generate a whole VM
- * switch-case loop. Instead of listing all cases by hand and worrying
- * about their ordering, like this:
- * ```cpp
- * switch (opcode) {
- *   OP_CASE(foo)
- *   OP_CASE(bar)
- *   ...
- * }
- * ```
- * you can just define macros #DEF_OPCODE and include this
+ * you can just define `HANDLE_OPCODE` macro and include this
  * header like so:
  * ```cpp
- * switch (opcode) {
- *   #define DEF_OPCODE(opcode)     OP_CASE(opcode)
- *   #include <code_data/opcodes_list.hpp>
- *   #undef DEF_OPCODE
- * }
+ *  constexpr u16 countOpCases() {
+ *  	u16 count = 0;
+ *		#define HANDLE_OPCODE(opcode) count++;
+ * 		#include "opcodes_list.hpp"
+ * 		#undef HANDLE_OPCODE
+ * 		return count;
+ * 	}
  * ```
+ * This above function just counts the opcodes, but the possibilities are endless.
  *
  * There are other macros for cases where you want to know
  * what arguments the opcode has - HANDLE_OPCODE_#ARGS,
@@ -89,6 +82,8 @@ DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
 DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
 
+DEF_OPCODE(label, vm::opargs::Label)
+
 DEF_OPCODE(jmpRel_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
@@ -142,27 +137,27 @@ DEF_OPCODE(exit)
 
 DEF_OPCODE(breakpoint)
 
-#ifdef HANDLE_OPCODE
+#ifdef DEFAULT_HANDLE_OPCODE
 #undef DEFAULT_HANDLE_OPCODE
 #undef HANDLE_OPCODE
 #endif
 
-#ifdef HANDLE_OPCODE_0ARGS
+#ifdef DEFAULT_HANDLE_OPCODE_0ARGS
 #undef DEFAULT_HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_0ARGS
 #endif
 
-#ifdef HANDLE_OPCODE_1ARGS
+#ifdef DEFAULT_HANDLE_OPCODE_1ARGS
 #undef DEFAULT_HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_1ARGS
 #endif
 
-#ifdef HANDLE_OPCODE_2ARGS
+#ifdef DEFAULT_HANDLE_OPCODE_2ARGS
 #undef DEFAULT_HANDLE_OPCODE_2ARGS
 #undef HANDLE_OPCODE_2ARGS
 #endif
 
-#ifdef DEF_OPCODE
+#ifdef DEFAULT_DEF_OPCODE
 #undef DEFAULT_DEF_OPCODE
 #undef DEF_OPCODE
 #undef GET_MACRO

@@ -2,12 +2,12 @@
 #include "parser.hpp"
 #include <base/exceptions.hpp>
 #include <base/type_traits.hpp>
+#include <cstdlib>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
 #include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>
-#include <cstdint>
 #include <lexer/lexer.hpp>
 #include <limits>
 #include <token_file/file.hpp>
@@ -27,6 +27,7 @@
 #include <base/string_id.hpp>
 #include <expected>
 #include "errors.hpp"
+#include "token_parser_core/common_elements.hpp"
 #include <lexer/token.hpp>
 
 namespace assemble {
@@ -254,28 +255,21 @@ namespace assemble {
 			return { { arg0, pos0 }, { arg1, pos1 } };
 		}
 
-#define HANDLE_OPCODE_0ARGS(opcode) \
-	auto parseOpCode_##opcode(F8ParserState& state) { return parseOpCode0Args(state); }
+#define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) \
-	auto parseOpCode_##opcode(F8ParserState& state) { return parseOpCode1Args<arg0_type>(state); }
+#define HANDLE_OPCODE_0ARGS(opcode)            MAKE_LINK(opcode, parseOpCode0Args)
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) MAKE_LINK(opcode, parseOpCode1Args<arg0_type>)
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
+	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)     \
-	auto parseOpCode_##opcode(F8ParserState& state) {         \
-		return parseOpCode2Args<arg0_type, arg1_type>(state); \
-	}
-
+		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #include <code_data/opcodes_list.hpp>
+		};
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_2ARGS
-
-#define HANDLE_OPCODE(opcode) std::make_pair(std::string(#opcode), parseOpCode_##opcode),
-		const std::unordered_map OP_CODE_TO_OP_CODE_PARSER = {
-#include <code_data/opcodes_list.hpp>
-		};
-#undef HANDLE_OPCODE
+#undef MAKE_LINK
 	}
 
 	struct OpCode: AsmElement {
@@ -290,21 +284,35 @@ namespace assemble {
 			tpc::Identifier identifier1;
 			bool            logged = false;
 			while (state.notEmpty()) {
-				state.parse().one(&identifier1);
-				if (opargs_parsers::OP_CODE_TO_OP_CODE_PARSER.contains(identifier1.value.str())) {
-					auto out         = makeBox<OpCode>(identifier1.position);
-					out->opcode_name = identifier1.value;
-					out->args
-						= opargs_parsers::OP_CODE_TO_OP_CODE_PARSER.at(out->opcode_name.str())(state
-					    );
-					state.parse().one(lang_def::Special::Semicolon);
-					return out;
-
-				} else if (!logged) {
-					logged = true;
-					state.log(makeBox<vm::parser::UnknownOpCodeError>(
-						state.getPosition(), identifier1.value
-					));
+				if (state[0].isIdentifier()) {
+					state.parse().one(&identifier1);
+					if (opargs_parsers::OP_CODE_TO_ARGS_PARSER.contains(identifier1.value.str())) {
+						auto out         = makeBox<OpCode>(identifier1.position);
+						out->opcode_name = identifier1.value;
+						out->args
+							= opargs_parsers::OP_CODE_TO_ARGS_PARSER.at(out->opcode_name.str())(
+								state
+							);
+						if (!state.tryEat(lang_def::Special::Semicolon)) {
+							state.log(makeBox<vm::parser::ExpectedSemicolonAfterError>(
+								state.getPosition(-1)
+							));
+							logged = true;
+							continue;
+						}
+						return out;
+					} else if (!logged) {
+						state.log(makeBox<vm::parser::UnknownOpCodeError>(
+							state.getPosition(-1), identifier1.value
+						));
+						logged = true;
+					}
+				} else {
+					if (!logged) {
+						state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+						logged = true;
+					}
+					state.tokens().skip();
 				}
 			}
 			return nullptr;
@@ -350,30 +358,30 @@ namespace assemble {
 			std::vector<std::pair<base::StrID, dia::SourcePosition>> labels;
 
 			while (state.notEmpty()) {
-				if (state.tryEat(lang_def::Keyword::BCLabel)) {
-					tpc::Identifier label_name;
-					state.parse().one(&label_name);
-					if (!state.tryEat(lang_def::Special::Semicolon)) {
-						state.log(makeBox<tpc::BadSpecialError>(
-							state.getPosition(-1), lang_def::Special::Semicolon
-						));
-						continue;
-					}
-					if (out->label_position.contains(label_name.value)) {
-						auto msg = makeBox<vm::parser::InvalidLabel>(
-							label_name.position, "Repeated label."
-						);
-						for (auto&& lbl: labels)
-							if (lbl.first == label_name.value)
-								msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second));
-						state.log(std::move(msg));
+				auto opt_opcode = OpCode::parse(state).toOptBox();
+
+				if (opt_opcode) {
+					auto opcode = std::move(opt_opcode.value());
+					if (opcode->opcode_name == base::StrID("label")) {
+						auto arg        = opcode->args[0];
+						auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
+
+						if (out->label_position.contains(label_name)) {
+							auto msg = makeBox<vm::parser::InvalidLabel>(
+								arg.position, "Repeated label."
+							);
+							for (auto&& lbl: labels)
+								if (lbl.first == label_name)
+									msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second)
+									);
+							state.log(std::move(msg));
+						} else {
+							out->label_position.put(label_name, out->opcodes.size());
+							labels.emplace_back(label_name, arg.position);
+						}
 					} else {
-						out->label_position.put(label_name.value, out->opcodes.size());
-						labels.emplace_back(label_name.value, label_name.position);
+						out->opcodes.emplace_back(std::move(opcode));
 					}
-				} else {
-					auto op = OpCode::parse(state).toOptBox();
-					if (op) out->opcodes.emplace_back(std::move(*op));
 				}
 			}
 

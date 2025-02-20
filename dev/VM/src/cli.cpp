@@ -1,5 +1,6 @@
 #include <api/api.hpp>
 #include "cli.hpp"
+#include "api/data/api_error.hpp"
 #include <api/data/core_operation_error.hpp>
 #include <api/data/load_program_error.hpp>
 #include <base/variant.hpp>
@@ -11,11 +12,10 @@ std::string convertError(const vm::api::ApiError& api_error) {
 	variant_match(api_error) {
 		variant_case(vm::api::CoreOperationError, core) {
 			variant_match(core) {
-				variant_case(vm::api::LoadProgramError, load) {
-					return load.why;
-				}
+				variant_case(vm::api::LoadProgramError, load) { return load.why; }
 			}
 		}
+		variant_case(vm::api::WrongResponse, _) return "Wrong response.";
 	}
 	return nlohmann::to_string(nlohmann::json(api_error));
 }
