@@ -10,7 +10,7 @@ add_library(Lexer
 make_module(Lexer USES Filesystem Printer LexerDefinitions unicode Result::Result Diagnostic Init)
 
 duck_add_test(common lexer_test_simple tests/test.cpp
-	USES Lexer LexerDefinitions Init)
+	USES Lexer LexerDefinitions)
 duck_add_test(common token_test_position tests/token_position_test.cpp
 	USES Lexer LexerDefinitions)
 duck_add_test(common lexer_test_decode tests/decode_test.cpp
