@@ -79,7 +79,7 @@ namespace init {
 		init_was_created = true;
 
 		// we do it just so init_verifier is used
-		// so it wont be ignored for some weird reason:
+		// so it won't be ignored for some weird reason:
 		init_verifier.dummy = 1;
 
 		auto state = getInitState();

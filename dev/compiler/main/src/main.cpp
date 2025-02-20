@@ -17,15 +17,8 @@
 #include <config/config.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <helios/queries.hpp>
+#include <init/init.hpp>
 
-/**
- * @brief Runs inits needed by main
- */
-void init() {
-	lexer::init();
-	pst::init();
-	// @TODO: more inits?
-}
 
 namespace {
 	/**
@@ -270,7 +263,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
  * @brief Wrapper for logic of main function
  */
 int mainProcedure(int argc, const char* const* argv) {
-	init();
+	// @TODO:
+	// those inits should be registered automagically via
+	// RUN_BEFORE_MAIN
+	init::registerForInit(lexer::init);
+	init::registerForInit(pst::init);
+
+	init::InitObject _;
 
 	clap::CLIArgs full_args{ (usize) argc, argv };
 	clap::CLIArgs command_args{ (usize) argc - 1, argv + 1 };
