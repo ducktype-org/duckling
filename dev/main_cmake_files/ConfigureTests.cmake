@@ -53,6 +53,9 @@ if(ENABLE_COVERAGE)
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
 						--remove coverage_unfiltered.info 
+						"docs/**"
+						"integration_tests/**"
+						"scripts/**"
 						"**/tests/**" 
 						"**/playground/**"
 						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
