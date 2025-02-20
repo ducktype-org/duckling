@@ -198,5 +198,5 @@ namespace lexer {
 	 * A wrapper around u_cleanup macro
 	 */
 	void cleanupICU() { u_cleanup(); }
-	RUN_BEFORE_MAIN(cleanupICU());
+	RUN_BEFORE_MAIN(init::registerForDeinit(cleanupICU));
 }

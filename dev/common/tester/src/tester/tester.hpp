@@ -13,6 +13,7 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 #include <base/define_helper.hpp>
+#include <init/init.hpp> // IWYU pragma: export
 
 
 #define ASSERT_EQUAL(expected, actual)                                                    \
@@ -132,6 +133,8 @@ namespace tester {
  */
 #define TESTER_COMMON_MAIN(test_path)                                                \
 	int main(int argc, const char* argv[]) {                                         \
+		init::InitObject _;                                                          \
+																					 \
 		auto config = tester::testConfigFromArgs({ (usize) argc, argv }, test_path); \
                                                                                      \
 		TESTER_CLASS test(std::move(config));                                        \

@@ -6,3 +6,8 @@ as well as to run code before main.
 It intended use is to run initialization and deinitializaiotn
 functions in controlled manner, that for any reason can't or
 are inconvenient to be handled automatically by static objects.
+
+Important note: 
+If linkedin, the module does a sanity check that InitObject was created during the program runtime.
+However if entire init module is not used at all, then it might just not link at all, not firing any sanity checks.
+

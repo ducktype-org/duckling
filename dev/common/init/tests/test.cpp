@@ -11,8 +11,6 @@ namespace {
 	int counter = 0;
 }
 
-
-
 auto testFunction(int val) {
 	return [val]() {
 		counter += 1;
@@ -20,22 +18,27 @@ auto testFunction(int val) {
 	};
 }
 
-REGISTER_FUNC_FOR_DEINIT(testFunction(1));
-REGISTER_FUNC_FOR_DEINIT(testFunction(2));
-REGISTER_FUNC_FOR_DEINIT(testFunction(3));
+RUN_BEFORE_MAIN(testFunction(1)());
+RUN_BEFORE_MAIN(testFunction(2)());
+
+RUN_BEFORE_MAIN(init::registerForInit(testFunction(4)));
 
 namespace some_namespace {
-	REGISTER_FUNC_FOR_DEINIT(testFunction(4));
+	RUN_BEFORE_MAIN(testFunction(3)());
 }
 
 namespace {
-	REGISTER_FUNC_FOR_DEINIT(testFunction(5));
+	RUN_BEFORE_MAIN(init::registerForInit(testFunction(5)));
 }
 
+RUN_BEFORE_MAIN(init::registerForDeinit(testFunction(6)));
+
 int main() {
-	deinit::registerForDeinit(testFunction(6));
-	deinit::registerForDeinit([&]() {
-		CORE_ASSERT(counter == 6, "Test failed at the end.");
+	init::InitObject _;
+
+	init::registerForDeinit(testFunction(7));
+	init::registerForDeinit([&]() {
+		CORE_ASSERT(counter == 7, "Test failed at the end.");
 		std::cout << "Test passed!\n";
 	});
 }

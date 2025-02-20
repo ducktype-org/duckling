@@ -5,6 +5,19 @@
 
 namespace init {
 	namespace {
+
+		/**
+		 * This is essentially a duplication of
+		 * InitState::was_init, but defined in a way
+		 * that should make it safe to call after main,
+		 * and more precisely, after during static initialization
+		 * of init_verifier static object defined bellow.
+		 * 
+		 * It is used for sanity check that init was used
+		 * when it was linked.
+		 */
+		constinit bool init_was_created = false;
+
 		/**
 		 * Helper struct for storing module global state
 		**/
@@ -22,6 +35,7 @@ namespace init {
 			}
 		};
 
+
 		/**
 		 * Wrapper around InitState object instance.
 		 * This way it can be safely used before main is called,
@@ -31,6 +45,23 @@ namespace init {
 			static InitState deinit_static;
 			return &deinit_static;
 		}
+
+		/**
+		 * Helper struct to ensure that InitObject
+		 * was created and used correctly.
+		 */
+		struct InitVerifier final {
+			int dummy = 0;
+
+			~InitVerifier() {
+				if (not init_was_created) {
+					std::cerr << "ERROR: InitObject was never created!\n";
+					std::terminate();
+				}
+			}
+		};
+		
+		constinit InitVerifier init_verifier;
 	}
 
 	void registerForInit(std::function<void()> function) {
@@ -46,6 +77,12 @@ namespace init {
 	}
 
 	InitObject::InitObject() {
+		init_was_created = true;
+
+		// we do it just so init_verifier is used
+		// so it want be ignored for some weird reason:
+		init_verifier.dummy = 1;
+
 		auto state = getInitState();
 		CORE_ASSERT(not state->was_init, "InitObject can only be created once");
 		state->was_init = true;
@@ -57,12 +94,12 @@ namespace init {
 
 	InitObject::~InitObject() {
 		auto state = getInitState();
-		if (not state->was_deinit) {
+		if (state->was_deinit) {
 			// We can't really throw here, since it is
 			// a destructor, so we terminate instead.
 			// Double creation sanity check in InitObject() should disallow this
 			// to even happen, but better to be safe then sorry here.
-			std::cerr << "ERROR: DeinitObject can't be destroyed twice\n";
+			std::cerr << "ERROR: InitObject can't be destroyed twice\n";
 			std::terminate();
 		}
 		state->was_deinit = true;
