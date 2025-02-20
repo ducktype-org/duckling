@@ -55,6 +55,7 @@ namespace compiler::backend_llvm {
 		Ref<llvm::raw_pwrite_stream> output_stream,
 		llvm::CodeGenFileType        file_type
 	) {
+		// It's the only way to emit a file with a target machine (despite the "legacy" name)
 		llvm::legacy::PassManager pass;
 		m->setDataLayout(target_machine->createDataLayout());
 		m->setTargetTriple(target_triple);
