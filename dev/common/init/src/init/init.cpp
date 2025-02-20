@@ -12,7 +12,7 @@ namespace init {
 		 * that should make it safe to call after main,
 		 * and more precisely, after during static initialization
 		 * of init_verifier static object defined bellow.
-		 * 
+		 *
 		 * It is used for sanity check that init was used
 		 * when it was linked.
 		 */
@@ -20,12 +20,12 @@ namespace init {
 
 		/**
 		 * Helper struct for storing module global state
-		**/
+		 **/
 		struct InitState final {
 			std::vector<std::function<void()>> init_function_list;
 			std::vector<std::function<void()>> deinit_function_list;
-			bool was_init = false;
-			bool was_deinit = false;
+			bool                               was_init   = false;
+			bool                               was_deinit = false;
 
 			~InitState() {
 				if (not was_deinit or not was_init) {
@@ -34,7 +34,6 @@ namespace init {
 				}
 			}
 		};
-
 
 		/**
 		 * Wrapper around InitState object instance.
@@ -60,7 +59,7 @@ namespace init {
 				}
 			}
 		};
-		
+
 		constinit InitVerifier init_verifier;
 	}
 
@@ -87,9 +86,7 @@ namespace init {
 		CORE_ASSERT(not state->was_init, "InitObject can only be created once");
 		state->was_init = true;
 
-		for (auto& function : state->init_function_list) {
-			function();
-		}
+		for (auto& function: state->init_function_list) function();
 	}
 
 	InitObject::~InitObject() {
@@ -104,8 +101,6 @@ namespace init {
 		}
 		state->was_deinit = true;
 
-		for (auto& function : state->deinit_function_list) {
-			function();
-		}
+		for (auto& function: state->deinit_function_list) function();
 	}
 }
