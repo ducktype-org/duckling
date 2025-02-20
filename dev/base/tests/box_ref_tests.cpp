@@ -280,7 +280,8 @@ private:
 				Ref<Data>  data_3;
 				MRef<Data> data_4;
 
-				Container(): data_1(makeBox<Data>()), data_3(data_1.refMut()){};
+				Container(): data_1(makeBox<Data>()), data_3(data_1.refMut()) {}
+
 				Container(Container&&) = default;
 			};
 
@@ -294,7 +295,8 @@ private:
 				Ref<Data>  data_1;
 				MRef<Data> data_2;
 
-				Container(): data_1(&data){};
+				Container(): data_1(&data) {}
+
 				Container(const Container&) = default;
 				Container(Container&&)      = default;
 			};
