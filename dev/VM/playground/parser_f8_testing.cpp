@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 
 		variant_match(error) {
 			variant_case(vm::api::CoreOperationError, core_error) {
-				variant_match(core_error.error) {
+				variant_match(core_error) {
 					variant_case(vm::api::LoadProgramError, load_error) {
 						std::cerr << "Load errors: \n" << load_error.why << "\n";
 					}

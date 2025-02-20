@@ -56,7 +56,7 @@ namespace tpc {
 
 		/**
 		 * @return true If token on the relative position is an end of file.
-		 * @return true If token on the relative position is not an end of file.
+		 * @return false If token on the relative position is not an end of file.
 		 */
 		[[nodiscard]]
 		bool isEOF(i64 fwd = 0) const;
