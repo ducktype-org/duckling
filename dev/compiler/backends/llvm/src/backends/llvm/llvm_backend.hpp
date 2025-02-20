@@ -24,7 +24,7 @@ namespace compiler::backend_llvm {
 
 	struct ModuleCompilationOptions {
 		enum class OutputType : std::uint8_t { Object, Assembly };
-g
+
 		base::StrID                 object_file_path;
 		OutputType                  output_type;
 		base::Optional<base::StrID> llvm_ir_path;

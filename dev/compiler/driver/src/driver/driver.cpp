@@ -8,7 +8,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <backends/llvm/llvm_backend.hpp>
 
-#include "driver/system_command.hpp"
+#include "system_command.hpp"
 #include "driver.hpp"
 
 namespace compiler::driver {
@@ -32,27 +32,29 @@ namespace compiler::driver {
 
 		base::Optional<base::StrID> llvm_ir_path;
 		if (options->save_llvm_ir) {
-			llvm_ir_path = base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
+			llvm_ir_path
+				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
 		}
 
 		if (options->compile_to_assembly) {
 			backend_llvm::ModuleCompilationOptions compilation_opts{
 				.object_file_path
 				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str()),
-				.output_type = backend_llvm::ModuleCompilationOptions::OutputType::Assembly,
+				.output_type  = backend_llvm::ModuleCompilationOptions::OutputType::Assembly,
 				.llvm_ir_path = llvm_ir_path,
 			};
 			mod.compile(compilation_opts);
 			return;
 		}
 
-		auto object_file_path = base::StrID(base::strConcat(lir_module.module_id.strView(), ".o").c_str());
+		auto object_file_path
+			= base::StrID(base::strConcat(lir_module.module_id.strView(), ".o").c_str());
 		backend_llvm::ModuleCompilationOptions compilation_opts{
 			.object_file_path = object_file_path,
 			.output_type      = backend_llvm::ModuleCompilationOptions::OutputType::Object,
 			.llvm_ir_path     = llvm_ir_path,
 		};
-		
+
 		// @TODO there should be one instance for all duck compiler options
 		// and it should be passed to the backend drivers
 		mod.compile(compilation_opts);
@@ -69,7 +71,6 @@ namespace compiler::driver {
 			.addArg(object_file_path)
 			.execute();
 	}
-	
 
 	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;

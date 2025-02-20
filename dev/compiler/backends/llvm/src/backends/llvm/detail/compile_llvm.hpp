@@ -9,5 +9,6 @@
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
 
-	void compileModuleToObject(Ref<ModuleImpl> module_impl, const ModuleCompilationOptions& options);
+	void
+		compileModuleToObject(Ref<ModuleImpl> module_impl, const ModuleCompilationOptions& options);
 }

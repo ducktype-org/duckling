@@ -29,8 +29,8 @@ namespace compiler::driver {
 	struct Options {
 		BackendType backend_type;
 		base::StrID output_file;
-		bool compile_to_assembly;
-		bool save_llvm_ir;
+		bool        compile_to_assembly;
+		bool        save_llvm_ir;
 	};
 
 	/**
