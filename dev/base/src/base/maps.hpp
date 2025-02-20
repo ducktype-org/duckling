@@ -30,9 +30,12 @@ namespace base {
 		using KEY_T    = typename ContainerType::key_type;
 		using DATA_T   = typename ContainerType::mapped_type;
 
-		MapWrapper(): ContainerType(){};
-		MapWrapper(const MapWrapper& map): ContainerType(map){};
-		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)){};
+		MapWrapper(): ContainerType() {}
+
+		MapWrapper(const MapWrapper& map): ContainerType(map) {}
+
+		MapWrapper(MapWrapper&& map) noexcept: ContainerType(std::move(map)) {}
+
 		~MapWrapper() = default;
 
 		MapWrapper& operator=(const MapWrapper& map) {
