@@ -7,6 +7,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
 #include <base/defer.hpp>
+#include <init/init.hpp>
 
 void printContextErrors() {
 	if (query::Context::logger.messageCount() > 0) {
@@ -16,9 +17,12 @@ void printContextErrors() {
 }
 
 int notMain(int argc, const char* const* argv) {
+	init::InitObject _;
+
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();
+
 
 	// @FUTURE: record all inits somewhere..
 
