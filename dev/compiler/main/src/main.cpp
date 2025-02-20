@@ -19,7 +19,6 @@
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 
-
 namespace {
 	/**
 	 * @brief Whether main should throw compiler exceptions.
