@@ -2,10 +2,12 @@
 
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
+#include <init/init.hpp>
 
 #include <unicode/utypes.h>
 #include <unicode/errorcode.h>
 #include <unicode/ustream.h>
+#include <unicode/uclean.h>
 
 #include <iostream>
 
@@ -191,4 +193,11 @@ namespace lexer {
 		sanityChecks();
 		SIMPLE_INIT_GUARD_END
 	}
+
+	/**
+	 * A wrapper around u_cleanup macro
+	 */
+	void cleanupICU() { u_cleanup(); }
+
+	RUN_BEFORE_MAIN(init::registerForDeinit(cleanupICU));
 }

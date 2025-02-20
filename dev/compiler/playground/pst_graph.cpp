@@ -2,6 +2,7 @@
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/variant.hpp>
+#include <init/init.hpp>
 #include <iostream>
 
 #include <graphviz/gvc.h>
@@ -94,6 +95,7 @@ Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
 // NOLINTEND(-avoid-c-arrays)
 
 int main(int argc, char** argv) {
+	init::InitObject _;
 	if (argc != 3) {
 		std::cerr << "usage: ./pst_graph duckling_file svg_out_file\n";
 		return 1;
