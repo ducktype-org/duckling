@@ -50,6 +50,12 @@ namespace init {
 		 * was created and used correctly.
 		 */
 		struct InitVerifier final {
+			/**
+			 * We have it here,
+			 * just to make init_verifier static object
+			 * odr-used so no unexpected things happen
+			 * with its initialization/deinitization.
+			 */
 			int dummy = 0;
 
 			~InitVerifier() {
