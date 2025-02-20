@@ -10,7 +10,7 @@ namespace init {
 		 * This is essentially a duplication of
 		 * InitState::was_init, but defined in a way
 		 * that should make it safe to call after main,
-		 * and more precisely, after during static initialization
+		 * and more precisely, during static initialization
 		 * of init_verifier static object defined bellow.
 		 *
 		 * It is used for sanity check that init was used
@@ -79,7 +79,7 @@ namespace init {
 		init_was_created = true;
 
 		// we do it just so init_verifier is used
-		// so it want be ignored for some weird reason:
+		// so it wont be ignored for some weird reason:
 		init_verifier.dummy = 1;
 
 		auto state = getInitState();

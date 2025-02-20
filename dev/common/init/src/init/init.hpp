@@ -25,7 +25,8 @@ namespace init {
 	 * function effectively acting as one.
 	 *
 	 * @note It should not be used as a global object
-	 * as it could lead to static destruction order fiasco (yes you read that right).
+	 * as it could lead to static destruction order fiasco (yes you read that right)
+	 * as well as to calling registerForInit after init was already done.
 	 * The module can in principle be modified to handle this case,
 	 * but it is not currently implemented, as we see no good reason for it.
 	 */
@@ -37,7 +38,7 @@ namespace init {
 
 /**
  * Runs peace of code during static initialization phase.
- * Note that it is completely independent from InitObject.
+ * @note This is completely independent from InitObject.
  * @note This macro should only be used in global/namespace scope.
  * @note This macro should only be used in cpp files, to avoid duplication.
  * @note For technical reasons the macro should be used at most once per line.
