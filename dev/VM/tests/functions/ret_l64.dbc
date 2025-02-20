@@ -23,9 +23,9 @@ function main {
 	local_size: 8;
 
 	code: {
-		call_func          	0;
+		call_func          	check;
 		mov_l64_r0         	0;
-		
+
 		output_l64 			0;
 
 		ret_imm         0;

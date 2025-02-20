@@ -121,9 +121,9 @@ namespace dia {
 		auto [line, column]                      = getStartLineColumn();
 		std::vector<printer::PrinterContent> res = {
 			{ "In file: " }, { source_file->getPath().strView().data() },
-			{ ":\n" },       { std::to_string(line), printer::Color::BRIGHT_BLUE },
+			{ ":" },         { std::to_string(line), printer::Color::BRIGHT_BLUE },
 			{ ":" },         { std::to_string(column), printer::Color::BRIGHT_BLUE },
-			{ ": " },        reason,
+			{ ":\n\t" },     reason,
 			{ "\n" },
 		};
 		for (auto el: getPrettySourceLines()) res.push_back(std::move(el));
