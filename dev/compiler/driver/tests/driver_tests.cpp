@@ -19,8 +19,10 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		helios::HOUTUnit top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type = driver::BackendType::LLVM,
-		                        .output_file  = base::StrID("output") });
+		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
+		                        .output_file         = base::StrID("test_module_exe"),
+		                        .compile_to_assembly = false,
+		                        .save_llvm_ir        = true });
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));

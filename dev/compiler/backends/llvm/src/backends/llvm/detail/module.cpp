@@ -4,6 +4,7 @@
 #include "llvm_lowering.hpp"
 #include "../llvm_backend.hpp"
 #include "module_impl.hpp"
+#include "compile_llvm.hpp"
 
 namespace base::extend {
 	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
@@ -28,6 +29,10 @@ namespace compiler::backend_llvm {
 	}
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
+
+	void Module::compile(const ModuleCompilationOptions& options) {
+		compileModuleToObject(impl.refMut(), options);
+	}
 
 	Module::~Module() = default;
 }

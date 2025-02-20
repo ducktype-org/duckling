@@ -2,6 +2,8 @@
 
 #include <lir/lir_structure/function_forward.hpp>
 #include <base/box.hpp>
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
@@ -20,6 +22,14 @@ namespace base::extend {
 
 namespace compiler::backend_llvm {
 
+	struct ModuleCompilationOptions {
+		enum class OutputType : std::uint8_t { Object, Assembly };
+g
+		base::StrID                 object_file_path;
+		OutputType                  output_type;
+		base::Optional<base::StrID> llvm_ir_path;
+	};
+
 	/**
 	 * @brief Encapsulates a llvm module in a way
 	 * that does not require to include llvm headers.
@@ -37,6 +47,8 @@ namespace compiler::backend_llvm {
 		void addFunctionToModule(CRef<lir::Function> lir_function);
 
 		void debugPrint() const;
+
+		void compile(const ModuleCompilationOptions& options);
 
 		[[nodiscard]]
 		bool verify() const;

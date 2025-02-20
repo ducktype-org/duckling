@@ -28,7 +28,9 @@ namespace compiler::driver {
 	 */
 	struct Options {
 		BackendType backend_type;
-		base::StrID output_file;  /// just a mock-up for now
+		base::StrID output_file;
+		bool compile_to_assembly;
+		bool save_llvm_ir;
 	};
 
 	/**
@@ -38,6 +40,7 @@ namespace compiler::driver {
 	 * @todo for future, see if we can just make "Module" interface with 'add_function'-like methods
 	 */
 	class BackendDriver {
+	protected:
 		CRef<Options> options;  // NOLINT: Currently unused
 
 	public:
@@ -48,23 +51,23 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compile(BackendModuleData& module_data) = 0;
+		virtual void compile(const BackendModuleData& module_data) = 0;
 
 		virtual ~BackendDriver() = default;
 	};
 
-	class LLVMBackendDriver: public BackendDriver {
+	class LLVMBackendDriver final: public BackendDriver {
 	public:
 		LLVMBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(BackendModuleData& module_data) override;
+		void compile(const BackendModuleData& module_data) override;
 	};
 
-	class DuckBCBackendDriver: public BackendDriver {
+	class DuckBCBackendDriver final: public BackendDriver {
 	public:
 		DuckBCBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(BackendModuleData&) override {
+		void compile(const BackendModuleData&) override {
 			throw base::NotYetImplemented("compilation for BC driver");
 		}
 	};
@@ -76,7 +79,7 @@ namespace compiler::driver {
 	 */
 	class Driver final {
 	public:
-		Driver(Options options): options(options), backend_driver(createBackendDriver(&options)) {}
+		Driver(Options opts): options(opts), backend_driver(createBackendDriver(&options)) {}
 
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
 
