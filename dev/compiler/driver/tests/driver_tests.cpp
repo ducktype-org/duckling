@@ -47,7 +47,7 @@ private:
 		                        .save_llvm_ir        = true });
 
 		// This method can fail on module verification
-		driver.compileHOUTUnit(&top_level, base::StrID("test_modules"));
+		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));
 
 		assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
 		assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
