@@ -26,7 +26,7 @@
  * `opcodes_functions_utils.hpp`.
  */
 
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"

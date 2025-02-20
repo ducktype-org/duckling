@@ -28,7 +28,7 @@
 #include <base/string_id.hpp>
 #include <expected>
 #include "errors.hpp"
-#include "token_parser_core/common_elements.hpp"
+#include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
 
 namespace assemble {
