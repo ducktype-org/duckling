@@ -18,7 +18,7 @@ void printContextErrors() {
 
 int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
-	
+
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();

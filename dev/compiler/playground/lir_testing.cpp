@@ -13,7 +13,7 @@
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	
+
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();
