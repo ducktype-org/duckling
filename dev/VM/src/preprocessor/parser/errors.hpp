@@ -1,15 +1,16 @@
-#include <utility>
-
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
 #include <diagnostic/message.hpp>
 
 namespace vm::parser {
 	class ExpectedSemicolonAfterError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Expected `;` after here";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected `;` after here";
+			return ERR_MSG.data();
 		}
 
 	public:
@@ -21,10 +22,13 @@ namespace vm::parser {
 	class UnknownOpCodeError final: public dia::Error {
 		base::StrID opcode;
 
+	public:
+		constexpr static std::string_view ERR_MSG = "Given OpCode does not exist: ";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return base::strConcat("Given OpCode does not exist: ", opcode);
+			return base::strConcat(ERR_MSG, opcode);
 		}
 
 	public:
@@ -41,10 +45,13 @@ namespace vm::parser {
 	class InvalidLabel final: public dia::Error {
 		base::StrID reason;
 
+	public:
+		constexpr static std::string_view ERR_MSG = "Invalid label: ";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return base::strConcat("Invalid label: ", reason);
+			return base::strConcat(ERR_MSG, reason);
 		}
 
 	public:
@@ -59,10 +66,13 @@ namespace vm::parser {
 	};
 
 	class RepeatedLabelNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static std::string_view ERR_MSG = "Previous declaration here.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Previous declaration here.";
+			return ERR_MSG.data();
 		}
 
 	public:
@@ -70,10 +80,14 @@ namespace vm::parser {
 	};
 
 	class NoMainError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG
+			= "Provided program does not have `main` function.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Provided program does not have `main` function.";
+			return ERR_MSG.data();
 		}
 
 	public:
@@ -86,10 +100,13 @@ namespace vm::parser {
 	};
 
 	class DuplicatedTypeError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Duplicated type.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Duplicated type here.";
+			return ERR_MSG.data();
 		}
 
 	public:
@@ -102,23 +119,29 @@ namespace vm::parser {
 	};
 
 	class DuplicatedTypeNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static std::string_view ERR_MSG = "Previous type declaration here.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Duplicated type.";
+			return ERR_MSG.data();
 		}
 
 	public:
 		DuplicatedTypeNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class InvalidType final: public dia::Error {
-		base::StrID reason;
+	class UnknownType final: public dia::Error {
+		base::StrID type_name;
+
+	public:
+		constexpr static std::string_view ERR_MSG = "Unknown type: ";
 
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return base::strConcat("Invalid type: ", reason);
+			return base::strConcat(ERR_MSG, type_name);
 		}
 
 	public:
@@ -127,18 +150,21 @@ namespace vm::parser {
 			return Domain::Parser;
 		}
 
-		InvalidType(dia::SourcePosition pos, std::string_view reason):
+		UnknownType(dia::SourcePosition pos, base::StrID type_name):
 			  dia::Error(pos),
-			  reason(base::StrID(reason.data())) {}
+			  type_name(type_name) {}
 	};
 
-	class InvalidFunction final: public dia::Error {
-		base::StrID reason;
+	class UnknownFunction final: public dia::Error {
+		base::StrID func_name;
+
+	public:
+		constexpr static std::string_view ERR_MSG = "Function does not exist: ";
 
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return base::strConcat("Invalid function: ", reason);
+			return base::strConcat(ERR_MSG, func_name);
 		}
 
 	public:
@@ -147,18 +173,21 @@ namespace vm::parser {
 			return Domain::Parser;
 		}
 
-		InvalidFunction(dia::SourcePosition pos, std::string_view reason):
+		UnknownFunction(dia::SourcePosition pos, base::StrID func_name):
 			  dia::Error(pos),
-			  reason(base::StrID(reason.data())) {}
+			  func_name(func_name) {}
 	};
 
 	class InvalidLiteral final: public dia::Error {
 		base::StrID reason;
 
+	public:
+		constexpr static std::string_view ERR_MSG = "Invalid literal: ";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return base::strConcat("Invalid literal: ", reason);
+			return base::strConcat(ERR_MSG, reason);
 		}
 
 	public:

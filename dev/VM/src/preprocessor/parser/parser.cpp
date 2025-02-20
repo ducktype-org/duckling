@@ -10,6 +10,7 @@
 #include <code_data/opcodes.hpp>
 #include <lexer/lexer.hpp>
 #include <limits>
+#include <queue>
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
 #include <base/optional.hpp>
@@ -363,7 +364,11 @@ namespace assemble {
 				if (opt_opcode) {
 					auto opcode = std::move(opt_opcode.value());
 					if (opcode->opcode_name == base::StrID("label")) {
-						auto arg        = opcode->args[0];
+						auto arg = opcode->args[0];
+						CORE_ASSERT(
+							std::holds_alternative<vm::opargs::Label>(arg.arg),
+							"Something went wrong during label parsing."
+						);
 						auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
 
 						if (out->label_position.contains(label_name)) {
@@ -430,7 +435,7 @@ namespace assemble {
 		std::vector<Box<Func>> functions;
 		std::vector<Box<Type>> types;
 
-		static Box<ParsedCode> parse(F8ParserState& state);
+		static MBox<ParsedCode> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			for (auto& type: types) {
@@ -590,19 +595,19 @@ namespace assemble {
 	}
 
 	MBox<Type> Type::parse(F8ParserState& state) {
-		auto pos = state.getPosition();
 		state.parse().one(lang_def::Keyword::BCType);
 
-		auto out = makeBox<Type>(pos);
 
 		/// @TODO: implement keywordToNumLiteral
 		auto type = state.tokens().next().asKeyword();
 		state.parse().one(lang_def::NamedOperator::Colon);
+
+		auto        out  = makeBox<Type>(state.getPosition());
 		base::StrID name = state.tokens().next().getValue();
 
 		switch (type) {
 		case lang_def::Keyword::BCPrimitive: {
-			auto value = state.tokens().next();
+			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteral()) {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
@@ -734,9 +739,8 @@ namespace assemble {
 		return out;
 	}
 
-	Box<ParsedCode> ParsedCode::parse(F8ParserState& state) {
+	MBox<ParsedCode> ParsedCode::parse(F8ParserState& state) {
 		auto out = makeBox<ParsedCode>(state.getPosition());
-
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
@@ -746,7 +750,7 @@ namespace assemble {
 				if (func) out->functions.emplace_back(std::move(*func));
 			} else {
 				state.fail(0, "Unexpected keyword");
-				return out;
+				break;
 			}
 		}
 
@@ -774,6 +778,8 @@ namespace assemble {
 	void defineTypes(Ref<ParsedCode> code, vm::TypeMetadata& type_metadata, dia::Logger& log) {
 		base::Map<base::StrID, vm::TypeRef> type_map;
 
+		std::deque<Ref<Type>> good_types;
+
 		for (auto& type: code->types) {
 			base::StrID name = VISIT(type->datatype, value, return value.name);
 
@@ -792,14 +798,15 @@ namespace assemble {
 					);
 
 				log.log(std::move(msg));
+			} else {
+				vm::Type typ      = vm::Type::declareType(name);
+				auto     type_ref = type_metadata.addType(std::move(typ));
+				type_map.put(name, type_ref);
+				good_types.push_back(type.refMut());
 			}
-
-			vm::Type typ      = vm::Type::declareType(name);
-			auto     type_ref = type_metadata.addType(std::move(typ));
-			type_map.put(name, type_ref);
 		}
 
-		for (auto& type: code->types) {
+		for (auto& type: good_types) {
 			variant_match(type->datatype) {
 				variant_case(PrimitiveType, data) {
 					type_map[data.name]->definePrimitive(data.size);
@@ -814,7 +821,7 @@ namespace assemble {
 					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
 				}
 				variant_case(DataType, data) {
-					std::vector<std::pair<base::StrID COMMA vm::TypeRef>> fields;
+					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
@@ -904,17 +911,15 @@ namespace assemble {
 			variant_case(vm::opargs::Type, type_arg) {
 				auto type_obj = types.getTypeByName(type_arg.type_name);
 				if (type_obj) return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-				log.log(
-					makeBox<vm::parser::InvalidType>(opcode_arg.position, "Type does not exist.")
-				);
+				log.log(makeBox<vm::parser::UnknownType>(opcode_arg.position, type_arg.type_name));
 				return 0;
 			}
-			variant_case(vm::opargs::FunctionName, name) {
+			variant_case(vm::opargs::FunctionName, func) {
 				for (i64 i = 0; i < functions.size(); i++)
-					if (functions[i]->name == name.function_name) return i;
-				log.log(makeBox<vm::parser::InvalidFunction>(
-					opcode_arg.position, "Function does not exist."
-				));
+					if (functions[i]->name == func.function_name) return i;
+				log.log(
+					makeBox<vm::parser::UnknownFunction>(opcode_arg.position, func.function_name)
+				);
 				return 0;
 			}
 			variant_case(vm::opargs::Label, label) {
