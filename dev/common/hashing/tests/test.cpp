@@ -47,9 +47,9 @@ struct S {
 	std::array<int, 2> y = { 1, 2 };
 	bool               b{};
 	float              z{ 7.0f };
-	X                  m{ 1, 2, 3.0f };
-	Y                  n{ 1.0f, "hello" };
-	Z                  o{ 1, 2.0f, { 1.0f, "hello" } };
+	X                  m{ .x = 1, .y = 2, .z = 3.0f };
+	Y                  n{ .f = 1.0f, .s = "hello" };
+	Z                  o{ .x = 1, .y = 2.0f, .z = { .f = 1.0f, .s = "hello" } };
 
 public:
 	friend constexpr void addToHash(hash_algorithm auto& h, const S& s) noexcept {
@@ -175,7 +175,7 @@ private:
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 		DebugHash dh;
-		dh(std::span{"hello 1234567890"});
+		dh(std::span{ "hello 1234567890" });
 
 		Hash<DebugHash, TypeHashCode>{}(type3{});
 		Hash<DebugHash>{}(type4{});
@@ -209,9 +209,7 @@ private:
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 
-	void constexprTest() {
-		[[maybe_unused]] constexpr auto res = constexprTestHelper();
-	}
+	void constexprTest() { [[maybe_unused]] constexpr auto res = constexprTestHelper(); }
 
 	template<typename T>
 	void defaultsTest() {

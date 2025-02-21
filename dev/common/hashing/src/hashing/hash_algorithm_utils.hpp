@@ -21,16 +21,16 @@ namespace hashing {
 	using byte_like_types_tuple = std::
 		tuple<std::byte, unsigned char, std::uint8_t, char8_t, char, signed char, std::int8_t>;
 
-	static constexpr std::tuple byte_like_types_tuple_v = byte_like_types_tuple{};
+	static constexpr std::tuple BYTE_LIKE_TYPES_TUPLE_V = byte_like_types_tuple{};
 
 	template<typename T>
-	static constexpr bool byte_like_type = []<typename... Ts>(std::tuple<Ts...>) {
+	static constexpr bool BYTE_LIKE_TYPE = []<typename... Ts>(std::tuple<Ts...>) {
 		return (std::is_same_v<std::remove_const_t<T>, Ts> || ...);
-	}(byte_like_types_tuple_v);
+	}(BYTE_LIKE_TYPES_TUPLE_V);
 
 
 	template<typename T>
-	concept byte_like = byte_like_type<T>;
+	concept byte_like = BYTE_LIKE_TYPE<T>;
 
 	/**
 	 * checks if the type can be invoked with a span of type B
@@ -49,7 +49,7 @@ namespace hashing {
 	   || invocable_with_span<T, std::int8_t>;
 	// []<typename... Ts>(std::tuple<Ts...>) {
 	// 	return (invocable_with_span<T, Ts> || ...);
-	// }(byte_like_types_tuple_v);
+	// }(BYTE_LIKE_TYPES_TUPLE_V);
 
 	/**
 	 * finds index of the first span of bytes that the type accepts
@@ -62,7 +62,7 @@ namespace hashing {
 			if (arr[i]) return i;
 		// unreachable
 		return arr.size();
-	}(byte_like_types_tuple_v);
+	}(BYTE_LIKE_TYPES_TUPLE_V);
 
 	/**
 	 * finds the first byte-like type, span of which the type can accept

@@ -141,8 +141,6 @@ namespace hashing {
 
 		using result_type = std::string;
 
-		constexpr DebugHash() = default;  // todo: delete
-
 		explicit constexpr operator result_type() noexcept {
 			std::string ret;
 			usize       line = 0, pos = 0;

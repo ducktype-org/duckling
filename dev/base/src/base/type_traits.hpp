@@ -38,11 +38,11 @@ namespace base {
 		template<template<typename...> class Template, typename... Args>
 		struct IsInstantiationOfImpl<Template, Template<Args...>>: std::true_type {};
 
-		template<class, template<class> class>
+		template<class, class>
 		struct IsOfSameClassImpl: public std::false_type {};
 
-		template<class T2, template<class> class U>
-		struct IsOfSameClassImpl<U<T2>, U>: public std::true_type {};
+		template<class T1, class T2, template<class> class U>
+		struct IsOfSameClassImpl<U<T1>, U<T2>>: public std::true_type {};
 	}
 
 	/**
@@ -73,7 +73,7 @@ namespace base {
 	 * static_assert(IsOfSameClass<A<int>, A<bool>>); // passes
 	 * @n static_assert(IsOfSameClass<A<int>, B<int>>);  // fails
 	 */
-	template<class TypeA, template<class> class TypeB>
+	template<class TypeA, class TypeB>
 	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
 
 	/**

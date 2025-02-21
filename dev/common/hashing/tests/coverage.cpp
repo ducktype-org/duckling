@@ -49,9 +49,9 @@ struct S {
 	std::array<int, 2> y = { 1, 2 };
 	bool               b{};
 	float              z{ 7.0f };
-	X                  m{ 1, 2, 3.0f };
-	Y                  n{ 1.0f, "hello" };
-	Z                  o{ {}, 1, 2.0f, { 1.0f, "hello" } };
+	X                  m{ .x = 1, .y = 2, .z = 3.0f };
+	Y                  n{ .f = 1.0f, .s = "hello" };
+	Z                  o{ {}, 1, 2.0f, { .f = 1.0f, .s = "hello" } };
 
 public:
 	friend constexpr void addToHash(hash_algorithm auto& h, const S& s) noexcept {
@@ -245,14 +245,14 @@ private:
 		assertFalse(detail::can_hashDecompose<int>, "int should not be hashDecomposable");
 		assertFalse(detail::can_hashDecompose<S>, "S should not be hashDecomposable");
 
-		static_assert(byte_like_type<std::byte>, "std::byte should be byte-like");
-		static_assert(byte_like_type<unsigned char>, "unsigned char should be byte-like");
-		static_assert(byte_like_type<std::uint8_t>, "std::uint8_t should be byte-like");
-		static_assert(byte_like_type<char8_t>, "char8_t should be byte-like");
-		static_assert(byte_like_type<char>, "char should be byte-like");
-		static_assert(byte_like_type<signed char>, "signed char should be byte-like");
-		static_assert(byte_like_type<std::int8_t>, "std::int8_t should be byte-like");
-		assertFalse(byte_like_type<int>, "int should not be byte-like");
+		static_assert(BYTE_LIKE_TYPE<std::byte>, "std::byte should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<unsigned char>, "unsigned char should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<std::uint8_t>, "std::uint8_t should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<char8_t>, "char8_t should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<char>, "char should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<signed char>, "signed char should be byte-like");
+		static_assert(BYTE_LIKE_TYPE<std::int8_t>, "std::int8_t should be byte-like");
+		assertFalse(BYTE_LIKE_TYPE<int>, "int should not be byte-like");
 
 		static_assert(
 			invocable_with_span<Fnv1a_32, std::byte>,
@@ -424,7 +424,8 @@ private:
 			"h2 should be able to hash range as chars"
 		);
 		addToHash(h2, range);  // hashing range as chars
-		std::vector<Y> vec_y = { { 1.0f, "hello" }, { 2.0f, "world" }, { 3.0f, "!" } };
+		std::vector<Y> vec_y
+			= { { .f = 1.0f, .s = "hello" }, { .f = 2.0f, .s = "world" }, { .f = 3.0f, .s = "!" } };
 		assertTrue(
 			std::ranges::contiguous_range<decltype(vec_y)>, "vec_y should be a contiguous range"
 		);
@@ -455,11 +456,13 @@ private:
 		my_map::unordered_map<S, int> m2;
 		m2[S{}] = 42;
 		assertTrue(m2[S{}] == 42, "m2[S{}] should be 42");
-		m2[S{ 1, { 2, 3 } }] = 77;
-		m2[S{ 5, { 987 } }]  = 33;
-		m2[S{ 1, { 2, 3 } }] = 42;
-		assertTrue(m2[S{ 5, { 987 } }] == 33, "m2[S{5}] should be 33");
-		assertTrue(m2[S{ 1, { 2, 3 } }] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]");
+		m2[S{ .x = 1, .y = { 2, 3 } }] = 77;
+		m2[S{ .x = 5, .y = { 987 } }]  = 33;
+		m2[S{ .x = 1, .y = { 2, 3 } }] = 42;
+		assertTrue(m2[S{ .x = 5, .y = { 987 } }] == 33, "m2[S{5}] should be 33");
+		assertTrue(
+			m2[S{ .x = 1, .y = { 2, 3 } }] == m2[S{}], "m2[S{1, 2, 3}] should be equal to m2[S{}]"
+		);
 
 		Hash{}(std::tuple{ 1, 2, 3 });
 		[[maybe_unused]] auto var1 = hasher(std::tuple{ 1, 2, 3 });

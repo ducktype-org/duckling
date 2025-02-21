@@ -12,16 +12,16 @@ namespace hashing {
 
 
 	struct addToHashOptions {
-		bool ALLOW_STD_HASH;
-		bool ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER;
+		bool allow_std_hash;
+		bool allow_hashing_ranges_with_unspecified_order;
 	};
 
-	static constexpr addToHashOptions defaultAddToHashOptions{
-		.ALLOW_STD_HASH = false, .ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER = false
+	static constexpr addToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
+		.allow_std_hash = false, .allow_hashing_ranges_with_unspecified_order = false
 	};
 
-	static constexpr addToHashOptions relaxedAddToHashOptions{
-		.ALLOW_STD_HASH = true, .ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER = true
+	static constexpr addToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
+		.allow_std_hash = true, .allow_hashing_ranges_with_unspecified_order = true
 	};
 
 	/**
@@ -33,7 +33,7 @@ namespace hashing {
 	template<
 		hash_algorithm HashAlgorithm,
 		typename T,
-		addToHashOptions Options = defaultAddToHashOptions>
+		addToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
 		// for most types we only want to add to hash some subset of their subobjects (bases +
 		// members) this can be done easily by defining `hashDecompose` friend function that lists
@@ -86,7 +86,7 @@ namespace hashing {
 			for (auto&& elem: t) addToHash(hash_alg, elem);
 		}
 		// some ranges will compare equal but keep their elements in unspecified order
-		else if constexpr (Options.ALLOW_HASHING_RANGES_WITH_UNSPECIFIED_ORDER
+		else if constexpr (Options.allow_hashing_ranges_with_unspecified_order
 		                   && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
 			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
@@ -100,7 +100,7 @@ namespace hashing {
 		}
 		// std::hash is not constexpr, so if some type needs to be hashable in compile-time,
 		// its specialization should be provided above
-		else if constexpr (Options.ALLOW_STD_HASH && detail::can_stdhash<T>) {
+		else if constexpr (Options.allow_std_hash && detail::can_stdhash<T>) {
 			addToHash(hash_alg, std::hash<T>{}(t));
 		} else {
 			static_assert(
