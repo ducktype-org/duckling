@@ -34,6 +34,9 @@ namespace pst {
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
 
+		template<std::derived_from<LangElement>  Element>
+		friend class LangElementAccess;
+
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {}
@@ -252,6 +255,49 @@ namespace pst {
 
 	private:
 		PstID id = PstID::next();
+	};
+
+	/**
+	 * @brief Some kind of id in the future
+	 */
+	class PSTAccessKey final {
+	private:
+		int key = 0;
+	public:
+		PSTAccessKey() = default;
+
+		bool operator== (PSTAccessKey other) {return key == other.key;}
+	};
+
+	/**
+	 * @brief common ancestor for element accessors
+	 */
+	template<std::derived_from<LangElement> Element>
+	class LangElementAccess {
+		base::MRef<Element> element;
+		PSTAccessKey stored_key;
+
+		LangElementAccess(base::MCRef<Element> element): element(element) {}
+	public:
+		void getAccess(PSTAccessKey new_key) {stored_key = new_key;}
+		LangElementAccess() = delete;
+		LangElementAccess(const LangElementAccess& other) noexcept: element(other.element) {}
+		LangElementAccess(const LangElementAccess&& other) noexcept: element(other.element) {}
+
+		// Public access methods of LangElement moved here
+	};
+
+	template<std::derived_from<LangElement> Element>
+	class Access;
+
+	template<std::derived_from<LangElement> Element>
+	class AccessLocked: private MBox<Element> {
+		Access<Element> unlock();
+	};
+
+	template<std::derived_from<LangElement> Element>
+	class Access: public MBox<Element> {
+		
 	};
 
 	using ImportType = CRef<pst::Import>;
