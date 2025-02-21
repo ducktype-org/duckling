@@ -19,6 +19,7 @@ LLVM_INCLUDE_END()
 
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <init/init.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/maps.hpp>
@@ -38,6 +39,22 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
+
+	void llvmDeinit() {
+		// I'm not sure if this is a proper/stable
+		// way to clean up llvm, but it works.
+		// If it ever breaks, a quick-fix is just to comment it out
+		// and let memory leak.
+		// @note: There is also llvm_shutdown_obj helper object,
+		// but we don't use it here in favor of deinit module.
+		//
+		// Note from LLVM docs:
+		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
+		// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
+		llvm::llvm_shutdown();
+	}
+
+	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
 	/**
 	 * @brief Returns reference to the llvm context.
@@ -330,18 +347,22 @@ namespace compiler::backend_llvm {
 		}
 	};
 
-	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
+	Box<ModuleImpl> initModuleImpl(base::StrID module_id) {
 		init();
 		llvm::LLVMContext& context = getLLVMContext();
 
-		Box<llvm::Module> module = makeBox<llvm::Module>("test", context);
+		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
+		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
 
-		LIR2LLVMFunction lir2llvm{ context, lir_function, module.refMut() };
-
-		// this implicitly adds the function to the module:
+	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
+	}
 
-		Box<ModuleImpl> module_impl = makeBox<ModuleImpl>(std::move(module));
+	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
+		auto module_impl = initModuleImpl(base::StrID("test"));
+		addFunctionToModuleImpl(module_impl.refMut(), lir_function);
 		return Module{ std::move(module_impl) };
 	}
 }

@@ -48,7 +48,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 		std::string str_to_log = base::strConcat("Result of query 2 : ", result);
 		// Dummy source position:
 		dia::SourcePosition source_position = dia::SourcePosition::fakePosition();
-		context.log(base::make_unique<InfoInMyQuery>(source_position, str_to_log));
+		context.log(makeBox<InfoInMyQuery>(source_position, str_to_log));
 
 		// some trivial implementation:
 		return PResult{ key.v };

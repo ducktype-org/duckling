@@ -86,7 +86,7 @@ namespace tokenizer {
 
 	void TokenFile::runLexer() {
 		if (log.bad()) return;
-		lexer::Lexer lexer{ base::borrow_ptr(this) };
+		lexer::Lexer lexer{ Ref<TokenFile>(this) };
 		token_data.emplace(lexer.tokenize());
 	}
 

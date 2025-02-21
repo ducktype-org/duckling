@@ -21,7 +21,7 @@ namespace lexer {
 		SIMPLE_INIT_GUARD_END
 	}
 
-	tokenizer::OwnFile tokenizeFile(const fs::FilePath& path) {
+	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {
 		auto file = tokenizer::makeTokenFile(path);
 		file->tokenize();
 		if (file->getLogger().bad()) {

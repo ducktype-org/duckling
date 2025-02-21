@@ -44,6 +44,7 @@
 #include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
 
+#include <base/box.hpp>
 #include "message.hpp"
 #include "diagnostic_converters.hpp"
 
@@ -56,8 +57,7 @@ namespace dia {
 		 * @brief Storage for messages of each severity.
 		 */
 		// @TODO: We may want to store a priority queue sorted by Message::Domain.
-		std::array<std::vector<base::unique_ptr<Message>>, Message::NUM_SEVERITIES> message_log
-			= {};
+		std::array<std::vector<Box<Message>>, Message::NUM_SEVERITIES> message_log = {};
 
 	public:
 		Logger()                    = default;
@@ -76,14 +76,14 @@ namespace dia {
 		/**
 		 * @brief Log a message.
 		 *
-		 * @param message_ptr A base::unique_ptr to the Message to be logged.
+		 * @param message_ptr A Box to the Message to be logged.
 		 * @param detailed Whether to dump detailed logs if immediately dumping.
 		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 */
 		void
-			log(base::unique_ptr<Message> message_ptr,
-		        bool                      detailed         = true,
-		        bool                      immediately_dump = Logger::immediately_dump);
+			log(Box<Message> message_ptr,
+		        bool         detailed         = true,
+		        bool         immediately_dump = Logger::immediately_dump);
 
 		/**
 		 * @brief Print all logged messages to a stream.

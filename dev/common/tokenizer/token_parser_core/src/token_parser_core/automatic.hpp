@@ -9,7 +9,7 @@
  * location and skips it, otherwise it logs an error
  *  - for OptionalIdentifier* it parses an identifier into the specified location and skips. If
  * There is no identifier next it doesn't do anything
- *  - for ParserRef<T>* it calls the parser of T object into the specified location
+ *  - for Box<T>* it calls the parser of T object into the specified location
  *
  * The optional argument ignorable additionally allows to control behaviour in case of error.
  * If it's set to true then simple parse-able entities(not parser ref) will not be skipped on error.
@@ -27,7 +27,6 @@
 
 #include "parser_state.hpp"
 #include "common_elements.hpp"
-#include "parser_ref.hpp"
 #include <lang_definitions/key_spec_op.hpp>
 
 #include "base_element.hpp"
@@ -48,7 +47,9 @@ namespace tpc {
 	void nullAwareDprint(Special, std::ostream& out);
 
 	template<typename T>
-	void nullAwareDprint(const ParserRef<T>& ref, std::ostream& out) {
+	void nullAwareDprint(const Box<T>& ref, std::ostream& out) {
+		// This templates's logic is very weird...
+		// It implies that if not bool(*ref) then <nullptr> else dprint...
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else
@@ -92,7 +93,7 @@ namespace tpc {
 		 */
 		void one(Keyword key, bool ignorable = false) {
 			if (!state.tryEat(key)) {
-				state.log(base::make_unique<BadKeywordError>(state.getPosition(), key));
+				state.log(makeBox<BadKeywordError>(state.getPosition(), key));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -103,7 +104,7 @@ namespace tpc {
 		 */
 		void one(Special spec, bool ignorable = false) {
 			if (!state.tryEat(spec)) {
-				state.log(base::make_unique<BadSpecialError>(state.getPosition(), spec));
+				state.log(makeBox<BadSpecialError>(state.getPosition(), spec));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -114,7 +115,7 @@ namespace tpc {
 		 */
 		void one(Operator op, bool ignorable = false) {
 			if (!state.tryEat(op)) {
-				state.log(base::make_unique<BadOperatorError>(state.getPosition(), op));
+				state.log(makeBox<BadOperatorError>(state.getPosition(), op));
 				if (!ignorable) state.tokens().next();
 			}
 		}
@@ -125,7 +126,7 @@ namespace tpc {
 		 */
 		void one(Identifier* result, bool ignorable = false) {
 			if (!state.ctokens().peek().isIdentifier()) {
-				state.log(base::make_unique<NoIdentifierError>(state.getPosition()));
+				state.log(makeBox<NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
 				if (!ignorable) state.tokens().next();
 				return;
@@ -147,7 +148,7 @@ namespace tpc {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<Element> T>
-		void one(ParserRef<T>* result, bool = false) {
+		void one(Box<T>* result, bool = false) {
 			*result = T::parse(state);
 		}
 
@@ -157,7 +158,7 @@ namespace tpc {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<Element> T>
-		void one(base::Optional<ParserRef<T>>* result, bool = false) {
+		void one(MBox<T>* result, bool = false) {
 			*result = T::parse(state);
 		}
 
@@ -191,7 +192,7 @@ namespace tpc {
 		 * @param args Arguments passed to the parsing function
 		 */
 		template<std::derived_from<Element> El, typename Sink, typename... Args>
-		void with(Sink* sink, ParserRef<El> fun(State&, Args...), Args&&... args) {
+		void with(Sink* sink, Box<El> fun(State&, Args...), Args&&... args) {
 			*sink = fun(state, std::forward<Args>(args)...);
 		}
 

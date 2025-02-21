@@ -104,7 +104,7 @@ namespace lexer {
 			dia::SourcePosition start_pos, dia::SourcePosition expected_pos, UChar32 closing_bracket
 		):
 			  dia::Error(start_pos) {
-			addNote(base::make_unique<EndBlock>(expected_pos, closing_bracket));
+			addNote(makeBox<EndBlock>(expected_pos, closing_bracket));
 		}
 
 		class EndBlock final: public dia::NoteWithPosition {
@@ -126,7 +126,7 @@ namespace lexer {
 		};
 	};
 
-	Lexer::Lexer(tokenizer::BorrowFile file):
+	Lexer::Lexer(Ref<tokenizer::TokenFile> file):
 		  file(file),
 		  logger(file->getLogger()),
 		  char_array(file->getChars()) {
@@ -164,8 +164,8 @@ namespace lexer {
 		for (usize i = 0; i < n; i++) next();
 	}
 
-	bool Lexer::tryRawValue(char rawValue, usize fwd) const {
-		return char_array.size() > where + fwd && peek(fwd).is(rawValue);
+	bool Lexer::tryRawValue(char raw_value, usize fwd) const {
+		return char_array.size() > where + fwd && peek(fwd).is(raw_value);
 	}
 
 	const Char& Lexer::peek(usize fwd) const { return char_array.at(where + fwd); }
@@ -194,12 +194,12 @@ namespace lexer {
 	}
 
 	void Lexer::parseCodeblockInto(Tokens& output) {
-		constexpr auto stopOnEOF = [](const Lexer& lexer) { return lexer.isEOF(); };
-		parseUntil(output, stopOnEOF);
+		constexpr auto stop_on_eof = [](const Lexer& lexer) { return lexer.isEOF(); };
+		parseUntil(output, stop_on_eof);
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		dia::SourcePosition sourceStart(file, where);
+		dia::SourcePosition source_start(file, where);
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
@@ -227,7 +227,7 @@ namespace lexer {
 				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
-				logger.log(base::make_unique<TokenStartError>(sourceStart));
+				logger.log(makeBox<TokenStartError>(source_start));
 			next();
 		}
 	}
@@ -235,7 +235,7 @@ namespace lexer {
 	void Lexer::commentHandler([[maybe_unused]] Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		skip(1);  // "#"
 		while (true) {
@@ -251,7 +251,7 @@ namespace lexer {
 			}
 		}
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "line comment");
 	}
@@ -259,13 +259,13 @@ namespace lexer {
 	void Lexer::blockCommentHandler([[maybe_unused]] Tokens& output) {
 		usize               begin = where;
 		usize               end{};
-		auto                sourceStart = currentPosition();
-		dia::SourcePosition opening(sourceStart, begin + 1);
+		auto                source_start = currentPosition();
+		dia::SourcePosition opening(source_start, begin + 1);
 
 		skip(2);  // "#{"
 		while (true) {
 			if (isEOF()) {
-				logger.log(base::make_unique<UnclosedCommentError>(opening));
+				logger.log(makeBox<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
 			} else if (isBlockCommentEnd()) {
@@ -277,36 +277,37 @@ namespace lexer {
 			}
 		}
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "block comment");
 	}
 
 	void Lexer::operatorHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		while (peek().is(Class::operator_continue)) next();
 		end = where - 1;
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "operator");
-		output.push_back(Token::makeOperator(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeOperator(file->getCharRange(begin, end + 1), source_position));
 	}
 
 	void Lexer::nameHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		next();  // first char - character
 		while (peek().is(Class::name_continue)) next();
 		end = where - 1;
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 		std::string         message;
-		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), source_position)
+		);
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -314,30 +315,31 @@ namespace lexer {
 	}
 
 	void Lexer::specialHandler(Tokens& output) {
-		usize begin       = where;
-		usize end         = where;
-		auto  sourceStart = currentPosition();
+		usize begin        = where;
+		usize end          = where;
+		auto  source_start = currentPosition();
 
 		next();
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 		addTokenMsg(begin, end, "special");
-		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeSpecial(file->getCharRange(begin, end + 1), source_position));
 	}
 
 	void Lexer::binLiteralHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
+		auto  source_start = currentPosition();
 
 		skip(2);  // 0b
 		while (peek().isBinDigit()) next();
 		end = where - 1;
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
+		);
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -380,33 +382,34 @@ namespace lexer {
 
 		end = where - 1;
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), sourcePosition));
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
+		);
 	}
 
 	void Lexer::stringHandler(Tokens& output) {
 		usize begin = where;
 		usize end{};
-		auto  sourceStart = currentPosition();
-		bool  closed      = true;
+		auto  source_start = currentPosition();
+		bool  closed       = true;
 
 		next();
 		while (!peek().is('"')) {
 			if (peek().is('\\')) {
 				skip(2);
 			} else if (isEOL()) {
-				dia::SourcePosition errPos(sourceStart, where - 1);
-				dia::SourcePosition eolPos = currentPosition();
-				auto                error  = base::make_unique<UnclosedStringEolError>(errPos);
-				error->addNote(base::make_unique<UnclosedStringEolError::EolLocationNote>(eolPos));
+				dia::SourcePosition err_pos(source_start, where - 1);
+				dia::SourcePosition eol_pos = currentPosition();
+				auto                error   = makeBox<UnclosedStringEolError>(err_pos);
+				error->addNote(makeBox<UnclosedStringEolError::EolLocationNote>(eol_pos));
 				logger.log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
-				dia::SourcePosition errPos(sourceStart, where - 1);
-				logger.log(base::make_unique<UnclosedStringEofError>(errPos));
+				dia::SourcePosition err_pos(source_start, where - 1);
+				logger.log(makeBox<UnclosedStringEofError>(err_pos));
 				closed = false;
 				break;
 			} else {
@@ -416,11 +419,11 @@ namespace lexer {
 		end = where - 1 + int(closed);
 		if (closed) next();
 
-		dia::SourcePosition sourcePosition(sourceStart, end);
+		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "string");
 		output.push_back(Token::makeString(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), sourcePosition
+			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
 		));
 	}
 
@@ -439,10 +442,10 @@ namespace lexer {
 
 		Tokens inner_tokens;
 		next();  // par open
-		constexpr auto isGroupEnd = [](const Lexer& lexer) {
+		constexpr auto is_group_end = [](const Lexer& lexer) {
 			return lexer.isEOF() || lexer.peek().is(Class::close_bracket);
 		};
-		parseUntil(inner_tokens, isGroupEnd);
+		parseUntil(inner_tokens, is_group_end);
 
 		end = where;
 
@@ -450,14 +453,10 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			logger.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
-			);
+			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		} else {
-			logger.log(
-				base::make_unique<UnmatchedBracketError>(source_start, currentPosition(), group_end)
-			);
+			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		}
 

@@ -29,7 +29,7 @@ namespace pst {
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
 		if (out->name && out->name->getStar())
-			state.log(base::make_unique<AttrStarError>(out->name->getSourcePosition()));
+			state.log(makeBox<AttrStarError>(out->name->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
 		return out;
