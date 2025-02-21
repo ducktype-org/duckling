@@ -7,7 +7,6 @@
 #include <base/ints.hpp>
 
 #include <hashing/hash_algorithm_utils.hpp>
-#include <hashing/call_overloads_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <hashing/type_hash_code_def.hpp>
 #include <hashing/type_hash_code.hpp>
@@ -159,10 +158,13 @@ private:
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
 		constexpr auto res1 = Fnv1a_32{}(4);
-		assertTrue(has_updateHash_void<Fnv1a_64>, "Fnv1a_64 should have updateHash(char*, usize)");
-		constexpr auto res2 = Fnv1a_64{}(std::array{ 1, 2, 3 });
-		constexpr auto res3
-			= static_cast<std::string>(DebugHash{}(std::string_view{ "hello" })).size();
+		constexpr auto arr  = std::array{ 1, 2, 3 };
+		constexpr auto res2 = Fnv1a_64{}(std::span{ arr });
+		constexpr auto res3 = [] {
+			DebugHash dh;
+			dh(std::span{ "hello" });
+			return static_cast<std::string>(dh).size();
+		}();
 		assertTrue(
 			is_explicitly_convertible_to<decltype(res1), u32>,
 			"Fnv1a_32 should be convertible to u32"
@@ -173,7 +175,7 @@ private:
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 		DebugHash dh;
-		dh("hello 1234567890");
+		dh(std::span{"hello 1234567890"});
 
 		Hash<DebugHash, TypeHashCode>{}(type3{});
 		Hash<DebugHash>{}(type4{});
@@ -207,7 +209,9 @@ private:
 		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
 	}
 
-	void constexprTest() { [[maybe_unused]] constexpr auto res = constexprTestHelper(); }
+	void constexprTest() {
+		[[maybe_unused]] constexpr auto res = constexprTestHelper();
+	}
 
 	template<typename T>
 	void defaultsTest() {

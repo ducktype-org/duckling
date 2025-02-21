@@ -43,7 +43,7 @@ namespace hashing {
 		}
 		// if there is no user-defined specialization for hashDecompose nor addToHash, but the
 		// chosen hashing algorithm is able to hash the type directly, we can use it (for most
-		// algorithms those will be types with unique representations)
+		// algorithms those will only be the types with unique representations)
 		else if constexpr (detail::can_hash_directly<HashAlgorithm, T>) {
 			hash_alg(t);
 		}
@@ -67,6 +67,11 @@ namespace hashing {
 		// treat it as a segment of memory and hash it directly
 		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
 			detail::hashRangeAsChars(hash_alg, t);
+		}
+		// if for each value of the type there is a unique representation of it in memory,
+		// we can treat it as a sequence of chars and hash it directly
+		else if constexpr (std::has_unique_object_representations_v<T>) {
+			detail::hashAsChars(hash_alg, t);
 		}
 		// if type supports std::tuple_size and std::get, we can use them to get and hash its
 		// members

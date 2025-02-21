@@ -230,14 +230,3 @@ As stated before algorithm has to be organized into three stages:
 3) finalizing the hash - this should be done in the conversion operator to the `result_type` marked `explicit`, algorithm should convert it's internal state to the hash value and return it without changing it's state in the process
 
 After the setup it should be possible to call stages 2 and 3 multiple times in any order.
-
-CallOverloads utility class
----------------------------
-
-This class is meant to make implementing hashing algorithms easier by adding call operator overloads to the derived class.
-
-To use this utility our hashing algorithm should derive from it. Our class should also have a protected member function `updateHash(void*, usize)` or `updateHash(std::string_view)` which will be called by the call operator. It also shouldn't be final.
-It can also have a protected member function `addHashCode(any TypeHashCode)` which will be called if matching `TypeHashCode` is passed.
-When possible call operator will be constexpr.
-
-Class also adds overloads for types which values have unique representations in memory hashing their bytes directly as bytes and if possible in compile time.

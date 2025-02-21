@@ -1,8 +1,8 @@
 #pragma once
 
-#include <concepts>
 #include <type_traits>
-#include <string_view>
+#include <concepts>
+#include <span>
 
 #include <base/ints.hpp>
 
@@ -21,9 +21,10 @@ namespace hashing {
 		requires std::convertible_to<typename HashAlgorithm::result_type, I> struct StrToIntegral {
 			TypeHashCodeBase<I> hash_value;
 
-			consteval StrToIntegral(const std::string_view sv) {
+			template<std::size_t N>
+			consteval StrToIntegral(const std::span<const char, N> span) {
 				HashAlgorithm h;
-				h(sv);
+				h(span);
 				hash_value.value = static_cast<typename HashAlgorithm::result_type>(h);
 			}
 
@@ -41,9 +42,9 @@ namespace hashing {
 			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
-			return StrToIntegral<I, HashAlgorithm>{ __FUNCDNAME__ };
+			return StrToIntegral<I, HashAlgorithm>{ std::span{ __FUNCDNAME__ } };
 #elif defined(__GNUC__) || defined(__clang__)
-			return StrToIntegral<I, HashAlgorithm>{ __PRETTY_FUNCTION__ };
+			return StrToIntegral<I, HashAlgorithm>{ std::span{ __PRETTY_FUNCTION__ } };
 #else
 	#error "Please provide a unique string for each type"
 			return { "" };

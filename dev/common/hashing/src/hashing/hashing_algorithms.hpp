@@ -8,13 +8,13 @@
 #include <string>
 #include <tuple>
 #include <array>
+#include <span>
 #include <bit>
 
 #include <base/ints.hpp>
 
 #include "type_hash_code_def.hpp"
 #include "hash_algorithm_utils.hpp"
-#include "call_overloads_utils.hpp"
 
 namespace hashing {
 
@@ -45,27 +45,41 @@ namespace hashing {
 	 * though not meant for cryptographic purposes
 	 */
 	template<std::unsigned_integral I>
-	class Fnv1a: public CallOverloads, protected detail::Fnv1a_Constants<I> {
-		friend CallOverloads;
+	class Fnv1a: protected detail::Fnv1a_Constants<I> {
 		using detail::Fnv1a_Constants<I>::OFFSET_BASIS;
 		using detail::Fnv1a_Constants<I>::FNV_PRIME;
 
 		I state = OFFSET_BASIS;
 
-	protected:
-		// @C++26 constexpr (static_cast from void*)
-		void updateHash(const void* data, usize len) noexcept {
-			updateHash(std::string_view{ static_cast<const char*>(data), len });
-		}
-
-		constexpr void updateHash(const std::string_view sv) noexcept {
-			for (auto&& c: sv) {
-				state ^= c;
+	public:
+		template<byte_like B, std::size_t N>
+		constexpr auto& operator()(const std::span<B, N> span) noexcept {
+			for (auto&& c: span) {
+				state ^= static_cast<const unsigned char>(c);
 				state *= FNV_PRIME;
 			}
+			return *this;
 		}
 
-	public:
+		template<typename T>
+		requires((std::has_unique_object_representations_v<T> && !std::ranges::range<T>) )
+		constexpr auto& operator()(const T& t) noexcept {
+			const std::array arr = std::bit_cast<std::array<std::byte, sizeof(T)>, T>(t);
+			this->operator()(std::span{ arr.data(), arr.size() });
+			return *this;
+		}
+
+		template<typename R>
+		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
+		constexpr auto& operator()(const R& range) noexcept {
+			for (auto&& it: range) {
+				using val_t    = std::ranges::range_value_t<R>;
+				const auto arr = std::bit_cast<std::array<std::byte, sizeof(val_t)>, val_t>(it);
+				this->operator()(std::span{ arr.data(), arr.size() });
+			}
+			return *this;
+		}
+
 		using result_type = I;
 
 		constexpr Fnv1a() = default;
@@ -84,32 +98,50 @@ namespace hashing {
 	 * hash algorithm that keeps the bytes of the hashed objects
 	 * and can be converted to a string that represents the bytes in hex
 	 */
-	class DebugHash: public CallOverloads {
-		friend CallOverloads;
-
+	class DebugHash {
 		enum class Type : std::uint8_t { HashCode, Other };
 		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
-	protected:
-		// @C++26 constexpr (static_cast from void*)
-		void updateHash(const void* data, usize len) noexcept {
-			updateHash(std::string_view{ static_cast<const char*>(data), len });
-		}
-
-		constexpr void updateHash(const std::string_view sv, Type type = Type::Other) noexcept {
-			bytes.emplace_back(std::vector<char>(sv.begin(), sv.end()), sv.size(), type);
-		}
-
-		template<base::IsInstantiationOf<TypeHashCodeBase> TypeHC>
-		constexpr void addHashCode(TypeHC hash) noexcept {
-			auto arr = std::bit_cast<std::array<char, sizeof(TypeHC)>, TypeHC>(hash);
-			updateHash(std::string_view{ arr.data(), arr.size() }, Type::HashCode);
-		}
-
 	public:
+		// spans of bytes
+		template<byte_like B, std::size_t N>
+		constexpr void operator()(const std::span<B, N> span, Type type = Type::Other) noexcept {
+			std::vector<char> vec;
+			vec.reserve(span.size());
+			for (auto&& c: span) vec.push_back(static_cast<char>(c));
+			bytes.emplace_back(std::move(vec), span.size(), type);
+		}
+
+		// type codes
+		template<base::IsInstantiationOf<TypeHashCodeBase> TypeHC>
+		constexpr void operator()(TypeHC hash) noexcept {
+			auto arr = std::bit_cast<std::array<char, sizeof(TypeHC)>, TypeHC>(hash);
+			this->operator()(std::span{ arr.data(), arr.size() }, Type::HashCode);
+		}
+
+		// objects with unique representations but not ranges nor type codes
+		template<typename T>
+		requires(not base::IsInstantiationOf<T, TypeHashCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
+		constexpr void operator()(const T& t) noexcept {
+			const std::array arr = std::bit_cast<std::array<char, sizeof(T)>, T>(t);
+			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
+		}
+
+		// contiguous ranges
+		template<typename R>
+		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
+		constexpr auto& operator()(const R& range) noexcept {
+			for (auto&& it: range) {
+				using val_t    = std::ranges::range_value_t<R>;
+				const auto arr = std::bit_cast<std::array<std::byte, sizeof(val_t)>, val_t>(it);
+				this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
+			}
+			return *this;
+		}
+
 		using result_type = std::string;
 
-		constexpr DebugHash() = default;
+		constexpr DebugHash() = default;  // todo: delete
 
 		explicit constexpr operator result_type() noexcept {
 			std::string ret;

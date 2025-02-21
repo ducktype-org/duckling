@@ -1,12 +1,13 @@
 #pragma once
 
 #include <type_traits>
-#include <string_view>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 #include <ranges>
 #include <array>
 #include <tuple>
+#include <span>
 #include <bit>
 
 #include <base/ints.hpp>
@@ -17,13 +18,68 @@ namespace hashing {
 	template<typename From, typename To>
 	concept is_explicitly_convertible_to = requires(From f) { static_cast<To>(f); };
 
+	using byte_like_types_tuple = std::
+		tuple<std::byte, unsigned char, std::uint8_t, char8_t, char, signed char, std::int8_t>;
+
+	static constexpr std::tuple byte_like_types_tuple_v = byte_like_types_tuple{};
+
+	template<typename T>
+	static constexpr bool byte_like_type = []<typename... Ts>(std::tuple<Ts...>) {
+		return (std::is_same_v<std::remove_const_t<T>, Ts> || ...);
+	}(byte_like_types_tuple_v);
+
+
+	template<typename T>
+	concept byte_like = byte_like_type<T>;
+
+	/**
+	 * checks if the type can be invoked with a span of type B
+	 */
+	template<typename T, typename B>
+	concept invocable_with_span = requires(T t) { t(std::span<B>{}); };
+
+	/**
+	 * checks if the type can be invoked with some span of byte-like type
+	 */
+	template<typename T>
+	concept invocable_with_byte_span
+		= invocable_with_span<T, std::byte> || invocable_with_span<T, unsigned char>
+	   || invocable_with_span<T, std::uint8_t> || invocable_with_span<T, char8_t>
+	   || invocable_with_span<T, char> || invocable_with_span<T, signed char>
+	   || invocable_with_span<T, std::int8_t>;
+	// []<typename... Ts>(std::tuple<Ts...>) {
+	// 	return (invocable_with_span<T, Ts> || ...);
+	// }(byte_like_types_tuple_v);
+
+	/**
+	 * finds index of the first span of bytes that the type accepts
+	 */
+	template<typename Algorithm>
+	static constexpr std::size_t FIRST_MATCHING_SPAN_INDEX = []<typename... Ts>(std::tuple<Ts...>) {
+		static_assert(invocable_with_byte_span<Algorithm>);
+		constexpr std::array arr = { invocable_with_span<Algorithm, Ts>... };
+		for (std::size_t i = 0; i < arr.size(); ++i)
+			if (arr[i]) return i;
+		// unreachable
+		return arr.size();
+	}(byte_like_types_tuple_v);
+
+	/**
+	 * finds the first byte-like type, span of which the type can accept
+	 */
+	template<typename Algorithm>
+	using first_matching_byte_like_t
+		= std::tuple_element_t<FIRST_MATCHING_SPAN_INDEX<Algorithm>, byte_like_types_tuple>;
+
+	template<typename Algorithm>
+	using first_matching_span = std::span<first_matching_byte_like_t<Algorithm>>;
+
 	namespace detail {
 
 		template<typename T>
 		concept hash_algorithm_impl
 			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
-		   && requires { typename T::result_type; }
-		   && (std::is_invocable_v<T, void*, usize> || std::is_invocable_v<T, std::string_view>)
+		   && requires { typename T::result_type; } && invocable_with_byte_span<T>
 		   && is_explicitly_convertible_to<T, typename T::result_type>;
 
 	}  // namespace detail
@@ -70,19 +126,14 @@ namespace hashing {
 		};
 
 		/**
-		 * hashes an object as a sequence of chars in constexpr
+		 * hashes an object as a sequence of bytes
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
-			std::array arr = std::bit_cast<std::array<char, sizeof(t)>, T>(t);
-			if constexpr (requires {
-							  std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(),
-				                                                               arr.size() });
-						  }) {
-				std::forward<HashAlgorithm>(h)(std::string_view{ arr.data(), arr.size() });
-			} else {
-				std::forward<HashAlgorithm>(h)(arr.data(), arr.size());
-			}
+			using byte_t    = first_matching_byte_like_t<HashAlgorithm>;
+			const auto arr  = std::bit_cast<std::array<byte_t, sizeof(T)>, T>(t);
+			const auto span = std::span{ arr.data(), arr.size() };
+			std::forward<HashAlgorithm>(h)(span);
 		}
 
 		/**
@@ -95,8 +146,8 @@ namespace hashing {
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
 		   && requires(HashAlgorithm& h, const R& t) {
-				  h(std::ranges::data(t),
-			        std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
+				  std::span{ std::ranges::data(t), std::ranges::size(t) };
+				  h(std::as_bytes(std::span{ std::ranges::data(t), std::ranges::size(t) }));
 			  };
 
 		/**
@@ -105,7 +156,8 @@ namespace hashing {
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_chars<HashAlgorithm, R>
 		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& t) {
-			h(std::ranges::data(t), std::ranges::size(t) * sizeof(std::ranges::range_value_t<R>));
+			const auto span = std::span{ std::ranges::data(t), std::ranges::size(t) };
+			h(std::as_bytes(span));
 		}
 
 		/**

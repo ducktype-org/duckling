@@ -7,7 +7,6 @@
 #include <base/ints.hpp>
 
 #include <hashing/hash_algorithm_utils.hpp>
-#include <hashing/call_overloads_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <hashing/type_hash_code_def.hpp>
 #include <hashing/type_hash_code.hpp>
@@ -123,23 +122,15 @@ struct type_with_bases: X, S {
 struct algo {
 	using result_type = u32;
 
-	void updateHash(void*, usize) {}
-
-	void updateHash(int) {}
-
-	void operator()(void*, usize) const {}
+	void operator()(std::span<std::byte>) const {}
 
 	operator u32() const { return 0; }
 };
 
-struct algo2: public CallOverloads {
+struct algo2 {
 	using result_type = u32;
 
-	void updateHash(void*, usize) {}
-
-	void updateHash(int) {}
-
-	void operator()(void*, usize) const {}
+	void operator()(std::span<std::byte>) const {}
 
 	void operator()(int) const {}
 
@@ -155,7 +146,6 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(typeHashCodeDefTest);
 		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
-		TESTER_ADD_TEST(callOverloadsUtilsTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
 		TESTER_ADD_TEST(hashTest);
@@ -197,7 +187,7 @@ private:
 			hash_algorithm<std::function<int(int)>>, "std::function is not a hashing algorithm"
 		);
 		assertTrue(
-			hash_algorithm<std::function<void(std::string_view)>>,
+			hash_algorithm<std::function<void(std::span<char>)>>,
 			"std::function could be a hashing algorithm"
 		);
 		assertTrue(
@@ -212,7 +202,7 @@ private:
 		);
 		assertTrue(
 			detail::can_hash_directly<Fnv1a_32, std::string>,
-			"Fnv1a_32 should not be able to hash std::string"
+			"Fnv1a_32 should be able to hash std::string"
 		);
 		assertFalse(
 			detail::can_hash_directly<Fnv1a_64, float>, "Fnv1a_64 should not be able to hash float"
@@ -255,12 +245,33 @@ private:
 		assertFalse(detail::can_hashDecompose<int>, "int should not be hashDecomposable");
 		assertFalse(detail::can_hashDecompose<S>, "S should not be hashDecomposable");
 
+		static_assert(byte_like_type<std::byte>, "std::byte should be byte-like");
+		static_assert(byte_like_type<unsigned char>, "unsigned char should be byte-like");
+		static_assert(byte_like_type<std::uint8_t>, "std::uint8_t should be byte-like");
+		static_assert(byte_like_type<char8_t>, "char8_t should be byte-like");
+		static_assert(byte_like_type<char>, "char should be byte-like");
+		static_assert(byte_like_type<signed char>, "signed char should be byte-like");
+		static_assert(byte_like_type<std::int8_t>, "std::int8_t should be byte-like");
+		assertFalse(byte_like_type<int>, "int should not be byte-like");
+
+		static_assert(
+			invocable_with_span<Fnv1a_32, std::byte>,
+			"Fnv1a_32 should be invocable with std::span<std::byte>"
+		);
+		static_assert(
+			invocable_with_span<Fnv1a_32, int>, "Fnv1a_32 should be invocable with span of int"
+		);
+		static_assert(
+			invocable_with_byte_span<Fnv1a_32>, "Fnv1a_32 should be invocable with byte-like type"
+		);
+
+		static_assert(FIRST_MATCHING_SPAN_INDEX<Fnv1a_32> == 0, "Fnv1a_32 should accept std::byte");
+
 		detail::hashAsChars(Fnv1a_32{}, 42);
 		Fnv1a_64 h1;
 		detail::hashAsChars(h1, 42.0f);
 		detail::hashAsChars(h1, std::array{ 1, 2, 3 });
-		detail::hashAsChars(algo{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
-
+		detail::hashAsChars(Fnv1a_32{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
 
 		std::string s = "hello_long_string";
 		assertTrue(
@@ -297,47 +308,10 @@ private:
 		);
 	}
 
-	void callOverloadsUtilsTest() {
-		assertFalse(has_updateHash_void<Check_1>, "Check_1 has public updateHash(void*, usize)");
-		assertFalse(has_updateHash_void<Check_2>, "Check_2 has private updateHash(void*, usize)");
-		assertTrue(has_updateHash_void<Check_3>, "Check_3 has protected updateHash(void*, usize)");
-		assertFalse(has_updateHash_void<Check_4>, "Check_4 does not have updateHash(void*, usize)");
-		assertFalse(has_updateHash_void<Check_5>, "Check_5 does not have updateHash(void*, usize)");
-		assertFalse(
-			has_updateHash_sv<Check_1>, "Check_1 does not have updateHash(std::string_view)"
-		);
-		assertTrue(
-			has_updateHash_sv<Check_4>, "Check_4 has protected updateHash(std::string_view)"
-		);
-		assertFalse(
-			has_updateHash_sv<Check_6>,
-			"Check_6 does not have protected updateHash(std::string_view)"
-		);
-
-		assertFalse(has_updateHash<Check_1>, "Check_1 does not have updateHash");
-		assertFalse(has_updateHash<Check_2>, "Check_2 does not have updateHash");
-		assertTrue(has_updateHash<Check_3>, "Check_3 has updateHash");
-		assertTrue(has_updateHash<Check_4>, "Check_4 has updateHash");
-		assertFalse(has_updateHash<Check_5>, "Check_5 does not have updateHash");
-		assertFalse(has_updateHash<Check_6>, "Check_6 does not have updateHash");
-
-		assertFalse(SHOULD_HASH_AS_HASH_CODE<Check_1, int>, "Check_1 is not a hash algorithm");
-		assertFalse(SHOULD_HASH_AS_HASH_CODE<Fnv1a_32, int>, "int is not a TypeHashCode");
-		assertFalse(
-			SHOULD_HASH_AS_HASH_CODE<Fnv1a_64, TypeHashCode>, "Fnv1a_64 does not have addHashCode"
-		);
-		assertTrue(SHOULD_HASH_AS_HASH_CODE<DebugHash, TypeHashCode>, "DebugHash has addHashCode");
-		assertFalse(SHOULD_HASH_AS_HASH_CODE<DebugHash, int>, "int is not a TypeHashCode");
-		DebugHash h;
-		h(TypeHashCode{});
-		algo2 a2;
-		a2(123);
-	}
-
 	void hashingAlgorithmsTest() {
-		Fnv1a_32                   h2;
-		[[maybe_unused]] Fnv1a_64  qwe{ 123 };
-		constexpr std::string_view sv = "hello";
+		Fnv1a_32                  h2;
+		[[maybe_unused]] Fnv1a_64 qwe{ 123 };
+		constexpr std::span       sp = "hello";
 		assertTrue(
 			std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32"
 		);
@@ -349,40 +323,44 @@ private:
 			"DebugHash::result_type should be std::string"
 		);
 		std::string s = "qwertyuiopasdfghjk";
-		h2(static_cast<const void*>(sv.data()), sv.size());
-		h2(static_cast<void*>(s.data()), s.size());
-		h2(sv);
-		h2(std::array<char, 123>{});
+		h2(std::span{ reinterpret_cast<std::byte*>(s.data()), s.size() });
+		h2(sp);
+		constexpr auto arr = std::array<char, 123>{};
+		h2(std::span{ arr });
 		Fnv1a_64              h3, h4{ 14'695'981'039'346'656'037ull };
 		[[maybe_unused]] auto discard = static_cast<decltype(h3)::result_type>(h3);
 		assertTrue(
 			static_cast<u64>(h4) == static_cast<u64>(h4),
 			"h3 and h4 should have been initialized with the same value"
 		);
-		h4(sv);
+		h4(sp);
 		const auto& r = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
-		h4(r);
+		h4(std::as_bytes(std::span{ r }));
 		auto h5 = h4;
 		assertTrue(
 			static_cast<u64>(h5) == static_cast<u64>(h4), "casted h5 should be equal to casted h4"
 		);
-		h4(s.data(), s.size());
-		h5(s.data(), s.size());
-		h4(sv);
-		h5(sv);
-		h4(static_cast<const void*>(sv.data()), sv.size());
-		h5(static_cast<const void*>(sv.data()), sv.size());
+		h4(std::span{ s.data(), s.size() });
+		h5(std::span{ s.data(), s.size() });
+		h4(sp);
+		h5(sp);
 		assertTrue(
 			static_cast<u64>(h4) == static_cast<u64>(h5), "casted h4 should be equal to casted h5"
 		);
 
 		DebugHash dh;
-		dh(s.data(), s.size());
-		dh(sv);
-		dh(std::array<char, 16>{});
-		dh(static_cast<const void*>(sv.data()), sv.size());
+		dh(std::span{ s.data(), s.size() });
+		dh(sp);
+		std::array<char, 16> array{};
+		dh(std::as_bytes(std::span{ array }));
+		Hash<DebugHash>{}(std::array<char, 16>{});
+		dh(std::span{ sp.data(), sp.size() });
 		constexpr std::string_view sv2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
-		constexpr auto             str_size = static_cast<std::string>(DebugHash{}(sv2)).size();
+		constexpr auto             str_size = [&] {
+            DebugHash d;
+            d(std::span{ sv2 });
+            return static_cast<std::string>(d).size();
+		}();
 		assertTrue(str_size == 187, "string should have 187 characters");
 
 		assertTrue(
@@ -434,11 +412,11 @@ private:
 			detail::can_hash_directly<decltype(h2), std::string_view>,
 			"h2 should be able to hash std::string_view"
 		);
-		addToHash(h2, std::string_view{ "wertyuiop" });  // can hash directly
-		addToHash(h2, 123.0f);                           // hashing floating point
+		addToHash(h2, std::span{ "wertyuiop" });  // can hash directly
+		addToHash(h2, 123.0f);                    // hashing floating point
 		X* xptr = nullptr;
-		addToHash(h2, xptr);                             // hashing pointer
-		addToHash(h2, nullptr);                          // hashing nullptr
+		addToHash(h2, xptr);                      // hashing pointer
+		addToHash(h2, nullptr);                   // hashing nullptr
 		auto range = std::vector{ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }
 		           | std::views::take(10);
 		assertTrue(
@@ -492,8 +470,8 @@ private:
 		sh(1);
 		assertFalse(sh(123) == sh(123), "stete should change");
 		assertTrue(static_cast<u64>(sh) == StatefulHash{}(1, 123, 123), "state should be the same");
-		std::string_view sv = "dsfjsalfjfa salfjfalsdfj";
-		sh("124241", sv, X{}, S{});
+		std::span sp = "dsfjsalfjfa salfjfalsdfj";
+		sh("124241", sp, X{}, S{});
 		sh(std::pair<int, S>{ 1, S{} });
 		sh(type_with_bases{});
 	}

@@ -9,7 +9,6 @@
 #include <hashing/add_to_hash.hpp>
 #include <hashing/type_hash_code.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/call_overloads_utils.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/type_hash_code_def.hpp>
 
@@ -23,7 +22,6 @@ namespace my_map {
 		class Hash  = hashing::Hash<>,
 		class Pred  = std::equal_to<Key>,
 		class Alloc = std::allocator<std::pair<const Key, T>>>
-
 	using unordered_map = std::unordered_map<Key, T, Hash, Pred, Alloc>;
 }
 
@@ -56,6 +54,25 @@ struct type_with_bases: type1, type2 {
 		return std::tie(hashing::getBase<type1>(t), hashing::getBase<type2>(t), t.x, t.y);
 	}
 };
+
+// example implementation of a (very poor) hash algorithm
+struct ExampleHash {
+	u64 state{ 0 };
+	using result_type = u64;
+
+	// 1) setup - prepare the state
+	constexpr ExampleHash(u64 state = 0) noexcept: state{ state } {}
+
+	// 2) update - consume the data updating the state
+	constexpr void operator()(const std::span<unsigned char> span) noexcept {
+		for (auto&& c: span) state ^= c;
+	}
+
+	// 3) finalize - convert the state to the result
+	explicit constexpr operator u64() const noexcept { return state; }
+};
+
+static_assert(hashing::hash_algorithm<ExampleHash>);
 
 int main() {
 	using namespace hashing;
@@ -105,22 +122,27 @@ int main() {
 	hasher2(7, std::string{ "hello" }, 42);
 	constexpr auto hash_value = hashing::StatefulHash{}(7, type2{}, 7, std::string{ "hello" }, 42);
 	std::cout << "stateful hash:\n"
-			  << static_cast<std::string>(hasher2) << "\n\tconstexpr hash value: " << hash_value
+			  << static_cast<std::string>(hasher2) << "\n\t(constexpr) hash value: " << hash_value
 			  << '\n';
 
 	// module also provides unique ids for types in compile time
 	// note that those can change between compilations
-	std::cout << hashing::TYPE_HASH_CODE<int> << ' ' << hashing::TYPE_HASH_CODE<type1> << '\n';
+	std::cout << "constexpr hash codes:\t" << hashing::TYPE_HASH_CODE<int> << ' '
+			  << hashing::TYPE_HASH_CODE<type1> << '\n';
 
 	std::cout << "hash of type_with_bases: " << hashing::Hash{}(type_with_bases{}) << '\n';
 
 
 	// different hash code types
-	std::cout << hashing::Hash<hashing::DebugHash, void>{}(42) << '\n'
+	std::cout << "using different hash code types (none, 4 bytes, 8 bytes):\n"
+			  << hashing::Hash<hashing::DebugHash, void>{}(42) << '\n'
 			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u32>>{}(42) << '\n'
 			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u64>>{}(42) << '\n';
 
-	std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
-		42, 3.14, "hello", std::pair<std::string, char>{ "abc", 'x' }
-	) << '\n';
+	// debug hash with tuple
+	std::cout << "hashing tuple-like types:\n"
+			  << hashing::StatefulHash<hashing::DebugHash>{}(
+					 std::tuple{ 42, 3.14, "hello" }, std::pair<std::string, char>{ "abc", 'x' }
+				 )
+			  << '\n';
 }
