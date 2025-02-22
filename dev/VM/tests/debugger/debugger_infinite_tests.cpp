@@ -5,22 +5,21 @@
 
 /**
  * @brief This test set is responsible for testing the debugger when the VM is running endlessly.
- * This can cause stack overflow if the tail-call optimization is not working properly 
+ * This can cause stack overflow if the tail-call optimization is not working properly
  * and the test is running slow (e.g. when using Valgrind).
  *
  * It is also advised to use "--fair-sched=yes" option in Valgrind,
  * because the code executing thread is running all the time and the "waitingForResponse" thread
  * runs very slowly because of that - mine took 10-70 seconds to finish in Release mode.
  * (but a just a second in "--fair-sched=yes" mode).
+ * https://stackoverflow.com/questions/8663148/valgrind-stalls-in-multithreaded-socket-program
  */
 class VmDebugInfiniteTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmDebugInfiniteTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(pausesExecution);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(pausesExecution); }
 
 
 private:

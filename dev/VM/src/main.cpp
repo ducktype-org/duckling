@@ -18,7 +18,7 @@ void showVersion() {
 
 int main(int argc, const char** argv) {
 	init::InitObject _;
-	auto clap = clap::Clap()
+	auto             clap = clap::Clap()
 	                .addHelpFlag()
 	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
 	                         .addShortName('s')

@@ -46,7 +46,6 @@ function(duck_add_vm_tests suffix)
   duck_add_test(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
           USES ${libvm} Tester ${vmtester})
 
-#   set_property(TEST ${test_set}_correctness_test PROPERTY DISABLED "$<$<CONFIG:Debug>:True>")
 endfunction()
 
 duck_add_vm_tests("tc")
