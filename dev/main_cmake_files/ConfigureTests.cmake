@@ -70,7 +70,7 @@ if(ENABLE_COVERAGE)
 endif()
 
 
-set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full")
+set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
 include(CTest)
 enable_testing()

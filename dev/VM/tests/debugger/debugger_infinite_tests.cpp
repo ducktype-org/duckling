@@ -10,7 +10,8 @@
  *
  * It is also advised to use "--fair-sched=yes" option in Valgrind,
  * because the code executing thread is running all the time and the "waitingForResponse" thread
- * executes very slowly because of that.
+ * runs very slowly because of that - mine took 10-70 seconds to finish in Release mode.
+ * (but a just a second in "--fair-sched=yes" mode).
  */
 class VmDebugInfiniteTest: public tester::TestSuite {
 #undef TESTER_CLASS
