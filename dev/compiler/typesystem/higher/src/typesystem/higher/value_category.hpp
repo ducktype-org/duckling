@@ -56,11 +56,11 @@ namespace tsh {
 		 */
 		PrimaryCategory category{ PrimaryCategory::Local };
 		/**
-		 * If value is mutable it can be implicitly changed by the coder.
+		 * If a value is mutable it can be implicitly changed by the coder.
 		 */
 		bool is_mutable{ false };
 		/**
-		 * If value is pure it is guaranteed to not be changed behind the scenes.
+		 * If a value is pure it is guaranteed to not be changed behind the scenes.
 		 */
 		bool is_pure{ false };
 		/**

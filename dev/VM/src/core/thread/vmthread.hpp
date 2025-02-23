@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <atomic>
+#include <result.hpp>
 
 /**
  * For now only single threaded execution is suported
@@ -144,7 +145,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MRef<const Code> executing_code = nullptr;
+		MCRef<Code> executing_code = nullptr;
 
 		/**
 		 * @TODO:
@@ -181,7 +182,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(Ref<const vm::Code> code);
+		bool initThreadAndRun(CRef<vm::Code> code);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -217,7 +218,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(Ref<const Code>);
+		void run(CRef<Code>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 

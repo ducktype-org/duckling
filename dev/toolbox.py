@@ -58,7 +58,7 @@ def cli():
 
 
 def setup_build_impl(
-    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, ccache, coverage
+    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, gcov_version, ccache, coverage
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -80,6 +80,7 @@ def setup_build_impl(
             f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
             f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
             f"-D CMAKE_C_COMPILER={cc_compiler}",
+            f"-D GCOV_VERSION={gcov_version}",
             f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
             f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
         ]
@@ -160,6 +161,13 @@ def setup_build_impl(
     type=bool,
     default=False,
     is_flag=True,
+)
+# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
+@click.option(
+    "--gcov-version",
+    prompt="GCOV version",
+    help="GCOV version that will be passed to find_program in CMAKE",
+    default="gcov-14",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
@@ -421,16 +429,16 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-18 or clang-tidy",
-    default="clang-tidy-18",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
 )
 @click.option(
     "-f",
     "--format",
     "clang_format_path",
     prompt="clang-format path",
-    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="clang-format-18",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
 )
 @click.option(
     "-b",

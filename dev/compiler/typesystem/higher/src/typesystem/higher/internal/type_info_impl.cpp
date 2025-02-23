@@ -7,8 +7,8 @@ namespace tsh::internal {
 	 * @brief Gets the global TypeInfoImpl storage structure.
 	 * @return The global TypeInfoImpl storage structure.
 	 */
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes() {
-		static std::vector<base::unique_ptr<const TypeInfoImpl>> type_info_impl_storage{};
+	std::vector<Box<const TypeInfoImpl>>& getTypes() {
+		static std::vector<Box<const TypeInfoImpl>> type_info_impl_storage{};
 		return type_info_impl_storage;
 	}
 
@@ -34,10 +34,10 @@ namespace tsh::internal {
 	 * @return A human-readable string representing a sequence of types.
 	 */
 	std::string stringifyTypeVector(const std::vector<TypeInfo>& types) {
-		std::vector<ComponentType> immutableTypes;
-		immutableTypes.reserve(types.size());
-		for (const auto& t: types) immutableTypes.emplace_back(t, false);
-		return stringifyTypeVector(immutableTypes);
+		std::vector<ComponentType> immutable_types;
+		immutable_types.reserve(types.size());
+		for (const auto& t: types) immutable_types.emplace_back(t, false);
+		return stringifyTypeVector(immutable_types);
 	}
 
 	TupleInfoImpl::TupleInfoImpl(std::vector<ComponentType> components):
@@ -70,21 +70,21 @@ namespace tsh::internal {
 		// and only a free function can be coerced to a free function.
 
 		if (target.getKind() != Kind::Function) return false;
-		const FunctionInfo targetFunction = target;
-		if ((!pure && targetFunction.isPure()) || (!free && targetFunction.isFree())
-		    || parameter_types.size() != targetFunction.getParameterTypes().size()) {
+		const FunctionInfo target_function = target;
+		if ((!pure && target_function.isPure()) || (!free && target_function.isFree())
+		    || parameter_types.size() != target_function.getParameterTypes().size()) {
 			return false;
 		}
 
 		for (usize i = 0; i < parameter_types.size(); i++)
 			if (!context.query<QueryImplicitCoercibilityOnInfo>({
-					targetFunction.getParameterTypes()[i],
+					target_function.getParameterTypes()[i],
 					parameter_types[i],
 				}))
 				return false;
 		return context.query<QueryImplicitCoercibilityOnInfo>({
 			result_type,
-			targetFunction.getResultType(),
+			target_function.getResultType(),
 		});
 	}
 

@@ -16,18 +16,18 @@ function ackermann {
 
         cmpEq_l64_imm       8, 0;
         jmpRelIf_label      N0;
-        
+
         # m, n > 0
         # return A(m-1, A(m, n-1))
         sub_l64_imm         8, 1;
         setFstArg_l64       0;
         mov_arg64_l64       8, 8;
-        call_func           0; # A(m, n-1)
+        call_func           ackermann; # A(m, n-1)
         mov_l64_r0          8;
         sub_l64_imm         0, 1;
         setFstArg_l64       0;
         mov_arg64_l64       8, 8;
-        call_func           0;  # A(m-1, A(m, n-1))
+        call_func           ackermann;  # A(m-1, A(m, n-1))
         mov_l64_r0          0;
         ret_l64             0;
 
@@ -37,7 +37,7 @@ function ackermann {
         setFstArg_l64       0;
         mov_l64_imm         8, 1;
         mov_arg64_l64       8, 8;
-        call_func           0;
+        call_func           ackermann;
         mov_l64_r0          0;
         ret_l64             0;
 
@@ -52,21 +52,21 @@ function main {
     arg_size: 0;
     next_arg_size: 16;
     ret_size: 8;
-    
+
     # m, n
-    
+
     local_size: 32;
-    
+
     code: {
         input_l64           0;
         setFstArg_l64       0;
-        
+
         input_l64           8;
         mov_arg64_l64  8, 8;
 
-        call_func           0;
+        call_func           ackermann;
         mov_l64_r0          0;
         output_l64          0;
-        ret_imm             0; 
+        ret_imm             0;
     }
 }

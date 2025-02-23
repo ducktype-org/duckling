@@ -16,7 +16,7 @@ namespace dia {
 		 */
 		[[nodiscard]]
 		static printer::PrinterContentsSeq
-			toPrinterContents(base::c_borrow_ptr<Message> message_ptr, bool detailed);
+			toPrinterContents(CRef<Message> message_ptr, bool detailed);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence ready to be printed for
@@ -29,18 +29,14 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq toPrinterContents(
-			base::c_borrow_ptr<Note>    note_ptr,
-			base::c_borrow_ptr<Message> parent_message,
-			bool                        detailed
-		);
+		static printer::PrinterContentsSeq
+			toPrinterContents(CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed);
 
 		template<std::ranges::input_range R>
-		requires std::same_as<base::c_borrow_ptr<Message>, std::ranges::range_value_t<R>>
-		[[nodiscard]]
+		requires std::same_as<CRef<Message>, std::ranges::range_value_t<R>> [[nodiscard]]
 		static printer::PrinterContentsSeq listToPrinterContents(R range, bool detailed) {
 			std::vector<printer::PrinterContentsSeq> res;
-			for (base::c_borrow_ptr<Message> message: range) {
+			for (CRef<Message> message: range) {
 				res.push_back(toPrinterContents(message, detailed));
 				res.push_back({ { "\n\n" } });
 			}
@@ -65,7 +61,7 @@ namespace dia {
 		 */
 		[[nodiscard]]
 		static printer::PrinterContentsSeq
-			toPrinterContents(base::c_borrow_ptr<Message> message_ptr, bool detailed);
+			toPrinterContents(CRef<Message> message_ptr, bool detailed);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence representing an
@@ -79,20 +75,16 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq toPrinterContents(
-			base::c_borrow_ptr<Note>    note_ptr,
-			base::c_borrow_ptr<Message> parent_message,
-			bool                        detailed
-		);
+		static printer::PrinterContentsSeq
+			toPrinterContents(CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed);
 
 		template<std::ranges::input_range R>
-		requires std::same_as<base::c_borrow_ptr<Message>, std::ranges::range_value_t<R>>
-		[[nodiscard]]
+		requires std::same_as<CRef<Message>, std::ranges::range_value_t<R>> [[nodiscard]]
 		static printer::PrinterContentsSeq listToPrinterContents(R range, bool detailed) {
 			std::vector<printer::PrinterContentsSeq> res;
 			res.push_back({ { "{ \"messages\":[\n" } });
 			bool first = true;
-			for (base::c_borrow_ptr<Message> message: range) {
+			for (CRef<Message> message: range) {
 				if (first)
 					first = false;
 				else

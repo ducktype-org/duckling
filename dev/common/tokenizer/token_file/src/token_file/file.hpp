@@ -43,7 +43,7 @@ namespace tokenizer {
 		explicit TokenFile(const fs::FilePath&);
 
 		template<class T, class... Ts>
-		friend base::unique_ptr<T> base::make_unique(Ts&&... args);
+		friend base::Box<T> base::makeBox(Ts&&... args);
 
 	public:
 		TokenFile(const TokenFile&) = delete;
@@ -87,7 +87,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(BorrowFile{ this }, log));
+			decoded.emplace(lexer::decode<encoding>(Ref(this), log));
 		}
 
 		void countLines();
@@ -110,7 +110,7 @@ namespace tokenizer {
 	};
 
 	template<class... Ts>
-	base::unique_ptr<TokenFile> makeTokenFile(Ts&&... args) {
-		return base::make_unique<TokenFile>(std::forward<Ts>(args)...);
+	Box<TokenFile> makeTokenFile(Ts&&... args) {
+		return makeBox<TokenFile>(std::forward<Ts>(args)...);
 	}
 }

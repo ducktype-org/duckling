@@ -6,7 +6,7 @@ function(duck_add_vm_tests suffix)
   set(vmtester "VmTester_${suffix}")
   add_library(${vmtester} STATIC
           utils/vm_tester_utils.cpp)
-  target_include_directories(${vmtester} 
+  target_include_directories(${vmtester}
           PUBLIC
           ${CMAKE_CURRENT_SOURCE_DIR}/utils)
   target_link_libraries(${vmtester} PRIVATE
@@ -26,6 +26,8 @@ function(duck_add_vm_tests suffix)
   duck_add_test(vm ${test_set}_correctness_test correctness/correctness.cpp
           USES ${libvm} Tester ${vmtester})
   duck_add_test(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
+          USES ${libvm} Tester ${vmtester})
+  duck_add_test(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
           USES ${libvm} Tester ${vmtester})
 
   set_property(TEST ${test_set}_correctness_test PROPERTY DISABLED "$<$<CONFIG:Debug>:True>")

@@ -5,10 +5,9 @@ add_library(Lexer
 	src/lexer/classifications.cpp
 	src/lexer/decode.cpp
 	src/lexer/lexer_class.cpp
-	src/lexer/icu_deinit.cpp
 )
 
-make_module(Lexer USES Filesystem Printer LexerDefinitions unicode Result::Result Diagnostic)
+make_module(Lexer USES Filesystem Printer LexerDefinitions unicode Result::Result Diagnostic Init)
 
 duck_add_test(common lexer_test_simple tests/test.cpp
 	USES Lexer LexerDefinitions)

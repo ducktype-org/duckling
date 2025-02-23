@@ -1,6 +1,6 @@
 ---
-Checks: 'readability-identifier-naming*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-* readability-redundant-inline-specifier,bugprone-suspicious-include,readability-duplicate-include'
-WarningsAsErrors: true
+Checks: 'readability-identifier-naming*,clang-diagnostic-*,-clang-diagnostic-unknown-warning-option,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-owning-memory,-cppcoreguidelines-avoid-do-while,-cppcoreguidelines-avoid-magic-numbers,-cppcoreguidelines-special-member-functions,-cppcoreguidelines-pro-bounds-pointer-arithmetic,-cppcoreguidelines-avoid-non-const-global-variables,-cppcoreguidelines-macro-usage,-cppcoreguidelines-non-private-member-variables-in-classes,-cppcoreguidelines-avoid-const-or-ref-data-members,-cppcoreguidelines-pro-type-reinterpret-cast,modernize-*,-modernize-use-trailing-return-type,performance-*,concurrency-*,readability-redundant-inline-specifier,bugprone-suspicious-include,readability-duplicate-include'
+WarningsAsErrors: 'true'
 HeaderFilterRegex: ''
 FormatStyle: file
 
@@ -25,12 +25,11 @@ CheckOptions:
   llvm-else-after-return.WarnOnUnfixable: 'false'
   google-readability-function-size.StatementThreshold: '800'
 
-
   # Names config:
-  
+
   # Types:
-  
-  # note: the project default is CamelCase for types, 
+
+  # note: the project default is CamelCase for types,
   # but we have a lot od edge-cases, like `KeyOF_` prefix,
   # and in general we preferer flexibility here
   # for its expressivness.
@@ -44,7 +43,7 @@ CheckOptions:
   readability-identifier-naming.FunctionCase: camelBack
   readability-identifier-naming.MethodCase: camelBack
   readability-identifier-naming.ClassMethodCase: camelBack
-  
+
   # Variable like:
   readability-identifier-naming.VariableCase: lower_case
   readability-identifier-naming.ClassMemberCase: lower_case
@@ -52,11 +51,11 @@ CheckOptions:
   readability-identifier-naming.ParameterCase: lower_case
   readability-identifier-naming.LocalConstantCase: lower_case
   readability-identifier-naming.ConstantParameterCase: lower_case
-  
+
   # Namespaces:
   readability-identifier-naming.NamespaceCase: lower_case
   readability-identifier-naming.InlineNamespaceCase: lower_case
-  
+
   # Constant like:
   readability-identifier-naming.ClassConstantCase: UPPER_CASE
   readability-identifier-naming.EnumConstantCase: CamelCase

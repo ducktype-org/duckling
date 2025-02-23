@@ -62,43 +62,42 @@ namespace dia {
 		}
 	}
 
-	printer::PrinterContentsSeq DiagnosticToUserConverter::toPrinterContents(
-		base::c_borrow_ptr<Message> message_ptr, bool detailed
-	) {
+	printer::PrinterContentsSeq
+		DiagnosticToUserConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
 		// Prepare the leading message.
 		const Message::Severity s = message_ptr->getSeverity();
 		const Message::Domain   d = message_ptr->getDomain();
 
-		const auto severityTag = severityToPrinterContent(s);
-		const auto domainTag   = domainToString(d);
+		const auto severity_tag = severityToPrinterContent(s);
+		const auto domain_tag   = domainToString(d);
 
-		auto resultContents
+		auto result_contents
 			= message_ptr->getSourcePosition().genPrinterContents(message_ptr->toString(detailed));
-		resultContents.insert(resultContents.begin(), { severityTag, " [", domainTag, "]:\n" });
+		result_contents.insert(result_contents.begin(), { severity_tag, " [", domain_tag, "]:\n" });
 
 		// Append the notes.
 		for (const auto& note_ptr: message_ptr->getNotes()) {
-			resultContents.emplace_back("\n");
-			for (auto& noteContent: toPrinterContents(note_ptr.borrow(), message_ptr, detailed))
-				resultContents.emplace_back(std::move(noteContent));
+			result_contents.emplace_back("\n");
+			for (auto& note_content: toPrinterContents(note_ptr.ref(), message_ptr, detailed))
+				result_contents.emplace_back(std::move(note_content));
 		}
 
-		return resultContents;
+		return result_contents;
 	}
 
 	printer::PrinterContentsSeq DiagnosticToUserConverter::toPrinterContents(
-		base::c_borrow_ptr<Note> note_ptr, base::c_borrow_ptr<Message>, bool detailed
+		CRef<Note> note_ptr, CRef<Message>, bool detailed
 	) {
-		const printer::PrinterContent severityTag = { "NOTE", printer::Color::BRIGHT_GREEN };
+		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BRIGHT_GREEN };
 
-		auto resultContents = note_ptr->getSourcePosition()
-		                          .map([&](SourcePosition pos) {
-									  return pos.genPrinterContents(note_ptr->toString(detailed));
-								  })
-		                          .value_or({ note_ptr->toString(detailed) });
-		resultContents.insert(resultContents.begin(), { severityTag, "\n" });
+		auto result_contents = note_ptr->getSourcePosition()
+		                           .map([&](SourcePosition pos) {
+									   return pos.genPrinterContents(note_ptr->toString(detailed));
+								   })
+		                           .value_or({ note_ptr->toString(detailed) });
+		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
 
-		return resultContents;
+		return result_contents;
 	}
 
 	namespace {
@@ -150,19 +149,17 @@ namespace dia {
 		}
 
 		printer::PrinterContentsSeq notesToLspJson(
-			const std::vector<base::unique_ptr<Note>>& notes,
-			const base::c_borrow_ptr<Message>          parent_message,
-			const bool                                 detailed
+			const std::vector<Box<Note>>& notes, CRef<Message> parent_message, const bool detailed
 		) {
 			printer::PrinterContentsSeq result{ "[" };
 
 			bool prepend_comma = false;
-			for (const auto& note_ptr: notes) {
+			for (const auto& note: notes) {
 				if (prepend_comma) result.emplace_back(",");
 				result.emplace_back("\n");
 
 				auto note_printer_contents = DiagnosticToJSONConverter::toPrinterContents(
-					note_ptr.borrow(), parent_message, detailed
+					note.ref(), parent_message, detailed
 				);
 				result.insert(
 					result.end(), note_printer_contents.begin(), note_printer_contents.end()
@@ -192,9 +189,8 @@ namespace dia {
 		return o.str();
 	}
 
-	printer::PrinterContentsSeq DiagnosticToJSONConverter::toPrinterContents(
-		base::c_borrow_ptr<Message> message_ptr, bool detailed
-	) {
+	printer::PrinterContentsSeq
+		DiagnosticToJSONConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
 		// Prepare complex subJSONs.
 		auto range = sourcePositionToLspJson(message_ptr->getSourcePosition());
 		auto notes = notesToLspJson(message_ptr->getNotes(), message_ptr, detailed);
@@ -235,11 +231,11 @@ namespace dia {
 	}
 
 	printer::PrinterContentsSeq DiagnosticToJSONConverter::toPrinterContents(
-		base::c_borrow_ptr<Note> note_ptr, base::c_borrow_ptr<Message> parent_message, bool detailed
+		CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
 	) {
 		auto source_position
 			= note_ptr->getSourcePosition().value_or(parent_message->getSourcePosition());
-		auto source_uri = source_position.getSource().get()
+		auto source_uri = (source_position.getSource() != nullptr)
 		                    ? source_position.getSource()->getPath().uri()
 		                    : "file:///dev/null";
 		auto range      = sourcePositionToLspJson(source_position);

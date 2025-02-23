@@ -523,7 +523,7 @@ namespace pst {
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
 		public:
-			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {}
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -664,6 +664,21 @@ namespace pst {
 			[[nodiscard]]
 			std::string elementType() const override {
 				return "Assignment Expr";
+			}
+
+			[[nodiscard]]
+			MCRef<ExprElement> getVariables() const {
+				return variables.ref();
+			}
+
+			[[nodiscard]]
+			base::StrID getAssignmentType() const {
+				return type;
+			}
+
+			[[nodiscard]]
+			MCRef<ExprElement> getValue() const {
+				return value.ref();
 			}
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
