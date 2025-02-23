@@ -157,7 +157,7 @@ void server(i32 port) {
 	/**
 	 * @brief Route to generate semantic tokens for a file under the given path in the virtual file
 	 * system.
-	 * * URL: /get_errors/[base64 relative path]
+	 * * URL: /get_senatic_tokens/[base64 relative path]
 	 * @param base64_path The base64 encoded relative path of the file.
 	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
 	 */

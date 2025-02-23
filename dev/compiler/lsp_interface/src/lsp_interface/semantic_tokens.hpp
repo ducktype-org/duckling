@@ -60,7 +60,7 @@ namespace lsp {
 		int           startCharacter;
 		int           length;
 		Type          type;
-		// @TODO token modifiers
+		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
 	void getSemanticTokens(MCRef<pst::LangElement>, std::vector<SemanticToken>&);
