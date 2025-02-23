@@ -56,10 +56,10 @@ namespace lsp {
 
 	private:
 		base::c_borrow_ptr<lexer::Token> source_token;
-		u64           					 line;
-		u64           					 start_character;
-		u64           					 length;
-		Type          					 type;
+		u64                              line;
+		u64                              start_character;
+		u64                              length;
+		Type                             type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
