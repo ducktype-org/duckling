@@ -13,12 +13,12 @@
 #include <map>
 
 namespace lsp {
-	SemanticToken::SemanticToken(lexer::Token& source):
+	SemanticToken::SemanticToken(base::c_borrow_ptr<lexer::Token> source):
 		  source_token(source),
-		  line(source.getPosition().getStartLineColumn().first),
-		  start_character(source.getPosition().getStartLineColumn().second),
-		  length(source.getPosition().getEnd() - source.getPosition().getStart() + 1),
-		  type(translateType(source.getType())) {}
+		  line(source->getPosition().getStartLineColumn().first),
+		  start_character(source->getPosition().getStartLineColumn().second),
+		  length(source->getPosition().getEnd() - source->getPosition().getStart() + 1),
+		  type(translateType(source->getType())) {}
 
 	Type SemanticToken::translateType(lexer::Token::Type type) {
 		using lTT = lexer::Token::Type;
@@ -65,7 +65,7 @@ namespace lsp {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
 					// add token to list
-					auto semantic_token = SemanticToken((lexer::Token&) token);
+					auto semantic_token = SemanticToken(token);
 					token_list.push_back(semantic_token);
 				}
 				variant_case(pst::LangElement::ConstChild, child) {
