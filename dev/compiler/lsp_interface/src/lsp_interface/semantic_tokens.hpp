@@ -56,9 +56,9 @@ namespace lsp {
 
 	private:
 		lexer::Token& sourceToken;
-		int           line;
-		int           startCharacter;
-		int           length;
+		i64           line;
+		i64           startCharacter;
+		i64           length;
 		Type          type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
