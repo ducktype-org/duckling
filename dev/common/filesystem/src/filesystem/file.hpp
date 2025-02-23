@@ -17,7 +17,7 @@
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/perfect_hash.hpp>
-#include <result.hpp>
+#include <expected>
 
 // Seems fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))
@@ -41,7 +41,8 @@ namespace fs {
 			  content(std::move(content)) {}
 
 	public:
-		FileContent(): content(nullptr){};
+		FileContent(): content(nullptr) {}
+
 		FileContent(const FileContent&) = default;
 		FileContent(FileContent&&)      = default;
 
@@ -147,7 +148,7 @@ namespace fs {
 		[[nodiscard]]
 		FileContent getContent() const;
 		[[nodiscard]]
-		cpp::result<FileContent, std::string> getContentSafe() const;
+		std::expected<FileContent, std::string> getContentSafe() const;
 
 		[[nodiscard]]
 		std::string_view strView() const;

@@ -8,8 +8,8 @@ namespace pst {
 	// IDEs to generate correct skeleton for defining these methods with a name in place .
 
 	/**
-	 * PstStmtVisitor is a simple base class for VisitorPattern in `pst::Stmt`s.
-	 * It is used by calling `stmt.acceptVisitor(visitor)`.
+	 * PstExprVisitor is a simple base class for VisitorPattern in `pst::Expr`s.
+	 * It is used by calling `expr.acceptExprVisitor(visitor)`.
 	 */
 	class PstExprVisitor {
 	public:
@@ -51,46 +51,46 @@ namespace pst {
 	};
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does nothing on visiting.
+	 * A simple implementation for PstExprVisitor, that by default does nothing on visiting.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
 	class PstExprVisitorEmpty: public PstExprVisitor {
 	public:
 		~PstExprVisitorEmpty() override = default;
 
-		void visitPrefixOperator([[maybe_unused]] const expr::PrefixOperator& stmt) override{};
+		void visitPrefixOperator([[maybe_unused]] const expr::PrefixOperator& stmt) override {}
 
-		void visitSuffixOperator([[maybe_unused]] const expr::SuffixOperator& stmt) override{};
+		void visitSuffixOperator([[maybe_unused]] const expr::SuffixOperator& stmt) override {}
 
-		void visitBinaryOperator([[maybe_unused]] const expr::BinaryOperator& stmt) override{};
+		void visitBinaryOperator([[maybe_unused]] const expr::BinaryOperator& stmt) override {}
 
-		void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) override{};
+		void visitExprValue([[maybe_unused]] const expr::ExprValue& stmt) override {}
 
-		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt
-		) override{};
+		void visitTemplateSpecifier([[maybe_unused]] const expr::TemplateSpecifier& stmt) override {
+		}
 
-		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt
-		) override{};
+		void visitIdentifierLiteral([[maybe_unused]] const expr::IdentifierLiteral& stmt) override {
+		}
 
-		void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt) override{};
+		void visitKeywordLiteral([[maybe_unused]] const expr::KeywordLiteral& stmt) override {}
 
-		void visitAccess([[maybe_unused]] const expr::Access& stmt) override{};
+		void visitAccess([[maybe_unused]] const expr::Access& stmt) override {}
 
-		void visitCall([[maybe_unused]] const expr::Call& stmt) override{};
+		void visitCall([[maybe_unused]] const expr::Call& stmt) override {}
 
-		void visitChainExpr([[maybe_unused]] const expr::ChainExpr& stmt) override{};
+		void visitChainExpr([[maybe_unused]] const expr::ChainExpr& stmt) override {}
 
-		void visitRoundExpr([[maybe_unused]] const expr::RoundExpr& stmt) override{};
+		void visitRoundExpr([[maybe_unused]] const expr::RoundExpr& stmt) override {}
 
-		void visitBlockExpr([[maybe_unused]] const expr::BlockExpr& stmt) override{};
+		void visitBlockExpr([[maybe_unused]] const expr::BlockExpr& stmt) override {}
 
-		void visitComparisonChain([[maybe_unused]] const expr::ComparisonChain& stmt) override{};
+		void visitComparisonChain([[maybe_unused]] const expr::ComparisonChain& stmt) override {}
 
-		void visitTernary([[maybe_unused]] const expr::Ternary& stmt) override{};
+		void visitTernary([[maybe_unused]] const expr::Ternary& stmt) override {}
 
-		void visitComma([[maybe_unused]] const expr::Comma& stmt) override{};
+		void visitComma([[maybe_unused]] const expr::Comma& stmt) override {}
 
-		void visitAssignment([[maybe_unused]] const expr::Assignment& stmt) override{};
+		void visitAssignment([[maybe_unused]] const expr::Assignment& stmt) override {}
 	};
 
 /**
@@ -102,7 +102,7 @@ namespace pst {
 	}
 
 	/**
-	 * A simple implementation for PstStmtVisitor, that by default does CORE_PANIC.
+	 * A simple implementation for PstExprVisitor, that by default does CORE_PANIC.
 	 * It's a helper class, whose functionality is meant to be overriden for desired statements.
 	 */
 	class PstExprVisitorPanicky: public PstExprVisitor {

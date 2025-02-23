@@ -1,9 +1,11 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
+#include <init/init.hpp>
 #include <iostream>
 
 int main(int argc, char** argv) {
+	init::InitObject _;
 	if (argc != 2) {
 		std::cerr << "usage: ./json_testing file_name\n";
 		return 1;

@@ -22,7 +22,7 @@ namespace pst {
 		auto out      = makeBox<AccessBlock>(position, ctx);
 
 		if (not access_specifiers.contains(state[0].asKeyword())) {
-			state.log(base::make_unique<NoSpecifierError>(position));
+			state.log(makeBox<NoSpecifierError>(position));
 		} else {
 			out->context.specifiers.emplace_back(&state[0]);
 			out->specifier = state[0].asKeyword();
@@ -47,7 +47,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void AccessBlock::acceptVisitor(PstStmtVisitor& visitor) const {
-		visitor.visitAccessBlock(*this);
-	}
+	void AccessBlock::acceptVisitor(PstVisitor& visitor) const { visitor.visitAccessBlock(*this); }
 }

@@ -53,5 +53,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Class::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitClass(*this); }
+	void Class::acceptVisitor(PstVisitor& visitor) const { visitor.visitClass(*this); }
 }

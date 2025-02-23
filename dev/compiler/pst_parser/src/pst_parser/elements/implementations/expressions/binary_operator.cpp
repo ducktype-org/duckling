@@ -14,7 +14,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void BinaryOperator::acceptVisitor(PstExprVisitor& visitor) const {
+	void BinaryOperator::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitBinaryOperator(*this);
 	}
 }

@@ -44,5 +44,5 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void Comma::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitComma(*this); }
+	void Comma::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitComma(*this); }
 }

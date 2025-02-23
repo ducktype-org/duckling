@@ -5,13 +5,12 @@
 namespace pst {
 	MBox<InitList> InitList::parse(LangParserState& state) {
 		return ListParsingTemplate::parseList<
-			ExprElement,
+			UniversalExprHolder,
 			InitList,
 			false,
 			lexer::Token::BracketType::None,
 			detail::Conditions::isComma,
 			detail::Conditions::isAssign,
-			detail::NameGetters::classInitList,
-			UniversalExpr>(state);
+			detail::NameGetters::classInitList>(state);
 	}
 }

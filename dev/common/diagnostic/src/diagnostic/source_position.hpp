@@ -22,6 +22,7 @@ int main() {
 #include <memory>
 #include <printer/printer_content.hpp>
 #include <string>
+#include <base/ref.hpp>
 
 namespace dia {
 	/**
@@ -31,7 +32,7 @@ namespace dia {
 	 */
 	class SourcePosition final {
 	private:
-		explicit SourcePosition(): source_start(0), source_end(0), source_file(nullptr) {}
+		explicit SourcePosition(): source_start(0), source_end(0), source_file() {}
 
 	public:
 		/**
@@ -40,8 +41,10 @@ namespace dia {
 		 */
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
-		SourcePosition(tokenizer::BorrowFile source_file, usize source_start);
-		SourcePosition(tokenizer::BorrowFile source_file, usize source_start, usize source_end);
+		SourcePosition(MRef<tokenizer::TokenFile> source_file, usize source_start);
+		SourcePosition(
+			MRef<tokenizer::TokenFile> source_file, usize source_start, usize source_end
+		);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize source_end);
 
@@ -84,11 +87,19 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		tokenizer::BorrowFile getSource() const;
+		MRef<tokenizer::TokenFile> getSource() const;
+
+		/**
+		 * @brief This checks exactly for position being EOF
+		 */
+		[[nodiscard]]
+		bool isFileEnd() const;
+
+		void printToJson(std::ostream&) const;
 
 	private:
-		usize                 source_start;  ///< Start of the range of characters in the file.
-		usize                 source_end;    ///< End of the range of characters in the file.
-		tokenizer::BorrowFile source_file;   ///< Pointer to source file data.
+		usize                      source_start;  ///< Start of the range of characters in the file.
+		usize                      source_end;    ///< End of the range of characters in the file.
+		MRef<tokenizer::TokenFile> source_file;   ///< Ref to source file data.
 	};
 }

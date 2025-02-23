@@ -15,7 +15,7 @@ namespace clap {
 
 	const base::Optional<base::RawView>& Parameter::getLongDesc() const { return long_description; }
 
-	const ValueParser* Parameter::getValueParser() const { return value_parser.get(); }
+	MCRef<ValueParser> Parameter::getValueParser() const { return value_parser.ref(); }
 
 	const ParameterNecessity& Parameter::getParameterNecessity() const {
 		return parameter_necessity;

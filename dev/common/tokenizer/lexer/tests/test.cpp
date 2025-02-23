@@ -7,7 +7,7 @@ class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	tokenizer::OwnFile td;
+	MBox<tokenizer::TokenFile> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -31,7 +31,7 @@ public:
 	~SimpleLexerTest() override = default;
 
 private:
-	constexpr static std::array<std::string_view, 8> group_names = {
+	constexpr static std::array<std::string_view, 8> GROUP_NAMES = {
 		"", "keyword", "operator", "identifier", "special", "comment", "numLiteral", "string",
 	};
 
@@ -86,13 +86,13 @@ private:
 			assertTrue(
 				token.getType() == token_type,
 				std::string("Type of token `") + std::string(token.getStrValue()) + "` is not a "
-					+ std::string(group_names[index]),
+					+ std::string(GROUP_NAMES[index]),
 				false
 			);
 			assertTrue(
 				(token.*isTokenType)(),
 				std::string("Token `") + std::string(token.getStrValue()) + "` is not a "
-					+ std::string(group_names[index]),
+					+ std::string(GROUP_NAMES[index]),
 				false
 			);
 		}

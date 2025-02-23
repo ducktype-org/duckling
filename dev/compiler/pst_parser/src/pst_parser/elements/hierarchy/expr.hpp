@@ -45,7 +45,8 @@ namespace pst {
 
 	namespace expr {
 		/**
-		 * @brief General parseUntil
+		 * @brief General parseUntil that allows to parse an expression element with a condition for
+		 * expression end.
 		 */
 		template<std::derived_from<ExprElement> T, StateCondition until>
 		MBox<ExprElement> parseUntil(LangParserState& state) {
@@ -55,6 +56,9 @@ namespace pst {
 			return T::parse(state, length);
 		}
 
+		/**
+		 * @brief Common ancestor for prefix operator elements.
+		 */
 		class PrefixOperator: public ExprElement {
 		protected:
 			MBox<ExprElement> expr;
@@ -67,7 +71,7 @@ namespace pst {
 
 			~PrefixOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -80,6 +84,9 @@ namespace pst {
 			MCRef<ExprElement> getExpr() const;
 		};
 
+		/**
+		 * @brief Common ancestor for suffix operator elements.
+		 */
 		class SuffixOperator: public ExprElement {
 		protected:
 			Operator          op;
@@ -92,7 +99,7 @@ namespace pst {
 
 			~SuffixOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -105,6 +112,9 @@ namespace pst {
 			MCRef<ExprElement> getExpr() const;
 		};
 
+		/**
+		 * @brief Common ancestor for binary operator elements.
+		 */
 		class BinaryOperator: public ExprElement {
 		protected:
 			MBox<ExprElement> left;
@@ -118,7 +128,7 @@ namespace pst {
 
 			~BinaryOperator() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			MCRef<ExprElement> getLeftOperand() const;
@@ -133,6 +143,9 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Element representing a number value in an expression
+		 */
 		class ExprValue final: public ExprElement {
 			lexer::Value number;
 
@@ -150,7 +163,7 @@ namespace pst {
 
 			~ExprValue() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -159,16 +172,20 @@ namespace pst {
 		};
 
 		/**
-		 * @brief This is a helper element for parsing
+		 * @brief This is a helper element for parsing literals and bracket subexpressions that
+		 * decides which literal to parse.
 		 */
-		class Literal: public ExprElement {
+		class Atom: public ExprElement {
 		public:
-			Literal() = delete;
+			Atom() = delete;
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 		};
 
 		/**
+		 * @brief Element representing template initialization in an expression. For example:
+		 * `list:{i32}`.
+		 *
 		 * @note For now the inner expression is just a comma expression, this should probably have
 		 * it's own parsing in the future
 		 */
@@ -182,7 +199,7 @@ namespace pst {
 
 			~TemplateSpecifier() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -190,6 +207,9 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Element that represents an identifier literal in an expression
+		 */
 		class IdentifierLiteral final: public ExprElement {
 			tpc::Identifier                   name;
 			base::Optional<MBox<ExprElement>> template_specifier;
@@ -201,7 +221,7 @@ namespace pst {
 
 			~IdentifierLiteral() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			const tpc::Identifier& getName() const {
@@ -214,6 +234,9 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief Element that represents an keyword literal in an expression
+		 */
 		class KeywordLiteral final: public ExprElement {
 			Keyword                           keyword = Keyword::NotAKeyword;
 			base::Optional<MBox<ExprElement>> template_specifier;
@@ -225,7 +248,7 @@ namespace pst {
 
 			~KeywordLiteral() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			Keyword getKeyword() const {
@@ -254,7 +277,7 @@ namespace pst {
 
 			~Access() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -273,9 +296,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Call or Subscript
-		 *
-		 * @note Currently an empty call/subscript results in an error.
+		 * @brief Represents a single call or subscript expression
 		 */
 		class Call final: public ExprElement {
 			lexer::Token::BracketType type
@@ -289,7 +310,7 @@ namespace pst {
 
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -298,12 +319,12 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Combined Access / Call / Subscript.
+		 * @brief Combined chain of an atom followed by Accesses / Calls / Subscripts.
 		 */
 		class ChainExpr final: public ExprElement {
-			using Lower = Literal;
+			using Lower = Atom;
 
-			MBox<ExprElement>              literal;
+			MBox<ExprElement>              atom;
 			std::vector<MBox<ExprElement>> chain;
 
 			/**
@@ -316,7 +337,7 @@ namespace pst {
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 			void                     dprint(std::ostream& out) const final;
-			void                     acceptVisitor(PstExprVisitor& visitor) const final;
+			void                     acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			~ChainExpr() override = default;
 
@@ -326,7 +347,7 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getLiteral() const;
+			MCRef<ExprElement> getAtom() const;
 			[[nodiscard]]
 			const std::vector<MBox<ExprElement>>& getChain() const;
 		};
@@ -344,7 +365,7 @@ namespace pst {
 
 			~RoundExpr() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -372,7 +393,7 @@ namespace pst {
 
 			~BlockExpr() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			MCRef<CodeBlock> getBlock() { return block.ref(); }
 
@@ -382,6 +403,11 @@ namespace pst {
 			}
 		};
 
+		/**
+		 * @brief General prefix operator
+		 *
+		 * Excludes `not`
+		 */
 		class GeneralPrefix final: public PrefixOperator {
 			using Lower = ChainExpr;
 			using Self  = GeneralPrefix;
@@ -395,6 +421,9 @@ namespace pst {
 			~GeneralPrefix() override = default;
 		};
 
+		/**
+		 * @brief General suffix operator
+		 */
 		class GeneralSuffix final: public SuffixOperator {
 			using Lower = GeneralPrefix;
 			using Self  = GeneralSuffix;
@@ -410,6 +439,11 @@ namespace pst {
 			~GeneralSuffix() override = default;
 		};
 
+		/**
+		 * @brief General binary operator
+		 *
+		 * Excludes `and`, `or`
+		 */
 		class GeneralBinary final: public BinaryOperator {
 			using Lower = GeneralSuffix;
 			using Self  = GeneralBinary;
@@ -419,16 +453,18 @@ namespace pst {
 			 */
 			CONDITION(isGenBinOp) {
 				static const std::set<lang_def::NamedOperator> gen_bin_ops = {
-					NamedOperator::Multiply, NamedOperator::Divide, NamedOperator::Plus,
-					NamedOperator::Minus,    NamedOperator::Pipe,
+					NamedOperator::Exponentiate, NamedOperator::Multiply, NamedOperator::Divide,
+					NamedOperator::Remainder,    NamedOperator::Plus,     NamedOperator::Minus,
+					NamedOperator::Pipe,
 				};
 				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
 			}
 
 			static i64 getOpPrec(Operator op) {
 				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Pipe, 540 },   { NamedOperator::Multiply, 560 },
-					{ NamedOperator::Divide, 560 }, { NamedOperator::Plus, 570 },
+					{ NamedOperator::Pipe, 540 },      { NamedOperator::Exponentiate, 550 },
+					{ NamedOperator::Multiply, 560 },  { NamedOperator::Divide, 560 },
+					{ NamedOperator::Remainder, 560 }, { NamedOperator::Plus, 570 },
 					{ NamedOperator::Minus, 570 },
 				};
 				if (not precedences.contains(op.asNamed()))
@@ -455,14 +491,14 @@ namespace pst {
 			/**
 			 * @brief
 			 *
-			 * @note Assumes an expression "literal" ends on either:
+			 * @note Assumes an expression atom ends on either:
 			 * 1. End of expression
 			 * 2. A General binary operator
 			 * 3. Literal that isn't following an access operator (`.`, in future also `.?`, maybe
 			 * `::`)
 			 *
 			 */
-			static i64 skipLiteral(const LangParserState& state, i64 base, i64 length);
+			static i64 skipAtom(const LangParserState& state, i64 base, i64 length);
 
 			static MBox<ExprElement>
 				parseRecursive(LangParserState& state, const BuilderExpr& expr);
@@ -476,7 +512,7 @@ namespace pst {
 		 * @brief This class represents a chain of compared expressions for example: `0 < a + b <=
 		 * c.size()`
 		 *
-		 * The chain is scared as a list of sub-expressions and a list of operators between them.
+		 * The chain is stored as a list of sub-expressions and a list of operators between them.
 		 */
 		class ComparisonChain final: public ExprElement {
 			using Lower = GeneralBinary;
@@ -487,7 +523,7 @@ namespace pst {
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
 		public:
-			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600){};
+			ComparisonChain(const dia::SourcePosition& pos): ExprElement(pos, 600) {}
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -498,11 +534,11 @@ namespace pst {
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		/**
-		 * @brief Logical not operator.
+		 * @brief Logical `not` operator.
 		 */
 		class LogicNot final: public PrefixOperator {
 			using Lower = ComparisonChain;
@@ -518,7 +554,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Logical and operator.
+		 * @brief Logical `and` operator.
 		 */
 		class LogicAnd final: public BinaryOperator {
 			using Lower = LogicNot;
@@ -534,7 +570,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Logical or operator.
+		 * @brief Logical `or` operator.
 		 */
 		class LogicOr final: public BinaryOperator {
 			using Lower = LogicAnd;
@@ -577,7 +613,7 @@ namespace pst {
 
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 
 		/**
@@ -603,7 +639,7 @@ namespace pst {
 
 			~Comma() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
 			const std::vector<MBox<ExprElement>>& getExpressions() const;
@@ -630,11 +666,26 @@ namespace pst {
 				return "Assignment Expr";
 			}
 
+			[[nodiscard]]
+			MCRef<ExprElement> getVariables() const {
+				return variables.ref();
+			}
+
+			[[nodiscard]]
+			base::StrID getAssignmentType() const {
+				return type;
+			}
+
+			[[nodiscard]]
+			MCRef<ExprElement> getValue() const {
+				return value.ref();
+			}
+
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
 			~Assignment() override = default;
 			void dprint(std::ostream& out) const final;
-			void acceptVisitor(PstExprVisitor& visitor) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 		};
 	}
 }

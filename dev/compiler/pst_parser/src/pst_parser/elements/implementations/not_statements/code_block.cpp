@@ -6,7 +6,7 @@ namespace pst {
 		auto out      = makeBox<CodeBlock>(position);
 
 		if (!state[0].isBracketGroup(Token::BracketType::Curly)) {
-			state.log(base::make_unique<error::BlockStartError>(state.getPosition()));
+			state.log(makeBox<error::BlockStartError>(state.getPosition()));
 			return nullptr;
 		}
 

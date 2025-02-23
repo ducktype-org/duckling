@@ -27,7 +27,7 @@ namespace pst {
 		state.parse(out).all(NamedOperator::Period, &out->kind);
 
 		state.parse(out).goDown();
-		if (state.notEmpty()) state.log(base::make_unique<NonEmptyError>(state.getPosition()));
+		if (state.notEmpty()) state.log(makeBox<NonEmptyError>(state.getPosition()));
 		state.parse(out).goUpAndSkip();
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);
@@ -42,7 +42,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Destructor::acceptVisitor(PstStmtVisitor& visitor) const {
-		visitor.visitDestructor(*this);
-	}
+	void Destructor::acceptVisitor(PstVisitor& visitor) const { visitor.visitDestructor(*this); }
 }

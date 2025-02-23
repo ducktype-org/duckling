@@ -3,7 +3,6 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 #include <iostream>
-#include <iomanip>
 #include <crow.h>
 #include <unordered_map>
 #include <base64.hpp>
@@ -15,9 +14,11 @@
 #include <filesystem/file.hpp>
 #include <base/variant.hpp>
 
-#include "cli.hpp"
-#include "server.hpp"
-#include "config.hpp"
+
+// vm includes:
+#include <server.hpp>
+#include <cli.hpp>
+#include <config.hpp>
 
 #include "utils.hpp"
 #include "export_keywords.hpp"

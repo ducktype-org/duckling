@@ -16,6 +16,7 @@ namespace compiler::mir {
 
 	Function::Function(
 		base::StrID                  name,
+		tsh::TypeInfo                return_type,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -23,6 +24,7 @@ namespace compiler::mir {
 		helios::SymID                helios_id
 	):
 		  name(name),
+		  return_type(return_type),
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
 		  entry_block(entry_block),
@@ -172,7 +174,7 @@ namespace compiler::mir {
 		};
 
 	public:
-		BlockBuilder(usize vector_index): id(vector_index){};
+		BlockBuilder(usize vector_index): id(vector_index) {}
 
 		[[nodiscard]]
 		Block build() const {
@@ -242,7 +244,7 @@ namespace compiler::mir {
 		helios::SymID   helios_symbol;
 
 	public:
-		FunctionBuilder(query::Context& ctx, helios::SymID helios_symbol):
+		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
 			  ctx(ctx),
 			  helios_symbol(helios_symbol) {}
 
@@ -254,12 +256,16 @@ namespace compiler::mir {
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			return Function{ name.value(),
-				             std::move(blocks),
-				             std::move(local_list),
-				             entry_block.value()->getID(),
-				             top_lifetime_scope.value(),
-				             helios_symbol };
+			const auto function_return_type
+				= tsh::FunctionInfo(ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
+			                            ->expect("Handling errors in HOUT is not supported yet"))
+			          .getResultType();
+
+			return Function{
+				name.value(),          function_return_type,         std::move(blocks),
+				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				helios_symbol,
+			};
 		}
 
 		void setName(base::StrID name) {
@@ -272,15 +278,36 @@ namespace compiler::mir {
 			top_lifetime_scope.emplace(scope);
 		}
 
-		[[nodiscard]]
-		LocalRef addLocal(helios::SymID helios_id) {
-			auto key = local_list.emplaceBack(MirLocal{
+		LocalRef addLocal(const helios::SymID helios_id) {
+			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
-				scope(helios_id) });
+				scope(helios_id),
+			});
 			return local_list.getRef(key).value();
+		}
+
+		[[nodiscard]]
+		LocalRef addTmp(const tsh::TypeInfo type, const helios::ScopeID scope) {
+			const auto type_desc
+				= tsh::TypeDesc<>{ type, tsh::ValueCategory{ tsh::PrimaryCategory::Temporary } };
+			const auto key = local_list.emplaceBack(MirLocal{ type_desc, scope });
+			return local_list.getRef(key).value();
+		}
+
+		/**
+		 * Finds the location of a local variable in the function. Does not check the global scope.
+		 * @param helios_id The HELIoS symbol ID of the local variable.
+		 * @return The local variable reference, if found.
+		 */
+		[[nodiscard]]
+		LocalRef findLocal(const helios::SymID helios_id) const {
+			// @TODO: Optimise into a hashmap.
+			for (const auto& local: local_list)
+				if (local->helios_id == helios_id) return local.ref();
+			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
 		}
 
 		[[nodiscard]]
@@ -295,6 +322,36 @@ namespace compiler::mir {
 			CORE_ASSERT(entry_block.empty(), "Entry block already set.");
 			entry_block.emplace(block);
 		}
+
+		query::Context& getContext() { return ctx; }
+	};
+
+	/**
+	 * @brief Visitor that collects all local variables in the function and adds them directly to
+	 * the FunctionBuilder.
+	 */
+	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
+		FunctionBuilder& function;
+
+		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
+
+		void visitVariableStmt(const hc::VariableStmt& stmt) override {
+			function.addLocal(stmt.helios_symbol);
+		}
+
+		void visitIfStmt(const helios::code::IfStmt& stmt) override {
+			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
+		}
+
+		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
+
+		void visitReturnStmt(const helios::code::ReturnStmt&) override {}
+
+		void visitVoidReturnStmt(const helios::code::VoidReturnStmt&) override {}
+
+		void visitExprStmt(const helios::code::ExprStmt&) override {}
+
+		void visitAssignmentStmt(const helios::code::AssignmentStmt&) override {}
 	};
 
 	/**
@@ -373,18 +430,20 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			auto local                   = function.addLocal(stmt.helios_symbol);
+			auto local                   = function.findLocal(stmt.helios_symbol);
 			auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
 				opt_some(value) {
 					auto expr_result = lowerExpr(*value, continuation, function);
 
-					local_construction_hole.fill(Instruction{ Operation::Assign,
-					                                          { local },
-					                                          { expr_result.value },
-					                                          { flagConstruct(local) },
-					                                          stmt.lifetime_scope });
+					local_construction_hole.fill(Instruction{
+						Operation::Assign,
+						{ local },
+						{ expr_result.value },
+						{ flagConstruct(local) },
+						stmt.lifetime_scope,
+					});
 
 					output({ expr_result.begin });
 					return;
@@ -393,6 +452,24 @@ namespace compiler::mir {
 			}
 
 			CORE_UNREACHABLE();
+		}
+
+		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
+			// TODO: #448 Search for location in global scope as well.
+			// TODO: #469 Support arbitrary lvalues on the left.
+			auto target_location            = function.findLocal(stmt.helios_symbol);
+			auto target_construction_hole   = continuation->addHole();
+			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function);
+
+			target_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ target_location },
+				{ result },
+				{},
+				stmt.lifetime_scope,
+			});
+
+			output({ sub_continuation });
 		}
 	};
 
@@ -416,40 +493,134 @@ namespace compiler::mir {
 			this->out.emplace(value);
 		}
 
-		void visitLiteralValueExpr(const hc::LiteralValueExpr& expr) override {
+		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
 			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
 		}
 
-		void visitIdentifierExpr(const hc::IdentifierExpr&) override {
-			throw base::NotYetImplemented("identifier");
+		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
+			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
 		}
 
-		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr&) override {
-			throw base::NotYetImplemented("binary operator");
+		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
+			throw base::NotYetImplemented("type literal");
 		}
 
-		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr&) override {
-			throw base::NotYetImplemented("unary operator");
+		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
 		}
 
-		void visitParenthesisExpr(const hc::ParenthesisExpr&) override {
-			throw base::NotYetImplemented("parenthesis expr");
+		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
+			// Construct the result of the expression in reverse.
+			auto target_construction_hole          = continuation->addHole();
+			const auto [r_continuation, right_res] = lowerExpr(*expr.rhs, continuation, function);
+			const auto [l_continuation, left_res]  = lowerExpr(*expr.lhs, r_continuation, function);
+
+			// Fill the hole with the binary operation.
+			// Assume (for now?) that the arguments are of the same type,
+			// and the result is of the same type as the arguments.
+			const auto argument_type = locationType(right_res, function.getContext());
+			CORE_ASSERT(
+				argument_type == locationType(left_res, function.getContext()),
+				"Binary operator with different types"
+			);
+			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const Operation operation       = builtinBinaryToOperation(expr.operation);
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ left_res, right_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
+			output({ l_continuation, target_location });
 		}
 
-		void visitKeywordExpr(const hc::KeywordExpr&) override {
-			throw base::NotYetImplemented("keyword");
+		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
+			// Construct the result of the expression in reverse.
+			auto target_construction_hole          = continuation->addHole();
+			const auto [sub_continuation, sub_res] = lowerExpr(*expr.expr, continuation, function);
+
+			// Fill the hole with the unary operation.
+			const auto      argument_type   = locationType(sub_res, function.getContext());
+			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const Operation operation       = builtinUnaryToOperation(expr.operation);
+			target_construction_hole.fill(Instruction{
+				operation,
+				{ target_location },
+				{ sub_res },
+				{ flagConstruct(target_location) },
+				expr.lifetime_scope,
+			});
+
+			output({ sub_continuation, target_location });
 		}
 
-		void visitTupleConstructorExpr(const hc::TupleConstructorExpr&) override {
+		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
+			output(lowerExpr(*expr.inner, continuation, function));
+		}
+
+		void visitTupleTypeConstructorExpr(const hc::TupleTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("tuple constructor");
 		}
 
-		void visitVariantConstructorExpr(const hc::VariantConstructorExpr&) override {
+		void visitVariantTypeConstructorExpr(const hc::VariantTypeConstructorExpr&) override {
 			throw base::NotYetImplemented("variant constructor");
 		}
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+	private:
+		static Operation builtinBinaryToOperation(const helios::code::BuiltinBinary builtin) {
+			using enum helios::code::BuiltinBinary;
+			switch (builtin) {
+			case IntegerAdd:
+				return Operation::IntegerAdd;
+			case IntegerSub:
+				return Operation::IntegerSub;
+			case IntegerMul:
+				return Operation::IntegerMul;
+			case IntegerDiv:
+				return Operation::IntegerDiv;
+			case IntegerMod:
+				return Operation::IntegerMod;
+			case IntegerPow:
+				// @fixme: Implement exponentiation as a function call.
+				throw base::NotYetImplemented("Exponentiation on variables");
+			case IntegerLt:
+				return Operation::IntegerLt;
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+
+		static Operation builtinUnaryToOperation(const helios::code::BuiltinUnary builtin) {
+			using enum helios::code::BuiltinUnary;
+			switch (builtin) {
+			case IntegerNegation:
+				return Operation::IntegerNeg;
+			default:
+				CORE_UNREACHABLE();
+			}
+		}
+
+		/**
+		 * Get the type of a location, assuming that it is a local value.
+		 * @param location A MIR location which holds a local value.
+		 * @param ctx The query context for TypeInfo generation.
+		 * @return The type of the local value.
+		 */
+		static tsh::TypeInfo locationType(const MirLocation location, query::Context& ctx) {
+			variant_match(location.getVariant()) {
+				variant_case_novalue(MirIntegerConst) {
+					return ctx.query<tsh::QueryIntegralType>({ 64 });
+				}
+				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
+				variant_case(LocalRef, local) { return local->type.getType(); }
+				variant_default { CORE_UNREACHABLE(); }
+			}
+			CORE_UNREACHABLE();
 		}
 	};
 
@@ -485,14 +656,16 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
-		// @TODO: add parameters do list od locals
+		// @TODO: add parameters to list of locals
+		LocalVarCollectionVisitor visitor{ function_builder };
+		for (const auto& stmt: function.content.body->statements) stmt->acceptVisitor(visitor);
 
-		auto fun_body_scope = function.body.body->lifetime_scope;
+		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
 		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, fun_body_scope });
 
 		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(*function.body.body, last_block, function_builder);
+		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder);
 
 		function_builder.setEntry(first_block.begin);
 

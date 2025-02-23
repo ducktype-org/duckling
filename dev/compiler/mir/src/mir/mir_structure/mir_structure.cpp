@@ -116,19 +116,23 @@ namespace compiler::mir {
 	void MirLocal::debugPrint(std::ostream& output, bool detailed) const {
 		output << "Local(" << u64(id) << ")";
 		if (detailed) {
-			output << ": Helios Name: " << name(this->helios_id).strView();
+			output << ": Helios Name: " << getName().strView();
 			output << ", Type: ";
 			output << this->type.getType().toString();
 			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
 		}
 	}
 
-	base::StrID MirLocal::getName() const { return name(this->helios_id); }
+	base::StrID MirLocal::getName() const {
+		if (helios_id.has_value()) return name(helios_id.value());
+		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
+	}
 
 	void MirLocation::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
 			variant_case(LocalRef, local) { local->debugPrint(output); }
 			variant_case(MirIntegerConst, value) { output << value.value; }
+			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
 			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}

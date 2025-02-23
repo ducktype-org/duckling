@@ -79,6 +79,11 @@ namespace lang_def {
 
 		// Types:
 		// @IDEA: change i -> s
+
+		// NOLINTBEGIN
+		// no lint, since those keywords do not follow
+		// identifier naming rules.
+
 		i8,
 		i16,
 		i32,
@@ -94,6 +99,9 @@ namespace lang_def {
 		f32,
 		f64,
 		f80,
+		f128,
+
+		// NOLINTEND
 
 		Char,
 		Bool,  // ...
@@ -138,7 +146,6 @@ namespace lang_def {
 		BCArgSize,
 		BCNextArgSize,
 		BCDefine,
-		BCLabel,
 		BCArg,
 		BCLocal,
 		BCCode,
@@ -187,6 +194,8 @@ namespace lang_def {
 		DoubleMinus,
 		Multiply,
 		Divide,
+		Remainder,
+		Exponentiate,
 	};
 }
 

@@ -6,9 +6,11 @@
 
 #pragma once
 
-#include "base/raw_view.hpp"
 #include "value_parser.hpp"
-#include "base/optional.hpp"
+
+#include <base/raw_view.hpp>
+#include <base/optional.hpp>
+
 #include <variant>
 
 namespace clap {
@@ -60,7 +62,7 @@ namespace clap {
 		 * @return Value parser pointer, that may be null.
 		 */
 		[[nodiscard]]
-		const ValueParser* getValueParser() const;
+		MCRef<ValueParser> getValueParser() const;
 		/**
 		 * @return The necessity of a parameter.
 		 */
@@ -76,8 +78,7 @@ namespace clap {
 
 		// If a ConfigParameter has a ValueParser, then
 		// it means it's not a flag.
-		// Using pointer here, because of polymorphism.
-		base::unique_ptr<ValueParser> value_parser;
+		MBox<ValueParser> value_parser;
 
 		ParameterNecessity parameter_necessity;
 	};

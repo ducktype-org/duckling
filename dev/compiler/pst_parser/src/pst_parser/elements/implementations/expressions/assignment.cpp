@@ -32,7 +32,7 @@ namespace pst::expr {
 					found = true;
 					place = i;
 				} else {
-					state.log(base::make_unique<MultipleAssignmentError>(pos));
+					state.log(makeBox<MultipleAssignmentError>(pos));
 					fastForward(state, length);
 					return nullptr;
 				}
@@ -63,7 +63,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void Assignment::acceptVisitor(PstExprVisitor& visitor) const {
+	void Assignment::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitAssignment(*this);
 	}
 }

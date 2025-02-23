@@ -40,12 +40,12 @@ namespace detail {
  * here `b` will execute before `a`.
  * see: "Destruction sequence" in https://en.cppreference.com/w/cpp/language/destructor
  *
- * For technical reasons only one defer per line can be written.
- * Identifiers starting with `defer_custom_name_rJd7liva5_` should not be used when defer is used.
- *
  * See tests/test.cpp for examples.
  */
 #define defer(code)                                                         \
-	::detail::DeferHelper CONCAT_2(defer_custom_name_rJd7liva5_, __LINE__)( \
-		[&]() noexcept -> void { code; }                                    \
-	);
+	PUSH_DIAGNOSTIC _Pragma("GCC diagnostic ignored \"-Wc++26-extensions\"" \
+	)::detail::DeferHelper _{ [&]() noexcept -> void { code; } };           \
+	POP_DIAGNOSTIC
+#if __cplusplus >= 202'600L
+	#warning "Remove the pragmas above when upgrading to C++26"
+#endif

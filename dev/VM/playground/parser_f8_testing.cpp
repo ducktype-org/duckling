@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
 
 		variant_match(error) {
 			variant_case(vm::api::CoreOperationError, core_error) {
-				variant_match(core_error.error) {
+				variant_match(core_error) {
 					variant_case(vm::api::LoadProgramError, load_error) {
 						std::cerr << "Load errors: \n" << load_error.why << "\n";
 					}
@@ -33,6 +33,8 @@ int main(int argc, char** argv) {
 		// error is lost somewhere on api-vcpu path
 		vm::api::run(process_pid).expect("Run error");
 
-		[[maybe_unused]] auto join_result = vm::api::join(process_pid);
+		[[maybe_unused]]
+		auto join_result
+			= vm::api::join(process_pid);
 	}
 }

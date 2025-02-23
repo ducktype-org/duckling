@@ -19,6 +19,8 @@ namespace pst {
 	template<typename State>
 	class PSTAutomatic;
 
+	class PstVisitor;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -41,6 +43,14 @@ namespace pst {
 		 */
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
+
+	protected:
+		void dprintPrefix(std::ostream& out) const override {
+			tpc::Element::dprintPrefix(out);
+			out << R"("position": )";
+			source_position.printToJson(out);
+			out << ", ";
+		}
 
 	private:
 		/**
@@ -194,6 +204,8 @@ namespace pst {
 			);
 			return element_kind;
 		}
+
+		virtual void acceptVisitor(PstVisitor& visitor) const;
 
 		template<typename X>
 		friend class PSTAutomatic;

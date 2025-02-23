@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../symbols/symbols.hpp"
+#include "../../symbols/symbols.hpp"  // @todo ... #404
 #include "../../scope_symbol_id.hpp"
 
 #include <vector>
@@ -48,28 +48,39 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents an integer literal value written in the expression.
 	 */
-	struct LiteralValueExpr final: public Expr {
+	struct LiteralIntExpr final: public Expr {
 		// @TODO: ctv + type for consts?
 		// @note: this is a mock
 		i64 value;
 
-		LiteralValueExpr(query::Context& ctx, ScopeID scope, i64 value);
+		LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
-	 * @brief Represents an expression made of a keyword, like "true", or "i32".
-	 * @brief This is a mock
+	 * @brief Represents a boolean literal value written in the expression (true, false).
 	 */
-	struct KeywordExpr final: public Expr {
-		lang_def::Keyword keyword;
+	struct LiteralBoolExpr final: public Expr {
+		bool value;
 
-		KeywordExpr(query::Context& ctx, ScopeID scope, lang_def::Keyword keyword);
+		LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
+	 */
+	struct LiteralTypeExpr final: public Expr {
+		tsh::TypeInfo value_type;
+
+		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -85,7 +96,7 @@ namespace compiler::helios::code {
 		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -94,10 +105,10 @@ namespace compiler::helios::code {
 	 * For:
 	 * - nice dprints, because with this class we know what was in "()"
 	 * Against:
-	 * - We have/will have TupleConstructorExpr and VariantConstructor Expr.
+	 * - We have/will have TupleTypeConstructorExpr and VariantConstructor Expr.
 	 *
 	 * @TODO HOUT 2.0: once variants are chained in PST we can delete it
-	 * For now it will be kept for simplicity of creating VariantConstructorExpr.
+	 * For now it will be kept for simplicity of creating VariantTypeConstructorExpr.
 	 * Also we should print all "()" from hout structure anyway.
 	 */
 	struct ParenthesisExpr final: public Expr {
@@ -106,16 +117,31 @@ namespace compiler::helios::code {
 		ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * Builtin binary operation.
+	 */
+	enum class BuiltinBinary {
+		// we don't have to be super specific here
+		// we will likely want to be super specific in LIR
+
+		IntegerAdd,
+		IntegerSub,
+		IntegerMul,
+		IntegerDiv,
+		IntegerMod,
+		IntegerPow,
+
+		IntegerLt,  //< Less than
 	};
 
 	/**
 	 * @brief A binary operator.
 	 */
 	struct BinaryOperatorExpr: public Expr {
-		// @TODO: At this point, operator should be a symbol.
-		// HOUT should not be concerned with overload resolution.
-		lexer::Operator op;
+		BuiltinBinary operation;
 
 		base::Box<Expr> lhs;
 		base::Box<Expr> rhs;
@@ -123,67 +149,65 @@ namespace compiler::helios::code {
 		BinaryOperatorExpr(
 			query::Context& ctx,
 			ScopeID         scope,
-			lexer::Operator op,
+			BuiltinBinary   operation,
 			base::Box<Expr> lhs,
 			base::Box<Expr> rhs
 		);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Builtin unary operations.
+	 */
+	enum class BuiltinUnary {
+		// we don't have to be super specific here
+		// we will likely want to be super specific in LIR
+
+		IntegerNegation,
 	};
 
 	/**
 	 * @brief General unary operator. Correctness depends on a proper lookup of a method (operator).
 	 */
 	struct UnaryOperatorExpr: public Expr {
-		// @NOTE: `op` and `prefix` should be replaced with a SymID that links to a proper function
-		// that resolves the operator
-		pst::Operator op;
-
-		// @TODO HOUT 2.0: this should not be needed at this stage
-		bool prefix = false;  // prefix/suffix
+		BuiltinUnary operation;
 
 		base::Box<Expr> expr;
 
-		UnaryOperatorExpr(ScopeID scope, lexer::Operator op, bool prefix, base::Box<Expr> expr);
+		UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr);
 
-		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
 	 * @brief Tuple constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of tuple, not meta type
-	 * we should fix it here, and comp-time.
-	 * We will keep this element, and distinguish tuple-meta from tuple-tuple
-	 * during hout creation. Change this name to "TupleTypeExpr" (and "TupleExpr")
 	 */
-	struct TupleConstructorExpr: public Expr {
+	struct TupleTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleConstructorExpr(
+		TupleTypeConstructorExpr(
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
 		);
 
-		void debugPrint(std::ostream& out) const override;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
 	 * @brief Variant constructor inside an expression.
-	 * @todo HOUT 2.0: type of this expr is the type of variant, not meta type
-	 * we should fix it here, and comp-time.
-	 * Also see: comments on ParenthesisExpr.
 	 */
-	struct VariantConstructorExpr: public Expr {
+	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
 
-		VariantConstructorExpr(
+		VariantTypeConstructorExpr(
 			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
 		);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
 	/**
@@ -200,6 +224,9 @@ namespace compiler::helios::code {
 		LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols);
 
 		void debugPrint(std::ostream& out) const final;
-		void acceptVisitor(HoutExprVisitor&) const override;
+		void acceptVisitor(HoutExprVisitor&) const final;
 	};
+
+	// @todo HOUT 2.0: function call expression
+	// it should hold SymID of a function and vector of arguments
 }

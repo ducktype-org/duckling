@@ -37,7 +37,7 @@ class LexerPositionTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LexerPositionTest
 
-	tokenizer::OwnFile td;
+	MBox<tokenizer::TokenFile> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {

@@ -1,49 +1,109 @@
 {
+	"position": {
+		"sourceStart": 0,
+		"sourceEnd": 83
+	},
 	"Top Level": [
 		{
+			"position": {
+				"sourceStart": 0,
+				"sourceEnd": 83
+			},
 			"If": {
 				"name": {
 					"Name": "MyName"
 				},
 				"condition": {
+					"position": {
+						"sourceStart": 9,
+						"sourceEnd": 19
+					},
 					"Round Group Expression": {
-						"Comparison Chain": {
-							"sub-expressions": [
-								{
-									"Binary Operator": {
-										"left_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "a"
+						"position": {
+							"sourceStart": 10,
+							"sourceEnd": 18
+						},
+						"Top Level Expression": {
+							"expr": {
+								"position": {
+									"sourceStart": 10,
+									"sourceEnd": 18
+								},
+								"Comparison Chain": {
+									"sub-expressions": [
+										{
+											"position": {
+												"sourceStart": 10,
+												"sourceEnd": 14
+											},
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 10,
+														"sourceEnd": 10
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "a"
+														}
+													}
+												},
+												"operator": "+",
+												"right_expr": {
+													"position": {
+														"sourceStart": 14,
+														"sourceEnd": 14
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "b"
+														}
+													}
 												}
 											}
 										},
-										"operator": "+",
-										"right_expr": {
-											"Identifier Expression": {
-												"name": {
-													"Name": "b"
-												}
+										{
+											"position": {
+												"sourceStart": 18,
+												"sourceEnd": 18
+											},
+											"Value Expr": {
+												"number": "0"
 											}
 										}
-									}
-								},
-								{
-									"Value Expr": {
-										"number": "0"
-									}
+									]
 								}
-							]
+							}
 						}
 					}
 				},
 				"body": {
+					"position": {
+						"sourceStart": 21,
+						"sourceEnd": 34
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 21,
+							"sourceEnd": 34
+						},
 						"Code Block": [
 							{
+								"position": {
+									"sourceStart": 24,
+									"sourceEnd": 32
+								},
 								"Expr Stmt": {
+									"position": {
+										"sourceStart": 24,
+										"sourceEnd": 31
+									},
 									"Assignment Expr": {
 										"assigned variables": {
+											"position": {
+												"sourceStart": 24,
+												"sourceEnd": 24
+											},
 											"Identifier Expression": {
 												"name": {
 													"Name": "c"
@@ -52,6 +112,10 @@
 										},
 										"assignment type": "=",
 										"assigned value": {
+											"position": {
+												"sourceStart": 28,
+												"sourceEnd": 31
+											},
 											"Value Expr": {
 												"number": "4.25"
 											}
@@ -63,48 +127,108 @@
 					}
 				},
 				"else body": {
+					"position": {
+						"sourceStart": 41,
+						"sourceEnd": 83
+					},
 					"Code Block or Statement": {
+						"position": {
+							"sourceStart": 41,
+							"sourceEnd": 83
+						},
 						"If": {
 							"name": "<ANONYMOUS>",
 							"condition": {
+								"position": {
+									"sourceStart": 44,
+									"sourceEnd": 55
+								},
 								"Round Group Expression": {
-									"Comparison Chain": {
-										"sub-expressions": [
-											{
-												"Binary Operator": {
-													"left_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "a"
+									"position": {
+										"sourceStart": 45,
+										"sourceEnd": 54
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 45,
+												"sourceEnd": 54
+											},
+											"Comparison Chain": {
+												"sub-expressions": [
+													{
+														"position": {
+															"sourceStart": 45,
+															"sourceEnd": 49
+														},
+														"Binary Operator": {
+															"left_expr": {
+																"position": {
+																	"sourceStart": 45,
+																	"sourceEnd": 45
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "a"
+																	}
+																}
+															},
+															"operator": "+",
+															"right_expr": {
+																"position": {
+																	"sourceStart": 49,
+																	"sourceEnd": 49
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "b"
+																	}
+																}
 															}
 														}
 													},
-													"operator": "+",
-													"right_expr": {
-														"Identifier Expression": {
-															"name": {
-																"Name": "b"
-															}
+													{
+														"position": {
+															"sourceStart": 54,
+															"sourceEnd": 54
+														},
+														"Value Expr": {
+															"number": "0"
 														}
 													}
-												}
-											},
-											{
-												"Value Expr": {
-													"number": "0"
-												}
+												]
 											}
-										]
+										}
 									}
 								}
 							},
 							"body": {
+								"position": {
+									"sourceStart": 57,
+									"sourceEnd": 70
+								},
 								"Code Block or Statement": {
+									"position": {
+										"sourceStart": 57,
+										"sourceEnd": 70
+									},
 									"Code Block": [
 										{
+											"position": {
+												"sourceStart": 60,
+												"sourceEnd": 68
+											},
 											"Expr Stmt": {
+												"position": {
+													"sourceStart": 60,
+													"sourceEnd": 67
+												},
 												"Assignment Expr": {
 													"assigned variables": {
+														"position": {
+															"sourceStart": 60,
+															"sourceEnd": 60
+														},
 														"Identifier Expression": {
 															"name": {
 																"Name": "c"
@@ -113,6 +237,10 @@
 													},
 													"assignment type": "=",
 													"assigned value": {
+														"position": {
+															"sourceStart": 64,
+															"sourceEnd": 67
+														},
 														"Value Expr": {
 															"number": "4.30"
 														}
@@ -124,10 +252,26 @@
 								}
 							},
 							"else body": {
+								"position": {
+									"sourceStart": 77,
+									"sourceEnd": 83
+								},
 								"Code Block or Statement": {
+									"position": {
+										"sourceStart": 77,
+										"sourceEnd": 83
+									},
 									"Expr Stmt": {
+										"position": {
+											"sourceStart": 77,
+											"sourceEnd": 82
+										},
 										"Assignment Expr": {
 											"assigned variables": {
+												"position": {
+													"sourceStart": 77,
+													"sourceEnd": 77
+												},
 												"Identifier Expression": {
 													"name": {
 														"Name": "c"
@@ -136,9 +280,17 @@
 											},
 											"assignment type": "=",
 											"assigned value": {
+												"position": {
+													"sourceStart": 81,
+													"sourceEnd": 82
+												},
 												"Prefix Operator": {
 													"operator": "-",
 													"expression": {
+														"position": {
+															"sourceStart": 82,
+															"sourceEnd": 82
+														},
 														"Value Expr": {
 															"number": "1"
 														}

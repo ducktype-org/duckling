@@ -6,7 +6,17 @@ endfunction()
 
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
+	
 	find_program(LCOV lcov REQUIRED)
+
+	if (NOT GCOV_VERSION)
+		message(FATAL_ERROR "GCOV_VERSION is not set.")
+	endif()
+
+	find_program(GCOV_PATH ${GCOV_VERSION} REQUIRED)
+	
+	message(STATUS "GCOV path: ${GCOV_PATH}")
+
 	find_program(GENHTML genhtml REQUIRED)
 
 	add_custom_target(build_all_coverage_targets)
@@ -22,13 +32,15 @@ if(ENABLE_COVERAGE)
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+						--gcov-tool "${GCOV_PATH}"
 						--initial 
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
 						--output-file coverage_base.info
 		# Creating coverage data for the tests.
-		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
+						--gcov-tool "${GCOV_PATH}"
 						--capture 
 						--base-directory "${CMAKE_SOURCE_DIR}" 
 						--no-external 
@@ -37,17 +49,23 @@ if(ENABLE_COVERAGE)
 		COMMAND ${LCOV} --add-tracefile coverage_base.info 
 						--add-tracefile coverage_test.info 
 						--output-file coverage_unfiltered.info
+						--gcov-tool "${GCOV_PATH}"
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
 						--remove coverage_unfiltered.info 
+						"docs/**"
+						"integration_tests/**"
+						"scripts/**"
 						"**/tests/**" 
 						"**/playground/**"
 						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
 						--output-file coverage.info
+						--gcov-tool "${GCOV_PATH}"
 		
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-		VERBATIM)
+		VERBATIM
+	)
 	add_dependencies(coverage build_all_coverage_targets)
 endif()
 

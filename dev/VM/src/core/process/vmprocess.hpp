@@ -1,6 +1,8 @@
 #pragma once
 
+#include <api/data/status.hpp>
 #include <deque>
+#include <mutex>
 #include <services/profiler/profiler.hpp>
 #include <services/service_manager.hpp>
 #include <services/reference_counter/reference_counter.hpp>
@@ -12,17 +14,11 @@
 #include <code_data/code.hpp>
 #include <condition_variable>
 #include <shared_mutex>
-#include <thread>
-#include <memory>
 #include <base/optional.hpp>
 #include <api/vm.hpp>
 #include <core/thread/vmthread.hpp>
 #include <api/data/request.hpp>
-#include "memory/allocator/allocator.hpp"
-#include "memory/allocator/stack_allocator.hpp"
 #include <preprocessor/preprocessor.hpp>
-
-#include <iostream>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -45,16 +41,16 @@ namespace vm {
 	 */
 	class VMProcess final: public Listener<api::ProcStatus> {
 	private:
-		std::shared_mutex rwGlobal;
+		std::shared_mutex rw_global;
 
-		std::condition_variable_any status_cv;
-		std::shared_mutex           rwStatus;
 		api::ProcStatus             status;
+		std::shared_mutex           rw_status;
+		std::condition_variable_any status_cv;
 
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::Code> loadedCode = {};
+		base::Optional<vm::Code> loaded_code = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
@@ -154,13 +150,6 @@ namespace vm {
 		VMThread& getMainVMThread();
 
 	public:
-		/**
-		 * For internal use only
-		 * Usage:
-		 * Supervisor::get().onEvent(status);
-		 *
-		 * Name of this method may be misleading
-		 */
 		void onEvent(const api::ProcStatus& event) noexcept override;
 
 		Memory& getMemory();
@@ -175,7 +164,6 @@ namespace vm {
 
 		ProcIO& getIO();
 
-		// For external API
 
 		// Each of the following methods can be called concurrently, so they should synchronize
 		// resources.

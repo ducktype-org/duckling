@@ -5,6 +5,9 @@
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 
+// @todo relax this dependency, just expr is needed (#404)
+#include <helios/hout/elements/expr.hpp>
+
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
@@ -28,7 +31,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The value of the last symbol in the chain.
 	 */
-	int getValue(const std::string_view chain, ScopeID scope);
+	i64 getValue(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
@@ -47,4 +50,18 @@ namespace compiler::helios::test_utils {
 	 * @return The type of the last symbol in the chain.
 	 */
 	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * @brief returns hout-expr of the initialization value of given const.
+	 * For `const a = 42`, it returns the hout-expr of `42`.
+	 * @note It's a hack-ish method, for easy testing only
+	 */
+	Box<code::Expr> getExprOfConst(SymID sym);
+
+	/**
+	 * @brief returns hout-expr of the initialization value of given variable.
+	 * For `var a = 42`, it returns the hout-expr of `42`.
+	 * @note It's a hack-ish method, for easy testing only
+	 */
+	Box<code::Expr> getExprOfVariable(SymID sym);
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better
+#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 
 #include <token_file/file.hpp>
 #include "lang_parser_state.hpp"
@@ -28,9 +28,9 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		tokenizer::OwnFile      file;
-		MBox<Element>           element;
-		std::vector<ImportType> imports;
+		Box<tokenizer::TokenFile> file;
+		MBox<Element>             element;
+		std::vector<ImportType>   imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -67,7 +67,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(tokenizer::OwnFile&& file) requires ParseAble<>: file(std::move(file)) {
+		PST(Box<tokenizer::TokenFile>&& file) requires ParseAble<>: file(std::move(file)) {
 			pst::init();
 			if (getLogger().bad()) return;
 			parse();
@@ -103,8 +103,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		tokenizer::BorrowFile getFile() const {
-			return file.borrow();
+		Ref<tokenizer::TokenFile> getFile() const {
+			return file.ref();
 		}
 
 		[[nodiscard]]

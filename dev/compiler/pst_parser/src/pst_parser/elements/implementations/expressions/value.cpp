@@ -44,7 +44,7 @@ namespace pst::expr {
 
 		if (!state[0].is(lexer::Token::Type::NumLiteral)) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(base::make_unique<BadValueError>(pos));
+			state.log(makeBox<BadValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
@@ -53,7 +53,7 @@ namespace pst::expr {
 		state.parse(out).eatOne();
 
 		if (length > 1) {
-			state.log(base::make_unique<MoreThanValueError>(pos));
+			state.log(makeBox<MoreThanValueError>(pos));
 			fastForward(state, length);
 		}
 
@@ -68,5 +68,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void ExprValue::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitExprValue(*this); }
+	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitExprValue(*this);
+	}
 }

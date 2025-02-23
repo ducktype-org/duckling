@@ -34,22 +34,16 @@ namespace pst {
 		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	/**
-	 * @brief Expr parsing for type inside for.
-	 */
-	class ForTypeExpr: public NotStmt {
-	public:
-		static bool end(const LangParserState& state, i64 fwd = 0) {
+	namespace {
+		bool isForTypeEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)
 			    || state[fwd].is(Keyword::In);
 		}
+	}
 
-		static MBox<ExprElement> parse(LangParserState& state) {
-			return expr::parseUntil<expr::Comma, end>(state);
-		}
-
-		ForTypeExpr() = delete;
-	};
+	MBox<ExprElement> ExprParserHelper::parseForType(LangParserState& state) {
+		return expr::parseUntil<expr::Comma, isForTypeEnd>(state);
+	}
 
 	MBox<For> For::parse(LangParserState& state) {
 		// @TODO: attr list
@@ -61,20 +55,20 @@ namespace pst {
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
-			state.log(base::make_unique<ForBracketError>(state.getPosition()));
+			state.log(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();
 
 			state.parse(out).one(&out->iterator, true);
 
 			if (state.parse(out).tryEat(NamedOperator::Colon)) {
-				state.parse(out).with(&out->type, ForTypeExpr::parse);
+				state.parse(out).one(&out->type);
 				state.parse(out).tryEat(Keyword::In);
 			} else {
 				state.parse(out).one(Keyword::In);
 			}
 
-			state.parse(out).with(&out->iterable, CommaExpr::parse);
+			state.parse(out).one(&out->iterable);
 
 			state.parse(out).goUpAndSkip();
 		}
@@ -99,5 +93,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void For::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitFor(*this); }
+	void For::acceptVisitor(PstVisitor& visitor) const { visitor.visitFor(*this); }
 }

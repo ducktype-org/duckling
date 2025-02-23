@@ -35,7 +35,7 @@ namespace dia {
 		auto error  = source_file->viewSplitRange(source_start, fixed_end + 1);
 		auto after  = source_file->viewSplitRange(fixed_end + 1, end_char);
 
-		auto linePref = [&](usize line) {
+		auto line_pref = [&](usize line) {
 			res.emplace_back("\n");
 			std::stringstream number;
 			number << std::setw((int) length) << line;
@@ -47,21 +47,21 @@ namespace dia {
 		for (auto [line, view]: before) {
 			if (line != prev_line) {
 				prev_line = line;
-				linePref(line);
+				line_pref(line);
 			}
 			res.emplace_back(view.stdString());
 		}
 		for (auto [line, view]: error) {
 			if (line != prev_line) {
 				prev_line = line;
-				linePref(line);
+				line_pref(line);
 			}
 			res.emplace_back(view.stdString(), printer::Color::BRIGHT_RED);
 		}
 		for (auto [line, view]: after) {
 			if (line != prev_line) {
 				prev_line = line;
-				linePref(line);
+				line_pref(line);
 			}
 			res.emplace_back(view.stdString());
 		}
@@ -70,11 +70,13 @@ namespace dia {
 		return res;
 	}
 
-	SourcePosition::SourcePosition(tokenizer::BorrowFile source_file, const usize source_start):
+	SourcePosition::SourcePosition(
+		MRef<tokenizer::TokenFile> source_file, const usize source_start
+	):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
-		tokenizer::BorrowFile source_file, const usize source_start, const usize source_end
+		MRef<tokenizer::TokenFile> source_file, const usize source_start, const usize source_end
 	):
 		  source_start(source_start),
 		  source_end(source_end),
@@ -94,20 +96,20 @@ namespace dia {
 		  SourcePosition(other.source_file, other.source_start, source_end) {}
 
 	std::pair<usize, usize> SourcePosition::getStartLineColumn() const {
-		return source_file.get() ? source_file->getLineColumn(source_start)
-		                         : std::make_pair(usize(0), usize(0));
+		return (source_file != nullptr) ? source_file->getLineColumn(source_start)
+		                                : std::make_pair(usize(0), usize(0));
 	}
 
 	std::pair<usize, usize> SourcePosition::getEndLineColumn() const {
-		return source_file.get() ? source_file->getLineColumn(source_end)
-		                         : std::make_pair(usize(0), usize(0));
+		return (source_file != nullptr) ? source_file->getLineColumn(source_end)
+		                                : std::make_pair(usize(0), usize(0));
 	}
 
 	usize SourcePosition::getStart() const { return source_start; }
 
 	usize SourcePosition::getEnd() const { return source_end; }
 
-	tokenizer::BorrowFile SourcePosition::getSource() const { return source_file; }
+	MRef<tokenizer::TokenFile> SourcePosition::getSource() const { return source_file; }
 
 	printer::PrinterContentsSeq
 		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
@@ -119,9 +121,9 @@ namespace dia {
 		auto [line, column]                      = getStartLineColumn();
 		std::vector<printer::PrinterContent> res = {
 			{ "In file: " }, { source_file->getPath().strView().data() },
-			{ ":\n" },       { std::to_string(line), printer::Color::BRIGHT_BLUE },
+			{ ":" },         { std::to_string(line), printer::Color::BRIGHT_BLUE },
 			{ ":" },         { std::to_string(column), printer::Color::BRIGHT_BLUE },
-			{ ": " },        reason,
+			{ ":\n\t" },     reason,
 			{ "\n" },
 		};
 		for (auto el: getPrettySourceLines()) res.push_back(std::move(el));
@@ -133,5 +135,17 @@ namespace dia {
 		std::stringstream res;
 		printer::StreamPrinter::printNL(content, res);
 		return res.str();
+	}
+
+	bool SourcePosition::isFileEnd() const {
+		// EOF is always (last_char, last_char)
+		return source_end == source_file->getChars().size() - 1;
+	}
+
+	void SourcePosition::printToJson(std::ostream& out) const {
+		out << "{";
+		out << R"("sourceStart": )" << getStart() << ", ";
+		out << R"("sourceEnd": )" << getEnd();
+		out << "}";
 	}
 }

@@ -21,10 +21,21 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 		@brief Placeholder.
 		@todo Some decisions here to be made about operations like that.
 	*//**
-		Perhaps we want more generic code for MIR, so algorithms are simpler.
+		Perhaps we want more generic code for LIR, so algorithms are simpler.
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
+
+		Some operations are sign-sensitive and are prefixed with U or S, e.g. UDiv and SDiv.
 	*/
 	IntegerAdd,
+	IntegerSub,
+	IntegerMul,
+	IntegerUDiv,
+	IntegerSDiv,
+	IntegerUMod,
+	IntegerSMod,
+	IntegerULt,
+	IntegerSLt,
+	IntegerNeg,
 
 	ReturnVoid,
 	ReturnValue,
@@ -33,7 +44,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 )
 
 // clang-format on
-
 
 namespace compiler::lir {
 	struct LirLocal;
@@ -54,11 +64,13 @@ namespace compiler::lir {
 	 */
 	struct LirLocation {
 	private:
-		using ValueType = std::variant<i64, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
 		ValueType value;
 
 	public:
 		LirLocation(i64 value): value(value) {}
+
+		LirLocation(bool value): value(value) {}
 
 		LirLocation(LocalRef value): value(value) {}
 
@@ -92,19 +104,19 @@ namespace compiler::lir {
 	 */
 	struct LirLocal final {
 		/**
-		 * @brief HELIOS id of the variable, if exist.
+		 * @brief HELIOS id of the variable, if exists.
 		 */
 		base::Optional<helios::SymID> helios_id;
 
-		// a copy of type-layout here might bu sub-optimal
+		// a copy of type-layout here might be suboptimal
 		tsl::TypeLayout layout;
 
 	private:
-		LirLocal(helios::SymID helios_id, tsl::TypeLayout layout):
+		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout):
 			  helios_id(helios_id),
 			  layout(std::move(layout)) {}
 
-		LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
+		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 
 		friend Function;
 		friend LocalRef;
@@ -117,7 +129,7 @@ namespace compiler::lir {
 		/**
 		 * @brief Crates unique local with bool-type, and without
 		 * helios_id.
-		 * @note its used to create lifetime-flags
+		 * @note it's used to create lifetime-flags
 		 * @param ctx
 		 * @return LirLocal
 		 */
@@ -141,7 +153,9 @@ namespace compiler::lir {
 		Instruction& operator=(Instruction&&) = default;
 
 		Instruction(
-			Operation operation, base::Optional<LocalRef> output, std::vector<LirLocation> arguments
+			const Operation                operation,
+			const base::Optional<LocalRef> output,
+			std::vector<LirLocation>       arguments
 		):
 			  operation(operation),
 			  output(output),
@@ -162,10 +176,11 @@ namespace compiler::lir {
 	 * @brief Function in LIR.
 	 */
 	struct Function final {
-		// @TODO: store type of the function
-
 		// @TODO: is this name mangled somehow:?
 		base::StrID name;
+
+		// @TODO: Perhaps we want to store the whole type of the function here?
+		tsl::TypeLayout return_type_layout;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LirLocal> local_list;

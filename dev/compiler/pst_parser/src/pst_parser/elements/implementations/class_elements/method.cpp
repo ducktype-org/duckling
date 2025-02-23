@@ -11,8 +11,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name, &out->params);
-		if (state.parse(out).tryEat(NamedOperator::SingleArrow))
-			state.parse(out).with(&out->ret, CommaExpr::parse);
+		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 
 		state.parse(out).all(NamedOperator::Assign, &out->body);
 
@@ -35,5 +34,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void Method::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitMethod(*this); }
+	void Method::acceptVisitor(PstVisitor& visitor) const { visitor.visitMethod(*this); }
 }

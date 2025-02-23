@@ -58,10 +58,11 @@ namespace compiler::lir {
 	 * @brief Maps MIR operation to LIR operation for those
 	 * that have direct counterpart.
 	 *
-	 * @param mir_operation
+	 * @param mir_operation The MIR operation to convert.
+	 * @param signed_version Whether to use a signed version of the operation, if relevant.
 	 * @return Operation
 	 */
-	Operation mir2lirOperation(mir::Operation mir_operation) {
+	Operation mir2lirOperation(const mir::Operation mir_operation, const bool signed_version) {
 		switch (mir_operation) {
 		case mir::Operation::Assign:
 			return Operation::Assign;
@@ -73,6 +74,20 @@ namespace compiler::lir {
 			return Operation::Jump;
 		case mir::Operation::Branch:
 			return Operation::Branch;
+		case mir::Operation::IntegerAdd:
+			return Operation::IntegerAdd;
+		case mir::Operation::IntegerSub:
+			return Operation::IntegerSub;
+		case mir::Operation::IntegerMul:
+			return Operation::IntegerMul;
+		case mir::Operation::IntegerDiv:
+			return signed_version ? Operation::IntegerSDiv : Operation::IntegerUDiv;
+		case mir::Operation::IntegerMod:
+			return signed_version ? Operation::IntegerSMod : Operation::IntegerUMod;
+		case mir::Operation::IntegerLt:
+			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
+		case mir::Operation::IntegerNeg:
+			return Operation::IntegerNeg;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -127,6 +142,9 @@ namespace compiler::lir {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LirLocation{ integer.value };
+					}
+					variant_case(mir::MirBoolConst, boolean) {
+						return LirLocation{ boolean.value };
 					}
 					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
@@ -212,7 +230,8 @@ namespace compiler::lir {
 				const mir::Instruction&                                mir_instruction
 			) {
 				for (const auto& flag: mir_instruction.flags) {
-					[[maybe_unused]]  //< temporary for linter
+					[[maybe_unused]]
+					//< temporary for linter
 					auto lir_local
 						= getLocal(flag.local);
 
@@ -233,6 +252,19 @@ namespace compiler::lir {
 				}
 			}
 
+			static bool isArgSigned(const mir::MirLocation location) {
+				variant_match(location.getVariant()) {
+					variant_case_novalue(mir::MirIntegerConst) { return true; }
+					variant_case(mir::LocalRef, local) {
+						const auto arg_type = local->type.getType();
+						return arg_type.getKind() == tsh::Kind::Integral
+						   and tsh::IntegralInfo(arg_type).getSignedness();
+					}
+					variant_default { return false; }
+				}
+				CORE_UNREACHABLE();
+			}
+
 			/**
 			 * @brief Lowers instruction from MIR to LIR.
 			 * * Fills @p curr_block.
@@ -251,21 +283,35 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
-				case mir::Operation::Assign: {
+				case mir::Operation::Assign:
+				case mir::Operation::IntegerAdd:
+				case mir::Operation::IntegerSub:
+				case mir::Operation::IntegerMul:
+				case mir::Operation::IntegerDiv:
+				case mir::Operation::IntegerMod:
+				case mir::Operation::IntegerLt:
+				case mir::Operation::IntegerNeg: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 
 					auto output = getLocal(mir_instruction.output.value());
 					auto args   = getLocations(mir_instruction.arguments);
+
+					// It is assumed that all arguments of a built-in function are of the same exact
+					// type, and thus also have the same sign (if that matters). Any conversions
+					// should have been handled by HELIoS.
+					// @TODO: Refine this check.
+					const auto use_signed_version = isArgSigned(mir_instruction.arguments.at(0));
 					curr_block->instructions.emplace_back(
-						mir2lirOperation(mir_instruction.operation), output, std::move(args)
+						mir2lirOperation(mir_instruction.operation, use_signed_version),
+						output,
+						std::move(args)
 					);
 					return curr_block;
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping"
-							  << "\n";
+					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
 				default:
 					throw base::NotYetImplemented("instruction in LowerToLirFunction");
@@ -281,7 +327,7 @@ namespace compiler::lir {
 			 */
 			void lowerTerminator(MutBlockRef curr_block, const mir::Instruction& mir_terminator) {
 				// @TODO
-				// curr_block alfredy in order
+				// curr_block already in order
 				CORE_ASSERT(
 					mir::isTerminating(mir_terminator.operation),
 					"non-Terminator in lowerTerminator"
@@ -296,7 +342,7 @@ namespace compiler::lir {
 				case mir::Operation::Branch: {
 					auto args              = getLocations(mir_terminator.arguments);
 					curr_block->terminator = Instruction{
-						mir2lirOperation(mir_terminator.operation), {}, std::move(args)
+						mir2lirOperation(mir_terminator.operation, false), {}, std::move(args)
 					};
 					break;
 				}
@@ -318,7 +364,11 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				return Function{
-					key.function->name, std::move(blocks), std::move(locals), std::move(block_order)
+					key.function->name,
+					ctx.query<tsl::QueryTypeLayout>(key.function->return_type),
+					std::move(blocks),
+					std::move(locals),
+					std::move(block_order),
 				};
 			}
 		};

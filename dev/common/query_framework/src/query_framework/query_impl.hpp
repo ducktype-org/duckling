@@ -44,7 +44,7 @@ namespace query::detail {
 		NodeID my_node;
 		bool   active = true;
 
-		ContextType(NodeID my_node): my_node(my_node){};
+		ContextType(NodeID my_node): my_node(my_node) {}
 		friend struct ContextMaker;
 
 	public:
@@ -74,7 +74,7 @@ namespace query::detail {
 		 * Log message to be shown to the user.
 		 * @param message The dia::Message to be logged.
 		 */
-		void log(base::unique_ptr<dia::Message> message) {
+		void log(Box<dia::Message> message) {
 			assertActive();
 			logger.log(std::move(message));
 		}
@@ -135,13 +135,15 @@ namespace query::detail {
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
 			);
 
-			// calculation:
-			auto&& result = QueryImplType::store(key, QueryImplType::provide(context, key), acd);
-
 			// epilog:
-			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n");
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
+			);
 
-			return result;
+			// This is all at the end, with defer above,
+			// to avoid false positive dangling reference warning.
+			// We can't do it move-less without using temporary
+			// lifetime extension, which causes the warning.
+			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 		}
 	}
 

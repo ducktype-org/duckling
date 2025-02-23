@@ -27,12 +27,12 @@ function main {
 	code: {
         mov_l64_imm         0,  1;
         cmpEq_l64_imm       0,  1;
-		
-        call_func          	0;
+
+        call_func          	check;
 
         mov_l64_imm         0,  1;
         mov_l64_imm         8,  0;
-        
+
         # flag from cmpEq should be on
         jmpRelIf_label      ok_label;
 

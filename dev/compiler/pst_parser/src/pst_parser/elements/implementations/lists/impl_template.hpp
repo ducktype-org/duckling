@@ -104,6 +104,18 @@ namespace pst {
 	public:
 		ListParsingTemplate() = delete;
 
+		/**
+		 * @brief General Element representing a list of Elements.
+		 *
+		 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
+		 * @tparam Self - Inheriting class type for construction purposes
+		 * @tparam NON_EMPTY - Should empty list be an error.
+		 * @tparam BRACKETS - expected brackets or None if not expected
+		 * @tparam isSeparator - Separator should always be skip-able with one skip.
+		 * @tparam isEnding - Check for successful ending.
+		 * @tparam getName - List name getter for errors.
+		 * @tparam ParsingClass - Class that defines parsing for the elements
+		 */
 		template<
 			class ListElements,
 			typename Self,
@@ -121,7 +133,7 @@ namespace pst {
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 				if (!state[0].isBracketGroup(BRACKETS)) {
-					state.log(base::make_unique<OpeningBracketMissingError<getName>>(
+					state.log(makeBox<OpeningBracketMissingError<getName>>(
 						state.getPosition(-1), BRACKETS
 					));
 					return nullptr;
@@ -133,7 +145,7 @@ namespace pst {
 			if (state.empty() || isEnding(state, 0)) {
 				// Handle empty expression
 				if constexpr (NON_EMPTY)
-					state.log(base::make_unique<EmptyListError<getName>>(state.getPosition(-1)));
+					state.log(makeBox<EmptyListError<getName>>(state.getPosition(-1)));
 			} else {
 				while (true) {
 					expr_length = 0;
@@ -152,12 +164,10 @@ namespace pst {
 								auto other = state.getPosition();
 								pos        = dia::SourcePosition(pos, other.getStart());
 							}
-							state.log(base::make_unique<EmptyFieldError<getName>>(pos));
+							state.log(makeBox<EmptyFieldError<getName>>(pos));
 							break;
 						} else {
-							state.log(base::make_unique<EmptyFieldError<getName>>(
-								state.getPosition(-1, 0)
-							));
+							state.log(makeBox<EmptyFieldError<getName>>(state.getPosition(-1, 0)));
 							state.parse(out).eatOne();
 							continue;
 						}
@@ -171,8 +181,7 @@ namespace pst {
 					if (isSeparator(state, 0))
 						state.parse(out).eatOne();
 					else
-						state.log(base::make_unique<NoSeparatorError<getName>>(state.getPosition())
-						);
+						state.log(makeBox<NoSeparatorError<getName>>(state.getPosition()));
 				}
 			}
 

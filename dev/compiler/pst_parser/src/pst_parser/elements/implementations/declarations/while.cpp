@@ -22,5 +22,5 @@ namespace pst {
 		out << "}";
 	}
 
-	void While::acceptVisitor(PstStmtVisitor& visitor) const { visitor.visitWhile(*this); }
+	void While::acceptVisitor(PstVisitor& visitor) const { visitor.visitWhile(*this); }
 }

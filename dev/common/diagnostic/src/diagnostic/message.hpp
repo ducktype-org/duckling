@@ -82,10 +82,68 @@
 #include <printer/printer_content.hpp>
 #include <concepts>
 
+#include <base/box.hpp>
 #include "source_position.hpp"
 
 namespace dia {
-	class Note;
+	/**
+	 * @brief A supplementary piece of information aimed to enhance a dia::Message.
+	 *
+	 * Examples of a Note include "note: previous declaration here" in a redeclaration message.
+	 *
+	 * Each Note can be converted to a printer::printerContentsSeq via the method
+	 * toPrinterContents of a DiagnosticToPrinterConverter.
+	 *
+	 * Each Note has two (not necessarily different) printable messages. One brief,
+	 * and one detailed. The latter may contain extra information about the source
+	 * or nature of the message and may be used to explain the message to beginners.
+	 */
+	class Note {
+	protected:
+		/**
+		 * @brief Convert the Note to an std::string containing the diagnostic minimum.
+		 * @return The brief std::string ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		virtual std::string toStringBrief() const
+			= 0;
+
+		/**
+		 * @brief Convert the Note to an std::string which possibly contains information
+		 * not included in the diagnostic minimum, thus not included in the brief message.
+		 * @return The detailed std::string ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		virtual std::string toStringDetailed() const {
+			// By default, the detailed version is the same as the brief version.
+			return toStringBrief();
+		}
+
+	public:
+		/**
+		 * @brief Get the SourcePosition relevant to this Note, if it exists.
+		 * @return The SourcePosition relevant to this Note.
+		 */
+		[[nodiscard]]
+		virtual base::Optional<SourcePosition> getSourcePosition() const {
+			return {};
+		}
+
+		/**
+		 * @brief Get an std::string ready to be printed for the user to view.
+		 *
+		 * @param detailed Whether to include more details than the diagnostic minimum. These
+		 * details may include extra information about the source or nature of the message and
+		 * may be used to explain the message to beginners.
+		 * @return An std::string ready to be printed for the user.
+		 */
+		[[nodiscard]]
+		std::string toString(bool detailed) const {
+			return detailed ? toStringBrief() : toStringDetailed();
+		}
+
+		virtual ~Note() noexcept = default;
+	};
 
 	/**
 	 * @brief Abstract base class for storing diagnostic messages generated during the compilation
@@ -101,8 +159,8 @@ namespace dia {
 	 * an arbitrary number of Notes, which provide additional, helpful information.
 	 */
 	class Message {
-		SourcePosition                      source_position;
-		std::vector<base::unique_ptr<Note>> notes{};
+		SourcePosition         source_position;
+		std::vector<Box<Note>> notes{};
 		// @FIXME: should we include a `cause` field here?
 		// Do we expect to detect when an error is caused by another error?
 
@@ -231,16 +289,16 @@ namespace dia {
 		 * @return The notes added to this Message.
 		 */
 		[[nodiscard]]
-		const std::vector<base::unique_ptr<Note>>& getNotes() const {
+		const std::vector<Box<Note>>& getNotes() const {
 			return notes;
 		}
 
 		/**
 		 * @brief Add a Note to this Message.
 		 *
-		 * @param note_ptr A base::unique_ptr to the Note to be added.
+		 * @param note_ptr A Box to the Note to be added.
 		 */
-		void addNote(base::unique_ptr<Note> note_ptr) { notes.emplace_back(note_ptr.release()); }
+		void addNote(Box<Note> note_ptr) { notes.emplace_back(std::move(note_ptr)); }
 
 		virtual ~Message() noexcept = default;
 	};
@@ -254,19 +312,18 @@ namespace dia {
 	 * and C++ does not support static virtual methods.
 	 */
 	template<typename Converter>
-	concept DiagnosticToPrinterConverter = requires(
-		base::c_borrow_ptr<Message> message, base::c_borrow_ptr<Note> note, bool detailed
-	) {
-		{
-			Converter::toPrinterContents(message, detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-		{
-			Converter::toPrinterContents(note, detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-		{
-			Converter::listToPrinterContents(std::vector<base::c_borrow_ptr<Message>>(), detailed)
-		} -> std::same_as<printer::PrinterContentsSeq>;
-	};
+	concept DiagnosticToPrinterConverter
+		= requires(CRef<Message> message, CRef<Note> note, bool detailed) {
+			  {
+				  Converter::toPrinterContents(message, detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+			  {
+				  Converter::toPrinterContents(note, detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+			  {
+				  Converter::listToPrinterContents(std::vector<CRef<Message>>(), detailed)
+			  } -> std::same_as<printer::PrinterContentsSeq>;
+		  };
 
 	/**
 	 * @brief Abstract base class for storing errors generated during the compilation process.
@@ -366,65 +423,6 @@ namespace dia {
 		explicit Hint(const SourcePosition& source_position): Message(source_position) {}
 	};
 
-	/**
-	 * @brief A supplementary piece of information aimed to enhance a dia::Message.
-	 *
-	 * Examples of a Note include "note: previous declaration here" in a redeclaration message.
-	 *
-	 * Each Note can be converted to a printer::printerContentsSeq via the method
-	 * toPrinterContents of a DiagnosticToPrinterConverter.
-	 *
-	 * Each Note has two (not necessarily different) printable messages. One brief,
-	 * and one detailed. The latter may contain extra information about the source
-	 * or nature of the message and may be used to explain the message to beginners.
-	 */
-	class Note {
-	protected:
-		/**
-		 * @brief Convert the Note to an std::string containing the diagnostic minimum.
-		 * @return The brief std::string ready to be printed for the user.
-		 */
-		[[nodiscard]]
-		virtual std::string toStringBrief() const
-			= 0;
-
-		/**
-		 * @brief Convert the Note to an std::string which possibly contains information
-		 * not included in the diagnostic minimum, thus not included in the brief message.
-		 * @return The detailed std::string ready to be printed for the user.
-		 */
-		[[nodiscard]]
-		virtual std::string toStringDetailed() const {
-			// By default, the detailed version is the same as the brief version.
-			return toStringBrief();
-		}
-
-	public:
-		/**
-		 * @brief Get the SourcePosition relevant to this Note, if it exists.
-		 * @return The SourcePosition relevant to this Note.
-		 */
-		[[nodiscard]]
-		virtual base::Optional<SourcePosition> getSourcePosition() const {
-			return {};
-		}
-
-		/**
-		 * @brief Get an std::string ready to be printed for the user to view.
-		 *
-		 * @param detailed Whether to include more details than the diagnostic minimum. These
-		 * details may include extra information about the source or nature of the message and
-		 * may be used to explain the message to beginners.
-		 * @return An std::string ready to be printed for the user.
-		 */
-		[[nodiscard]]
-		std::string toString(bool detailed) const {
-			return detailed ? toStringBrief() : toStringDetailed();
-		}
-
-		virtual ~Note() noexcept = default;
-	};
-
 	class NoteWithPosition: public Note {
 		/**
 		 * @brief The source position relevant to this note, e.g. the position of an original
@@ -490,6 +488,10 @@ namespace dia {
 		[[nodiscard]]
 		std::string toStringBrief() const override {
 			return message;
+		}
+
+		static auto make(const SourcePosition& source_position, std::string message) {
+			return makeBox<PlaceholderMessage>(source_position, std::move(message));
 		}
 	};
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "is_complete.hpp"
 #include "ref.hpp"
 
 namespace base {
@@ -14,6 +15,8 @@ namespace base {
 		 */
 		template<class T>
 		struct BoxPtrDeleter {
+			static_assert(IS_COMPLETE_V<T>);
+
 			static void del(T* ptr) { delete ptr; }
 		};
 	}
@@ -152,8 +155,8 @@ namespace base {
 
 	public:
 		MBox() = default;
-		MBox(std::nullptr_t){};
 
+		MBox(std::nullptr_t) {}
 
 		MBox(const MBox& other) = delete;
 

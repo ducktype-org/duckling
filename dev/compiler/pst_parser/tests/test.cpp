@@ -22,7 +22,7 @@
 	}
 
 template<class T>
-requires std::is_base_of_v<pst::PstStmtVisitor, T> class PstStmtVisitorTester final: public T {
+requires std::is_base_of_v<pst::PstVisitor, T> class PstVisitorTester final: public T {
 public:
 	int counter = 0;
 
@@ -73,6 +73,7 @@ public:
 		TESTER_ADD_TEST(testMissingSemiErr);
 		TESTER_ADD_TEST(testVisitor);
 		TESTER_ADD_TEST(testVisitorAlternative);
+		TESTER_ADD_TEST(testFunctionParameterVisitors);
 
 		// TESTER_ADD_TEST(testParsingHandler)
 	}
@@ -81,17 +82,35 @@ private:
 	pst::PST<> prepare(const std::string& filename) { return { fs::FilePath(filename) }; }
 
 	void testVisitorImpl(const std::string& filename, usize expected_counter) {
-		auto pst            = prepare(path(filename));
-		auto panicky_vistor = PstStmtVisitorTester<pst::PstStmtVisitorPanicky>();
-		auto empty_vistor   = PstStmtVisitorTester<pst::PstStmtVisitorEmpty>();
-		for (auto&& stmt: pst.getRootElement()->getStatements()) {
-			assertThrows<base::Panic>(
-				[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
-			);
-			stmt->acceptVisitor(empty_vistor);
+		auto pst = prepare(path(filename));
+		{
+			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			for (auto& stmt: pst.getRootElement()->getStatements()) {
+				assertThrows<base::Panic>(
+					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
+				);
+				stmt->acceptVisitor(empty_vistor);
+			}
+			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
+			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
 		}
-		ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
-		ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+
+		// check that is also works when called from LangElement:
+		{
+			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
+			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
+			for (auto& stmt: pst.getRootElement()->getStatements()) {
+				Ref<pst::LangElement> lang_stmt = &*stmt;
+				assertThrows<base::Panic>(
+					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
+					"LangElement did not call it\'s visitor"
+				);
+				lang_stmt->acceptVisitor(empty_vistor);
+			}
+			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
+			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
+		}
 	}
 
 	void testVisitor() { testVisitorImpl("snippets/all_statements.txt", 18); }
@@ -176,6 +195,40 @@ private:
 		assertTrue(
 			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
+	}
+
+	void testFunctionParameterVisitors() {
+		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
+		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
+
+		auto fun = dynamic_cast<const pst::Fun*>(&*pst.getRootElement()->getStatements().at(0));
+		ASSERT_TRUE(fun != nullptr);
+
+		auto params = fun->getParams();
+		ASSERT_EQUAL(params->size(), 4);
+
+		struct PstParamVisitor: public pst::PstVisitorPanicky {
+			usize       counter   = 0;
+			bool        good_name = false;
+			base::StrID expected_name;
+
+			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
+
+			void visitFunParam(const pst::FunParam& param) override {
+				counter++;
+				good_name = param.getName() == expected_name;
+			}
+		};
+
+		std::array names = { "a", "b", "c", "d" };
+
+		usize i = 0;
+		for (auto param: *params) {
+			PstParamVisitor visitor(base::StrID(names.at(i)));
+			param->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.counter, 1);
+			i++;
+		}
 	}
 
 

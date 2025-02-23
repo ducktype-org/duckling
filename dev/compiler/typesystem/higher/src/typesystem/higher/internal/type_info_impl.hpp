@@ -13,13 +13,6 @@
 #include <helios/symbols/symbols.hpp>
 
 namespace tsh::internal {
-	std::vector<base::unique_ptr<const TypeInfoImpl>>& getTypes();
-
-	template<std::derived_from<TypeInfoImpl> T>
-	void pushType(base::unique_ptr<T>&& type) {
-		getTypes().emplace_back(base::unique_ptr<TypeInfoImpl>(std::move(type)));
-	}
-
 	/**
 	 * @brief The TypeInfoImpl class and its subclasses are a heavy type implementation hierarchy.
 	 *
@@ -44,7 +37,7 @@ namespace tsh::internal {
 		/**
 		 * @brief The Kind of the type described by an object of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Any;
+		static constexpr Kind STATIC_KIND = Kind::Any;
 
 		/**
 		 * @brief Gets the Kind of the type described by this object.
@@ -129,17 +122,24 @@ namespace tsh::internal {
 		std::string representation = "UNNAMED";
 	};
 
+	std::vector<Box<const TypeInfoImpl>>& getTypes();
+
+	template<std::derived_from<TypeInfoImpl> T>
+	void pushType(Box<T>&& type) {
+		getTypes().emplace_back(std::move(type));
+	}
+
 	class UnitInfoImpl final: public TypeInfoImpl {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Unit;
+		static constexpr Kind STATIC_KIND = Kind::Unit;
 
 		UnitInfoImpl() { representation = "unit"; }
 	};
@@ -148,13 +148,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Void;
+		static constexpr Kind STATIC_KIND = Kind::Void;
 
 		VoidInfoImpl() { representation = "void"; }
 	};
@@ -163,13 +163,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Byte;
+		static constexpr Kind STATIC_KIND = Kind::Byte;
 
 		explicit ByteInfoImpl() { representation = "byte"; }
 
@@ -184,13 +184,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Bool;
+		static constexpr Kind STATIC_KIND = Kind::Bool;
 
 		explicit BoolInfoImpl() { representation = "bool"; }
 
@@ -205,13 +205,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Char;
+		static constexpr Kind STATIC_KIND = Kind::Char;
 
 		explicit CharInfoImpl() { representation = "char"; }
 
@@ -229,13 +229,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Integral;
+		static constexpr Kind STATIC_KIND = Kind::Integral;
 
 		[[nodiscard]]
 		Bits getSize() const {
@@ -273,13 +273,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Float;
+		static constexpr Kind STATIC_KIND = Kind::Float;
 
 		[[nodiscard]]
 		Bits getSize() const {
@@ -303,13 +303,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::RawPointer;
+		static constexpr Kind STATIC_KIND = Kind::RawPointer;
 
 		explicit RawPointerInfoImpl(const bool is_mutable): is_mutable(is_mutable) {
 			representation = "raw_pointer";
@@ -337,13 +337,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Pointer;
+		static constexpr Kind STATIC_KIND = Kind::Pointer;
 
 		[[nodiscard]]
 		ComponentType getComponent() const {
@@ -387,13 +387,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Reference;
+		static constexpr Kind STATIC_KIND = Kind::Reference;
 
 		[[nodiscard]]
 		TypeInfo getUnderlyingType() const {
@@ -452,13 +452,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Tuple;
+		static constexpr Kind STATIC_KIND = Kind::Tuple;
 
 		[[nodiscard]]
 		const std::vector<ComponentType>& getComponents() const {
@@ -496,13 +496,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Function;
+		static constexpr Kind STATIC_KIND = Kind::Function;
 
 		[[nodiscard]]
 		const std::vector<TypeInfo>& getParameterTypes() const {
@@ -546,13 +546,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Variant;
+		static constexpr Kind STATIC_KIND = Kind::Variant;
 
 		explicit VariantInfoImpl(const std::vector<TypeInfo>& variant_types);
 
@@ -573,13 +573,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static inline Kind staticKind = Kind::Class;
+		static constexpr Kind STATIC_KIND = Kind::Class;
 
 		[[nodiscard]]
 		const TypeInterface& getInterface(query::Context& ctx) const override;
@@ -596,8 +596,8 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		base::Optional<compiler::helios::SymID> getBaseClassSymbol(query::Context& ctx) const {
-			return getBaseClassType(ctx).map([](ClassInfo classInfo) {
-				return classInfo.getSymbol();
+			return getBaseClassType(ctx).map([](ClassInfo class_info) {
+				return class_info.getSymbol();
 			});
 		}
 
@@ -622,13 +622,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Namespace;
+		static constexpr Kind STATIC_KIND = Kind::Namespace;
 
 		NamespaceInfoImpl() = default;
 	};
@@ -637,13 +637,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Module;
+		static constexpr Kind STATIC_KIND = Kind::Module;
 
 		ModuleInfoImpl() = default;
 	};
@@ -652,13 +652,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Meta;
+		static constexpr Kind STATIC_KIND = Kind::Meta;
 
 		explicit MetaInfoImpl() { representation = "META"; }
 	};
@@ -667,13 +667,13 @@ namespace tsh::internal {
 	public:
 		[[nodiscard]]
 		Kind getKind() const override {
-			return staticKind;
+			return STATIC_KIND;
 		}
 
 		/**
 		 * @brief The Kind of types described by objects of this class.
 		 */
-		static constexpr Kind staticKind = Kind::Import;
+		static constexpr Kind STATIC_KIND = Kind::Import;
 
 		explicit ImportInfoImpl() = default;
 	};

@@ -5,7 +5,7 @@
 #pragma once
 
 #include <base/ints.hpp>
-#include <map>
+#include <unordered_map>
 
 /**
  * Opcodes names conventions:
@@ -29,14 +29,14 @@
 
 namespace vm {
 	enum class OpcodeFix8 : u16 {
-#define DEF_OPCODE(opcode) opcode,
+#define HANDLE_OPCODE(opcode) opcode,
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
-		COUNT,
+#undef HANDLE_OPCODE
 	};
-	const std::map<std::string, OpcodeFix8> str_to_OpcodeFix8{
-#define DEF_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
+	// @TODO: Add constructors to base::HashMap to allow usage of base::HashMap here.
+	const std::unordered_map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
+#define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 	};
 }

@@ -74,7 +74,7 @@ namespace base {
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
-#define CORE_ASSERT(cond, what) \
+#define CORE_ASSERT(cond, what...) \
 	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
 
 /**

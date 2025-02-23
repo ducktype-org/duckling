@@ -3,6 +3,7 @@
 #include <vector>
 #include <variant>
 #include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/types.hpp>
 #include <typesystem/higher/type_desc.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
@@ -29,6 +30,12 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 		There could be single operation for all Add, Sub, etc, and single one for all comparisons.
 	*/
 	IntegerAdd,
+	IntegerSub,
+	IntegerMul,
+	IntegerDiv,
+	IntegerMod,
+	IntegerLt,
+	IntegerNeg,
 
 	/** See readme.md for more info about destruct. */
 	Destruct,
@@ -74,6 +81,12 @@ namespace compiler::mir {
 		bool operator==(const MirIntegerConst& other) const = default;
 	};
 
+	struct MirBoolConst final {
+		bool value;
+
+		bool operator==(const MirBoolConst& other) const = default;
+	};
+
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
@@ -86,22 +99,24 @@ namespace compiler::mir {
 	struct MirLocal final {
 		LocalID id;
 
-		// @TODO: type
-
-		// for now we just keep HELIOS id:
-		helios::SymID   helios_id;
-		tsh::TypeDesc<> type;
-		helios::ScopeID lifetime_scope;
+		// Locals without a helios_id are locals created for temporary values
+		base::Optional<helios::SymID> helios_id;
+		tsh::TypeDesc<>               type;
+		helios::ScopeID               lifetime_scope;
 
 	private:
-		// @note: making MirLocal from helios_id
-		// is a temporary solution.
-		// It will not work with temporary values for example.
-		// it might work poorly for template/generic instantiations.
+		// @note: Constructing MirLocal from helios_id
+		// might work poorly for template/generic instantiations.
 
 		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
+			  type(type),
+			  lifetime_scope(lifetime_scope) {}
+
+		MirLocal(tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+			  id(LocalID::next()),
+			  helios_id({}),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
@@ -126,12 +141,14 @@ namespace compiler::mir {
 		// @TODO: global, literal, func-literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, LocalRef, BlockID>;
+		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
 
 		ValueType value;
 
 	public:
 		MirLocation(MirIntegerConst value): value(value) {}
+
+		MirLocation(MirBoolConst value): value(value) {}
 
 		MirLocation(LocalRef value): value(value) {}
 
@@ -270,6 +287,7 @@ namespace compiler::mir {
 	 */
 	struct Function final {
 		base::StrID                  name;
+		tsh::TypeInfo                return_type;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -291,6 +309,7 @@ namespace compiler::mir {
 
 		Function(
 			base::StrID                  name,
+			tsh::TypeInfo                return_type,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,

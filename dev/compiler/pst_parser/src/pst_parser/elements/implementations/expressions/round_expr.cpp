@@ -22,7 +22,7 @@ namespace pst::expr {
 
 		if (not(length == 1 && state[0].isBracketGroup(lexer::Token::Round))) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(base::make_unique<BadRoundExprError>(
+			state.log(makeBox<BadRoundExprError>(
 				dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd())
 			));
 		}
@@ -45,5 +45,7 @@ namespace pst::expr {
 		out << "}";
 	}
 
-	void RoundExpr::acceptVisitor(PstExprVisitor& visitor) const { visitor.visitRoundExpr(*this); }
+	void RoundExpr::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitRoundExpr(*this);
+	}
 }

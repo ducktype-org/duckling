@@ -6,8 +6,10 @@
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <init/init.hpp>
 
 int main(int argc, const char* argv[]) {
+	init::InitObject _;
 	// @TODO: add to helios init
 	lexer::init();
 	pst::init();

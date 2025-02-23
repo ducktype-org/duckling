@@ -11,6 +11,13 @@ namespace pst {
 #define DECL_CHILD_CONSTRUCTOR_NO_KIND(class_name) \
 	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) {}
 
+	/**
+	 * @brief Common ancestor element for code declarations.
+	 *
+	 * Code declarations are statements that can generally create new symbols like function
+	 * declarations, variable declarations or language construct with names like fors, blocks and
+	 * whiles
+	 */
 	class CodeDecl: public Decl {
 	public:
 		DECL_CHILD_CONSTRUCTOR_NO_KIND(CodeDecl);
@@ -26,6 +33,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Top-level element that is the root of the pst of a single file.
+	 */
 	class TopLevel final: public Decl {
 		std::vector<MBox<Stmt>> statements;
 
@@ -52,9 +62,12 @@ namespace pst {
 			return true;
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Block declaration
+	 */
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		MBox<CodeBlock>         code_block = nullptr;
@@ -73,9 +86,12 @@ namespace pst {
 			return "Block";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Namespace declaration
+	 */
 	class Namespace final: public Decl {
 		tpc::Identifier name;
 		MBox<CodeBlock> body = nullptr;
@@ -102,9 +118,12 @@ namespace pst {
 			return "Namespace";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Class declaration
+	 */
 	class Class final: public Decl {
 	private:
 		tpc::Identifier      name;
@@ -149,14 +168,17 @@ namespace pst {
 		// 	return true;
 		// }
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Variable declaration
+	 */
 	class Variable final: public Decl {
-		tpc::Identifier   name;
-		MBox<ExprElement> type     = nullptr;
-		MBox<ExprElement> value    = nullptr;
-		bool              is_const = true;
+		tpc::Identifier       name;
+		MBox<CommaExprHolder> type     = nullptr;
+		MBox<CommaExprHolder> value    = nullptr;
+		bool                  is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
@@ -169,12 +191,12 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		MCRef<ExprElement> getType() const {
+		MCRef<ExprHolder> getType() const {
 			return type.ref();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getValue() const {
+		MCRef<ExprHolder> getValue() const {
 			return value.ref();
 		}
 
@@ -192,14 +214,17 @@ namespace pst {
 			return is_const ? "Let" : "Var";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief Function declaration
+	 */
 	class Fun final: public Decl {
-		tpc::Identifier                   name;
-		MBox<ParamList>                   params = nullptr;
-		base::Optional<MBox<ExprElement>> ret;
-		MBox<CodeBlockOrStmt>             body = nullptr;
+		tpc::Identifier                       name;
+		MBox<ParamList>                       params = nullptr;
+		base::Optional<MBox<CommaExprHolder>> ret;
+		MBox<CodeBlockOrStmt>                 body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
@@ -218,8 +243,8 @@ namespace pst {
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
-		base::Optional<MCRef<ExprElement>> getRet() const {
-			return ret.map([](const auto& v) { return v.ref(); });
+		base::Optional<MCRef<ExprHolder>> getRet() const {
+			return ret.map([](const auto& v) -> MCRef<ExprHolder> { return v.ref(); });
 		}
 
 		[[nodiscard]]
@@ -236,9 +261,12 @@ namespace pst {
 			return "Function";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief If declaration
+	 */
 	class If final: public CodeDecl {
 		MBox<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
@@ -260,7 +288,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getCondition() const {
+		MCRef<ExprHolder> getCondition() const {
 			return condition->getExpr();
 		}
 
@@ -269,9 +297,12 @@ namespace pst {
 			return body.ref();
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief While declaration
+	 */
 	class While final: public CodeDecl {
 		MBox<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
@@ -291,14 +322,17 @@ namespace pst {
 			return "While";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
+	/**
+	 * @brief For declaration
+	 */
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		tpc::Identifier         iterator;
-		MBox<ExprElement>       type     = nullptr;
-		MBox<ExprElement>       iterable = nullptr;
+		MBox<ForTypeExprHolder> type     = nullptr;
+		MBox<CommaExprHolder>   iterable = nullptr;
 		MBox<CodeBlockOrStmt>   body     = nullptr;
 
 	public:
@@ -313,7 +347,7 @@ namespace pst {
 			return "For";
 		}
 
-		void acceptVisitor(PstStmtVisitor& visitor) const override;
+		void acceptVisitor(PstVisitor& visitor) const override;
 	};
 
 }

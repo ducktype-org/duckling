@@ -2,7 +2,9 @@
 
 #include <variant>
 #include <filesystem/file.hpp>
-#include <core/process/memory/memory_data/pointer.hpp>
+
+#include <core/process/memory/pointer.hpp>
+#include <core/process/memory/block.hpp>
 #include "process_info.hpp"
 
 namespace vm::api {
@@ -29,6 +31,10 @@ namespace vm::api {
 
 		struct Step {};
 
+		struct WaitForBreakpoint {};
+
+		struct ExecutionPosition {};
+
 		struct TypeMetadata {
 			std::string type_name;
 		};
@@ -39,7 +45,7 @@ namespace vm::api {
 
 		struct Memory {
 			Pointer pointer;
-			u64     size;
+			u64     size{};
 		};
 
 		struct Attach {
@@ -59,7 +65,9 @@ namespace vm::api {
 		request::Stop,
 		request::Run,
 		request::Join,
-		request::Step>;
+		request::Step,
+		request::WaitForBreakpoint,
+		request::ExecutionPosition>;
 
 	using IORequest
 		= std::variant<request::Input, request::Output, request::Attach, request::Detach>;

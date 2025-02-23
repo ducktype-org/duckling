@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 import os
 import pathlib
@@ -6,28 +6,33 @@ import sys
 import shutil
 
 import click
-import requests
 
-from scripts.toolbox.helpers import (
+from scripts.py.toolbox.integration.tester import (
+    DEFAULT_LOG_FILE_PATH,
+    integration_tests_impl,
+)
+from scripts.py.toolbox.helpers import (
     abort_if_false,
     bash_command,
     exit_with_error,
     get_llvm_strings,
     log_info,
     log_new_line,
-    make_pretty_command,
     with_venv,
+    default_compiler_from_ctx,
+    check_if_compilers_are_compatible,
 )
-from scripts.toolbox.internet_file import (
+from scripts.py.toolbox.internet_file import (
     InternetFile,
-    callback_chmod,
     callback_move,
     callback_remove,
     callback_unTAR,
 )
 
-from scripts.toolbox.cpp_linter import simulate_cpp_linter
-from scripts.toolbox.duck_linter import duck_linter_impl
+from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
+from scripts.py.toolbox.duck_linter import duck_linter_impl
+
+# @todo move all other implementation to separate files
 
 DATA_USER = "dev"
 # @FUTURE: change this password and hide it:
@@ -35,12 +40,6 @@ DATA_PASS = "7ocwXWOAwg="
 BUILD_SYSTEMS = click.Choice(["Ninja", "Unix Makefiles"], case_sensitive=False)
 
 FILES_TO_DOWNLOAD: list[InternetFile] = [
-    InternetFile(
-        "scripts/downloads/clang-format",
-        "http://internal.ducktype.org/static/bin/clang-format",
-        auth=(DATA_USER, DATA_PASS),
-        after_download=[(callback_chmod, "clang-format", "u+x")],
-    ),
     InternetFile(
         "scripts/downloads/ccache.tar.xz",
         "https://github.com/ccache/ccache/releases/download/v4.9.1/ccache-4.9.1-linux-x86_64.tar.xz",
@@ -58,7 +57,12 @@ def cli():
     pass
 
 
-def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, coverage):
+def setup_build_impl(
+    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, gcov_version, ccache, coverage
+):
+
+    check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
+
     bld = pathlib.Path(build_dir)
     if bld.exists():
         # Delete old cache
@@ -67,17 +71,20 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
             shutil.rmtree(bld / pathlib.Path("CMakeFiles"))
         except FileNotFoundError:
             pass
-    cmd = f"""
-        cmake
-         -G "{build_system}"
-         -B {build_dir}
-         -D CMAKE_BUILD_TYPE={type}
-         -D BUILD_DOCS={'ON' if docs else 'OFF'}
-         -D CMAKE_CXX_COMPILER={compiler}
-         -D USE_CCACHE={'ON' if ccache else 'OFF'}
-         -D ENABLE_COVERAGE={'true' if coverage else 'false'}
-    """
-    cmd = make_pretty_command(cmd)
+    cmd = " ".join(
+        [
+            f"cmake",
+            f'-G "{build_system}"',
+            f"-B {build_dir}",
+            f"-D CMAKE_BUILD_TYPE={type}",
+            f"-D BUILD_DOCS={'ON' if docs else 'OFF'}",
+            f"-D CMAKE_CXX_COMPILER={cxx_compiler}",
+            f"-D CMAKE_C_COMPILER={cc_compiler}",
+            f"-D GCOV_VERSION={gcov_version}",
+            f"-D USE_CCACHE={'ON' if ccache else 'OFF'}",
+            f"-D ENABLE_COVERAGE={'true' if coverage else 'false'}",
+        ]
+    )
 
     log_info("Setting up a build folder...")
     if docs:
@@ -122,11 +129,22 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
     is_flag=True,
 )
 @click.option(
+    "-x",
+    "--cxx-compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cxx_compiler"),
+)
+@click.option(
     "-c",
-    "--compiler",
-    prompt="Compiler path",
-    help="A path to the complier to compile with",
-    default="g++",
+    "--cc-compiler",
+    prompt="C compiler path",
+    help="A path to the C complier to compile with",
+    # this overrides the click.Option class to use the default_compiler_from_ctx
+    # instead, so it can get ctx and infer and set the default value
+    cls=default_compiler_from_ctx("cc_compiler"),
 )
 @click.option(
     "--ccache",
@@ -143,6 +161,13 @@ def setup_build_impl(build_dir, build_system, type, docs, compiler, ccache, cove
     type=bool,
     default=False,
     is_flag=True,
+)
+# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
+@click.option(
+    "--gcov-version",
+    prompt="GCOV version",
+    help="GCOV version that will be passed to find_program in CMAKE",
+    default="gcov-14",
 )
 def setup_build(*args, **kwargs):
     """Makes a build folder"""
@@ -332,9 +357,9 @@ def test_impl(build_dir, memcheck):
     "--memcheck",
     prompt="Memcheck",
     help="Whether or not to perform memcheck with valgrind",
-    type=bool,
+    type=click.BOOL,
     default=False,
-    is_flag=True,
+    show_default=True,
 )
 def test(*args, **kwargs):
     """Performs tests of the code"""
@@ -404,16 +429,16 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-17 or clang-tidy",
-    default="clang-tidy-17",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
 )
 @click.option(
     "-f",
     "--format",
     "clang_format_path",
     prompt="clang-format path",
-    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="scripts/downloads/clang-format",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
 )
 @click.option(
     "-b",
@@ -504,6 +529,54 @@ def duck_linter(*args, **kwargs):
     passed = duck_linter_impl(*args, **kwargs)
     if not passed:
         exit_with_error("Linting failed.")
+
+
+@cli.command()
+@click.option(
+    "-c",
+    "--clean",
+    is_flag=True,
+    default=False,
+    help="Runs `Clean` command on every test. If passed, no tests are ran.",
+)
+@click.option(
+    "-d",
+    "--dry",
+    is_flag=True,
+    default=False,
+    help="Only prints commands to be executed instead of really executing them",
+)
+@click.option(
+    "-t",
+    "--filter",
+    type=str,
+    default="",
+    help="Run tests under the specified path prefix (e.g., 'tests/C++' or 'tests/C++/Case1').",
+)
+@click.option(
+    "-f",
+    "--fail-fast",
+    is_flag=True,
+    default=False,
+    help="Whether to fail upon a testcase failure. If not passed, runs all tests regardless of their result.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Prints some debug information about test cases",
+)
+@click.option(
+    "-l",
+    "--log-file",
+    type=str,
+    default=str(DEFAULT_LOG_FILE_PATH),
+    help="Path to a log file. A log file contains e.g. dumps of program incorrect IO",
+)
+def itest(*args, **kwargs):
+    """Runs integration tests"""
+    integration_tests_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

@@ -56,7 +56,7 @@ namespace tpc {
 
 		/**
 		 * @return true If token on the relative position is an end of file.
-		 * @return true If token on the relative position is not an end of file.
+		 * @return false If token on the relative position is not an end of file.
 		 */
 		[[nodiscard]]
 		bool isEOF(i64 fwd = 0) const;
@@ -86,7 +86,7 @@ namespace tpc {
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void log(base::unique_ptr<dia::Message> message) { err.log(std::move(message)); }
+		void log(Box<dia::Message> message) { err.log(std::move(message)); }
 
 		/**
 		 * @brief Get position relative to the current token.

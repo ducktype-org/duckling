@@ -5,8 +5,7 @@
 
 #pragma once
 #include <regex>
-#include <future>
-#include "filesystem/file.hpp"
+#include "file.hpp"
 
 namespace fs {
 	/**
