@@ -13,7 +13,7 @@
 #include <string>
 
 // clang-format off
-MAKE_STRINGIFYABLE_ENUM(lsp, i8, Type,
+MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 	Namespace,
 	Class,
 	Enum,
