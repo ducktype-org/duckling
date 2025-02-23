@@ -64,10 +64,10 @@ crow::response toResponse(const cpp::result<void, E>& x) {
  * @param port The port number to run the server on.
  */
 void server(i32 port) {
-	crow::SimpleApp app;
-	pst::init();
+	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
+	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -95,9 +95,9 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/put_file/<string>/<string>")
 	([&files](const std::string& base64_path, const std::string& base64_content) {
 		try {
-			const auto path    = base64::decode_into<std::string>(base64_path);
-			const auto content = base64::decode_into<std::string>(base64_content);
-			const auto file    = fs::FilePath::createTempFile(content);
+			const auto  path    = base64::decode_into<std::string>(base64_path);
+			const auto  content = base64::decode_into<std::string>(base64_content);
+			const auto& file    = fs::FilePath::createTempFile(content);
 			files.erase(path);
 			files.emplace(path, file);
 			return crow::response(200, "OK");
@@ -117,7 +117,7 @@ void server(i32 port) {
 	([&files](const std::string& base64_path) {
 		try {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto        file   = files.at(path);
+			const auto&       file   = files.at(path);
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
@@ -143,7 +143,7 @@ void server(i32 port) {
 	([&files](const std::string& base64_path) {
 		try {
 			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto        file   = files.at(path);
+			const auto&       file   = files.at(path);
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
