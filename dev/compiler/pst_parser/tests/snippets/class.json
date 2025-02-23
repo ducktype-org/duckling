@@ -1,762 +1,762 @@
 {
-    "position": {
-        "sourceStart": 2,
-        "sourceEnd": 295
-    },
-    "Top Level": [
-        {
-            "position": {
-                "sourceStart": 2,
-                "sourceEnd": 295
-            },
-            "Class": {
-                "name": {
-                    "Name": "xxx"
-                },
-                "Base": {
-                    "position": {
-                        "sourceStart": 20,
-                        "sourceEnd": 22
-                    },
-                    "Identifier Expression": {
-                        "name": {
-                            "Name": "aaa"
-                        }
-                    }
-                },
-                "Implements": {
-                    "position": {
-                        "sourceStart": 35,
-                        "sourceEnd": 43
-                    },
-                    "inheritance list": [
-                        {
-                            "position": {
-                                "sourceStart": 35,
-                                "sourceEnd": 37
-                            },
-                            "Top Level Expression": {
-                                "expr": {
-                                    "position": {
-                                        "sourceStart": 35,
-                                        "sourceEnd": 37
-                                    },
-                                    "Identifier Expression": {
-                                        "name": {
-                                            "Name": "bbb"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "position": {
-                                "sourceStart": 40,
-                                "sourceEnd": 43
-                            },
-                            "Top Level Expression": {
-                                "expr": {
-                                    "position": {
-                                        "sourceStart": 40,
-                                        "sourceEnd": 43
-                                    },
-                                    "Identifier Expression": {
-                                        "name": {
-                                            "Name": "cccc"
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                    ]
-                },
-                "body": {
-                    "position": {
-                        "sourceStart": 45,
-                        "sourceEnd": 295
-                    },
-                    "Class Block": [
-                        {
-                            "position": {
-                                "sourceStart": 48,
-                                "sourceEnd": 54
-                            },
-                            "Class Field": {
-                                "is mutable": "true",
-                                "name": {
-                                    "Name": "x"
-                                },
-                                "type": {
-                                    "position": {
-                                        "sourceStart": 51,
-                                        "sourceEnd": 53
-                                    },
-                                    "Top Level Expression": {
-                                        "expr": {
-                                            "position": {
-                                                "sourceStart": 51,
-                                                "sourceEnd": 53
-                                            },
-                                            "Keyword Expression": {
-                                                "keyword": "i32"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "position": {
-                                "sourceStart": 57,
-                                "sourceEnd": 75
-                            },
-                            "specifiers": [
-                                "private",
-                            ],
-                            "Class Field": {
-                                "is mutable": "true",
-                                "name": {
-                                    "Name": "y"
-                                },
-                                "type": {
-                                    "position": {
-                                        "sourceStart": 68,
-                                        "sourceEnd": 70
-                                    },
-                                    "Top Level Expression": {
-                                        "expr": {
-                                            "position": {
-                                                "sourceStart": 68,
-                                                "sourceEnd": 70
-                                            },
-                                            "Keyword Expression": {
-                                                "keyword": "i32"
-                                            }
-                                        }
-                                    }
-                                },
-                                "initial": {
-                                    "position": {
-                                        "sourceStart": 74,
-                                        "sourceEnd": 74
-                                    },
-                                    "Top Level Expression": {
-                                        "expr": {
-                                            "position": {
-                                                "sourceStart": 74,
-                                                "sourceEnd": 74
-                                            },
-                                            "Value Expr": {
-                                                "number": "5"
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        {
-                            "position": {
-                                "sourceStart": 79,
-                                "sourceEnd": 118
-                            },
-                            "Class Method": {
-                                "name": {
-                                    "Name": "foo"
-                                },
-                                "parameters": {
-                                    "position": {
-                                        "sourceStart": 86,
-                                        "sourceEnd": 101
-                                    },
-                                    "function parameter list": [
-                                        {
-                                            "position": {
-                                                "sourceStart": 87,
-                                                "sourceEnd": 92
-                                            },
-                                            "Function Parameter": {
-                                                "Function Parameter": {
-                                                    "name": {
-                                                        "Name": "a"
-                                                    },
-                                                    "type": {
-                                                        "position": {
-                                                            "sourceStart": 90,
-                                                            "sourceEnd": 92
-                                                        },
-                                                        "Top Level Expression": {
-                                                            "expr": {
-                                                                "position": {
-                                                                    "sourceStart": 90,
-                                                                    "sourceEnd": 92
-                                                                },
-                                                                "Keyword Expression": {
-                                                                    "keyword": "i64"
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "position": {
-                                                "sourceStart": 95,
-                                                "sourceEnd": 100
-                                            },
-                                            "Function Parameter": {
-                                                "Function Parameter": {
-                                                    "name": {
-                                                        "Name": "c"
-                                                    },
-                                                    "type": {
-                                                        "position": {
-                                                            "sourceStart": 98,
-                                                            "sourceEnd": 100
-                                                        },
-                                                        "Top Level Expression": {
-                                                            "expr": {
-                                                                "position": {
-                                                                    "sourceStart": 98,
-                                                                    "sourceEnd": 100
-                                                                },
-                                                                "Identifier Expression": {
-                                                                    "name": {
-                                                                        "Name": "yyy"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    ]
-                                },
-                                "return": "unit",
-                                "body": {
-                                    "position": {
-                                        "sourceStart": 105,
-                                        "sourceEnd": 118
-                                    },
-                                    "Code Block": [
-                                        {
-                                            "position": {
-                                                "sourceStart": 109,
-                                                "sourceEnd": 115
-                                            },
-                                            "Expr Stmt": {
-                                                "position": {
-                                                    "sourceStart": 109,
-                                                    "sourceEnd": 114
-                                                },
-                                                "Top Level Expression": {
-                                                    "expr": {
-                                                        "position": {
-                                                            "sourceStart": 109,
-                                                            "sourceEnd": 114
-                                                        },
-                                                        "Chain Expression": {
-                                                            "atom": {
-                                                                "position": {
-                                                                    "sourceStart": 109,
-                                                                    "sourceEnd": 111
-                                                                },
-                                                                "Identifier Expression": {
-                                                                    "name": {
-                                                                        "Name": "goo"
-                                                                    }
-                                                                }
-                                                            },
-                                                            "chain": [
-                                                                {
-                                                                    "position": {
-                                                                        "sourceStart": 112,
-                                                                        "sourceEnd": 114
-                                                                    },
-                                                                    "Call Expression": {
-                                                                        "type": "[]",
-                                                                        "arguments": {
-                                                                            "position": {
-                                                                                "sourceStart": 113,
-                                                                                "sourceEnd": 113
-                                                                            },
-                                                                            "call list": [
-                                                                                {
-                                                                                    "position": {
-                                                                                        "sourceStart": 113,
-                                                                                        "sourceEnd": 113
-                                                                                    },
-                                                                                    "Top Level Expression": {
-                                                                                        "expr": {
-                                                                                            "position": {
-                                                                                                "sourceStart": 113,
-                                                                                                "sourceEnd": 113
-                                                                                            },
-                                                                                            "Identifier Expression": {
-                                                                                                "name": {
-                                                                                                    "Name": "a"
-                                                                                                }
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                },
-                                                                            ]
-                                                                        }
-                                                                    }
-                                                                }
-                                                            ]
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            "position": {
-                                "sourceStart": 121,
-                                "sourceEnd": 178
-                            },
-                            "specifiers": [
-                                "private",
-                            ],
-                            "Class Method": {
-                                "name": {
-                                    "Name": "goo"
-                                },
-                                "parameters": {
-                                    "position": {
-                                        "sourceStart": 136,
-                                        "sourceEnd": 143
-                                    },
-                                    "function parameter list": [
-                                        {
-                                            "position": {
-                                                "sourceStart": 137,
-                                                "sourceEnd": 142
-                                            },
-                                            "Function Parameter": {
-                                                "Function Parameter": {
-                                                    "name": {
-                                                        "Name": "z"
-                                                    },
-                                                    "type": {
-                                                        "position": {
-                                                            "sourceStart": 140,
-                                                            "sourceEnd": 142
-                                                        },
-                                                        "Top Level Expression": {
-                                                            "expr": {
-                                                                "position": {
-                                                                    "sourceStart": 140,
-                                                                    "sourceEnd": 142
-                                                                },
-                                                                "Keyword Expression": {
-                                                                    "keyword": "i64"
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    ]
-                                },
-                                "return": {
-                                    "position": {
-                                        "sourceStart": 148,
-                                        "sourceEnd": 150
-                                    },
-                                    "Top Level Expression": {
-                                        "expr": {
-                                            "position": {
-                                                "sourceStart": 148,
-                                                "sourceEnd": 150
-                                            },
-                                            "Keyword Expression": {
-                                                "keyword": "i64"
-                                            }
-                                        }
-                                    }
-                                },
-                                "body": {
-                                    "position": {
-                                        "sourceStart": 154,
-                                        "sourceEnd": 178
-                                    },
-                                    "Code Block": [
-                                        {
-                                            "position": {
-                                                "sourceStart": 158,
-                                                "sourceEnd": 163
-                                            },
-                                            "Expr Stmt": {
-                                                "position": {
-                                                    "sourceStart": 158,
-                                                    "sourceEnd": 162
-                                                },
-                                                "Top Level Expression": {
-                                                    "expr": {
-                                                        "position": {
-                                                            "sourceStart": 158,
-                                                            "sourceEnd": 162
-                                                        },
-                                                        "Assignment Expr": {
-                                                            "assigned variables": {
-                                                                "position": {
-                                                                    "sourceStart": 158,
-                                                                    "sourceEnd": 158
-                                                                },
-                                                                "Identifier Expression": {
-                                                                    "name": {
-                                                                        "Name": "x"
-                                                                    }
-                                                                }
-                                                            },
-                                                            "assignment type": "=",
-                                                            "assigned value": {
-                                                                "position": {
-                                                                    "sourceStart": 162,
-                                                                    "sourceEnd": 162
-                                                                },
-                                                                "Identifier Expression": {
-                                                                    "name": {
-                                                                        "Name": "z"
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "position": {
-                                                "sourceStart": 167,
-                                                "sourceEnd": 175
-                                            },
-                                            "Action": {
-                                                "kind": "Return",
-                                                "value": {
-                                                    "position": {
-                                                        "sourceStart": 174,
-                                                        "sourceEnd": 174
-                                                    },
-                                                    "Top Level Expression": {
-                                                        "expr": {
-                                                            "position": {
-                                                                "sourceStart": 174,
-                                                                "sourceEnd": 174
-                                                            },
-                                                            "Identifier Expression": {
-                                                                "name": {
-                                                                    "Name": "y"
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        },
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            "position": {
-                                "sourceStart": 182,
-                                "sourceEnd": 293
-                            },
-                            "specifiers": [
-                                "public",
-                            ],
-                            "Access specification block": {
-                                "specifier": "public",
-                                "code block": {
-                                    "position": {
-                                        "sourceStart": 189,
-                                        "sourceEnd": 293
-                                    },
-                                    "Class Block": [
-                                        {
-                                            "position": {
-                                                "sourceStart": 193,
-                                                "sourceEnd": 235
-                                            },
-                                            "specifiers": [
-                                                "public",
-                                            ],
-                                            "Class Constructor": {
-                                                "name": {
-                                                    "Name": "create"
-                                                },
-                                                "params": {
-                                                    "position": {
-                                                        "sourceStart": 203,
-                                                        "sourceEnd": 209
-                                                    },
-                                                    "function parameter list": [
-                                                        {
-                                                            "position": {
-                                                                "sourceStart": 204,
-                                                                "sourceEnd": 208
-                                                            },
-                                                            "Function Parameter": {
-                                                                "Function Parameter": {
-                                                                    "name": {
-                                                                        "Name": "c"
-                                                                    },
-                                                                    "type": {
-                                                                        "position": {
-                                                                            "sourceStart": 206,
-                                                                            "sourceEnd": 208
-                                                                        },
-                                                                        "Top Level Expression": {
-                                                                            "expr": {
-                                                                                "position": {
-                                                                                    "sourceStart": 206,
-                                                                                    "sourceEnd": 208
-                                                                                },
-                                                                                "Keyword Expression": {
-                                                                                    "keyword": "i64"
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                    ]
-                                                },
-                                                "inits": {
-                                                    "position": {
-                                                        "sourceStart": 212,
-                                                        "sourceEnd": 217
-                                                    },
-                                                    "initialization list": [
-                                                        {
-                                                            "position": {
-                                                                "sourceStart": 212,
-                                                                "sourceEnd": 217
-                                                            },
-                                                            "Top Level Expression": {
-                                                                "expr": {
-                                                                    "position": {
-                                                                        "sourceStart": 212,
-                                                                        "sourceEnd": 217
-                                                                    },
-                                                                    "Chain Expression": {
-                                                                        "atom": {
-                                                                            "position": {
-                                                                                "sourceStart": 212,
-                                                                                "sourceEnd": 214
-                                                                            },
-                                                                            "Identifier Expression": {
-                                                                                "name": {
-                                                                                    "Name": "aaa"
-                                                                                }
-                                                                            }
-                                                                        },
-                                                                        "chain": [
-                                                                            {
-                                                                                "position": {
-                                                                                    "sourceStart": 215,
-                                                                                    "sourceEnd": 217
-                                                                                },
-                                                                                "Call Expression": {
-                                                                                    "type": "[]",
-                                                                                    "arguments": {
-                                                                                        "position": {
-                                                                                            "sourceStart": 216,
-                                                                                            "sourceEnd": 216
-                                                                                        },
-                                                                                        "call list": [
-                                                                                            {
-                                                                                                "position": {
-                                                                                                    "sourceStart": 216,
-                                                                                                    "sourceEnd": 216
-                                                                                                },
-                                                                                                "Top Level Expression": {
-                                                                                                    "expr": {
-                                                                                                        "position": {
-                                                                                                            "sourceStart": 216,
-                                                                                                            "sourceEnd": 216
-                                                                                                        },
-                                                                                                        "Identifier Expression": {
-                                                                                                            "name": {
-                                                                                                                "Name": "c"
-                                                                                                            }
-                                                                                                        }
-                                                                                                    }
-                                                                                                }
-                                                                                            },
-                                                                                        ]
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        ]
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                    ]
-                                                },
-                                                "body": {
-                                                    "position": {
-                                                        "sourceStart": 221,
-                                                        "sourceEnd": 235
-                                                    },
-                                                    "Code Block": [
-                                                        {
-                                                            "position": {
-                                                                "sourceStart": 226,
-                                                                "sourceEnd": 231
-                                                            },
-                                                            "Expr Stmt": {
-                                                                "position": {
-                                                                    "sourceStart": 226,
-                                                                    "sourceEnd": 230
-                                                                },
-                                                                "Top Level Expression": {
-                                                                    "expr": {
-                                                                        "position": {
-                                                                            "sourceStart": 226,
-                                                                            "sourceEnd": 230
-                                                                        },
-                                                                        "Assignment Expr": {
-                                                                            "assigned variables": {
-                                                                                "position": {
-                                                                                    "sourceStart": 226,
-                                                                                    "sourceEnd": 226
-                                                                                },
-                                                                                "Identifier Expression": {
-                                                                                    "name": {
-                                                                                        "Name": "x"
-                                                                                    }
-                                                                                }
-                                                                            },
-                                                                            "assignment type": "=",
-                                                                            "assigned value": {
-                                                                                "position": {
-                                                                                    "sourceStart": 230,
-                                                                                    "sourceEnd": 230
-                                                                                },
-                                                                                "Identifier Expression": {
-                                                                                    "name": {
-                                                                                        "Name": "c"
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                    ]
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "position": {
-                                                "sourceStart": 241,
-                                                "sourceEnd": 268
-                                            },
-                                            "specifiers": [
-                                                "public",
-                                            ],
-                                            "Class Constructor": {
-                                                "name": {
-                                                    "Name": "abc"
-                                                },
-                                                "params": {
-                                                    "position": {
-                                                        "sourceStart": 248,
-                                                        "sourceEnd": 249
-                                                    },
-                                                    "function parameter list": []
-                                                },
-                                                "inits": "<nullptr>",
-                                                "body": {
-                                                    "position": {
-                                                        "sourceStart": 253,
-                                                        "sourceEnd": 268
-                                                    },
-                                                    "Code Block": [
-                                                        {
-                                                            "position": {
-                                                                "sourceStart": 258,
-                                                                "sourceEnd": 264
-                                                            },
-                                                            "Expr Stmt": {
-                                                                "position": {
-                                                                    "sourceStart": 258,
-                                                                    "sourceEnd": 263
-                                                                },
-                                                                "Top Level Expression": {
-                                                                    "expr": {
-                                                                        "position": {
-                                                                            "sourceStart": 258,
-                                                                            "sourceEnd": 263
-                                                                        },
-                                                                        "Assignment Expr": {
-                                                                            "assigned variables": {
-                                                                                "position": {
-                                                                                    "sourceStart": 258,
-                                                                                    "sourceEnd": 258
-                                                                                },
-                                                                                "Identifier Expression": {
-                                                                                    "name": {
-                                                                                        "Name": "x"
-                                                                                    }
-                                                                                }
-                                                                            },
-                                                                            "assignment type": "=",
-                                                                            "assigned value": {
-                                                                                "position": {
-                                                                                    "sourceStart": 262,
-                                                                                    "sourceEnd": 263
-                                                                                },
-                                                                                "Value Expr": {
-                                                                                    "number": "81"
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        },
-                                                    ]
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "position": {
-                                                "sourceStart": 273,
-                                                "sourceEnd": 290
-                                            },
-                                            "specifiers": [
-                                                "public",
-                                            ],
-                                            "Class Destructor": {
-                                                "body": {
-                                                    "position": {
-                                                        "sourceStart": 289,
-                                                        "sourceEnd": 290
-                                                    },
-                                                    "Code Block": []
-                                                }
-                                            }
-                                        },
-                                    ]
-                                }
-                            }
-                        },
-                    ]
-                }
-            }
-        },
-    ]
+	"position": {
+		"sourceStart": 2,
+		"sourceEnd": 295
+	},
+	"Top Level": [
+		{
+			"position": {
+				"sourceStart": 2,
+				"sourceEnd": 295
+			},
+			"Class": {
+				"name": {
+					"Name": "xxx"
+				},
+				"Base": {
+					"position": {
+						"sourceStart": 20,
+						"sourceEnd": 22
+					},
+					"Identifier Expression": {
+						"name": {
+							"Name": "aaa"
+						}
+					}
+				},
+				"Implements": {
+					"position": {
+						"sourceStart": 35,
+						"sourceEnd": 43
+					},
+					"inheritance list": [
+						{
+							"position": {
+								"sourceStart": 35,
+								"sourceEnd": 37
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 35,
+										"sourceEnd": 37
+									},
+									"Identifier Expression": {
+										"name": {
+											"Name": "bbb"
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 40,
+								"sourceEnd": 43
+							},
+							"Top Level Expression": {
+								"expr": {
+									"position": {
+										"sourceStart": 40,
+										"sourceEnd": 43
+									},
+									"Identifier Expression": {
+										"name": {
+											"Name": "cccc"
+										}
+									}
+								}
+							}
+						},
+					]
+				},
+				"body": {
+					"position": {
+						"sourceStart": 45,
+						"sourceEnd": 295
+					},
+					"Class Block": [
+						{
+							"position": {
+								"sourceStart": 48,
+								"sourceEnd": 54
+							},
+							"Class Field": {
+								"is mutable": "true",
+								"name": {
+									"Name": "x"
+								},
+								"type": {
+									"position": {
+										"sourceStart": 51,
+										"sourceEnd": 53
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 51,
+												"sourceEnd": 53
+											},
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 57,
+								"sourceEnd": 75
+							},
+							"specifiers": [
+								"private",
+							],
+							"Class Field": {
+								"is mutable": "true",
+								"name": {
+									"Name": "y"
+								},
+								"type": {
+									"position": {
+										"sourceStart": 68,
+										"sourceEnd": 70
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 68,
+												"sourceEnd": 70
+											},
+											"Keyword Expression": {
+												"keyword": "i32"
+											}
+										}
+									}
+								},
+								"initial": {
+									"position": {
+										"sourceStart": 74,
+										"sourceEnd": 74
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 74,
+												"sourceEnd": 74
+											},
+											"Value Expr": {
+												"number": "5"
+											}
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 79,
+								"sourceEnd": 118
+							},
+							"Class Method": {
+								"name": {
+									"Name": "foo"
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 86,
+										"sourceEnd": 101
+									},
+									"function parameter list": [
+										{
+											"position": {
+												"sourceStart": 87,
+												"sourceEnd": 92
+											},
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "a"
+													},
+													"type": {
+														"position": {
+															"sourceStart": 90,
+															"sourceEnd": 92
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 90,
+																	"sourceEnd": 92
+																},
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 95,
+												"sourceEnd": 100
+											},
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "c"
+													},
+													"type": {
+														"position": {
+															"sourceStart": 98,
+															"sourceEnd": 100
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 98,
+																	"sourceEnd": 100
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "yyy"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+									]
+								},
+								"return": "unit",
+								"body": {
+									"position": {
+										"sourceStart": 105,
+										"sourceEnd": 118
+									},
+									"Code Block": [
+										{
+											"position": {
+												"sourceStart": 109,
+												"sourceEnd": 115
+											},
+											"Expr Stmt": {
+												"position": {
+													"sourceStart": 109,
+													"sourceEnd": 114
+												},
+												"Top Level Expression": {
+													"expr": {
+														"position": {
+															"sourceStart": 109,
+															"sourceEnd": 114
+														},
+														"Chain Expression": {
+															"atom": {
+																"position": {
+																	"sourceStart": 109,
+																	"sourceEnd": 111
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "goo"
+																	}
+																}
+															},
+															"chain": [
+																{
+																	"position": {
+																		"sourceStart": 112,
+																		"sourceEnd": 114
+																	},
+																	"Call Expression": {
+																		"type": "[]",
+																		"arguments": {
+																			"position": {
+																				"sourceStart": 113,
+																				"sourceEnd": 113
+																			},
+																			"call list": [
+																				{
+																					"position": {
+																						"sourceStart": 113,
+																						"sourceEnd": 113
+																					},
+																					"Top Level Expression": {
+																						"expr": {
+																							"position": {
+																								"sourceStart": 113,
+																								"sourceEnd": 113
+																							},
+																							"Identifier Expression": {
+																								"name": {
+																									"Name": "a"
+																								}
+																							}
+																						}
+																					}
+																				},
+																			]
+																		}
+																	}
+																}
+															]
+														}
+													}
+												}
+											}
+										},
+									]
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 121,
+								"sourceEnd": 178
+							},
+							"specifiers": [
+								"private",
+							],
+							"Class Method": {
+								"name": {
+									"Name": "goo"
+								},
+								"parameters": {
+									"position": {
+										"sourceStart": 136,
+										"sourceEnd": 143
+									},
+									"function parameter list": [
+										{
+											"position": {
+												"sourceStart": 137,
+												"sourceEnd": 142
+											},
+											"Function Parameter": {
+												"Function Parameter": {
+													"name": {
+														"Name": "z"
+													},
+													"type": {
+														"position": {
+															"sourceStart": 140,
+															"sourceEnd": 142
+														},
+														"Top Level Expression": {
+															"expr": {
+																"position": {
+																	"sourceStart": 140,
+																	"sourceEnd": 142
+																},
+																"Keyword Expression": {
+																	"keyword": "i64"
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+									]
+								},
+								"return": {
+									"position": {
+										"sourceStart": 148,
+										"sourceEnd": 150
+									},
+									"Top Level Expression": {
+										"expr": {
+											"position": {
+												"sourceStart": 148,
+												"sourceEnd": 150
+											},
+											"Keyword Expression": {
+												"keyword": "i64"
+											}
+										}
+									}
+								},
+								"body": {
+									"position": {
+										"sourceStart": 154,
+										"sourceEnd": 178
+									},
+									"Code Block": [
+										{
+											"position": {
+												"sourceStart": 158,
+												"sourceEnd": 163
+											},
+											"Expr Stmt": {
+												"position": {
+													"sourceStart": 158,
+													"sourceEnd": 162
+												},
+												"Top Level Expression": {
+													"expr": {
+														"position": {
+															"sourceStart": 158,
+															"sourceEnd": 162
+														},
+														"Assignment Expr": {
+															"assigned variables": {
+																"position": {
+																	"sourceStart": 158,
+																	"sourceEnd": 158
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "x"
+																	}
+																}
+															},
+															"assignment type": "=",
+															"assigned value": {
+																"position": {
+																	"sourceStart": 162,
+																	"sourceEnd": 162
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "z"
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 167,
+												"sourceEnd": 175
+											},
+											"Action": {
+												"kind": "Return",
+												"value": {
+													"position": {
+														"sourceStart": 174,
+														"sourceEnd": 174
+													},
+													"Top Level Expression": {
+														"expr": {
+															"position": {
+																"sourceStart": 174,
+																"sourceEnd": 174
+															},
+															"Identifier Expression": {
+																"name": {
+																	"Name": "y"
+																}
+															}
+														}
+													}
+												}
+											}
+										},
+									]
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 182,
+								"sourceEnd": 293
+							},
+							"specifiers": [
+								"public",
+							],
+							"Access specification block": {
+								"specifier": "public",
+								"code block": {
+									"position": {
+										"sourceStart": 189,
+										"sourceEnd": 293
+									},
+									"Class Block": [
+										{
+											"position": {
+												"sourceStart": 193,
+												"sourceEnd": 235
+											},
+											"specifiers": [
+												"public",
+											],
+											"Class Constructor": {
+												"name": {
+													"Name": "create"
+												},
+												"params": {
+													"position": {
+														"sourceStart": 203,
+														"sourceEnd": 209
+													},
+													"function parameter list": [
+														{
+															"position": {
+																"sourceStart": 204,
+																"sourceEnd": 208
+															},
+															"Function Parameter": {
+																"Function Parameter": {
+																	"name": {
+																		"Name": "c"
+																	},
+																	"type": {
+																		"position": {
+																			"sourceStart": 206,
+																			"sourceEnd": 208
+																		},
+																		"Top Level Expression": {
+																			"expr": {
+																				"position": {
+																					"sourceStart": 206,
+																					"sourceEnd": 208
+																				},
+																				"Keyword Expression": {
+																					"keyword": "i64"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+													]
+												},
+												"inits": {
+													"position": {
+														"sourceStart": 212,
+														"sourceEnd": 217
+													},
+													"initialization list": [
+														{
+															"position": {
+																"sourceStart": 212,
+																"sourceEnd": 217
+															},
+															"Top Level Expression": {
+																"expr": {
+																	"position": {
+																		"sourceStart": 212,
+																		"sourceEnd": 217
+																	},
+																	"Chain Expression": {
+																		"atom": {
+																			"position": {
+																				"sourceStart": 212,
+																				"sourceEnd": 214
+																			},
+																			"Identifier Expression": {
+																				"name": {
+																					"Name": "aaa"
+																				}
+																			}
+																		},
+																		"chain": [
+																			{
+																				"position": {
+																					"sourceStart": 215,
+																					"sourceEnd": 217
+																				},
+																				"Call Expression": {
+																					"type": "[]",
+																					"arguments": {
+																						"position": {
+																							"sourceStart": 216,
+																							"sourceEnd": 216
+																						},
+																						"call list": [
+																							{
+																								"position": {
+																									"sourceStart": 216,
+																									"sourceEnd": 216
+																								},
+																								"Top Level Expression": {
+																									"expr": {
+																										"position": {
+																											"sourceStart": 216,
+																											"sourceEnd": 216
+																										},
+																										"Identifier Expression": {
+																											"name": {
+																												"Name": "c"
+																											}
+																										}
+																									}
+																								}
+																							},
+																						]
+																					}
+																				}
+																			}
+																		]
+																	}
+																}
+															}
+														},
+													]
+												},
+												"body": {
+													"position": {
+														"sourceStart": 221,
+														"sourceEnd": 235
+													},
+													"Code Block": [
+														{
+															"position": {
+																"sourceStart": 226,
+																"sourceEnd": 231
+															},
+															"Expr Stmt": {
+																"position": {
+																	"sourceStart": 226,
+																	"sourceEnd": 230
+																},
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 226,
+																			"sourceEnd": 230
+																		},
+																		"Assignment Expr": {
+																			"assigned variables": {
+																				"position": {
+																					"sourceStart": 226,
+																					"sourceEnd": 226
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "x"
+																					}
+																				}
+																			},
+																			"assignment type": "=",
+																			"assigned value": {
+																				"position": {
+																					"sourceStart": 230,
+																					"sourceEnd": 230
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "c"
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+													]
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 241,
+												"sourceEnd": 268
+											},
+											"specifiers": [
+												"public",
+											],
+											"Class Constructor": {
+												"name": {
+													"Name": "abc"
+												},
+												"params": {
+													"position": {
+														"sourceStart": 248,
+														"sourceEnd": 249
+													},
+													"function parameter list": []
+												},
+												"inits": "<nullptr>",
+												"body": {
+													"position": {
+														"sourceStart": 253,
+														"sourceEnd": 268
+													},
+													"Code Block": [
+														{
+															"position": {
+																"sourceStart": 258,
+																"sourceEnd": 264
+															},
+															"Expr Stmt": {
+																"position": {
+																	"sourceStart": 258,
+																	"sourceEnd": 263
+																},
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 258,
+																			"sourceEnd": 263
+																		},
+																		"Assignment Expr": {
+																			"assigned variables": {
+																				"position": {
+																					"sourceStart": 258,
+																					"sourceEnd": 258
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "x"
+																					}
+																				}
+																			},
+																			"assignment type": "=",
+																			"assigned value": {
+																				"position": {
+																					"sourceStart": 262,
+																					"sourceEnd": 263
+																				},
+																				"Value Expr": {
+																					"number": "81"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+													]
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 273,
+												"sourceEnd": 290
+											},
+											"specifiers": [
+												"public",
+											],
+											"Class Destructor": {
+												"body": {
+													"position": {
+														"sourceStart": 289,
+														"sourceEnd": 290
+													},
+													"Code Block": []
+												}
+											}
+										},
+									]
+								}
+							}
+						},
+					]
+				}
+			}
+		},
+	]
 }
