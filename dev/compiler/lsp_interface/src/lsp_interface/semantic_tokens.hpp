@@ -13,7 +13,7 @@
 #include <string>
 
 // clang-format off
-MAKE_STRINGIFYABLE_ENUM(lsp, i32, Type,
+MAKE_STRINGIFYABLE_ENUM(lsp, i8, Type,
 	Namespace,
 	Class,
 	Enum,
@@ -55,14 +55,14 @@ namespace lsp {
 		std::string toJSON();
 
 	private:
-		lexer::Token& sourceToken;
-		i64           line;
-		i64           startCharacter;
-		i64           length;
+		lexer::Token& source_token;
+		u64           line;
+		u64           start_character;
+		u64           length;
 		Type          type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
-	void getSemanticTokens(MCRef<pst::LangElement>, std::vector<SemanticToken>&);
+	void        getSemanticTokens(MCRef<pst::LangElement>, std::vector<SemanticToken>&);
 	std::string getSemanticTokens(MCRef<pst::LangElement>);
 }

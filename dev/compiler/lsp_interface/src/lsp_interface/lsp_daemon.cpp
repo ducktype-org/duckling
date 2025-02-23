@@ -165,17 +165,17 @@ void server(i32 port) {
 	CROW_ROUTE(app, "/get_senatic_tokens/<string>")
 	([&files](const std::string& base64_path) {
 		try {
-			const auto        path   = base64::decode_into<std::string>(base64_path);
-			const auto        file   = files.at(path);
-			auto              tokens = lexer::tokenizeFile(file);
-			pst::PST<>        pst(std::move(tokens));
+			const auto path   = base64::decode_into<std::string>(base64_path);
+			const auto file   = files.at(path);
+			auto       tokens = lexer::tokenizeFile(file);
+			pst::PST<> pst(std::move(tokens));
 
 			if (pst.getLogger().bad()) {
 				std::stringstream ss;
 				pst.getLogger().dumpLog(true, ss);
 				return crow::response(200, ss.str());
 			};
-			
+
 			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();

@@ -3,7 +3,7 @@
 #include <map>
 
 namespace lsp {
-    /**
+	/**
 	 * @brief Converts a list of strings to a JSON array format.
 	 *
 	 * @param list The list of strings to convert.
