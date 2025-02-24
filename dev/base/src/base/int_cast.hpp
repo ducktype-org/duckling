@@ -1,0 +1,17 @@
+#pragma once
+
+#include <utility>
+#include "exceptions.hpp"
+
+namespace base {
+    /**
+     * Functions that cast given integer value to 
+     * different integral type.
+     * Panics if conversion could be invalid.
+     */
+    template<class T, class U>
+    T safeIntConv(U u) {
+        CORE_ASSERT(std::in_range<T>(u), "Bad integer conversion");
+        return static_cast<T>(u);
+    }
+}
