@@ -5,6 +5,7 @@
 #include <diagnostic/source_position.hpp>
 #include <token_file/forward.hpp>
 #include <base/convert.hpp>
+#include <base/int_conv.hpp>
 #include <token_file/file.hpp>
 
 namespace lexer {
@@ -148,12 +149,11 @@ namespace lexer {
 
 		[[nodiscard]]
 		std::string reason() const override {
-			CORE_ASSERT(value >= 0, "If value is negative, then conversion of value bellow will result in underflow");
 			return base::strConcat(
 				"UTF-8 decoding error: ",
 				"Codepoint undefined in the Unicode standard encountered starting here ",
 				"with value of ",
-				base::toHexString(usize(value))
+				base::toHexString(base::safeIntConv<usize>(value))
 			);
 		}
 	};
@@ -245,8 +245,7 @@ namespace lexer {
 				continue;
 			}
 			
-			CORE_ASSERT(size <= std::numeric_limits<uint8_t>::max(), "Bad conversion");
-			out.emplace_back(value, u8(uint8_t(size)), pos);
+			out.emplace_back(value, u8(base::safeIntConv<uint8_t>(size)), pos);
 			pos += size;
 		}
 		// Add eof value
