@@ -23,9 +23,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	# Debug version uses O0.
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
-	elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
-	
+
 	# I didn't find a good -Werror=terminate alternative for Clang.
 	string(CONCAT ADDITIONAL_CLANG_FLAGS
 		"-Werror=return-type "
