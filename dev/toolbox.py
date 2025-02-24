@@ -31,6 +31,7 @@ from scripts.py.toolbox.internet_file import (
 
 from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.py.toolbox.duck_linter import duck_linter_impl
+from scripts.py.toolbox.todo_counter import todo_counter_impl
 
 # @todo move all other implementation to separate files
 
@@ -577,6 +578,32 @@ def duck_linter(*args, **kwargs):
 def itest(*args, **kwargs):
     """Runs integration tests"""
     integration_tests_impl(*args, **kwargs)
+
+@cli.command()
+@click.option(
+    "-b",
+    "--branch",
+    type=str,
+    default="",
+    help="Branch for which to count (empty string means current branch)",
+)
+@click.option(
+    "-c",
+    "--count-only",
+    is_flag=True,
+    default=False,
+    help="Only show numer counts and nothing else",
+)
+@click.option(
+    "-p",
+    "--pattern",
+    type=str,
+    required=False,
+    help="Search for a given pattern instead of the default ones",
+)
+def todo_counter(*args, **kwargs):
+    """Prints counts of todos and similar comments in the code"""
+    todo_counter_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":
