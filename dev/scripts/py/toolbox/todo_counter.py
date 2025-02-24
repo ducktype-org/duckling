@@ -3,12 +3,12 @@ from .helpers import (
     log_info
 )
 
-def todo_counter_impl(branch: str, count_only:bool, pattern: str | None):
+def todo_counter_impl(branch: str, count_only:bool, pattern: list[str]):
 
-    if pattern is None:
+    if len(pattern) == 0:
         patterns = ["TODO", "FIXME"]
     else:
-        patterns = [pattern]
+        patterns = pattern
 
     def show_counts(branch, patterns):
         assert len(patterns) >= 1
