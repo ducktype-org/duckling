@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 from termcolor import colored, cprint
 
@@ -112,13 +113,17 @@ def type(id, name):
     print()
     input()
 
+if len(sys.argv) < 2:
+        print("Usage: presentation.py <path_to_rbc>")
+        sys.exit(1)
+
+path_to_rbc = sys.argv[1]
 
 print(colored("Spawning VCPU:", "light_green"))
 spawn()
 
-
 print(colored("Loading RiftBC:", "light_green"))
-load(pid, '/home/andrzej/mine/rift/rift-poc-zpp1/dev/RiftVM/snippets_f8/working.rbc')
+load(pid, path_to_rbc)
 
 print(colored("Running program:", "light_green"))
 run(pid)

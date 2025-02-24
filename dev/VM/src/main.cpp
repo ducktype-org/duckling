@@ -1,5 +1,6 @@
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
+#include <init/init.hpp>
 
 #include <core/supervisor/supervisor.hpp>
 #include "cli.hpp"
@@ -16,7 +17,8 @@ void showVersion() {
 }
 
 int main(int argc, const char** argv) {
-	auto clap = clap::Clap()
+	init::InitObject _;
+	auto             clap = clap::Clap()
 	                .addHelpFlag()
 	                .add(clap::ParamBuilder::ofValue(clap::IntParser::make("port"))
 	                         .addShortName('s')
