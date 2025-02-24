@@ -4,6 +4,7 @@
 #include <tester/tester.hpp>
 #include <chrono>
 #include <thread>
+#include <base/int_conv.hpp>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -156,9 +157,9 @@ private:
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(pid).expect("Step failed");
+		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
 		auto execution_position
-			= vm::api::getCurrentPosition(pid).expect("Get current position failed");
+			= vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid)).expect("Get current position failed");
 		return execution_position.instr_number;
 	}
 };
