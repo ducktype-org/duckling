@@ -59,7 +59,15 @@ def cli():
 
 
 def setup_build_impl(
-    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, gcov_version, ccache, coverage
+    build_dir,
+    build_system,
+    type,
+    docs,
+    cxx_compiler,
+    cc_compiler,
+    gcov_version,
+    ccache,
+    coverage,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -578,6 +586,7 @@ def duck_linter(*args, **kwargs):
 def itest(*args, **kwargs):
     """Runs integration tests"""
     integration_tests_impl(*args, **kwargs)
+
 
 @cli.command()
 @click.option(
