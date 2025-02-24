@@ -19,6 +19,7 @@ LLVM_INCLUDE_END()
 
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <init/init.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/maps.hpp>
@@ -38,6 +39,22 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
+
+	void llvmDeinit() {
+		// I'm not sure if this is a proper/stable
+		// way to clean up llvm, but it works.
+		// If it ever breaks, a quick-fix is just to comment it out
+		// and let memory leak.
+		// @note: There is also llvm_shutdown_obj helper object,
+		// but we don't use it here in favor of deinit module.
+		//
+		// Note from LLVM docs:
+		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
+		// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
+		llvm::llvm_shutdown();
+	}
+
+	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
 	/**
 	 * @brief Returns reference to the llvm context.

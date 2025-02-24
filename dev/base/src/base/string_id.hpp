@@ -62,6 +62,7 @@
 #include "raw_view.hpp"
 #include <string>
 #include <charconv>
+#include <type_traits>
 
 namespace base {
 
@@ -80,7 +81,8 @@ namespace base {
 		static ToIDType   to_id_map;
 
 	public:
-		StrID(): id(InnerID::bad()){};
+		StrID(): id(InnerID::bad()) {}
+
 		StrID(const StrID& oth) = default;
 		StrID(StrID&& oth)      = default;
 
@@ -162,7 +164,19 @@ namespace base {
 	 *
 	 * Raises exception on error.
 	 */
-	i64 strIDToNum(base::StrID str);
+	template<class T = i64>
+	requires std::is_arithmetic_v<T> T strIDToNum(base::StrID str) {
+		auto view = str.strView();
+
+		T                      out{};
+		std::from_chars_result res = std::from_chars(view.data(), view.data() + view.size(), out);
+		if (res.ec == std::errc::invalid_argument)
+			throw std::invalid_argument{ "invalid_argument" };
+		else if (res.ec == std::errc::result_out_of_range)
+			throw std::out_of_range{ "out_of_range" };
+
+		return out;
+	}
 
 	namespace detail {
 		inline void strConcat(std::string& out, StrID str_id) { out.append(str_id.strView()); }

@@ -250,56 +250,64 @@
 													"sourceStart": 109,
 													"sourceEnd": 114
 												},
-												"Chain Expression": {
-													"atom": {
+												"Top Level Expression": {
+													"expr": {
 														"position": {
 															"sourceStart": 109,
-															"sourceEnd": 111
+															"sourceEnd": 114
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "goo"
-															}
-														}
-													},
-													"chain": [
-														{
-															"position": {
-																"sourceStart": 112,
-																"sourceEnd": 114
+														"Chain Expression": {
+															"atom": {
+																"position": {
+																	"sourceStart": 109,
+																	"sourceEnd": 111
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "goo"
+																	}
+																}
 															},
-															"Call Expression": {
-																"type": "[]",
-																"arguments": {
+															"chain": [
+																{
 																	"position": {
-																		"sourceStart": 113,
-																		"sourceEnd": 113
+																		"sourceStart": 112,
+																		"sourceEnd": 114
 																	},
-																	"call list": [
-																		{
+																	"Call Expression": {
+																		"type": "[]",
+																		"arguments": {
 																			"position": {
 																				"sourceStart": 113,
 																				"sourceEnd": 113
 																			},
-																			"Top Level Expression": {
-																				"expr": {
+																			"call list": [
+																				{
 																					"position": {
 																						"sourceStart": 113,
 																						"sourceEnd": 113
 																					},
-																					"Identifier Expression": {
-																						"name": {
-																							"Name": "a"
+																					"Top Level Expression": {
+																						"expr": {
+																							"position": {
+																								"sourceStart": 113,
+																								"sourceEnd": 113
+																							},
+																							"Identifier Expression": {
+																								"name": {
+																									"Name": "a"
+																								}
+																							}
 																						}
 																					}
-																				}
-																			}
-																		},
-																	]
+																				},
+																			]
+																		}
+																	}
 																}
-															}
+															]
 														}
-													]
+													}
 												}
 											}
 										},
@@ -390,27 +398,35 @@
 													"sourceStart": 158,
 													"sourceEnd": 162
 												},
-												"Assignment Expr": {
-													"assigned variables": {
+												"Top Level Expression": {
+													"expr": {
 														"position": {
 															"sourceStart": 158,
-															"sourceEnd": 158
-														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "x"
-															}
-														}
-													},
-													"assignment type": "=",
-													"assigned value": {
-														"position": {
-															"sourceStart": 162,
 															"sourceEnd": 162
 														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "z"
+														"Assignment Expr": {
+															"assigned variables": {
+																"position": {
+																	"sourceStart": 158,
+																	"sourceEnd": 158
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "x"
+																	}
+																}
+															},
+															"assignment type": "=",
+															"assigned value": {
+																"position": {
+																	"sourceStart": 162,
+																	"sourceEnd": 162
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "z"
+																	}
+																}
 															}
 														}
 													}
@@ -604,27 +620,35 @@
 																	"sourceStart": 226,
 																	"sourceEnd": 230
 																},
-																"Assignment Expr": {
-																	"assigned variables": {
+																"Top Level Expression": {
+																	"expr": {
 																		"position": {
 																			"sourceStart": 226,
-																			"sourceEnd": 226
-																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "x"
-																			}
-																		}
-																	},
-																	"assignment type": "=",
-																	"assigned value": {
-																		"position": {
-																			"sourceStart": 230,
 																			"sourceEnd": 230
 																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "c"
+																		"Assignment Expr": {
+																			"assigned variables": {
+																				"position": {
+																					"sourceStart": 226,
+																					"sourceEnd": 226
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "x"
+																					}
+																				}
+																			},
+																			"assignment type": "=",
+																			"assigned value": {
+																				"position": {
+																					"sourceStart": 230,
+																					"sourceEnd": 230
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "c"
+																					}
+																				}
 																			}
 																		}
 																	}
@@ -671,26 +695,34 @@
 																	"sourceStart": 258,
 																	"sourceEnd": 263
 																},
-																"Assignment Expr": {
-																	"assigned variables": {
+																"Top Level Expression": {
+																	"expr": {
 																		"position": {
 																			"sourceStart": 258,
-																			"sourceEnd": 258
-																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "x"
-																			}
-																		}
-																	},
-																	"assignment type": "=",
-																	"assigned value": {
-																		"position": {
-																			"sourceStart": 262,
 																			"sourceEnd": 263
 																		},
-																		"Value Expr": {
-																			"number": "81"
+																		"Assignment Expr": {
+																			"assigned variables": {
+																				"position": {
+																					"sourceStart": 258,
+																					"sourceEnd": 258
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "x"
+																					}
+																				}
+																			},
+																			"assignment type": "=",
+																			"assigned value": {
+																				"position": {
+																					"sourceStart": 262,
+																					"sourceEnd": 263
+																				},
+																				"Value Expr": {
+																					"number": "81"
+																				}
+																			}
 																		}
 																	}
 																}

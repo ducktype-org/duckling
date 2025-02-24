@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <atomic>
+#include <result.hpp>
 
 /**
  * For now only single threaded execution is suported

@@ -146,7 +146,6 @@ namespace lang_def {
 		BCArgSize,
 		BCNextArgSize,
 		BCDefine,
-		BCLabel,
 		BCArg,
 		BCLocal,
 		BCCode,

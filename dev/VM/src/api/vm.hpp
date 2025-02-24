@@ -6,6 +6,7 @@
 
 #include <api/api.hpp>
 #include <filesystem/file.hpp>
+#include <result.hpp>
 
 namespace vm::api {
 	/**

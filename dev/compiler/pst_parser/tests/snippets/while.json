@@ -114,27 +114,35 @@
 										"sourceStart": 28,
 										"sourceEnd": 32
 									},
-									"Binary Operator": {
-										"left_expr": {
+									"Top Level Expression": {
+										"expr": {
 											"position": {
 												"sourceStart": 28,
-												"sourceEnd": 28
-											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "c"
-												}
-											}
-										},
-										"operator": "-",
-										"right_expr": {
-											"position": {
-												"sourceStart": 32,
 												"sourceEnd": 32
 											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "d"
+											"Binary Operator": {
+												"left_expr": {
+													"position": {
+														"sourceStart": 28,
+														"sourceEnd": 28
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "c"
+														}
+													}
+												},
+												"operator": "-",
+												"right_expr": {
+													"position": {
+														"sourceStart": 32,
+														"sourceEnd": 32
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "d"
+														}
+													}
 												}
 											}
 										}

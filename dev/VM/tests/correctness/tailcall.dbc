@@ -16,7 +16,7 @@ function dummy {
 
     sub_l64_imm        0, 1;
     setFstArg_l64      0;
-    ret_tailcall       0;
+    ret_tailcall       dummy;
 
     label End;
 
@@ -37,7 +37,7 @@ function main {
     input_l64          0;
 
     setFstArg_l64      0;
-    call_func          0;
+    call_func          dummy;
 
     mov_l64_r0         0;
     output_l64         0;

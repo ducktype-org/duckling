@@ -125,6 +125,7 @@ namespace tpc {
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(Identifier* result, bool ignorable = false) {
+			result->position = state.getPosition();
 			if (!state.ctokens().peek().isIdentifier()) {
 				state.log(makeBox<NoIdentifierError>(state.getPosition()));
 				result->value = base::StrID("<error>");
@@ -139,8 +140,10 @@ namespace tpc {
 		 * @param result The place to store the parsed identifier.
 		 */
 		void one(OptionalIdentifier* result, bool = false) {
-			if (state.ctokens().peek().isIdentifier())
-				result->value = state.tokens().next().getValue();
+			if (state.ctokens().peek().isIdentifier()) {
+				result->position = state.getPosition();
+				result->value    = state.tokens().next().getValue();
+			}
 		}
 
 		/**
