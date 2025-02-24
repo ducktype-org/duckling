@@ -98,26 +98,34 @@
 										"sourceStart": 24,
 										"sourceEnd": 31
 									},
-									"Assignment Expr": {
-										"assigned variables": {
+									"Top Level Expression": {
+										"expr": {
 											"position": {
 												"sourceStart": 24,
-												"sourceEnd": 24
-											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "c"
-												}
-											}
-										},
-										"assignment type": "=",
-										"assigned value": {
-											"position": {
-												"sourceStart": 28,
 												"sourceEnd": 31
 											},
-											"Value Expr": {
-												"number": "4.25"
+											"Assignment Expr": {
+												"assigned variables": {
+													"position": {
+														"sourceStart": 24,
+														"sourceEnd": 24
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "c"
+														}
+													}
+												},
+												"assignment type": "=",
+												"assigned value": {
+													"position": {
+														"sourceStart": 28,
+														"sourceEnd": 31
+													},
+													"Value Expr": {
+														"number": "4.25"
+													}
+												}
 											}
 										}
 									}
@@ -223,26 +231,34 @@
 													"sourceStart": 60,
 													"sourceEnd": 67
 												},
-												"Assignment Expr": {
-													"assigned variables": {
+												"Top Level Expression": {
+													"expr": {
 														"position": {
 															"sourceStart": 60,
-															"sourceEnd": 60
-														},
-														"Identifier Expression": {
-															"name": {
-																"Name": "c"
-															}
-														}
-													},
-													"assignment type": "=",
-													"assigned value": {
-														"position": {
-															"sourceStart": 64,
 															"sourceEnd": 67
 														},
-														"Value Expr": {
-															"number": "4.30"
+														"Assignment Expr": {
+															"assigned variables": {
+																"position": {
+																	"sourceStart": 60,
+																	"sourceEnd": 60
+																},
+																"Identifier Expression": {
+																	"name": {
+																		"Name": "c"
+																	}
+																}
+															},
+															"assignment type": "=",
+															"assigned value": {
+																"position": {
+																	"sourceStart": 64,
+																	"sourceEnd": 67
+																},
+																"Value Expr": {
+																	"number": "4.30"
+																}
+															}
 														}
 													}
 												}
@@ -266,33 +282,41 @@
 											"sourceStart": 77,
 											"sourceEnd": 82
 										},
-										"Assignment Expr": {
-											"assigned variables": {
+										"Top Level Expression": {
+											"expr": {
 												"position": {
 													"sourceStart": 77,
-													"sourceEnd": 77
-												},
-												"Identifier Expression": {
-													"name": {
-														"Name": "c"
-													}
-												}
-											},
-											"assignment type": "=",
-											"assigned value": {
-												"position": {
-													"sourceStart": 81,
 													"sourceEnd": 82
 												},
-												"Prefix Operator": {
-													"operator": "-",
-													"expression": {
+												"Assignment Expr": {
+													"assigned variables": {
 														"position": {
-															"sourceStart": 82,
+															"sourceStart": 77,
+															"sourceEnd": 77
+														},
+														"Identifier Expression": {
+															"name": {
+																"Name": "c"
+															}
+														}
+													},
+													"assignment type": "=",
+													"assigned value": {
+														"position": {
+															"sourceStart": 81,
 															"sourceEnd": 82
 														},
-														"Value Expr": {
-															"number": "1"
+														"Prefix Operator": {
+															"operator": "-",
+															"expression": {
+																"position": {
+																	"sourceStart": 82,
+																	"sourceEnd": 82
+																},
+																"Value Expr": {
+																	"number": "1"
+																}
+															}
 														}
 													}
 												}
