@@ -90,13 +90,10 @@ namespace compiler::backend_llvm {
 	}
 
 	/**
-	 * @brief
-	 *
-	 * One can also inspect the contents of the binary object file with tools like `objdump` and
-	 * `readelf`.
+	 * @brief Compiles the module to an object file or assembly file.
 	 */
 	void compileModuleToObject(
-		Ref<ModuleImpl> module_impl, const ModuleCompilationOptions& options
+		Ref<ModuleImpl> module_impl, base::StrID output_file, CompilationOutputType output_type
 	) {
 		auto m              = module_impl->module.refMut();
 		auto target_triple  = llvm::sys::getDefaultTargetTriple();
@@ -107,25 +104,15 @@ namespace compiler::backend_llvm {
 		// Using raw_fd_ostream is the recommended way to write files in LLVM,
 		// as it is much more efficient than using std::ofstream.
 		llvm::raw_fd_ostream output_stream(
-			options.object_file_path.strView(), error_code, llvm::sys::fs::OF_None
+			output_file.strView(), error_code, llvm::sys::fs::OF_None
 		);
 		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
 
-		if (options.output_type == ModuleCompilationOptions::OutputType::Assembly)
+		if (output_type == CompilationOutputType::Assembly)
 			emitAssembly(m, target_machine, target_triple, &output_stream);
 		else
 			emitObject(m, target_machine, target_triple, &output_stream);
 
-		llvm::errs() << "Generated object file: " << options.object_file_path.strView() << "\n";
-
-		if (options.llvm_ir_path.has_value()) {
-			llvm::raw_fd_ostream ir_output_stream(
-				options.llvm_ir_path->str(), error_code, llvm::sys::fs::OF_None
-			);
-			if (error_code)
-				CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
-
-			m->print(ir_output_stream, nullptr);
-		}
+		llvm::errs() << "Compiled LLVM module to the file: " << output_file.strView() << "\n";
 	}
 }

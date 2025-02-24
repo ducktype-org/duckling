@@ -21,7 +21,7 @@ namespace base::extend {
 }
 
 namespace compiler::backend_llvm {
-	enum class CompilationOutputType : std::uint8_t { Object, Assembly };
+
 
 	/**
 	 * @brief Encapsulates a llvm module in a way
@@ -50,6 +50,8 @@ namespace compiler::backend_llvm {
 
 		[[nodiscard]]
 		bool verify() const;
+
+		enum class CompilationOutputType : std::uint8_t { Object, Assembly };
 
 		/**
 		 * @brief Compile the module to object file or assembly.
