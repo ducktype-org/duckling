@@ -63,19 +63,27 @@
 									"sourceStart": 33,
 									"sourceEnd": 35
 								},
-								"Suffix Operator": {
-									"expression": {
+								"Top Level Expression": {
+									"expr": {
 										"position": {
 											"sourceStart": 33,
-											"sourceEnd": 33
+											"sourceEnd": 35
 										},
-										"Identifier Expression": {
-											"name": {
-												"Name": "a"
-											}
+										"Suffix Operator": {
+											"expression": {
+												"position": {
+													"sourceStart": 33,
+													"sourceEnd": 33
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "a"
+													}
+												}
+											},
+											"operator": "++"
 										}
-									},
-									"operator": "++"
+									}
 								}
 							}
 						},

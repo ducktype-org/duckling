@@ -102,7 +102,7 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
 				// @TODO: handle null here
-				auto inner_expr = stmt.getExpr().toOpt().value();
+				auto inner_expr = stmt.getExpr().toOpt().value()->getExpr();
 
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:

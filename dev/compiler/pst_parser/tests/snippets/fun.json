@@ -66,26 +66,34 @@
 										"sourceStart": 19,
 										"sourceEnd": 23
 									},
-									"Assignment Expr": {
-										"assigned variables": {
+									"Top Level Expression": {
+										"expr": {
 											"position": {
 												"sourceStart": 19,
-												"sourceEnd": 19
-											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "x"
-												}
-											}
-										},
-										"assignment type": "=",
-										"assigned value": {
-											"position": {
-												"sourceStart": 23,
 												"sourceEnd": 23
 											},
-											"Value Expr": {
-												"number": "3"
+											"Assignment Expr": {
+												"assigned variables": {
+													"position": {
+														"sourceStart": 19,
+														"sourceEnd": 19
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "x"
+														}
+													}
+												},
+												"assignment type": "=",
+												"assigned value": {
+													"position": {
+														"sourceStart": 23,
+														"sourceEnd": 23
+													},
+													"Value Expr": {
+														"number": "3"
+													}
+												}
 											}
 										}
 									}
@@ -101,26 +109,34 @@
 										"sourceStart": 27,
 										"sourceEnd": 31
 									},
-									"Assignment Expr": {
-										"assigned variables": {
+									"Top Level Expression": {
+										"expr": {
 											"position": {
 												"sourceStart": 27,
-												"sourceEnd": 27
-											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "y"
-												}
-											}
-										},
-										"assignment type": "=",
-										"assigned value": {
-											"position": {
-												"sourceStart": 31,
 												"sourceEnd": 31
 											},
-											"Value Expr": {
-												"number": "4"
+											"Assignment Expr": {
+												"assigned variables": {
+													"position": {
+														"sourceStart": 27,
+														"sourceEnd": 27
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "y"
+														}
+													}
+												},
+												"assignment type": "=",
+												"assigned value": {
+													"position": {
+														"sourceStart": 31,
+														"sourceEnd": 31
+													},
+													"Value Expr": {
+														"number": "4"
+													}
+												}
 											}
 										}
 									}
