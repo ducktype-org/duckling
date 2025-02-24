@@ -244,7 +244,7 @@ namespace lexer {
 				pos += size;
 				continue;
 			}
-			
+
 			out.emplace_back(value, u8(base::safeIntConv<uint8_t>(size)), pos);
 			pos += size;
 		}

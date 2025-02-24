@@ -72,9 +72,7 @@
 		inline NAME& operator=(const NAME& rhs)     = default;                                     \
 		inline NAME& operator=(NAME&& rhs) noexcept = default;                                     \
 		inline constexpr explicit(EXPLICIT_BASE) NAME(const BASE& x) noexcept: value{ x } {}       \
-		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept {           \
-			return value;                                                                          \
-		}                                                                                          \
+		inline constexpr explicit(EXPLICIT_BASE) operator BASE() const noexcept { return value; }  \
 		inline constexpr explicit(EXPLICIT_BASE) operator BASE() noexcept { return value; }        \
 		inline constexpr NAME  operator+() const noexcept { return NAME(+value); }                 \
 		inline constexpr NAME  operator-() const noexcept { return NAME(-value); }                 \

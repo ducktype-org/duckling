@@ -5,7 +5,7 @@
 
 namespace base {
 	/**
-	 * Convert given integer value to 
+	 * Convert given integer value to
 	 * different integral type.
 	 * Panics if conversion could be invalid.
 	 */

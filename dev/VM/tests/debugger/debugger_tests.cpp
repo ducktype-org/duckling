@@ -158,8 +158,8 @@ private:
 
 	u64 stepAndGetLine(u64 pid) {
 		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
-		auto execution_position
-			= vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid)).expect("Get current position failed");
+		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
+		                              .expect("Get current position failed");
 		return execution_position.instr_number;
 	}
 };
