@@ -103,7 +103,7 @@ namespace pst {
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {
-		MBox<ExprElement> expr;
+		MBox<AssignmentExprHolder> expr;
 
 	public:
 		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
@@ -121,7 +121,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getExpr() const {
+		MCRef<AssignmentExprHolder> getExpr() const {
 			return expr.ref();
 		}
 

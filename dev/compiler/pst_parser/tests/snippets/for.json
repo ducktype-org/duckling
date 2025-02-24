@@ -191,56 +191,64 @@
 										"sourceStart": 35,
 										"sourceEnd": 42
 									},
-									"Chain Expression": {
-										"atom": {
+									"Top Level Expression": {
+										"expr": {
 											"position": {
 												"sourceStart": 35,
-												"sourceEnd": 39
+												"sourceEnd": 42
 											},
-											"Identifier Expression": {
-												"name": {
-													"Name": "print"
-												}
-											}
-										},
-										"chain": [
-											{
-												"position": {
-													"sourceStart": 40,
-													"sourceEnd": 42
+											"Chain Expression": {
+												"atom": {
+													"position": {
+														"sourceStart": 35,
+														"sourceEnd": 39
+													},
+													"Identifier Expression": {
+														"name": {
+															"Name": "print"
+														}
+													}
 												},
-												"Call Expression": {
-													"type": "[]",
-													"arguments": {
+												"chain": [
+													{
 														"position": {
-															"sourceStart": 41,
-															"sourceEnd": 41
+															"sourceStart": 40,
+															"sourceEnd": 42
 														},
-														"call list": [
-															{
+														"Call Expression": {
+															"type": "[]",
+															"arguments": {
 																"position": {
 																	"sourceStart": 41,
 																	"sourceEnd": 41
 																},
-																"Top Level Expression": {
-																	"expr": {
+																"call list": [
+																	{
 																		"position": {
 																			"sourceStart": 41,
 																			"sourceEnd": 41
 																		},
-																		"Identifier Expression": {
-																			"name": {
-																				"Name": "a"
+																		"Top Level Expression": {
+																			"expr": {
+																				"position": {
+																					"sourceStart": 41,
+																					"sourceEnd": 41
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "a"
+																					}
+																				}
 																			}
 																		}
-																	}
-																}
-															},
-														]
+																	},
+																]
+															}
+														}
 													}
-												}
+												]
 											}
-										]
+										}
 									}
 								}
 							},
