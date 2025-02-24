@@ -715,7 +715,6 @@ private:
 							variant_match(sub_inner) {
 								variant_case(pst::LangElement::ConstChild, sub_expr) {
 									sub_test_expr(sub_expr);
-									message("a");
 								}
 								variant_default {}
 							}
@@ -743,7 +742,6 @@ private:
 						if (auto holder = dynamic_cast<const pst::ExprHolder*>(&*element)) {
 							if (holder->isTopLevel()) {
 								// OK, we found parent
-								message("b");
 								break;
 							}
 						}

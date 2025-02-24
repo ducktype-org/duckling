@@ -181,7 +181,7 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprHolder: {
 			// note: top expr creates a scope for lifetimes
-			auto as_expr_holder = dynamic_cast<const pst::ExprHolder*>(&*element);
+			Ref as_expr_holder = dynamic_cast<const pst::ExprHolder*>(&*element);
 			if (as_expr_holder->isTopLevel())
 				return ElementScopeKind::Standard;
 			else
