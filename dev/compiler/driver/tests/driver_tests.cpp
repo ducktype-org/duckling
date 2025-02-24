@@ -26,7 +26,7 @@ private:
 		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
 		                        .output_file         = base::StrID("test_module_exe"),
 		                        .compile_to_assembly = false,
-		                        .save_llvm_ir        = false });
+		                        .dump_llvm_ir        = false });
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));
@@ -44,7 +44,7 @@ private:
 		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
 		                        .output_file         = base::StrID("test_module_exe"),
 		                        .compile_to_assembly = true,
-		                        .save_llvm_ir        = true });
+		                        .dump_llvm_ir        = true });
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));

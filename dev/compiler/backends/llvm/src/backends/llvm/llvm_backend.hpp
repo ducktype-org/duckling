@@ -52,7 +52,7 @@ namespace compiler::backend_llvm {
 		bool verify() const;
 
 		/**
-		 * @brief Compile the module to object file or assembly.
+		 * @brief Compile the module to binary object file or assembly file.
 		 *
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.

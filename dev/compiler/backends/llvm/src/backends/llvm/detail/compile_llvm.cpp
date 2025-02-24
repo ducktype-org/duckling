@@ -51,14 +51,13 @@ namespace compiler::backend_llvm {
 	void emitCode(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
-		const std::string&           target_triple,
 		Ref<llvm::raw_pwrite_stream> output_stream,
 		llvm::CodeGenFileType        file_type
 	) {
 		// It's the only way to emit a file with a target machine (despite the "legacy" name)
 		llvm::legacy::PassManager pass;
 		m->setDataLayout(target_machine->createDataLayout());
-		m->setTargetTriple(target_triple);
+		m->setTargetTriple(target_machine->getTargetTriple().getTriple());
 
 		if (target_machine->addPassesToEmitFile(pass, *output_stream, nullptr, file_type))
 			CORE_PANIC("TargetMachine can't emit a file of this type");
@@ -70,23 +69,17 @@ namespace compiler::backend_llvm {
 	void emitObject(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
-		const std::string&           target_triple,
 		Ref<llvm::raw_pwrite_stream> output_stream
 	) {
-		emitCode(
-			m, target_machine, target_triple, output_stream, llvm::CodeGenFileType::ObjectFile
-		);
+		emitCode(m, target_machine, output_stream, llvm::CodeGenFileType::ObjectFile);
 	}
 
 	void emitAssembly(
 		Ref<llvm::Module>            m,
 		Ref<llvm::TargetMachine>     target_machine,
-		const std::string&           target_triple,
 		Ref<llvm::raw_pwrite_stream> output_stream
 	) {
-		emitCode(
-			m, target_machine, target_triple, output_stream, llvm::CodeGenFileType::AssemblyFile
-		);
+		emitCode(m, target_machine, output_stream, llvm::CodeGenFileType::AssemblyFile);
 	}
 
 	/**
@@ -109,9 +102,9 @@ namespace compiler::backend_llvm {
 		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
 
 		if (output_type == CompilationOutputType::Assembly)
-			emitAssembly(m, target_machine, target_triple, &output_stream);
+			emitAssembly(m, target_machine, &output_stream);
 		else
-			emitObject(m, target_machine, target_triple, &output_stream);
+			emitObject(m, target_machine, &output_stream);
 
 		llvm::errs() << "Compiled LLVM module to the file: " << output_file.strView() << "\n";
 	}

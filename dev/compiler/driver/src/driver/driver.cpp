@@ -28,7 +28,7 @@ namespace compiler::driver {
 
 		if (not mod.verify()) CORE_PANIC("LLVM module verification failed");
 
-		if (options->save_llvm_ir) {
+		if (options->dump_llvm_ir) {
 			base::StrID llvm_ir_path
 				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
 			mod.debugDumpToFile(llvm_ir_path);

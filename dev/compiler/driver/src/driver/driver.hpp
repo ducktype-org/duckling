@@ -30,7 +30,7 @@ namespace compiler::driver {
 		BackendType backend_type;
 		base::StrID output_file;
 		bool        compile_to_assembly;
-		bool        save_llvm_ir;
+		bool        dump_llvm_ir;
 	};
 
 	/**
@@ -41,7 +41,7 @@ namespace compiler::driver {
 	 */
 	class BackendDriver {
 	protected:
-		CRef<Options> options;  // NOLINT: Currently unused
+		CRef<Options> options;
 
 	public:
 		BackendDriver(CRef<Options> options): options(options) {}
