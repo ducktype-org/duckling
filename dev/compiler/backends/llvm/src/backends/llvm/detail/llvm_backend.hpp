@@ -40,10 +40,10 @@ namespace compiler::backend_llvm {
 		void addFunctionToModule(CRef<lir::Function> lir_function);
 
 		void debugPrint() const;
-		
+
 		/**
 		 * @brief Dumps the LLVM IR to a file.
-		 * 
+		 *
 		 * @param output_file Path where the output file will be saved.
 		 */
 		void debugDumpToFile(base::StrID output_file) const;
@@ -55,7 +55,7 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * @brief Compile the module to object file or assembly.
-		 * 
+		 *
 		 * @param output_file Path where the output file will be saved.
 		 * @param output_type Type of the output file.
 		 */

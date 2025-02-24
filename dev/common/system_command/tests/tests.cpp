@@ -1,5 +1,5 @@
 
-#include "base/string_id.hpp"
+#include <base/string_id.hpp>
 #include <tester/tester.hpp>
 #include <system_command/system_command.hpp>
 
@@ -8,9 +8,7 @@ class SystemCommandTests final: public tester::TestSuite {
 #define TESTER_CLASS SystemCommandTests
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(exitCode);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(exitCode); }
 
 private:
 	void exitCode() {
@@ -19,10 +17,11 @@ private:
 		assertTrue(true_ec == 0, "true command should return 0");
 		auto false_ec = system_command::SystemCommand(base::StrID("false")).execute(true, false);
 		assertTrue(false_ec == 1, "false command should return 1");
-		
-		assertThrows<base::Panic>([&]() {
-			system_command::SystemCommand(base::StrID("false")).execute();
-		}, "command should panic on non-zero exit code");
+
+		assertThrows<base::Panic>(
+			[&]() { system_command::SystemCommand(base::StrID("false")).execute(); },
+			"command should panic on non-zero exit code"
+		);
 	}
 };
 

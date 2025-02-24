@@ -31,15 +31,15 @@ namespace system_command {
 
 		/**
 		 * @brief Adds an argument to the command.
-		 * 
-		 * @param arg 
+		 *
+		 * @param arg
 		 */
 		SystemCommand& addArg(base::StrID arg);
-		
+
 		/**
 		 * @brief Executes the command.
 		 * @warning Is not thread safe.
-		 * 
+		 *
 		 * @param echo if true, the command will be echoed to stderr.
 		 * @param error_on_exit_code if true, the command will panic if the exit code is not 0.
 		 * @return i32 exit code of the command.

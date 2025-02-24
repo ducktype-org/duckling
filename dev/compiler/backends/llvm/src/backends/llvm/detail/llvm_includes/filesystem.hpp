@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include <llvm_helpers/llvm_helpers.hpp>
 

@@ -9,6 +9,7 @@
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
 
-	void
-		compileModuleToObject(Ref<ModuleImpl> module_impl, base::StrID output_file, CompilationOutputType output_type);
+	void compileModuleToObject(
+		Ref<ModuleImpl> module_impl, base::StrID output_file, CompilationOutputType output_type
+	);
 }
