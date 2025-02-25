@@ -23,7 +23,7 @@ function(duck_add_vm suffix defines default)
 
   set(lib "Lib${exec}")
   add_library(${lib} ${vm_sources})
-  make_module(${lib} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Result)
+  make_module(${lib} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Result Init)
   target_compile_definitions(${lib} PRIVATE ${defines})
 
   set(sources src/main.cpp src/server.cpp src/cli.cpp)
