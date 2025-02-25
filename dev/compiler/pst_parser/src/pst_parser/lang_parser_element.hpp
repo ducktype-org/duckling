@@ -269,35 +269,37 @@ namespace pst {
 		bool operator== (PSTAccessKey other) {return key == other.key;}
 	};
 
-	/**
-	 * @brief common ancestor for element accessors
-	 */
-	template<std::derived_from<LangElement> Element>
-	class LangElementAccess {
-		base::MRef<Element> element;
-		PSTAccessKey stored_key;
+	// /**
+	 // * @brief common ancestor for element accessors
+	 // */
+	// template<std::derived_from<LangElement> Element>
+	// class LangElementAccess {
+		// base::MRef<Element> element;
+		// PSTAccessKey stored_key;
 
-		LangElementAccess(base::MCRef<Element> element): element(element) {}
-	public:
-		void getAccess(PSTAccessKey new_key) {stored_key = new_key;}
-		LangElementAccess() = delete;
-		LangElementAccess(const LangElementAccess& other) noexcept: element(other.element) {}
-		LangElementAccess(const LangElementAccess&& other) noexcept: element(other.element) {}
+		// LangElementAccess(base::MCRef<Element> element): element(element) {}
+	// public:
+		// void getAccess(PSTAccessKey new_key) {stored_key = new_key;}
+		// LangElementAccess() = delete;
+		// LangElementAccess(const LangElementAccess& other) noexcept: element(other.element) {}
+		// LangElementAccess(const LangElementAccess&& other) noexcept: element(other.element) {}
 
-		// Public access methods of LangElement moved here
-	};
+		// // Public access methods of LangElement moved here
+	// };
 
 	template<std::derived_from<LangElement> Element>
 	class Access;
 
 	template<std::derived_from<LangElement> Element>
 	class AccessLocked: private MBox<Element> {
+	public:
 		Access<Element> unlock();
 	};
 
 	template<std::derived_from<LangElement> Element>
 	class Access: public MBox<Element> {
-		
+		PSTAccessKey stored_key;
+	public:
 	};
 
 	using ImportType = CRef<pst::Import>;
