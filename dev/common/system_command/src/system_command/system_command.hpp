@@ -18,6 +18,7 @@ namespace system_command {
 	 *
 	 * @warning This class is not thread safe.
 	 *
+	 * @todo Change base::StrID to std::string
 	 * @todo Add support for getting the output of the command.
 	 * @todo Add proper error handling.
 	 */
