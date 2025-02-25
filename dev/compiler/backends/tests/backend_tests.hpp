@@ -1,3 +1,8 @@
+/**
+ * @brief This file serves as a common base for backend tests.
+ */
+
+#include <query_framework/query_int.hpp>
 #include <tester/tester.hpp>
 
 #include <query_framework/utils/with_context_do.hpp>
@@ -6,19 +11,28 @@
 #include <helios/queries.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
 
-class LLVMBackendTest final: public tester::TestSuite {
-#undef TESTER_CLASS
-#define TESTER_CLASS LLVMBackendTest
+class TESTER_CLASS: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		#ifdef DVM_BACKEND_TEST
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
+		#elif LLVM_BACKEND_TEST
+		TESTER_ADD_TEST(returnVoidTest);
+		TESTER_ADD_TEST(simpleTypesVariables);
+		TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(arithmeticTest);
+		#else
+		#error "Unknown backend test"
+		#endif
 	}
+
+protected:
+	void testWithLir(CRef<compiler::lir::Function> lir_function);
 
 private:
 	void runTestForModuleWithSingleFunction(std::string module_path) {
@@ -31,14 +45,7 @@ private:
 
 			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level.functions[0] });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
-
-			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
-
-			// debug print for coverage only:
-			llvm_module.debugPrint();
-
-			// this is were the main part ot test is:
-			assertTrue(llvm_module.verify(), "LLVM module verification failed");
+			testWithLir(lir_fun);
 		});
 	}
 
@@ -57,4 +64,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/backends/llvm/tests/")
+TESTER_COMMON_MAIN("/compiler/backends/tests/")
