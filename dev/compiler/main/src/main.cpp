@@ -11,6 +11,7 @@
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
@@ -311,11 +312,11 @@ int mainProcedure(int argc, const char* const* argv) {
 	init::InitObject _;
 
 	clap::CLIArgs full_args{
-		.argc = (usize) argc /*base::safeInvConv<usize>(argc) TODO: this PR*/,
+		.argc = base::safeIntConv<usize>(argc),
 		.argv = argv,
 	};
 	clap::CLIArgs command_args{
-		.argc = (usize) (argc - 1) /*base::safeInvConv<usize>(argc - 1) TODO this PR*/,
+		.argc = base::safeIntConv<usize>(argc - 1),
 		.argv = argv + 1,
 	};
 
