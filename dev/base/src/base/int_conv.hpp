@@ -1,6 +1,7 @@
 #pragma once
 
 #include <utility>
+#include <concepts>
 #include "exceptions.hpp"
 
 namespace base {
@@ -9,7 +10,7 @@ namespace base {
 	 * different integral type.
 	 * Panics if conversion would change the value.
 	 */
-	template<class T, class U>
+	template<std::integral T, std::integral U>
 	T safeIntConv(U u) {
 		CORE_ASSERT(std::in_range<T>(u), "Bad integer conversion");
 		return static_cast<T>(u);
