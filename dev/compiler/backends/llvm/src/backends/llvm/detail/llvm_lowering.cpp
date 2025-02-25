@@ -212,13 +212,7 @@ namespace compiler::backend_llvm {
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
-					if (value >= 0) {
-						return llvm::ConstantInt::get(
-							i64Type(context), base::safeIntConv<u64>(value)
-						);
-					} else {
-						return llvm::ConstantInt::getSigned(i64Type(context), value);
-					}
+					return llvm::ConstantInt::getSigned(i64Type(context), value);
 				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LocalRef, lir_local) {
