@@ -86,7 +86,9 @@ namespace compiler::backend_llvm {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
-				return llvm::Type::getIntNTy(context, base::safeIntConv<unsigned>(static_cast<usize>(layout.getSize())));
+				return llvm::Type::getIntNTy(
+					context, base::safeIntConv<unsigned>(static_cast<usize>(layout.getSize()))
+				);
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
 				// see https://llvm.org/docs/LangRef.html#floating-point-types for docs on LLVM
@@ -211,9 +213,10 @@ namespace compiler::backend_llvm {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
 					if (value >= 0) {
-						return llvm::ConstantInt::get(i64Type(context), base::safeIntConv<u64>(value));
-					}
-					else {
+						return llvm::ConstantInt::get(
+							i64Type(context), base::safeIntConv<u64>(value)
+						);
+					} else {
 						return llvm::ConstantInt::getSigned(i64Type(context), value);
 					}
 				}
