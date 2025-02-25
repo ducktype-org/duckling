@@ -7,7 +7,7 @@ namespace base {
 	/**
 	 * Convert given integer value to
 	 * different integral type.
-	 * Panics if conversion could be invalid.
+	 * Panics if conversion would change the value.
 	 */
 	template<class T, class U>
 	T safeIntConv(U u) {
