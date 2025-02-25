@@ -53,9 +53,9 @@ struct CommandList final {
 	 */
 	void add(std::string name, std::string desc, CommandRunner runner) {
 		commands.emplace_back(Command{
-			.name=std::move(name),
-			.description=std::move(desc),
-			.runner=std::move(runner), 
+			.name        = std::move(name),
+			.description = std::move(desc),
+			.runner      = std::move(runner),
 		});
 	}
 
@@ -92,10 +92,10 @@ struct CommandList final {
 		for (auto& cmd: commands) {
 			if (cmd.name == what) {
 				int status = cmd.runner();
-				return { .was_command_run=true, .exit_code=status };
+				return { .was_command_run = true, .exit_code = status };
 			}
 		}
-		return { .was_command_run=false, .exit_code=1 };
+		return { .was_command_run = false, .exit_code = 1 };
 	}
 };
 
@@ -261,7 +261,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Path to the module")
 		             .required()
 		             .build());
-		
+
 		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
 		             .addShortName('o')
 		             .addLongName("output")
@@ -275,18 +275,17 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		// @TODO: error handling
 		using namespace compiler;
-		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
 		// @TODO: change to hout of entire module, when available
 		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-		
-		driver::Driver driver{driver::Options{
-				.backend_type = driver::BackendType::LLVM,
-				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
-				.compile_to_assembly = false,
-				.dump_llvm_ir = false,
-			}
-		};
+
+		driver::Driver driver{ driver::Options{
+			.backend_type = driver::BackendType::LLVM,
+			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
+			.compile_to_assembly = false,
+			.dump_llvm_ir        = false,
+		} };
 
 		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
 
@@ -312,11 +311,11 @@ int mainProcedure(int argc, const char* const* argv) {
 	init::InitObject _;
 
 	clap::CLIArgs full_args{
-		.argc = (usize)argc /*base::safeInvConv<usize>(argc) TODO: this PR*/,
-		.argv = argv, 
+		.argc = (usize) argc /*base::safeInvConv<usize>(argc) TODO: this PR*/,
+		.argv = argv,
 	};
 	clap::CLIArgs command_args{
-		.argc = (usize)(argc - 1)/*base::safeInvConv<usize>(argc - 1) TODO this PR*/, 
+		.argc = (usize) (argc - 1) /*base::safeInvConv<usize>(argc - 1) TODO this PR*/,
 		.argv = argv + 1,
 	};
 
@@ -387,7 +386,8 @@ int main(int argc, const char* argv[]) {
 		return 1;
 	} catch (...) {
 		if (throwing_main) throw;
-		std::cerr << "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
+		std::cerr
+			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
 		return 1;
 	}
 }
