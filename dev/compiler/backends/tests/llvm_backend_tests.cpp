@@ -1,7 +1,7 @@
+#include <backends/llvm/llvm_backend.hpp>
+
 #define TESTER_CLASS LLVMBackendTest
 #define LLVM_BACKEND_TEST
-
-#include <backends/llvm/llvm_backend.hpp>
 #include "backend_tests.hpp"
 
 void LLVMBackendTest::testWithLir(CRef<compiler::lir::Function> lir_function) {
