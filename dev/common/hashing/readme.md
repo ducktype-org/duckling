@@ -188,7 +188,7 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
         3.14,
         "hello",
         std::pair<std::string, char>{"abc", 'x'
-    ) << '\n';
+    ).finalize() << '\n';
 // prints:
 ~~~~~
 <html>
