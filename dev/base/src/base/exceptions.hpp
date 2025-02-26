@@ -72,23 +72,25 @@ namespace base {
 /**
  * Base helper macro, don't use it directly.
  */
- #define DETAIL_THROW_PANIC(panic_title, ...)                \
- throw base::Panic(                                    \
-	 "    In " __FILE__ ":" STRINGIFY_2(__LINE__), \
-	 base::strConcat(panic_title, "    " __VA_OPT__(,) __VA_ARGS__)        \
- )
+#define DETAIL_THROW_PANIC(panic_title, ...)                            \
+	throw base::Panic(                                                  \
+		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
+		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
+	)
 
 
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
 #define CORE_ASSERT(cond, what, ...) \
-	if (!(cond)) DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(,) __VA_ARGS__)
+	if (!(cond))                     \
+	DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define CORE_PANIC(what, ...) DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(,) __VA_ARGS__)
+#define CORE_PANIC(what, ...) \
+	DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * @brief Wrapper for CORE_PANIC intended to be used
