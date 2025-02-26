@@ -136,7 +136,7 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
     </body>
     </html>
 
-* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeHashCodeBase` or the type `void`. Shorter hash codes may be desired when hashing many small objects as for them hash codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
+* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCodeBase` or the type `void`. Shorter hash codes may be desired when hashing many small objects as for them hash codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
 
 Using different hashing algorithms:
 ~~~~~cpp
@@ -150,7 +150,7 @@ Different hash type code lengths used:
 ~~~~~cpp
 std::cout << Hash<DebugHash, void>{}(42) << '\n'
           << Hash<DebugHash>{}(42) << '\n'
-          << Hash<DebugHash, TypeHashCodeBase<u64>>{}(42) << '\n';
+          << Hash<DebugHash, TypeCodeBase<u64>>{}(42) << '\n';
 // prints:
 ~~~~~
 <html>
@@ -198,10 +198,21 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
 </html>
 
 
+`justHash()`
+------------
+
+You can also use the `justHash()` function which is a shorthand for creating a temporary `Hash` or `StatefulHash` object and calling it with the given arguments.
+
+~~~~~cpp
+constexpr auto h1 = justHash(42);
+constexpr auto h2 = justHash(42, 3.14, "hello");
+~~~~~
+
+
 `TYPE_HASH_CODE`
 ----------------
 
-Module also provides a `TYPE_HASH_CODE` variable template which is a unique integer constant for each type. In contrast to `std::type_info::hash_code()` it can be used in a `constexpr` context and in templates. It is used by `Hash` and `StatefulHash` to append appropriate bytes to the hashed bytes.
+Module also provides a `TYPE_HASH_CODE` variable template which is an integer constant that is a hash of the type's name. In contrast to `std::type_info::hash_code()` it can be used in a `constexpr` context and in templates. It is used by `Hash` and `StatefulHash` to append appropriate bytes to the hashed bytes.
 
 It can be used simply by providing it the type we are interested in:
 ~~~~~cpp
@@ -212,6 +223,18 @@ We can also specify the size of the hash code:
 bool b1 = sizeof(TYPE_HASH_CODE<int, u32>) == 4; // true
 bool b2 = sizeof(TYPE_HASH_CODE<int, u64>) == 8; // true
 ~~~~~
+
+`TYPE_UNIQUE_CODE`
+------------------
+
+This constant template variable is a unique number of a given length for each type.
+
+~~~~~cpp
+static_assert(TYPE_UNIQUE_CODE<int> == TYPE_UNIQUE_CODE<int>);
+static_assert(TYPE_UNIQUE_CODE<std::string> != TYPE_UNIQUE_CODE<float>);
+bool b = sizeof(TYPE_UNIQUE_CODE<int, u32>) == 4; // true
+~~~~~
+
 
 Adding new hashing algorithm
 ============================

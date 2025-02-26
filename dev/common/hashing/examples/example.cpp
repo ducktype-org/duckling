@@ -7,10 +7,10 @@
 
 #include <hashing/hash.hpp>
 #include <hashing/add_to_hash.hpp>
-#include <hashing/type_hash_code.hpp>
 #include <hashing/hashing_algorithms.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
-#include <hashing/type_hash_code_def.hpp>
+#include <hashing/type_unique_code.hpp>
+#include <hashing/type_hash_code.hpp>
 
 // example usage of hashing utilities
 
@@ -120,7 +120,8 @@ int main() {
 	hasher2(type2{});
 	// or all at once
 	hasher2(7, std::string{ "hello" }, 42);
-	constexpr auto hash_value = hashing::StatefulHash{}(7, type2{}, 7, std::string{ "hello" }, 42);
+	constexpr auto hash_value
+		= hashing::StatefulHash{}(7, type2{}, 7, std::string{ "hello" }, 42).finalize();
 	std::cout << "stateful hash:\n"
 			  << static_cast<std::string>(hasher2) << "\n\t(constexpr) hash value: " << hash_value
 			  << '\n';
@@ -136,13 +137,21 @@ int main() {
 	// different hash code types
 	std::cout << "using different hash code types (none, 4 bytes, 8 bytes):\n"
 			  << hashing::Hash<hashing::DebugHash, void>{}(42) << '\n'
-			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u32>>{}(42) << '\n'
-			  << hashing::Hash<hashing::DebugHash, hashing::TypeHashCodeBase<u64>>{}(42) << '\n';
+			  << hashing::Hash<hashing::DebugHash, hashing::TypeCodeBase<u32>>{}(42) << '\n'
+			  << hashing::Hash<hashing::DebugHash, hashing::TypeCodeBase<u64>>{}(42) << '\n';
 
 	// debug hash with tuple
 	std::cout << "hashing tuple-like types:\n"
 			  << hashing::StatefulHash<hashing::DebugHash>{}(
 					 std::tuple{ 42, 3.14, "hello" }, std::pair<std::string, char>{ "abc", 'x' }
 				 )
+					 .finalize()
 			  << '\n';
+
+	// unique codes
+	std::cout << "unique codes:\n"
+			  << "\tint:\t" << hashing::TYPE_UNIQUE_CODE<int> << '\n'
+			  << "\tt1:\t" << hashing::TYPE_UNIQUE_CODE<type1> << '\n'
+			  << "\tt2:\t" << hashing::TYPE_UNIQUE_CODE<type2> << '\n'
+			  << "\tint:\t" << hashing::TYPE_UNIQUE_CODE<int> << '\n';
 }

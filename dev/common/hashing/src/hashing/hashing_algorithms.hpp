@@ -13,8 +13,8 @@
 
 #include <base/ints.hpp>
 
-#include "type_hash_code_def.hpp"
 #include "hash_algorithm_utils.hpp"
+#include "type_code.hpp"
 
 namespace hashing {
 
@@ -45,7 +45,7 @@ namespace hashing {
 	 * though not meant for cryptographic purposes
 	 */
 	template<std::unsigned_integral I>
-	class Fnv1a: protected detail::Fnv1a_Constants<I> {
+	class Fnv1a final: protected detail::Fnv1a_Constants<I> {
 		using detail::Fnv1a_Constants<I>::OFFSET_BASIS;
 		using detail::Fnv1a_Constants<I>::FNV_PRIME;
 
@@ -98,8 +98,8 @@ namespace hashing {
 	 * hash algorithm that keeps the bytes of the hashed objects
 	 * and can be converted to a string that represents the bytes in hex
 	 */
-	class DebugHash {
-		enum class Type : std::uint8_t { HashCode, Other };
+	class DebugHash final {
+		enum class Type : std::uint8_t { TypeCode, Other };
 		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
 	public:
@@ -113,15 +113,15 @@ namespace hashing {
 		}
 
 		// type codes
-		template<base::IsInstantiationOf<TypeHashCodeBase> TypeHC>
-		constexpr void operator()(TypeHC hash) noexcept {
-			auto arr = std::bit_cast<std::array<char, sizeof(TypeHC)>, TypeHC>(hash);
-			this->operator()(std::span{ arr.data(), arr.size() }, Type::HashCode);
+		template<base::IsInstantiationOf<TypeCodeBase> TypeC>
+		constexpr void operator()(TypeC hash) noexcept {
+			auto arr = std::bit_cast<std::array<char, sizeof(TypeC)>, TypeC>(hash);
+			this->operator()(std::span{ arr.data(), arr.size() }, Type::TypeCode);
 		}
 
 		// objects with unique representations but not ranges nor type codes
 		template<typename T>
-		requires(not base::IsInstantiationOf<T, TypeHashCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
+		requires(not base::IsInstantiationOf<T, TypeCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
 		constexpr void operator()(const T& t) noexcept {
 			const std::array arr = std::bit_cast<std::array<char, sizeof(T)>, T>(t);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
@@ -173,7 +173,7 @@ namespace hashing {
 						if (line != 0) ret += '\n';
 						append_line_number(ret, line++);
 					}
-					if (i == pos) ret += (type == Type::HashCode ? yellow : red);
+					if (i == pos) ret += (type == Type::TypeCode ? yellow : red);
 					append_byte_hex(ret, static_cast<std::byte>(b[j]));
 					ret += ' ';
 					if (i == pos) ret += reset;

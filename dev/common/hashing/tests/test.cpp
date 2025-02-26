@@ -8,9 +8,10 @@
 
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_hash_code_def.hpp>
+#include <hashing/type_unique_code.hpp>
 #include <hashing/type_hash_code.hpp>
 #include <hashing/add_to_hash.hpp>
+#include <hashing/type_code.hpp>
 #include <hashing/hash.hpp>
 
 
@@ -139,6 +140,7 @@ public:
 		TESTER_ADD_TEST(constexprTest);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
+		TESTER_ADD_TEST(uniqueCodeTest);
 	}
 
 private:
@@ -177,7 +179,7 @@ private:
 		DebugHash dh;
 		dh(std::span{ "hello 1234567890" });
 
-		Hash<DebugHash, TypeHashCode>{}(type3{});
+		Hash<DebugHash, TypeCode>{}(type3{});
 		Hash<DebugHash>{}(type4{});
 	}
 
@@ -200,8 +202,8 @@ private:
 		constexpr auto         r1 = Hash<Fnv1a_32>{}(876'543);
 		constexpr auto         r2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
 		constexpr auto         r3 = TYPE_HASH_CODE<int>;
-		constexpr auto         r4 = TypeHashCode{ 23 };
-		constexpr auto         r5 = TypeHashCodeBase<u16>{ 234 };
+		constexpr auto         r4 = TypeCode{ 23 };
+		constexpr auto         r5 = TypeCodeBase<u16>{ 234 };
 		constexpr auto         r6 = Hash{}(S{});
 		StatefulHash<Fnv1a_64> h;
 		h(123, 345.f, std::string_view{ "hello" }, S{});
@@ -213,13 +215,23 @@ private:
 
 	template<typename T>
 	void defaultsTest() {
-		StatefulHash<T, TypeHashCodeBase<u16>> h;
+		StatefulHash<T, TypeCodeBase<u16>> h;
 		h(123, 345.f, "hello", S{});
-		static_assert(requires { typename decltype(h)::TypeHC_value_type; });
+		static_assert(requires { typename decltype(h)::TypeCode_value_type; });
 		Hash<T, void> h2;
 		h2(123);
 		h2(std::string_view{ "hello" });
-		static_assert(not requires { typename decltype(h2)::TypeHC_value_type; });
+		static_assert(not requires { typename decltype(h2)::TypeCode_value_type; });
+	}
+
+	void uniqueCodeTest() {
+		auto id1 = TYPE_UNIQUE_CODE<int>;
+		auto id2 = TYPE_UNIQUE_CODE<int>;
+		assertTrue(id1 == id2, "unique codes should be the same");
+		auto id3 = TYPE_UNIQUE_CODE<float>;
+		assertTrue(id1 != id3, "unique codes should differ");
+		auto id4 = TYPE_UNIQUE_CODE<S>;
+		assertTrue(id1 != id4, "unique codes should differ");
 	}
 };
 

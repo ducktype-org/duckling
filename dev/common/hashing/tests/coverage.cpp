@@ -8,9 +8,10 @@
 
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_hash_code_def.hpp>
+#include <hashing/type_unique_code.hpp>
 #include <hashing/type_hash_code.hpp>
 #include <hashing/add_to_hash.hpp>
+#include <hashing/type_code.hpp>
 #include <hashing/hash.hpp>
 
 
@@ -144,7 +145,7 @@ class HashingTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(typeHashCodeDefTest);
+		TESTER_ADD_TEST(typeCodeDefTest);
 		TESTER_ADD_TEST(hashAlgorithmUtilsTest);
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(addToHashTest);
@@ -152,24 +153,19 @@ public:
 	}
 
 private:
-	void typeHashCodeDefTest() {
+	void typeCodeDefTest() {
 		static_assert(std::integral<u32>, "u32 should be integral");
 		static_assert(std::integral<u64>, "u64 should be integral");
-		static_assert(
-			std::integral<TypeHashCodeBase<>::value_type>, "value_type should be integral"
-		);
+		static_assert(std::integral<TypeCodeBase<>::value_type>, "value_type should be integral");
+		assertTrue(std::is_same_v<TypeCode, TypeCodeBase<>>, "TypeCode should be TypeCodeBase<>");
+		TypeCodeBase<u64> thcb1;
+		TypeCodeBase<u64> thcb2;
 		assertTrue(
-			std::is_same_v<TypeHashCode, TypeHashCodeBase<>>,
-			"TypeHashCode should be TypeHashCodeBase<>"
+			std::is_same_v<TypeCodeBase<u64>::value_type, u64>,
+			"TypeCodeBase should have value_type"
 		);
-		TypeHashCodeBase<u64> thcb1;
-		TypeHashCodeBase<u64> thcb2;
-		assertTrue(
-			std::is_same_v<TypeHashCodeBase<u64>::value_type, u64>,
-			"TypeHashCodeBase should have value_type"
-		);
-		[[maybe_unused]] auto _ = static_cast<TypeHashCodeBase<u64>::value_type>(thcb1);
-		assertTrue(thcb1 <= thcb2, "TypeHashCodeBase should be comparable");
+		[[maybe_unused]] auto _ = static_cast<TypeCodeBase<u64>::value_type>(thcb1);
+		assertTrue(thcb1 <= thcb2, "TypeCodeBase should be comparable");
 	}
 
 	void hashAlgorithmUtilsTest() {
@@ -471,8 +467,11 @@ private:
 
 		StatefulHash sh;
 		sh(1);
-		assertFalse(sh(123) == sh(123), "stete should change");
-		assertTrue(static_cast<u64>(sh) == StatefulHash{}(1, 123, 123), "state should be the same");
+		assertFalse(static_cast<u64>(sh(123)) == static_cast<u64>(sh(123)), "stete should change");
+		assertTrue(
+			static_cast<u64>(sh) == static_cast<u64>(StatefulHash{}(1, 123, 123)),
+			"state should be the same"
+		);
 		std::span sp = "dsfjsalfjfa salfjfalsdfj";
 		sh("124241", sp, X{}, S{});
 		sh(std::pair<int, S>{ 1, S{} });
