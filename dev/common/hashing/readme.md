@@ -163,7 +163,7 @@ std::cout << Hash<DebugHash, void>{}(42) << '\n'
 `StatefulHash`
 --------------
 
-This class is very similar to `Hash` but instead of hashing only a single object and immediately returning the value it also keeps the state of the hashing algorithm. We can add more objects to the hash using call operator and at the end cast it to the hash value. This allows for hashing multiple objects at once.
+This class is very similar to `Hash` but instead of hashing only a single object and immediately returning the value it keeps the state of the hashing algorithm. We can add more objects to the hash using call operator and at the end cast it to the hash value or use a `finalize()` member function. This allows for hashing multiple objects at once.
 
 Template parameters work the same way as in `Hash`.
 
@@ -177,7 +177,7 @@ bool b1 = h(42) == sh(42); // true
 bool b2 = h(42) == sh(42); // false
 
 // passing multiple objects is supported:
-constexpr auto hash = StatefulHash{}(42, 3.14, "hello");
+constexpr auto hash = StatefulHash{}(42, 3.14, "hello").finalize();
 ~~~~~
 
 Similarly to `Hash` we can peek at the hashed bytes using `DebugHash`:
