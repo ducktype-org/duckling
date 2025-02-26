@@ -3,6 +3,8 @@
 #include <base/exceptions.hpp>
 #include <iostream>
 
+#include <init_private/aaa.hpp>
+
 namespace init {
 	namespace {
 
