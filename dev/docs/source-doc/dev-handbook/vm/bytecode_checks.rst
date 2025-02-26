@@ -5,6 +5,7 @@ Bytecode Checks
 Init deinit
 -----------
 
+- Missing init or deinit
 - Using stack before init
 - Using stack after deinit
 - Moving between two data types
