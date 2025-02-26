@@ -11,6 +11,7 @@
 #include <span>
 #include <bit>
 
+#include <base/type_traits.hpp>
 #include <base/ints.hpp>
 
 #include "hash_algorithm_utils.hpp"
