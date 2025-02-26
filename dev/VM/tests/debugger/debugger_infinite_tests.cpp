@@ -2,6 +2,7 @@
 #include <api/vm.hpp>
 #include <api/api.hpp>
 #include <tester/tester.hpp>
+#include <base/int_conv.hpp>
 
 /**
  * @brief This test set is responsible for testing the debugger when the VM is running endlessly.
@@ -48,10 +49,11 @@ private:
 			1 <= position.instr_number && position.instr_number <= 2, "Line number is not correct"
 		);
 
-		auto expected_next_line = [](u64 x) -> u64 {
+		auto expected_next_line = [this](u64 x) -> u64 {
 			if (x == 1) return 2;
 			if (x == 2) return 1;
-			return -1;
+			this->fail("Unexpected line number");
+			CORE_UNREACHABLE();
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
@@ -77,9 +79,9 @@ private:
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(pid).expect("Step failed");
-		auto execution_position
-			= vm::api::getCurrentPosition(pid).expect("Get current position failed");
+		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
+		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
+		                              .expect("Get current position failed");
 		return execution_position.instr_number;
 	}
 };
