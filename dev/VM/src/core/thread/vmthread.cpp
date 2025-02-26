@@ -122,7 +122,13 @@ namespace vm {
 		instr->opfun(instr, local_stack, frame, *this);
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
 #elif USE_COMPUTED_GOTO
+// We use computed-gotos here, so we turn off pedantic warnings
+// for this case
+PUSH_DIAGNOSTIC
+_Pragma("GCC diagnostic ignored \"-Wpedantic\"")
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
+	
+
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
 	#include <code_data/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
@@ -145,6 +151,8 @@ namespace vm {
 
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
+
+	POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
