@@ -55,11 +55,11 @@ function main {
 		input_l64       0;
 
         label Loop;
-            call_func 0;
-            call_func 0;
-            call_func 0;
-            call_func 0;
-            call_func 0;
+            call_func run_every_opcode;
+            call_func run_every_opcode;
+            call_func run_every_opcode;
+            call_func run_every_opcode;
+            call_func run_every_opcode;
 
             sub_l64_imm 0, 1;
             cmpEq_l64_imm   0, 0;

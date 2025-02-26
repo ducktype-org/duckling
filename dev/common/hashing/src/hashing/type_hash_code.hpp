@@ -26,7 +26,8 @@ namespace hashing {
 			consteval StrToIntegral(const std::span<const char, N> span) {
 				HashAlgorithm h;
 				h(span);
-				hash_value.value = static_cast<typename HashAlgorithm::result_type>(h);
+				hash_value.value
+					= static_cast<I>(static_cast<typename HashAlgorithm::result_type>(h));
 			}
 
 			consteval operator TypeCodeBase<I>() const { return hash_value; }

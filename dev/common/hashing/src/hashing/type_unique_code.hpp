@@ -23,7 +23,7 @@ namespace hashing {
 
 		template<typename T, std::integral I>
 		TypeCodeBase<I> getUniqueID() {
-			static const I id = getNextID();
+			static const I id = static_cast<I>(getNextID());
 			assert(id < std::numeric_limits<I>::max());
 			return TypeCodeBase<I>{ id };
 		}

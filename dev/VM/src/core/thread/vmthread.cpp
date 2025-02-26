@@ -123,45 +123,43 @@ namespace vm {
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
 #elif USE_COMPUTED_GOTO
 		constexpr static std::array<void*, OP_CASES_COUNT> opcode_label = {
-	#define DEF_OPCODE(opcode) (&&LABEL_##opcode),
+	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
 	#include <code_data/opcodes_list.hpp>
-	#undef DEF_OPCODE
+	#undef HANDLE_OPCODE
 		};
 
 		goto* opcode_label[static_cast<u64>(instr->opcode)];
 
-	#define DEF_OPCODE(opcode_name)                                         \
-		LABEL_##opcode_name: {                                              \
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-			goto* opcode_label[static_cast<u64>(instr->opcode)];            \
-		}
-	#define DEF_OPCODE_END(opcode_name)                                     \
-		LABEL_##opcode_name: {                                              \
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-			goto End;                                                       \
+	#define HANDLE_OPCODE(opcode_name)                                          \
+		LABEL_##opcode_name: {                                                  \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
+			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
+			              opcode_str == "exit") {                               \
+				goto End;                                                       \
+			} else {                                                            \
+				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+			}                                                                   \
 		}
 	#include <code_data/opcodes_list.hpp>
-	#undef DEF_OPCODE
-	#undef DEF_OPCODE_END
+	#undef HANDLE_OPCODE
 
 	End:
 		return runtime_data.frame_stack_base->regs.p64_reg_0;
 #elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
-	#define DEF_OPCODE(opcode_name)                                     \
-	case OpcodeFix8::opcode_name: {                                     \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-		break;                                                          \
-	}
-	#define DEF_OPCODE_END(opcode_name)                                 \
-	case OpcodeFix8::opcode_name: {                                     \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this); \
-		goto End;                                                       \
+	#define HANDLE_OPCODE(opcode_name)                                      \
+	case OpcodeFix8::opcode_name: {                                         \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
+		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
+		              opcode_str == "exit") {                               \
+			goto End;                                                       \
+		} else {                                                            \
+			break;                                                          \
+		}                                                                   \
 	}
 	#include <code_data/opcodes_list.hpp>
-	#undef DEF_OPCODE
-	#undef DEF_OPCODE_END
+	#undef HANDLE_OPCODE
 
 			default: {
 				CORE_PANIC("Unknown operator:", u64(instr->opcode));

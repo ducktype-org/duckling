@@ -10,6 +10,7 @@
 #include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
 #include <pst_parser/parser.hpp>
+#include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <type_traits>
@@ -47,6 +48,7 @@ public:
 		TESTER_ADD_TEST(testTypeOf);
 		TESTER_ADD_TEST(testKeywordLiterals);
 		TESTER_ADD_TEST(testFunctionParameters);
+		TESTER_ADD_TEST(testExprScopes);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -686,6 +688,68 @@ private:
 
 				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
+			}
+		});
+	}
+
+	void testExprScopes() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/expr_scopes")));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
+			auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
+
+			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
+				ASSERT_TRUE(expr->isTopLevel());
+				auto expected_scope
+					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
+
+				// this can't be auto because of recursive lambda
+				std::function<void(CRef<pst::LangElement>)> sub_test_expr =
+					[&](CRef<pst::LangElement> inner_expr) {
+						auto inner_scope
+							= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
+						ASSERT_EQUAL(expected_scope, inner_scope);
+
+						for (auto sub_inner: inner_expr->viewSubElements()) {
+							variant_match(sub_inner) {
+								variant_case(pst::LangElement::ConstChild, sub_expr) {
+									sub_test_expr(sub_expr);
+								}
+								variant_default {}
+							}
+						}
+					};
+
+				sub_test_expr(expr);
+			};
+
+			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
+				pst->getRootElement().toOpt().value()
+			);
+
+			// We test that each expr_holder and all its sub expressions
+			// have the same scope as their "top expr_holder"
+			for (auto expr_holder: all_expr_holders) {
+				if (expr_holder->isTopLevel()) {
+					// test all sub elements:
+					test_expr(expr_holder);
+				} else {
+					// test that element has a top-expr parent
+					auto element = expr_holder->getParent().value();
+
+					while (true) {
+						if (auto holder = dynamic_cast<const pst::ExprHolder*>(&*element)) {
+							if (holder->isTopLevel()) {
+								// OK, we found parent
+								break;
+							}
+						}
+						// if parent doesn't exist, we will
+						// hit panic here at some point:
+						element = element->getParent().value();
+					}
+				}
 			}
 		});
 	}

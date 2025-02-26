@@ -34,9 +34,9 @@ namespace {
 	 */
 	constexpr u16 countOpCases() {
 		u16 count = 0;
-#define DEF_OPCODE(opcode) count++;
+#define HANDLE_OPCODE(opcode) count++;
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 		return count;
 	}
 }
@@ -88,16 +88,16 @@ namespace vm {
 	 */
 	class OpFuns {
 	public:
-#define DEF_OPCODE(opcode) static OpFun op_##opcode;
+#define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 
-#define DEF_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
+#define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 
 		// NOLINTBEGIN(readability-identifier-naming)
-		// Opcodes utilities functions (named the simmiliar way as all OpFuns)
+		// Opcodes utilities functions (named the similar way as all OpFuns)
 		static OpFun handle_execution_break;
 		static OpFun save_execution_state;
 		// NOLINTEND(readability-identifier-naming)
@@ -108,18 +108,18 @@ namespace vm {
 		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
-#define DEF_OPCODE(opcode) op_##opcode,
+#define HANDLE_OPCODE(opcode) op_##opcode,
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 		};
 
 		/**
 		 * @brief A mapping between opcode ids and debug function pointers.
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define DEF_OPCODE(opcode) op_debug_##opcode,
+#define HANDLE_OPCODE(opcode) op_debug_##opcode,
 #include "opcodes_list.hpp"
-#undef DEF_OPCODE
+#undef HANDLE_OPCODE
 		};
 
 		/**
