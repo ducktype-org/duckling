@@ -13,6 +13,8 @@ Init deinit
 Pointers
 --------
 
+Ref is not implemented yet, so I used `ref_lptr arg0 arg1` as a placeholder. It's equivalent to `arg0 = &arg1` in C.
+
 - Deref a pointer after deinit
 - Arithmetical operations on pointer type
 - Deref a pointer to a wrong type
