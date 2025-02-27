@@ -44,6 +44,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     env:
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
@@ -178,6 +179,10 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+      # Check against regressions in target applications.
+      - name: Build deployables
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        run: cmake --build ${{ env.BUILD_DIR }} -- all
 
   coverage:
     needs: [build]
