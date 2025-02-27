@@ -1,39 +1,60 @@
 import logging
-from argparse import Namespace
 from os import getenv
 from typing import Final
 
 from rich.logging import RichHandler
 
-__FORMAT: Final[str] = "%(message)s"
-__DATE_FORMAT: Final[str] = "[%x %X.%f]"
+# NOTE: Logger name should correspond to full file module-like path.
+# All attributes are here: https://docs.python.org/3/library/logging.html#logrecord-attributes.
+__FORMAT: Final[str] = "%(name)s:%(lineno)s %(message)s"
+__DATE_FORMAT: Final[str] = "[%X.%f]"
+_debug_env_value: str | None = None
 
 
-# TODO: Do we want to change anything more than loglevel? (Idk, if time should be printed, formats, etc)
-#       (This of course requires changes in main parser.)
+class QuackPackDebugFilter(logging.Filter):
+    def __init__(self, name: str = ""):
+        self._cached_filter: bool | None = None
+        super().__init__(name)
+
+    def filter(self, record: logging.LogRecord) -> bool | logging.LogRecord:
+        # NOTE: This works, because filtering records is only based on logger's name,
+        #       and each logger has its own instance of QuackPackDebugFilter.
+        # PERF: Cache results, so string operations don't become bottle-neck.
+        if self._cached_filter is None:
+            filename = record.name
+            module_name = filename.rsplit(".", maxsplit=1)[0]
+            # NOTE: This is for command-line debugging particular modules, like in cargo: https://doc.crates.io/contrib/implementation/debugging.html.
+            self._cached_filter = _debug_env_value in (filename, module_name, "quackpack", "qp", "all")
+        return self._cached_filter
+
+
 def setup_logger() -> None:
     """
-    Setups logger for debug printing.
+    Setup logger for debug printing.
     """
+    # PERF: Cache environmental variable, so getenv() doesn't become bottle-neck.
+    global _debug_env_value
+    _debug_env_value = getenv("QP_DEBUG")
+    # NOTE: We set every logger level to DEBUG, and instead rely on filters.
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format=__FORMAT,
         datefmt=__DATE_FORMAT,
+        force=True,
         handlers=[
             RichHandler(
-                rich_tracebacks=True, show_time=False, markup=True, omit_repeated_times=False, show_path=False
+                rich_tracebacks=True, show_time=True, markup=True, omit_repeated_times=False, show_path=False
             )
         ],
     )
 
 
-# FIXME: always passing `__name__` on the call site can be awkward. We might not want to do this (so `get_logger()` is equivalent to `get_logger(__name__)`), but:
-#        1. if we set default argument here as `__name__`, it'll be this file `__name__`, not the caller (unlike in C++),
-#        2. we CAN get `__name__` of the caller, but it's hacky, requires looking at the call stack, and this sounds like something, that could brake: https://stackoverflow.com/a/1095621.
 def get_logger(name: str) -> logging.Logger:
     """
     Get logger with name `name`.
-    It should be used like this: `logger = get_logger(__name__)`, at the top of the file.
+    Because Python does not have lazy initialization of global variables, there should not be a global `logger = get_logger(__name__)` variable; always wrap it in a function or create local variable when needed.
+    `__name__` should always be passed as a `name` (but for Python reasons it can't be set here as a default, because it'd use this file `__name__`, therefor caller should pass its own).
+    Loggers should only be used with `.debug()` calls.
     ----
     Args:
     - `name`: name of the logger.
@@ -42,8 +63,5 @@ def get_logger(name: str) -> logging.Logger:
     - `logging.Logger`: logger for provided `name`.
     """
     logger = logging.getLogger(name)
-    # NOTE: This is for command-line debugging particular modules, like in cargo: https://doc.crates.io/contrib/implementation/debugging.html.
-    module_name = name.rsplit(".", maxsplit=1)[0]
-    if getenv("QP_DEBUG") in (module_name, "quackpack"):
-        logger.setLevel(logging.DEBUG)
+    logger.addFilter(QuackPackDebugFilter())
     return logger

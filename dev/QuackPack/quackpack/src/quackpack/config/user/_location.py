@@ -5,12 +5,12 @@ from typing import Final
 __QUACKPACK_CONFIG_LOCATION_RELATIVE_TO_CONFIG_DIR: Final[Path] = Path("duck") / "qp"
 
 
-def get_config_file_directory() -> Path:
+def _config_file_directory() -> Path:
     """
-    Get directory suitable for configuration file.
+    Get directory path suitable for the configuration file.
     ----
     Returns:
-    - `pathlib.Path`: Path to directory for configuration file.
+    - `pathlib.Path`: Path to directory of the configuration file.
     """
     if dir := os.environ.get("QUACK_PACK_CONFIG"):
         return Path(dir)
@@ -19,11 +19,11 @@ def get_config_file_directory() -> Path:
     return Path.home() / ".config" / __QUACKPACK_CONFIG_LOCATION_RELATIVE_TO_CONFIG_DIR
 
 
-def get_config_file() -> Path:
+def config_filepath() -> Path:
     """
-    Get file location of configuration file.
+    Get path of the configuration file.
     ----
     Returns:
-    - `pathlib.Path`: Path to configuration file.
+    - `pathlib.Path`: Path to the configuration file.
     """
-    return get_config_file_directory() / "config.yaml"
+    return _config_file_directory() / "config.yaml"

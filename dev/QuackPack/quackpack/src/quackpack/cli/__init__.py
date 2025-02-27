@@ -1,8 +1,11 @@
 import os
 from argparse import ArgumentParser
 from collections import defaultdict
+from collections.abc import Callable
 from pathlib import Path
 from typing import Final
+
+from quackpack.global_info import GlobalInfo
 
 from . import (
     _build_parser,
@@ -12,7 +15,6 @@ from . import (
     _init_parser,
     _login_parser,
     _logout_parser,
-    _main_parser,
     _publish_parser,
     _run_parser,
     _search_parser,
@@ -20,8 +22,11 @@ from . import (
     _unpublish_parser,
     _venv_parser,
 )
+from ._main_parser import get_early_parser
 
-__all__ = ["builtin_aliases", "cli", "get_parser"]
+__all__ = ["ExecFn", "action_for", "get_early_parser", "get_parser"]
+
+type ExecFn = Callable[[GlobalInfo], int]
 
 
 def get_parser() -> ArgumentParser:
@@ -31,30 +36,31 @@ def get_parser() -> ArgumentParser:
     Returns:
     - `argparse.ArgumentParser`: The fully combined argument parser.
     """
-    subcommands = cli()
-    parser = _main_parser.get_early_parser()
-    subparser = parser.add_subparsers(dest="command")
+    parser = get_early_parser()
+    # We need to pass formatter_class down, because of venv subparsers.
+    # FIXME: This may be nicer, if deriving formatter_class's would work.
+    subcommands = _cli(parser.formatter_class, parser.prog)  # pyright: ignore [reportArgumentType]
+    subparser = parser.add_subparsers(title="Commands", dest="command", metavar="")
     for command in subcommands:
         subparser.add_parser(
             command.prog,
             help=command.description,
-            aliases=builtin_aliases()[command.prog],
+            aliases=_builtin_aliases()[command.prog],
             parents=[command],
             formatter_class=parser.formatter_class,
+            exit_on_error=False,
             add_help=False,
         )
-    # FIXME: Allow somehow `--` as a positional argument for executing scripts.
     return parser
 
 
-# TODO: Maybe each `_*name*_parser.py` should also provide `exec(...) -> ...` function,
-#       which would tell us, what action we should take.
-#       (just like Cargo: https://github.com/rust-lang/cargo/blob/master/src/bin/cargo/commands/mod.rs)
-
-
-def cli() -> list[ArgumentParser]:
+def _cli(formatter_class: type, prog: str) -> list[ArgumentParser]:
     """
     Get list of all known subparsers for Quack Pack.
+    ----
+    Args:
+    - `formatter_class`: Formatter class for subparsers of returned parsers.
+    - `prog`: Program name from main parser.
     ----
     Returns:
     - `list[argparse.ArgumentParser]`: List of all known subparsers.
@@ -64,7 +70,7 @@ def cli() -> list[ArgumentParser]:
         _run_parser.get_parser(),
         _test_parser.get_parser(),
         _cache_parser.get_parser(),
-        _venv_parser.get_parser(),
+        _venv_parser.get_parser(formatter_class, prog),
         _init_parser.get_parser(),
         _info_parser.get_parser(),
         _search_parser.get_parser(),
@@ -74,8 +80,6 @@ def cli() -> list[ArgumentParser]:
         _unpublish_parser.get_parser(),
     ]
     _update_with_external_cmds(subcommands)
-    # TODO: We might want not to do this.
-    subcommands.sort(key=lambda cmd: cmd.prog)
     return subcommands
 
 
@@ -86,11 +90,10 @@ def _update_with_external_cmds(buitlin_commands: list[ArgumentParser]) -> None:
     Args:
     - `buitlin_commands`: list of subparsers which will be populated with external executables.
     """
-    paths = (Path(x) for x in os.environ["PATH"].split(":"))
+    paths = (path for x in os.environ["PATH"].split(":") if (path := Path(x)).is_dir())
     known_commands = {parser.prog for parser in buitlin_commands}
     PREFIX: Final[str] = "qp-"
     for dir in paths:
-        assert dir.is_dir()
         for x in dir.iterdir():
             # Skip non executable files.
             if not (x.is_file() and os.access(x, os.X_OK)):
@@ -105,7 +108,7 @@ def _update_with_external_cmds(buitlin_commands: list[ArgumentParser]) -> None:
             known_commands.add(command_name)
 
 
-def builtin_aliases() -> defaultdict[str, list[str]]:
+def _builtin_aliases() -> defaultdict[str, list[str]]:
     """
     Get default Quack Pack command aliases.
     ----
@@ -115,7 +118,40 @@ def builtin_aliases() -> defaultdict[str, list[str]]:
     return defaultdict(list, {"build": ["b"], "run": ["r"], "test": ["t"]})
 
 
-# FIXME: Implement (recursive) alias expansion. Note that aliases from configuration
-#        should either be a string, that we can safely `.split(" ")`, or an already splitted string
-#        (look at Cargo's example: https://doc.rust-lang.org/cargo/reference/config.html#configuration-format).
-#        We should also update the docs.
+def action_for(command: str) -> ExecFn | None:
+    """
+    All possible actions for subcommands.
+    ----
+    Args:
+    - `command`: name of the `command`.
+    ----
+    Returns:
+    - `ExecFn | None`: possible function which executes provided subcommand.
+    """
+    match command:
+        case "build":
+            return _build_parser.execute
+        case "cache":
+            return _cache_parser.execute
+        case "info":
+            return _info_parser.execute
+        case "init":
+            return _init_parser.execute
+        case "login":
+            return _login_parser.execute
+        case "logout":
+            return _logout_parser.execute
+        case "publish":
+            return _publish_parser.execute
+        case "run":
+            return _run_parser.execute
+        case "search":
+            return _search_parser.execute
+        case "test":
+            return _test_parser.execute
+        case "unpublish":
+            return _unpublish_parser.execute
+        case "venv":
+            return _venv_parser.execute
+        case _:
+            return None

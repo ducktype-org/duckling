@@ -1,23 +1,36 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Annotated, Any
 
-from pydantic.types import NonNegativeInt
+from pydantic import BeforeValidator
 
 
 # TODO: Refactor this.
-# TODO: Add docstrings.
 @dataclass(order=True, frozen=True)
 class Version:
-    major: NonNegativeInt
-    minor: NonNegativeInt = 0
-    patch: NonNegativeInt = 0
+    """
+    SemVer human interface.
+    """
+
+    major: int
+    """
+    Package major version. Should be nonnegative.
+    """
+    minor: int = 0
+    """
+    Package minor version. Should be nonnegative.
+    """
+    patch: int = 0
+    """
+    Package patch version. Should be nonnegative.
+    """
 
     def __post_init__(self):
         if self.major < 0 or self.minor < 0 or self.patch < 0:
             raise ValueError("Negative versions are not supported")
-        if self.major == 0 and self.minor == 0 and self.patch == 0:
-            raise ValueError("0.0.0 is not a valid SemVer")
+        if self.major == 0 and self.minor == 0:
+            raise ValueError("Versions of format 0.0.X are not valid SemVer")
 
     @staticmethod
     def create_from_string(input: str) -> Version:
@@ -28,7 +41,7 @@ class Version:
         - `input`: string to be parsed as `Version`.
         ----
         Returns:
-        - `Version`: parsed `Version from `input`.
+        - `Version`: parsed `Version` from `input`.
         ----
         Raises:
         - `ValueError`: if `input` is invalid (too many keys or non-numeric ones).
@@ -40,13 +53,13 @@ class Version:
 
     def can_be_upgraded_to(self, other: Version) -> bool:
         """
-        Check if `self` can be upgraded to `other` without breaking changes.
+        Check if `self` can be upgraded to `other` without breaking changes (as defined by SemVer).
         ----
         Args:
         - `other`: other `Version` to compare against.
         ----
         Returns:
-        - `bool`: `True` if `self` can be upgraded to `other`.
+        - `bool`: `True` if `self` can be upgraded to `other` without breaking changes.
         """
         if self.major != other.major:
             return False
@@ -82,3 +95,29 @@ class Version:
         - `Version`: new `Version` with increased major version.
         """
         return Version(self.major + 1, 0, 0)
+
+    def __str__(self) -> str:
+        if self.minor == 0 and self.patch == 0:
+            return f"{self.major}"
+        if self.patch == 0:
+            return f"{self.major}.{self.minor}"
+        return f"{self.major}.{self.minor}.{self.patch}"
+
+
+def version_list_parser(value: Any) -> Any:
+    # If we get a list or a Version then we do not need to do anything
+    if isinstance(value, list):
+        if len(value) == 0:  # type: ignore[attr-defined]
+            raise ValueError("Empty list")
+        result: list[Version] = []
+        for x in value:  # type: ignore[attr-defined]
+            if not isinstance(x, str):
+                raise ValueError("All list elements should be strings")
+            result.append(Version.create_from_string(x))
+        return result
+    if isinstance(value, str):
+        return [Version.create_from_string(x.strip()) for x in value.split("or")]
+    raise ValueError("Input should be a list or string")
+
+
+type VersionList = Annotated[list[Version], BeforeValidator(version_list_parser)]

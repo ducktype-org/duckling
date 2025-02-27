@@ -1,0 +1,42 @@
+metadata:
+  version: 2.1.37
+  author: Elitarny MIM
+  id: TODO
+  name: Cool package name
+  license: GLWTS
+  vm_version: 2.71.0
+  compiler_version: 3.14
+  is_temporary: False
+
+dependencies:
+  foo:
+    - version: 1.2.3
+      conditions:
+        system: [Windows, Mac]
+        arch: [x86-64, arm64]
+      flags:
+        - a:
+           system: i386
+  local:
+    - version:
+       path: ~/local path
+  git:
+    - version:
+       git_url: github.com
+       branch: stable # lub commit, lub tag, ale co najwyżej jeden z trzech
+  bar:
+    - version: 2.1.9 # czyli >= 2.1.9 < 3.0.0
+      flags: [ a, {b: {arch: ARM}}, c, d, e, f, g, h]
+        # - a
+        # - b:
+        #     arch: ARM
+        # - c
+        # - d
+        # - e
+        # - f
+        # - g
+        # - h
+      conditions:
+        system: Windows
+        arch: ARM
+        project_flags: [x, y, z] # Żeby włączyć `bar`, Cool package name trzeba budować z którąkolwiek z tych flag. # TODO: logic string

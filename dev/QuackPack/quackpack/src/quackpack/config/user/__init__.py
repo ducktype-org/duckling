@@ -1,4 +1,3 @@
-from ._location import get_config_file, get_config_file_directory
 from ._models import (
     BuildEntry,
     CacheEntry,
@@ -19,6 +18,4 @@ __all__ = [
     "Security",
     "Size",
     "TypoTolerance",
-    "get_config_file",
-    "get_config_file_directory",
 ]

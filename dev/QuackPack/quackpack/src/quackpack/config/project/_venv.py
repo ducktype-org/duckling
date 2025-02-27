@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from itertools import chain
 from pathlib import Path
 from typing import Final
 
 import yaml
 
 from common.venv_config import Configuration
+from quackpack.config.strict_yaml_parsing import load_and_validate
 
 
 # TODO: Should this really be called Venv and live here? Maybe name it "ProjectLoader", and add:
@@ -19,9 +21,9 @@ class Venv:
     def find_venv(cls) -> Venv | None:
         current_dir = Path.cwd()
 
-        for parent in current_dir.parents:
-            path = parent / cls.CONFIG_FILE_NAME
-            if path.exists():
+        for potential_location in chain((current_dir,), current_dir.parents):
+            path = potential_location / cls.CONFIG_FILE_NAME
+            if path.is_file():
                 return Venv(path)
 
         return None
@@ -29,7 +31,7 @@ class Venv:
     def __init__(self, path: Path) -> None:
         # TODO: venv relocation is disabled right now
         self.path: Final[Path] = path
-        self.config_file_path: Final[Path] = self.path / self.CONFIG_FILE_NAME
+        self.config_file_path: Final[Path] = self.path
         self.config: Configuration = self.read_config()
 
     def write_config(self) -> None:
@@ -39,11 +41,6 @@ class Venv:
             yaml.dump(config_dict, config_file, sort_keys=False)
 
     def read_config(self) -> Configuration:
-        if self.config_file_path.exists():
-            with open(self.config_file_path) as config_file:
-                config_dict = yaml.safe_load(config_file)
-                return Configuration(**config_dict)
-        else:
-            return Configuration()
+        return load_and_validate(self.config_file_path, Configuration)
 
     # TODO: rest of methods

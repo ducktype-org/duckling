@@ -1,0 +1,16 @@
+Aliases: {}
+Build:
+  ExtraFlags: ''
+Cache:
+  MaxSize: 10G
+  Path: ~/.cache/duck/qp
+Packaging:
+  BuildFromSource: false
+Repository:
+  Default:
+  - 'TODO: Add here Ducknest URL.'
+  Extra: null
+Security:
+  TypoTolerance:
+    Enabled: false
+    MaxDistance: 10

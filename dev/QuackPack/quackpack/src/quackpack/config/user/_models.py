@@ -1,22 +1,30 @@
 # pyright: standard
 from __future__ import annotations
 
+import logging
 import os
-import sys
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Final
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_serializer, model_validator
 from pydantic.alias_generators import to_pascal
 from pydantic.config import ExtraValues
 
+from quackpack.config.strict_yaml_parsing import load_and_validate
+from quackpack.errors import QuackPackError
 from quackpack.logger import get_logger
 
-from ._location import get_config_file
+from ._location import config_filepath
 
-_logger = get_logger(__name__)
+
+def logger() -> logging.Logger:
+    """
+    Get `logging.Logger` for this module.
+    """
+    return get_logger(__name__)
+
 
 PathLike = str | Path
 
@@ -37,7 +45,7 @@ class Size(BaseModel):
     @staticmethod
     def from_string(size: str) -> Size:
         """
-        Pass `size` as a `Size`.
+        Try to parse a string as a `Size`.
         ----
         Args:
         - `size`: string to be parsed.
@@ -65,14 +73,14 @@ class Size(BaseModel):
 __DEFAULT_MAX_CACHE_SIZE: Final[Size] = Size.from_string("10G")
 __QUACKPACK_CACHE_LOCATION_RELATIVE_TO_CACHE_DIR: Final[Path] = Path("duck") / "qp"
 __DEFAULT_TYPO_TOLERANCE: Final[int] = 10
-__ALLOW_EXTRA_ARGS: Final[ExtraValues] = "ignore"
+__ALLOW_EXTRA_ARGS: Final[ExtraValues] = "forbid"
 
 
-def _get_default_model_config():
+def _default_model_config():
     return ConfigDict(extra=__ALLOW_EXTRA_ARGS, alias_generator=to_pascal)
 
 
-def _get_default_cache_directory() -> Path:
+def _default_cache_directory() -> Path:
     """
     Get default directory path for Quack Pack cache.
     ----
@@ -88,9 +96,15 @@ class CacheEntry(BaseModel):
     Class representing cache entry in Quack Pack configuration.
     """
 
-    path: Annotated[Path, Field(default=_get_default_cache_directory())]
+    path: Annotated[Path, Field(default=_default_cache_directory())]
+    """
+    Path to the Quack Pack cache directory.
+    """
     max_size: Annotated[Size, Field(default=__DEFAULT_MAX_CACHE_SIZE)]
-    model_config = _get_default_model_config()
+    """
+    Maximum available size of Quack Pack cache directory.
+    """
+    model_config = _default_model_config()
 
     @model_validator(mode="before")
     @classmethod
@@ -116,7 +130,10 @@ class PackagingEntry(BaseModel):
     """
 
     build_from_source: Annotated[bool, Field(default=False)]
-    model_config = _get_default_model_config()
+    """
+    If `True`, then all downloaded packages will be compiled on the host machine.
+    """
+    model_config = _default_model_config()
     # TODO: Add dependency solver.
 
 
@@ -126,7 +143,10 @@ class BuildEntry(BaseModel):
     """
 
     extra_flags: Annotated[str, Field(default="")]
-    model_config = _get_default_model_config()
+    """
+    String with any extra flags, which will be passed down to the compiler.
+    """
+    model_config = _default_model_config()
 
 
 class RepositoryEntry(BaseModel):
@@ -134,9 +154,15 @@ class RepositoryEntry(BaseModel):
     Class representing repository entry in Quack Pack configuration.
     """
 
-    override: Annotated[str | list[str] | None, Field(default=None)]
+    default: Annotated[str | list[str] | None, Field(default=["TODO: Add here Ducknest URL."])]
+    """
+    If not `None`, then override default Quack Pack server URL.
+    """
     extra: Annotated[str | list[str] | None, Field(default=None)]
-    model_config = _get_default_model_config()
+    """
+    Additional locations of Quack Pack packages servers.
+    """
+    model_config = _default_model_config()
 
 
 class TypoTolerance(BaseModel):
@@ -145,8 +171,16 @@ class TypoTolerance(BaseModel):
     """
 
     enabled: Annotated[bool, Field(default=False)]
+    """
+    If `True`, then Quack Pack CLI will update main commands.
+    """
     max_distance: Annotated[int, Field(default=__DEFAULT_TYPO_TOLERANCE)]
-    model_config = _get_default_model_config()
+    """
+    Radius of maximum disk in Levenshtein distance of possible matches.
+
+    If there is more than one match, then Quack Pack will not try to guess.
+    """
+    model_config = _default_model_config()
 
 
 class Security(BaseModel):
@@ -155,8 +189,11 @@ class Security(BaseModel):
     """
 
     # They are callable, because Python is great language, so let's just silence errors.
-    typo_tolerace: Annotated[TypoTolerance, Field(default_factory=TypoTolerance)]  # pyright: ignore[reportArgumentType]
-    model_config = _get_default_model_config()
+    typo_tolerance: Annotated[TypoTolerance, Field(default_factory=TypoTolerance)]  # pyright: ignore[reportArgumentType]
+    """
+    TypoTolerance configuration.
+    """
+    model_config = _default_model_config()
 
 
 class Config(BaseModel):
@@ -166,17 +203,34 @@ class Config(BaseModel):
 
     # They are callable, because Python is great language, so let's just silence errors.
     aliases: Annotated[dict[str, str | list[str]], Field(default={})]
-    cache: Annotated[CacheEntry, Field(default_factory=CacheEntry)]  # pyright: ignore[reportArgumentType]
-    packaging: Annotated[PackagingEntry, Field(default_factory=PackagingEntry)]  # pyright: ignore[reportArgumentType]
-    build: Annotated[BuildEntry, Field(default_factory=BuildEntry)]  # pyright: ignore[reportArgumentType]
-    repository: Annotated[RepositoryEntry, Field(default_factory=RepositoryEntry)]  # pyright: ignore[reportArgumentType]
-    security: Annotated[Security, Field(default_factory=Security)]  # pyright: ignore[reportArgumentType]
-    _location: Path
-    model_config = _get_default_model_config()
+    """
+    Any user-defined CLI aliases.
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        self._location = data["_location"]
+    Note that `str` values will be `split()`-ed by spaces.
+    """
+    cache: Annotated[CacheEntry, Field(default_factory=CacheEntry)]  # pyright: ignore[reportArgumentType]
+    """
+    Quack Pack cache settings.
+    """
+    packaging: Annotated[PackagingEntry, Field(default_factory=PackagingEntry)]  # pyright: ignore[reportArgumentType]
+    """
+    Quack Pack packages settings.
+    """
+    build: Annotated[BuildEntry, Field(default_factory=BuildEntry)]  # pyright: ignore[reportArgumentType]
+    """
+    Settings used for configuring packages built from source.
+    """
+    repository: Annotated[RepositoryEntry, Field(default_factory=RepositoryEntry)]  # pyright: ignore[reportArgumentType]
+    """
+    Settings for managing Quack Pack packages servers.
+    """
+    security: Annotated[Security, Field(default_factory=Security)]  # pyright: ignore[reportArgumentType]
+    """
+    Any potentially unsecure settings.
+    Keep sane defaults.
+    """
+    _location: Path = PrivateAttr()
+    model_config = _default_model_config()
 
     def save_to_file(self, target: PathLike | None = None) -> None:
         """
@@ -187,9 +241,10 @@ class Config(BaseModel):
         """
         target = Path(target or self._location).expanduser()
         target.parent.mkdir(parents=True, exist_ok=True)
-        data = self.model_dump(exclude_defaults=True, by_alias=True)
+        data = self.model_dump(exclude_defaults=False, by_alias=True)
+        logger().debug(f"Saving user configuration {data} to {target.resolve()}")
         with open(target.resolve(), "w") as f:
-            yaml.dump(data, f)
+            yaml.safe_dump(data, f)
 
     @staticmethod
     def load_from_file(path: PathLike | None = None) -> Config:
@@ -201,30 +256,19 @@ class Config(BaseModel):
         ----
         Returns:
         - `Config`: Parsed configuration file with human interface.
+        ----
+        Raises:
+        - `QuackPackError`: if any error occurred.
         """
-        path = Path(path or get_config_file()).expanduser()
-        _logger.debug(f"Trying config @ {path}")
+        path = Path(path or config_filepath()).expanduser()
+        logger().debug(f"Looking for user configuration @ {path}")
         try:
-            with open(path.resolve()) as f:
-                data = yaml.safe_load(f)
-        except yaml.MarkedYAMLError as e:
-            if (
-                (mark := e.problem_mark)
-                and hasattr(mark, "line")
-                and hasattr(mark, "column")
-                and isinstance(mark.line, int)
-                and isinstance(mark.column, int)
-            ):
-                location = f"({mark.line + 1}:{mark.column + 1})"
-            else:
-                location = "(??:??)"
-            message = f"Error in file {path} @ {location}: {e.problem}"
-            # TODO: Move to OUI, when it's merged.
-            # TODO: Display code snippet, like miette does https://docs.rs/miette/latest/miette/index.html#about.
-            # TODO: Maybe don't `sys.exit(69)`?
-            print(message, file=sys.stderr)
-            sys.exit(69)
+            config = load_and_validate(path, Config)
+            logger().debug(f"Found user configuration {config}")
         except FileNotFoundError:
-            data = {}
-        data["_location"] = path
-        return Config.model_validate(data)
+            config = Config()  # pyright: ignore[reportCallIssue], these are handled by default values in `Field`.
+            logger().debug("User configuration not found, falling back to defaults...")
+        except Exception as e:
+            raise QuackPackError(e) from e
+        config._location = path
+        return config

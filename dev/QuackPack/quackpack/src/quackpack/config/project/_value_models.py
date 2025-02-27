@@ -5,13 +5,13 @@ from typing import Annotated
 from pydantic import AfterValidator
 
 
-class PackageLocation(StrEnum):
+class PackageLocationImpl(StrEnum):
     GIT = "git"
     LOCAL = "local"
-    SERVER = "server"
+    DUCKNEST = "ducknest"
 
 
-def check_package_location(value: dict[PackageLocation, str]) -> dict[PackageLocation, str]:
+def check_package_location(value: dict[PackageLocationImpl, str]) -> dict[PackageLocationImpl, str]:
     if len(value) == 0:
         raise ValueError("There should be one location specified")
     if len(value) > 1:
@@ -19,7 +19,7 @@ def check_package_location(value: dict[PackageLocation, str]) -> dict[PackageLoc
     return value
 
 
-type PackageLocation = Annotated[dict[PackageLocation, str], AfterValidator(check_package_location)]
+type PackageLocation = Annotated[dict[PackageLocationImpl, str], AfterValidator(check_package_location)]
 
 
 def check_legal_chars_package(value: str) -> str:

@@ -1,7 +1,9 @@
+exclude = ["./extras"]
 fix = false
 indent-width = 4
 line-length = 110
 preview = true
+target-version = "py312"
 
 [analyze]
 detect-string-imports = true
