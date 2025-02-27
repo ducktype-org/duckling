@@ -1,4 +1,5 @@
 
+#include <backends/vm/backend.hpp>
 
 
 #define TESTER_CLASS DVMBackendTest
@@ -6,6 +7,8 @@
 #include "backend_tests.hpp"
 
 void DVMBackendTest::testWithLir(CRef<compiler::lir::Function> lir_function) {
-    
-    lir_function
+	using namespace compiler::backend_vm;
+
+
+	Module _ = Module::fromLirFunction(lir_function);
 }

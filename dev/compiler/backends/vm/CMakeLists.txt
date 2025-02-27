@@ -4,4 +4,4 @@ add_library(DVMBackend
 )
 
 
-make_module(DVMBackend USES Base QueryFramework LIR Init)
+make_module(DVMBackend USES Base QueryFramework LIR Init ${libvm})

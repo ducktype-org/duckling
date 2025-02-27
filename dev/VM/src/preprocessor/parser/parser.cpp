@@ -30,6 +30,7 @@
 #include "errors.hpp"
 #include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
+#include "types_of_data.hpp"
 
 namespace assemble {
 
@@ -40,115 +41,6 @@ namespace assemble {
 
 		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
 	};
-
-	struct PrimitiveType {
-		base::StrID name;
-		usize       size{};
-
-		void dprint(std::ostream& out) const {
-			out << "primitive {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    size: " << size << "\n";
-			out << "}";
-		}
-	};
-
-	struct PointerType {
-		base::StrID name;
-		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "pointer {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	struct StaticTableType {
-		base::StrID name;
-		base::StrID inner;
-		usize       table_size;
-
-		void dprint(std::ostream& out) const {
-			out << "static_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "    table_size: " << table_size << "\n";
-			out << "}";
-		}
-	};
-
-	struct DynamicTableType {
-		base::StrID name;
-		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "dynamic_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	struct Field {
-		base::StrID name;
-		base::StrID type;
-	};
-
-	struct DataType {
-		base::StrID        name;
-		std::vector<Field> fields;
-
-		void dprint(std::ostream& out) const {
-			out << "data {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    fields: [";
-			for (auto& field: fields)
-				out << field.name.strView() << ": " << field.type.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
-	};
-
-	struct VariantType {
-		base::StrID              name;
-		std::vector<base::StrID> variant_alternatives;
-
-		void dprint(std::ostream& out) const {
-			out << "variant {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    alternatives: [";
-			for (auto& alt: variant_alternatives) out << alt.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
-	};
-
-	struct FunctionType {
-		base::StrID              name;
-		std::vector<base::StrID> parameters;
-		base::StrID              result;
-
-		void dprint(std::ostream& out) const {
-			out << "function {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    parameters: [";
-			for (auto& param: parameters) out << param.strView() << ", ";
-			out << "]\n";
-			out << "    result: " << result.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	using TypeData = std::variant<
-		PrimitiveType,
-		PointerType,
-		StaticTableType,
-		DynamicTableType,
-		DataType,
-		VariantType,
-		FunctionType>;
 
 	struct AsmElement: tpc::Element {
 		dia::SourcePosition position;
@@ -161,7 +53,7 @@ namespace assemble {
 	struct Type: AsmElement {
 		using AsmElement::AsmElement;
 
-		TypeData          datatype;
+		vm::TypeOfData    datatype;
 		static MBox<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
@@ -612,8 +504,8 @@ namespace assemble {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				out->datatype
-					= PrimitiveType{ .name = name,
-					                 .size = static_cast<usize>(strIDToNum(value.getValue())) };
+					= vm::PrimitiveType{ .name = name,
+					                     .size = static_cast<usize>(strIDToNum(value.getValue())) };
 			}
 			break;
 		}
@@ -622,7 +514,7 @@ namespace assemble {
 			if (!pointered_type.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else
-				out->datatype = PointerType{ .name = name, .inner = pointered_type.getValue() };
+				out->datatype = vm::PointerType{ .name = name, .inner = pointered_type.getValue() };
 			break;
 		}
 		case lang_def::Keyword::BCStaticTable: {
@@ -635,7 +527,7 @@ namespace assemble {
 					state.err.failAndLog(state.getPosition(), "expected number");
 				} else {
 					out->datatype
-						= StaticTableType{ .name  = name,
+						= vm::StaticTableType{ .name  = name,
 						                   .inner = type_name.getValue(),
 						                   .table_size
 						                   = static_cast<usize>(strIDToNum(size.getValue())) };
@@ -648,7 +540,7 @@ namespace assemble {
 			if (!type_name.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else
-				out->datatype = DynamicTableType{ .name = name, .inner = type_name.getValue() };
+				out->datatype = vm::DynamicTableType{ .name = name, .inner = type_name.getValue() };
 			break;
 		}
 		case lang_def::Keyword::BCData: {
@@ -658,12 +550,12 @@ namespace assemble {
 			}
 
 			state.goDown();
-			std::vector<Field> fields;
+			std::vector<vm::Field> fields;
 			while (state.notEmpty()) {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
 				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				fields.emplace_back(Field{ .name = field_name.value, .type = field_type.value });
+				fields.emplace_back(vm::Field{ .name = field_name.value, .type = field_type.value });
 
 				if (state.empty()) break;
 
@@ -675,7 +567,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = DataType{ name, fields };
+			out->datatype = vm::DataType{ name, fields };
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
@@ -700,7 +592,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = VariantType{ .name = name, .variant_alternatives = alternatives };
+			out->datatype = vm::VariantType{ .name = name, .variant_alternatives = alternatives };
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
@@ -727,7 +619,7 @@ namespace assemble {
 			state.goUpAndSkip();
 			tpc::Identifier result;
 			state.parse().one(&result);
-			out->datatype = FunctionType{ .name = name, .parameters = arguments, .result = result };
+			out->datatype = vm::FunctionType{ .name = name, .parameters = arguments, .result = result };
 			break;
 		}
 		default: {
@@ -808,33 +700,33 @@ namespace assemble {
 
 		for (auto& type: good_types) {
 			variant_match(type->datatype) {
-				variant_case(PrimitiveType, data) {
+				variant_case(vm::PrimitiveType, data) {
 					type_map[data.name]->definePrimitive(data.size);
 				}
-				variant_case(PointerType, data) {
+				variant_case(vm::PointerType, data) {
 					type_map[data.name]->definePointer(type_map[data.inner]);
 				}
-				variant_case(StaticTableType, data) {
+				variant_case(vm::StaticTableType, data) {
 					type_map[data.name]->defineStaticTable(type_map[data.inner], data.table_size);
 				}
-				variant_case(DynamicTableType, data) {
+				variant_case(vm::DynamicTableType, data) {
 					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
 				}
-				variant_case(DataType, data) {
+				variant_case(vm::DataType, data) {
 					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
 					type_map[data.name]->defineData(fields);
 				}
-				variant_case(VariantType, data) {
+				variant_case(vm::VariantType, data) {
 					std::vector<vm::TypeRef> variants;
 					variants.reserve(data.variant_alternatives.size());
 					for (auto& variant: data.variant_alternatives)
 						variants.emplace_back(type_map[variant]);
 					type_map[data.name]->defineVariant(variants);
 				}
-				variant_case(FunctionType, data) {
+				variant_case(vm::FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
 					parameters.reserve(data.parameters.size());
 					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
