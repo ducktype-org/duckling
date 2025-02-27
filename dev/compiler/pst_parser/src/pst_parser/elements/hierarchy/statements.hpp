@@ -103,7 +103,7 @@ namespace pst {
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {
-		AccessInternal<ExprElement> expr;
+		AccessInternal<AssignmentExprHolder> expr;
 
 	public:
 		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
@@ -121,7 +121,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprElement> getExpr() const {
+		AccessLocked<AssignmentExprHolder> getExpr() const {
 			return expr.give();
 		}
 

@@ -192,7 +192,7 @@ namespace pst {
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {
-			this->element_kind = ElementKind::ExprWrapper;
+			this->element_kind = ElementKind::RoundGroupExpr;
 		}
 
 		static MBox<RoundGroupExpr> parse(LangParserState& state);

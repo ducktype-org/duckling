@@ -1,12 +1,9 @@
 #include "preamble.hpp"
 
-#include "../../hierarchy/expr.hpp"
-
 namespace pst {
 	MBox<ExprStmt> ExprStmt::parse(LangParserState& state) {
 		auto out = makeBox<ExprStmt>(state.getPosition());
-		state.parse(out)
-			.with(&out->expr, expr::parseUntil<expr::Assignment, ExprClassify::exprStmtEnd>);
+		state.parse(out).one(&out->expr);
 		return out;
 	}
 

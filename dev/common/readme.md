@@ -1,9 +1,5 @@
 \page common-readme Common modules
 
-# Module overview:
-
-This module contains useful utilities and tools that are used in other parts of the project.
-
 ## clap
 
 \subpage clap-module
@@ -18,18 +14,19 @@ This module contains useful utilities and tools that are used in other parts of 
   The Diagnostic module defines a framework for reporting errors,
   warnings, and other messages to the user.
 
-## config
-
-  Module implementing parsing command line arguments.
-  It also provides interface for easy creation of parsing rules,
-  has functions dedicated for parsing arguments of main Duckling compiler and test options.
-
 ## filesystem
 
 \subpage filesystem-module
 
   Module implementing `std::filesystem::path` wrapper and reading of files content, with
   automatic memory management.
+
+## init
+
+\subpage init-module
+
+  Simple utility module for scheduling functions to execute right after main starts, and right before main finishes,
+as well as to run code before main.
 
 ## json
 
@@ -53,6 +50,12 @@ Json module
 \subpage query-framework-module
 
   This module provides implementation of Query Framework used in compiler.
+
+## system_command
+
+\subpage system-command-module
+
+  Module implementing system command execution.
 
 ## tester
 

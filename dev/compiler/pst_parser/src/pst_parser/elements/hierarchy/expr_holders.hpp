@@ -24,7 +24,7 @@ namespace pst {
 
 	public:
 		explicit ExprHolder(const dia::SourcePosition& pos): NotStmt(pos) {
-			this->element_kind = ElementKind::ExprWrapper;
+			this->element_kind = ElementKind::ExprHolder;
 		}
 
 		[[nodiscard]]
@@ -39,7 +39,8 @@ namespace pst {
 			return expr.give();
 		}
 
-		virtual bool isTopLevel() = 0;
+		[[nodiscard]]
+		virtual bool isTopLevel() const = 0;
 	};
 
 	/**
@@ -79,7 +80,10 @@ namespace pst {
 			return out;
 		}
 
-		bool isTopLevel() override { return TOP_LEVEL; }
+		[[nodiscard]]
+		bool isTopLevel() const override { 
+			return TOP_LEVEL; 
+		}
 	};
 
 	/**
