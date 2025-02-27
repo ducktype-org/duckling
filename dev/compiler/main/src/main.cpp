@@ -11,21 +11,15 @@
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <iostream>
 #include <clap/clap.hpp>
 #include <printer/stream_printer.hpp>
 #include <config/config.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <helios/queries.hpp>
-
-/**
- * @brief Runs inits needed by main
- */
-void init() {
-	lexer::init();
-	pst::init();
-	// @TODO: more inits?
-}
+#include <init/init.hpp>
+#include <driver/driver.hpp>
 
 namespace {
 	/**
@@ -59,7 +53,11 @@ struct CommandList final {
 	 * @brief Adds new command to the list.
 	 */
 	void add(std::string name, std::string desc, CommandRunner runner) {
-		commands.emplace_back(Command{ std::move(name), std::move(desc), std::move(runner) });
+		commands.emplace_back(Command{
+			.name        = std::move(name),
+			.description = std::move(desc),
+			.runner      = std::move(runner),
+		});
 	}
 
 	/**
@@ -95,10 +93,10 @@ struct CommandList final {
 		for (auto& cmd: commands) {
 			if (cmd.name == what) {
 				int status = cmd.runner();
-				return { true, status };
+				return { .was_command_run = true, .exit_code = status };
 			}
 		}
-		return { false, 1 };
+		return { .was_command_run = false, .exit_code = 1 };
 	}
 };
 
@@ -123,7 +121,7 @@ void printHelp(
  * @brief Generate Clap instance with all standard "main" parameters.
  * @return clap::Clap
  */
-clap::Clap getClap() {
+clap::Clap getClapForMain() {
 	// standard options:
 	auto clap = config::standardOptions();
 
@@ -145,17 +143,14 @@ clap::Clap getClap() {
  * @brief Parses arguments with @p clap and performs
  * configuration of the program that is independent from any command.
  * @note it assumes that @p clap has parameters
- * added by getClap.
+ * added by getClapForMain.
  */
 clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
 	// standard options:
 	auto res = config::configureWith(clap, args);
 
 	// custom options of main:
-	if (res.isFlag("let-it-throw"))
-		throwing_main = true;
-	else
-		throwing_main = false;
+	throwing_main = res.isFlag("let-it-throw");
 
 	return res;
 }
@@ -259,6 +254,44 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		return exit_code;
 	});
+	commands.add("compile_module", "compile given module into a binary.", [&]() {
+		// modify clap as needed:
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the module")
+		             .required()
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		             .addShortName('o')
+		             .addLongName("output")
+		             .addShortDesc("Path to the output file")
+		             .required()
+		             .build());
+
+		auto options = configureDuckMainWith(clap, command_args);
+
+		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		// @TODO: error handling
+		using namespace compiler;
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+		// @TODO: change to hout of entire module, when available
+		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+
+		driver::Driver driver{ driver::Options{
+			.backend_type = driver::BackendType::LLVM,
+			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
+			.compile_to_assembly = false,
+			.dump_llvm_ir        = false,
+		} };
+
+		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+
+		return 0;
+	});
 	commands.add("throw", "Throws exception (testing command).", [&]() -> int {
 		configureDuckMainWith(clap, command_args);
 		throw base::LogicError("Command `throw` thrown successfully!");
@@ -270,12 +303,24 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
  * @brief Wrapper for logic of main function
  */
 int mainProcedure(int argc, const char* const* argv) {
-	init();
+	// @TODO:
+	// those inits should be registered automagically via
+	// RUN_BEFORE_MAIN
+	init::registerForInit(lexer::init);
+	init::registerForInit(pst::init);
 
-	clap::CLIArgs full_args{ (usize) argc, argv };
-	clap::CLIArgs command_args{ (usize) argc - 1, argv + 1 };
+	init::InitObject _;
 
-	auto clap         = getClap();
+	clap::CLIArgs full_args{
+		.argc = base::safeIntConv<usize>(argc),
+		.argv = argv,
+	};
+	clap::CLIArgs command_args{
+		.argc = base::safeIntConv<usize>(argc - 1),
+		.argv = argv + 1,
+	};
+
+	auto clap         = getClapForMain();
 	bool command_mode = false;
 
 	auto commands = getCommandList(command_args, clap);
@@ -339,6 +384,11 @@ int main(int argc, const char* argv[]) {
 		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
+		return 1;
+	} catch (...) {
+		if (throwing_main) throw;
+		std::cerr
+			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
 		return 1;
 	}
 }

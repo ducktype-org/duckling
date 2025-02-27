@@ -1,5 +1,6 @@
 add_library(LLVMBackend
         src/backends/llvm/detail/llvm_lowering.cpp
+        src/backends/llvm/detail/compile_llvm.cpp
         src/backends/llvm/detail/module.cpp
 )
 
@@ -14,7 +15,7 @@ llvm_map_components_to_libnames(llvm_libs
 target_include_directories(LLVMBackend PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(LLVMBackend ${llvm_libs})
 
-make_module(LLVMBackend USES Base QueryFramework LIR llvm_helpers)
+make_module(LLVMBackend USES Base QueryFramework LIR llvm_helpers Init)
 
 duck_add_test(compiler llvm_test tests/llvm_test.cpp
 	USES Base Tester LLVMBackend)

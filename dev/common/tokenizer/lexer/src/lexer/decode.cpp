@@ -5,6 +5,7 @@
 #include <diagnostic/source_position.hpp>
 #include <token_file/forward.hpp>
 #include <base/convert.hpp>
+#include <base/int_conv.hpp>
 #include <token_file/file.hpp>
 
 namespace lexer {
@@ -152,7 +153,7 @@ namespace lexer {
 				"UTF-8 decoding error: ",
 				"Codepoint undefined in the Unicode standard encountered starting here ",
 				"with value of ",
-				base::toHexString(value)
+				base::toHexString(base::safeIntConv<usize>(value))
 			);
 		}
 	};
@@ -244,7 +245,7 @@ namespace lexer {
 				continue;
 			}
 
-			out.emplace_back(value, u8(size), pos);
+			out.emplace_back(value, u8(base::safeIntConv<uint8_t>(size)), pos);
 			pos += size;
 		}
 		// Add eof value

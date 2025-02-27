@@ -4,6 +4,7 @@
 #include <code_data/code.hpp>
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
+#include <expected>
 
 namespace vm {
 	class VMProcess;
@@ -30,8 +31,8 @@ namespace vm {
 		 * @brief Parses the file, creates type metadata and returns the code.
 		 *
 		 * @param file
-		 * @return cpp::result<vm::Code, std::string>
+		 * @return std::expected<vm::Code, std::string>
 		 */
-		cpp::result<vm::Code, std::string> getCode(const fs::FilePath& file);
+		std::expected<vm::Code, std::string> getCode(const fs::FilePath& file);
 	};
 }

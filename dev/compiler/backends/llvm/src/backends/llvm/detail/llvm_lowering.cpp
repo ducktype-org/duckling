@@ -19,9 +19,11 @@ LLVM_INCLUDE_END()
 
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <init/init.hpp>
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/maps.hpp>
+#include <base/int_conv.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
@@ -38,6 +40,22 @@ namespace compiler::backend_llvm {
 		CORE_ASSERT(not v1, "failed to initialize llvm (1)");
 		CORE_ASSERT(not v2, "failed to initialize llvm (2)");
 	}
+
+	void llvmDeinit() {
+		// I'm not sure if this is a proper/stable
+		// way to clean up llvm, but it works.
+		// If it ever breaks, a quick-fix is just to comment it out
+		// and let memory leak.
+		// @note: There is also llvm_shutdown_obj helper object,
+		// but we don't use it here in favor of deinit module.
+		//
+		// Note from LLVM docs:
+		// IMPORTANT: it's only safe to call llvm_shutdown() in single thread, without any other
+		// threads executing LLVM APIs. llvm_shutdown() should be the last use of LLVM APIs.
+		llvm::llvm_shutdown();
+	}
+
+	RUN_BEFORE_MAIN(init::registerForDeinit(llvmDeinit));
 
 	/**
 	 * @brief Returns reference to the llvm context.
@@ -68,7 +86,9 @@ namespace compiler::backend_llvm {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) { return llvm::Type::getVoidTy(context); }
 			variant_case_novalue(tsl::IntegralTypeLayout) {
-				return llvm::Type::getIntNTy(context, static_cast<usize>(layout.getSize()));
+				return llvm::Type::getIntNTy(
+					context, base::safeIntConv<unsigned>(static_cast<usize>(layout.getSize()))
+				);
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
 				// see https://llvm.org/docs/LangRef.html#floating-point-types for docs on LLVM
@@ -191,7 +211,9 @@ namespace compiler::backend_llvm {
 		auto lirLocation2LLVM(const lir::LirLocation& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
-				variant_case(i64, value) { return llvm::ConstantInt::get(i64Type(context), value); }
+				variant_case(i64, value) {
+					return llvm::ConstantInt::getSigned(i64Type(context), value);
+				}
 				variant_case(bool, value) { return llvm::ConstantInt::get(i1Type(context), value); }
 				variant_case(lir::LocalRef, lir_local) {
 					// We store local values behind pointers to stack-allocated memory.

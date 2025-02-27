@@ -31,6 +31,7 @@ from scripts.py.toolbox.internet_file import (
 
 from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.py.toolbox.duck_linter import duck_linter_impl
+from scripts.py.toolbox.todo_counter import todo_counter_impl
 
 # @todo move all other implementation to separate files
 
@@ -58,7 +59,15 @@ def cli():
 
 
 def setup_build_impl(
-    build_dir, build_system, type, docs, cxx_compiler, cc_compiler, gcov_version, ccache, coverage
+    build_dir,
+    build_system,
+    type,
+    docs,
+    cxx_compiler,
+    cc_compiler,
+    gcov_version,
+    ccache,
+    coverage,
 ):
 
     check_if_compilers_are_compatible(cxx_compiler, cc_compiler)
@@ -162,7 +171,7 @@ def setup_build_impl(
     default=False,
     is_flag=True,
 )
-# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options) 
+# @TODO: make it prompt only for cov-build (see https://click.palletsprojects.com/en/stable/options/#callbacks-and-eager-options)
 @click.option(
     "--gcov-version",
     prompt="GCOV version",
@@ -429,16 +438,16 @@ def download_llvm(*args, **kwargs):
     "--tidy",
     "clang_tidy_path",
     prompt="clang-tidy path",
-    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-18 or clang-tidy",
-    default="clang-tidy-18",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
 )
 @click.option(
     "-f",
     "--format",
     "clang_format_path",
     prompt="clang-format path",
-    help="Path to clang-format, ex. /usr/bin/clang-format-17 or clang-format",
-    default="clang-format-18",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
 )
 @click.option(
     "-b",
@@ -577,6 +586,34 @@ def duck_linter(*args, **kwargs):
 def itest(*args, **kwargs):
     """Runs integration tests"""
     integration_tests_impl(*args, **kwargs)
+
+
+@cli.command()
+@click.option(
+    "-b",
+    "--branch",
+    type=str,
+    default="",
+    help="Branch for which to count (empty string means the current branch). It can also be any other commit reference understood be git (e.g. HEAD~1)",
+)
+@click.option(
+    "-c",
+    "--count-only",
+    is_flag=True,
+    default=False,
+    help="Only show the counts and nothing else",
+)
+@click.option(
+    "-p",
+    "--pattern",
+    type=str,
+    required=False,
+    multiple=True,
+    help="Search for a given pattern instead of the default ones (todo and fixme). If passed multiple times, all the patterns will be searched for",
+)
+def todo_counter(*args, **kwargs):
+    """Prints counts of todos and similar comments in the code"""
+    todo_counter_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

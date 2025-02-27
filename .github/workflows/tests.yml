@@ -24,7 +24,7 @@ env:
 jobs:
   build:
     if: github.event.pull_request.draft == false
-    
+
     strategy:
       matrix:
         build-type: [Debug, Release]  # (Release, Debug, RelWithDebInfo, etc.)
@@ -59,7 +59,7 @@ jobs:
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
           sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
-      
+
       - name: Check installations
         run: |
           ${{ env.CXX_COMPILER }} --version
@@ -83,9 +83,9 @@ jobs:
 
       # Cache local branch and on miss fallback to main branch's cache. In case
       # main branch misses, fallback to any branch's cache.
-      - name: Cache build
-        id: cache-build
-        uses: actions/cache@v4
+      - name: Restore build cache
+        id: restore-build-cache
+        uses: actions/cache/restore@v4
         with:
           path: |
             ${{ env.CCACHE_DIR }}
@@ -131,18 +131,6 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
-      - name: Test
-        working-directory: ${{ env.BUILD_DIR }}
-        run: cmake --build ${{ env.BUILD_DIR }} -- test
-
-      - name: Test Coverage
-        id: test-coverage
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        working-directory: ${{ env.WORKSPACE }}
-        run: |
-          cmake --build ${{ env.BUILD_DIR }} -- coverage
-          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
-
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -168,6 +156,28 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.CACHE_DEL_PAT }}  # This env variable is used by the GH tool.
           REPO: ${{ github.repository }}
+
+      # Manually cache the build before testing, but **after** cleaning.
+      - name: Save build cache
+        id: save-build-cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ steps.restore-build-cache.outputs.cache-primary-key }}
+
+      - name: Test
+        working-directory: ${{ env.BUILD_DIR }}
+        run: cmake --build ${{ env.BUILD_DIR }} -- test
+
+      - name: Test Coverage
+        id: test-coverage
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -- coverage
+          echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
+
 
   coverage:
     needs: [build]

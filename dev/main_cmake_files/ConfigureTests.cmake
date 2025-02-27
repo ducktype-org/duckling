@@ -53,6 +53,9 @@ if(ENABLE_COVERAGE)
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
 						--remove coverage_unfiltered.info 
+						"docs/**"
+						"integration_tests/**"
+						"scripts/**"
 						"**/tests/**" 
 						"**/playground/**"
 						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
@@ -66,8 +69,9 @@ if(ENABLE_COVERAGE)
 	add_dependencies(coverage build_all_coverage_targets)
 endif()
 
-
-set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full")
+# The "--fair-sched=yes" option is used in VM debugger tests to speed up the tests,
+# for more info see dev/VM/tests/debugger/debugger_infinite_tests.cpp
+set(MEMORYCHECK_COMMAND_OPTIONS "--error-exitcode=1 --leak-check=full --fair-sched=yes")
 
 include(CTest)
 enable_testing()

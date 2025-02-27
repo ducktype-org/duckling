@@ -29,26 +29,34 @@
 									"sourceStart": 21,
 									"sourceEnd": 25
 								},
-								"Binary Operator": {
-									"left_expr": {
+								"Top Level Expression": {
+									"expr": {
 										"position": {
 											"sourceStart": 21,
-											"sourceEnd": 21
-										},
-										"Identifier Expression": {
-											"name": {
-												"Name": "x"
-											}
-										}
-									},
-									"operator": "+",
-									"right_expr": {
-										"position": {
-											"sourceStart": 25,
 											"sourceEnd": 25
 										},
-										"Value Expr": {
-											"number": "3"
+										"Binary Operator": {
+											"left_expr": {
+												"position": {
+													"sourceStart": 21,
+													"sourceEnd": 21
+												},
+												"Identifier Expression": {
+													"name": {
+														"Name": "x"
+													}
+												}
+											},
+											"operator": "+",
+											"right_expr": {
+												"position": {
+													"sourceStart": 25,
+													"sourceEnd": 25
+												},
+												"Value Expr": {
+													"number": "3"
+												}
+											}
 										}
 									}
 								}

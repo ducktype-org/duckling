@@ -7,8 +7,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=terminate -Werror=shadow=local -Werror=return-local-addr -Werror=free-nonheap-object -Wall -Wextra -Wno-sign-compare")
 
+	string(CONCAT ADDITIONAL_GNU_FLAGS
+		"-Werror=return-type "
+		"-Werror=terminate "
+		"-Werror=shadow=local "
+		"-Werror=return-local-addr "
+		"-Werror=free-nonheap-object "
+		"-Werror=conversion "
+		"-Wall -Wextra "
+		"-Wno-sign-compare "
+		)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
+	
 	# Debug version uses O0.
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
@@ -16,7 +27,19 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=return-type -Werror=shadow-all -Werror=return-stack-address -Werror=free-nonheap-object -Wno-shadow-field-in-constructor -Wno-shadow-field -Wall -Wextra -Wno-sign-compare")
+	string(CONCAT ADDITIONAL_CLANG_FLAGS
+		"-Werror=return-type "
+		"-Werror=shadow-all "
+		"-Werror=return-stack-address "
+		"-Werror=free-nonheap-object "
+		"-Werror=conversion "
+		"-Wno-shadow-field-in-constructor "
+		"-Wno-shadow-field "
+		"-Wall -Wextra "
+		"-Wno-sign-compare"
+	)
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
 
 	# Debug version uses O0.
 	# For some reason -Og does not work in clang
