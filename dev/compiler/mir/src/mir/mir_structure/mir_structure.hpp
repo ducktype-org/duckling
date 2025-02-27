@@ -287,7 +287,7 @@ namespace compiler::mir {
 	 */
 	struct Function final {
 		base::StrID                  name;
-		tsh::TypeInfo                return_type;
+		tsh::AbstractType            return_type;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -309,7 +309,7 @@ namespace compiler::mir {
 
 		Function(
 			base::StrID                  name,
-			tsh::TypeInfo                return_type,
+			tsh::AbstractType            return_type,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,

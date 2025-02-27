@@ -11,10 +11,7 @@
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/type_desc.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/lookup_result.hpp>
-#include <lang_definitions/key_spec_op.hpp>
-#include <lexer/token_common.hpp>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
@@ -75,9 +72,9 @@ namespace compiler::helios::code {
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
-		tsh::TypeInfo value_type;
+		tsh::AbstractType value_type;
 
-		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type);
+		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

@@ -1,12 +1,12 @@
 add_library(TypeSystemHigher
         src/typesystem/higher/queries/implicit_coercibility.cpp
         src/typesystem/higher/queries/types.cpp
-        src/typesystem/higher/type_info.cpp
+        src/typesystem/higher/abstract_type.cpp
         src/typesystem/higher/types.cpp
         src/typesystem/higher/type_interface.cpp
         src/typesystem/higher/value_category.cpp
         src/typesystem/higher/all.cpp
-        src/typesystem/higher/internal/type_info_impl.cpp
+        src/typesystem/higher/internal/abstract_type_impl.cpp
         src/typesystem/higher/internal/queries.cpp
 )
 

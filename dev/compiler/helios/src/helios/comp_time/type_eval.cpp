@@ -15,7 +15,7 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
+			= errors::HResult<tsh::AbstractType, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
@@ -70,7 +70,7 @@ namespace compiler::helios {
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::TypeInfo> subtypes;
+				std::vector<tsh::AbstractType> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());

@@ -49,7 +49,7 @@ namespace compiler::helios::code {
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
 
-	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type):
+	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type):
 		  Expr(
 			  scope,
 			  tsh::TypeDesc<>(

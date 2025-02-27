@@ -6,12 +6,12 @@
  * underlying implementation hierarchy.
  */
 
-#include "type_info.hpp"
+#include "abstract_type.hpp"
 
 #include <sstream>
 #include <concepts>
 
-#include "internal/type_info_impl.hpp"
+#include "internal/abstract_type_impl.hpp"
 #include "type_desc.hpp"
 #include "types.hpp"
 
@@ -20,10 +20,10 @@
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**
  * @brief Explicitly instantiate the `checkDynamicCast` template.
- * @param ClassName The class name from the `TypeInfo` hierarchy.
+ * @param ClassName The class name from the `AbstractType` hierarchy.
  */
 #define INSTANTIATE_CHECKED_CAST(ClassName) \
-	template ClassName::CPimpl checkDynamicCast<ClassName>(TypeInfo::CPimpl);
+	template ClassName::CPimpl checkDynamicCast<ClassName>(AbstractType::CPimpl);
 
 // NOLINTEND
 
@@ -55,141 +55,153 @@ namespace tsh {
 		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
 	}
 
-	Bits IntegralInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+	Bits IntegralAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
-	Bits FloatInfo::getSize() const { return toCPimpl(pimpl)->getSize(); }
+	Bits FloatAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
-	bool IntegralInfo::getSignedness() const { return toCPimpl(pimpl)->getSignedness(); }
+	bool IntegralAbstractType::getSignedness() const { return toCPimpl(pimpl)->getSignedness(); }
 
-	bool RawPointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
+	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
-	ComponentType PointerInfo::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
+	ComponentType PointerAbstractType::getComponent() const {
+		return toCPimpl(pimpl)->getComponent();
+	}
 
-	TypeInfo PointerInfo::getUnderlyingType() const { return toCPimpl(pimpl)->getUnderlyingType(); }
+	AbstractType PointerAbstractType::getUnderlyingType() const {
+		return toCPimpl(pimpl)->getUnderlyingType();
+	}
 
-	bool PointerInfo::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
+	bool PointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	struct ReferenceConstructionRecord {
-		TypeInfo      underlying_type;
+		AbstractType  underlying_type;
 		ReferenceKind ref_kind;
 		bool          leaking, nullable, unique;
 
 		auto operator<=>(const ReferenceConstructionRecord&) const = default;
 	};
 
-	ReferenceInfo ReferenceInfo::create(
-		const TypeInfo      underlying_type,
+	ReferenceAbstractType ReferenceAbstractType::create(
+		const AbstractType  underlying_type,
 		const ReferenceKind ref_kind,
 		const bool          leaking,
 		const bool          nullable,
 		const bool          unique
 	) {
-		static base::Map<ReferenceConstructionRecord, ReferenceInfo> references;
+		static base::Map<ReferenceConstructionRecord, ReferenceAbstractType> references;
 
 		const auto ref_record
 			= ReferenceConstructionRecord{ underlying_type, ref_kind, leaking, nullable, unique };
 
 		if (!references.contains(ref_record)) {
 			auto reference = makeBox<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
-			references.put(ref_record, ReferenceInfo(reference.refMut().get()));
+			references.put(ref_record, ReferenceAbstractType(reference.refMut().get()));
 			pushType(std::move(reference));
 		}
 
 		return references[ref_record];
 	}
 
-	TypeInfo ReferenceInfo::getUnderlyingType() const {
+	AbstractType ReferenceAbstractType::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
 
-	ReferenceKind ReferenceInfo::getReferenceKind() const {
+	ReferenceKind ReferenceAbstractType::getReferenceKind() const {
 		return toCPimpl(pimpl)->getReferenceKind();
 	}
 
-	bool ReferenceInfo::isLeaking() const { return toCPimpl(pimpl)->isLeaking(); }
+	bool ReferenceAbstractType::isLeaking() const { return toCPimpl(pimpl)->isLeaking(); }
 
-	bool ReferenceInfo::isNullable() const { return toCPimpl(pimpl)->isNullable(); }
+	bool ReferenceAbstractType::isNullable() const { return toCPimpl(pimpl)->isNullable(); }
 
-	bool ReferenceInfo::isUnique() const { return toCPimpl(pimpl)->isUnique(); }
+	bool ReferenceAbstractType::isUnique() const { return toCPimpl(pimpl)->isUnique(); }
 
 	/*******************\
 	|  COMPOSITE TYPES  |
 	\*******************/
 
-	const std::vector<ComponentType>& TupleInfo::getComponents() const {
+	const std::vector<ComponentType>& TupleAbstractType::getComponents() const {
 		return toCPimpl(pimpl)->getComponents();
 	}
 
-	std::vector<TypeInfo> TupleInfo::getComponentTypes() const {
+	std::vector<AbstractType> TupleAbstractType::getComponentTypes() const {
 		const std::vector<ComponentType>& components = getComponents();
-		std::vector<TypeInfo>             componentTypes;
-		componentTypes.reserve(components.size());
-		for (const auto& component: components) componentTypes.push_back(component.type);
-		return componentTypes;
+		std::vector<AbstractType>         component_types;
+		component_types.reserve(components.size());
+		for (const auto& [type, _]: components) component_types.push_back(type);
+		return component_types;
 	}
 
 	struct FunctionConstructionRecord {
-		std::vector<TypeInfo> parameter_types;
-		TypeDesc<>            result_type;
-		bool                  pure, free;
+		std::vector<AbstractType> parameter_types;
+		TypeDesc<>                result_type;
+		bool                      pure, free;
 
 		auto operator<=>(const FunctionConstructionRecord&) const = default;
 	};
 
-	const std::vector<TypeInfo>& FunctionInfo::getParameterTypes() const {
+	const std::vector<AbstractType>& FunctionAbstractType::getParameterTypes() const {
 		return toCPimpl(pimpl)->getParameterTypes();
 	}
 
-	TypeInfo FunctionInfo::getResultType() const { return toCPimpl(pimpl)->getResult(); }
+	AbstractType FunctionAbstractType::getResultType() const {
+		return toCPimpl(pimpl)->getResult();
+	}
 
-	bool FunctionInfo::isPure() const { return toCPimpl(pimpl)->isPure(); }
+	bool FunctionAbstractType::isPure() const { return toCPimpl(pimpl)->isPure(); }
 
-	bool FunctionInfo::isFree() const { return toCPimpl(pimpl)->isFree(); }
+	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	const std::vector<TypeInfo>& VariantInfo::getUnderlyingTypes() const {
+	const std::vector<AbstractType>& VariantAbstractType::getUnderlyingTypes() const {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
-	TypeInfo VariantInfo::getMember(const usize index) const {
+	AbstractType VariantAbstractType::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
 	}
 
-	compiler::helios::SymID ClassInfo::getSymbol() const { return toCPimpl(pimpl)->getSymbol(); }
+	compiler::helios::SymID ClassAbstractType::getSymbol() const {
+		return toCPimpl(pimpl)->getSymbol();
+	}
 
-	base::Optional<ClassInfo> ClassInfo::getBaseClassType(query::Context& ctx) const {
+	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	base::Optional<compiler::helios::SymID> ClassInfo::getBaseClassSymbol(query::Context& ctx
-	) const {
+	base::Optional<compiler::helios::SymID>
+		ClassAbstractType::getBaseClassSymbol(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	std::vector<ClassInfo> ClassInfo::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassAbstractType>
+		ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
 	std::vector<compiler::helios::SymID>
-		ClassInfo::getImplementedInterfaceSymbols(query::Context& ctx) const {
+		ClassAbstractType::getImplementedInterfaceSymbols(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
-	TypeInfo ClassInfo::getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
+	AbstractType ClassAbstractType::getMemberType(
+		const compiler::helios::SymID sym, query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getMemberType(sym, ctx);
 	}
 
-	template<std::derived_from<TypeInfo> TYPE_INFO>
-	typename TYPE_INFO::CPimpl checkDynamicCast(TypeInfo::CPimpl p) {
-		auto result = dynamic_cast<typename TYPE_INFO::CPimpl>(p);
+	template<std::derived_from<AbstractType> TYPE_AbstractType>
+	typename TYPE_AbstractType::CPimpl checkDynamicCast(AbstractType::CPimpl p) {
+		auto result = dynamic_cast<typename TYPE_AbstractType::CPimpl>(p);
 		if (result == nullptr) {
 			std::stringstream ss;
 			const Kind        original_kind = p->getKind();
-			const Kind        target_kind   = TYPE_INFO::Impl::STATIC_KIND;
-			ss << "Type cast between TypeInfo kinds failed. A cast from "
+			const Kind        target_kind   = TYPE_AbstractType::Impl::STATIC_KIND;
+			ss << "Type cast between TypeAbstractType kinds failed. A cast from "
 			   << base::enumToStr(original_kind).str() << " to "
 			   << base::enumToStr(target_kind).str() << " was attempted.";
 			throw base::LogicError{ ss.str() };
@@ -197,21 +209,21 @@ namespace tsh {
 		return result;
 	}
 
-	INSTANTIATE_CHECKED_CAST(UnitInfo)
-	INSTANTIATE_CHECKED_CAST(VoidInfo)
-	INSTANTIATE_CHECKED_CAST(ByteInfo)
-	INSTANTIATE_CHECKED_CAST(BoolInfo)
-	INSTANTIATE_CHECKED_CAST(CharInfo)
-	INSTANTIATE_CHECKED_CAST(IntegralInfo)
-	INSTANTIATE_CHECKED_CAST(FloatInfo)
-	INSTANTIATE_CHECKED_CAST(RawPointerInfo)
-	INSTANTIATE_CHECKED_CAST(ReferenceInfo)
-	INSTANTIATE_CHECKED_CAST(PointerInfo)
-	INSTANTIATE_CHECKED_CAST(TupleInfo)
-	INSTANTIATE_CHECKED_CAST(FunctionInfo)
-	INSTANTIATE_CHECKED_CAST(VariantInfo)
-	INSTANTIATE_CHECKED_CAST(ClassInfo)
-	INSTANTIATE_CHECKED_CAST(NamespaceInfo)
-	INSTANTIATE_CHECKED_CAST(ModuleInfo)
-	INSTANTIATE_CHECKED_CAST(MetaInfo)
+	INSTANTIATE_CHECKED_CAST(UnitAbstractType)
+	INSTANTIATE_CHECKED_CAST(VoidAbstractType)
+	INSTANTIATE_CHECKED_CAST(ByteAbstractType)
+	INSTANTIATE_CHECKED_CAST(BoolAbstractType)
+	INSTANTIATE_CHECKED_CAST(CharAbstractType)
+	INSTANTIATE_CHECKED_CAST(IntegralAbstractType)
+	INSTANTIATE_CHECKED_CAST(FloatAbstractType)
+	INSTANTIATE_CHECKED_CAST(RawPointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(ReferenceAbstractType)
+	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
+	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
+	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
+	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
+	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)
+	INSTANTIATE_CHECKED_CAST(ModuleAbstractType)
+	INSTANTIATE_CHECKED_CAST(MetaAbstractType)
 }

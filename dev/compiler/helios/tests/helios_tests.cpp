@@ -121,21 +121,22 @@ private:
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
 
-		const auto tuple_int_int           = getTypeOf("TupleII", root_scope);
-		const auto tuple_int_int_type_info = query::entryPoint<tsh::QueryTupleType>(
-			{ { { INT32_TYPE, false }, { INT32_TYPE, false } } }
+		const auto tuple_int_int               = getTypeOf("TupleII", root_scope);
+		const auto tuple_int_int_abstract_type = query::entryPoint<tsh::QueryTupleType>(
+			{ { { .type = INT32_TYPE, .is_mutable = false },
+		        { .type = INT32_TYPE, .is_mutable = false } } }
 		);
-		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_type_info);
+		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_abstract_type);
 
 		const auto first_variant = getTypeOf("first_variant", root_scope);
-		const auto first_variant_type_info
+		const auto first_variant_abstract_type
 			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
-		ASSERT_EQUAL(true, first_variant == first_variant_type_info);
+		ASSERT_EQUAL(true, first_variant == first_variant_abstract_type);
 
 		const auto second_variant = getTypeOf("second_variant", root_scope);
-		const auto second_variant_type_info
+		const auto second_variant_abstract_type
 			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE, BOOL_TYPE } });
-		ASSERT_EQUAL(true, second_variant == second_variant_type_info);
+		ASSERT_EQUAL(true, second_variant == second_variant_abstract_type);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
@@ -167,11 +168,12 @@ private:
 			{ { { INT16_TYPE, false }, { INT32_TYPE, false } } }
 		);
 
-		const auto tuple_ii_ff_type_info = query::entryPoint<tsh::QueryTupleType>(
-			{ { { tuple_i16_i32, false }, { tuple_f16_f32, false } } }
+		const auto tuple_ii_ff_abstract_type = query::entryPoint<tsh::QueryTupleType>(
+			{ { { .type = tuple_i16_i32, .is_mutable = false },
+		        { .type = tuple_f16_f32, .is_mutable = false } } }
 		);
 
-		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_type_info);
+		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_abstract_type);
 	}
 
 	void testEdgeEvals() {

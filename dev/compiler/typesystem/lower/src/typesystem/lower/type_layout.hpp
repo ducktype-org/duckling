@@ -4,13 +4,12 @@
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
-#include <typesystem/higher/type_info.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
 #include <typesystem/higher/type_desc.hpp>
 
 #include <query_framework/query_int.hpp>
 
-#include <base/variant.hpp>
 #include <base/maps.hpp>
 #include <base/bits_and_bytes.hpp>
 
@@ -31,7 +30,7 @@ namespace tsl {
 		/**
 		 * @brief The source type of a memory layout.
 		 */
-		tsh::TypeInfo source_type;
+		tsh::AbstractType source_type;
 
 	public:
 		// This definition is necessary for default definitions in deriving classes.
@@ -51,7 +50,7 @@ namespace tsl {
 		 * @return The source type of a layout.
 		 */
 		[[nodiscard]]
-		tsh::TypeInfo getSourceType() const {
+		tsh::AbstractType getSourceType() const {
 			return source_type;
 		}
 
@@ -80,10 +79,12 @@ namespace tsl {
 		virtual ~TypeLayoutABC() = default;
 
 	protected:
-		TypeLayoutABC(Bits size, tsh::TypeInfo source_type): size(size), source_type(source_type) {}
+		TypeLayoutABC(const Bits size, const tsh::AbstractType source_type):
+			  size(size),
+			  source_type(source_type) {}
 
 		[[nodiscard]]
-		static auto getIndent(u32 indent) {
+		static auto getIndent(const u32 indent) {
 			return std::string(indent, '\t');
 		}
 	};
@@ -99,10 +100,10 @@ namespace tsl {
 	 */
 	class EmptyTypeLayout: public TypeLayoutABC {
 	public:
-		EmptyTypeLayout(tsh::UnitInfo unit_info): TypeLayoutABC(Bits(0), unit_info) {}
+		EmptyTypeLayout(const tsh::UnitAbstractType unit_type): TypeLayoutABC(Bits(0), unit_type) {}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "{} : " + std::to_string(getSize());
 		}
 	};
@@ -114,17 +115,20 @@ namespace tsl {
 	 */
 	class IntegralTypeLayout: public TypeLayoutABC {
 	public:
-		IntegralTypeLayout(tsh::ByteInfo byte_info): TypeLayoutABC(tsl::BYTE_SIZE, byte_info) {}
+		IntegralTypeLayout(const tsh::ByteAbstractType byte_type):
+			  TypeLayoutABC(BYTE_SIZE, byte_type) {}
 
-		IntegralTypeLayout(tsh::BoolInfo bool_info): TypeLayoutABC(tsl::BOOL_SIZE, bool_info) {}
+		IntegralTypeLayout(const tsh::BoolAbstractType bool_type):
+			  TypeLayoutABC(BOOL_SIZE, bool_type) {}
 
-		IntegralTypeLayout(tsh::CharInfo char_info): TypeLayoutABC(tsl::CHAR_SIZE, char_info) {}
+		IntegralTypeLayout(const tsh::CharAbstractType char_type):
+			  TypeLayoutABC(CHAR_SIZE, char_type) {}
 
-		IntegralTypeLayout(tsh::IntegralInfo integral_info):
-			  TypeLayoutABC(integral_info.getSize(), integral_info) {}
+		IntegralTypeLayout(const tsh::IntegralAbstractType integral_type):
+			  TypeLayoutABC(integral_type.getSize(), integral_type) {}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "i" + std::to_string(usize(getSize())) + " : "
 			     + std::to_string(getSize());
 		}
@@ -135,11 +139,11 @@ namespace tsl {
 	 */
 	class FloatTypeLayout: public TypeLayoutABC {
 	public:
-		FloatTypeLayout(tsh::FloatInfo float_info):
-			  TypeLayoutABC(float_info.getSize(), float_info) {}
+		FloatTypeLayout(const tsh::FloatAbstractType float_type):
+			  TypeLayoutABC(float_type.getSize(), float_type) {}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "f" + std::to_string(usize(getSize())) + " : "
 			     + std::to_string(getSize());
 		}
@@ -154,14 +158,14 @@ namespace tsl {
 		Bytes data_offset;
 		Bits  data_size;
 
-		base::Map<tsh::TypeInfo, usize> type_to_index;
-		std::vector<tsh::TypeInfo>      index_to_type;
+		base::Map<tsh::AbstractType, usize> type_to_index;
+		std::vector<tsh::AbstractType>      index_to_type;
 
 		// Delegate constructor.
 		VariantTypeLayout(struct VariantTypeLayoutConstructionHelper helper);
 
 	public:
-		VariantTypeLayout(tsh::VariantInfo variant_info, query::Context& ctx);
+		VariantTypeLayout(tsh::VariantAbstractType variant_type, query::Context& ctx);
 
 		/**
 		 * @return The offset of the discriminating tag of this variant, in bytes.
@@ -192,7 +196,7 @@ namespace tsl {
 		 * @return The index (tag value) of the given option.
 		 */
 		[[nodiscard]]
-		usize getIndexOfType(tsh::TypeInfo key) const {
+		usize getIndexOfType(const tsh::AbstractType key) const {
 			return type_to_index.at(key);
 		}
 
@@ -201,7 +205,7 @@ namespace tsl {
 		 * @return The type corresponding to that index.
 		 */
 		[[nodiscard]]
-		tsh::TypeInfo getTypeOfIndex(usize index) const {
+		tsh::AbstractType getTypeOfIndex(const usize index) const {
 			return index_to_type[index];
 		}
 
@@ -232,7 +236,7 @@ namespace tsl {
 		TupleTypeLayout(struct TupleTypeLayoutConstructionHelper&& helper);
 
 	public:
-		TupleTypeLayout(tsh::TupleInfo tuple_info, query::Context& ctx);
+		TupleTypeLayout(tsh::TupleAbstractType tuple_type, query::Context& ctx);
 
 		/**
 		 * @return The full list of component offsets, in bytes.
@@ -250,7 +254,7 @@ namespace tsl {
 		 * @return The offset of the component corresponding to the given index, in bytes.
 		 */
 		[[nodiscard]]
-		Bytes getComponentOffset(usize index) const {
+		Bytes getComponentOffset(const usize index) const {
 			return getComponentOffsets()[index];
 		}
 
@@ -276,7 +280,7 @@ namespace tsl {
 		ClassTypeLayout(struct ClassTypeLayoutConstructionHelper&& helper);
 
 	public:
-		ClassTypeLayout(tsh::ClassInfo class_info, query::Context& ctx);
+		ClassTypeLayout(tsh::ClassAbstractType class_type, query::Context& ctx);
 
 		/**
 		 * @return The full dictionary of field offsets, in bytes.
@@ -291,7 +295,7 @@ namespace tsl {
 		 * @return The offset of the field corresponding to the given symbol, in bytes.
 		 */
 		[[nodiscard]]
-		Bytes getFieldOffset(compiler::helios::SymID symbol) const {
+		Bytes getFieldOffset(const compiler::helios::SymID symbol) const {
 			return getFieldOffsets().at(symbol);
 		}
 
@@ -306,11 +310,11 @@ namespace tsl {
 	class FunctionalTypeLayout: public TypeLayoutABC {
 	public:
 		// @TODO: Add support for function objects
-		FunctionalTypeLayout(tsh::FunctionInfo function_info):
-			  TypeLayoutABC(POINTER_SIZE, function_info) {}
+		FunctionalTypeLayout(const tsh::FunctionAbstractType function_type):
+			  TypeLayoutABC(POINTER_SIZE, function_type) {}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Functional : " + std::to_string(getSize());
 		}
 	};
@@ -326,32 +330,35 @@ namespace tsl {
 			  TypeLayoutABC(other.getSize(), other.getSourceType()),
 			  pointee(other.pointee ? makeBox<TypeLayout>(*other.pointee) : MBox<TypeLayout>{}) {}
 
-		Ref<TypeLayout> operator->() { return pointee.toOpt().value(); }
+		Ref<TypeLayout> operator->() const { return pointee.toOpt().value(); }
 
-		Ref<TypeLayout> getPointee() { return operator->(); }
+		[[nodiscard]]
+		Ref<TypeLayout> getPointee() const {
+			return operator->();
+		}
 
 		bool hasPointee() { return pointee; }
 
 		/**
 		 * @brief Construct a PointerLayout for a RawPointer.
-		 * @param raw_pointer_info The source RawPointer.
+		 * @param raw_pointer_type The source RawPointer.
 		 */
-		PointerTypeLayout(tsh::RawPointerInfo raw_pointer_info):
-			  TypeLayoutABC(POINTER_SIZE, raw_pointer_info),
+		PointerTypeLayout(const tsh::RawPointerAbstractType raw_pointer_type):
+			  TypeLayoutABC(POINTER_SIZE, raw_pointer_type),
 			  pointee() {}
 
 		/**
 		 * @brief Construct a PointerLayout from a typed Pointer.
-		 * @param pointer_info The source typed Pointer.
+		 * @param pointer_type The source typed Pointer.
 		 * @param ctx The query::Context for constructing the TypeLayout of the pointee.
 		 */
-		PointerTypeLayout(tsh::PointerInfo pointer_info, query::Context& ctx);
+		PointerTypeLayout(tsh::PointerAbstractType pointer_type, query::Context& ctx);
 
-		// There is NO constructor from ReferenceInfo because
-		// ReferenceInfo will be soon removed. @TODO: remove this comment.
+		// There is NO constructor from ReferenceAbstractType because
+		// ReferenceAbstractType will be soon removed. @TODO: remove this comment.
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, u32 indent) const override {
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "Pointer to " + getSourceType().toString() + " : "
 			     + std::to_string(getSize());
 		}
@@ -392,7 +399,7 @@ namespace tsl {
 		 * @copydoc TypeLayoutABC::getSourceType
 		 */
 		[[nodiscard]]
-		tsh::TypeInfo getSourceType() const;
+		tsh::AbstractType getSourceType() const;
 
 		/**
 		 * @copydoc TypeLayoutABC::toStringDefinition

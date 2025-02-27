@@ -19,15 +19,15 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(basic_types_test);
+		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(variant_test);
 		TESTER_ADD_TEST(tuple_test);
 		TESTER_ADD_TEST(class_test);
 	}
 
 private:
-	void test_printing(
-		const tsl::TypeLayout& layout, query::Context& ctx, bool do_non_recursive = false
+	static void testPrinting(
+		const TypeLayout& layout, query::Context& ctx, const bool do_non_recursive = false
 	) {
 		std::cout << layout.toStringIdentification() << "\n";
 		std::cout << layout.toStringDefinition(ctx) << "\n";
@@ -37,10 +37,10 @@ private:
 		}
 	}
 
-	void basic_types_test() {
+	void basicTypesTest() {
 		withContextDo([&](query::Context& ctx) -> void {
-			UnitInfo   unit_type   = ctx.query<QueryUnitType>({});
-			TypeLayout unit_layout = ctx.query<QueryTypeLayout>(unit_type);
+			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
+			TypeLayout             unit_layout = ctx.query<QueryTypeLayout>(unit_type);
 
 			assertTrue(unit_layout.getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
@@ -51,14 +51,14 @@ private:
 				variant_case(EmptyTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of unit type should be empty."); }
 			}
-			test_printing(unit_layout, ctx);
+			testPrinting(unit_layout, ctx);
 
-			TypeInfo byte_sized_types[]{
+			const std::array<AbstractType, 3> byte_sized_types{
 				ctx.query<QueryByteType>({}),
 				ctx.query<QueryBoolType>({}),
 				ctx.query<QueryCharType>({}),
 			};
-			for (TypeInfo byte_sized_type: byte_sized_types) {
+			for (AbstractType byte_sized_type: byte_sized_types) {
 				TypeLayout byte_sized_layout = ctx.query<QueryTypeLayout>(byte_sized_type);
 				assertTrue(
 					byte_sized_layout.getSize() == BYTE_SIZE,
@@ -72,13 +72,13 @@ private:
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
-				test_printing(byte_sized_layout, ctx);
+				testPrinting(byte_sized_layout, ctx);
 			}
 
-			usize int_sizes[] = { 8, 16, 32, 64, 128 };
-			for (usize size: int_sizes) {
-				IntegralInfo int_type   = ctx.query<QueryIntegralType>(size);
-				TypeLayout   int_layout = ctx.query<QueryTypeLayout>(int_type);
+			for (constexpr std::array<usize, 5> int_sizes{ 8, 16, 32, 64, 128 };
+			     usize                          size: int_sizes) {
+				IntegralAbstractType int_type   = ctx.query<QueryIntegralType>(size);
+				TypeLayout           int_layout = ctx.query<QueryTypeLayout>(int_type);
 				assertTrue(
 					int_layout.getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
@@ -91,13 +91,13 @@ private:
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of integral type should be integral."); }
 				}
-				test_printing(int_layout, ctx);
+				testPrinting(int_layout, ctx);
 			}
 
-			usize float_sizes[] = { 16, 32, 64, 80, 128 };
-			for (usize size: float_sizes) {
-				FloatInfo  float_type   = ctx.query<QueryFloatType>(size);
-				TypeLayout float_layout = ctx.query<QueryTypeLayout>(float_type);
+			for (constexpr std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
+			     usize                          size: float_sizes) {
+				FloatAbstractType float_type   = ctx.query<QueryFloatType>(size);
+				TypeLayout        float_layout = ctx.query<QueryTypeLayout>(float_type);
 				assertTrue(
 					float_layout.getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
@@ -110,11 +110,12 @@ private:
 					variant_case(FloatTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of float type should be float."); }
 				}
-				test_printing(float_layout, ctx);
+				testPrinting(float_layout, ctx);
 			}
 
-			FunctionInfo function_type     = ctx.query<QueryFunctionType>({ {}, unit_type });
-			TypeLayout   functional_layout = ctx.query<QueryTypeLayout>(function_type);
+			const FunctionAbstractType function_type
+				= ctx.query<QueryFunctionType>({ {}, unit_type });
+			TypeLayout functional_layout = ctx.query<QueryTypeLayout>(function_type);
 			assertTrue(
 				functional_layout.getSize() == POINTER_SIZE,
 				"Functional layout should have size equal to the size of a pointer."
@@ -127,10 +128,10 @@ private:
 				variant_case(FunctionalTypeLayout, l) { /* good */ }
 				variant_default { fail("Layout of function type should be functional."); }
 			}
-			test_printing(functional_layout, ctx);
+			testPrinting(functional_layout, ctx);
 
-			RawPointerInfo raw_pointer_type   = ctx.query<QueryRawPointerType>({});
-			TypeLayout     raw_pointer_layout = ctx.query<QueryTypeLayout>(raw_pointer_type);
+			const RawPointerAbstractType raw_pointer_type = ctx.query<QueryRawPointerType>({});
+			TypeLayout raw_pointer_layout = ctx.query<QueryTypeLayout>(raw_pointer_type);
 			assertTrue(
 				raw_pointer_layout.getSize() == POINTER_SIZE,
 				"Raw pointer layout should have size equal to the size of a pointer."
@@ -145,10 +146,11 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
-			test_printing(raw_pointer_layout, ctx);
+			testPrinting(raw_pointer_layout, ctx);
 
-			PointerInfo unit_pointer_type   = ctx.query<QueryPointerType>({ unit_type });
-			TypeLayout  unit_pointer_layout = ctx.query<QueryTypeLayout>(unit_pointer_type);
+			const PointerAbstractType unit_pointer_type
+				= ctx.query<QueryPointerType>({ unit_type });
+			TypeLayout unit_pointer_layout = ctx.query<QueryTypeLayout>(unit_pointer_type);
 			assertTrue(
 				unit_pointer_layout.getSize() == POINTER_SIZE,
 				"Typed pointer layout should have size equal to the size of a pointer."
@@ -167,16 +169,17 @@ private:
 				}
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
-			test_printing(unit_pointer_layout, ctx);
+			testPrinting(unit_pointer_layout, ctx);
 		});
 	}
 
 	void variant_test() {
 		withContextDo([&](query::Context& ctx) -> void {
-			IntegralInfo i8_type        = ctx.query<QueryIntegralType>({ 8 });
-			FloatInfo    f16_type       = ctx.query<QueryFloatType>(16);
-			VariantInfo  variant_type   = ctx.query<QueryVariantType>({ { i8_type, f16_type } });
-			TypeLayout   variant_layout = ctx.query<QueryTypeLayout>(variant_type);
+			IntegralAbstractType      i8_type  = ctx.query<QueryIntegralType>({ 8 });
+			FloatAbstractType         f16_type = ctx.query<QueryFloatType>(16);
+			const VariantAbstractType variant_type
+				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
+			TypeLayout variant_layout = ctx.query<QueryTypeLayout>(variant_type);
 
 			assertTrue(
 				variant_layout.getSize() == BYTE_SIZE * 2 + Bits(16),
@@ -207,19 +210,19 @@ private:
 				}
 				variant_default { fail("Layout of variant type should be variant-like."); }
 			}
-			test_printing(variant_layout, ctx, true);
+			testPrinting(variant_layout, ctx, true);
 		});
 	}
 
 	void tuple_test() {
 		withContextDo([&](query::Context& ctx) -> void {
-			IntegralInfo i8_type      = ctx.query<QueryIntegralType>({ 8 });
-			FloatInfo    f16_type     = ctx.query<QueryFloatType>(16);
-			FloatInfo    f64_type     = ctx.query<QueryFloatType>(64);
-			TupleInfo    tuple_type   = ctx.query<QueryTupleType>({
-                { { i8_type }, { f16_type }, { f64_type } },
+			const IntegralAbstractType i8_type      = ctx.query<QueryIntegralType>({ 8 });
+			const FloatAbstractType    f16_type     = ctx.query<QueryFloatType>(16);
+			const FloatAbstractType    f64_type     = ctx.query<QueryFloatType>(64);
+			const TupleAbstractType    tuple_type   = ctx.query<QueryTupleType>({
+                { { .type = i8_type }, { .type = f16_type }, { .type = f64_type } },
             });
-			TypeLayout   tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
+			TypeLayout                 tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
 
 			assertTrue(
 				tuple_layout.getSize() == BYTE_SIZE * 16,
@@ -239,7 +242,7 @@ private:
 				}
 				variant_default { fail("Layout of tuple type should be tuple-like."); }
 			}
-			test_printing(tuple_layout, ctx, true);
+			testPrinting(tuple_layout, ctx, true);
 		});
 	}
 
@@ -251,22 +254,22 @@ private:
 		const SymID my_class_symbol = getChain("MyClass", root_scope).back();
 
 		withContextDo([&](query::Context& ctx) -> void {
-			ClassInfo     my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
-			TypeInterface my_class_interface = my_class_type.getInterface(ctx);
+			const ClassAbstractType my_class_type      = ctx.query<QueryClassType>(my_class_symbol);
+			TypeInterface           my_class_interface = my_class_type.getInterface(ctx);
 
-			SymID a_field_symbol = [&]() {
+			const SymID a_field_symbol = [&] {
 				variant_match(my_class_interface.resolve(base::StrID("a"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
 				CORE_PANIC("Could not resolve field.");
 			}();
-			SymID b_field_symbol = [&]() {
+			const SymID b_field_symbol = [&] {
 				variant_match(my_class_interface.resolve(base::StrID("b"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
 				CORE_PANIC("Could not resolve field.");
 			}();
-			SymID c_field_symbol = [&]() {
+			const SymID c_field_symbol = [&] {
 				variant_match(my_class_interface.resolve(base::StrID("c"), ctx)) {
 					variant_case(TypeInterface::SingleMatch, m) { return m.best_match.getSymbol(); }
 				}
@@ -294,7 +297,7 @@ private:
 				}
 				variant_default { fail("Layout of class type should be class-like."); }
 			}
-			test_printing(my_class_layout, ctx, true);
+			testPrinting(my_class_layout, ctx, true);
 		});
 	}
 

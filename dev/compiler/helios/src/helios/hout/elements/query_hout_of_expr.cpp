@@ -124,8 +124,8 @@ namespace compiler::helios::code {
 					return {};
 				}
 
-				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
-				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
+				auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
+				auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
 				// we only do the most simplest version here:
 				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()

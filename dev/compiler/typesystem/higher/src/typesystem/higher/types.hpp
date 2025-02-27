@@ -1,13 +1,13 @@
 /**
- * @file type_info.hpp
+ * @file types.hpp
  * @brief Interfaces of the simpler kinds of types.
  *
- * The interface is not aware of the internal implementation hierarchy in any way other than its
+ * The interfaces are not aware of the internal implementation hierarchy in any way other than its
  * existence and name.
  */
 
 #pragma once
-#include "type_info.hpp"
+#include "abstract_type.hpp"
 #include "type_desc.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
@@ -15,24 +15,24 @@
 
 namespace tsh {
 	namespace internal {
-		class UnitInfoImpl;
-		class VoidInfoImpl;
-		class ByteInfoImpl;
-		class BoolInfoImpl;
-		class CharInfoImpl;
-		class IntegralInfoImpl;
-		class FloatInfoImpl;
-		class RawPointerInfoImpl;
-		class PointerInfoImpl;
-		class ReferenceInfoImpl;
-		class TupleInfoImpl;
-		class FunctionInfoImpl;
-		class VariantInfoImpl;
-		class ClassInfoImpl;
-		class NamespaceInfoImpl;
-		class ModuleInfoImpl;
-		class MetaInfoImpl;
-		class ImportInfoImpl;
+		class UnitAbstractTypeImpl;
+		class VoidAbstractTypeImpl;
+		class ByteAbstractTypeImpl;
+		class BoolAbstractTypeImpl;
+		class CharAbstractTypeImpl;
+		class IntegralAbstractTypeImpl;
+		class FloatAbstractTypeImpl;
+		class RawPointerAbstractTypeImpl;
+		class PointerAbstractTypeImpl;
+		class ReferenceAbstractTypeImpl;
+		class TupleAbstractTypeImpl;
+		class FunctionAbstractTypeImpl;
+		class VariantAbstractTypeImpl;
+		class ClassAbstractTypeImpl;
+		class NamespaceAbstractTypeImpl;
+		class ModuleAbstractTypeImpl;
+		class MetaAbstractTypeImpl;
+		class ImportAbstractTypeImpl;
 	}
 
 	/******************\
@@ -44,13 +44,13 @@ namespace tsh {
 	 *
 	 * The Unit type is the type with only one value -- the empty tuple ().
 	 */
-	class UnitInfo final: public TypeInfo {
+	class UnitAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(UnitInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(UnitAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(UnitInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(UnitAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Unit)
+		CONSTRUCT_FROM_IMPLEMENTATION(UnitAbstractType)
 	};
 
 	/**
@@ -62,13 +62,13 @@ namespace tsh {
 	 * The Void type is a subtype of every type.
 	 * While this may seem strange, it is useful in generic variance contexts.
 	 */
-	class VoidInfo final: public TypeInfo {
+	class VoidAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(VoidInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(VoidAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(VoidInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(VoidAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Void)
+		CONSTRUCT_FROM_IMPLEMENTATION(VoidAbstractType)
 	};
 
 	/**
@@ -79,13 +79,13 @@ namespace tsh {
 	 * instead of an Integral of size 8 or a Char when it is particularly
 	 * important that the underlying data is a byte, e.g. in cryptography.
 	 */
-	class ByteInfo final: public TypeInfo {
+	class ByteAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(ByteInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(ByteAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(ByteInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ByteAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Byte)
+		CONSTRUCT_FROM_IMPLEMENTATION(ByteAbstractType)
 	};
 
 	/**
@@ -94,13 +94,13 @@ namespace tsh {
 	 * Despite having a size of 8 bits, a value of the Bool type can be
 	 * only one of two values: true (1) and false (0).
 	 */
-	class BoolInfo final: public TypeInfo {
+	class BoolAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(BoolInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(BoolAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(BoolInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(BoolAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Bool)
+		CONSTRUCT_FROM_IMPLEMENTATION(BoolAbstractType)
 	};
 
 	/**
@@ -109,13 +109,13 @@ namespace tsh {
 	 * A value of this type represents a character.
 	 * It is not decided how encodings other than ASCII will be supported yet.
 	 */
-	class CharInfo final: public TypeInfo {
+	class CharAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(CharInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(CharAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(CharInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(CharAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Char)
+		CONSTRUCT_FROM_IMPLEMENTATION(CharAbstractType)
 	};
 
 	/**
@@ -124,9 +124,9 @@ namespace tsh {
 	 * Each Integral type has a size which is a power of two between 8 and 128 (inclusive).
 	 * Additionally, it can be signed or unsigned.
 	 */
-	class IntegralInfo final: public TypeInfo {
+	class IntegralAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(IntegralInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(IntegralAbstractType, AbstractType)
 
 		/**
 		 * @brief Get the size of the integral type.
@@ -141,9 +141,9 @@ namespace tsh {
 		[[nodiscard]]
 		bool getSignedness() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(IntegralInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(IntegralAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Integral)
+		CONSTRUCT_FROM_IMPLEMENTATION(IntegralAbstractType)
 	};
 
 	/**
@@ -152,9 +152,9 @@ namespace tsh {
 	 * The Float types come in sizes being powers of two between 16 and 128 (inclusive),
 	 * as well as 80 bits.
 	 */
-	class FloatInfo final: public TypeInfo {
+	class FloatAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(FloatInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(FloatAbstractType, AbstractType)
 
 		/**
 		 * @brief Get the size of the floating point type.
@@ -163,9 +163,9 @@ namespace tsh {
 		[[nodiscard]]
 		Bits getSize() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(FloatInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(FloatAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Float)
+		CONSTRUCT_FROM_IMPLEMENTATION(FloatAbstractType)
 	};
 
 	/*******************\
@@ -173,9 +173,9 @@ namespace tsh {
 	\*******************/
 
 	/**
-	 * @brief A type supplied with mutability information.
+	 * @brief A type supplied with mutability AbstractTypermation.
 	 *
-	 * @todo should this exist, how it realted to typeinfo, typedesc; document it.
+	 * @todo should this exist, how it realted to AbstractType, typedesc; document it.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
 	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some
@@ -185,7 +185,7 @@ namespace tsh {
 		/**
 		 * @brief The actual type of the component.
 		 */
-		TypeInfo type;
+		AbstractType type;
 
 		/**
 		 * @brief Whether the component is mutable or not.
@@ -220,16 +220,16 @@ namespace tsh {
 	 *
 	 * A value of this type is simply a memory address.
 	 */
-	class RawPointerInfo final: public TypeInfo {
+	class RawPointerAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(RawPointerInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(RawPointerAbstractType, AbstractType)
 
 		[[nodiscard]]
 		bool isMutable() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(RawPointerInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(RawPointerAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(RawPointer)
+		CONSTRUCT_FROM_IMPLEMENTATION(RawPointerAbstractType)
 	};
 
 	/**
@@ -238,9 +238,9 @@ namespace tsh {
 	 * A value of this type is simply a memory address.
 	 * However, it is statically known what the type of the pointee is.
 	 */
-	class PointerInfo final: public TypeInfo {
+	class PointerAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(PointerInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
 
 		/**
 		 * @brief Gets the underlying component of the Pointer type.
@@ -254,7 +254,7 @@ namespace tsh {
 		 * @return The underlying type.
 		 */
 		[[nodiscard]]
-		TypeInfo getUnderlyingType() const;
+		AbstractType getUnderlyingType() const;
 
 		/**
 		 * @brief Checks whether the data under the pointer is mutable.
@@ -263,9 +263,9 @@ namespace tsh {
 		[[nodiscard]]
 		bool isMutable() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(PointerInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(PointerAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Pointer)
+		CONSTRUCT_FROM_IMPLEMENTATION(PointerAbstractType)
 	};
 
 	/**
@@ -309,9 +309,9 @@ namespace tsh {
 	 * However, a reference carries additional semantics and guarantees,
 	 * such as leakiness, nullability and uniqueness.
 	 */
-	class ReferenceInfo final: public TypeInfo {
+	class ReferenceAbstractType final: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(ReferenceInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(ReferenceAbstractType, AbstractType)
 
 		/**
 		 * @brief Create a new reference type with the given parameters.
@@ -325,8 +325,8 @@ namespace tsh {
 		 * By default, references can be copied and shared.
 		 * @return The created reference type.
 		 */
-		static ReferenceInfo create(
-			TypeInfo      underlying_type,
+		static ReferenceAbstractType create(
+			AbstractType  underlying_type,
 			ReferenceKind ref_kind,
 			bool          leaking  = false,
 			bool          nullable = false,
@@ -338,7 +338,7 @@ namespace tsh {
 		 * @return The underlying type.
 		 */
 		[[nodiscard]]
-		TypeInfo getUnderlyingType() const;
+		AbstractType getUnderlyingType() const;
 
 		/**
 		 * @brief Gets the reference kind.
@@ -368,9 +368,9 @@ namespace tsh {
 		[[nodiscard]]
 		bool isUnique() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(ReferenceInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ReferenceAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Reference)
+		CONSTRUCT_FROM_IMPLEMENTATION(ReferenceAbstractType)
 	};
 
 	/*******************\
@@ -386,19 +386,19 @@ namespace tsh {
 	 * For example, (A, B) and (A, mut B) are two different tuple types.
 	 * Nota bene, the former is implicitly coercible to the latter.
 	 */
-	class TupleInfo: public TypeInfo {
+	class TupleAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(TupleInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(TupleAbstractType, AbstractType)
 
 		[[nodiscard]]
 		const std::vector<ComponentType>& getComponents() const;
 
 		[[nodiscard]]
-		std::vector<TypeInfo> getComponentTypes() const;
+		std::vector<AbstractType> getComponentTypes() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(TupleInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(TupleAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Tuple)
+		CONSTRUCT_FROM_IMPLEMENTATION(TupleAbstractType)
 	};
 
 	/**
@@ -444,23 +444,23 @@ namespace tsh {
 	 *
 	 * A function can be non-free and pure if it does not change its captures.
 	 */
-	class FunctionInfo: public TypeInfo {
+	class FunctionAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(FunctionInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(FunctionAbstractType, AbstractType)
 
 		/**
 		 * @brief Gets the parameter types of the function type.
 		 * @return The parameter types of the function type.
 		 */
 		[[nodiscard]]
-		const std::vector<TypeInfo>& getParameterTypes() const;
+		const std::vector<AbstractType>& getParameterTypes() const;
 
 		/**
 		 * @brief Gets the result type of the function type.
 		 * @return The result type of the function type.
 		 */
 		[[nodiscard]]
-		TypeInfo getResultType() const;
+		AbstractType getResultType() const;
 
 		/**
 		 * @brief Check whether the function type is pure or not.
@@ -476,9 +476,9 @@ namespace tsh {
 		[[nodiscard]]
 		bool isFree() const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(FunctionInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(FunctionAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Function)
+		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
 	};
 
 	/**
@@ -488,19 +488,19 @@ namespace tsh {
 	 * exactly one of its component types. In practice, we mark the type of the
 	 * dynamic value using additional discriminatory bytes, or more cleverly if possible.
 	 */
-	class VariantInfo: public TypeInfo {
+	class VariantAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(VariantInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(VariantAbstractType, AbstractType)
 
 		[[nodiscard]]
-		const std::vector<TypeInfo>& getUnderlyingTypes() const;
+		const std::vector<AbstractType>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
-		TypeInfo getMember(usize index) const;
+		AbstractType getMember(usize index) const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(VariantInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Variant)
+		CONSTRUCT_FROM_IMPLEMENTATION(VariantAbstractType)
 	};
 
 	/**
@@ -510,15 +510,15 @@ namespace tsh {
 	 *
 	 * A Class type may be cyclically dependent on itself, which is why construction
 	 * requires only a Symbol ID (which then leads to the place of definition in the PST,
-	 * whence all required information is gathered).
+	 * whence all required AbstractTypermation is gathered).
 	 *
 	 * A Class may have zero or one base classes and may implement arbitrarily many interfaces.
 	 * A Class may define its own member fields and member functions. All of the above can be
-	 * accessed via ClassInfo methods.
+	 * accessed via ClassAbstractType methods.
 	 */
-	class ClassInfo: public TypeInfo {
+	class ClassAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(ClassInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(ClassAbstractType, AbstractType)
 
 		/**
 		 * Gets the SymID of the class type.
@@ -533,7 +533,7 @@ namespace tsh {
 		 * @return The type of the base class.
 		 */
 		[[nodiscard]]
-		base::Optional<ClassInfo> getBaseClassType(query::Context& ctx) const;
+		base::Optional<ClassAbstractType> getBaseClassType(query::Context& ctx) const;
 
 		/**
 		 * Gets the symbol of the base class.
@@ -549,8 +549,8 @@ namespace tsh {
 		 * @return The symbols of implemented interfaces.
 		 */
 		[[nodiscard]]
-		std::vector<ClassInfo> getImplementedInterfaceTypes(query::Context& ctx) const;
-		// @TODO: change return type to InterfaceInfo when interface type is created.
+		std::vector<ClassAbstractType> getImplementedInterfaceTypes(query::Context& ctx) const;
+		// @TODO: change return type to InterfaceAbstractType when interface type is created.
 
 		[[nodiscard]]
 		std::vector<compiler::helios::SymID> getImplementedInterfaceSymbols(query::Context& ctx
@@ -563,53 +563,53 @@ namespace tsh {
 		 * @return The type of the member.
 		 */
 		[[nodiscard]]
-		TypeInfo getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
+		AbstractType getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
 
-		CONSTRUCT_WITH_CHECKED_CAST(ClassInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ClassAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Class)
+		CONSTRUCT_FROM_IMPLEMENTATION(ClassAbstractType)
 	};
 
 	/***********************\
 	|  MISCELLANEOUS TYPES  |
 	\***********************/
 
-	class NamespaceInfo: public TypeInfo {
+	class NamespaceAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(NamespaceInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(NamespaceAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(NamespaceInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(NamespaceAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Namespace)
+		CONSTRUCT_FROM_IMPLEMENTATION(NamespaceAbstractType)
 	};
 
-	class ModuleInfo: public TypeInfo {
+	class ModuleAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(ModuleInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(ModuleAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(ModuleInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ModuleAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Module)
+		CONSTRUCT_FROM_IMPLEMENTATION(ModuleAbstractType)
 	};
 
 	// The Meta type is the type which hold values being types.
 	// One could write, for example, `type myInt64 = i64;`.
 	// Might be useful for generic interfaces and compile time code execution.
-	class MetaInfo: public TypeInfo {
+	class MetaAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(MetaInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(MetaAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(MetaInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(MetaAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Meta)
+		CONSTRUCT_FROM_IMPLEMENTATION(MetaAbstractType)
 	};
 
-	class ImportInfo: public TypeInfo {
+	class ImportAbstractType: public AbstractType {
 	public:
-		SETUP_TYPE_WITH_BASE(ImportInfo, TypeInfo)
+		SETUP_TYPE_WITH_BASE(ImportAbstractType, AbstractType)
 
-		CONSTRUCT_WITH_CHECKED_CAST(ImportInfo)
+		CONSTRUCT_WITH_CHECKED_CAST(ImportAbstractType)
 
-		CONSTRUCT_FROM_IMPLEMENTATION(Import)
+		CONSTRUCT_FROM_IMPLEMENTATION(ImportAbstractType)
 	};
 }
