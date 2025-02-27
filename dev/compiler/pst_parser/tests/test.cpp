@@ -86,11 +86,11 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (auto& stmt: pst.getRootElement()->getStatements()) {
+			for (const auto& stmt: pst.getRootElement()->getStatements()) {
 				assertThrows<base::Panic>(
-					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
+					[&] { stmt.unlock({})->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 				);
-				stmt->acceptVisitor(empty_vistor);
+				stmt.unlock({})->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
@@ -100,8 +100,8 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (auto& stmt: pst.getRootElement()->getStatements()) {
-				Ref<pst::LangElement> lang_stmt = &*stmt;
+			for (const auto& stmt: pst.getRootElement()->getStatements()) {
+				pst::Access<pst::LangElement> lang_stmt = stmt.unlock({});
 				assertThrows<base::Panic>(
 					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
 					"LangElement did not call it\'s visitor"
@@ -201,10 +201,10 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = dynamic_cast<const pst::Fun*>(&*pst.getRootElement()->getStatements().at(0));
+		auto fun = pst.getRootElement()->getStatements()[0].cast<pst::Fun>().unlock({});
 		ASSERT_TRUE(fun != nullptr);
 
-		auto params = fun->getParams();
+		auto params = fun->getParams().unlock({});
 		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
@@ -225,7 +225,7 @@ private:
 		usize i = 0;
 		for (auto param: *params) {
 			PstParamVisitor visitor(base::StrID(names.at(i)));
-			param->acceptVisitor(visitor);
+			param.unlock({})->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}

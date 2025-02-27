@@ -265,6 +265,7 @@ namespace pst {
 		int key = 0;
 	public:
 		PSTAccessKey() = default;
+		PSTAccessKey(const PSTAccessKey&) = default;
 
 		bool operator== (PSTAccessKey other) {return key == other.key;}
 	};
@@ -275,12 +276,17 @@ namespace pst {
 
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
+		template</*std::derived_from<LangElement>*/ typename E>
+		friend class Access;
 
 		Access(MCRef<Element> ref, PSTAccessKey key): MCRef<Element>(ref), stored_key(key) {}
 	public:
 		Access() = delete;	
 		Access(Access&) = delete;	
 		Access(Access&& other) = default;
+
+		template<typename T>
+		Access(Access<T>&& other): MCRef<Element>(other), stored_key(other.stored_key) {}
 	};
 
 	template</*std::derived_from<LangElement>*/ typename Element>
@@ -303,6 +309,11 @@ namespace pst {
 		AccessLocked(AccessLocked<T> other): ref(other.ref) {}
 		template<typename T>
 		AccessLocked(AccessLocked<T>& other): ref(other.ref) {}
+
+		template<std::derived_from<Element> Desc>
+		AccessLocked<Desc> cast() const {
+			return {dynamic_cast<const Desc*>(&*ref)};
+		}
 
 		Access<Element> unlock(PSTAccessKey key) const {
 			return {ref, key};
