@@ -6,6 +6,8 @@
 #include <core/process/type_metadata/type_metadata.hpp>
 
 namespace assemble {
-	std::expected<vm::Code, std::string>
-		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata);
+	std::expected<vm::VMProgram, std::string>
+		assemble(const std::vector<fs::FilePath>& files);
+		
+	std::expected<Box<vm::VMProgram>, std::string> convertParsedProgramToVMProgram(CBox<ParsedProgram> parsed_program);
 }

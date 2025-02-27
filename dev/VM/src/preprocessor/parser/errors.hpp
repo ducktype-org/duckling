@@ -99,6 +99,26 @@ namespace vm::parser {
 		NoMainError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class DuplicateFunctionDeclarationError final: public dia::Error {
+		public:
+			constexpr static std::string_view ERR_MSG
+				= "Function with this name already exists.";
+	
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return ERR_MSG.data();
+			}
+	
+		public:
+			[[nodiscard]]
+			Domain getDomain() const override {
+				return Domain::Parser;
+			}
+	
+			DuplicateFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
+		};
+
 	class DuplicatedTypeError final: public dia::Error {
 	public:
 		constexpr static std::string_view ERR_MSG = "Duplicated type.";

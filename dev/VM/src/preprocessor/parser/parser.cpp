@@ -429,13 +429,13 @@ namespace assemble {
 		~Func() override = default;
 	};
 
-	struct ParsedCode: AsmElement {
+	struct ParsedFile: AsmElement {
 		using AsmElement::AsmElement;
 
 		std::vector<Box<Func>> functions;
 		std::vector<Box<Type>> types;
 
-		static MBox<ParsedCode> parse(F8ParserState& state);
+		static MBox<ParsedFile> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
 			for (auto& type: types) {
@@ -449,7 +449,35 @@ namespace assemble {
 			}
 		}
 
-		~ParsedCode() override = default;
+		~ParsedFile() override = default;
+	};
+
+	/**
+	 * @brief Structure containing a parsed program combined 
+	 * from all files with type metadata.
+	 */
+	struct ParsedProgram {
+		ParsedProgram() = default;
+
+		dia::SourcePosition position;
+		std::vector<Box<Func>> functions;
+		std::vector<Box<Type>> types;
+		vm::TypeMetadata type_metadata;
+
+
+		void dprint(std::ostream& out) const {
+			for (auto& type: types) {
+				type->dprint(out);
+				out << "\n";
+			}
+
+			for (auto& func: functions) {
+				func->dprint(out);
+				out << "\n";
+			}
+		}
+
+		~ParsedProgram() = default;
 	};
 
 	MBox<Func> Func::parse(F8ParserState& state) {
@@ -739,8 +767,8 @@ namespace assemble {
 		return out;
 	}
 
-	MBox<ParsedCode> ParsedCode::parse(F8ParserState& state) {
-		auto out = makeBox<ParsedCode>(state.getPosition());
+	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
+		auto out = makeBox<ParsedFile>(state.getPosition());
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
@@ -764,30 +792,29 @@ namespace assemble {
 		return lexer::tokenizeFile(path);
 	}
 
-	MBox<ParsedCode> parseFile(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
+	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
 		const lexer::TokenData& td = file->getTokenData();
 
 		F8ParserState state(
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
 
-		return ParsedCode::parse(state);
+		return ParsedFile::parse(state);
 	}
 
-	// returns true if was successfully
-	void defineTypes(Ref<ParsedCode> code, vm::TypeMetadata& type_metadata, dia::Logger& log) {
+	void defineTypes(Ref<ParsedProgram> program, dia::Logger& log) {
 		base::Map<base::StrID, vm::TypeRef> type_map;
 
 		std::deque<Ref<Type>> good_types;
 
-		for (auto& type: code->types) {
+		for (auto& type: program->types) {
 			base::StrID name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
 				auto msg = makeBox<vm::parser::DuplicatedTypeError>(type->position);
 
 				auto duplicated_types
-					= code->types | std::views::filter([&](auto&& duplicated_type) {
+					= program->types | std::views::filter([&](auto&& duplicated_type) {
 						  base::StrID other_name
 							  = VISIT(duplicated_type->datatype, value, return value.name);
 						  return name == other_name && (&*duplicated_type != &*type);
@@ -800,7 +827,7 @@ namespace assemble {
 				log.log(std::move(msg));
 			} else {
 				vm::Type typ      = vm::Type::declareType(name);
-				auto     type_ref = type_metadata.addType(std::move(typ));
+				auto     type_ref = program->type_metadata.addType(std::move(typ));
 				type_map.put(name, type_ref);
 				good_types.push_back(type.refMut());
 			}
@@ -844,7 +871,7 @@ namespace assemble {
 			}
 		}
 
-		type_metadata.finalize();
+		program->type_metadata.finalize();
 	}
 
 	u16 nameToOpcodeValue(base::StrID str) {
@@ -993,52 +1020,75 @@ namespace assemble {
 	// @TODO: this function returns errors as string, in the future `StreamPrinter`
 	// like object should be returned, that can produce both human readable and json
 	// error output
-	base::Optional<vm::Code>
-		getCode(Ref<ParsedCode> code, vm::TypeMetadata& type_metadata, dia::Logger& log) {
-		vm::Code instructions_code;
+	base::Optional<Box<vm::VMProgram>>
+		getCode(Ref<ParsedProgram> parsed_program, dia::Logger& log) {
+		auto program = makeBox<vm::VMProgram>();
 
-		base::Optional<usize> main_id;
+		// @TODO: This should be moved to Validator
+		// for (usize idx = 0; idx < parsed_program->functions.size(); idx++) {
+		// 	if (parsed_program->functions[idx]->name.value.strView() == "main") {
+		// 		main_id = idx;
+		// 		break;
+		// 	}
+		// }
 
-		for (usize idx = 0; idx < code->functions.size(); idx++) {
-			if (code->functions[idx]->name.value.strView() == "main") {
-				main_id = idx;
-				break;
+		// if (!main_id) {
+		// 	log.log(makeBox<vm::parser::NoMainError>(parsed_program->position));
+		// 	return {};
+		// }
+		// program.main_id = *main_id;
+		// =====================
+
+		for (auto& func: parsed_program->functions) {
+			auto convertedFunc = changeFuncToFuncData(parsed_program->functions, func.ref(), parsed_program->type_metadata, log);
+			bool res = program->addFunction(func->name, convertedFunc);
+			// @ TODO: That should be moved to Validator
+			if (!res) { // Duplicate function name
+				log.log(makeBox<vm::parser::DuplicateFunctionDeclarationError>(parsed_program->position));
+				return {};
 			}
+			// ===================
 		}
 
-		if (!main_id) {
-			log.log(makeBox<vm::parser::NoMainError>(code->position));
-			return {};
-		}
-		instructions_code.main_id = *main_id;
+		// @TODO: This should be moved to Validator
+		// assertTailcallsSignatures(program.functions);
+		// =====================
 
-		for (auto& func: code->functions)
-			instructions_code.functions.emplace_back(
-				changeFuncToFuncData(code->functions, func.ref(), type_metadata, log)
-			);
-		assertTailcallsSignatures(instructions_code.functions);
-
-		return instructions_code;
+		return program;
 	}
 
-	std::expected<vm::Code, std::string>
-		assemble(const fs::FilePath& file, vm::TypeMetadata& type_metadata) {
-		auto log       = dia::Logger();
-		auto tokenized = tokenizeFile(file);
-		auto parsed    = parseFile(tokenized.refMut(), log).toOptBox();
 
-		bool bad = !parsed || log.bad();
+	std::expected<Box<ParsedProgram>, std::string>
+	assemble(const std::vector<fs::FilePath>& files) {
+		auto log       = dia::Logger();
+		auto parsed_program = makeBox<ParsedProgram>();
+
+		std::vector<base::Box<ParsedFile>> parsed_files;
+		bool bad = false;
+
+		for (auto& file : files) {
+			auto tokenized = tokenizeFile(file);
+			auto parsed    = parseFile(tokenized.refMut(), log).toOptBox();
+			bad = !parsed || log.bad();
+
+			for (auto& func : parsed.value()->functions) {
+				parsed_program->functions.push_back(std::move(func));
+			}
+			
+			for (auto& type : parsed.value()->types) {
+				parsed_program->types.push_back(std::move(type));
+			}
+
+			parsed_files.push_back(parsed.value());
+		}
 
 		if (!bad) {
-			defineTypes(parsed->refMut(), type_metadata, log);
+			defineTypes(parsed_program.refMut(), log);
 			bad = log.bad();
 		}
 
-		base::Optional<vm::Code> result;
-		if (!bad) {
-			result = getCode(parsed->refMut(), type_metadata, log);
-			bad    = !result || log.bad();
-		}
+		std::cout << "Bad: " << bad << '\n';
+		parsed_program->dprint(std::cout);
 
 		if (bad) {
 			std::stringstream stream;
@@ -1046,6 +1096,22 @@ namespace assemble {
 			return std::unexpected(stream.str());
 		}
 
-		return *result;
+		return parsed_program;
 	}
+
+	std::expected<Box<vm::VMProgram>, std::string> convertParsedProgramToVMProgram(CBox<ParsedProgram> parsed_program) {
+		auto log = dia::Logger();
+		bool bad = false;
+
+		auto result = getCode(parsed_program.refMut(), log);
+		bad    = !result || log.bad();
+
+		if (bad) {
+			std::stringstream stream;
+			log.dumpLogAndClear(true, stream);
+			return std::unexpected(stream.str());
+		}
+		return result.expect("he");
+	}
+
 }

@@ -104,8 +104,6 @@ namespace vm {
 		 */
 		VMProcess&    process;
 		Memory&       process_memory;
-		TypeMetadata& process_types;
-
 
 		// This might change:
 		std::condition_variable pause_cv;
@@ -145,7 +143,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<Code> executing_code = nullptr;
+		MCRef<const VMProgram> executing_code = nullptr;
 
 		/**
 		 * @TODO:
@@ -163,7 +161,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(const FuncData&);
+		u64 internalCallMain(CRef<FuncData>);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -182,7 +180,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<vm::Code> code);
+		bool initThreadAndRun(CRef<VMProgram> program);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -218,7 +216,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<Code>);
+		void run(CRef<VMProgram>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 
