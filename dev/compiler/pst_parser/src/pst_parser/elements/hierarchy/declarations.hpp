@@ -37,7 +37,7 @@ namespace pst {
 	 * @brief Top-level element that is the root of the pst of a single file.
 	 */
 	class TopLevel final: public Decl {
-		std::vector<MBox<Stmt>> statements;
+		std::vector<AccessInternal<Stmt>> statements;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(TopLevel, ElementKind::TopLevel);
@@ -53,8 +53,10 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const auto& getStatements() const {
-			return statements;
+		auto getStatements() const {
+			using namespace std::views;
+			static auto give_one = [](auto& acc) -> AccessLocked<Stmt> {return acc.give();};
+			return std::ranges::ref_view(statements) | transform(give_one);
 		}
 
 		[[nodiscard]]
@@ -70,7 +72,7 @@ namespace pst {
 	 */
 	class Block final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
-		MBox<CodeBlock>         code_block = nullptr;
+		AccessInternal<CodeBlock>         code_block = nullptr;
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
@@ -94,7 +96,7 @@ namespace pst {
 	 */
 	class Namespace final: public Decl {
 		tpc::Identifier name;
-		MBox<CodeBlock> body = nullptr;
+		AccessInternal<CodeBlock> body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Namespace, ElementKind::Namespace);
@@ -105,8 +107,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<CodeBlock> getBody() const {
-			return body.ref();
+		AccessLocked<CodeBlock> getBody() const {
+			return body.give();
 		}
 
 		static MBox<Namespace> parse(LangParserState& state);
@@ -127,9 +129,9 @@ namespace pst {
 	class Class final: public Decl {
 	private:
 		tpc::Identifier      name;
-		MBox<ExprElement>    base       = nullptr;
-		MBox<ImplementsList> implements = nullptr;
-		MBox<ClassBlock>     body       = nullptr;
+		AccessInternal<ExprElement>    base       = nullptr;
+		AccessInternal<ImplementsList> implements = nullptr;
+		AccessInternal<ClassBlock>     body       = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Class, ElementKind::Class);
@@ -140,18 +142,18 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ClassBlock> getBody() const {
-			return body.ref();
+		AccessLocked<ClassBlock> getBody() const {
+			return body.give();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprElement> getBase() const {
-			return base.ref();
+		AccessLocked<ExprElement> getBase() const {
+			return base.give();
 		}
 
 		[[nodiscard]]
-		MCRef<ImplementsList> getImplements() const {
-			return implements.ref();
+		AccessLocked<ImplementsList> getImplements() const {
+			return implements.give();
 		}
 
 		static MBox<Class> parse(LangParserState& state);
@@ -176,8 +178,8 @@ namespace pst {
 	 */
 	class Variable final: public Decl {
 		tpc::Identifier       name;
-		MBox<CommaExprHolder> type     = nullptr;
-		MBox<CommaExprHolder> value    = nullptr;
+		AccessInternal<CommaExprHolder> type     = nullptr;
+		AccessInternal<CommaExprHolder> value    = nullptr;
 		bool                  is_const = true;
 
 	public:
@@ -191,13 +193,13 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getType() const {
-			return type.ref();
+		AccessLocked<ExprHolder> getType() const {
+			return type.give();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getValue() const {
-			return value.ref();
+		AccessLocked<ExprHolder> getValue() const {
+			return value.give();
 		}
 
 		[[nodiscard]]
@@ -222,9 +224,9 @@ namespace pst {
 	 */
 	class Fun final: public Decl {
 		tpc::Identifier                       name;
-		MBox<ParamList>                       params = nullptr;
-		base::Optional<MBox<CommaExprHolder>> ret;
-		MBox<CodeBlockOrStmt>                 body = nullptr;
+		AccessInternal<ParamList>                       params = nullptr;
+		base::Optional<AccessInternal<CommaExprHolder>> ret;
+		AccessInternal<CodeBlockOrStmt>                 body = nullptr;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Fun, ElementKind::Fun);
@@ -235,21 +237,21 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ParamList> getParams() const {
-			return params.ref();
+		AccessLocked<ParamList> getParams() const {
+			return params.give();
 		}
 
 		[[nodiscard]]
 		/**
 		 * @note Optional of MCRef here is intentional
 		 */
-		base::Optional<MCRef<ExprHolder>> getRet() const {
-			return ret.map([](const auto& v) -> MCRef<ExprHolder> { return v.ref(); });
+		base::Optional<AccessLocked<ExprHolder>> getRet() const {
+			return ret.map([](const auto& v) -> AccessLocked<ExprHolder> { return v.give(); });
 		}
 
 		[[nodiscard]]
-		MCRef<CodeBlockOrStmt> getBody() const {
-			return body.ref();
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
 		}
 
 		static MBox<Fun> parse(LangParserState& state);
@@ -268,10 +270,10 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
-		MBox<RoundGroupExpr>    condition = nullptr;
+		AccessInternal<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
-		MBox<CodeBlockOrStmt>   body      = nullptr;
-		MBox<CodeBlockOrStmt>   else_body = nullptr;
+		AccessInternal<CodeBlockOrStmt>   body      = nullptr;
+		AccessInternal<CodeBlockOrStmt>   else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
@@ -288,13 +290,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getCondition() const {
-			return condition->getExpr();
+		AccessLocked<ExprHolder> getCondition() const {
+			return condition.internal()->getExpr();
 		}
 
 		[[nodiscard]]
-		MCRef<CodeBlockOrStmt> getBody() const {
-			return body.ref();
+		AccessLocked<CodeBlockOrStmt> getBody() const {
+			return body.give();
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
@@ -304,9 +306,9 @@ namespace pst {
 	 * @brief While declaration
 	 */
 	class While final: public CodeDecl {
-		MBox<RoundGroupExpr>    condition = nullptr;
+		AccessInternal<RoundGroupExpr>    condition = nullptr;
 		tpc::OptionalIdentifier optional_name;
-		MBox<CodeBlockOrStmt>   body = nullptr;
+		AccessInternal<CodeBlockOrStmt>   body = nullptr;
 
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {
@@ -331,9 +333,9 @@ namespace pst {
 	class For final: public CodeDecl {
 		tpc::OptionalIdentifier optional_name;
 		tpc::Identifier         iterator;
-		MBox<ForTypeExprHolder> type     = nullptr;
-		MBox<CommaExprHolder>   iterable = nullptr;
-		MBox<CodeBlockOrStmt>   body     = nullptr;
+		AccessInternal<ForTypeExprHolder> type     = nullptr;
+		AccessInternal<CommaExprHolder>   iterable = nullptr;
+		AccessInternal<CodeBlockOrStmt>   body     = nullptr;
 
 	public:
 		explicit For(const dia::SourcePosition& position): CodeDecl(position) {}

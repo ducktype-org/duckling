@@ -48,7 +48,7 @@ namespace pst {
 		void simpleActionDprint(
 			std::ostream&                                out,
 			const std::string&                           kind,
-			const base::Optional<MBox<CommaExprHolder>>* expr
+			const base::Optional<AccessInternal<CommaExprHolder>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

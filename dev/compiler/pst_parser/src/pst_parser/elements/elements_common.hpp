@@ -108,7 +108,7 @@ namespace pst::detail {
 		internal_iterator it;
 
 	public:
-		using value_type        = MCRef<ParserElement>;
+		using value_type        = AccessLocked<ParserElement>;
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type   = typename internal_iterator::difference_type;
 		using reference         = value_type;
@@ -119,11 +119,11 @@ namespace pst::detail {
 
 		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
 
-		explicit ForwardBorrowIterator(const MBox<ParserElement>* ptr): it(ptr) {}
+		explicit ForwardBorrowIterator(const AccessInternal<ParserElement>* ptr): it(ptr) {}
 
-		value_type operator*() const { return it->ref(); }
+		value_type operator*() const { return it->give(); }
 
-		value_type operator[](difference_type diff) const { return it[diff]->ref(); }
+		value_type operator[](difference_type diff) const { return it[diff]->give(); }
 
 		ForwardBorrowIterator& operator++() {
 			++it;

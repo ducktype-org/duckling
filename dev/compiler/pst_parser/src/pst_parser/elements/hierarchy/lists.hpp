@@ -11,7 +11,7 @@ namespace pst {
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
-	template<class ListElements, GetName getName, class Container = std::vector<MBox<ListElements>>>
+	template<class ListElements, GetName getName, class Container = std::vector<AccessInternal<ListElements>>>
 	class List: public NotStmt {
 	protected:
 		Container elements;
@@ -36,7 +36,7 @@ namespace pst {
 		void dprint(std::ostream& out) const final {
 			out << "[";
 			for (auto& x: elements) {
-				tpc::nullAwareDprint(x, out);
+				nullAwareDprint(x, out);
 				out << ",";
 			}
 			out << "]";

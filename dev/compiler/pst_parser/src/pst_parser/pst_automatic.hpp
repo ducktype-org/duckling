@@ -31,6 +31,11 @@ namespace pst {
 	using lang_def::Special;
 	using lexer::Operator;
 
+	template<typename T>
+	void nullAwareDprint(const AccessInternal<T>& ref, std::ostream& out) {
+		tpc::nullAwareDprint(static_cast<const MBox<T>&>(ref), out);
+	}
+
 	template<typename State>
 	class PSTAutomatic {
 	protected:
@@ -144,7 +149,25 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
+		void one(AccessInternal<T>* result, [[maybe_unused]] bool ignorable = false) {
+			with(result, T::parse);
+		}
+
+		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
+		template<std::derived_from<LangElement> T>
 		void one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
+			with(result, T::parse);
+		}
+
+		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
+		template<std::derived_from<LangElement> T>
+		void one(base::Optional<AccessInternal<T>>* result, [[maybe_unused]] bool ignorable = false) {
 			with(result, T::parse);
 		}
 

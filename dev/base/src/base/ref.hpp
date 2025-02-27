@@ -14,7 +14,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class Ref final {
+	class Ref {
 	private:
 		T* ptr;
 
@@ -99,7 +99,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class MRef final {
+	class MRef {
 	private:
 		T* ptr = nullptr;
 
@@ -204,6 +204,8 @@ namespace base {
 
 		// swap:
 		friend void swap(MRef& first, MRef& second) noexcept { std::swap(first.ptr, second.ptr); }
+
+		operator bool() const { return ptr; }
 
 		~MRef() = default;
 	};
