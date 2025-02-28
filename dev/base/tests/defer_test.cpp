@@ -2,15 +2,6 @@
 #include <tester/testing_utils.hpp>
 #include <base/defer.hpp>
 
-// This does not work, yay:
-// #include <init_private/aaa.hpp>
-// This does work, but it is creally sketchy
-// we can add duck-linter test for not using
-// #include <..
-#include <../src_private/init_private/aaa.hpp>
-// init/src_private/init_private/aaa.hpp
-
-
 class DeferTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DeferTest
