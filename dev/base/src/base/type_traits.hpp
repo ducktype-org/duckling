@@ -32,11 +32,11 @@
 
 namespace base {
 	namespace detail {
-		template<template<typename...> class Template, typename>
-		struct IsInstantiationOfImpl: std::false_type {};
+		// template<template<typename...> class Template, typename>
+		// struct IsInstantiationOfImpl: std::false_type {};
 
-		template<template<typename...> class Template, typename... Args>
-		struct IsInstantiationOfImpl<Template, Template<Args...>>: std::true_type {};
+		// template<template<typename...> class Template, typename... Args>
+		// struct IsInstantiationOfImpl<Template, Template<Args...>>: std::true_type {};
 
 		template<class, class>
 		struct IsOfSameClassImpl: public std::false_type {};
@@ -49,8 +49,25 @@ namespace base {
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
 	 * @note This concept works only for templates that have only type template parameters
 	 */
-	template<typename T, template<typename...> class Template>
-	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
+	// template<typename T, template<typename...> class Template>
+	// concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
+	template<typename T, template<typename...> typename Template>
+	concept IsInstantiationOf = requires(T t) {
+		[]<typename... Args>(Template<Args...>)
+			requires std::is_same_v<Template<Args...>, T>
+		{}(t);
+	};
+	
+	/**
+	 * @brief Checks if type `T` is an instantiation of template `Template`.
+	 * @note This concept works only for templates that take one type and one value template parameter
+	 */
+	template<typename T, template<typename, auto> class Template>
+	concept IsInstantiationOfTypeValue = requires(T t) {
+		[]<typename U, auto V>(Template<U, V>)
+			requires std::is_same_v<Template<U, V>, T>
+		{}(t);
+	};
 
 	/**
 	 * @brief Checks if type `T` is an integral or floating point number.

@@ -114,7 +114,7 @@ namespace hashing {
 		}
 
 		// type codes
-		template<base::IsInstantiationOf<TypeCodeBase> TypeC>
+		template<base::IsInstantiationOfTypeValue<TypeCodeBase> TypeC>
 		constexpr void operator()(TypeC hash) noexcept {
 			auto arr = std::bit_cast<std::array<char, sizeof(TypeC)>, TypeC>(hash);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::TypeCode);
@@ -122,7 +122,7 @@ namespace hashing {
 
 		// objects with unique representations but not ranges nor type codes
 		template<typename T>
-		requires(not base::IsInstantiationOf<T, TypeCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
+		requires(not base::IsInstantiationOfTypeValue<T, TypeCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
 		constexpr void operator()(const T& t) noexcept {
 			const std::array arr = std::bit_cast<std::array<char, sizeof(T)>, T>(t);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);

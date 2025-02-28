@@ -6,6 +6,7 @@
 #include <limits>
 #include <span>
 
+#include <base/exceptions.hpp>
 #include <base/ints.hpp>
 
 #include "type_code.hpp"
@@ -15,16 +16,15 @@ namespace hashing {
 
 	namespace detail {
 
-		// constexpr
-		u64 getNextID() {
-			static u64 id = 0;
-			return id++;
-		}
+		u64 getNextID();
 
+		/**
+		* returns a trully unique ID for the type
+		*/
 		template<typename T, std::integral I>
 		TypeCodeBase<I> getUniqueID() {
 			static const I id = static_cast<I>(getNextID());
-			assert(id < std::numeric_limits<I>::max());
+			CORE_ASSERT(id < std::numeric_limits<I>::max(), "too many types have been created and the unique ID has wrapped around");
 			return TypeCodeBase<I>{ id };
 		}
 

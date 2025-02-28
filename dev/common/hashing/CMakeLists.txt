@@ -1,11 +1,5 @@
 add_library(Hashing
-    src/hashing/hash.hpp
-    src/hashing/add_to_hash.hpp
-    src/hashing/type_code.hpp
-    src/hashing/hashing_algorithms.hpp
-    src/hashing/hash_algorithm_utils.hpp
-    src/hashing/type_hash_code.hpp
-    src/hashing/type_unique_code.hpp
+    src/hashing/type_unique_code.cpp
 )
 
 make_module(Hashing USES Base)

@@ -44,7 +44,7 @@ namespace hashing {
 			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 #ifdef _MSC_VER
-			return StrToIntegral<I, HashAlgorithm>{ std::span{ __FUNCDNAME__ } };
+			return StrToIntegral<I, HashAlgorithm>{ std::span{ __FUNCSIG__ } };
 #elif defined(__GNUC__) || defined(__clang__)
 			return StrToIntegral<I, HashAlgorithm>{ std::span{ __PRETTY_FUNCTION__ } };
 #else

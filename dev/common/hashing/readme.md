@@ -98,7 +98,9 @@ The module provides two ways of hashing objects: by using either `Hash` or `Stat
 `Hash`
 ------
 
-This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. Note that it is not necessary to add hash codes after every subobject, as changing any of them will change the hash code of the whole object.
+This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. 
+
+Note that it is not necessary (and so it is not done) to add hash codes after every subobject, as changing any of them will change the hash code of the whole object.
 
 The simplest way to use it is without specifying any template parameters.
 With it's defaults it can be used as a drop-in replacement for `std::hash`:
