@@ -241,27 +241,9 @@ private:
 		assertFalse(detail::can_hashDecompose<int>, "int should not be hashDecomposable");
 		assertFalse(detail::can_hashDecompose<S>, "S should not be hashDecomposable");
 
-		static_assert(BYTE_LIKE_TYPE<std::byte>, "std::byte should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<unsigned char>, "unsigned char should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<std::uint8_t>, "std::uint8_t should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<char8_t>, "char8_t should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<char>, "char should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<signed char>, "signed char should be byte-like");
-		static_assert(BYTE_LIKE_TYPE<std::int8_t>, "std::int8_t should be byte-like");
-		assertFalse(BYTE_LIKE_TYPE<int>, "int should not be byte-like");
-
 		static_assert(
-			invocable_with_span<Fnv1a_32, std::byte>,
-			"Fnv1a_32 should be invocable with std::span<std::byte>"
+			detail::invocable_with_byte_span<Fnv1a_32>, "Fnv1a_32 should be invocable with a span of bytes"
 		);
-		static_assert(
-			invocable_with_span<Fnv1a_32, int>, "Fnv1a_32 should be invocable with span of int"
-		);
-		static_assert(
-			invocable_with_byte_span<Fnv1a_32>, "Fnv1a_32 should be invocable with byte-like type"
-		);
-
-		static_assert(FIRST_MATCHING_SPAN_INDEX<Fnv1a_32> == 0, "Fnv1a_32 should accept std::byte");
 
 		detail::hashAsChars(Fnv1a_32{}, 42);
 		Fnv1a_64 h1;
@@ -353,7 +335,7 @@ private:
             d(std::span{ sv2 });
             return d.finalize().size();
 		}();
-		assertTrue(str_size == 187, "string should have 187 characters");
+		assertTrue(str_size == 660, "string should have 660 characters");
 
 		assertTrue(
 			hash_algorithm<default_hash_algorithm_for<u32>>,

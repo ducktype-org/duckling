@@ -15,18 +15,30 @@ namespace hashing {
 
 	namespace detail {
 
+		/**
+		 * Checks if a given type is a type code or a void type
+		 */
 		template<typename T>
 		concept TypeCode_or_void
 			= std::is_void_v<T> || base::IsInstantiationOfTypeValue<T, TypeCodeBase>;
 
+		/**
+		 * Checks if a given type has a nested value_type member type
+		 */
 		template<class T>
 		concept has_value_type = requires { typename T::value_type; };
 
-		// primary template handles types that do not have a nested value_type member:
+		/**
+		* helper struct that enables the TypeCode_value_type member type
+		* if the given type has a value_type member type
+		* (this is a default implementation that does not add the member type)
+		*/
 		template<class TypeC>
 		struct enable_TypeHC_value_type {};
 
-		// specialization that adds TypeCode_value_type
+		/**
+		* specialization that adds TypeCode_value_type
+		*/
 		template<has_value_type TypeC>
 		struct enable_TypeHC_value_type<TypeC> {
 			using TypeCode_value_type = TypeC::value_type;

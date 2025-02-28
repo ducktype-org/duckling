@@ -14,69 +14,28 @@
 
 namespace hashing {
 
-	using byte_like_types_tuple = std::
-		tuple<std::byte, unsigned char, std::uint8_t, char8_t, char, signed char, std::int8_t>;
-
-	static constexpr std::tuple BYTE_LIKE_TYPES_TUPLE_V = byte_like_types_tuple{};
-
-	template<typename T>
-	static constexpr bool BYTE_LIKE_TYPE = []<typename... Ts>(std::tuple<Ts...>) {
-		return (std::is_same_v<std::remove_const_t<T>, Ts> || ...);
-	}(BYTE_LIKE_TYPES_TUPLE_V);
-
-
-	template<typename T>
-	concept byte_like = BYTE_LIKE_TYPE<T>;
-
-	/**
-	 * checks if the type can be invoked with a span of type B
-	 */
-	template<typename T, typename B>
-	concept invocable_with_span = requires(T t) { t(std::span<B>{}); };
-
-	/**
-	 * checks if the type can be invoked with some span of byte-like type
-	 */
-	template<typename T>
-	concept invocable_with_byte_span
-		= invocable_with_span<T, std::byte> || invocable_with_span<T, unsigned char>
-	   || invocable_with_span<T, std::uint8_t> || invocable_with_span<T, char8_t>
-	   || invocable_with_span<T, char> || invocable_with_span<T, signed char>
-	   || invocable_with_span<T, std::int8_t>;
-	// []<typename... Ts>(std::tuple<Ts...>) {
-	// 	return (invocable_with_span<T, Ts> || ...);
-	// }(BYTE_LIKE_TYPES_TUPLE_V);
-
-	/**
-	 * finds index of the first span of bytes that the type accepts
-	 */
-	template<typename Algorithm>
-	static constexpr std::size_t FIRST_MATCHING_SPAN_INDEX = []<typename... Ts>(std::tuple<Ts...>) {
-		static_assert(invocable_with_byte_span<Algorithm>);
-		constexpr std::array arr = { invocable_with_span<Algorithm, Ts>... };
-		for (std::size_t i = 0; i < arr.size(); ++i)
-			if (arr[i]) return i;
-		// unreachable
-		return arr.size();
-	}(BYTE_LIKE_TYPES_TUPLE_V);
-
-	/**
-	 * finds the first byte-like type, span of which the type can accept
-	 */
-	template<typename Algorithm>
-	using first_matching_byte_like_t
-		= std::tuple_element_t<FIRST_MATCHING_SPAN_INDEX<Algorithm>, byte_like_types_tuple>;
-
-	template<typename Algorithm>
-	using first_matching_span = std::span<first_matching_byte_like_t<Algorithm>>;
 
 	namespace detail {
 
+		/**
+		* checks if the type can be invoked with a span of byte
+		*/
+		template<typename T>
+		concept invocable_with_byte_span = requires(T t) {
+			t(std::declval<std::span<std::byte>>());
+		};
+
+		/**
+		 * checks if the type has a finalize() method that returns a result_type
+		 */
 		template<typename T>
 		concept has_finalize = requires(T t) {
 			{ t.finalize() } -> std::same_as<typename T::result_type>;
 		};
 
+		/**
+		 * implementation of the hash_algorithm concept
+		 */
 		template<typename T>
 		concept hash_algorithm_impl
 			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
@@ -85,6 +44,9 @@ namespace hashing {
 
 	}  // namespace detail
 
+	/**
+	 * checks if the type is a hash algorithm
+	 */
 	template<typename T>
 	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
@@ -107,9 +69,15 @@ namespace hashing {
 		concept can_hash_directly
 			= hash_algorithm<HashAlgorithm> && requires(HashAlgorithm& h, const T& t) { h(t); };
 
+		/**
+		 * checks if the type can be hashed with std::hash
+		 */
 		template<typename T>
 		concept can_stdhash = requires(const T& t) { std::hash<T>{}(t); };
 
+		/**
+		 * checks if the type is a tuple of references
+		 */
 		template<typename T>
 		concept tuple_of_refs = requires(T t) {
 			[]<typename... Args>(std::tuple<Args...>)
@@ -131,8 +99,7 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
-			using byte_t    = first_matching_byte_like_t<HashAlgorithm>;
-			const auto arr  = std::bit_cast<std::array<byte_t, sizeof(T)>, T>(t);
+			const auto arr  = std::bit_cast<std::array<std::byte, sizeof(T)>, T>(t);
 			const auto span = std::span{ arr.data(), arr.size() };
 			std::forward<HashAlgorithm>(h)(span);
 		}

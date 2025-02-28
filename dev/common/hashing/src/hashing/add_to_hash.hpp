@@ -10,16 +10,28 @@
 
 namespace hashing {
 
-
+	/**
+	 * options for the addToHash function template
+	 * allow_std_hash - if true, the function will try to use std::hash for hashing types that
+	 * can't be hashed using the provided hashing algorithm
+	 * allow_hashing_ranges_with_unspecified_order - if true, the function will hash ranges that
+	 * may have unspecified order of elements, which circumvents the strict use of the hashing algorithm
+	 */
 	struct addToHashOptions {
 		bool allow_std_hash;
 		bool allow_hashing_ranges_with_unspecified_order;
 	};
 
+	/**
+	 * default (strict) options for the addToHash function template
+	 */
 	static constexpr addToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = false, .allow_hashing_ranges_with_unspecified_order = false
 	};
 
+	/**
+	 * relaxed options for the addToHash function template
+	 */
 	static constexpr addToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = true, .allow_hashing_ranges_with_unspecified_order = true
 	};

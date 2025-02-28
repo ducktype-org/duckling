@@ -22,9 +22,16 @@ namespace hashing {
 
 	namespace detail {
 
+		/**
+		 * primary template of FNV-1a constants for different integer sizes
+		 * nothe that there is no definition - only the specializations are to be used
+		 */
 		template<std::integral I>
 		class Fnv1a_Constants;
 
+		/**
+		 * specialization of FNV-1a constants for integer sizes <= 32 bits
+		 */
 		template<std::integral I>
 		requires(sizeof(I) <= sizeof(u32)) class Fnv1a_Constants<I> {
 		protected:
@@ -32,6 +39,9 @@ namespace hashing {
 			static constexpr u32 FNV_PRIME    = (1u << 24) + (1u << 8) + 0x93u;
 		};
 
+		/**
+		 * specialization of FNV-1a constants for integer sizes > 32 bits
+		 */
 		template<std::integral I>
 		requires(sizeof(I) > sizeof(u32)) class Fnv1a_Constants<I> {
 		protected:
@@ -53,8 +63,8 @@ namespace hashing {
 		I state = OFFSET_BASIS;
 
 	public:
-		template<byte_like B, std::size_t N>
-		constexpr auto& operator()(const std::span<B, N> span) noexcept {
+		template<std::size_t N>
+		constexpr Fnv1a<I>& operator()(const std::span<const std::byte, N> span) noexcept {
 			for (auto&& c: span) {
 				state ^= static_cast<const unsigned char>(c);
 				state *= FNV_PRIME;
@@ -64,18 +74,18 @@ namespace hashing {
 
 		template<typename T>
 		requires((std::has_unique_object_representations_v<T> && !std::ranges::range<T>) )
-		constexpr auto& operator()(const T& t) noexcept {
-			const std::array arr = std::bit_cast<std::array<std::byte, sizeof(T)>, T>(t);
+		constexpr Fnv1a<I>& operator()(const T& t) noexcept {
+			const std::array arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
 			this->operator()(std::span{ arr.data(), arr.size() });
 			return *this;
 		}
 
 		template<typename R>
 		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
-		constexpr auto& operator()(const R& range) noexcept {
+		constexpr Fnv1a<I>& operator()(const R& range) noexcept {
 			for (auto&& it: range) {
 				using val_t    = std::ranges::range_value_t<R>;
-				const auto arr = std::bit_cast<std::array<std::byte, sizeof(val_t)>, val_t>(it);
+				const auto arr = std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
 				this->operator()(std::span{ arr.data(), arr.size() });
 			}
 			return *this;
@@ -103,18 +113,18 @@ namespace hashing {
 
 	public:
 		// spans of bytes
-		template<byte_like B, std::size_t N>
-		constexpr void operator()(const std::span<B, N> span, Type type = Type::Other) noexcept {
+		template<std::size_t N>
+		constexpr void operator()(const std::span<const std::byte, N> span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));
-			bytes.emplace_back(std::move(vec), span.size(), type);
+			bytes.emplace_back(std::move(vec), vec.size(), type);
 		}
 
 		// type codes
 		template<base::IsInstantiationOfTypeValue<TypeCodeBase> TypeC>
 		constexpr void operator()(TypeC hash) noexcept {
-			auto arr = std::bit_cast<std::array<char, sizeof(TypeC)>, TypeC>(hash);
+			const auto arr = std::bit_cast<std::array<const std::byte, sizeof(TypeC)>, TypeC>(hash);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::TypeCode);
 		}
 
@@ -122,7 +132,7 @@ namespace hashing {
 		template<typename T>
 		requires(not base::IsInstantiationOfTypeValue<T, TypeCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
 		constexpr void operator()(const T& t) noexcept {
-			const std::array arr = std::bit_cast<std::array<char, sizeof(T)>, T>(t);
+			const std::array arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
 		}
 
@@ -132,7 +142,7 @@ namespace hashing {
 		constexpr auto& operator()(const R& range) noexcept {
 			for (auto&& it: range) {
 				using val_t    = std::ranges::range_value_t<R>;
-				const auto arr = std::bit_cast<std::array<std::byte, sizeof(val_t)>, val_t>(it);
+				const auto arr = std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
 				this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
 			}
 			return *this;
