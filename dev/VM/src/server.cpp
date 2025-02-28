@@ -1,3 +1,4 @@
+#include <base/int_conv.hpp>
 #include <json/json.hpp>
 #include <api/api.hpp>
 #include <core/supervisor/supervisor.hpp>
@@ -99,5 +100,5 @@ void server(i32 port) {
 			})
 		);
 	});
-	app.port(port).run();
+	app.port(base::safeIntConv<u16>(port)).run();
 }

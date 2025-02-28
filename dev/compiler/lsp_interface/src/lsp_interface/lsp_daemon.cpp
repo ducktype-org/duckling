@@ -13,6 +13,7 @@
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
 #include <base/variant.hpp>
+#include <base/int_conv.hpp>
 
 
 // vm includes:
@@ -183,7 +184,7 @@ void server(i32 port) {
 		}
 	});
 
-	app.port(port).run();
+	app.port(base::safeIntConv<u16>(port)).run();
 }
 
 /**
@@ -226,7 +227,7 @@ int main(int argc, const char** argv) {
 
 	try {
 		// Parse the command-line arguments
-		result = clap.parse(argc, argv);
+		result = clap.parse(base::safeIntConv<u16>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		// Handle general parsing exceptions and print error message
 		printer::StreamPrinter      console = printer::StreamPrinter();
