@@ -5,6 +5,7 @@
 #include <span>
 
 #include <base/ints.hpp>
+#include <base/type_traits.hpp>
 
 #include "type_code.hpp"
 #include "hashing_algorithms.hpp"
@@ -26,8 +27,7 @@ namespace hashing {
 			consteval StrToIntegral(const std::span<const char, N> span) {
 				HashAlgorithm h;
 				h(span);
-				hash_value.value
-					= static_cast<I>(static_cast<typename HashAlgorithm::result_type>(h));
+				hash_value.value = static_cast<I>(h.finalize());
 			}
 
 			consteval operator TypeCodeBase<I>() const { return hash_value; }
@@ -35,22 +35,13 @@ namespace hashing {
 
 		/**
 		 * returns a unique string for each type
-		 * uses implementation-specific macros to get unique strings
-		 * (decorated function names contain the name of the type template parameters)
 		 */
 		template<
-			typename,
+			typename T,
 			std::integral I        = u32,
 			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
-#ifdef _MSC_VER
-			return StrToIntegral<I, HashAlgorithm>{ std::span{ __FUNCSIG__ } };
-#elif defined(__GNUC__) || defined(__clang__)
-			return StrToIntegral<I, HashAlgorithm>{ std::span{ __PRETTY_FUNCTION__ } };
-#else
-	#error "Please provide a unique string for each type"
-			return { "" };
-#endif
+			return StrToIntegral<I, HashAlgorithm>{ std::span{ base::typeName<T, false>() } };
 		}
 
 		template<

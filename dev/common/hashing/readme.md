@@ -124,7 +124,7 @@ With it's defaults it can be used as a drop-in replacement for `std::hash`:
     ~~~~~
 
 But it can also be customized.
-There are two template parameters that can be specified: `HashAlgorithm` and `TypeHC`.
+There are two template parameters that can be specified: `HashAlgorithm` and `TypeC`.
 
 * The first one chooses the underlying algorithm that converts bytes to the hash value.
 

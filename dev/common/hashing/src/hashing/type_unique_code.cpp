@@ -9,7 +9,6 @@
 #include "type_code.hpp"
 #include "type_code.hpp"
 
-
 namespace hashing {
 
 	namespace detail {

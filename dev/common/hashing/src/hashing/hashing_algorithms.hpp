@@ -87,9 +87,7 @@ namespace hashing {
 
 		constexpr Fnv1a(I state): state(state) {}
 
-		constexpr explicit operator result_type() const noexcept {
-			return static_cast<result_type>(state);
-		}
+		constexpr result_type finalize() const noexcept { return static_cast<result_type>(state); }
 	};
 
 	using Fnv1a_32 = Fnv1a<u32>;
@@ -142,7 +140,7 @@ namespace hashing {
 
 		using result_type = std::string;
 
-		explicit constexpr operator result_type() noexcept {
+		constexpr result_type finalize() {
 			std::string ret;
 			usize       line = 0, pos = 0;
 

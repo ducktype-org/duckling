@@ -126,6 +126,9 @@ struct type4 {
 	std::array<int, 2> a{ 123, 456 };
 };
 
+template<typename From, typename To>
+concept is_explicitly_convertible_to = requires(From f) { static_cast<To>(f); };
+
 class HashingTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS HashingTest
@@ -165,15 +168,15 @@ private:
 		constexpr auto res3 = [] {
 			DebugHash dh;
 			dh(std::span{ "hello" });
-			return static_cast<std::string>(dh).size();
+			return dh.finalize().size();
 		}();
 		assertTrue(
-			is_explicitly_convertible_to<decltype(res1), u32>,
-			"Fnv1a_32 should be convertible to u32"
+			std::is_same_v<decltype(res1.finalize()), u32>,
+			"Fnv1a_32's finalize() should return u32"
 		);
 		assertTrue(
-			is_explicitly_convertible_to<decltype(res2), u64>,
-			" Fnv1a_64 should be convertible to u64"
+			std::is_same_v<decltype(res2.finalize()), u64>,
+			"Fnv1a_64's finalize() should return u64"
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 		DebugHash dh;
@@ -208,7 +211,7 @@ private:
 		StatefulHash<Fnv1a_64> h;
 		h(123, 345.f, std::string_view{ "hello" }, S{});
 
-		return r1 + r2 + r3 + r4 + r5 + r6 + static_cast<u64>(h);
+		return r1 + r2 + r3 + r4 + r5 + r6 + h.finalize();
 	}
 
 	void constexprTest() { [[maybe_unused]] constexpr auto res = constexprTestHelper(); }

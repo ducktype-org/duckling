@@ -19,12 +19,15 @@ namespace hashing {
 		u64 getNextID();
 
 		/**
-		* returns a trully unique ID for the type
-		*/
+		 * returns a trully unique ID for the type
+		 */
 		template<typename T, std::integral I>
 		TypeCodeBase<I> getUniqueID() {
 			static const I id = static_cast<I>(getNextID());
-			CORE_ASSERT(id < std::numeric_limits<I>::max(), "too many types have been created and the unique ID has wrapped around");
+			CORE_ASSERT(
+				id < std::numeric_limits<I>::max(),
+				"too many types have been created and the unique ID has wrapped around"
+			);
 			return TypeCodeBase<I>{ id };
 		}
 

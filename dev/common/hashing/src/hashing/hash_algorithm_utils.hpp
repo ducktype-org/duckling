@@ -14,10 +14,6 @@
 
 namespace hashing {
 
-
-	template<typename From, typename To>
-	concept is_explicitly_convertible_to = requires(From f) { static_cast<To>(f); };
-
 	using byte_like_types_tuple = std::
 		tuple<std::byte, unsigned char, std::uint8_t, char8_t, char, signed char, std::int8_t>;
 
@@ -77,10 +73,15 @@ namespace hashing {
 	namespace detail {
 
 		template<typename T>
+		concept has_finalize = requires(T t) {
+			{ t.finalize() } -> std::same_as<typename T::result_type>;
+		};
+
+		template<typename T>
 		concept hash_algorithm_impl
 			= std::is_object_v<T> && std::is_constructible_v<T> && std::is_destructible_v<T>
-		   && requires { typename T::result_type; } && invocable_with_byte_span<T>
-		   && is_explicitly_convertible_to<T, typename T::result_type>;
+		   && requires { typename T::result_type; }
+		   && invocable_with_byte_span<T> && has_finalize<T>;
 
 	}  // namespace detail
 

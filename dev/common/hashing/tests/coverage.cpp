@@ -125,7 +125,7 @@ struct algo {
 
 	void operator()(std::span<std::byte>) const {}
 
-	operator u32() const { return 0; }
+	u32 finalize() const { return 0; }
 };
 
 struct algo2 {
@@ -135,7 +135,7 @@ struct algo2 {
 
 	void operator()(int) const {}
 
-	operator u32() const { return 0; }
+	u32 finalize() const { return 0; }
 };
 
 class HashingTest: public tester::TestSuite {
@@ -182,9 +182,9 @@ private:
 		assertFalse(
 			hash_algorithm<std::function<int(int)>>, "std::function is not a hashing algorithm"
 		);
-		assertTrue(
+		assertFalse(
 			hash_algorithm<std::function<void(std::span<char>)>>,
-			"std::function could be a hashing algorithm"
+			"std::function should not be a hashing algorithm"
 		);
 		assertTrue(
 			std::is_same_v<decltype(getBase<X>(type_with_bases{})), const X&>,
@@ -324,25 +324,21 @@ private:
 		constexpr auto arr = std::array<char, 123>{};
 		h2(std::span{ arr });
 		Fnv1a_64              h3, h4{ 14'695'981'039'346'656'037ull };
-		[[maybe_unused]] auto discard = static_cast<decltype(h3)::result_type>(h3);
+		[[maybe_unused]] auto discard = h3.finalize();
 		assertTrue(
-			static_cast<u64>(h4) == static_cast<u64>(h4),
+			h4.finalize() == h4.finalize(),
 			"h3 and h4 should have been initialized with the same value"
 		);
 		h4(sp);
 		const auto& r = { 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
 		h4(std::as_bytes(std::span{ r }));
 		auto h5 = h4;
-		assertTrue(
-			static_cast<u64>(h5) == static_cast<u64>(h4), "casted h5 should be equal to casted h4"
-		);
+		assertTrue(h5.finalize() == h4.finalize(), "casted h5 should be equal to casted h4");
 		h4(std::span{ s.data(), s.size() });
 		h5(std::span{ s.data(), s.size() });
 		h4(sp);
 		h5(sp);
-		assertTrue(
-			static_cast<u64>(h4) == static_cast<u64>(h5), "casted h4 should be equal to casted h5"
-		);
+		assertTrue(h4.finalize() == h5.finalize(), "casted h4 should be equal to casted h5");
 
 		DebugHash dh;
 		dh(std::span{ s.data(), s.size() });
@@ -355,7 +351,7 @@ private:
 		constexpr auto             str_size = [&] {
             DebugHash d;
             d(std::span{ sv2 });
-            return static_cast<std::string>(d).size();
+            return d.finalize().size();
 		}();
 		assertTrue(str_size == 187, "string should have 187 characters");
 
@@ -467,10 +463,9 @@ private:
 
 		StatefulHash sh;
 		sh(1);
-		assertFalse(static_cast<u64>(sh(123)) == static_cast<u64>(sh(123)), "stete should change");
+		assertFalse(sh(123).finalize() == sh(123).finalize(), "stete should change");
 		assertTrue(
-			static_cast<u64>(sh) == static_cast<u64>(StatefulHash{}(1, 123, 123)),
-			"state should be the same"
+			sh.finalize() == StatefulHash{}(1, 123, 123).finalize(), "state should be the same"
 		);
 		std::span sp = "dsfjsalfjfa salfjfalsdfj";
 		sh("124241", sp, X{}, S{});

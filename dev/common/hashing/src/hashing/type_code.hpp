@@ -13,7 +13,7 @@ namespace hashing {
 	 */
 	template<std::integral I = u32, bool is_unique = false>
 	struct TypeCodeBase final {
-		using value_type = I;
+		using value_type                = I;
 		static constexpr bool IS_UNIQUE = is_unique;
 
 		value_type value{};
@@ -25,6 +25,5 @@ namespace hashing {
 
 	using TypeCode = TypeCodeBase<>;
 
-	
 
 }  // namespace hashing
