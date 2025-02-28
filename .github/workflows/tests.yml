@@ -138,7 +138,8 @@ jobs:
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
-      # However, it does not fail the job (yet) because we still want the tests to be run.
+      # However, it does not fail the job at this stage because we still want the tests to be run.
+      # It will fail the job at the end in the "Fail if deployables failed to build" step.
       - name: Build deployables
         id: build-deployables
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
