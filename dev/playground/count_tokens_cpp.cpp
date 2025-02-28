@@ -63,7 +63,9 @@ struct CppParser {
 
 	CppParser(const std::string& source_code): source_code(source_code), parser(ts_parser_new()) {
 		if (ts_parser_set_language(parser, tree_sitter_cpp()))
-			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), base::safeIntConv<u32>(source_code.size()));
+			tree = ts_parser_parse_string(
+				parser, nullptr, source_code.data(), base::safeIntConv<u32>(source_code.size())
+			);
 		else
 			CORE_PANIC("Failed to set parser language.");
 	}
