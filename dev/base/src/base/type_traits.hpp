@@ -92,7 +92,7 @@ namespace base {
 #ifdef __clang__
 		name   = __PRETTY_FUNCTION__;
 		prefix = "auto base::typeName() [T = ";
-		suffix = ", pretty = false]";
+		suffix = ", pretty = true]";
 #elif defined(__GNUC__)
 		name   = __PRETTY_FUNCTION__;
 		prefix = "constexpr auto base::typeName() [with T = ";
