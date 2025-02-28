@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <clap/clap.hpp> // @TODO #404 relax it so it only includes CLIArgs
+#include <clap/clap.hpp>  // @TODO #404 relax it so it only includes CLIArgs
 
 namespace tester {
 	struct TestConfig final {
