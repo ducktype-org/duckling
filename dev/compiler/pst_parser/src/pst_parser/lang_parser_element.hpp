@@ -34,7 +34,7 @@ namespace pst {
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
 
-		template<std::derived_from<LangElement>  Element>
+		template<std::derived_from<LangElement> Element>
 		friend class LangElementAccess;
 
 		explicit LangElement(const dia::SourcePosition& position):
@@ -263,11 +263,12 @@ namespace pst {
 	class PSTAccessKey final {
 	private:
 		int key = 0;
+
 	public:
-		PSTAccessKey() = default;
+		PSTAccessKey()                    = default;
 		PSTAccessKey(const PSTAccessKey&) = default;
 
-		bool operator== (PSTAccessKey other) {return key == other.key;}
+		bool operator==(PSTAccessKey other) { return key == other.key; }
 	};
 
 	template</*std::derived_from<LangElement>*/ typename Element>
@@ -280,9 +281,10 @@ namespace pst {
 		friend class Access;
 
 		Access(MCRef<Element> ref, PSTAccessKey key): MCRef<Element>(ref), stored_key(key) {}
+
 	public:
-		Access() = delete;	
-		Access(Access&) = delete;	
+		Access()               = delete;
+		Access(Access&)        = delete;
 		Access(Access&& other) = default;
 
 		template<typename T>
@@ -300,43 +302,41 @@ namespace pst {
 		friend class AccessLocked;
 
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
+
 	public:
-		AccessLocked() = delete;
-		AccessLocked(AccessLocked&) = default;
+		AccessLocked()               = delete;
+		AccessLocked(AccessLocked&)  = default;
 		AccessLocked(AccessLocked&&) = default;
 
 		template<typename T>
 		AccessLocked(AccessLocked<T> other): ref(other.ref) {}
+
 		template<typename T>
 		AccessLocked(AccessLocked<T>& other): ref(other.ref) {}
 
 		template<std::derived_from<Element> Desc>
 		AccessLocked<Desc> cast() const {
-			return {dynamic_cast<const Desc*>(&*ref)};
+			return { dynamic_cast<const Desc*>(&*ref) };
 		}
 
-		Access<Element> unlock(PSTAccessKey key) const {
-			return {ref, key};
-		}
+		Access<Element> unlock(PSTAccessKey key) const { return { ref, key }; }
 	};
 
 	template</*std::derived_from<LangElement>*/ typename Element>
 	class AccessInternal: private MBox<Element> {
-		template <typename T>
+		template<typename T>
 		friend void nullAwareDprint(const AccessInternal<T>&, std::ostream&);
+
 	public:
 		using MBox<Element>::MBox;
 
-		AccessLocked<Element> give() const {
-			return {this->ref()};
-		}
+		AccessLocked<Element> give() const { return { this->ref() }; }
 
 		/**
-		 * @brief For internal usage of an Element, the alternative is to make Element a friend of AccessInternal but it allows for easier access leaks.
+		 * @brief For internal usage of an Element, the alternative is to make Element a friend of
+		 * AccessInternal but it allows for easier access leaks.
 		 */
-		MCRef<Element> internal() const {
-			return this->ref();
-		}
+		MCRef<Element> internal() const { return this->ref(); }
 
 		AccessInternal(MBox<Element>&& box): MBox<Element>(std::move(box)) {}
 	};

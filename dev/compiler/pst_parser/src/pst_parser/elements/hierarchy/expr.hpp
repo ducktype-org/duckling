@@ -62,7 +62,7 @@ namespace pst {
 		class PrefixOperator: public ExprElement {
 		protected:
 			AccessInternal<ExprElement> expr;
-			Operator          op;
+			Operator                    op;
 
 		public:
 			explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -89,7 +89,7 @@ namespace pst {
 		 */
 		class SuffixOperator: public ExprElement {
 		protected:
-			Operator          op;
+			Operator                    op;
 			AccessInternal<ExprElement> expr;
 
 		public:
@@ -118,7 +118,7 @@ namespace pst {
 		class BinaryOperator: public ExprElement {
 		protected:
 			AccessInternal<ExprElement> left;
-			Operator          op;
+			Operator                    op;
 			AccessInternal<ExprElement> right;
 
 		public:
@@ -211,7 +211,7 @@ namespace pst {
 		 * @brief Element that represents an identifier literal in an expression
 		 */
 		class IdentifierLiteral final: public ExprElement {
-			tpc::Identifier                   name;
+			tpc::Identifier                             name;
 			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
@@ -238,7 +238,7 @@ namespace pst {
 		 * @brief Element that represents an keyword literal in an expression
 		 */
 		class KeywordLiteral final: public ExprElement {
-			Keyword                           keyword = Keyword::NotAKeyword;
+			Keyword                                     keyword = Keyword::NotAKeyword;
 			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
@@ -266,8 +266,8 @@ namespace pst {
 		 * .?][name][optionally template specifier]`
 		 */
 		class Access final: public ExprElement {
-			base::StrID                       type;  ///< either `.` or `.?`
-			tpc::Identifier                   name;
+			base::StrID                                 type;  ///< either `.` or `.?`
+			tpc::Identifier                             name;
 			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
@@ -352,7 +352,8 @@ namespace pst {
 			[[nodiscard]]
 			auto getChain() const {
 				using namespace std::views;
-				static auto give_one = [](const auto& ref) -> AccessLocked<ExprElement> {return ref.give();};
+				static auto give_one
+					= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
 				return std::ranges::ref_view(chain) | transform(give_one);
 			}
 		};
@@ -523,7 +524,7 @@ namespace pst {
 			using Lower = GeneralBinary;
 
 			std::vector<AccessInternal<ExprElement>> sub_expr;
-			std::vector<Operator>          operators;
+			std::vector<Operator>                    operators;
 
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
@@ -649,7 +650,8 @@ namespace pst {
 			[[nodiscard]]
 			auto getChain() const {
 				using namespace std::views;
-				static auto give_one = [](const auto& ref) -> AccessLocked<ExprElement> {return ref.give();};
+				static auto give_one
+					= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
 				return std::ranges::ref_view(expressions) | transform(give_one);
 			}
 		};
@@ -663,7 +665,7 @@ namespace pst {
 			using Lower = Comma;
 
 			AccessInternal<ExprElement> variables;
-			base::StrID       type;
+			base::StrID                 type;
 			AccessInternal<ExprElement> value;
 
 		public:

@@ -167,7 +167,9 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
-		void one(base::Optional<AccessInternal<T>>* result, [[maybe_unused]] bool ignorable = false) {
+		void
+			one(base::Optional<AccessInternal<T>>* result,
+		        [[maybe_unused]] bool              ignorable = false) {
 			with(result, T::parse);
 		}
 

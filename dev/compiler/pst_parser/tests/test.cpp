@@ -88,7 +88,8 @@ private:
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
 			for (const auto& stmt: pst.getRootElement()->getStatements()) {
 				assertThrows<base::Panic>(
-					[&] { stmt.unlock({})->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
+					[&] { stmt.unlock({})->acceptVisitor(panicky_vistor); },
+					"Stmt did not call it\'s visitor"
 				);
 				stmt.unlock({})->acceptVisitor(empty_vistor);
 			}

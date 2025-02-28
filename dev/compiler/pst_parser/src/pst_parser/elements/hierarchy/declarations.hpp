@@ -55,7 +55,7 @@ namespace pst {
 		[[nodiscard]]
 		auto getStatements() const {
 			using namespace std::views;
-			static auto give_one = [](auto& acc) -> AccessLocked<Stmt> {return acc.give();};
+			static auto give_one = [](auto& acc) -> AccessLocked<Stmt> { return acc.give(); };
 			return std::ranges::ref_view(statements) | transform(give_one);
 		}
 
@@ -71,8 +71,8 @@ namespace pst {
 	 * @brief Block declaration
 	 */
 	class Block final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
-		AccessInternal<CodeBlock>         code_block = nullptr;
+		tpc::OptionalIdentifier   optional_name;
+		AccessInternal<CodeBlock> code_block = nullptr;
 
 	public:
 		explicit Block(const dia::SourcePosition& position): CodeDecl(position) {
@@ -95,7 +95,7 @@ namespace pst {
 	 * @brief Namespace declaration
 	 */
 	class Namespace final: public Decl {
-		tpc::Identifier name;
+		tpc::Identifier           name;
 		AccessInternal<CodeBlock> body = nullptr;
 
 	public:
@@ -128,7 +128,7 @@ namespace pst {
 	 */
 	class Class final: public Decl {
 	private:
-		tpc::Identifier      name;
+		tpc::Identifier                name;
 		AccessInternal<ExprElement>    base       = nullptr;
 		AccessInternal<ImplementsList> implements = nullptr;
 		AccessInternal<ClassBlock>     body       = nullptr;
@@ -177,10 +177,10 @@ namespace pst {
 	 * @brief Variable declaration
 	 */
 	class Variable final: public Decl {
-		tpc::Identifier       name;
+		tpc::Identifier                 name;
 		AccessInternal<CommaExprHolder> type     = nullptr;
 		AccessInternal<CommaExprHolder> value    = nullptr;
-		bool                  is_const = true;
+		bool                            is_const = true;
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
@@ -223,7 +223,7 @@ namespace pst {
 	 * @brief Function declaration
 	 */
 	class Fun final: public Decl {
-		tpc::Identifier                       name;
+		tpc::Identifier                                 name;
 		AccessInternal<ParamList>                       params = nullptr;
 		base::Optional<AccessInternal<CommaExprHolder>> ret;
 		AccessInternal<CodeBlockOrStmt>                 body = nullptr;
@@ -270,10 +270,10 @@ namespace pst {
 	 * @brief If declaration
 	 */
 	class If final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>    condition = nullptr;
-		tpc::OptionalIdentifier optional_name;
-		AccessInternal<CodeBlockOrStmt>   body      = nullptr;
-		AccessInternal<CodeBlockOrStmt>   else_body = nullptr;
+		AccessInternal<RoundGroupExpr>  condition = nullptr;
+		tpc::OptionalIdentifier         optional_name;
+		AccessInternal<CodeBlockOrStmt> body      = nullptr;
+		AccessInternal<CodeBlockOrStmt> else_body = nullptr;
 
 	public:
 		explicit If(const dia::SourcePosition& position): CodeDecl(position) {
@@ -306,9 +306,9 @@ namespace pst {
 	 * @brief While declaration
 	 */
 	class While final: public CodeDecl {
-		AccessInternal<RoundGroupExpr>    condition = nullptr;
-		tpc::OptionalIdentifier optional_name;
-		AccessInternal<CodeBlockOrStmt>   body = nullptr;
+		AccessInternal<RoundGroupExpr>  condition = nullptr;
+		tpc::OptionalIdentifier         optional_name;
+		AccessInternal<CodeBlockOrStmt> body = nullptr;
 
 	public:
 		explicit While(const dia::SourcePosition& position): CodeDecl(position) {
@@ -331,8 +331,8 @@ namespace pst {
 	 * @brief For declaration
 	 */
 	class For final: public CodeDecl {
-		tpc::OptionalIdentifier optional_name;
-		tpc::Identifier         iterator;
+		tpc::OptionalIdentifier           optional_name;
+		tpc::Identifier                   iterator;
 		AccessInternal<ForTypeExprHolder> type     = nullptr;
 		AccessInternal<CommaExprHolder>   iterable = nullptr;
 		AccessInternal<CodeBlockOrStmt>   body     = nullptr;

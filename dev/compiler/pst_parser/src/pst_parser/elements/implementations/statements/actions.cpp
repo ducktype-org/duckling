@@ -46,8 +46,8 @@ namespace pst {
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream&                                out,
-			const std::string&                           kind,
+			std::ostream&                                          out,
+			const std::string&                                     kind,
 			const base::Optional<AccessInternal<CommaExprHolder>>* expr
 		) {
 			out << "{";

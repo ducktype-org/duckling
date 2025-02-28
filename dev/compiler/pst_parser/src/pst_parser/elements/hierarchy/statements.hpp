@@ -25,7 +25,7 @@ namespace pst {
 	 */
 	class Import final: public Stmt {
 		AccessInternal<DottedName> names;
-		tpc::Identifier  alias;
+		tpc::Identifier            alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);
@@ -132,7 +132,7 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
-		tpc::Identifier  name;
+		tpc::Identifier            name;
 		AccessInternal<DottedName> points_to;
 
 	public:
@@ -197,7 +197,7 @@ namespace pst {
 	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
 	 */
 	class Const final: public Stmt {
-		tpc::Identifier       name;
+		tpc::Identifier                 name;
 		AccessInternal<CommaExprHolder> type;
 		AccessInternal<CommaExprHolder> value;
 

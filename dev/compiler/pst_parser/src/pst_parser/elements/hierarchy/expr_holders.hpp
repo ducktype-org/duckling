@@ -40,7 +40,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		virtual bool isTopLevel() const = 0;
+		virtual bool isTopLevel() const
+			= 0;
 	};
 
 	/**
@@ -81,8 +82,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		bool isTopLevel() const override { 
-			return TOP_LEVEL; 
+		bool isTopLevel() const override {
+			return TOP_LEVEL;
 		}
 	};
 

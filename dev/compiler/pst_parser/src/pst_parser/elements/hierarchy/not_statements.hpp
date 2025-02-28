@@ -23,7 +23,7 @@ namespace pst {
 	 * @brief Declaration of a single function argument.
 	 */
 	class FunParam final: public NotStmt {
-		tpc::Identifier                           name;
+		tpc::Identifier                                     name;
 		AccessInternal<UniversalExprHolder>                 type;
 		base::Optional<AccessInternal<UniversalExprHolder>> initial;
 

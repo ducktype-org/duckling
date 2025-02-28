@@ -27,7 +27,9 @@ namespace pst {
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
 		variant_match(content) {
 			variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt); }
-			variant_case(AccessInternal<CodeBlock>, code_block) { return code_block.internal()->begin(); }
+			variant_case(AccessInternal<CodeBlock>, code_block) {
+				return code_block.internal()->begin();
+			}
 		}
 		CORE_UNREACHABLE();
 	}
@@ -35,7 +37,9 @@ namespace pst {
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::end() const {
 		variant_match(content) {
 			variant_case(AccessInternal<Stmt>, stmt) { return const_iterator(&stmt) + 1; }
-			variant_case(AccessInternal<CodeBlock>, code_block) { return code_block.internal()->end(); }
+			variant_case(AccessInternal<CodeBlock>, code_block) {
+				return code_block.internal()->end();
+			}
 		}
 		CORE_UNREACHABLE();
 	}

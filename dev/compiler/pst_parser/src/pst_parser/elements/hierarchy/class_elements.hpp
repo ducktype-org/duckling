@@ -33,8 +33,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
-		AccessInternal<ClassBlock>  block;
+		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
+		AccessInternal<ClassBlock> block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
@@ -152,7 +152,7 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier                       name;
+		tpc::Identifier                                 name;
 		AccessInternal<ParamList>                       params = nullptr;
 		base::Optional<AccessInternal<CommaExprHolder>> ret;
 		AccessInternal<CodeBlock>                       body = nullptr;
@@ -191,8 +191,8 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool                                  is_mutable = true;
-		tpc::Identifier                       name;
+		bool                                            is_mutable = true;
+		tpc::Identifier                                 name;
 		AccessInternal<CommaExprHolder>                 type;
 		base::Optional<AccessInternal<CommaExprHolder>> init;
 
