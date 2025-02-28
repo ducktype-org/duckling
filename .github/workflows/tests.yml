@@ -55,6 +55,10 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov llvm llvm-dev
 
+      - name: Install graphviz
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        run: sudo apt -y install libgraphviz-dev
+
       - name: Install GCC 14 and gcov-14
         run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
