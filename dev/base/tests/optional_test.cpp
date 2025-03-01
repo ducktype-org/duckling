@@ -262,36 +262,27 @@ public:
 			}
 			ASSERT_TRUE(entered);
 
-			if_opt_none(opt) {
-				fail("Entered if_opt_none with value!");
-			}
+			if_opt_none(opt) { fail("Entered if_opt_none with value!"); }
 		}
 
 		opt = std::nullopt;
 		{
-			bool entered = false;	
-			if_opt_none(opt) {
-				entered = true;
-			}
+			bool entered = false;
+			if_opt_none(opt) { entered = true; }
 			ASSERT_TRUE(entered);
 
-			if_opt_some(opt, _) {
-				fail("Entered if_opt_some with no value!");
-			}
+			if_opt_some(opt, _) { fail("Entered if_opt_some with no value!"); }
 		}
 
 		{
-			u64 count = 0;
+			u64  count   = 0;
 			auto get_opt = [&]() -> base::Optional<int> {
 				count++;
 				return 1;
 			};
-			if_opt_some(get_opt(), val) {
-				ASSERT_EQUAL(1, val);
-			}
+			if_opt_some(get_opt(), val) { ASSERT_EQUAL(1, val); }
 			ASSERT_EQUAL(1, count);
 		}
-		
 	}
 };
 

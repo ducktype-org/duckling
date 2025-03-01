@@ -80,13 +80,13 @@
 	NO_SHADOW       \
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
-#define if_opt_some(optional, _value_name)                                     \
-	PUSH_DIAGNOSTIC                                                            \
-	NO_SHADOW                                                                  \
-	if (auto&& _internal_optional = (optional))                               \
-	if (bool _if_opt_some_stop = true)                               \
+#define if_opt_some(optional, _value_name)                                           \
+	PUSH_DIAGNOSTIC                                                                  \
+	NO_SHADOW                                                                        \
+	if (auto&& _internal_optional = (optional))                                      \
+		if (bool _if_opt_some_stop = true)                                           \
 			for (auto&& _value_name = _internal_optional.value(); _if_opt_some_stop; \
-			_if_opt_some_stop        = false)                                   \
+			     _if_opt_some_stop  = false)                                         \
 	POP_DIAGNOSTIC
 
 
