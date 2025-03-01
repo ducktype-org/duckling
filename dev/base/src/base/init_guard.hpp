@@ -14,6 +14,8 @@ namespace base::detail {
 		Initializing,
 		Initialized,
 	};
+
+	void logInitFunction(const char* function_name);
 }
 
 /**
@@ -24,6 +26,7 @@ namespace base::detail {
  * and SIMPLE_INIT_GUARD_END should be used at the end.
  */
 #define SIMPLE_INIT_GUARD_BEGIN                                                 \
+	::base::detail::logInitFunction(__PRETTY_FUNCTION__);                       \
 	static ::base::detail::InitState _detail_init_state                         \
 		= ::base::detail::InitState::NotInitialized;                            \
                                                                                 \

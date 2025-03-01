@@ -18,7 +18,5 @@
  * Short for "Type System: High(er)".
  */
 namespace tsh {
-	void init();  // if needed
-
 	void reset();
 }

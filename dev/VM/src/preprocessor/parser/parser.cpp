@@ -19,7 +19,6 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/tpc.hpp>
 #include <base/maps.hpp>
 #include <type_traits>
 #include <utility>
@@ -759,7 +758,7 @@ namespace assemble {
 
 	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {
 		lexer::init();
-		tpc::init();
+		// tpc::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		return lexer::tokenizeFile(path);
 	}
