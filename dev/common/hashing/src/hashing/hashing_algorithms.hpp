@@ -63,8 +63,7 @@ namespace hashing {
 		I state = OFFSET_BASIS;
 
 	public:
-		template<std::size_t N>
-		constexpr Fnv1a<I>& operator()(const std::span<const std::byte, N> span) noexcept {
+		constexpr Fnv1a<I>& operator()(const std::span<const std::byte> span) noexcept {
 			for (auto&& c: span) {
 				state ^= static_cast<const unsigned char>(c);
 				state *= FNV_PRIME;
@@ -114,9 +113,8 @@ namespace hashing {
 
 	public:
 		// spans of bytes
-		template<std::size_t N>
 		constexpr void
-			operator()(const std::span<const std::byte, N> span, Type type = Type::Other) noexcept {
+			operator()(const std::span<const std::byte> span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));

@@ -152,7 +152,7 @@ Different hash type code lengths used:
 ~~~~~cpp
 std::cout << Hash<DebugHash, void>{}(42) << '\n'
           << Hash<DebugHash>{}(42) << '\n'
-          << Hash<DebugHash, TypeCode<u64>>{}(42) << '\n';
+          << Hash<DebugHash, TypeCodeBase<u64>>{}(42) << '\n';
 // prints:
 ~~~~~
 <html>

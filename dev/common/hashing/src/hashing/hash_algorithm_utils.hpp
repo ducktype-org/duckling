@@ -22,7 +22,7 @@ namespace hashing {
 		 */
 		template<typename T>
 		concept invocable_with_byte_span
-			= requires(T t) { t(std::declval<std::span<std::byte>>()); };
+			= requires(T t) { t(std::declval<std::span<const std::byte>>()); };
 
 		/**
 		 * checks if the type has a finalize() method that returns a result_type

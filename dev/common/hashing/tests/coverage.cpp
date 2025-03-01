@@ -123,7 +123,7 @@ struct type_with_bases: X, S {
 struct algo {
 	using result_type = u32;
 
-	void operator()(std::span<std::byte>) const {}
+	void operator()(std::span<const std::byte>) const {}
 
 	[[nodiscard]]
 	u32 finalize() const {
@@ -134,7 +134,7 @@ struct algo {
 struct algo2 {
 	using result_type = u32;
 
-	void operator()(std::span<std::byte>) const {}
+	void operator()(std::span<const std::byte>) const {}
 
 	void operator()(int) const {}
 
