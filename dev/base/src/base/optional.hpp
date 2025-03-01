@@ -83,10 +83,10 @@
 #define if_opt_some(optional, _value_name)                                     \
 	PUSH_DIAGNOSTIC                                                            \
 	NO_SHADOW                                                                  \
-	if (bool _perform_if = optional.has_value())                               \
-		for (auto&& _internal_optional = (optional); _perform_if;)             \
-			for (auto&& _value_name = _internal_optional.value(); _perform_if; \
-			     _perform_if        = false)                                   \
+	if (auto&& _internal_optional = (optional))                               \
+	if (bool _if_opt_some_stop = true)                               \
+			for (auto&& _value_name = _internal_optional.value(); _if_opt_some_stop; \
+			_if_opt_some_stop        = false)                                   \
 	POP_DIAGNOSTIC
 
 
