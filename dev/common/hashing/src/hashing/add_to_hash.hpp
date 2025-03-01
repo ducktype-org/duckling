@@ -18,7 +18,7 @@ namespace hashing {
 	 * may have unspecified order of elements, which circumvents the strict use of the hashing
 	 * algorithm
 	 */
-	struct addToHashOptions {
+	struct AddToHashOptions {
 		bool allow_std_hash;
 		bool allow_hashing_ranges_with_unspecified_order;
 	};
@@ -26,14 +26,14 @@ namespace hashing {
 	/**
 	 * default (strict) options for the addToHash function template
 	 */
-	static constexpr addToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
+	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = false, .allow_hashing_ranges_with_unspecified_order = false
 	};
 
 	/**
 	 * relaxed options for the addToHash function template
 	 */
-	static constexpr addToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
+	static constexpr AddToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = true, .allow_hashing_ranges_with_unspecified_order = true
 	};
 
@@ -52,7 +52,7 @@ namespace hashing {
 	template<
 		hash_algorithm HashAlgorithm,
 		typename T,
-		addToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
+		AddToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
 		// for most types we only want to add to hash some subset of their subobjects (bases +
 		// members) this can be done easily by defining `hashDecompose` friend function that lists

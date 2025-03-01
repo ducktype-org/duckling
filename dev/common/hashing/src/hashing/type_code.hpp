@@ -9,27 +9,22 @@ namespace hashing {
 
 
 	/**
-	 * base class for type codes of any length used by TYPE_HASH_CODE and TYPE_UNIQUE_CODE
+	 * Class for storing codes of types of any length. Used by TYPE_HASH_CODE and TYPE_UNIQUE_CODE
 	 *
 	 * @tparam I - type of the value of the type code
 	 * @tparam is_unique - if true, the type code is unique for each type
 	 */
 	template<std::integral I = u32, bool is_unique = true>
-	struct TypeCodeBase final {
+	struct TypeCode final {
 		using value_type                = I;
 		static constexpr bool IS_UNIQUE = is_unique;
 
 		value_type value{};
 
-		constexpr auto operator<=>(const TypeCodeBase<I, is_unique>&) const noexcept = default;
+		constexpr auto operator<=>(const TypeCode<I, is_unique>&) const noexcept = default;
 
 		constexpr operator I() const noexcept { return value; }
 	};
-
-	/**
-	 * the default type code used by TYPE_HASH_CODE and TYPE_UNIQUE_CODE
-	 */
-	using TypeCode = TypeCodeBase<>;
 
 
 }  // namespace hashing

@@ -28,13 +28,13 @@ namespace hashing {
 		 * @tparam I - type of the value of the type code
 		 */
 		template<typename T, std::integral I>
-		TypeCodeBase<I, true> getUniqueID() {
+		TypeCode<I, true> getUniqueID() {
 			static const I id = static_cast<I>(getNextID());
 			CORE_ASSERT(
 				id < std::numeric_limits<I>::max(),
 				"too many types have been created and the unique ID has wrapped around"
 			);
-			return TypeCodeBase<I, true>{ id };
+			return TypeCode<I, true>{ id };
 		}
 
 	}  // namespace detail
@@ -46,7 +46,7 @@ namespace hashing {
 	 * @tparam I - type of the value of the type code
 	 */
 	template<typename T, std::integral I = u32>
-	static const TypeCodeBase<I, true> TYPE_UNIQUE_CODE = detail::getUniqueID<T, I>();
+	static const TypeCode<I, true> TYPE_UNIQUE_CODE = detail::getUniqueID<T, I>();
 
 
 }  // namespace hashing

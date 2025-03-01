@@ -123,6 +123,8 @@ namespace hashing {
 
 		/**
 		 * hashes a range as a contiguous sequence of memory
+		 * (when its elements are in a contiguous memory block, have unique object representations
+		 * and size is known)
 		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_chars<HashAlgorithm, R>

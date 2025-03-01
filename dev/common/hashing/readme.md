@@ -137,7 +137,7 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
     </body>
     </html>
 
-* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCodeBase` or the type `void`. Shorter type codes may be desired when hashing many small objects as for them type codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
+* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCode` or the type `void`. Shorter type codes may be desired when hashing many small objects as for them type codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
 There are two types of type codes: unique and hash codes. Unique codes are trully unique for each type and hash codes are hashes of the type's name so collisions are possible. The advantage of hash codes is that they can be used in a `constexpr` contexts such as template parameters. By default unique hash codes are used. 
 
 Using different hashing algorithms:
@@ -152,7 +152,7 @@ Different hash type code lengths used:
 ~~~~~cpp
 std::cout << Hash<DebugHash, void>{}(42) << '\n'
           << Hash<DebugHash>{}(42) << '\n'
-          << Hash<DebugHash, TypeCodeBase<u64>>{}(42) << '\n';
+          << Hash<DebugHash, TypeCode<u64>>{}(42) << '\n';
 // prints:
 ~~~~~
 <html>

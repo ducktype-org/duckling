@@ -162,16 +162,14 @@ private:
 	void typeCodeDefTest() {
 		static_assert(std::integral<u32>, "u32 should be integral");
 		static_assert(std::integral<u64>, "u64 should be integral");
-		static_assert(std::integral<TypeCodeBase<>::value_type>, "value_type should be integral");
-		assertTrue(std::is_same_v<TypeCode, TypeCodeBase<>>, "TypeCode should be TypeCodeBase<>");
-		TypeCodeBase<u64> thcb1;
-		TypeCodeBase<u64> thcb2;
+		static_assert(std::integral<TypeCode<>::value_type>, "value_type should be integral");
+		TypeCode<u64> thcb1;
+		TypeCode<u64> thcb2;
 		assertTrue(
-			std::is_same_v<TypeCodeBase<u64>::value_type, u64>,
-			"TypeCodeBase should have value_type"
+			std::is_same_v<TypeCode<u64>::value_type, u64>, "TypeCode should have value_type"
 		);
-		[[maybe_unused]] auto _ = static_cast<TypeCodeBase<u64>::value_type>(thcb1);
-		assertTrue(thcb1 <= thcb2, "TypeCodeBase should be comparable");
+		[[maybe_unused]] auto _ = static_cast<TypeCode<u64>::value_type>(thcb1);
+		assertTrue(thcb1 <= thcb2, "TypeCode should be comparable");
 	}
 
 	void hashAlgorithmUtilsTest() {

@@ -21,7 +21,7 @@ namespace hashing {
 		 */
 		template<typename T>
 		concept TypeCode_or_void
-			= std::is_void_v<T> || base::IsInstantiationOfTypeValue<T, TypeCodeBase>;
+			= std::is_void_v<T> || base::IsInstantiationOfTypeValue<T, TypeCode>;
 
 		/**
 		 * Checks if a given type has a nested value_type member type
@@ -56,7 +56,7 @@ namespace hashing {
 		concept can_get_type_hash_code = requires(HashAlgorithm& h) {
 			typename TypeC::value_type;
 			uniqueString<T, typename TypeC::value_type, HashAlgorithm>();
-			static_cast<TypeCodeBase<typename TypeC::value_type>>(
+			static_cast<TypeCode<typename TypeC::value_type>>(
 				std::declval<StrToIntegral<typename TypeC::value_type, HashAlgorithm>>()
 			);
 			detail::getIDFromUniqueString<T, typename TypeC::value_type, HashAlgorithm>();
@@ -64,29 +64,22 @@ namespace hashing {
 		};
 
 		/**
-		 * Adds either a unique type code or a type hash code to the hash
-		 * depending on the type code that type (TypeC) that is provided
+		 * Adds to hash object `t` and either a TYPE_UNIQUE_CODE or a
+		 * TYPE_HASH_CODE depending on the type's IS_UNIQUE value of the TypeC that is provided
 		 */
 		template<
-			base::IsInstantiationOfTypeValue<TypeCodeBase> TypeC,
+			base::IsInstantiationOfTypeValue<TypeCode> TypeC,
 			typename HashAlgorithm,
-			typename... Ts>
-		constexpr void addToHashAndAddTypeCode(HashAlgorithm& h, const Ts&... ts) noexcept {
-			if (TypeC::IS_UNIQUE) {
-				((addToHash(h, ts), h(TYPE_UNIQUE_CODE<Ts, typename TypeC::value_type>)), ...);
-			} else if constexpr ((detail::can_get_type_hash_code<Ts, TypeC, HashAlgorithm> && ...
-			                     )) {
-				((addToHash(h, ts),
-				  h(TYPE_HASH_CODE<Ts, typename TypeC::value_type, HashAlgorithm>)),
-				 ...);
-			} else if constexpr ((detail::can_get_type_hash_code<Ts, TypeC, DefaultHashAlgorithm>
-			                      && ...)) {
-				((addToHash(h, ts),
-				  h(TYPE_HASH_CODE<Ts, typename TypeC::value_type, DefaultHashAlgorithm>)),
-				 ...);
-			} else {
-				((addToHash(h, ts), h(TYPE_HASH_CODE<Ts>)), ...);
-			}
+			typename T>
+		constexpr void addTypeCode(HashAlgorithm& h) noexcept {
+			if (TypeC::IS_UNIQUE)
+				h(TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);
+			else if constexpr (detail::can_get_type_hash_code<T, TypeC, HashAlgorithm>)
+				h(TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
+			else if constexpr (detail::can_get_type_hash_code<T, TypeC, DefaultHashAlgorithm>)
+				h(TYPE_HASH_CODE<T, typename TypeC::value_type, DefaultHashAlgorithm>);
+			else
+				h(TYPE_HASH_CODE<T>);
 		}
 
 	}  // namespace detail
@@ -101,7 +94,7 @@ namespace hashing {
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode>
+		detail::TypeCode_or_void TypeC         = TypeCode<>>
 	class Hash final: public detail::enable_TypeHC_value_type<TypeC> {
 	public:
 		static constexpr bool APPEND_TYPE_CODE = not std::is_void_v<TypeC>;
@@ -111,10 +104,8 @@ namespace hashing {
 		constexpr result_type operator()(const T& t) const noexcept {
 			HashAlgorithm h{};
 
-			if constexpr (APPEND_TYPE_CODE)
-				detail::addToHashAndAddTypeCode<TypeC, HashAlgorithm, T>(h, t);
-			else
-				addToHash(h, t);
+			addToHash(h, t);
+			if constexpr (APPEND_TYPE_CODE) detail::addTypeCode<TypeC, HashAlgorithm, T>(h);
 
 			return h.finalize();
 		}
@@ -132,7 +123,7 @@ namespace hashing {
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode>
+		detail::TypeCode_or_void TypeC         = TypeCode<>>
 	class StatefulHash final: public detail::enable_TypeHC_value_type<TypeC> {
 		HashAlgorithm h{};
 
@@ -142,22 +133,15 @@ namespace hashing {
 
 		template<typename T>
 		constexpr StatefulHash& operator()(const T& t) noexcept {
-			if constexpr (APPEND_TYPE_CODE)
-				detail::addToHashAndAddTypeCode<TypeC, HashAlgorithm, T>(h, t);
-			else
-				addToHash(h, t);
+			addToHash(h, t);
+			if constexpr (APPEND_TYPE_CODE) detail::addTypeCode<TypeC, HashAlgorithm, T>(h);
 
 			return *this;
 		}
 
 		template<typename... Ts>
 		constexpr StatefulHash& operator()(const Ts&... ts) noexcept {
-			if constexpr (APPEND_TYPE_CODE)
-				detail::addToHashAndAddTypeCode<TypeC, HashAlgorithm, Ts...>(h, ts...);
-			else
-				addToHash(h, ts...);
-
-			return *this;
+			return ((this->operator()(ts)), ...);
 		}
 
 		[[nodiscard]]
@@ -177,7 +161,7 @@ namespace hashing {
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode>
+		detail::TypeCode_or_void TypeC         = TypeCode<>>
 	auto justHash(const auto& t) {
 		return Hash<HashAlgorithm, TypeC>{}(t);
 	}
@@ -193,7 +177,7 @@ namespace hashing {
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
-		detail::TypeCode_or_void TypeC         = TypeCode>
+		detail::TypeCode_or_void TypeC         = TypeCode<>>
 	auto justHash(const auto&... ts) {
 		return StatefulHash<HashAlgorithm, TypeC>{}(ts...).finalize();
 	}

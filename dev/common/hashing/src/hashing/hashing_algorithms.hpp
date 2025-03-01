@@ -109,7 +109,7 @@ namespace hashing {
 	 * and can be converted to a string that represents the bytes in hex
 	 */
 	class DebugHash final {
-		enum class Type : std::uint8_t { TypeCode, Other };
+		enum class Type : std::uint8_t { Code, Other };
 		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
 	public:
@@ -124,15 +124,15 @@ namespace hashing {
 		}
 
 		// type codes
-		template<base::IsInstantiationOfTypeValue<TypeCodeBase> TypeC>
+		template<base::IsInstantiationOfTypeValue<TypeCode> TypeC>
 		constexpr void operator()(TypeC hash) noexcept {
 			const auto arr = std::bit_cast<std::array<const std::byte, sizeof(TypeC)>, TypeC>(hash);
-			this->operator()(std::span{ arr.data(), arr.size() }, Type::TypeCode);
+			this->operator()(std::span{ arr.data(), arr.size() }, Type::Code);
 		}
 
 		// objects with unique representations but not ranges nor type codes
 		template<typename T>
-		requires(not base::IsInstantiationOfTypeValue<T, TypeCodeBase> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
+		requires(not base::IsInstantiationOfTypeValue<T, TypeCode> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
 		constexpr void operator()(const T& t) noexcept {
 			const std::array arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
@@ -185,7 +185,7 @@ namespace hashing {
 						if (line != 0) ret += '\n';
 						append_line_number(ret, line++);
 					}
-					if (i == pos) ret += (type == Type::TypeCode ? yellow : red);
+					if (i == pos) ret += (type == Type::Code ? yellow : red);
 					append_byte_hex(ret, static_cast<std::byte>(b[j]));
 					ret += ' ';
 					if (i == pos) ret += reset;

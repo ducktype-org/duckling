@@ -182,13 +182,13 @@ private:
 		DebugHash dh;
 		dh(std::span{ "hello 1234567890" });
 
-		Hash<DebugHash, TypeCode>{}(type3{});
+		Hash<DebugHash, TypeCode<>>{}(type3{});
 		Hash<DebugHash>{}(type4{});
 	}
 
 	template<typename Alg>
 	void hashTest() {
-		Hash<Alg, TypeCodeBase<u32, false>> hasher;
+		Hash<Alg, TypeCode<u32, false>> hasher;
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 		constexpr auto res1 = hasher(X{});
 		constexpr auto res2 = hasher(S{});
@@ -202,13 +202,13 @@ private:
 
 	[[nodiscard]]
 	static constexpr u64 constexprTestHelper() {
-		constexpr auto r1 = Hash<Fnv1a_32, TypeCodeBase<u32, false>>{}(876'543);
-		constexpr auto r2 = Hash<Fnv1a_32, TypeCodeBase<u32, false>>{}(std::string_view{ "hello" });
+		constexpr auto r1 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(876'543);
+		constexpr auto r2 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(std::string_view{ "hello" });
 		constexpr auto r3 = TYPE_HASH_CODE<int>;
 		constexpr auto r4 = TypeCode{ 23 };
-		constexpr auto r5 = TypeCodeBase<u16>{ 234 };
-		constexpr auto r6 = Hash<Fnv1a_64, TypeCodeBase<u32, false>>{}(S{});
-		StatefulHash<Fnv1a_64, TypeCodeBase<u32, false>> h;
+		constexpr auto r5 = TypeCode<u16>{ 234 };
+		constexpr auto r6 = Hash<Fnv1a_64, TypeCode<u32, false>>{}(S{});
+		StatefulHash<Fnv1a_64, TypeCode<u32, false>> h;
 		h(123, 345.f, std::string_view{ "hello" }, S{});
 
 		return r1 + r2 + r3 + r4 + r5 + r6 + h.finalize();
@@ -218,7 +218,7 @@ private:
 
 	template<typename T>
 	void defaultsTest() {
-		StatefulHash<T, TypeCodeBase<u16>> h;
+		StatefulHash<T, TypeCode<u16>> h;
 		h(123, 345.f, "hello", S{});
 		static_assert(requires { typename decltype(h)::TypeCode_value_type; });
 		Hash<T, void> h2;
