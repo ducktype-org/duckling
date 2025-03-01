@@ -161,11 +161,6 @@ namespace hashing {
 		}
 
 		[[nodiscard]]
-		constexpr explicit operator result_type() noexcept {
-			return h.finalize();
-		}
-
-		[[nodiscard]]
 		constexpr result_type finalize() noexcept {
 			return h.finalize();
 		}

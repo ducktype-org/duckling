@@ -129,7 +129,7 @@ int main() {
 		)
 	          .finalize();
 	std::cout << "stateful hash:\n"
-			  << static_cast<std::string>(hasher2) << "\n\t(constexpr) hash value: " << hash_value
+			  << hasher2.finalize() << "\n\t(constexpr) hash value: " << hash_value
 			  << '\n';
 
 	// module also provides unique ids for types in compile time
