@@ -1,3 +1,4 @@
+#pragma once
 #include <iostream>
 #include <base/string_id.hpp>
 

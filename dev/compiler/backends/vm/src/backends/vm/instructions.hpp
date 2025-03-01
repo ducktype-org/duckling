@@ -29,16 +29,15 @@ namespace compiler::backend_vm {
 #undef HANDLE_OPCODE_2ARGS
 
 	/**
-     * @brief This type is here just to make templates work with our macros.
-     */
+	 * @brief This type is here just to make templates work with our macros.
+	 */
 	struct Guardian {
 		Guardian() { CORE_PANIC("Should not instantiate Guardian"); }
 	};
 
-	std::variant<
+	using VmInstruction = std::variant<
 #define HANDLE_OPCODE(opcode) Op_##opcode,
 #include "../../../../../../VM/src/code_data/opcodes_list.hpp"
 #undef HANDLE_OPCODE
-		Guardian>
-		vm_op;
+		Guardian>;
 }
