@@ -188,7 +188,7 @@ private:
 
 	template<typename Alg>
 	void hashTest() {
-		Hash<Alg> hasher;
+		Hash<Alg, TypeCodeBase<u32, false>> hasher;
 		assertTrue(hasher(1.f) != hasher(2.f), "hashes should differ");
 		constexpr auto res1 = hasher(X{});
 		constexpr auto res2 = hasher(S{});
@@ -202,13 +202,13 @@ private:
 
 	[[nodiscard]]
 	static constexpr u64 constexprTestHelper() {
-		constexpr auto         r1 = Hash<Fnv1a_32>{}(876'543);
-		constexpr auto         r2 = Hash<Fnv1a_32>{}(std::string_view{ "hello" });
-		constexpr auto         r3 = TYPE_HASH_CODE<int>;
-		constexpr auto         r4 = TypeCode{ 23 };
-		constexpr auto         r5 = TypeCodeBase<u16>{ 234 };
-		constexpr auto         r6 = Hash{}(S{});
-		StatefulHash<Fnv1a_64> h;
+		constexpr auto r1 = Hash<Fnv1a_32, TypeCodeBase<u32, false>>{}(876'543);
+		constexpr auto r2 = Hash<Fnv1a_32, TypeCodeBase<u32, false>>{}(std::string_view{ "hello" });
+		constexpr auto r3 = TYPE_HASH_CODE<int>;
+		constexpr auto r4 = TypeCode{ 23 };
+		constexpr auto r5 = TypeCodeBase<u16>{ 234 };
+		constexpr auto r6 = Hash<Fnv1a_64, TypeCodeBase<u32, false>>{}(S{});
+		StatefulHash<Fnv1a_64, TypeCodeBase<u32, false>> h;
 		h(123, 345.f, std::string_view{ "hello" }, S{});
 
 		return r1 + r2 + r3 + r4 + r5 + r6 + h.finalize();

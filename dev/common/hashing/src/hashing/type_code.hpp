@@ -14,7 +14,7 @@ namespace hashing {
 	 * @tparam I - type of the value of the type code
 	 * @tparam is_unique - if true, the type code is unique for each type
 	 */
-	template<std::integral I = u32, bool is_unique = false>
+	template<std::integral I = u32, bool is_unique = true>
 	struct TypeCodeBase final {
 		using value_type                = I;
 		static constexpr bool IS_UNIQUE = is_unique;

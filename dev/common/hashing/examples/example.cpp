@@ -89,7 +89,7 @@ int main() {
 	std::cout << Hash{}(type1{}) << '\n';  // some 64-bit number
 	// but we can specify the algorithm explicitly as a template parameter
 	// it's also possible to get the hash value at compile time
-	constexpr auto h = Hash<Fnv1a_32>{}(type2{});
+	constexpr auto h = Hash<Fnv1a_32, TypeCodeBase<u32, false>>{}(type2{});
 	std::cout << h << '\n';  // some 32-bit number
 
 	// by default the type's hash-code is appended to the hashed bytes so it's possible to
@@ -124,7 +124,10 @@ int main() {
 	// or all at once
 	hasher2(7, std::string{ "hello" }, 42);
 	constexpr auto hash_value
-		= hashing::StatefulHash{}(7, type2{}, 7, std::string{ "hello" }, 42).finalize();
+		= hashing::StatefulHash<hashing::Fnv1a_64, TypeCodeBase<u32, false>>{}(
+			  7, type2{}, 7, std::string{ "hello" }, 42
+		)
+	          .finalize();
 	std::cout << "stateful hash:\n"
 			  << static_cast<std::string>(hasher2) << "\n\t(constexpr) hash value: " << hash_value
 			  << '\n';
