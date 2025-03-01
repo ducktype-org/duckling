@@ -15,7 +15,8 @@ namespace hashing {
 	 * allow_std_hash - if true, the function will try to use std::hash for hashing types that
 	 * can't be hashed using the provided hashing algorithm
 	 * allow_hashing_ranges_with_unspecified_order - if true, the function will hash ranges that
-	 * may have unspecified order of elements, which circumvents the strict use of the hashing algorithm
+	 * may have unspecified order of elements, which circumvents the strict use of the hashing
+	 * algorithm
 	 */
 	struct addToHashOptions {
 		bool allow_std_hash;
@@ -41,6 +42,12 @@ namespace hashing {
 	 * if a friend function overload exists for the type, it will be used instead
 	 * this one serves as a fallback and a place where specializations for
 	 * types that are not ours can be added (like the built-in types)
+	 *
+	 * @tparam HashAlgorithm - type of the hashing algorithm to use
+	 * @tparam T - type of the object to hash
+	 * @tparam Options - options for the addToHash function template
+	 * @param hash_alg - hashing algorithm to use
+	 * @param t - object to hash
 	 */
 	template<
 		hash_algorithm HashAlgorithm,
@@ -123,6 +130,11 @@ namespace hashing {
 
 	/**
 	 * variadic overload of template addToHash()
+	 *
+	 * @tparam HashAlgorithm - type of the hashing algorithm to use
+	 * @tparam Ts - types of the objects to hash
+	 * @param hash_alg - hashing algorithm to use
+	 * @param ts - objects to hash
 	 */
 	template<hash_algorithm HashAlgorithm, typename... Ts>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const Ts&... ts) {

@@ -84,8 +84,9 @@ namespace hashing {
 		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
 		constexpr Fnv1a<I>& operator()(const R& range) noexcept {
 			for (auto&& it: range) {
-				using val_t    = std::ranges::range_value_t<R>;
-				const auto arr = std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
+				using val_t = std::ranges::range_value_t<R>;
+				const auto arr
+					= std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
 				this->operator()(std::span{ arr.data(), arr.size() });
 			}
 			return *this;
@@ -114,7 +115,8 @@ namespace hashing {
 	public:
 		// spans of bytes
 		template<std::size_t N>
-		constexpr void operator()(const std::span<const std::byte, N> span, Type type = Type::Other) noexcept {
+		constexpr void
+			operator()(const std::span<const std::byte, N> span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));
@@ -141,8 +143,9 @@ namespace hashing {
 		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
 		constexpr auto& operator()(const R& range) noexcept {
 			for (auto&& it: range) {
-				using val_t    = std::ranges::range_value_t<R>;
-				const auto arr = std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
+				using val_t = std::ranges::range_value_t<R>;
+				const auto arr
+					= std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
 				this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
 			}
 			return *this;
@@ -194,8 +197,14 @@ namespace hashing {
 		}
 	};
 
+	/**
+	 * the default hash algorithm
+	 */
 	using DefaultHashAlgorithm = Fnv1a_64;
 
+	/**
+	 * the default hash algorithm for the given integer type
+	 */
 	template<typename I>
 	using default_hash_algorithm_for
 		= std::conditional_t<sizeof(I) <= sizeof(u32), Fnv1a_32, Fnv1a_64>;

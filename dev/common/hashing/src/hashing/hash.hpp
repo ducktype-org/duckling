@@ -29,16 +29,16 @@ namespace hashing {
 		concept has_value_type = requires { typename T::value_type; };
 
 		/**
-		* helper struct that enables the TypeCode_value_type member type
-		* if the given type has a value_type member type
-		* (this is a default implementation that does not add the member type)
-		*/
+		 * helper struct that enables the TypeCode_value_type member type
+		 * if the given type has a value_type member type
+		 * (this is a default implementation that does not add the member type)
+		 */
 		template<class TypeC>
 		struct enable_TypeHC_value_type {};
 
 		/**
-		* specialization that adds TypeCode_value_type
-		*/
+		 * specialization that adds TypeCode_value_type
+		 */
 		template<has_value_type TypeC>
 		struct enable_TypeHC_value_type<TypeC> {
 			using TypeCode_value_type = TypeC::value_type;
@@ -47,7 +47,9 @@ namespace hashing {
 		/**
 		 * Checks if a given type hash code can be hashed by the given hash algorithm
 		 * (it also protects from invalid instantiations outside of the immediate context
-		 * that could cause a compilation error by omitting SFINAE)
+		 * that could cause a compilation error by omitting SFINAE,
+		 * i.e. checks all required steps for the instantiation to be valid one by one
+		 * and returns false on the first invalid step instead of failing to compile)
 		 */
 		template<typename T, typename TypeC, typename HashAlgorithm>
 		concept can_get_type_hash_code = requires(HashAlgorithm& h) {
@@ -60,6 +62,10 @@ namespace hashing {
 			h(TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
 		};
 
+		/**
+		 * Adds either a unique type code or a type hash code to the hash
+		 * depending on the type code that type (TypeC) that is provided
+		 */
 		template<
 			base::IsInstantiationOfTypeValue<TypeCodeBase> TypeC,
 			typename HashAlgorithm,
@@ -166,6 +172,12 @@ namespace hashing {
 
 	/**
 	 * @brief Gets the hash value for the object using the specified hash algorithm
+	 *
+	 * @tparam HashAlgorithm - type of the hashing algorithm to use
+	 * @tparam TypeC - type of the type code that should be appended to the hash
+	 * or void if the type code should not be appended
+	 * @param t - object to hash
+	 * @return hash value
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,
@@ -175,7 +187,13 @@ namespace hashing {
 	}
 
 	/**
-	 * @brief Variadic version of justHash()
+	 * @brief Variadic version of justHash(), uses StatefulHash to hash multiple objects
+	 *
+	 * @tparam HashAlgorithm - type of the hashing algorithm to use
+	 * @tparam TypeC - type of the type code that should be appended to the hash
+	 * or void if the type code should not be appended
+	 * @param ts - objects to hash
+	 * @return hash value
 	 */
 	template<
 		hash_algorithm           HashAlgorithm = DefaultHashAlgorithm,

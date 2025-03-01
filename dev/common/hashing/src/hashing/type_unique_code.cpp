@@ -13,6 +13,9 @@ namespace hashing {
 
 	namespace detail {
 
+		/**
+		 * returns a unique ID on each call
+		 */
 		u64 getNextID() {
 			static u64 id = 0;
 			return id++;

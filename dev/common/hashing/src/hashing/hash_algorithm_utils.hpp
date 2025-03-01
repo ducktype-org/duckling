@@ -18,12 +18,11 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		* checks if the type can be invoked with a span of byte
-		*/
+		 * checks if the type can be invoked with a span of byte
+		 */
 		template<typename T>
-		concept invocable_with_byte_span = requires(T t) {
-			t(std::declval<std::span<std::byte>>());
-		};
+		concept invocable_with_byte_span
+			= requires(T t) { t(std::declval<std::span<std::byte>>()); };
 
 		/**
 		 * checks if the type has a finalize() method that returns a result_type
@@ -52,6 +51,10 @@ namespace hashing {
 
 	/**
 	 * returns a reference to one of the Bases of Derived
+	 *
+	 * @tparam Base - the base class to get a reference to
+	 * @param derived - object for which we want to get a reference to the base
+	 * @return reference to (one of) the base(s) of derived
 	 */
 	template<typename Base, std::derived_from<std::remove_cvref_t<Base>> Derived>
 	requires(not std::is_same_v<std::remove_cvref_t<Base>, std::remove_cvref_t<Derived>>)
@@ -153,8 +156,8 @@ namespace hashing {
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>) requires requires {
 				(std::get<Is>(std::declval<T>()), ...);
-			} {}(std::make_index_sequence<std::tuple_size<T>::value>{}
-			);  // don't change to std::tuple_size_v
+			} {}(std::make_index_sequence<
+				 /* don't change to std::tuple_size_v */ std::tuple_size<T>::value>{});
 		};
 
 	}  // namespace detail

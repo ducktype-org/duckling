@@ -242,7 +242,8 @@ private:
 		assertFalse(detail::can_hashDecompose<S>, "S should not be hashDecomposable");
 
 		static_assert(
-			detail::invocable_with_byte_span<Fnv1a_32>, "Fnv1a_32 should be invocable with a span of bytes"
+			detail::invocable_with_byte_span<Fnv1a_32>,
+			"Fnv1a_32 should be invocable with a span of bytes"
 		);
 
 		detail::hashAsChars(Fnv1a_32{}, 42);

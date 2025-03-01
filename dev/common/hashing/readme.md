@@ -19,8 +19,7 @@ This module provides tools for easy and composable integration of those processe
 Hooking up hashing for a class
 ==============================
 
-This is the most common use case and also the simplest one. There are three ways for enabling a hashing
-support for a class:
+This is the most common use case and also the simplest one. There are three ways to enable a hashing support for a class (if possible, the first two should be preferred):
 
 `hashDecompose()`
 -----------------
@@ -84,8 +83,8 @@ Adding type to `addToHash()` template fallback
 
 Sometimes, you may want to hash an object whose definition you don’t have access to, such as certain types from the standard library. In such cases you can add a 'specialization' to the `addToHash()` function template in [add_to_hash.hpp](src/hashing/add_to_hash.hpp).
 
-The actual specializations or partial specializations are a bit of a mess to keep track of and maintain - if there are many partial/full specializations interactions between them and their plecement (assuming we would like to place them in different files) would have to be considered which is often bug-prone.
-Instead we are using a single template (in [add_to_hash.hpp](src/hashing/add_to_hash.hpp)) with `if constexpr` conditions, which are much better structured as the conditions are clearly visible.
+The actual specializations or partial specializations are [a bit of a mess](https://eel.is/c++draft/temp.expl.spec#8.sentence-2) to keep track of and maintain - if there are many partial/full specializations interactions between them and their plecement (assuming we would like to place them in different files) would have to be considered which is often bug-prone.
+Instead we are using a single template (in [add_to_hash.hpp](src/hashing/add_to_hash.hpp)) with `if constexpr` conditions, which are much better structured, as the conditions are clearly visible and naturally create a 'control-flow' of logic.
 
 If the type you want to hash is not covered already by this template, you can add a new condition there. All you have to do is to choose an appropriate place and specific enough condition so that it won't interfere with other types.
 
@@ -100,7 +99,7 @@ The module provides two ways of hashing objects: by using either `Hash` or `Stat
 
 This callable class wraps a hashing algorithm, providing a simple interface for hashing objects of any type with it. It also appends the corresponding type hash code after the whole object which allows to distinguish hashes of objects with the same binary representations but of different types. 
 
-Note that it is not necessary (and so it is not done) to add hash codes after every subobject, as changing any of them will change the hash code of the whole object.
+Note that it is not necessary (and so it is not done) to add hash codes after every subobject, as changing type of any of them will change the top-level type which will change the hash of the whole object.
 
 The simplest way to use it is without specifying any template parameters.
 With it's defaults it can be used as a drop-in replacement for `std::hash`:
@@ -130,7 +129,7 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
 
     Module provides a generic, constexpr implementation of `Fnv1a` which is a fast and simple hashing algorithm with a good enough distribution for most applications like hash tables. It is available in its 32 bit version as `Fnv1a_32` and 64 bit version as `Fnv1a_64` which is also the default algorithm used by `Hash`.
 
-    There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object, yellow - first byte of the hash code).
+    There is also a `DebugHash`, which instead of converting bytes to a hash value, returns a string with the bytes in hexadecimal representation and hashed objects separated with colors (red - first byte of an object, yellow - first byte of the appended type code).
     
     <html>
     <body>
@@ -138,7 +137,8 @@ There are two template parameters that can be specified: `HashAlgorithm` and `Ty
     </body>
     </html>
 
-* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCodeBase` or the type `void`. Shorter hash codes may be desired when hashing many small objects as for them hash codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
+* The second one specifies what should be appended to the hashed bytes of the object. Allowed types are specializations of `TypeCodeBase` or the type `void`. Shorter type codes may be desired when hashing many small objects as for them type codes may have more bytes than the object representation itself. If `void` type is passed, no bytes are appended after the object.
+There are two types of type codes: unique and hash codes. Unique codes are trully unique for each type and hash codes are hashes of the type's name so collisions are possible. The advantage of hash codes is that they can be used in a `constexpr` contexts such as template parameters. By default unique hash codes are used. 
 
 Using different hashing algorithms:
 ~~~~~cpp
@@ -203,7 +203,7 @@ std::cout << hashing::StatefulHash<hashing::DebugHash>{}(
 `justHash()`
 ------------
 
-You can also use the `justHash()` function which is a shorthand for creating a temporary `Hash` or `StatefulHash` object and calling it with the given arguments.
+For convenience there is also a `justHash()` function which is a shorthand for creating a temporary `Hash` or `StatefulHash` object and calling it with the given arguments.
 
 ~~~~~cpp
 constexpr auto h1 = justHash(42);
@@ -229,7 +229,7 @@ bool b2 = sizeof(TYPE_HASH_CODE<int, u64>) == 8; // true
 `TYPE_UNIQUE_CODE`
 ------------------
 
-This constant template variable is a unique number of a given length for each type.
+This constant template variable is a trully unique number of a given length for each type.
 
 ~~~~~cpp
 static_assert(TYPE_UNIQUE_CODE<int> == TYPE_UNIQUE_CODE<int>);
@@ -246,12 +246,12 @@ Adapting algorithm to the module
 
 If we want to add a new hashing algorithm we have to create a class that will split the hashing logic into three parts: setup, hashing and finalization.
 
-To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` to which it can be explicitly converted to and be callable with `(void*, usize)` or `(std::string_view)`.
+To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` member type which will be returned after calling the member function `finalize()`. It also has to have a call operator that takes a `std::span<std::byte>`.
 
 As stated before algorithm has to be organized into three stages:
 
 1) setting up the initial state - this should happen in the constructor
 2) hashing bytes - should be done in the call operator. After receiving the bytes to hash, the algorithm should update its state.
-3) finalizing the hash - this should be done in the conversion operator to the `result_type` marked `explicit`, algorithm should convert it's internal state to the hash value and return it without changing it's state in the process
+3) finalizing the hash - this should be done in the `finalize()` function returning a `result_type`; algorithm should convert it's internal state to the hash value and return it without changing it's state in the process
 
 After the setup it should be possible to call stages 2 and 3 multiple times in any order.
