@@ -12,15 +12,15 @@ compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build() co
 	throw base::NotYetImplemented("FunctionBuilder::build");
 }
 
-void compiler::backend_vm::FileBuilder::addFunction(const FunctionBuilder& function) {
+void compiler::backend_vm::CodeFileBuilder::addFunction(const FunctionBuilder& function) {
 	functions.push_back(function.build());
 }
 
-void compiler::backend_vm::FileBuilder::addType(const vm::TypeOfData& type) {
+void compiler::backend_vm::CodeFileBuilder::addType(const vm::TypeOfData& type) {
 	types.push_back(type);
 }
 
-compiler::backend_vm::CodeFile compiler::backend_vm::FileBuilder::build() const {
+compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() const {
 	throw base::NotYetImplemented("FileBuilder::build");
 }
 

@@ -6,8 +6,10 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <backends/llvm/llvm_backend.hpp>
+#include <backends/vm/backend.hpp>
 
 #include "driver.hpp"
+#include "base/exceptions.hpp"
 
 namespace compiler::driver {
 
@@ -73,5 +75,11 @@ namespace compiler::driver {
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
 		backend_driver->compile(module_data);
+	}
+
+	void DuckBCBackendDriver::compile(const BackendModuleData& lir_module) {
+		backend_vm::Module mod(lir_module.module_id);
+		for (const auto& lir_function: lir_module.functions) mod.addLirFunction(lir_function);
+		throw base::NotYetImplemented("Creating files for DuckBC backend");
 	}
 }

@@ -48,12 +48,12 @@ namespace compiler::backend_vm {
 		[[nodiscard]] Function build() const override;
 	};
 
-	class FileBuilder: public Builder<CodeFile> {
+	class CodeFileBuilder: public Builder<CodeFile> {
 		std::vector<Function>       functions{};
 		std::vector<vm::TypeOfData> types{};
 
 	public:
-		FileBuilder() = default;
+		CodeFileBuilder() = default;
 
 		void addFunction(const FunctionBuilder& function);
 
@@ -61,4 +61,16 @@ namespace compiler::backend_vm {
 
 		[[nodiscard]] CodeFile build() const override;
 	};
+
+	void Block::serialize(std::ostream& out) const {
+		throw base::NotYetImplemented("Block::serialize");
+	}
+
+	void Function::serialize(std::ostream& out) const {
+		throw base::NotYetImplemented("Function::serialize");
+	}
+
+	void CodeFile::serialize(std::ostream& out) const {
+		throw base::NotYetImplemented("CodeFile::serialize");
+	}
 }

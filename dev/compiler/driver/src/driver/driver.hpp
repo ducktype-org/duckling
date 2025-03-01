@@ -67,9 +67,7 @@ namespace compiler::driver {
 	public:
 		DuckBCBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(const BackendModuleData&) override {
-			throw base::NotYetImplemented("compilation for BC driver");
-		}
+		void compile(const BackendModuleData&) override;
 	};
 
 	Box<BackendDriver> createBackendDriver(CRef<Options> options);

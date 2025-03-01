@@ -4,15 +4,20 @@
 #include "builders.hpp"
 
 namespace compiler::backend_vm {
+	/**
+	 * @brief Represents a module which maps to a single file.
+	 */
 	class Module {
+		base::StrID module_id;
+
 	public:
-		Module() = default;
+		Module(base::StrID module_id);
 
 		void addLirFunction(CRef<lir::Function> lir_function);
 
-		[[nodiscard]] std::string serialize() const;
+		void buildRepr(std::ostream& out) const;
 
 	private:
-		std::vector<CodeFile> files{};
+		CodeFileBuilder file_builder;
 	};
 }

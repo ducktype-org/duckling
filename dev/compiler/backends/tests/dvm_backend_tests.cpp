@@ -9,6 +9,6 @@
 void DVMBackendTest::testWithLir(CRef<compiler::lir::Function> lir_function) {
 	using namespace compiler::backend_vm;
 
+	auto vm_module = Module(base::StrID("test_module"));
 
-	Module _ = Module::fromLirFunction(lir_function);
 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
 #include "backends/vm/instructions.hpp"
+#include "base/exceptions.hpp"
 
 namespace compiler::backend_vm {
 	template<class T>
