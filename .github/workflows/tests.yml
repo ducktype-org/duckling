@@ -44,6 +44,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     env:
+      BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
@@ -53,6 +54,10 @@ jobs:
       - name: Install lcov, LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov llvm llvm-dev
+
+      - name: Install graphviz
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        run: sudo apt -y install libgraphviz-dev
 
       - name: Install GCC 14 and gcov-14
         run: |
@@ -131,6 +136,17 @@ jobs:
         working-directory: ${{ env.WORKSPACE }}
         run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
 
+      # Check against regressions in target applications.
+      # This step is run now so that the results are cached.
+      # However, it does not fail the job at this stage because we still want the tests to be run.
+      # It will fail the job at the end in the "Fail if deployables failed to build" step.
+      - name: Build deployables
+        id: build-deployables
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
+        working-directory: ${{ env.WORKSPACE }}
+        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- all
+        continue-on-error: true
+
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
       # This step deletes all the cache entries that are related to this branch,
       # and it is done in this moment in the script, right after building, because
@@ -178,6 +194,9 @@ jobs:
           cmake --build ${{ env.BUILD_DIR }} -- coverage
           echo coverage-percent=$(python3 ${{ env.WORKSPACE }}/scripts/cmake/coverage_info_parser.py ${{ env.BUILD_DIR }}/coverage/index.html) > $GITHUB_OUTPUT
 
+      - name: Fail if deployables failed to build
+        if: ${{ env.BUILD_DEPLOYABLES == 'true' && steps.build-deployables.outcome != 'success' }}
+        run: exit 1
 
   coverage:
     needs: [build]

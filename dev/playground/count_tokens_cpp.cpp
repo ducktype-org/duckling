@@ -46,14 +46,12 @@ int count_tokens(TSNode node) {
 		std::cerr << "Non include preprocessing directives are untested for token counts";
 		// This is an educated guess of how it would be treated
 		int res = 1;
-		for (int child = 0; child < count; child++)
-			res += count_tokens(ts_node_child(node, base::safeIntConv<u32>(child)));
+		for (u32 child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
 		return res;
 	} else {
 		// std::cout << type << "\n";
 		int res = 0;
-		for (int child = 0; child < count; child++)
-			res += count_tokens(ts_node_child(node, base::safeIntConv<u32>(child)));
+		for (u32 child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
 		return res;
 	}
 }

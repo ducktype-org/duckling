@@ -3,8 +3,6 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 #include <iostream>
-#include <crow.h>
-#include <unordered_map>
 #include <base64.hpp>
 
 #include <clap/clap.hpp>
@@ -15,6 +13,11 @@
 #include <base/variant.hpp>
 #include <base/int_conv.hpp>
 
+PUSH_DIAGNOSTIC
+#pragma GCC diagnostic ignored "-Wuninitialized"
+#include <crow/app.h>
+#include <crow/http_response.h>
+POP_DIAGNOSTIC
 
 // vm includes:
 #include <server.hpp>
@@ -227,7 +230,7 @@ int main(int argc, const char** argv) {
 
 	try {
 		// Parse the command-line arguments
-		result = clap.parse(base::safeIntConv<u16>(argc), argv);
+		result = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		// Handle general parsing exceptions and print error message
 		printer::StreamPrinter      console = printer::StreamPrinter();
