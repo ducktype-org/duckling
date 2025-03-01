@@ -64,12 +64,15 @@ struct ExampleHash {
 	constexpr ExampleHash(u64 state = 0) noexcept: state{ state } {}
 
 	// 2) update - consume the data updating the state
-	constexpr void operator()(const std::span<unsigned char> span) noexcept {
-		for (auto&& c: span) state ^= c;
+	constexpr void operator()(const std::span<const std::byte> span) noexcept {
+		for (auto&& c: span) state ^= std::to_integer<unsigned char>(c);
 	}
 
 	// 3) finalize - convert the state to the result
-	explicit constexpr operator u64() const noexcept { return state; }
+	[[nodiscard]]
+	constexpr u64 finalize() const noexcept {
+		return state;
+	}
 };
 
 static_assert(hashing::hash_algorithm<ExampleHash>);

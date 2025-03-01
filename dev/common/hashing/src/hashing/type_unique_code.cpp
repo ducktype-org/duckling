@@ -7,20 +7,17 @@
 #include <base/ints.hpp>
 
 #include "type_code.hpp"
-#include "type_code.hpp"
 
-namespace hashing {
+namespace hashing::detail {
 
-	namespace detail {
 
-		/**
-		 * returns a unique ID on each call
-		 */
-		u64 getNextID() {
-			static u64 id = 0;
-			return id++;
-		}
+	/**
+	 * returns a unique ID on each call
+	 */
+	u64 getNextID() {
+		static u64 id = 0;
+		return id++;
+	}
 
-	}  // namespace detail
 
-}  // namespace hashing
+}  // namespace hashing::detail

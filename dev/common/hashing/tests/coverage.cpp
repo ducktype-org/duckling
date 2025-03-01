@@ -125,7 +125,10 @@ struct algo {
 
 	void operator()(std::span<std::byte>) const {}
 
-	u32 finalize() const { return 0; }
+	[[nodiscard]]
+	u32 finalize() const {
+		return 0;
+	}
 };
 
 struct algo2 {
@@ -135,7 +138,10 @@ struct algo2 {
 
 	void operator()(int) const {}
 
-	u32 finalize() const { return 0; }
+	[[nodiscard]]
+	u32 finalize() const {
+		return 0;
+	}
 };
 
 class HashingTest: public tester::TestSuite {
