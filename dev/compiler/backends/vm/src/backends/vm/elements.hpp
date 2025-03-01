@@ -4,11 +4,14 @@
 #include <vector>
 #include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
 #include "backends/vm/instructions.hpp"
-#include "base/exceptions.hpp"
 
 namespace compiler::backend_vm {
 	template<class T>
-	class Builder;
+	class Builder {
+	public:
+		virtual ~Builder()                    = default;
+		[[nodiscard]] virtual T build() const = 0;
+	};
 
 	struct VmElement {
 	public:

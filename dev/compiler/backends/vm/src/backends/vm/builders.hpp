@@ -9,12 +9,6 @@
 #include "elements.hpp"
 
 namespace compiler::backend_vm {
-	template<class T>
-	class Builder {
-	public:
-		virtual ~Builder()                    = default;
-		[[nodiscard]] virtual T build() const = 0;
-	};
 
 	class BlockBuilder: public Builder<Block> {
 		// @TODO: Decide if we need it.
@@ -62,15 +56,5 @@ namespace compiler::backend_vm {
 		[[nodiscard]] CodeFile build() const override;
 	};
 
-	void Block::serialize(std::ostream& out) const {
-		throw base::NotYetImplemented("Block::serialize");
-	}
 
-	void Function::serialize(std::ostream& out) const {
-		throw base::NotYetImplemented("Function::serialize");
-	}
-
-	void CodeFile::serialize(std::ostream& out) const {
-		throw base::NotYetImplemented("CodeFile::serialize");
-	}
 }

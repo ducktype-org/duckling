@@ -27,3 +27,15 @@ compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() co
 void compiler::backend_vm::BlockBuilder::addInstruction(const VmInstruction& instruction) {
 	instructions.push_back(instruction);
 }
+
+void compiler::backend_vm::Block::serialize(std::ostream& out) const {
+	throw base::NotYetImplemented("Block::serialize");
+}
+
+void compiler::backend_vm::Function::serialize(std::ostream& out) const {
+	throw base::NotYetImplemented("Function::serialize");
+}
+
+void compiler::backend_vm::CodeFile::serialize(std::ostream& out) const {
+	throw base::NotYetImplemented("CodeFile::serialize");
+}
