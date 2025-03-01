@@ -99,3 +99,6 @@ duck_add_test(base bits_and_bytes_test tests/bits_and_bytes_test.cpp
 
 duck_add_test(base is_complete_test tests/is_complete_test.cpp
         USES Base)
+
+duck_add_test(base type_name_test tests/type_name_test.cpp
+        USES Base)
