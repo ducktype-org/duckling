@@ -162,25 +162,23 @@ private:
 		assertTrue(hash_algorithm<Fnv1a_32>, "Fnv1a_32 should be a hashing algorithm");
 		assertTrue(hash_algorithm<Fnv1a_64>, "Fnv1a_64 should be a hashing algorithm");
 		assertTrue(hash_algorithm<DebugHash>, "DebugHash should be a hashing algorithm");
-		constexpr auto res1 = Fnv1a_32{}(4);
+		constexpr auto res1 = Hash<Fnv1a_32, TypeCode<u32, false>>{}(4);
 		constexpr auto arr  = std::array{ 1, 2, 3 };
-		constexpr auto res2 = Fnv1a_64{}(std::span{ arr });
-		constexpr auto res3 = [] {
-			DebugHash dh;
-			dh(std::span{ "hello" });
-			return dh.finalize().size();
+		constexpr auto res2 = Hash<Fnv1a_64, TypeCode<u64, false>>{}(std::span{ arr });
+		auto           res3 = [] {
+            DebugHash dh;
+            dh(std::as_bytes(std::span{ "hello" }));
+            return dh.finalize().size();
 		}();
 		assertTrue(
-			std::is_same_v<decltype(res1.finalize()), u32>,
-			"Fnv1a_32's finalize() should return u32"
+			std::is_same_v<decltype(res1), const u32>, "Fnv1a_32's finalize() should return u32"
 		);
 		assertTrue(
-			std::is_same_v<decltype(res2.finalize()), u64>,
-			"Fnv1a_64's finalize() should return u64"
+			std::is_same_v<decltype(res2), const u64>, "Fnv1a_64's finalize() should return u64"
 		);
 		assertTrue(res3 > 0, "DebugHash should return a non-empty string");
 		DebugHash dh;
-		dh(std::span{ "hello 1234567890" });
+		dh(std::as_bytes(std::span{ "hello 1234567890" }));
 
 		Hash<DebugHash, TypeCode<>>{}(type3{});
 		Hash<DebugHash>{}(type4{});

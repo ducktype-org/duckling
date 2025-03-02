@@ -63,30 +63,10 @@ namespace hashing {
 		I state = OFFSET_BASIS;
 
 	public:
-		constexpr Fnv1a<I>& operator()(const std::span<const std::byte> span) noexcept {
+		constexpr Fnv1a<I>& operator()(detail::span_of_bytes auto span) noexcept {
 			for (auto&& c: span) {
-				state ^= static_cast<const unsigned char>(c);
+				state ^= static_cast<unsigned char>(c);
 				state *= FNV_PRIME;
-			}
-			return *this;
-		}
-
-		template<typename T>
-		requires((std::has_unique_object_representations_v<T> && !std::ranges::range<T>) )
-		constexpr Fnv1a<I>& operator()(const T& t) noexcept {
-			const std::array arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
-			this->operator()(std::span{ arr.data(), arr.size() });
-			return *this;
-		}
-
-		template<typename R>
-		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
-		constexpr Fnv1a<I>& operator()(const R& range) noexcept {
-			for (auto&& it: range) {
-				using val_t = std::ranges::range_value_t<R>;
-				const auto arr
-					= std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
-				this->operator()(std::span{ arr.data(), arr.size() });
 			}
 			return *this;
 		}
@@ -114,7 +94,7 @@ namespace hashing {
 	public:
 		// spans of bytes
 		constexpr void
-			operator()(const std::span<const std::byte> span, Type type = Type::Other) noexcept {
+			operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));
@@ -126,27 +106,6 @@ namespace hashing {
 		constexpr void operator()(TypeC hash) noexcept {
 			const auto arr = std::bit_cast<std::array<const std::byte, sizeof(TypeC)>, TypeC>(hash);
 			this->operator()(std::span{ arr.data(), arr.size() }, Type::Code);
-		}
-
-		// objects with unique representations but not ranges nor type codes
-		template<typename T>
-		requires(not base::IsInstantiationOfTypeValue<T, TypeCode> && std::has_unique_object_representations_v<T> && not std::ranges::range<T>)
-		constexpr void operator()(const T& t) noexcept {
-			const std::array arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
-			this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
-		}
-
-		// contiguous ranges
-		template<typename R>
-		requires(std::ranges::contiguous_range<R> && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>)
-		constexpr auto& operator()(const R& range) noexcept {
-			for (auto&& it: range) {
-				using val_t = std::ranges::range_value_t<R>;
-				const auto arr
-					= std::bit_cast<std::array<const std::byte, sizeof(val_t)>, val_t>(it);
-				this->operator()(std::span{ arr.data(), arr.size() }, Type::Other);
-			}
-			return *this;
 		}
 
 		using result_type = std::string;
