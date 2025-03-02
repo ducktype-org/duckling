@@ -514,25 +514,25 @@ private:
 		{
 			auto& var = get_var_ref(0);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type.type, i32_type);
 		}
 
 		{
 			auto& var = get_var_ref(1);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type.type, i32_type);
 		}
 
 		{
 			auto& var = get_var_ref(2);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			ASSERT_EQUAL(var.type.getType(), i32_or_f32);
+			ASSERT_EQUAL(var.type.type, i32_or_f32);
 		}
 
 		{
 			auto& var = get_var_ref(3);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
-			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+			ASSERT_EQUAL(var.type.type.getKind(), tsh::Kind::Class);
 		}
 
 		{
@@ -541,13 +541,13 @@ private:
                 *if_stmt.body.statements.at(0)
             );
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type.type, i32_type);
 		}
 
 		{
 			auto& var = get_var_ref(5);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
-			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
+			ASSERT_EQUAL(var.type.type.getKind(), tsh::Kind::Class);
 		}
 
 		// debug print test just for cov and to see if it does not throw:
@@ -647,7 +647,7 @@ private:
 
 				auto& a_param = function.content.parameters->at(0);
 				ASSERT_EQUAL("a", a_param.name);
-				ASSERT_EQUAL(int32_type, a_param.type.getType());
+				ASSERT_EQUAL(int32_type, a_param.type.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
@@ -683,8 +683,8 @@ private:
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
 
-				ASSERT_EQUAL(int32_type, abc_param.type.getType());
-				ASSERT_EQUAL(int64_type, second_param.type.getType());
+				ASSERT_EQUAL(int32_type, abc_param.type.type);
+				ASSERT_EQUAL(int64_type, second_param.type.type);
 
 				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
