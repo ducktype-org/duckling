@@ -85,10 +85,9 @@ private:
 };
 
 int main(int argc, const char**) {
-	if (argc != 1)
-		CORE_PANIC("Test expects no arguments");
-            
-	auto config = tester::testConfigFromArgs( "/common/tester/tests/");
+	if (argc != 1) CORE_PANIC("Test expects no arguments");
+
+	auto config = tester::testConfigFromArgs("/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);
 	if (!passing_test.run()) return 1;

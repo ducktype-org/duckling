@@ -133,16 +133,15 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                                \
-	int main(int argc, const char* const*) {                                         \
-		init::InitObject _;                                                          \
-		if (argc != 1) \
-			CORE_PANIC("Test expects no arguments"); \
-                                                                                     \
-		auto config = tester::testConfigFromArgs(test_path); \
-                                                                                     \
-		TESTER_CLASS test(std::move(config));                                        \
-		if (!test.run()) return 1;                                                   \
+#define TESTER_COMMON_MAIN(test_path)                           \
+	int main(int argc, const char* const*) {                    \
+		init::InitObject _;                                     \
+		if (argc != 1) CORE_PANIC("Test expects no arguments"); \
+                                                                \
+		auto config = tester::testConfigFromArgs(test_path);    \
+                                                                \
+		TESTER_CLASS test(std::move(config));                   \
+		if (!test.run()) return 1;                              \
 	}
 
 }
