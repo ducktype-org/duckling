@@ -13,6 +13,8 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 #include <base/define_helper.hpp>
+#include <base/ints.hpp>
+#include <base/exceptions.hpp>
 #include <init/init.hpp>  // IWYU pragma: export
 
 
@@ -132,10 +134,12 @@ namespace tester {
  * and after defining proper TESTER_CLASS
  */
 #define TESTER_COMMON_MAIN(test_path)                                                \
-	int main(int argc, const char* argv[]) {                                         \
+	int main(int argc, const char* const*) {                                         \
 		init::InitObject _;                                                          \
+		if (argc != 1) \
+			CORE_PANIC("Test expects no arguments"); \
                                                                                      \
-		auto config = tester::testConfigFromArgs({ (usize) argc, argv }, test_path); \
+		auto config = tester::testConfigFromArgs(test_path); \
                                                                                      \
 		TESTER_CLASS test(std::move(config));                                        \
 		if (!test.run()) return 1;                                                   \
