@@ -63,9 +63,9 @@ namespace compiler::helios {
 		}
 
 		struct HoutStmtMaker final: public pst::PstVisitorPanicky {
-			query::Context&                       ctx;
-			bool                                  empty = false;
-			base::Optional<base::Box<code::Stmt>> out;
+			query::Context&                 ctx;
+			bool                            empty = false;
+			base::Optional<Box<code::Stmt>> out;
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
@@ -128,11 +128,9 @@ namespace compiler::helios {
 
 					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
 
-					output(
-						code::AssignmentStmt(
-							scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol
-						)
-					);
+					output(code::AssignmentStmt(
+						scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol
+					));
 					return;
 				}
 
@@ -175,14 +173,12 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>({ stmt.getValue()->getExpr() })
 				          .expect("Not handling errors here yet... (variable initial value)");
 
-				output(
-					code::VariableStmt(
-						scope(symbol),
-						std::move(initial_value),
-						tsh::ComponentType{ symbol_type },
-						symbol
-					)
-				);
+				output(code::VariableStmt(
+					scope(symbol),
+					std::move(initial_value),
+					tsh::ComponentType{ .type = symbol_type },
+					symbol
+				));
 			}
 		};
 
@@ -239,7 +235,7 @@ namespace compiler::helios {
 					if (value.empty()) {
 						parameters.emplace_back(
 							param_name,
-							tsh::ComponentType{ param_type->value() },
+							tsh::ComponentType{ .type = param_type->value() },
 							std::nullopt,
 							param_symbol
 						);
@@ -255,7 +251,7 @@ namespace compiler::helios {
 
 						parameters.emplace_back(
 							param_name,
-							tsh::ComponentType{ param_type->value() },
+							tsh::ComponentType{ .type = param_type->value() },
 							std::move(initial_value.value()),
 							param_symbol
 						);
