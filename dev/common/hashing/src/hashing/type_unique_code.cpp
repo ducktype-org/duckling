@@ -1,12 +1,6 @@
-#include <type_traits>
-#include <concepts>
-#include <cassert>
-#include <limits>
-#include <span>
-
 #include <base/ints.hpp>
 
-#include "type_code.hpp"
+#include "type_unique_code.hpp"
 
 namespace hashing::detail {
 
