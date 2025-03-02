@@ -85,7 +85,7 @@ namespace hashing {
 		// if the range is contiguous and its elements have unique representations we can
 		// treat it as a segment of memory and hash it directly
 		else if constexpr (detail::can_hash_range_as_chars<HashAlgorithm, T>) {
-			detail::hashRangeAsChars(hash_alg, t);
+			detail::hashRangeAsBytes(hash_alg, t);
 		}
 		// if for each value of the type there is a unique representation of it in memory,
 		// we can treat it as a sequence of chars and hash it directly

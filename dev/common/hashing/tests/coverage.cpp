@@ -81,7 +81,7 @@ namespace my_map {
 }
 
 template<typename T>
-concept check_hashRangeAsChars = requires(T t) { detail::hashRangeAsChars(Fnv1a_32{}, t); };
+concept check_hashRangeAsBytes = requires(T t) { detail::hashRangeAsBytes(Fnv1a_32{}, t); };
 
 struct Check_1 {
 	void updateHash(void*, usize) {}
@@ -280,15 +280,15 @@ private:
 			"Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>"
 		);
 
-		detail::hashRangeAsChars(h1, std::array{ 1, 2, 3 });
-		detail::hashRangeAsChars(h1, s);
-		detail::hashRangeAsChars(h1, std::vector{ 1, 2, 3 });
+		detail::hashRangeAsBytes(h1, std::array{ 1, 2, 3 });
+		detail::hashRangeAsBytes(h1, s);
+		detail::hashRangeAsBytes(h1, std::vector{ 1, 2, 3 });
 		assertFalse(
-			check_hashRangeAsChars<std::map<int, int>>,
+			check_hashRangeAsBytes<std::map<int, int>>,
 			"std::map<int, int> should not be hashable as chars"
 		);
 		assertFalse(
-			check_hashRangeAsChars<std::array<std::string, 3>>,
+			check_hashRangeAsBytes<std::array<std::string, 3>>,
 			"std::array<std::string, 3> should not be hashable as chars"
 		);
 	}
@@ -339,7 +339,7 @@ private:
 		constexpr std::string_view sv2      = "qwertyuioplkjhgfdsazxcvbnm123456789098765432";
 		constexpr auto             str_size = [&] {
             DebugHash d;
-            detail::hashRangeAsChars(d, sv2);
+            detail::hashRangeAsBytes(d, sv2);
             return d.finalize().size();
 		}();
 		assertTrue(str_size == 187, "string should have 660 characters");

@@ -134,7 +134,7 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_chars<HashAlgorithm, R>
-		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& r) {
+		constexpr void hashRangeAsBytes(HashAlgorithm& h, const R& r) {
 			constexpr std::size_t elem_size   = sizeof(std::ranges::range_value_t<R>);
 			const std::size_t     r_size      = std::ranges::size(r);
 			const std::size_t     buffer_size = r_size * elem_size;
