@@ -102,10 +102,10 @@ namespace hashing {
 		 * Hashes an object as a sequence of bytes
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
-		constexpr void hashAsBytes(HashAlgorithm&& h, const T& t) {
+		constexpr void hashAsBytes(HashAlgorithm& h, const T& t) {
 			const auto      arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
 			const std::span span{ arr.data(), arr.size() };
-			std::forward<HashAlgorithm>(h)(span);
+			h(span);
 		}
 
 		/**

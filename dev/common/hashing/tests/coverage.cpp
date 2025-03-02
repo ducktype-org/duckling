@@ -237,11 +237,9 @@ private:
 			"Fnv1a_32 should be invocable with a span of bytes"
 		);
 
-		detail::hashAsBytes(Fnv1a_32{}, 42);
 		Fnv1a_64 h1;
 		detail::hashAsBytes(h1, 42.0f);
 		detail::hashAsBytes(h1, std::array{ 1, 2, 3 });
-		detail::hashAsBytes(Fnv1a_32{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
 
 		std::string s = "hello_long_string";
 		assertTrue(
