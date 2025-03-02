@@ -7,7 +7,6 @@
  */
 
 #include <filesystem/file.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <base/exceptions.hpp>
