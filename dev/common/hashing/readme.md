@@ -246,7 +246,7 @@ Adapting algorithm to the module
 
 If we want to add a new hashing algorithm we have to create a class that will split the hashing logic into three parts: setup, hashing and finalization.
 
-To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` member type which will be returned after calling the member function `finalize()`. It also has to have a call operator that takes a `std::span<std::byte>`.
+To help organize it a bit there is a `hash_algorithm` concept which checks some of those properties. To satisfy it our algorithm has to be an object, have a `result_type` member type which will be returned after calling the member function `finalize()`. It also has to have a call operator can take a `std::span<const std::byte>`.
 
 As stated before algorithm has to be organized into three stages:
 

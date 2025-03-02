@@ -10,12 +10,21 @@
 #include <span>
 #include <bit>
 
+#include <base/type_traits.hpp>
 #include <base/ints.hpp>
 
 namespace hashing {
 
 
 	namespace detail {
+
+		/**
+		 * checks if the type is a span of const or non-const bytes
+		 */
+		template<typename T>
+		concept span_of_bytes
+			= base::IsInstantiationOfTypeValue<T, std::span>
+		   && std::same_as<std::remove_const_t<typename T::value_type>, std::byte>;
 
 		/**
 		 * checks if the type can be invoked with a span of byte
@@ -102,8 +111,8 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
-			const auto arr  = std::bit_cast<std::array<std::byte, sizeof(T)>, T>(t);
-			const auto span = std::span{ arr.data(), arr.size() };
+			const auto      arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
+			const std::span span{ arr.data(), arr.size() };
 			std::forward<HashAlgorithm>(h)(span);
 		}
 
@@ -116,10 +125,7 @@ namespace hashing {
 		concept can_hash_range_as_chars
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
-		   && requires(HashAlgorithm& h, const R& t) {
-				  std::span{ std::ranges::data(t), std::ranges::size(t) };
-				  h(std::as_bytes(std::span{ std::ranges::data(t), std::ranges::size(t) }));
-			  };
+		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**
 		 * hashes a range as a contiguous sequence of memory
@@ -128,9 +134,23 @@ namespace hashing {
 		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_chars<HashAlgorithm, R>
-		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& t) {
-			const auto span = std::span{ std::ranges::data(t), std::ranges::size(t) };
-			h(std::as_bytes(span));
+		constexpr void hashRangeAsChars(HashAlgorithm& h, const R& r) {
+			constexpr std::size_t elem_size   = sizeof(std::ranges::range_value_t<R>);
+			const std::size_t     r_size      = std::ranges::size(r);
+			const std::size_t     buffer_size = r_size * elem_size;
+			auto* const           buffer      = ::new std::byte[buffer_size];
+
+			for (u64 i = 0, j = 0; i < r_size; ++i, j += elem_size) {
+				const auto& elem = *std::next(
+					std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
+				);
+				const auto arr = std::bit_cast<std::array<const std::byte, elem_size>>(elem);
+				std::copy(arr.begin(), arr.end(), buffer + j);
+			}
+
+			h(std::span<const std::byte>{ buffer, buffer_size });
+
+			delete[] buffer;
 		}
 
 		/**

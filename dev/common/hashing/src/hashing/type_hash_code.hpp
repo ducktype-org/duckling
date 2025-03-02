@@ -26,7 +26,7 @@ namespace hashing {
 		struct StrToIntegral final {
 			TypeCode<I, false> hash_value;
 
-			consteval StrToIntegral(const std::span<std::byte> span) {
+			consteval StrToIntegral(const std::span<const std::byte> span) {
 				HashAlgorithm h;
 				h(span);
 				hash_value.value = static_cast<I>(h.finalize());

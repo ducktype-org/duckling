@@ -60,7 +60,7 @@ namespace hashing {
 				std::declval<StrToIntegral<typename TypeC::value_type, HashAlgorithm>>()
 			);
 			detail::getIDFromUniqueString<T, typename TypeC::value_type, HashAlgorithm>();
-			h(TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
+			addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
 		};
 
 		/**
@@ -73,13 +73,13 @@ namespace hashing {
 			typename T>
 		constexpr void addTypeCode(HashAlgorithm& h) noexcept {
 			if (TypeC::IS_UNIQUE)
-				h(TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);
+				addToHash(h, TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);
 			else if constexpr (detail::can_get_type_hash_code<T, TypeC, HashAlgorithm>)
-				h(TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
+				addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, HashAlgorithm>);
 			else if constexpr (detail::can_get_type_hash_code<T, TypeC, DefaultHashAlgorithm>)
-				h(TYPE_HASH_CODE<T, typename TypeC::value_type, DefaultHashAlgorithm>);
+				addToHash(h, TYPE_HASH_CODE<T, typename TypeC::value_type, DefaultHashAlgorithm>);
 			else
-				h(TYPE_HASH_CODE<T>);
+				addToHash(h, TYPE_HASH_CODE<T>);
 		}
 
 	}  // namespace detail
