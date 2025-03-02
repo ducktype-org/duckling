@@ -138,7 +138,7 @@ namespace tester {
 		init::InitObject _;                                     \
 		if (argc != 1) CORE_PANIC("Test expects no arguments"); \
                                                                 \
-		auto config = tester::testConfigFromArgs(test_path);    \
+		auto config = tester::getTestConfig(test_path);    \
                                                                 \
 		TESTER_CLASS test(std::move(config));                   \
 		if (!test.run()) return 1;                              \
