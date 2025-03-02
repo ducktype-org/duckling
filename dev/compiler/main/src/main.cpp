@@ -21,7 +21,7 @@
 #include <init/init.hpp>
 #include <driver/driver.hpp>
 
-constexpr auto LET_IT_THROW_NAME = "let-it-throw";
+constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
 constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
 
 /**
@@ -122,12 +122,12 @@ clap::Clap getClapForMain() {
 	auto clap = config::standardOptions();
 
 	// custom options of main:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName(LET_IT_THROW_NAME)
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. It should be used for debugging only in order to preserve stack-trace. It can prevent stack-unwinding from happening.")
-			.build()
-	);
+	clap.add(clap::ParamBuilder::ofFlag()
+	             .addLongName(LET_IT_THROW_NAME)
+	             .addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                           "It should be used for debugging only in order to preserve "
+	                           "stack-trace. It can prevent stack-unwinding from happening.")
+	             .build());
 
 	return clap;
 }
@@ -375,9 +375,7 @@ int main(int argc, const char* argv[]) {
 		}
 	}
 
-	if (throwing_main) {
-		return mainProcedure(argc, argv);
-	}
+	if (throwing_main) return mainProcedure(argc, argv);
 
 	// else we just catch exceptions and print them:
 
