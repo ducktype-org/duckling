@@ -65,7 +65,7 @@ add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)
 
 add_example(constexpr_cat_example src/base/examples/constexpr_cat_example.cpp
-        USES Base)
+        USES Base Filesystem)
 
 add_example(defer_example src/base/examples/defer_example.cpp
         USES Base)

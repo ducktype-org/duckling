@@ -5,6 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/ints.hpp>
+#include <base/anycast.hpp>
 
 #include <query_framework/query_int.hpp>
 #include <query_framework/query_impl.hpp>
