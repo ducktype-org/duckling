@@ -56,7 +56,7 @@ namespace tester {
 			const char* what() const noexcept final;
 		};
 
-		printer::StreamPrinter streamPrinter;
+		printer::StreamPrinter stream_printer;
 
 		struct TestData final {
 			TestType    test;
