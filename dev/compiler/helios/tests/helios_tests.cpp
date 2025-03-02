@@ -9,7 +9,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
@@ -30,8 +29,6 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		pst::init();
-
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testError);

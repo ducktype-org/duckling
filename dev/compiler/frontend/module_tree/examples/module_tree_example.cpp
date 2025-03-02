@@ -1,7 +1,10 @@
 #include <frontend/module_tree/module_tree.hpp>
 #include <iostream>
+#include <init/init.hpp>
 
 int main() {
+	init::InitObject _;
+
 	using compiler::frontend::ModuleTree;
 
 	// First argument is some kind of a path to a module we want to parse.

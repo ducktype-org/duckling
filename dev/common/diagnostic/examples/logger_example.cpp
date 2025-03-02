@@ -1,4 +1,5 @@
 #include <diagnostic/logger.hpp>
+#include <init/init.hpp>
 
 // Extend Error, Warning, or Info.
 class MessageRelevantToThisSituation: public dia::Error {
@@ -20,6 +21,7 @@ protected:
 
 // ...
 int main() {
+	init::InitObject _;
 	dia::Logger logger;
 
 	// ...
