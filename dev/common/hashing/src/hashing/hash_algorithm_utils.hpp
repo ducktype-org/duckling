@@ -74,14 +74,6 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * checks if the hash algorithm can hash the type directly (i.e. it has an operator() that
-		 * accepts the type)
-		 */
-		template<typename HashAlgorithm, typename T>
-		concept can_hash_directly
-			= hash_algorithm<HashAlgorithm> && requires(HashAlgorithm& h, const T& t) { h(t); };
-
-		/**
 		 * checks if the type can be hashed with std::hash
 		 */
 		template<typename T>
@@ -110,7 +102,7 @@ namespace hashing {
 		 * hashes an object as a sequence of bytes
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
-		constexpr void hashAsChars(HashAlgorithm&& h, const T& t) {
+		constexpr void hashAsBytes(HashAlgorithm&& h, const T& t) {
 			const auto      arr = std::bit_cast<std::array<const std::byte, sizeof(T)>, T>(t);
 			const std::span span{ arr.data(), arr.size() };
 			std::forward<HashAlgorithm>(h)(span);
@@ -122,25 +114,39 @@ namespace hashing {
 		 * and size is known)
 		 */
 		template<typename HashAlgorithm, typename R>
-		concept can_hash_range_as_chars
+		concept can_hash_range_as_bytes
 			= hash_algorithm<HashAlgorithm> && std::ranges::contiguous_range<R>
 		   && std::has_unique_object_representations_v<std::ranges::range_value_t<R>>
 		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**
 		 * hashes a range as a contiguous sequence of memory
-		 * (when its elements are in a contiguous memory block, have unique object representations
+		 * (requires that its elements are in a contiguous memory block, have unique object representations
 		 * and size is known)
 		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
-		requires can_hash_range_as_chars<HashAlgorithm, R>
+		requires can_hash_range_as_bytes<HashAlgorithm, R>
 		constexpr void hashRangeAsBytes(HashAlgorithm& h, const R& r) {
+			// In C++23 the only way to get the memory representation of an object
+			// as a sequence of bytes is to use std::bit_cast. Since the range may be large,
+			// we don't want to copy it to a local buffer as it could cause stack overflow,
+			// so instead we allocate a buffer on the heap and copy the elements one by one
+			// using std::bit_cast
+			// Note: since C++20 if an allocation is freed in the same expression it was allocated in
+			// it is allowed to be a constant expression
+			// The buffer is then passed to the hash algorithm.
+			// The memory is freed in the same scope and compiler should also see that the buffer
+			// is a memcopy of the range's data. This should allow for copy elision and no overhead.
+
 			constexpr std::size_t elem_size   = sizeof(std::ranges::range_value_t<R>);
 			const std::size_t     r_size      = std::ranges::size(r);
 			const std::size_t     buffer_size = r_size * elem_size;
 			auto* const           buffer      = ::new std::byte[buffer_size];
 
 			for (u64 i = 0, j = 0; i < r_size; ++i, j += elem_size) {
+				// Ranges may have both singed and unsigned index types and there is not good trait
+				// that can always tell which one the range expects. To suppress warnings we get the
+				// elements using std::next with range's difference_type 
 				const auto& elem = *std::next(
 					std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
 				);

@@ -195,21 +195,6 @@ private:
 			"getBase<X>(type_with_bases{}) should return const X&"
 		);
 
-		assertFalse(
-			detail::can_hash_directly<Fnv1a_32, int>, "Fnv1a_32 should not be able to hash int"
-		);
-		assertFalse(
-			detail::can_hash_directly<Fnv1a_64, std::array<int, 3>>,
-			"Fnv1a_64 should not be able to hash std::array<int, 3>"
-		);
-		assertFalse(
-			detail::can_hash_directly<Fnv1a_32, std::string>,
-			"Fnv1a_32 should not be able to hash std::string"
-		);
-		assertFalse(
-			detail::can_hash_directly<Fnv1a_64, float>, "Fnv1a_64 should not be able to hash float"
-		);
-
 		assertTrue(detail::can_stdhash<int>, "int should be hashable with std::hash");
 		assertTrue(
 			detail::can_stdhash<std::string>, "std::string should be hashable with std::hash"
@@ -252,31 +237,31 @@ private:
 			"Fnv1a_32 should be invocable with a span of bytes"
 		);
 
-		detail::hashAsChars(Fnv1a_32{}, 42);
+		detail::hashAsBytes(Fnv1a_32{}, 42);
 		Fnv1a_64 h1;
-		detail::hashAsChars(h1, 42.0f);
-		detail::hashAsChars(h1, std::array{ 1, 2, 3 });
-		detail::hashAsChars(Fnv1a_32{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
+		detail::hashAsBytes(h1, 42.0f);
+		detail::hashAsBytes(h1, std::array{ 1, 2, 3 });
+		detail::hashAsBytes(Fnv1a_32{}, std::array<float, 3>{ 1.0f, 2.0f, 3.0f });
 
 		std::string s = "hello_long_string";
 		assertTrue(
-			detail::can_hash_range_as_chars<Fnv1a_32, std::array<int, 3>>,
+			detail::can_hash_range_as_bytes<Fnv1a_32, std::array<int, 3>>,
 			"Fnv1a_32 should be able to hash as chars std::array<int, 3>"
 		);
 		assertTrue(
-			detail::can_hash_range_as_chars<Fnv1a_64, std::string>,
+			detail::can_hash_range_as_bytes<Fnv1a_64, std::string>,
 			"Fnv1a_64 should be able to hash as chars std::string"
 		);
 		assertTrue(
-			detail::can_hash_range_as_chars<Fnv1a_32, std::vector<int>>,
+			detail::can_hash_range_as_bytes<Fnv1a_32, std::vector<int>>,
 			"Fnv1a_32 should be able to hash as chars std::vector<int>"
 		);
 		assertFalse(
-			detail::can_hash_range_as_chars<Fnv1a_64, std::map<int, int>>,
+			detail::can_hash_range_as_bytes<Fnv1a_64, std::map<int, int>>,
 			"Fnv1a_64 should not be able to hash as chars std::map<int, int>"
 		);
 		assertFalse(
-			detail::can_hash_range_as_chars<Fnv1a_32, std::array<std::string, 3>>,
+			detail::can_hash_range_as_bytes<Fnv1a_32, std::array<std::string, 3>>,
 			"Fnv1a_32 should not be able to hash as chars std::array<std::string, 3>"
 		);
 
@@ -389,10 +374,6 @@ private:
 		addToHash(h2, S{});  // S has addToHash overload
 		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
 		addToHash(h2, Z{});  // Z has hashDecompose overload
-		assertFalse(
-			detail::can_hash_directly<decltype(h2), std::string_view>,
-			"h2 should not be able to hash std::string_view"
-		);
 		addToHash(h2, std::span{ "wertyuiop" });  // can hash directly
 		addToHash(h2, 123.0f);                    // hashing floating point
 		X* xptr = nullptr;
@@ -401,7 +382,7 @@ private:
 		auto range = std::vector{ 9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 }
 		           | std::views::take(10);
 		assertTrue(
-			detail::can_hash_range_as_chars<decltype(h2), decltype(range)>,
+			detail::can_hash_range_as_bytes<decltype(h2), decltype(range)>,
 			"h2 should be able to hash range as chars"
 		);
 		addToHash(h2, range);  // hashing range as chars
