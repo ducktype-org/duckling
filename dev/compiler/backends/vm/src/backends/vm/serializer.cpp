@@ -1,5 +1,3 @@
-#pragma once
-
 #include <iomanip>
 
 #include "base/int_conv.hpp"
@@ -23,15 +21,15 @@ namespace compiler::backend_vm {
 
 	std::string toString0ArgOpcodeTemplate(const std::string_view opcode_name) {
 		std::ostringstream oss;
-		oss << std::setw(18) << std::left << opcode_name;
+		oss << opcode_name;
 		oss << ";";
 		return oss.str();
 	}
 
 	std::string toString1ArgOpcodeTemplate(const std::string_view opcode_name, auto arg1) {
 		std::ostringstream oss;
-		oss << std::setw(18) << std::left << opcode_name << " ";
-		oss << std::setw(8) << toString(arg1);
+		oss << std::setw(17) << std::left << opcode_name << " ";
+		oss << std::setw(8) << std::right << toString(arg1);
 		oss << ";";
 		return oss.str();
 	}
@@ -39,18 +37,18 @@ namespace compiler::backend_vm {
 	std::string
 		toString2ArgsOpcodeTemplate(const std::string_view opcode_name, auto arg1, auto arg2) {
 		std::ostringstream oss;
-		oss << std::setw(18) << std::left << opcode_name << " ";
-		oss << std::setw(8) << toString(arg1) << ",";
-		oss << std::setw(8) << toString(arg2);
+		oss << std::setw(17) << std::left << opcode_name << " ";
+		oss << std::setw(8) << std::right << toString(arg1) << ",";
+		oss << std::setw(8) << std::right << toString(arg2);
 		oss << ";";
 		return oss.str();
 	}
 
 	struct InstructionSerializerVisitor {
-		std::string operator()(Guardian _) { CORE_PANIC("Should not serialize Guardian"); }
+		std::string operator()(Guardian) { CORE_PANIC("Should not serialize Guardian"); }
 
 #define HANDLE_OPCODE_0ARGS(opcode) \
-	std::string operator()(Op_##opcode opcode) { return toString0ArgOpcodeTemplate(#opcode); }
+	std::string operator()(Op_##opcode) { return toString0ArgOpcodeTemplate(#opcode); }
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                   \
 	std::string operator()(Op_##opcode opcode) {                 \
 		return toString1ArgOpcodeTemplate(#opcode, opcode.arg0); \
@@ -85,14 +83,14 @@ namespace compiler::backend_vm {
 		void indentDown() { current_indentation -= 4; }
 
 		void writeOptions() {
-			withIdentWriteLine("stack_size: " + std::to_string(function.stack_size));
-			withIdentWriteLine("arg_size: " + std::to_string(function.arg_size));
-			withIdentWriteLine("next_arg_size: " + std::to_string(function.next_arg_size));
-			withIdentWriteLine("ret_size: " + std::to_string(function.ret_size));
+			withIdentWriteLine("local_size: " + std::to_string(function.stack_size) + ";");
+			withIdentWriteLine("arg_size: " + std::to_string(function.arg_size) + ";");
+			withIdentWriteLine("next_arg_size: " + std::to_string(function.next_arg_size) + ";");
+			withIdentWriteLine("ret_size: " + std::to_string(function.ret_size) + ";");
 		}
 
 		void writeCode() {
-			withIdentWriteLine("code {");
+			withIdentWriteLine("code: {");
 			indentUp();
 
 			for (const auto& instruction: function.body.instructions)
@@ -112,6 +110,7 @@ namespace compiler::backend_vm {
 			indentUp();
 
 			writeOptions();
+			out << '\n';
 			writeCode();
 
 			indentDown();
@@ -128,60 +127,36 @@ namespace compiler::backend_vm {
 			std::ostream& out;
 
 			void operator()(const vm::PrimitiveType& type) {
-				out << "primitive {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    size: " << type.size << "\n";
-				out << "}";
+				out << "type primitive: ";
+				out << type.name.strView() << " ";
+				out << type.size;
 			}
 
-			void operator()(const vm::PointerType& type) {
-				out << "pointer {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    inner: " << type.inner.strView() << "\n";
-				out << "}";
+			void operator()(const vm::PointerType&) {
+				throw base::NotYetImplemented("PointerType serialization");
 			}
 
 			void operator()(const vm::StaticTableType& type) {
-				out << "dynamic_table {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    inner: " << type.inner.strView() << "\n";
-				out << "}";
+				out << "type static_table: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView() << " ";
+				out << type.table_size;
 			}
 
-			void operator()(const vm::DynamicTableType& type) {
-				out << "dynamic_table {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    inner: " << type.inner.strView() << "\n";
-				out << "}";
+			void operator()(const vm::DynamicTableType&) {
+				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::DataType& type) {
-				out << "data {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    fields: [";
-				for (auto& field: type.fields)
-					out << field.name.strView() << ": " << field.type.strView() << ", ";
-				out << "]\n";
-				out << "}";
+			void operator()(const vm::DataType&) {
+				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::VariantType& type) {
-				out << "variant {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    alternatives: [";
-				for (auto& alt: type.variant_alternatives) out << alt.strView() << ", ";
-				out << "]\n";
-				out << "}";
+			void operator()(const vm::VariantType&) {
+				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::FunctionType& type) {
-				out << "function {\n";
-				out << "    name: " << type.name.strView() << "\n";
-				out << "    parameters: [";
-				for (auto& param: type.parameters) out << param.strView() << ", ";
-				out << "]\n";
-				out << "    result: " << type.result.strView() << "\n";
-				out << "}";
+			void operator()(const vm::FunctionType&) {
+				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 		};
 
@@ -195,11 +170,15 @@ namespace compiler::backend_vm {
 		for (const auto& type: file.types) {
 			TypeSerializer serializer(out, type);
 			serializer.write();
+			out << '\n';
 		}
+
+		out << '\n';
 
 		for (const auto& function: file.functions) {
 			FunctionSerializer serializer(out, function);
 			serializer.write();
+			out << '\n';
 		}
 	}
 }
