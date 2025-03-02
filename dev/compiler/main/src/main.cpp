@@ -21,12 +21,8 @@
 #include <init/init.hpp>
 #include <driver/driver.hpp>
 
-namespace {
-	/**
-	 * @brief Whether main should throw compiler exceptions.
-	 */
-	bool throwing_main = true;
-}
+constexpr auto LET_IT_THROW_NAME = "let-it-throw";
+constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
 
 /**
  * @brief Type of command callback. The returned int value is the value
@@ -128,11 +124,8 @@ clap::Clap getClapForMain() {
 	// custom options of main:
 	clap.add(
 		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
+			.addLongName(LET_IT_THROW_NAME)
+			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. It should be used for debugging only in order to preserve stack-trace. It can prevent stack-unwinding from happening.")
 			.build()
 	);
 
@@ -148,10 +141,6 @@ clap::Clap getClapForMain() {
 clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
 	// standard options:
 	auto res = config::configureWith(clap, args);
-
-	// custom options of main:
-	throwing_main = res.isFlag("let-it-throw");
-
 	return res;
 }
 
@@ -371,22 +360,40 @@ int mainProcedure(int argc, const char* const* argv) {
 }
 
 int main(int argc, const char* argv[]) {
+	// We have to see if --let-it-throw was passed
+	// before anything else happens.
+	// Thats why we do it here, bypassing typical clap usage.
+	// --let-it-throw is still included in clap options.
+	// for showing help.
+
+	bool throwing_main = false;
+
+	for (int i = 1; i < argc; i++) {
+		if (std::string_view(argv[i]) == LET_IT_THROW_OPTION) {
+			throwing_main = true;
+			break;
+		}
+	}
+
+	if (throwing_main) {
+		return mainProcedure(argc, argv);
+	}
+
+	// else we just catch exceptions and print them:
+
 	try {
 		return mainProcedure(argc, argv);
 	} catch (const base::Exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (const std::exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (...) {
-		if (throwing_main) throw;
 		std::cerr
 			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
 		return 1;
