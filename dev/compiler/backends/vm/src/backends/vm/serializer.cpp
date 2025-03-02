@@ -19,43 +19,38 @@ namespace compiler::backend_vm {
 
 	std::string toString(vm::opargs::Label arg) { return arg.label_name.str(); }
 
-	std::string toString0ArgOpcodeTemplate(const std::string_view opcode_name) {
-		std::ostringstream oss;
-		oss << opcode_name;
-		oss << ";";
-		return oss.str();
+	void write0ArgOpcodeTemplate(const std::string_view opcode_name, std::ostream& out) {
+		out << opcode_name;
+		out << ";";
 	}
 
-	std::string toString1ArgOpcodeTemplate(const std::string_view opcode_name, auto arg1) {
-		std::ostringstream oss;
-		oss << std::setw(17) << std::left << opcode_name << " ";
-		oss << std::setw(8) << std::right << toString(arg1);
-		oss << ";";
-		return oss.str();
+	void write1ArgOpcodeTemplate(const std::string_view opcode_name, auto arg1, std::ostream& out) {
+		out << std::setw(17) << std::left << opcode_name << " ";
+		out << std::setw(8) << std::right << toString(arg1);
+		out << ";";
 	}
 
-	std::string
-		toString2ArgsOpcodeTemplate(const std::string_view opcode_name, auto arg1, auto arg2) {
-		std::ostringstream oss;
-		oss << std::setw(17) << std::left << opcode_name << " ";
-		oss << std::setw(8) << std::right << toString(arg1) << ",";
-		oss << std::setw(8) << std::right << toString(arg2);
-		oss << ";";
-		return oss.str();
+	void write2ArgsOpcodeTemplate(
+		const std::string_view opcode_name, auto arg1, auto arg2, std::ostream& out
+	) {
+		out << std::setw(17) << std::left << opcode_name << " ";
+		out << std::setw(8) << std::right << toString(arg1) << ",";
+		out << std::setw(8) << std::right << toString(arg2);
+		out << ";";
 	}
 
 	struct InstructionSerializerVisitor {
-		std::string operator()(Guardian) { CORE_PANIC("Should not serialize Guardian"); }
+		std::ostream& out;
+
+		void operator()(Guardian) { CORE_PANIC("Should not serialize Guardian"); }
 
 #define HANDLE_OPCODE_0ARGS(opcode) \
-	std::string operator()(Op_##opcode) { return toString0ArgOpcodeTemplate(#opcode); }
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                   \
-	std::string operator()(Op_##opcode opcode) {                 \
-		return toString1ArgOpcodeTemplate(#opcode, opcode.arg0); \
-	}
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                      \
-	std::string operator()(Op_##opcode opcode) {                               \
-		return toString2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1); \
+	void operator()(Op_##opcode) { write0ArgOpcodeTemplate(#opcode, out); }
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type) \
+	void operator()(Op_##opcode opcode) { write1ArgOpcodeTemplate(#opcode, opcode.arg0, out); }
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                 \
+	void operator()(Op_##opcode opcode) {                                 \
+		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
 #include "../../../../../../VM/src/code_data/opcodes_list.hpp"
@@ -65,8 +60,8 @@ namespace compiler::backend_vm {
 #undef HANDLE_OPCODE_2ARGS
 	};
 
-	std::string toString(VmInstruction instruction) {
-		return std::visit(InstructionSerializerVisitor(), instruction);
+	void writeInstruction(VmInstruction instruction, std::ostream& out) {
+		std::visit(InstructionSerializerVisitor{ out }, instruction);
 	}
 
 	class FunctionSerializer {
@@ -74,19 +69,29 @@ namespace compiler::backend_vm {
 		const Function& function;
 		i64             current_indentation = 0;
 
+		void withIdentWriteLine(const std::function<void(std::ostream&)>& write) {
+			out << std::string(base::safeIntConv<size_t>(current_indentation), ' ');
+			write(out);
+			out << "\n";
+		}
+
 		void withIdentWriteLine(std::string_view str) {
-			out << std::string(base::safeIntConv<size_t>(current_indentation), ' ') << str << "\n";
+			withIdentWriteLine([&](std::ostream& out) { out << str; });
 		}
 
 		void indentUp() { current_indentation += 4; }
 
 		void indentDown() { current_indentation -= 4; }
 
+		void writeOption(const std::string_view name, usize value) {
+			withIdentWriteLine([&](std::ostream& out) { out << name << ": " << value << ";"; });
+		}
+
 		void writeOptions() {
-			withIdentWriteLine("local_size: " + std::to_string(function.stack_size) + ";");
-			withIdentWriteLine("arg_size: " + std::to_string(function.arg_size) + ";");
-			withIdentWriteLine("next_arg_size: " + std::to_string(function.next_arg_size) + ";");
-			withIdentWriteLine("ret_size: " + std::to_string(function.ret_size) + ";");
+			writeOption("local_size", function.stack_size);
+			writeOption("arg_size", function.arg_size);
+			writeOption("next_arg_size", function.next_arg_size);
+			writeOption("ret_size", function.ret_size);
 		}
 
 		void writeCode() {
@@ -94,7 +99,7 @@ namespace compiler::backend_vm {
 			indentUp();
 
 			for (const auto& instruction: function.body.instructions)
-				withIdentWriteLine(toString(instruction));
+				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
 
 			indentDown();
 			withIdentWriteLine("}");
