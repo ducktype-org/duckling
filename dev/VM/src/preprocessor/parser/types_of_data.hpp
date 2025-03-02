@@ -112,4 +112,7 @@ namespace vm {
 		VariantType,
 		FunctionType>;
 
+	inline base::StrID typeName(const TypeOfData& type) {
+		return std::visit([](const auto& t) { return t.name; }, type);
+	}
 }

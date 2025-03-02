@@ -1,6 +1,7 @@
 add_library(DVMBackend
     src/backends/vm/backend.cpp
     src/backends/vm/builders.cpp
+    src/backends/vm/serializer.cpp
 )
 
 

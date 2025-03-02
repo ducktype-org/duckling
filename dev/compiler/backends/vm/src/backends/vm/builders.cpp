@@ -1,6 +1,8 @@
 #include "builders.hpp"
 #include "backends/vm/elements.hpp"
 #include "backends/vm/instructions.hpp"
+#include <base/ref.hpp>
+#include <preprocessor/parser/types_of_data.hpp>
 #include <ranges>
 
 void compiler::backend_vm::BlockBuilder::addBlock(const BlockBuilder& block) {
@@ -22,13 +24,23 @@ void compiler::backend_vm::CodeFileBuilder::addFunction(const FunctionBuilder& f
 }
 
 void compiler::backend_vm::CodeFileBuilder::addType(const vm::TypeOfData& type) {
-	types.push_back(type);
+	if (type_map.atMaybe(typeName(type))) {
+		// Type already exists, check if it's the same and if true, skip
+	} else {
+		types.push_back(type);
+		auto type_ref = base::CRef<vm::TypeOfData>(&types.back());
+		type_map.put(typeName(type), type_ref);
+	}
 }
 
 compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() const {
 	auto file      = CodeFile();
 	file.types     = types;
-	file.functions = functions;
+	file.functions = std::ranges::to<std::deque<Function>>(
+		functions | std::views::transform([](const auto& function_builder) {
+			return function_builder.build();
+		})
+	);
 	return file;
 }
 
