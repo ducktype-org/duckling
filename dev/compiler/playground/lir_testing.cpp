@@ -14,13 +14,6 @@
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
 
-	// @TODO: add to helios init
-	lexer::init();
-	pst::init();
-
-
-	// @FUTURE: record all inits somewhere..
-
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
 	                                         .addShortName('p')

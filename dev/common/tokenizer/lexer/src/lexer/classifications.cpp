@@ -194,6 +194,8 @@ namespace lexer {
 		SIMPLE_INIT_GUARD_END
 	}
 
+	RUN_BEFORE_MAIN(init::registerForInit(Classifications::init));
+
 	/**
 	 * A wrapper around u_cleanup macro
 	 */

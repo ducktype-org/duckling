@@ -757,8 +757,6 @@ namespace assemble {
 	}
 
 	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {
-		lexer::init();
-		// tpc::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		return lexer::tokenizeFile(path);
 	}

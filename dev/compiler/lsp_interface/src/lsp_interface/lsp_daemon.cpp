@@ -71,7 +71,6 @@ void server(i32 port) {
 	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
-	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.

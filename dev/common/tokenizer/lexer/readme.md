@@ -12,11 +12,13 @@ Usage
 ~~~~~cpp
     :caption: Basic usage
 
-    #include<lexer/lexer.hpp>
-    #include<lang_definitions/key_spec_op.hpp>
+    #include <init/init.hpp>
+    #include <lexer/lexer.hpp>
+    #include <lang_definitions/key_spec_op.hpp>
 
     int main() {
-        lexer::init();
+        init::InitObject _;
+
         lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
         fs::FilePath file("path/to/duckling/file");

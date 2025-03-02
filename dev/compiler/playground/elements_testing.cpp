@@ -1,14 +1,16 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <pst_parser/pst.hpp>
+#include <parser/pst.hpp>
+#include <init/init.hpp>
 #include <iostream>
 
 int main(int argc, char** argv) {
+	init::InitObject _;
+
 	if (argc != 2) {
 		std::cerr << "usage: ./element_testing file_name\n";
 		return 1;
 	}
-	pst::init();
 	fs::FilePath file(argv[1]);
 	pst::PST<>   pst(file);
 

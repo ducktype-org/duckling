@@ -21,6 +21,10 @@
 namespace lang_def {
 
 	namespace operator_precedence {
+		/**
+		 * Initializes the module.
+		 * Will be called automagically when InitObject is used.
+		 */
 		void init();
 	}
 

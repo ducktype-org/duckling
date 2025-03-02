@@ -14,8 +14,6 @@
 #include <base/string_id.hpp>
 #include <base/flag.hpp>
 
-// @TODO: Implement reflection for those enums
-
 namespace lang_def {
 
 	enum class KeywordMode {
@@ -203,6 +201,10 @@ MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IS_ACTION)
 
 namespace lang_def {
 	namespace key_spec_op {
+		/**
+		 * @brief Initializes the key_spec_op module.
+		 * It will run automagically when InitObject is used.
+		 */
 		void init();
 	}
 
