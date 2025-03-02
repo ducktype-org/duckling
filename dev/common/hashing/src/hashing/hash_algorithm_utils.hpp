@@ -34,7 +34,7 @@ namespace hashing {
 			= requires(T t) { t(std::declval<std::span<const std::byte>>()); };
 
 		/**
-		 * checks if the type has a finalize() method that returns a result_type
+		 * Checks if the type has a finalize() method that returns a result_type
 		 */
 		template<typename T>
 		concept has_finalize = requires(T t) {
@@ -42,7 +42,7 @@ namespace hashing {
 		};
 
 		/**
-		 * implementation of the hash_algorithm concept
+		 * Implementation of the hash_algorithm concept
 		 */
 		template<typename T>
 		concept hash_algorithm_impl
@@ -53,13 +53,13 @@ namespace hashing {
 	}  // namespace detail
 
 	/**
-	 * checks if the type is a hash algorithm
+	 * Checks if the type is a hash algorithm
 	 */
 	template<typename T>
 	concept hash_algorithm = detail::hash_algorithm_impl<std::remove_cvref_t<T>>;
 
 	/**
-	 * returns a reference to one of the Bases of Derived
+	 * Returns a reference to one of the Bases of Derived
 	 *
 	 * @tparam Base - the base class to get a reference to
 	 * @param derived - object for which we want to get a reference to the base
@@ -74,13 +74,13 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * checks if the type can be hashed with std::hash
+		 * Checks if the type can be hashed with std::hash
 		 */
 		template<typename T>
 		concept can_stdhash = requires(const T& t) { std::hash<T>{}(t); };
 
 		/**
-		 * checks if the type is a tuple of references
+		 * Checks if the type is a tuple of references
 		 */
 		template<typename T>
 		concept tuple_of_refs = requires(T t) {
@@ -90,7 +90,7 @@ namespace hashing {
 		};
 
 		/**
-		 * checks if hashDecompose() can be called on the type and if it returns a tuple of
+		 * Checks if hashDecompose() can be called on the type and if it returns a tuple of
 		 * references
 		 */
 		template<typename T>
@@ -99,7 +99,7 @@ namespace hashing {
 		};
 
 		/**
-		 * hashes an object as a sequence of bytes
+		 * Hashes an object as a sequence of bytes
 		 */
 		template<hash_algorithm HashAlgorithm, typename T>
 		constexpr void hashAsBytes(HashAlgorithm&& h, const T& t) {
@@ -109,7 +109,7 @@ namespace hashing {
 		}
 
 		/**
-		 * checks if a range can be hashed as a contiguous sequence of memory
+		 * Checks if a range can be hashed as a contiguous sequence of memory
 		 * (i.e. its elements are in a contiguous memory block, have unique object representations
 		 * and size is known)
 		 */
@@ -120,9 +120,9 @@ namespace hashing {
 		   && requires(const R& r) { std::ranges::size(r); };
 
 		/**
-		 * hashes a range as a contiguous sequence of memory
-		 * (requires that its elements are in a contiguous memory block, have unique object representations
-		 * and size is known)
+		 * Hashes a range as a contiguous sequence of memory
+		 * (requires that its elements are in a contiguous memory block, have unique object
+		 * representations and size is known)
 		 */
 		template<hash_algorithm HashAlgorithm, std::ranges::contiguous_range R>
 		requires can_hash_range_as_bytes<HashAlgorithm, R>
@@ -132,11 +132,11 @@ namespace hashing {
 			// we don't want to copy it to a local buffer as it could cause stack overflow,
 			// so instead we allocate a buffer on the heap and copy the elements one by one
 			// using std::bit_cast
-			// Note: since C++20 if an allocation is freed in the same expression it was allocated in
-			// it is allowed to be a constant expression
-			// The buffer is then passed to the hash algorithm.
-			// The memory is freed in the same scope and compiler should also see that the buffer
-			// is a memcopy of the range's data. This should allow for copy elision and no overhead.
+			// Note: since C++20 if an allocation is freed in the same expression it was allocated
+			// in it is allowed to be a constant expression The buffer is then passed to the hash
+			// algorithm. The memory is freed in the same scope and compiler should also see that
+			// the buffer is a memcopy of the range's data. This should allow for copy elision and
+			// no overhead.
 
 			constexpr std::size_t elem_size   = sizeof(std::ranges::range_value_t<R>);
 			const std::size_t     r_size      = std::ranges::size(r);
@@ -146,7 +146,7 @@ namespace hashing {
 			for (u64 i = 0, j = 0; i < r_size; ++i, j += elem_size) {
 				// Ranges may have both singed and unsigned index types and there is not good trait
 				// that can always tell which one the range expects. To suppress warnings we get the
-				// elements using std::next with range's difference_type 
+				// elements using std::next with range's difference_type
 				const auto& elem = *std::next(
 					std::ranges::begin(r), static_cast<std::ranges::range_difference_t<R>>(i)
 				);
@@ -160,7 +160,7 @@ namespace hashing {
 		}
 
 		/**
-		 * checks if a range that may have unspecified order of elements can be hashed
+		 * Checks if a range that may have unspecified order of elements can be hashed
 		 */
 		template<typename HashAlgorithm, typename R>
 		concept can_hash_range_with_unspecified_order
@@ -173,13 +173,13 @@ namespace hashing {
 			  };
 
 		/**
-		 * checks if the type is tuple-like i.e. supports std::tuple_size and std::get
+		 * Checks if the type is tuple-like i.e. supports std::tuple_size and std::get
 		 */
 		template<typename T>
 		concept supports_std_get = requires {
-			// don't remove this line and don't change to std::tuple_size_v
-			// if std::tuple_size_v is ill-formed, the fail may happen not in the immediate context
-			// of the concept check which may omit SFINAE
+			// Don't remove this line and don't change to std::tuple_size_v.
+			// If std::tuple_size_v is ill-formed, the fail may happen not in the immediate context
+			// of the concept check which may omit SFINAE and cause a hard error
 			std::tuple_size<T>::value;
 
 			[]<std::size_t... Is>(std::index_sequence<Is...>) requires requires {

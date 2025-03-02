@@ -12,7 +12,7 @@ namespace hashing::detail {
 
 
 	/**
-	 * returns a unique ID on each call
+	 * Returns a unique ID on each call
 	 */
 	u64 getNextID() {
 		static u64 id = 0;

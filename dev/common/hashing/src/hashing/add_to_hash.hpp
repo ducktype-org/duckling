@@ -11,12 +11,12 @@
 namespace hashing {
 
 	/**
-	 * options for the addToHash function template
-	 * allow_std_hash - if true, the function will try to use std::hash for hashing types that
-	 * can't be hashed using the provided hashing algorithm
-	 * allow_hashing_ranges_with_unspecified_order - if true, the function will hash ranges that
-	 * may have unspecified order of elements, which circumvents the strict use of the hashing
-	 * algorithm
+	 * Options for the addToHash function template:
+	 * * allow_std_hash - if true, the function will try to use std::hash for hashing types that
+	 *     can't be hashed using the provided hashing algorithm
+	 * * allow_hashing_ranges_with_unspecified_order - if true, the function will hash ranges that
+	 *     may have unspecified order of elements, which circumvents the strict use of the hashing
+	 *     algorithm
 	 */
 	struct AddToHashOptions {
 		bool allow_std_hash;
@@ -24,23 +24,23 @@ namespace hashing {
 	};
 
 	/**
-	 * default (strict) options for the addToHash function template
+	 * Default (strict) options for the addToHash function template
 	 */
 	static constexpr AddToHashOptions DEFAULT_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = false, .allow_hashing_ranges_with_unspecified_order = false
 	};
 
 	/**
-	 * relaxed options for the addToHash function template
+	 * Relaxed options for the addToHash function template
 	 */
 	static constexpr AddToHashOptions RELAXED_ADD_TO_HASH_OPTIONS{
 		.allow_std_hash = true, .allow_hashing_ranges_with_unspecified_order = true
 	};
 
 	/**
-	 * this is a template overload for the 'addToHash' function
-	 * if a friend function overload exists for the type, it will be used instead
-	 * this one serves as a fallback and a place where specializations for
+	 * This is a template overload for the 'addToHash' function.
+	 * If a friend function overload exists for the type, it will be used instead.
+	 * This one serves as a fallback and a place where specializations for
 	 * types that are not ours can be added (like the built-in types)
 	 *
 	 * @tparam HashAlgorithm - type of the hashing algorithm to use
@@ -54,13 +54,13 @@ namespace hashing {
 		typename T,
 		AddToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
-		// for most types we only want to add to hash some subset of their subobjects (bases +
-		// members) this can be done easily by defining `hashDecompose` friend function that lists
+		// For most types we only want to add to hash some subset of their subobjects (bases +
+		// members). This can be done easily by defining `hashDecompose` friend function that lists
 		// subobjects in an order in which we want to hash them
 		if constexpr (detail::can_hashDecompose<T>) {
 			std::apply([&](auto&&... args) { (addToHash(hash_alg, args), ...); }, hashDecompose(t));
 		}
-		// specializations for types that are not ours
+		// Specializations for types that are not ours
 		else if constexpr (std::is_floating_point_v<T>) {
 			// IEEE 754 floating point numbers have multiple representations of 0:
 			// -0.0 == 0.0, but they should have the same hash since they compare equal
@@ -68,7 +68,7 @@ namespace hashing {
 			if (t_copy == 0) t_copy = 0;
 			detail::hashAsBytes(hash_alg, t_copy);
 		}
-		// specialation for pointers
+		// Specialation for pointers
 		else if constexpr (std::is_pointer_v<T>) {
 			detail::hashAsBytes(hash_alg, t);
 		}
@@ -76,34 +76,34 @@ namespace hashing {
 		else if constexpr (std::is_null_pointer_v<T>) {
 			detail::hashAsBytes(hash_alg, 0);
 		}
-		// if the range is contiguous and its elements have unique representations we can
+		// If the range is contiguous and its elements have unique representations we can
 		// treat it as a segment of memory and hash it directly
 		else if constexpr (detail::can_hash_range_as_bytes<HashAlgorithm, T>) {
 			detail::hashRangeAsBytes(hash_alg, t);
 		}
-		// if for each value of the type there is a unique representation of it in memory,
+		// If for each value of the type there is a unique representation of it in memory,
 		// we can treat it as a sequence of chars and hash it directly
 		else if constexpr (std::has_unique_object_representations_v<T>) {
 			detail::hashAsBytes(hash_alg, t);
 		}
-		// if type supports std::tuple_size and std::get, we can use them to get and hash its
+		// If type supports std::tuple_size and std::get, we can use them to get and hash its
 		// members
 		else if constexpr (detail::supports_std_get<T>) {
 			[&]<std::size_t... I>(std::index_sequence<I...>) {
 				(addToHash(hash_alg, std::get<I>(t)), ...);
 			}(std::make_index_sequence<std::tuple_size_v<T>>{});
 		}
-		// other overloads for ranges
-		// overload if range is contiguous
+		// Other overloads for ranges
+		// Overload if range is contiguous
 		else if constexpr (std::ranges::contiguous_range<T>) {
 			for (const auto& elem: t) addToHash(hash_alg, elem);
 		}
-		// some ranges will compare equal but keep their elements in unspecified order
+		// Some ranges will compare equal but keep their elements in unspecified order
 		else if constexpr (Options.allow_hashing_ranges_with_unspecified_order
 		                   && detail::can_hash_range_with_unspecified_order<HashAlgorithm, T>) {
 			typename HashAlgorithm::result_type combined_result{};
 			for (auto&& elem: t) {
-				// note that this copy and hash finalization in cast may be expensive,
+				// Note that this copy and hash finalization in cast may be expensive,
 				// if possible the type should get a dedicated addToHash overload
 				auto hash_copy = hash_alg;
 				addToHash(hash_copy, elem);
@@ -123,7 +123,7 @@ namespace hashing {
 	}
 
 	/**
-	 * variadic overload of template addToHash()
+	 * Variadic overload of the template addToHash() function
 	 *
 	 * @tparam HashAlgorithm - type of the hashing algorithm to use
 	 * @tparam Ts - types of the objects to hash

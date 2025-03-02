@@ -23,14 +23,14 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * primary template of FNV-1a constants for different integer sizes
-		 * nothe that there is no definition - only the specializations are to be used
+		 * Primary template of FNV-1a constants for different integer sizes.
+		 * Note that there is no definition - only the specializations are to be used
 		 */
 		template<std::integral I>
 		class Fnv1a_Constants;
 
 		/**
-		 * specialization of FNV-1a constants for integer sizes <= 32 bits
+		 * Specialization of FNV-1a constants for integer sizes <= 32 bits
 		 */
 		template<std::integral I>
 		requires(sizeof(I) <= sizeof(u32)) class Fnv1a_Constants<I> {
@@ -40,7 +40,7 @@ namespace hashing {
 		};
 
 		/**
-		 * specialization of FNV-1a constants for integer sizes > 32 bits
+		 * Specialization of FNV-1a constants for integer sizes > 32 bits
 		 */
 		template<std::integral I>
 		requires(sizeof(I) > sizeof(u32)) class Fnv1a_Constants<I> {
@@ -52,7 +52,7 @@ namespace hashing {
 	}  // namespace detail
 
 	/**
-	 * FNV-1a hash algorithm, fast and simple with reasonably good distribution
+	 * FNV-1a hash algorithm, fast and simple with reasonably good distribution,
 	 * though not meant for cryptographic purposes
 	 */
 	template<std::unsigned_integral I>
@@ -84,7 +84,7 @@ namespace hashing {
 	using Fnv1a_64 = Fnv1a<u64>;
 
 	/**
-	 * hash algorithm that keeps the bytes of the hashed objects
+	 * Hash algorithm that keeps the bytes of the hashed objects
 	 * and can be converted to a string that represents the bytes in hex
 	 */
 	class DebugHash final {
@@ -92,7 +92,7 @@ namespace hashing {
 		std::vector<std::tuple<std::vector<char>, usize, Type>> bytes;
 
 	public:
-		// spans of bytes
+		// Spans of bytes
 		constexpr void
 			operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
@@ -101,7 +101,7 @@ namespace hashing {
 			bytes.emplace_back(std::move(vec), vec.size(), type);
 		}
 
-		// type codes
+		// Type codes
 		template<base::IsInstantiationOfTypeValue<TypeCode> TypeC>
 		constexpr void operator()(TypeC hash) noexcept {
 			const auto arr = std::bit_cast<std::array<const std::byte, sizeof(TypeC)>, TypeC>(hash);
@@ -118,7 +118,7 @@ namespace hashing {
 			constexpr std::string_view red    = "\033[1;31m";
 			constexpr std::string_view reset  = "\033[0m";
 
-			// stringstream is not usable in constexpr
+			// Note: stringstream is not usable in constexpr
 			static constexpr auto append_line_number = [](std::string& str, usize num) {
 				str += "line ";
 				std::string num_str;
@@ -155,12 +155,12 @@ namespace hashing {
 	};
 
 	/**
-	 * the default hash algorithm
+	 * The default hash algorithm
 	 */
 	using DefaultHashAlgorithm = Fnv1a_64;
 
 	/**
-	 * the default hash algorithm for the given integer type
+	 * The default hash algorithm for the given integer type
 	 */
 	template<typename I>
 	using default_hash_algorithm_for

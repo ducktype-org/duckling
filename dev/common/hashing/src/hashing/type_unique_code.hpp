@@ -17,12 +17,12 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * returns a unique ID on each call
+		 * Returns a unique ID on each call
 		 */
 		u64 getNextID();
 
 		/**
-		 * returns a trully unique ID for the type
+		 * Returns a trully unique ID for the type
 		 *
 		 * @tparam T - type to get the unique ID for
 		 * @tparam I - type of the value of the type code
@@ -40,7 +40,7 @@ namespace hashing {
 	}  // namespace detail
 
 	/**
-	 * returns a unique hash code of a given length for the type
+	 * Returns a unique hash code of a given length for the type
 	 *
 	 * @tparam T - type to get the unique hash code for
 	 * @tparam I - type of the value of the type code

@@ -30,7 +30,7 @@ namespace hashing {
 		concept has_value_type = requires { typename T::value_type; };
 
 		/**
-		 * helper struct that enables the TypeCode_value_type member type
+		 * Helper struct that enables the TypeCode_value_type member type
 		 * if the given type has a value_type member type
 		 * (this is a default implementation that does not add the member type)
 		 */
@@ -38,7 +38,7 @@ namespace hashing {
 		struct enable_TypeHC_value_type {};
 
 		/**
-		 * specialization that adds TypeCode_value_type
+		 * Specialization that adds TypeCode_value_type
 		 */
 		template<has_value_type TypeC>
 		struct enable_TypeHC_value_type<TypeC> {
@@ -64,8 +64,8 @@ namespace hashing {
 		};
 
 		/**
-		 * Adds to hash object `t` and either a TYPE_UNIQUE_CODE or a
-		 * TYPE_HASH_CODE depending on the type's IS_UNIQUE value of the TypeC that is provided
+		 * Adds to hash either a TYPE_UNIQUE_CODE or a TYPE_HASH_CODE
+		 * depending on the value of IS_UNIQUE constant in the provided TypeC
 		 */
 		template<
 			base::IsInstantiationOfTypeValue<TypeCode> TypeC,
@@ -88,8 +88,8 @@ namespace hashing {
 	 * @brief Callable type that obtains a hash for an object it is called with
 	 * together with it's type code using the specified hash algorithm
 	 *
-	 * @tparam HashAlgorithm Hashing algorithm to use
-	 * @tparam TypeC Type of the type code that should be appended to the hash
+	 * @tparam HashAlgorithm - Hashing algorithm to use
+	 * @tparam TypeC - Type of the type code that should be appended to the hash
 	 * or void if the type code should not be appended
 	 */
 	template<
@@ -113,12 +113,11 @@ namespace hashing {
 
 	/**
 	 * @brief Callable type that obtains hash values for sequences of objects it is called with
-	 * Type keeps the state between calls, so next objects can be appended
-	 * Casting to result_type of the hash algorithm yields the hash value corresponding to the
-	 * current state
+	 * Type keeps the state between calls, so next objects can be appended.
+	 * Calling finalize() yields the hash value corresponding to the current state
 	 *
-	 * @tparam HashAlgorithm Hashing algorithm to use
-	 * @tparam TypeC Type of the type code that should be appended to the hash
+	 * @tparam HashAlgorithm - Hashing algorithm to use
+	 * @tparam TypeC - Type of the type code that should be appended to the hash
 	 * or void if the type code should not be appended
 	 */
 	template<

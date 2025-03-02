@@ -16,7 +16,7 @@ namespace hashing {
 	namespace detail {
 
 		/**
-		 * type that converts string to integral type using a given hash algorithm
+		 * Type that converts string to integral type using a given hash algorithm
 		 *
 		 * @tparam I - type of the value of the type code
 		 * @tparam HashAlgorithm - type of the hashing algorithm to use to get the hash code
@@ -36,7 +36,7 @@ namespace hashing {
 		};
 
 		/**
-		 * returns a unique string for each type
+		 * Returns a unique string for each type
 		 *
 		 * @tparam T - type to get the unique string for
 		 * @tparam I - type of the value of the type code
@@ -54,7 +54,7 @@ namespace hashing {
 		}
 
 		/**
-		 * returns a unique hash code of a given length for the type using a given hash algorithm
+		 * Returns a unique hash code of a given length for the type using a given hash algorithm
 		 *
 		 * @tparam T - type to get the unique hash code for
 		 * @tparam I - type of the value of the type code
@@ -71,7 +71,7 @@ namespace hashing {
 	}  // namespace detail
 
 	/**
-	 * returns a hash code of a given length for the type
+	 * Returns a hash code of a given length for the type
 	 *
 	 * @tparam T - type to get the hash code for
 	 * @tparam I - type of the value of the type code

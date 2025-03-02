@@ -371,9 +371,9 @@ private:
 
 	void hashTest() {
 		Fnv1a_32 h2;
-		addToHash(h2, S{});  // S has addToHash overload
+		addToHash(h2, S{});                       // S has addToHash overload
 		assertTrue(detail::can_hashDecompose<Z>, "Z should be hashDecomposable");
-		addToHash(h2, Z{});  // Z has hashDecompose overload
+		addToHash(h2, Z{});                       // Z has hashDecompose overload
 		addToHash(h2, std::span{ "wertyuiop" });  // can hash directly
 		addToHash(h2, 123.0f);                    // hashing floating point
 		X* xptr = nullptr;
