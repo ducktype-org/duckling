@@ -22,7 +22,7 @@ protected:
 // ...
 int main() {
 	init::InitObject _;
-	dia::Logger logger;
+	dia::Logger      logger;
 
 	// ...
 

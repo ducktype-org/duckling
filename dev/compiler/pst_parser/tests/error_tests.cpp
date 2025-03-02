@@ -219,9 +219,7 @@ class PSTErrorTests: public tester::TestSuite {
 	}
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(exampleTests);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(exampleTests); }
 
 public:
 	~PSTErrorTests() override = default;
