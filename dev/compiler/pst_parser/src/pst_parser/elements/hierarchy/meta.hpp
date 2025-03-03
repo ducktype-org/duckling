@@ -39,7 +39,7 @@ namespace pst {
 	 */
 	class Attribute final: public NotStmt {
 		AccessInternal<DottedName> name;
-		AccessInternal<AtrArgList> args = nullptr;
+		AccessInternal<AtrArgList> args;
 
 	public:
 		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}

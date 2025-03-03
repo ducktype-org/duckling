@@ -103,9 +103,9 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		AccessInternal<ParamList> params = nullptr;
-		AccessInternal<InitList>  inits  = nullptr;
-		AccessInternal<CodeBlock> body   = nullptr;
+		AccessInternal<ParamList> params;
+		AccessInternal<InitList>  inits;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -131,7 +131,7 @@ namespace pst {
 	 * @brief Class destructor element.
 	 */
 	class Destructor final: public ClassSpecial {
-		AccessInternal<CodeBlock> body = nullptr;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
@@ -153,9 +153,9 @@ namespace pst {
 	 */
 	class Method final: public ClassStmt {
 		tpc::Identifier                                 name;
-		AccessInternal<ParamList>                       params = nullptr;
+		AccessInternal<ParamList>                       params;
 		base::Optional<AccessInternal<CommaExprHolder>> ret;
-		AccessInternal<CodeBlock>                       body = nullptr;
+		AccessInternal<CodeBlock>                       body;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);

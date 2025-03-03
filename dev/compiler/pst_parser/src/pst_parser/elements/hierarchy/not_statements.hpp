@@ -188,7 +188,7 @@ namespace pst {
 	 * @brief Expression surrounded by parenthesis.
 	 */
 	class RoundGroupExpr final: public NotStmt {
-		AccessInternal<CommaExprHolder> expr = nullptr;
+		AccessInternal<CommaExprHolder> expr;
 
 	public:
 		explicit RoundGroupExpr(const dia::SourcePosition& position): NotStmt(position) {

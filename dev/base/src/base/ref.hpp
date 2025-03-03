@@ -14,7 +14,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class Ref {
+	class Ref final {
 	private:
 		T* ptr;
 
@@ -99,7 +99,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class MRef {
+	class MRef final {
 	private:
 		T* ptr = nullptr;
 
@@ -222,9 +222,10 @@ namespace base {
 
 
 	// ...
-	#define EXPOSE_REF_INTERFACE(element_name) \
-		operator bool() const { return bool(element_name); }\ 
-		auto operator->() const { return element_name.operator->(); }
+	#define EXPOSE_MREF_INTERFACE(element_name) \
+		operator bool() const { return bool(element_name); }\
+		auto operator->() const { return element_name.operator->(); }\
+		auto& operator*() const { return element_name.operator*(); }
 
 }
 

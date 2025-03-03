@@ -24,6 +24,7 @@
 
 #include <token_parser_core/automatic.hpp>
 #include "lang_parser_element.hpp"
+#include "access.hpp"
 
 namespace pst {
 	using lang_def::Keyword;
@@ -32,8 +33,8 @@ namespace pst {
 	using lexer::Operator;
 
 	template<typename T>
-	void nullAwareDprint(const AccessInternal<T>& ref, std::ostream& out) {
-		tpc::nullAwareDprint(static_cast<const MBox<T>&>(ref), out);
+	void nullAwareDprint(const AccessInternal<T>& acc, std::ostream& out) {
+		tpc::nullAwareDprint(acc.internal(), out);
 	}
 
 	template<typename State>

@@ -31,7 +31,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class Box {
+	class Box final {
 	private:
 		T* ptr;
 
@@ -133,7 +133,7 @@ namespace base {
 	 * @tparam T pointed type
 	 */
 	template<class T>
-	class MBox {
+	class MBox final {
 	private:
 		T* ptr = nullptr;
 

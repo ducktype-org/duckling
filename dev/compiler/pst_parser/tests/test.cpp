@@ -86,7 +86,7 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement()->getStatements()) {
+			for (const auto& stmt: pst.getRootElement().unlock({})->getStatements()) {
 				assertThrows<base::Panic>(
 					[&] { stmt.unlock({})->acceptVisitor(panicky_vistor); },
 					"Stmt did not call it\'s visitor"
@@ -101,7 +101,7 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement()->getStatements()) {
+			for (const auto& stmt: pst.getRootElement().unlock({})->getStatements()) {
 				pst::Access<pst::LangElement> lang_stmt = stmt.unlock({});
 				assertThrows<base::Panic>(
 					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
@@ -202,8 +202,8 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = pst.getRootElement()->getStatements()[0].cast<pst::Fun>().unlock({});
-		ASSERT_TRUE(fun != nullptr);
+		auto fun = pst.getRootElement().unlock({})->getStatements()[0].cast<pst::Fun>().unlock({});
+		ASSERT_TRUE(fun);
 
 		auto params = fun->getParams().unlock({});
 		ASSERT_EQUAL(params->size(), 4);

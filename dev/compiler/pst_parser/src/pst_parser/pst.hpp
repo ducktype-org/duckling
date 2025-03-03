@@ -1,6 +1,7 @@
 #pragma once
 
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
+#include "access.hpp"
 
 #include <token_file/file.hpp>
 #include "lang_parser_state.hpp"
@@ -29,7 +30,7 @@ namespace pst {
 
 	private:
 		Box<tokenizer::TokenFile> file;
-		MBox<Element>             element;
+		AccessInternal<Element>             element;
 		std::vector<ImportType>   imports;
 
 		/**
@@ -108,8 +109,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<Element> getRootElement() const {
-			return element.ref();
+		AccessLocked<Element> getRootElement() const {
+			return element.give();
 		}
 
 		PST(PST&& other) noexcept:
