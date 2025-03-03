@@ -28,28 +28,29 @@ namespace vm {
 
 	/**
 	 * @brief Representation of the program VM runs.
-	 * Parser creates this structure from a list of ParsedFile structures after validation. 
-     * Executor uses it to execute the code.
+	 * Parser creates this structure from a list of ParsedFile structures after validation.
+	 * Executor uses it to execute the code.
 	 */
 	class VMProgram {
-		friend class OpFuns;
-
 	public:
-		VMProgram() = default;
+		// VMProgram() = default;    
+		// VMProgram(const VMProgram& other);
+    	// VMProgram& operator=(const VMProgram& other);
 
-		base::Optional<CRef<FuncData>> getFuncByName(base::StrID name) const;
+		base::Optional<CRef<FuncData>>     getFuncByName(base::StrID name) const;
 		base::Optional<CRef<vm::FuncData>> getFuncByID(usize id) const;
 
 		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;
 		CRef<Type>                 getTypeByID(TypeID id) const;
 
-		bool addFunction(const base::StrID& funcName, const FuncData& func);
+		bool addFunction(const base::StrID& func_name, const FuncData& func);
 
 		usize getNumberOfFunctions() const;
 
-	// private:
+		// private:
 		base::StableHashMap<base::StrID, usize> func_name_to_id;
 		base::StableVector<FuncData>            functions;
-		TypeMetadata type_metadata;
+		// std::vector<FuncData>            functions;
+		TypeMetadata                            type_metadata;
 	};
 }

@@ -5,28 +5,40 @@
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
 #include <expected>
-#include <validator/validator.hpp>
-#include <parser/parser.hpp>
+#include "validator/validator.hpp"
+#include "parser/parser.hpp"
 
 namespace vm {
 	class VMProcess;
 
-	// @TODO: static type checking
-
 	/**
 	 * @brief Service that loads the program file to the VM.
-	 * @TODO: Refactor this to return a program object....
+	 * Current preprocessor pipline is as follows:
+	 * 1) Parse the program from a given list of files and create
+	 *    a ParsedProgram object, enriched in source positions
+	 *    of every opcode, type etc.
+	 * 2) Perform static verification of the code using the Validator module
+	 * 3) Convert ParsedProgram object into VMProgram which will be used to
+	 *    execute the code.
 	 */
 	class Preprocessor {
 		friend VMProcess;
 
 	private:
-		bool validate_program;
+		bool                 validate_program;
 		validator::Validator validator;
-		
-		std::expected<vm::VMProgram, std::string> Preprocessor::changeParsedProgramToVMProgram(const ParsedProgram& parsed_program);
-		
-		Preprocessor(VMProcess& process, bool validateProgram);
+
+		/**
+		 * @brief Changes the program representation from parser representation
+		 * (with source positions) to a program format executable by the VM.
+		 *
+		 * @param parsed_program
+		 * @return std::expected<vm::VMProgram, std::string>
+		 */
+		std::expected<vm::VMProgram, std::string>
+			changeParsedProgramToVMProgram(const assemble::ParsedProgram& parsed_program);
+
+		Preprocessor(VMProcess& process, bool validate_program);
 
 	public:
 		template<class... DynamicServices>
@@ -42,14 +54,13 @@ namespace vm {
 
 
 		/**
-		 * @brief Parses a list of files, returns the representation of the program with type metadata.
+		 * @brief Parses a list of files, returns the representation of the program with type
+		 * metadata.
 		 *
 		 * @param files
 		 * @return std::expected<vm::VMProgram, std::string>
 		 */
-		std::expected<vm::VMProgram, std::string> getProgram(const std::vector<fs::FilePath>& files);
-
-
-
+		std::expected<vm::VMProgram, std::string> getProgram(const std::vector<fs::FilePath>& files
+		);
 	};
 }

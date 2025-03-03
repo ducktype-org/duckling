@@ -102,8 +102,8 @@ namespace vm {
 		/**
 		 * @brief Process link as well as some of it's resources.
 		 */
-		VMProcess&    process;
-		Memory&       process_memory;
+		VMProcess& process;
+		Memory&    process_memory;
 
 		// This might change:
 		std::condition_variable pause_cv;

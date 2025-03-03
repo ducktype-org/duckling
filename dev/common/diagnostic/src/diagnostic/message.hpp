@@ -194,10 +194,11 @@ namespace dia {
 		 */
 		enum class Domain {
 			/* Error domains */
-			Lexer,                 ///< For errors in the lexer.
-			Parser,                ///< For errors in the parser.
-			Lookup,                ///< For errors in lookup.
-			TypeCheck,             ///< For errors when type checking.
+			Lexer,               ///< For errors in the lexer.
+			Parser,              ///< For errors in the parser.
+			Lookup,              ///< For errors in lookup.
+			TypeCheck,           ///< For errors when type checking.
+			StaticVerification,  ///< For errors in static verification which are not type specyfic.
 			CompileTimeExecution,  ///< For errors resulting from compile time code execution.
 			SafetyViolation,       ///< For errors resulting from violation of visibility rules,
 			                       ///< immutability rules, reference uniqueness rules, etc.

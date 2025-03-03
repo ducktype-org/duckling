@@ -8,23 +8,35 @@ namespace vm {
 		return getProgram(std::vector{ file });
 	}
 
-	std::expected<vm::VMProgram, std::string> Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
-		auto parsedProgram = assemble::assemble(files);
+	std::expected<vm::VMProgram, std::string>
+		Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
+		auto log                  = dia::Logger();
+		auto maybe_parsed_program = assemble::assemble(files, log);
+		if (auto parsed_program = std::move(maybe_parsed_program).toOptBox(); parsed_program) {
+			bool is_valid = false;
+			if (validate_program) {
+				// is_valid = validator.validateProgram(parsed_program);
+			}
 
-		bool is_valid = false;
-		if (validate_program) {
-			// is_valid = validator.validateProgram(parsedProgram);
+			auto program = assemble::changeParsedProgramToVMProgram(parsed_program->refMut(), log);
+
+
+			if (!program) {
+				std::stringstream stream;
+				log.dumpLogAndClear(true, stream);
+				return std::unexpected(stream.str());
+			}
+
+			// return std::expected<vm::VMProgram, std::string(program->);
+			return std::move(*program->refMut());
+
+		} else {
+			std::stringstream stream;
+			log.dumpLogAndClear(true, stream);
+			return std::unexpected(stream.str());
 		}
-		// auto program = changeParsedProgramToVMProgram(parsedProgram);
-
-		return parsedProgram;
 	}
 
-	std::expected<vm::VMProgram, std::string> Preprocessor::changeParsedProgramToVMProgram(const assemble::ParsedProgram& parsed_program) {
-		assemble::
-	}
-
-	
-
-	Preprocessor::Preprocessor(VMProcess& process, bool validate_program): validate_program(validate_program) {}
+	Preprocessor::Preprocessor(VMProcess& process, bool validate_program):
+		  validate_program(validate_program) {}
 }

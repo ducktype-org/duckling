@@ -32,150 +32,6 @@
 #include <lexer/token.hpp>
 
 namespace assemble {
-
-	class F8ParserState final: public tpc::ParserState {
-	public:
-		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
-			  tpc::ParserState(std::move(stream), err) {}
-
-		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
-	};
-
-	struct PrimitiveType {
-		base::StrID name;
-		usize       size{};
-
-		void dprint(std::ostream& out) const {
-			out << "primitive {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    size: " << size << "\n";
-			out << "}";
-		}
-	};
-
-	struct PointerType {
-		base::StrID name;
-		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "pointer {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	struct StaticTableType {
-		base::StrID name;
-		base::StrID inner;
-		usize       table_size;
-
-		void dprint(std::ostream& out) const {
-			out << "static_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "    table_size: " << table_size << "\n";
-			out << "}";
-		}
-	};
-
-	struct DynamicTableType {
-		base::StrID name;
-		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "dynamic_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	struct Field {
-		base::StrID name;
-		base::StrID type;
-	};
-
-	struct DataType {
-		base::StrID        name;
-		std::vector<Field> fields;
-
-		void dprint(std::ostream& out) const {
-			out << "data {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    fields: [";
-			for (auto& field: fields)
-				out << field.name.strView() << ": " << field.type.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
-	};
-
-	struct VariantType {
-		base::StrID              name;
-		std::vector<base::StrID> variant_alternatives;
-
-		void dprint(std::ostream& out) const {
-			out << "variant {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    alternatives: [";
-			for (auto& alt: variant_alternatives) out << alt.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
-	};
-
-	struct FunctionType {
-		base::StrID              name;
-		std::vector<base::StrID> parameters;
-		base::StrID              result;
-
-		void dprint(std::ostream& out) const {
-			out << "function {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    parameters: [";
-			for (auto& param: parameters) out << param.strView() << ", ";
-			out << "]\n";
-			out << "    result: " << result.strView() << "\n";
-			out << "}";
-		}
-	};
-
-	using TypeData = std::variant<
-		PrimitiveType,
-		PointerType,
-		StaticTableType,
-		DynamicTableType,
-		DataType,
-		VariantType,
-		FunctionType>;
-
-	struct AsmElement: tpc::Element {
-		dia::SourcePosition position;
-
-		AsmElement(const dia::SourcePosition& position): position(position) {}
-
-		void debugPrint(std::ostream& out) const override { dprint(out); }
-	};
-
-	struct Type: AsmElement {
-		using AsmElement::AsmElement;
-
-		TypeData          datatype;
-		static MBox<Type> parse(F8ParserState& state);
-
-		void dprint(std::ostream& out) const override {
-			out << "type: ";
-			VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
-			out << "\n}";
-		}
-	};
-
-	struct OpCodeArgAndPosition {
-		vm::opargs::OpCodeArg arg;
-		dia::SourcePosition   position;
-	};
-
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseInt(F8ParserState& state) {
@@ -273,212 +129,79 @@ namespace assemble {
 #undef MAKE_LINK
 	}
 
-	struct OpCode: AsmElement {
-		using AsmElement::AsmElement;
-
-		base::StrID opcode_name;
-
-
-		std::vector<OpCodeArgAndPosition> args;
-
-		static MBox<OpCode> parse(F8ParserState& state) {
-			tpc::Identifier identifier1;
-			bool            logged = false;
-			while (state.notEmpty()) {
-				if (state[0].isIdentifier()) {
-					state.parse().one(&identifier1);
-					if (opargs_parsers::OP_CODE_TO_ARGS_PARSER.contains(identifier1.value.str())) {
-						auto out         = makeBox<OpCode>(identifier1.position);
-						out->opcode_name = identifier1.value;
-						out->args
-							= opargs_parsers::OP_CODE_TO_ARGS_PARSER.at(out->opcode_name.str())(
-								state
-							);
-						if (!state.tryEat(lang_def::Special::Semicolon)) {
-							state.log(makeBox<vm::parser::ExpectedSemicolonAfterError>(
-								state.getPosition(-1)
-							));
-							logged = true;
-							continue;
-						}
-						return out;
-					} else if (!logged) {
-						state.log(makeBox<vm::parser::UnknownOpCodeError>(
-							state.getPosition(-1), identifier1.value
-						));
+	MBox<OpCode> OpCode::parse(F8ParserState& state) {
+		tpc::Identifier identifier1;
+		bool            logged = false;
+		while (state.notEmpty()) {
+			if (state[0].isIdentifier()) {
+				state.parse().one(&identifier1);
+				if (opargs_parsers::OP_CODE_TO_ARGS_PARSER.contains(identifier1.value.str())) {
+					auto out         = makeBox<OpCode>(identifier1.position);
+					out->opcode_name = identifier1.value;
+					out->args
+						= opargs_parsers::OP_CODE_TO_ARGS_PARSER.at(out->opcode_name.str())(state);
+					if (!state.tryEat(lang_def::Special::Semicolon)) {
+						state.log(
+							makeBox<vm::parser::ExpectedSemicolonAfterError>(state.getPosition(-1))
+						);
 						logged = true;
+						continue;
+					}
+					return out;
+				} else if (!logged) {
+					state.log(makeBox<vm::parser::UnknownOpCodeError>(
+						state.getPosition(-1), identifier1.value
+					));
+					logged = true;
+				}
+			} else {
+				if (!logged) {
+					state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
+					logged = true;
+				}
+				state.tokens().skip();
+			}
+		}
+		return nullptr;
+	}
+
+	Box<ByteCode> ByteCode::parse(F8ParserState& state) {
+		auto out = makeBox<ByteCode>(state.getPosition());
+
+		std::vector<std::pair<base::StrID, dia::SourcePosition>> labels;
+
+		while (state.notEmpty()) {
+			auto opt_opcode = OpCode::parse(state).toOptBox();
+
+			if (opt_opcode) {
+				auto opcode = std::move(opt_opcode.value());
+				if (opcode->opcode_name == base::StrID("label")) {
+					auto arg = opcode->args[0];
+					CORE_ASSERT(
+						std::holds_alternative<vm::opargs::Label>(arg.arg),
+						"Something went wrong during label parsing."
+					);
+					auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
+
+					if (out->label_position.contains(label_name)) {
+						auto msg
+							= makeBox<vm::parser::InvalidLabel>(arg.position, "Repeated label.");
+						for (auto&& lbl: labels)
+							if (lbl.first == label_name)
+								msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second));
+						state.log(std::move(msg));
+					} else {
+						out->label_position.put(label_name, out->opcodes.size());
+						labels.emplace_back(label_name, arg.position);
 					}
 				} else {
-					if (!logged) {
-						state.log(makeBox<tpc::NoIdentifierError>(state.getPosition()));
-						logged = true;
-					}
-					state.tokens().skip();
+					out->opcodes.emplace_back(std::move(opcode));
 				}
 			}
-			return nullptr;
 		}
 
-		void dprint(std::ostream& out) const override {
-			out << "        " << opcode_name.view().stringView() << " ";
-			for (auto& arg: args) {
-				variant_match(arg.arg) {
-					variant_case(vm::opargs::ImmediateI64, num_arg) { out << num_arg.value << " "; }
-					variant_case(vm::opargs::StackOffset, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::ArgsOffset, args_offset_arg) {
-						out << args_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::Type, type_arg) {
-						out << type_arg.type_name.strView() << " ";
-					}
-					variant_case(vm::opargs::FunctionName, function_name_arg) {
-						out << function_name_arg.function_name.strView() << " ";
-					}
-					variant_case(vm::opargs::Label, label_arg) {
-						out << label_arg.label_name.strView() << " ";
-					}
-				}
-			}
-			out << '\n';
-		}
-
-		~OpCode() override = default;
-	};
-
-	struct ByteCode: AsmElement {
-		using AsmElement::AsmElement;
-
-		std::vector<Box<OpCode>>      opcodes;
-		base::Map<base::StrID, usize> label_position;
-
-		static Box<ByteCode> parse(F8ParserState& state) {
-			auto out = makeBox<ByteCode>(state.getPosition());
-
-			std::vector<std::pair<base::StrID, dia::SourcePosition>> labels;
-
-			while (state.notEmpty()) {
-				auto opt_opcode = OpCode::parse(state).toOptBox();
-
-				if (opt_opcode) {
-					auto opcode = std::move(opt_opcode.value());
-					if (opcode->opcode_name == base::StrID("label")) {
-						auto arg = opcode->args[0];
-						CORE_ASSERT(
-							std::holds_alternative<vm::opargs::Label>(arg.arg),
-							"Something went wrong during label parsing."
-						);
-						auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
-
-						if (out->label_position.contains(label_name)) {
-							auto msg = makeBox<vm::parser::InvalidLabel>(
-								arg.position, "Repeated label."
-							);
-							for (auto&& lbl: labels)
-								if (lbl.first == label_name)
-									msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second)
-									);
-							state.log(std::move(msg));
-						} else {
-							out->label_position.put(label_name, out->opcodes.size());
-							labels.emplace_back(label_name, arg.position);
-						}
-					} else {
-						out->opcodes.emplace_back(std::move(opcode));
-					}
-				}
-			}
-
-			return out;
-		}
-
-		void dprint(std::ostream& out) const override {
-			out << "    code {\n";
-			for (auto& opcode: opcodes) opcode->dprint(out);
-			out << "    }\n";
-		}
-
-		~ByteCode() override = default;
-	};
-
-	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
-
-	struct Func: AsmElement {
-		using AsmElement::AsmElement;
-
-		tpc::Identifier name;
-		usize           arg_size      = SIZE_T_MAX;
-		usize           next_arg_size = SIZE_T_MAX;
-		usize           local_size    = SIZE_T_MAX;
-		usize           ret_size      = SIZE_T_MAX;
-		MBox<ByteCode>  code;
-
-		static MBox<Func> parse(F8ParserState& state);
-
-		void dprint(std::ostream& out) const override {
-			out << "function {\n";
-			out << "    name: " << name.value.strView() << "\n";
-			out << "    arg_size: " << arg_size << "\n";
-			out << "    local_size: " << local_size << "\n";
-			out << "    ret_size: " << ret_size << "\n";
-			code->dprint(out);
-			out << "\n}";
-		}
-
-		~Func() override = default;
-	};
-
-	struct ParsedFile: AsmElement {
-		using AsmElement::AsmElement;
-
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-
-		static MBox<ParsedFile> parse(F8ParserState& state);
-
-		void dprint(std::ostream& out) const override {
-			for (auto& type: types) {
-				type->dprint(out);
-				out << "\n";
-			}
-
-			for (auto& func: functions) {
-				func->dprint(out);
-				out << "\n";
-			}
-		}
-
-		~ParsedFile() override = default;
-	};
-
-	/**
-	 * @brief Structure containing a parsed program combined 
-	 * from all files with type metadata.
-	 */
-	struct ParsedProgram {
-		ParsedProgram() = default;
-
-		dia::SourcePosition position;
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-		vm::TypeMetadata type_metadata;
-
-
-		void dprint(std::ostream& out) const {
-			for (auto& type: types) {
-				type->dprint(out);
-				out << "\n";
-			}
-
-			for (auto& func: functions) {
-				func->dprint(out);
-				out << "\n";
-			}
-		}
-
-		~ParsedProgram() = default;
-	};
+		return out;
+	}
 
 	MBox<Func> Func::parse(F8ParserState& state) {
 		auto out = makeBox<Func>(state.getPosition());
@@ -884,9 +607,9 @@ namespace assemble {
 		}
 	}
 
-	void assertTailcallsSignatures(std::vector<vm::FuncData>& functions) {
+	void assertTailcallsSignatures(base::StableVector<vm::FuncData>& functions) {
 		for (const auto& func: functions) {
-			for (const auto& op: func.bc) {
+			for (const auto& op: func->bc) {
 #ifdef USE_TAIL_CALLS
 				if (op.opfun
 				    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
@@ -894,7 +617,7 @@ namespace assemble {
 				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
 #endif
 					CORE_ASSERT(
-						func.arg_size == func.next_arg_size,
+						func->arg_size == func->next_arg_size,
 						"Invalid Tailcall! Caller signature must have arg_size "
 						"equal "
 						"to "
@@ -907,15 +630,15 @@ namespace assemble {
 						"next_arg_size"
 					);
 					CORE_ASSERT(
-						func.arg_size == functions[op.arg0].arg_size,
+						func->arg_size == functions[op.arg0].arg_size,
 						"Invalid Tailcall! Caller and called arg size unmatched"
 					);
 					CORE_ASSERT(
-						func.stack_size == functions[op.arg0].stack_size,
+						func->stack_size == functions[op.arg0].stack_size,
 						"Invalid Tailcall! Caller and called stack size unmatched"
 					);
 					CORE_ASSERT(
-						func.ret_size == functions[op.arg0].ret_size,
+						func->ret_size == functions[op.arg0].ret_size,
 						"Invalid Tailcall! Caller and called ret size unmatched"
 					);
 				}
@@ -1022,64 +745,55 @@ namespace assemble {
 	// error output
 	base::Optional<Box<vm::VMProgram>>
 		getCode(Ref<ParsedProgram> parsed_program, dia::Logger& log) {
+		// vm::VMProgram program;
 		auto program = makeBox<vm::VMProgram>();
 
-		// @TODO: This should be moved to Validator
-		// for (usize idx = 0; idx < parsed_program->functions.size(); idx++) {
-		// 	if (parsed_program->functions[idx]->name.value.strView() == "main") {
-		// 		main_id = idx;
-		// 		break;
-		// 	}
-		// }
-
-		// if (!main_id) {
-		// 	log.log(makeBox<vm::parser::NoMainError>(parsed_program->position));
-		// 	return {};
-		// }
-		// program.main_id = *main_id;
-		// =====================
-
 		for (auto& func: parsed_program->functions) {
-			auto convertedFunc = changeFuncToFuncData(parsed_program->functions, func.ref(), parsed_program->type_metadata, log);
-			bool res = program->addFunction(func->name, convertedFunc);
+			auto converted_func = changeFuncToFuncData(
+				parsed_program->functions, func.ref(), parsed_program->type_metadata, log
+			);
+			bool res = program->addFunction(func->name, converted_func);
 			// @ TODO: That should be moved to Validator
-			if (!res) { // Duplicate function name
-				log.log(makeBox<vm::parser::DuplicateFunctionDeclarationError>(parsed_program->position));
+			if (!res) {  // Duplicate function name
+				log.log(
+					makeBox<vm::parser::DuplicateFunctionDeclarationError>(parsed_program->position)
+				);
 				return {};
 			}
 			// ===================
 		}
 
 		// @TODO: This should be moved to Validator
-		// assertTailcallsSignatures(program.functions);
+		assertTailcallsSignatures(program->functions);
 		// =====================
 
 		return program;
 	}
 
+	MBox<ParsedProgram>
+		assemble(const std::vector<fs::FilePath>& files, dia::Logger& log) {
+		// ParsedProgram parsed_program(dia::SourcePosition::fakePosition());
 
-	std::expected<Box<ParsedProgram>, std::string>
-	assemble(const std::vector<fs::FilePath>& files) {
-		auto log       = dia::Logger();
-		auto parsed_program = makeBox<ParsedProgram>();
+		auto parsed_program = makeBox<ParsedProgram>(dia::SourcePosition::fakePosition());
 
-		std::vector<base::Box<ParsedFile>> parsed_files;
+
 		bool bad = false;
 
-		for (auto& file : files) {
+		for (auto& file: files) {
 			auto tokenized = tokenizeFile(file);
 			auto parsed    = parseFile(tokenized.refMut(), log).toOptBox();
-			bad = !parsed || log.bad();
+			bad            = !parsed || log.bad();
 
-			for (auto& func : parsed.value()->functions) {
+			// @TODO: This approach is temporary since we mainly work with
+			// single file programs for now, but should be changes in the
+			// future
+			parsed_program->position = parsed.value()->position;
+
+			for (auto& func: parsed.value()->functions)
 				parsed_program->functions.push_back(std::move(func));
-			}
-			
-			for (auto& type : parsed.value()->types) {
-				parsed_program->types.push_back(std::move(type));
-			}
 
-			parsed_files.push_back(parsed.value());
+			for (auto& type: parsed.value()->types)
+				parsed_program->types.push_back(std::move(type));
 		}
 
 		if (!bad) {
@@ -1087,31 +801,31 @@ namespace assemble {
 			bad = log.bad();
 		}
 
-		std::cout << "Bad: " << bad << '\n';
-		parsed_program->dprint(std::cout);
 
+		// @TODO: Should that be here???
 		if (bad) {
 			std::stringstream stream;
 			log.dumpLogAndClear(true, stream);
-			return std::unexpected(stream.str());
+			return {};
 		}
 
 		return parsed_program;
 	}
 
-	std::expected<Box<vm::VMProgram>, std::string> convertParsedProgramToVMProgram(CBox<ParsedProgram> parsed_program) {
-		auto log = dia::Logger();
+	std::expected<Box<vm::VMProgram>, std::string>
+		changeParsedProgramToVMProgram(Ref<ParsedProgram> parsed_program, dia::Logger& log) {
 		bool bad = false;
 
-		auto result = getCode(parsed_program.refMut(), log);
-		bad    = !result || log.bad();
+		auto program = getCode(parsed_program, log);
+		bad          = !program || log.bad();
 
 		if (bad) {
 			std::stringstream stream;
 			log.dumpLogAndClear(true, stream);
-			return std::unexpected(stream.str());
+			// return {};
 		}
-		return result.expect("he");
+
+		return std::move(*program);
 	}
 
 }

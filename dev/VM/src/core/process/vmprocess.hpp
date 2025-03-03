@@ -55,13 +55,13 @@ namespace vm {
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
-		Memory       memory;
+		Memory memory;
 
 		// @TODO: Read Processors' docs and do the TODO there...
 		Preprocessor preprocessor;
 
 		//@TODO: For now assume that bytecode validation is always turned on.
-		bool validate_code = true;
+		static const bool validate_code = true;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.

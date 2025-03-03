@@ -319,7 +319,7 @@ namespace vm {
 
 				for (size_t index = 0; index < executing_code->getNumberOfFunctions(); ++index) {
 					const auto& func = executing_code->getFuncByID(index);
-					auto bc = func.value()->bc;
+					auto        bc   = func.value()->bc;
 					if (bc.data() <= instr && instr < bc.data() + bc.size()) {
 						return api::Response(api::response::CodePosition{
 							.function_id  = static_cast<u64>(index),  // Assuming function_id is int

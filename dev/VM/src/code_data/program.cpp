@@ -1,5 +1,19 @@
 #include "program.hpp"
 
+// vm::VMProgram::VMProgram(const VMProgram& other)
+//     : func_name_to_id(other.func_name_to_id),
+//       functions(other.functions),
+//       type_metadata(other.type_metadata) {}
+
+// 	  // Operator przypisania kopiującego
+// vm::VMProgram& vm::VMProgram::operator=(const VMProgram& other) {
+//     if (this != &other) {
+//         func_name_to_id = other.func_name_to_id;
+//         functions = other.functions;
+//         type_metadata = other.type_metadata;
+//     }
+//     return *this;
+// }
 
 base::Optional<CRef<vm::FuncData>> vm::VMProgram::getFuncByName(base::StrID name) const {
 	auto data = func_name_to_id.atMaybeCopy(name);
@@ -16,16 +30,12 @@ base::Optional<CRef<vm::Type>> vm::VMProgram::getTypeByName(base::StrID name) co
 }
 
 bool vm::VMProgram::addFunction(const base::StrID& func_name, const FuncData& func) {
-	if (func_name_to_id.contains(func_name)) {
-		return false;
-	}
-	auto func_id = functions.pushBack(std::move(func));
-	func_name_to_id.put(std::move(func_name), std::move(func_id));
+	if (func_name_to_id.contains(func_name)) return false;
+	auto func_id = functions.pushBack(func);
+	func_name_to_id.put(func_name, func_id);
 	return true;
 }
 
 CRef<vm::Type> vm::VMProgram::getTypeByID(TypeID id) const { return type_metadata.getType(id); }
 
-usize vm::VMProgram::getNumberOfFunctions() const {
-	return functions.size();
-}
+usize vm::VMProgram::getNumberOfFunctions() const { return functions.size(); }
