@@ -2,6 +2,7 @@
 
 #include <base/ref.hpp>
 #include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
+#include "base/maps.hpp"
 #include "instructions.hpp"
 #include <deque>
 #include <vector>
@@ -9,61 +10,48 @@
 
 namespace compiler::backend_vm {
 
+	/**
+	 * @brief Creates a block of instructions.
+	 */
 	class BlockBuilder {
 		// @TODO: Decide if we need it.
 
 		// Jump instructions are only allowed in context
 		// of a single block.
 
+		std::deque<base::StrID>   types{};
 		std::deque<VmInstruction> instructions{};
 
 	public:
 		virtual ~BlockBuilder() = default;
 		BlockBuilder()          = default;
 
-		virtual void addBlock(const BlockBuilder& block);
-		void         addInstruction(const VmInstruction& instruction);
+		void initType(base::StrID name);
+		void addBlock(const BlockBuilder& block);
 
-		[[nodiscard]] Block build() const;
-	};
+		void addInstruction(const VmInstruction& instruction);
 
-	/**
-	 * @brief Creates a block of instructions.
-	 */
-	class VariableBlock: public BlockBuilder {
-		std::deque<base::StrID> types{};
-
-	public:
-		virtual ~VariableBlock() = default;
-
-		VariableBlock(base::StrID type_name): types({ type_name }) {}
-
-		void addBlock(const VariableBlock& block) {
-			types.insert(types.end(), block.types.begin(), block.types.end());
-			BlockBuilder::addBlock(block);
-		}
-
-		void addBlock(const BlockBuilder& block) override { BlockBuilder::addBlock(block); }
-
-		[[nodiscard]] Block build() const;
+		[[nodiscard]] virtual Block build() const;
 	};
 
 	/**
 	 * @brief Creates a VM function from blocks.
 	 */
 	class FunctionBuilder {
-		std::deque<BlockBuilder> blocks;
+		BlockBuilder body;
+		base::StrID  name;
 
 	public:
-		FunctionBuilder() = default;
+		FunctionBuilder(base::StrID name);
+		void addBlock(const BlockBuilder& block);
 
-		[[nodiscard]] Function build() const;
+		[[nodiscard]] Function build(const base::HashMap<base::StrID, CRef<vm::TypeOfData>>& available_types) const;
 	};
 
 	class CodeFileBuilder {
-		std::deque<FunctionBuilder> functions{};
-		std::deque<vm::TypeOfData>  types{};
-		base::Map<base::StrID, CRef<vm::TypeOfData>> type_map{};
+		std::deque<FunctionBuilder>                      functions{};
+		std::deque<vm::TypeOfData>                       types{};
+		base::HashMap<base::StrID, CRef<vm::TypeOfData>> type_map{};
 
 	public:
 		CodeFileBuilder() = default;

@@ -11,7 +11,6 @@ namespace compiler::backend_vm {
 	class Module {
 		base::StrID module_id;
 
-		vm::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout);
 	public:
 		Module(base::StrID module_id);
 

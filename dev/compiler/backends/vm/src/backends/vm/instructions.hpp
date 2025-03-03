@@ -35,9 +35,15 @@ namespace compiler::backend_vm {
 		Guardian() { CORE_PANIC("Should not instantiate Guardian"); }
 	};
 
+	struct Comment {
+		base::StrID comment;
+	};
+
 	using VmInstruction = std::variant<
+
 #define HANDLE_OPCODE(opcode) Op_##opcode,
 #include "../../../../../../VM/src/code_data/opcodes_list.hpp"
 #undef HANDLE_OPCODE
+		Comment,
 		Guardian>;
 }

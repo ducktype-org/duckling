@@ -9,7 +9,6 @@
 namespace compiler::backend_vm {
 	struct VmElement {
 		virtual ~VmElement()                            = default;
-		virtual void serialize(std::ostream& out) const = 0;
 	};
 
 	/**
@@ -17,8 +16,6 @@ namespace compiler::backend_vm {
 	 */
 	struct Block: public VmElement {
 		std::deque<VmInstruction> instructions;
-
-		void serialize(std::ostream& out) const override;
 	};
 
 	/**
@@ -32,8 +29,6 @@ namespace compiler::backend_vm {
 		usize ret_size      = 0;
 
 		Block body;
-
-		void serialize(std::ostream& out) const override;
 	};
 
 	/**
@@ -43,7 +38,5 @@ namespace compiler::backend_vm {
 	struct CodeFile: public VmElement {
 		std::deque<vm::TypeOfData> types;
 		std::deque<Function>       functions;
-
-		void serialize(std::ostream& out) const override;
 	};
 }

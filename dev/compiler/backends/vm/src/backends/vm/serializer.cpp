@@ -19,6 +19,10 @@ namespace compiler::backend_vm {
 
 	std::string toString(vm::opargs::Label arg) { return arg.label_name.str(); }
 
+	void writeComment(const std::string_view comment_content, std::ostream& out) {
+		out << '#' << ' ' << comment_content;
+	}
+
 	void write0ArgOpcodeTemplate(const std::string_view opcode_name, std::ostream& out) {
 		out << opcode_name;
 		out << ";";
@@ -43,6 +47,8 @@ namespace compiler::backend_vm {
 		std::ostream& out;
 
 		void operator()(Guardian) { CORE_PANIC("Should not serialize Guardian"); }
+
+		void operator()(const Comment& comment) { writeComment(comment.comment.strView(), out); }
 
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	void operator()(Op_##opcode) { write0ArgOpcodeTemplate(#opcode, out); }

@@ -6,17 +6,33 @@
 #include <ranges>
 
 void compiler::backend_vm::BlockBuilder::addBlock(const BlockBuilder& block) {
+	types.insert(types.end(), block.types.begin(), block.types.end());
 	instructions.insert(instructions.end(), block.instructions.begin(), block.instructions.end());
 }
 
 compiler::backend_vm::Block compiler::backend_vm::BlockBuilder::build() const {
-	auto block         = Block();
-	block.instructions = instructions;
+	auto block = Block();
+
+	for (auto& type: types) block.instructions.emplace_back(Op_init_type{ type });
+	block.instructions.insert(block.instructions.end(), instructions.begin(), instructions.end());
+	for (auto& _: types | std::views::reverse) block.instructions.emplace_back(Op_deinit{});
+
 	return block;
 }
 
-compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build() const {
-	throw base::NotYetImplemented("FunctionBuilder::build");
+compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build(
+	const base::HashMap<base::StrID, CRef<vm::TypeOfData>>& available_types
+) const {
+	Function function;
+	function.body = body.build();
+	function.name = name;
+
+	function.stack_size    = 1'337;
+	function.arg_size      = 1'337;
+	function.next_arg_size = 1'337;
+	function.ret_size      = 1'337;
+
+	return function;
 }
 
 void compiler::backend_vm::CodeFileBuilder::addFunction(const FunctionBuilder& function) {
@@ -37,8 +53,8 @@ compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() co
 	auto file      = CodeFile();
 	file.types     = types;
 	file.functions = std::ranges::to<std::deque<Function>>(
-		functions | std::views::transform([](const auto& function_builder) {
-			return function_builder.build();
+		functions | std::views::transform([&](const auto& function_builder) {
+			return function_builder.build(type_map);
 		})
 	);
 	return file;
@@ -48,25 +64,8 @@ void compiler::backend_vm::BlockBuilder::addInstruction(const VmInstruction& ins
 	instructions.push_back(instruction);
 }
 
-void compiler::backend_vm::Block::serialize(std::ostream& out) const {
-	throw base::NotYetImplemented("Block::serialize");
-}
+compiler::backend_vm::FunctionBuilder::FunctionBuilder(base::StrID name): name(name) {}
 
-void compiler::backend_vm::Function::serialize(std::ostream& out) const {
-	throw base::NotYetImplemented("Function::serialize");
-}
-
-void compiler::backend_vm::CodeFile::serialize(std::ostream& out) const {
-	throw base::NotYetImplemented("CodeFile::serialize");
-}
-
-compiler::backend_vm::Block compiler::backend_vm::VariableBlock::build() const {
-	auto block = BlockBuilder();
-	for (auto& type: types) block.addInstruction(Op_init_type{ type });
-
-	block.addBlock(*this);
-
-	for (auto& _: types | std::views::reverse) block.addInstruction(Op_deinit{});
-
-	return block.build();
+void compiler::backend_vm::FunctionBuilder::addBlock(const BlockBuilder& block) {
+	body.addBlock(block);
 }
