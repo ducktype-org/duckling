@@ -56,7 +56,7 @@ namespace compiler::helios::code {
 		out << " : ";
 
 		// this might not be correct:?
-		out << this->type.getType().toString();
+		out << this->type.toString();
 		out << " = ";
 		this->initial_value.value()->debugPrint(out);
 

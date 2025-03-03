@@ -3,17 +3,17 @@
 
 template<class T>
 struct Q {
-	...
+	// ...
 };
 
 template<class T>
 struct QQ: public Q<T> {
-	...
+	// ...
 };
 
 template<class T>
 struct G {
-	...
+	// ...
 };
 
 int main() {

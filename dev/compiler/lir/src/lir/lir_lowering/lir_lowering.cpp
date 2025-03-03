@@ -42,7 +42,7 @@ namespace compiler::lir {
 	 * @return LirLocal
 	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.getType());
+		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.type);
 
 		return LirLocal{ mir_local->helios_id, type_layout };
 	}
@@ -256,7 +256,7 @@ namespace compiler::lir {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {
-						const auto arg_type = local->type.getType();
+						const auto arg_type = local->type.type;
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralInfo(arg_type).getSignedness();
 					}

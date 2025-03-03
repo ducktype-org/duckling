@@ -90,12 +90,12 @@ private:
 			{
 				auto a = foo_mir.local_list.getCRef(0).value();
 				ASSERT_EQUAL(a->getName(), "a");
-				ASSERT_EQUAL(a->type.getType(), i32_type);
+				ASSERT_EQUAL(a->type.type, i32_type);
 			}
 			{
 				auto b = foo_mir.local_list.getCRef(1).value();
 				ASSERT_EQUAL(b->getName(), "b");
-				ASSERT_EQUAL(b->type.getType(), i32_type);
+				ASSERT_EQUAL(b->type.type, i32_type);
 			}
 
 			// Test code generation:
