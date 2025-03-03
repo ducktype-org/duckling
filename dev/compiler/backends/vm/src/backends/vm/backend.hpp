@@ -1,5 +1,6 @@
 #include <base/ref.hpp>
 #include <lir/lir_structure/function_forward.hpp>
+#include <typesystem/lower/type_layout.hpp>
 #include "backends/vm/elements.hpp"
 #include "builders.hpp"
 
@@ -10,6 +11,7 @@ namespace compiler::backend_vm {
 	class Module {
 		base::StrID module_id;
 
+		vm::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout);
 	public:
 		Module(base::StrID module_id);
 

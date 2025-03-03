@@ -1,6 +1,6 @@
 #pragma once
 
-
+#include <base/ref.hpp>
 #include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
 #include "instructions.hpp"
 #include <deque>
@@ -63,6 +63,7 @@ namespace compiler::backend_vm {
 	class CodeFileBuilder {
 		std::deque<FunctionBuilder> functions{};
 		std::deque<vm::TypeOfData>  types{};
+		base::Map<base::StrID, CRef<vm::TypeOfData>> type_map{};
 
 	public:
 		CodeFileBuilder() = default;
