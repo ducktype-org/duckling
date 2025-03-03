@@ -3,14 +3,9 @@
  */
 #pragma once
 
-#include <filesystem/file.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/string_id.hpp>
-#include <core/process/type_metadata/type_metadata.hpp>
-#include "base/optional.hpp"
-#include "core/process/type_metadata/type.hpp"
-#include "instruction.hpp"
-#include <vector>
+#include "base/stable_hashmap.hpp"
+#include "code_data/instruction.hpp"
+#include "core/process/type_metadata/type_metadata.hpp"
 
 namespace vm {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -19,23 +14,27 @@ namespace vm {
 	 * @brief Function data.
 	 */
 	struct FuncData {
-		ByteCode bc;
-		usize    stack_size;
-		usize    arg_size;
-		usize    next_arg_size;
-		usize    ret_size;
+		base::StrID name;
+		ByteCode    bc;
+		usize       stack_size;
+		usize       arg_size;
+		usize       next_arg_size;
+		usize       ret_size;
 	};
 
 	/**
 	 * @brief Representation of the program VM runs.
 	 * Parser creates this structure from a list of ParsedFile structures after validation.
 	 * Executor uses it to execute the code.
+	 *
+	 * @note It's guaranteed to contain main, if validator is enabled.
 	 */
 	class VMProgram {
 	public:
-		// VMProgram() = default;    
-		// VMProgram(const VMProgram& other);
-    	// VMProgram& operator=(const VMProgram& other);
+		VMProgram(const std::vector<vm::FuncData>& functions, Box<TypeMetadata> type_metadata):
+			  type_metadata(std::move(type_metadata)) {
+			for (auto& func: functions) addFunction(func.name, func);
+		}
 
 		base::Optional<CRef<FuncData>>     getFuncByName(base::StrID name) const;
 		base::Optional<CRef<vm::FuncData>> getFuncByID(usize id) const;
@@ -50,7 +49,6 @@ namespace vm {
 		// private:
 		base::StableHashMap<base::StrID, usize> func_name_to_id;
 		base::StableVector<FuncData>            functions;
-		// std::vector<FuncData>            functions;
-		TypeMetadata                            type_metadata;
+		Box<TypeMetadata> type_metadata;
 	};
 }

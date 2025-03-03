@@ -31,7 +31,15 @@
 #include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
 
-namespace assemble {
+namespace vm::parser {
+	class F8ParserState final: public tpc::ParserState {
+	public:
+		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+			  tpc::ParserState(std::move(stream), err) {}
+
+		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
+	};
+
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseInt(F8ParserState& state) {
@@ -230,7 +238,7 @@ namespace assemble {
 						state.getPosition(), "arg_size argument is not num-literal"
 					);
 				try {
-					out->arg_size = strIDToNum(value.getValue());
+					out->arg_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "arg_size argument is not num-literal"
@@ -255,7 +263,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->next_arg_size = strIDToNum(value.getValue());
+					out->next_arg_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
@@ -276,7 +284,7 @@ namespace assemble {
 						state.getPosition(), "local_size argument is not num-literal"
 					);
 				try {
-					out->local_size = strIDToNum(value.getValue());
+					out->local_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "local_size argument is not num-literal"
@@ -297,7 +305,7 @@ namespace assemble {
 						state.getPosition(), "ret_size argument is not num-literal"
 					);
 				try {
-					out->ret_size = base::strIDToNum(value.getValue());
+					out->ret_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "ret_size argument is not num-literal"
@@ -550,7 +558,7 @@ namespace assemble {
 				log.log(std::move(msg));
 			} else {
 				vm::Type typ      = vm::Type::declareType(name);
-				auto     type_ref = program->type_metadata.addType(std::move(typ));
+				auto     type_ref = program->type_metadata->addType(std::move(typ));
 				type_map.put(name, type_ref);
 				good_types.push_back(type.refMut());
 			}
@@ -594,187 +602,13 @@ namespace assemble {
 			}
 		}
 
-		program->type_metadata.finalize();
+		program->type_metadata->finalize();
 	}
 
-	u16 nameToOpcodeValue(base::StrID str) {
-		try {
-			return static_cast<u16>(vm::STR_TO_OPCODE_FIX8.at(str.str()));
-		} catch (std::out_of_range& err) {
-			// @TODO: better errors
-			CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
-			return 0;
-		}
-	}
-
-	void assertTailcallsSignatures(base::StableVector<vm::FuncData>& functions) {
-		for (const auto& func: functions) {
-			for (const auto& op: func->bc) {
-#ifdef USE_TAIL_CALLS
-				if (op.opfun
-				    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
-#else
-				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
-#endif
-					CORE_ASSERT(
-						func->arg_size == func->next_arg_size,
-						"Invalid Tailcall! Caller signature must have arg_size "
-						"equal "
-						"to "
-						"next_arg_size"
-					);
-					CORE_ASSERT(
-						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
-						"Invalid Tailcall! Called function signature must have "
-						"arg_size == "
-						"next_arg_size"
-					);
-					CORE_ASSERT(
-						func->arg_size == functions[op.arg0].arg_size,
-						"Invalid Tailcall! Caller and called arg size unmatched"
-					);
-					CORE_ASSERT(
-						func->stack_size == functions[op.arg0].stack_size,
-						"Invalid Tailcall! Caller and called stack size unmatched"
-					);
-					CORE_ASSERT(
-						func->ret_size == functions[op.arg0].ret_size,
-						"Invalid Tailcall! Caller and called ret size unmatched"
-					);
-				}
-			}
-		}
-	}
-
-	i64 getOpCodeArgValue(
-		const std::vector<Box<Func>>& functions,
-		const vm::TypeMetadata&       types,
-		CRef<Func>                    current_func,
-		usize                         instruction_index,
-		const OpCodeArgAndPosition&   opcode_arg,
-		dia::Logger&                  log
-	) {
-		variant_match(opcode_arg.arg) {
-			variant_case(vm::opargs::ImmediateI64, imm) return imm.value;
-			variant_case(vm::opargs::StackOffset, offset) return offset.offset;
-			variant_case(vm::opargs::ArgsOffset, offset) return offset.offset;
-			variant_case(vm::opargs::Type, type_arg) {
-				auto type_obj = types.getTypeByName(type_arg.type_name);
-				if (type_obj) return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-				log.log(makeBox<vm::parser::UnknownType>(opcode_arg.position, type_arg.type_name));
-				return 0;
-			}
-			variant_case(vm::opargs::FunctionName, func) {
-				for (i64 i = 0; i < functions.size(); i++)
-					if (functions[i]->name == func.function_name) return i;
-				log.log(
-					makeBox<vm::parser::UnknownFunction>(opcode_arg.position, func.function_name)
-				);
-				return 0;
-			}
-			variant_case(vm::opargs::Label, label) {
-				auto it = current_func->code->label_position.find(label.label_name);
-				if (it != current_func->code->label_position.end()) {
-					// We have to calculate the
-					// difference instead of absolute jump position,
-					// because our instruction counter is a pointer.
-					return static_cast<i64>(it->second) - static_cast<i64>(instruction_index) - 1;
-				}
-				log.log(
-					makeBox<vm::parser::InvalidLabel>(opcode_arg.position, "Label does not exist.")
-				);
-				return 0;
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
-	vm::FuncData changeFuncToFuncData(
-		const std::vector<Box<Func>>& functions,
-		CRef<Func>                    func,
-		vm::TypeMetadata&             types,
-		dia::Logger&                  log
-	) {
-		vm::FuncData func_data;
-		func_data.ret_size      = 0;
-		func_data.arg_size      = func->arg_size;
-		func_data.next_arg_size = func->next_arg_size;
-		func_data.stack_size    = func->local_size;
-		func_data.ret_size      = func->ret_size;
-
-		for (i64 op_idx = 0; op_idx < func->code->opcodes.size(); op_idx++) {
-			auto&& op    = func->code->opcodes[op_idx];
-			i64    arg_0 = 0;
-			i64    arg_1 = 0;
-			switch (op->args.size()) {
-			case 0: {
-				break;
-			}
-			case 1: {
-				arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
-				break;
-			}
-			case 2: {
-				arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
-				arg_1 = getOpCodeArgValue(functions, types, func, op_idx, op->args[1], log);
-				break;
-			}
-			}
-
-
-#ifdef USE_TAIL_CALLS
-			func_data.bc.emplace_back(vm::Fix8Instruction{
-				.opfun = vm::OpFuns::OPFUNS.at(nameToOpcodeValue(op->opcode_name)),
-				.arg0  = static_cast<i32>(arg_0),
-				.arg1  = static_cast<i32>(arg_1) });
-#endif
-
-// #else breaks clang-format for some reason (?)
-#ifndef USE_TAIL_CALLS
-			func_data.bc.emplace_back(vm::Fix8Instruction{
-				.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
-				.arg0   = static_cast<i32>(arg_0),
-				.arg1   = static_cast<i32>(arg_1) });
-#endif
-		}
-		return func_data;
-	}
-
-	// @TODO: this function returns errors as string, in the future `StreamPrinter`
-	// like object should be returned, that can produce both human readable and json
-	// error output
-	base::Optional<Box<vm::VMProgram>>
-		getCode(Ref<ParsedProgram> parsed_program, dia::Logger& log) {
-		// vm::VMProgram program;
-		auto program = makeBox<vm::VMProgram>();
-
-		for (auto& func: parsed_program->functions) {
-			auto converted_func = changeFuncToFuncData(
-				parsed_program->functions, func.ref(), parsed_program->type_metadata, log
-			);
-			bool res = program->addFunction(func->name, converted_func);
-			// @ TODO: That should be moved to Validator
-			if (!res) {  // Duplicate function name
-				log.log(
-					makeBox<vm::parser::DuplicateFunctionDeclarationError>(parsed_program->position)
-				);
-				return {};
-			}
-			// ===================
-		}
-
-		// @TODO: This should be moved to Validator
-		assertTailcallsSignatures(program->functions);
-		// =====================
-
-		return program;
-	}
-
-	MBox<ParsedProgram>
-		assemble(const std::vector<fs::FilePath>& files, dia::Logger& log) {
+	std::expected<ParsedProgram, std::string> assemble(const std::vector<fs::FilePath>& files) {
 		// ParsedProgram parsed_program(dia::SourcePosition::fakePosition());
-
-		auto parsed_program = makeBox<ParsedProgram>(dia::SourcePosition::fakePosition());
+		auto          log = dia::Logger();
+		ParsedProgram parsed_program;
 
 
 		bool bad = false;
@@ -787,45 +621,27 @@ namespace assemble {
 			// @TODO: This approach is temporary since we mainly work with
 			// single file programs for now, but should be changes in the
 			// future
-			parsed_program->position = parsed.value()->position;
+			parsed_program.position = parsed.value()->position;
 
 			for (auto& func: parsed.value()->functions)
-				parsed_program->functions.push_back(std::move(func));
+				parsed_program.functions.push_back(std::move(func));
 
-			for (auto& type: parsed.value()->types)
-				parsed_program->types.push_back(std::move(type));
+			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));
 		}
 
+		
 		if (!bad) {
-			defineTypes(parsed_program.refMut(), log);
+			defineTypes(&parsed_program, log);
 			bad = log.bad();
 		}
 
 
-		// @TODO: Should that be here???
 		if (bad) {
 			std::stringstream stream;
 			log.dumpLogAndClear(true, stream);
-			return {};
+			return std::unexpected(stream.str());
 		}
 
 		return parsed_program;
 	}
-
-	std::expected<Box<vm::VMProgram>, std::string>
-		changeParsedProgramToVMProgram(Ref<ParsedProgram> parsed_program, dia::Logger& log) {
-		bool bad = false;
-
-		auto program = getCode(parsed_program, log);
-		bad          = !program || log.bad();
-
-		if (bad) {
-			std::stringstream stream;
-			log.dumpLogAndClear(true, stream);
-			// return {};
-		}
-
-		return std::move(*program);
-	}
-
 }

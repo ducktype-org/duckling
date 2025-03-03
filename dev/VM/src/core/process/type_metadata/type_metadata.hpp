@@ -1,6 +1,5 @@
 #pragma once
 
-#include <base/stable_container.hpp>
 #include "type.hpp"
 
 namespace vm {
@@ -16,9 +15,9 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type, TypeID> types;
-		std::vector<TypeID>              types_ids;
-		base::Map<base::StrID, TypeID>   names_to_type;
+		base::StableVector<Type, TypeID> types{};
+		std::vector<TypeID>              types_ids{};
+		base::Map<base::StrID, TypeID>   names_to_type{};
 
 		TypeMetadataState state;
 

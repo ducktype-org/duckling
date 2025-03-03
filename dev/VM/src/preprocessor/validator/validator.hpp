@@ -1,21 +1,22 @@
 #pragma once
 
+#include "preprocessor/parser/elements.hpp"
 #include <code_data/program.hpp>
-#include "../parser/parser.hpp"
+#include "diagnostic/logger.hpp"
 
 namespace vm::validator {
 	class Validator {
 	public:
 		Validator() = default;
 
-		bool validateProgram(const assemble::ParsedProgram& program);
+		bool validateProgram(const parser::ParsedProgram& program);
 
 	private:
-		vm::VMProgram program;
-
-
-		bool validateMainExistance(const assemble::ParsedProgram& program, dia::Logger& log);
-		bool validateTailcallSignatures(const assemble::ParsedProgram& program, dia::Logger& log);
+		bool validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log);
+		bool validateTailcallSignatures(const parser::ParsedProgram& program, dia::Logger& log);
+		bool validateDuplicateFunctionDeclarations(
+			const parser::ParsedProgram& program, dia::Logger& log
+		);
 	};
 
 }

@@ -36,7 +36,7 @@ namespace vm {
 		 * @return std::expected<vm::VMProgram, std::string>
 		 */
 		std::expected<vm::VMProgram, std::string>
-			changeParsedProgramToVMProgram(const assemble::ParsedProgram& parsed_program);
+			changeParsedProgramToVMProgram(const parser::ParsedProgram& parsed_program);
 
 		Preprocessor(VMProcess& process, bool validate_program);
 

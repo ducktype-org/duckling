@@ -1,37 +1,47 @@
 #include "validator.hpp"
-#include <iostream>
 #include "errors.hpp"
 
 namespace vm::validator {
-	bool vm::validator::Validator::validateProgram(const assemble::ParsedProgram& program) {
-		auto log = dia::Logger();
-		bool bad = false;
+	bool Validator::validateProgram(const parser::ParsedProgram& program) {
+		auto log   = dia::Logger();
+		bool valid = false;
 
-		bad = validateMainExistance(program, log);
-		if (bad) return false;
-		bad = validateTailcallSignatures(program, log);
-		if (bad) return false;
+		valid = validateMainExistance(program, log);
+		if (!valid) return false;
+		valid = validateTailcallSignatures(program, log);
+		if (!valid) return false;
+		valid = validateDuplicateFunctionDeclarations(program, log);
+		if (!valid) return false;
 		return true;
 	}
 
-	bool validateMainExistance(const assemble::ParsedProgram& program, dia::Logger& log) {
-		base::Optional<usize> main_id;
-		for (usize idx = 0; idx < program.functions.size(); idx++) {
-			if (program.functions[idx]->name.value.strView() == "main") {
-				main_id = idx;
+	bool Validator::validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log) {
+		bool main_found = false;
+
+		for (auto& func: program.functions) {
+			if (func->name.value.strView() == "main") {
+				main_found = true;
 				break;
 			}
 		}
 
-		if (!main_id) {
+		if (!main_found) {
+			// @TODO: Change fakePosition() to real source position.
 			log.log(makeBox<vm::validator::NoMainError>(dia::SourcePosition::fakePosition()));
 			return false;
 		}
 		return true;
 	}
 
-	bool validateTailcallSignatures(const assemble::ParsedProgram& program, dia::Logger& log) {
-		// @TODO: Move tailcall checking from parser to here.
+	bool Validator::validateTailcallSignatures(
+		const parser::ParsedProgram& program, dia::Logger& log
+	) {
+		return true;
+	}
+
+	bool Validator::validateDuplicateFunctionDeclarations(
+		const parser::ParsedProgram& program, dia::Logger& log
+	) {
 		return true;
 	}
 
