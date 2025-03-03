@@ -5,7 +5,6 @@
 
 #include <tester/tester.hpp>
 #include <base/optional.hpp>
-#include <queue>
 
 using base::Optional;
 
@@ -28,6 +27,7 @@ public:
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
 		TESTER_ADD_TEST(arrowOperatorTest);
+		TESTER_ADD_TEST(ifOptSomeTest);
 	}
 
 	template<class T, class U>
@@ -250,6 +250,39 @@ public:
 		base::Optional<std::string&> opt_ref(str);
 		opt_ref->push_back('r');
 		ASSERT_EQUAL("r", opt_ref.value());
+	}
+
+	void ifOptSomeTest() {
+		base::Optional<int> opt = 1;
+		{
+			bool entered = false;
+			if_opt_some(opt, val) {
+				ASSERT_EQUAL(1, val);
+				entered = true;
+			}
+			ASSERT_TRUE(entered);
+
+			if_opt_none(opt) { fail("Entered if_opt_none with value!"); }
+		}
+
+		opt = std::nullopt;
+		{
+			bool entered = false;
+			if_opt_none(opt) { entered = true; }
+			ASSERT_TRUE(entered);
+
+			if_opt_some(opt, _) { fail("Entered if_opt_some with no value!"); }
+		}
+
+		{
+			u64  count   = 0;
+			auto get_opt = [&]() -> base::Optional<int> {
+				count++;
+				return 1;
+			};
+			if_opt_some(get_opt(), val) { ASSERT_EQUAL(1, val); }
+			ASSERT_EQUAL(1, count);
+		}
 	}
 };
 

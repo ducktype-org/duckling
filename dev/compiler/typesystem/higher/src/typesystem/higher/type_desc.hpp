@@ -52,7 +52,7 @@ namespace tsh {
 		 * @param abstract_type The source type description, from the AbstractType hierarchy.
 		 * @param value_category The value category of the described value.
 		 */
-		TypeDesc(ABSTRACT_TYPE abstract_type, const ValueCategory value_category = {}):
+		TypeDesc(const ABSTRACT_TYPE abstract_type, const ValueCategory value_category):
 			  abstract_type(abstract_type),
 			  value_category(value_category) {}
 

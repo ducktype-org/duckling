@@ -1,8 +1,7 @@
 #pragma once
 
 #include <string>
-#include <base/ints.hpp>
-#include <clap/clap.hpp>
+#include <clap/clap.hpp>  // @TODO #404 relax it so it only includes CLIArgs
 
 namespace tester {
 	struct TestConfig final {

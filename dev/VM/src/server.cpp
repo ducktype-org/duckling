@@ -1,14 +1,17 @@
 #include <json/json.hpp>
 #include <api/api.hpp>
+#include <base/define_helper.hpp>
+#include <base/int_conv.hpp>
 #include <core/supervisor/supervisor.hpp>
 #include "server.hpp"
 
 #include <result.hpp>
 
-#pragma GCC diagnostic push
+PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"
-#include <crow.h>
-#pragma GCC diagnostic pop
+#include <crow/app.h>
+#include <crow/http_response.h>
+POP_DIAGNOSTIC
 
 crow::response convertError(const vm::api::ApiError& apiError) {
 	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
@@ -99,5 +102,5 @@ void server(i32 port) {
 			})
 		);
 	});
-	app.port(port).run();
+	app.port(base::safeIntConv<u16>(port)).run();
 }

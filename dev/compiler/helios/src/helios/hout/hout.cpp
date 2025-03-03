@@ -30,7 +30,7 @@ namespace compiler::helios {
 		if (content.parameters->empty()) out << "  none\n";
 		for (auto& param: *content.parameters) {
 			out << "  " << param.name.strView() << " : ";
-			out << param.type.getType().toString();
+			out << param.type.toString();
 			if (param.initial_value.has_value()) {
 				out << " = ";
 				param.initial_value.value()->debugPrint(out);

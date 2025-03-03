@@ -16,6 +16,7 @@
 #include <tree-sitter-cpp.h>
 #include <regex>
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
@@ -45,12 +46,12 @@ int count_tokens(TSNode node) {
 		std::cerr << "Non include preprocessing directives are untested for token counts";
 		// This is an educated guess of how it would be treated
 		int res = 1;
-		for (int child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
+		for (u32 child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
 		return res;
 	} else {
 		// std::cout << type << "\n";
 		int res = 0;
-		for (int child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
+		for (u32 child = 0; child < count; child++) res += count_tokens(ts_node_child(node, child));
 		return res;
 	}
 }
@@ -62,7 +63,9 @@ struct CppParser {
 
 	CppParser(const std::string& source_code): source_code(source_code), parser(ts_parser_new()) {
 		if (ts_parser_set_language(parser, tree_sitter_cpp()))
-			tree = ts_parser_parse_string(parser, nullptr, source_code.data(), source_code.size());
+			tree = ts_parser_parse_string(
+				parser, nullptr, source_code.data(), base::safeIntConv<u32>(source_code.size())
+			);
 		else
 			CORE_PANIC("Failed to set parser language.");
 	}
@@ -85,7 +88,7 @@ int main(int argc, const char** argv) {
 	clap::ParsingResult input;
 
 	try {
-		input = clap.parse(argc, argv);
+		input = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },

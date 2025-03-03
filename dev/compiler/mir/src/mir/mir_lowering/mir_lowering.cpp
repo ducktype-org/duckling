@@ -283,9 +283,9 @@ namespace compiler::mir {
 		LocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
+				tsh::ComponentType{ .type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+										"Handling ERRORS in MIR is not supported yet..."
+									) },
 				scope(helios_id),
 			});
 			return local_list.getRef(key).value();
@@ -293,9 +293,8 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		LocalRef addTmp(const tsh::AbstractType type, const helios::ScopeID scope) {
-			const auto type_desc
-				= tsh::TypeDesc<>{ type, tsh::ValueCategory{ tsh::PrimaryCategory::Temporary } };
-			const auto key = local_list.emplaceBack(MirLocal{ type_desc, scope });
+			const auto key
+				= local_list.emplaceBack(MirLocal{ tsh::ComponentType{ .type = type }, scope });
 			return local_list.getRef(key).value();
 		}
 
@@ -534,7 +533,7 @@ namespace compiler::mir {
 				{ flagConstruct(target_location) },
 				expr.lifetime_scope,
 			});
-			output({ l_continuation, target_location });
+			output({ .begin = l_continuation, .value = target_location });
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
@@ -619,7 +618,7 @@ namespace compiler::mir {
 					return ctx.query<tsh::QueryIntegralType>({ 64 });
 				}
 				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
-				variant_case(LocalRef, local) { return local->type.getType(); }
+				variant_case(LocalRef, local) { return local->type.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
