@@ -666,7 +666,7 @@ private:
 				assertTrue(ret_expr_casted != nullptr, "Identifier expression expected");
 
 				auto a_sym  = ret_expr_casted->symbol;
-				auto a_type = ret_expr_casted->type_desc;
+				auto a_type = ret_expr_casted->expression_type;
 
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(

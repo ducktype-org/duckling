@@ -4,7 +4,7 @@
 #include <variant>
 #include <helios/scopes/scopes.hpp>
 #include <typesystem/higher/types.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>

@@ -8,7 +8,6 @@
 
 #pragma once
 #include "abstract_type.hpp"
-#include "type_desc.hpp"
 #include <helios/scope_symbol_id.hpp>
 #include <base/optional.hpp>
 #include <base/bits_and_bytes.hpp>
@@ -173,9 +172,9 @@ namespace tsh {
 	\*******************/
 
 	/**
-	 * @brief A type supplied with mutability AbstractTypermation.
+	 * @brief A type supplied with mutability type information.
 	 *
-	 * @todo should this exist, how it realted to AbstractType, typedesc; document it.
+	 * @todo should this exist, how it realted to AbstractType, ExpressionType; document it.
 	 *
 	 * It's called "Component Type" because it is used in types which are composed of other types.
 	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some

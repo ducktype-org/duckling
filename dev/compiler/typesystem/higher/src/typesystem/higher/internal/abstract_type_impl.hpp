@@ -76,7 +76,7 @@ namespace tsh::internal {
 
 		/**
 		 * @brief Determine whether it is legal to consider an implicit coercion
-		 * from a value described by this TypeDesc to one described by target.
+		 * from a value described by this ExpressionType to one described by target.
 		 *
 		 * An implicit coercion is when, for example, a boolean is expected, but
 		 * and integer is given. A desirable (and common) behaviour may be to

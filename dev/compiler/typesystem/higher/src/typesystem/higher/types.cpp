@@ -12,7 +12,7 @@
 #include <concepts>
 
 #include "internal/abstract_type_impl.hpp"
-#include "type_desc.hpp"
+#include "expression_type.hpp"
 #include "types.hpp"
 
 #include <base/exceptions.hpp>
@@ -134,7 +134,7 @@ namespace tsh {
 
 	struct FunctionConstructionRecord {
 		std::vector<AbstractType> parameter_types;
-		TypeDesc<>                result_type;
+		ExpressionType<>          result_type;
 		bool                      pure, free;
 
 		auto operator<=>(const FunctionConstructionRecord&) const = default;

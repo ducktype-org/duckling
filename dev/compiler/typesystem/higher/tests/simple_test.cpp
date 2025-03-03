@@ -42,7 +42,7 @@ public:
 		TESTER_ADD_TEST(simpleFunction);
 		TESTER_ADD_TEST(simpleLanguageElements);
 		TESTER_ADD_TEST(simpleMeta);
-		TESTER_ADD_TEST(simpleTypeDesc);
+		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
 		TESTER_ADD_TEST(simpleImplicitCoercibility);
 	}
@@ -373,27 +373,27 @@ private:
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 	}
 
-	void simpleTypeDesc() {
+	void simpleExpressionType() {
 		const auto void_i = query::entryPoint<QueryVoidType>({});
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
-		const TypeDesc int_desc(int_i, ValueCategory(PrimaryCategory::Local));
+		const ExpressionType int_desc(int_i, ValueCategory(PrimaryCategory::Local));
 
 		try {
-			TypeDesc<IntegralAbstractType>{ void_i, ValueCategory(PrimaryCategory::Local) };
+			ExpressionType<IntegralAbstractType>{ void_i, ValueCategory(PrimaryCategory::Local) };
 			fail("Created IntegralDesc for Void type.");
 		} catch (const base::LogicError&) {
 			// expected
 		}
 
-		TypeDesc<>{ void_i, ValueCategory(PrimaryCategory::Local) };
+		ExpressionType<>{ void_i, ValueCategory(PrimaryCategory::Local) };
 
-		const TypeDesc really_int_desc = int_desc;
+		const ExpressionType really_int_desc = int_desc;
 
 		assertTrue(int_desc.getType().getKind() == Integral, "IntDesc type is not int");
 		assertTrue(
 			really_int_desc.getType().getKind() == Integral,
-			"IntDesc type after conversion to TypeDesc is not int"
+			"IntDesc type after conversion to ExpressionType is not int"
 		);
 	}
 
@@ -466,11 +466,11 @@ private:
 		);
 
 		const auto i2_const
-			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 		const auto i2_mut
-			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
+			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
 		const auto i3_const
-			= TypeDesc<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 
 		assertTrue(
 			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i3_const }),

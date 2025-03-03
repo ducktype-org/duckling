@@ -29,7 +29,7 @@
 #pragma once
 
 #include "../abstract_type.hpp"
-#include "../type_desc.hpp"
+#include "../expression_type.hpp"
 
 #include <base/maps.hpp>
 
@@ -92,14 +92,16 @@ namespace tsh {
 		/**
 		 * @brief Source value description of the coercion.
 		 */
-		TypeDesc<> source;
+		ExpressionType<> source;
 
 		/**
 		 * @brief Target value description of the coercion.
 		 */
-		TypeDesc<> target;
+		ExpressionType<> target;
 
-		KeyFor_QueryImplicitCoercibilityOnDesc(const TypeDesc<>& source, const TypeDesc<>& target):
+		KeyFor_QueryImplicitCoercibilityOnDesc(
+			const ExpressionType<>& source, const ExpressionType<>& target
+		):
 			  source(source),
 			  target(target) {}
 
@@ -120,7 +122,7 @@ namespace tsh {
 	};
 
 	/**
-	 * @brief Query to check whether implicit coercion from one value described by TypeDesc to
+	 * @brief Query to check whether implicit coercion from one value described by ExpressionType to
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(QueryImplicitCoercibilityOnDesc, KeyFor_QueryImplicitCoercibilityOnDesc, bool)

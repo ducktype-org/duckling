@@ -61,7 +61,7 @@ namespace compiler::helios {
 					} else {
 						// @todo: False here means all subtypes of a tuple are immutable.
 						// this is likely wrong, we will have to change it with
-						// type info, type desc, component type refactor
+						// type info, expression type, component type refactor
 						subtypes.emplace_back(sub_type_result.value(), false);
 					}
 				}
@@ -116,7 +116,7 @@ namespace compiler::helios {
 
 			// note: this assert might be changed to a compiler error in the future:
 			CORE_ASSERT(
-				parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta,
+				parsed.value()->expression_type.getType().getKind() == tsh::Kind::Meta,
 				"Expression provided to EvalExprToType has non-meta type."
 			);
 

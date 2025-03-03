@@ -6,7 +6,7 @@
 #include <base/ref.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/types.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 
 #include <query_framework/query_int.hpp>
 

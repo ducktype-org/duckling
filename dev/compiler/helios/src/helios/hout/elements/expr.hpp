@@ -9,7 +9,7 @@
 #include <base/box.hpp>
 
 #include <query_framework/query_int.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <helios/lookup_result.hpp>
 
@@ -26,11 +26,11 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		tsh::TypeDesc<> type_desc;
+		tsh::ExpressionType<> expression_type;
 
-		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
+		Expr(ScopeID lifetime_scope, tsh::ExpressionType<> expression_type):
 			  lifetime_scope(lifetime_scope),
-			  type_desc(type_desc) {}
+			  expression_type(expression_type) {}
 
 		virtual ~Expr()                                  = default;
 		virtual void debugPrint(std::ostream& out) const = 0;
