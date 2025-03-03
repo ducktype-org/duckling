@@ -377,16 +377,16 @@ private:
 		const auto void_i = query::entryPoint<QueryVoidType>({});
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
-		const TypeDesc int_desc(int_i);
+		const TypeDesc int_desc(int_i, ValueCategory(PrimaryCategory::Local));
 
 		try {
-			TypeDesc<IntegralInfo>{ void_i };
+			TypeDesc<IntegralInfo>{ void_i, ValueCategory(PrimaryCategory::Local) };
 			fail("Created IntegralDesc for Void type.");
 		} catch (const base::LogicError&) {
 			// expected
 		}
 
-		TypeDesc<>{ void_i };
+		TypeDesc<>{ void_i, ValueCategory(PrimaryCategory::Local) };
 
 		const TypeDesc really_int_desc = int_desc;
 
