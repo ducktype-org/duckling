@@ -50,7 +50,7 @@ duck_add_test(base defer_tests tests/defer_test.cpp
         USES Base)
 
 duck_add_test(base strong_id_test tests/strong_id_test.cpp
-        USES Base Tester)
+        USES Base)
 
 duck_add_test(base at_maybe_test tests/at_maybe_test.cpp
         USES Base)
@@ -65,7 +65,7 @@ add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)
 
 add_example(constexpr_cat_example src/base/examples/constexpr_cat_example.cpp
-        USES Base Filesystem)
+        USES Base)
 
 add_example(defer_example src/base/examples/defer_example.cpp
         USES Base)

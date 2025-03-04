@@ -138,7 +138,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(VectorReferenceQuery);
 struct Result {
 	enum class Status { Live, Destroyed };
 	i64                                 id;
-	static inline std::map<u64, Status> status;
+	static inline std::map<i64, Status> status;
 	static inline i64                   next_id = 0;
 
 	void init() {

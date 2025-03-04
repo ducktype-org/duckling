@@ -1,5 +1,4 @@
 #include <tester/tester.hpp>
-#include <iostream>
 #include <thread>
 
 // Class representing suite of tets
@@ -69,10 +68,10 @@ private:
 // If the main is same as bellow you can just write:
 // TESTER_COMMON_MAIN("/common/tester/examples/");
 
-int main(int argc, const char** argv) {
+int main() {
 	// Relative path to test folder should be here:
 	// It should in general be `/path-to-module/tests/`
-	auto config = tester::getTestConfig({ usize(argc), argv }, "/common/tester/examples/");
+	auto config = tester::getTestConfig("/common/tester/examples/");
 
 	MyTest test(std::move(config));
 
