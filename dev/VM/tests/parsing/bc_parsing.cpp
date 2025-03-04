@@ -3,6 +3,7 @@
 #include <variant>
 #include <vm_tester_utils.hpp>
 #include <preprocessor/parser/errors.hpp>
+#include <preprocessor/validator/errors.hpp>
 
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -72,7 +73,7 @@ private:
 		parseInvalidDbc(
 			"no_main.dbc",
 			{
-				vm::parser::NoMainError::ERR_MSG,
+				vm::validator::NoMainError::ERR_MSG,
 			}
 		);
 	}

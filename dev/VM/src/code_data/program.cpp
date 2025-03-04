@@ -1,4 +1,5 @@
 #include "program.hpp"
+#include "base/ref.hpp"
 
 base::Optional<CRef<vm::FuncData>> vm::VMProgram::getFuncByName(base::StrID name) const {
 	auto data = func_name_to_id.atMaybeCopy(name);
@@ -7,7 +8,7 @@ base::Optional<CRef<vm::FuncData>> vm::VMProgram::getFuncByName(base::StrID name
 }
 
 base::Optional<CRef<vm::FuncData>> vm::VMProgram::getFuncByID(usize id) const {
-	return functions.getCRef(id).expect("Bad FuncID in getFuncByID");
+	return functions.getCRef(id);
 }
 
 base::Optional<CRef<vm::Type>> vm::VMProgram::getTypeByName(base::StrID name) const {

@@ -629,7 +629,6 @@ namespace vm::parser {
 			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));
 		}
 
-		
 		if (!bad) {
 			defineTypes(&parsed_program, log);
 			bad = log.bad();

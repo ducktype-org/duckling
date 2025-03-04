@@ -13,6 +13,7 @@
 namespace vm {
 	namespace {
 		void assertTailcallsSignatures(base::StableVector<FuncData>& functions) {
+		// void assertTailcallsSignatures(std::vector<FuncData>& functions) {
 			for (const auto& func: functions) {
 				for (const auto& op: func->bc) {
 #ifdef USE_TAIL_CALLS
@@ -54,7 +55,7 @@ namespace vm {
 
 		i64 getOpCodeArgValue(
 			const std::vector<Box<parser::Func>>& functions,
-			Box<vm::TypeMetadata>                 types,
+			Ref<vm::TypeMetadata>                 types,
 			CRef<parser::Func>                    current_func,
 			usize                                 instruction_index,
 			const parser::OpCodeArgAndPosition&   opcode_arg,
@@ -112,7 +113,7 @@ namespace vm {
 		vm::FuncData changeFuncToFuncData(
 			const std::vector<Box<parser::Func>>& functions,
 			CRef<parser::Func>                    func,
-			Box<vm::TypeMetadata>                 types,
+			Ref<vm::TypeMetadata>                 types,
 			dia::Logger&                          log
 		) {
 			vm::FuncData func_data;
@@ -132,18 +133,12 @@ namespace vm {
 					break;
 				}
 				case 1: {
-					arg_0 = getOpCodeArgValue(
-						functions, std::move(types), func, op_idx, op->args[0], log
-					);
+					arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
 					break;
 				}
 				case 2: {
-					arg_0 = getOpCodeArgValue(
-						functions, std::move(types), func, op_idx, op->args[0], log
-					);
-					arg_1 = getOpCodeArgValue(
-						functions, std::move(types), func, op_idx, op->args[1], log
-					);
+					arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
+					arg_1 = getOpCodeArgValue(functions, types, func, op_idx, op->args[1], log);
 					break;
 				}
 				}
@@ -179,7 +174,7 @@ namespace vm {
 				auto converted_func = changeFuncToFuncData(
 					parsed_program->functions,
 					func.ref(),
-					std::move(parsed_program->type_metadata),
+					parsed_program->type_metadata.refMut(),
 					log
 				);
 				converted_functions.push_back(converted_func);

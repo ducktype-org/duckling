@@ -19,6 +19,7 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+#include <iostream>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -328,12 +329,11 @@ namespace vm {
 				auto instr = frame->instr;
 
 				for (size_t index = 0; index < executing_code->getNumberOfFunctions(); ++index) {
-					const auto& func = executing_code->getFuncByID(index);
-					auto        bc   = func.value()->bc;
-					if (bc.data() <= instr && instr < bc.data() + bc.size()) {
+					const auto& func = executing_code->functions[index];
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
 							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - bc.data()) });
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}

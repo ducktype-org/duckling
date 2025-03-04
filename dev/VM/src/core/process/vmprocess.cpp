@@ -30,7 +30,6 @@ namespace vm {
 		auto code_result = preprocessor.getProgram(path);
 
 		if (code_result.has_value()) {
-			// loaded_program = base::Optional(code_result.value());
 			loaded_program.emplace(std::move(code_result.value()));
 			return api::Response(api::response::Empty());
 		} else {

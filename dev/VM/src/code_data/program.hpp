@@ -6,6 +6,7 @@
 #include "base/stable_hashmap.hpp"
 #include "code_data/instruction.hpp"
 #include "core/process/type_metadata/type_metadata.hpp"
+// #include <vector>
 
 namespace vm {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -49,6 +50,7 @@ namespace vm {
 		// private:
 		base::StableHashMap<base::StrID, usize> func_name_to_id;
 		base::StableVector<FuncData>            functions;
-		Box<TypeMetadata> type_metadata;
+		// std::vector<FuncData>            functions;
+		Box<TypeMetadata>                       type_metadata;
 	};
 }
