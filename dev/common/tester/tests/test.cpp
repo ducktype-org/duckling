@@ -20,11 +20,11 @@ private:
 		case 0:
 			return happy();
 		case 1:
-			return failing_is_not_throwing_std();
+			return failingIsNotThrowingStd();
 		case 2:
-			return catch_no_throw();
+			return catchNoThrow();
 		case 3:
-			return catch_wrong_throw();
+			return failingIsNotThrowingStd();
 		default:
 			return;
 		}
@@ -38,7 +38,7 @@ private:
 		assertThrows<i32>([&]() { throw 3; }, "int");
 	}
 
-	void failing_is_not_throwing_std() {
+	void failingIsNotThrowingStd() {
 		// Expected to fail: checks that failing a test is not mistaken for throwing std::exception.
 		try {
 			assertThrows<std::exception>(
@@ -50,12 +50,12 @@ private:
 		}
 	}
 
-	void catch_no_throw() {
+	void catchNoThrow() {
 		message("Expected to fail: checks that assertThrows fails when no exception is caught");
 		assertThrows<std::logic_error>([&]() {}, "expected failure: No exception was thrown");
 	}
 
-	void catch_wrong_throw() {
+	void catchWrongThrow() {
 		message("Expected to fail: checks that assertThrows fails when wrong exception is caught.");
 		assertThrows<std::logic_error>(
 			[&]() { throw std::exception(); }, "expected failure: Wrong exception was thrown"
@@ -84,8 +84,10 @@ private:
 	}
 };
 
-int main(int argc, const char** argv) {
-	auto config = tester::testConfigFromArgs({ (usize) argc, argv }, "/common/tester/tests/");
+int main(int argc, const char**) {
+	if (argc != 1) CORE_PANIC("Test expects no arguments");
+
+	auto config = tester::getTestConfig("/common/tester/tests/");
 
 	SimpleTesterTest passing_test(std::move(config), 0);
 	if (!passing_test.run()) return 1;
@@ -95,8 +97,7 @@ int main(int argc, const char** argv) {
 	 * @TODO: change that when "expected to fail" is added
 	 */
 	for (i32 i = 1; i < 4; i++) {
-		// @TODO: Why is config moved in a loop? \/
-		SimpleTesterTest failing_test(std::move(config), i);
+		SimpleTesterTest failing_test(config, i);
 		if (failing_test.run()) return 1;
 	}
 }
