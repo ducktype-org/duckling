@@ -3,6 +3,8 @@
 #include <base/box.hpp>
 #include <base/ref.hpp>
 
+#include <query_framework/query_int.hpp>
+
 namespace pst {
 	/**
 	 * @brief Some kind of id in the future
@@ -27,9 +29,8 @@ namespace pst {
 		friend class Access;
 
  		MCRef<Element> ref;
-		PSTAccessKey stored_key;
 
-		Access(MCRef<Element> ref, PSTAccessKey key): ref(ref), stored_key(key) {}
+		Access(MCRef<Element> ref): ref(ref) {}
 	public:
 		Access()               = delete;
 		Access(const Access&)        = delete;
@@ -38,18 +39,21 @@ namespace pst {
 		template<typename E>
 		Access& operator=(Access<E>&& oth) noexcept {
 			ref = std::move(oth.ref);
-			stored_key = oth.stored_key;
 			return *this;
 		}
 
 		template<typename T>
-		Access(Access<T>&& other): ref(std::move(other.ref)), stored_key(other.stored_key) {}
+		Access(Access<T>&& other): ref(std::move(other.ref)) {}
 
 		EXPOSE_MREF_INTERFACE(ref)
 	};
 
+	namespace detail {
+		void notifyContext(query::detail::ContextType& ctx);
+	}
+
 	template</*std::derived_from<LangElement>*/ typename Element>
-	class AccessLocked {
+	class AccessLocked final{
 	private:
 		MCRef<Element> ref;
 
@@ -77,6 +81,10 @@ namespace pst {
 		}
 
 		Access<Element> unlock(PSTAccessKey key) const { return { ref, key }; }
+		Access<Element> unlock(query::detail::ContextType& ctx) const {
+			detail::notifyContext(ctx);
+			return { ref }; 
+		}
 	};
 
 	template</*std::derived_from<LangElement>*/ typename Element>

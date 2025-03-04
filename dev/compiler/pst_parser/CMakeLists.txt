@@ -22,7 +22,7 @@ add_library(PstParser
 	src/pst_parser/pst_visitor.hpp
 )
 
-make_module(PstParser USES Lexer Printer TPC)
+make_module(PstParser USES Lexer Printer TPC QueryFramework)
 
 duck_add_test(compiler parser_test_simple tests/test.cpp
 	USES PstParser)
