@@ -79,7 +79,7 @@ namespace query::detail {
 			logger.log(std::move(message));
 		}
 
-		void setSidePSTInput(/*...*/) { /* @TODO: add implementation */};
+		void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
 	};
 
 	inline dia::Logger ContextType::logger{};

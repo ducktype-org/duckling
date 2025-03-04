@@ -28,12 +28,13 @@ namespace pst {
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class Access;
 
- 		MCRef<Element> ref;
+		MCRef<Element> ref;
 
 		Access(MCRef<Element> ref): ref(ref) {}
+
 	public:
 		Access()               = delete;
-		Access(const Access&)        = delete;
+		Access(const Access&)  = delete;
 		Access(Access&& other) = default;
 
 		template<typename E>
@@ -53,7 +54,7 @@ namespace pst {
 	}
 
 	template</*std::derived_from<LangElement>*/ typename Element>
-	class AccessLocked final{
+	class AccessLocked final {
 	private:
 		MCRef<Element> ref;
 
@@ -81,24 +82,26 @@ namespace pst {
 		}
 
 		Access<Element> unlock(PSTAccessKey key) const { return { ref, key }; }
+
 		Access<Element> unlock(query::detail::ContextType& ctx) const {
 			detail::notifyContext(ctx);
-			return { ref }; 
+			return { ref };
 		}
 	};
 
 	template</*std::derived_from<LangElement>*/ typename Element>
-	class AccessInternal final{
+	class AccessInternal final {
 	private:
-		MBox<Element> box;		
+		MBox<Element> box;
 
 		template<typename E>
 		friend class AccessInternal;
 
 	public:
-		AccessInternal() = default;
+		AccessInternal()                               = default;
 		AccessInternal(const AccessInternal<Element>&) = default;
-		AccessInternal(AccessInternal<Element>&&) = default;
+		AccessInternal(AccessInternal<Element>&&)      = default;
+
 		AccessInternal(MBox<Element>&& box): box(std::move(box)) {}
 
 		AccessLocked<Element> give() const { return { box.ref() }; }

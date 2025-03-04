@@ -30,7 +30,7 @@ namespace pst {
 
 	private:
 		Box<tokenizer::TokenFile> file;
-		AccessInternal<Element>             element;
+		AccessInternal<Element>   element;
 		std::vector<ImportType>   imports;
 
 		/**

@@ -221,11 +221,11 @@ namespace base {
 	using MCRef = MRef<const T>;
 
 
-	// ...
-	#define EXPOSE_MREF_INTERFACE(element_name) \
-		operator bool() const { return bool(element_name); }\
-		auto operator->() const { return element_name.operator->(); }\
-		auto& operator*() const { return element_name.operator*(); }
+// ...
+#define EXPOSE_MREF_INTERFACE(element_name)                        \
+	operator bool() const { return bool(element_name); }           \
+	auto  operator->() const { return element_name.operator->(); } \
+	auto& operator*() const { return element_name.operator*(); }
 
 }
 
