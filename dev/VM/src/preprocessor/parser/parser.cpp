@@ -11,6 +11,7 @@
 #include <lexer/lexer.hpp>
 #include <limits>
 #include <queue>
+#include <sstream>
 #include <token_file/file.hpp>
 #include <lexer/classifications.hpp>
 #include <base/optional.hpp>
@@ -542,7 +543,7 @@ namespace vm::parser {
 			base::StrID name = VISIT(type->datatype, value, return value.name);
 
 			if (type_map.contains(name)) {
-				auto msg = makeBox<vm::parser::DuplicatedTypeError>(type->position);
+				auto msg = makeBox<vm::parser::DuplicatedTypeError>(*type->position);
 
 				auto duplicated_types
 					= program->types | std::views::filter([&](auto&& duplicated_type) {
@@ -552,7 +553,7 @@ namespace vm::parser {
 					  });
 
 				for (auto& duplicated_type: duplicated_types)
-					msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(duplicated_type->position)
+					msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(*duplicated_type->position)
 					);
 
 				log.log(std::move(msg));
@@ -606,36 +607,27 @@ namespace vm::parser {
 	}
 
 	std::expected<ParsedProgram, std::string> assemble(const std::vector<fs::FilePath>& files) {
-		// ParsedProgram parsed_program(dia::SourcePosition::fakePosition());
 		auto          log = dia::Logger();
 		ParsedProgram parsed_program;
 
-
-		bool bad = false;
-
-		for (auto& file: files) {
-			auto tokenized = tokenizeFile(file);
-			auto parsed    = parseFile(tokenized.refMut(), log).toOptBox();
-			bad            = !parsed || log.bad();
-
-			// @TODO: This approach is temporary since we mainly work with
-			// single file programs for now, but should be changes in the
-			// future
-			parsed_program.position = parsed.value()->position;
+		for (const auto& file: files) {
+			parsed_program.token_files.push_back(tokenizeFile(file));
+			auto parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
 
 			for (auto& func: parsed.value()->functions)
 				parsed_program.functions.push_back(std::move(func));
 
 			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));
+
+			if (!parsed || log.bad()) {
+				std::stringstream stream;
+				log.dumpLogAndClear(true, stream);
+				return std::unexpected(stream.str());
+			}
 		}
 
-		if (!bad) {
-			defineTypes(&parsed_program, log);
-			bad = log.bad();
-		}
-
-
-		if (bad) {
+		defineTypes(&parsed_program, log);
+		if (log.bad()) {
 			std::stringstream stream;
 			log.dumpLogAndClear(true, stream);
 			return std::unexpected(stream.str());

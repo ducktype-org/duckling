@@ -1,13 +1,17 @@
 #pragma once
 
 #include <diagnostic/source_position.hpp>
+#include "base/box.hpp"
 #include "code_data/opcode_args.hpp"
 #include "core/process/type_metadata/type_metadata.hpp"
+#include "token_file/file.hpp"
 #include "token_parser_core/common_elements.hpp"
 #include "type_data.hpp"
 #include <token_parser_core/tpc.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
+#include <type_traits>
+#include <vector>
 
 namespace vm::parser {
 
@@ -19,9 +23,10 @@ namespace vm::parser {
 	};
 
 	struct AsmElement: tpc::Element {
-		dia::SourcePosition position;
+		base::Box<dia::SourcePosition> position;
 
-		AsmElement(const dia::SourcePosition& position): position(position) {}
+		AsmElement(const dia::SourcePosition& position):
+			  position(makeBox<dia::SourcePosition>(position)) {}
 
 		void debugPrint(std::ostream& out) const override { dprint(out); }
 	};
@@ -148,13 +153,11 @@ namespace vm::parser {
 	 * from all files with type metadata.
 	 */
 	struct ParsedProgram {
-		dia::SourcePosition position = dia::SourcePosition::fakePosition(
-		);  // @TODO: How should that be interpreted in case of
-		// multiple files?
 		// base::HashMap<Ref<Func>, base::FilePath> map;
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-		Box<vm::TypeMetadata>  type_metadata = makeBox<vm::TypeMetadata>();
+		std::vector<Box<Func>>                 functions;
+		std::vector<Box<Type>>                 types;
+		std::vector<Box<tokenizer::TokenFile>> token_files;
+		Box<vm::TypeMetadata>                  type_metadata = makeBox<vm::TypeMetadata>();
 
 		void dprint(std::ostream& out) const {
 			for (auto& type: types) {

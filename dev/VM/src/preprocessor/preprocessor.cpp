@@ -1,6 +1,7 @@
 #include "preprocessor.hpp"
 #include <core/process/vmprocess.hpp>
 #include "code_data/program.hpp"
+#include "diagnostic/logger.hpp"
 #include "parser/parser.hpp"
 #include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>
@@ -13,7 +14,7 @@
 namespace vm {
 	namespace {
 		void assertTailcallsSignatures(base::StableVector<FuncData>& functions) {
-		// void assertTailcallsSignatures(std::vector<FuncData>& functions) {
+			// void assertTailcallsSignatures(std::vector<FuncData>& functions) {
 			for (const auto& func: functions) {
 				for (const auto& op: func->bc) {
 #ifdef USE_TAIL_CALLS
@@ -196,15 +197,12 @@ namespace vm {
 			return program;
 		}
 
-		std::expected<vm::VMProgram, std::string> changeParsedProgramToVMProgram(
-			Ref<parser::ParsedProgram> parsed_program, dia::Logger& log
-		) {
-			bool bad = false;
+		std::expected<vm::VMProgram, std::string>
+			changeParsedProgramToVMProgram(Ref<parser::ParsedProgram> parsed_program) {
+			auto log = dia::Logger();
 
 			auto program = getCode(parsed_program, log);
-			bad          = !program || log.bad();
-
-			if (bad) {
+			if (!program || log.bad()) {
 				std::stringstream stream;
 				log.dumpLogAndClear(true, stream);
 				return std::unexpected(stream.str());
@@ -212,8 +210,6 @@ namespace vm {
 
 			return std::move(*program);
 		}
-
-
 	}
 }
 
@@ -223,27 +219,16 @@ std::expected<vm::VMProgram, std::string> vm::Preprocessor::getProgram(const fs:
 
 std::expected<vm::VMProgram, std::string>
 	vm::Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
-	auto log                  = dia::Logger();
 	auto maybe_parsed_program = parser::assemble(files);
-	if (maybe_parsed_program) {
-		bool is_valid = false;
-		if (validate_program) is_valid = validator.validateProgram(maybe_parsed_program.value());
+	if (!maybe_parsed_program) return std::unexpected(maybe_parsed_program.error());
 
-		auto program = vm::changeParsedProgramToVMProgram(&*maybe_parsed_program, log);
+	auto is_valid = validator.validateProgram(maybe_parsed_program.value());
+	if (!is_valid) return std::unexpected(is_valid.error());
 
-		if (!program) {
-			std::stringstream stream;
-			log.dumpLogAndClear(true, stream);
-			return std::unexpected(stream.str());
-		}
+	auto program = vm::changeParsedProgramToVMProgram(&*maybe_parsed_program);
+	if (!program) return std::unexpected(program.error());
 
-		return program;
-
-	} else {
-		std::stringstream stream;
-		log.dumpLogAndClear(true, stream);
-		return std::unexpected(stream.str());
-	}
+	return program;
 }
 
 vm::Preprocessor::Preprocessor(VMProcess& process, bool validate_program):

@@ -1,17 +1,32 @@
 #include "validator.hpp"
 #include "errors.hpp"
+#include <expected>
+#include <sstream>
 
 namespace vm::validator {
-	bool Validator::validateProgram(const parser::ParsedProgram& program) {
+	std::expected<bool, std::string> Validator::validateProgram(const parser::ParsedProgram& program
+	) {
 		auto log   = dia::Logger();
 		bool valid = false;
 
 		valid = validateMainExistance(program, log);
-		if (!valid) return false;
+		if (!valid) {
+			std::stringstream stream;
+			log.dumpLogAndClear(true, stream);
+			return std::unexpected(stream.str());
+		}
 		valid = validateTailcallSignatures(program, log);
-		if (!valid) return false;
+		if (!valid) {
+			std::stringstream stream;
+			log.dumpLogAndClear(true, stream);
+			return std::unexpected(stream.str());
+		}
 		valid = validateDuplicateFunctionDeclarations(program, log);
-		if (!valid) return false;
+		if (!valid) {
+			std::stringstream stream;
+			log.dumpLogAndClear(true, stream);
+			return std::unexpected(stream.str());
+		}
 		return true;
 	}
 

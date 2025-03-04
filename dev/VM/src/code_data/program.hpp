@@ -6,6 +6,7 @@
 #include "base/stable_hashmap.hpp"
 #include "code_data/instruction.hpp"
 #include "core/process/type_metadata/type_metadata.hpp"
+
 // #include <vector>
 
 namespace vm {
@@ -51,6 +52,6 @@ namespace vm {
 		base::StableHashMap<base::StrID, usize> func_name_to_id;
 		base::StableVector<FuncData>            functions;
 		// std::vector<FuncData>            functions;
-		Box<TypeMetadata>                       type_metadata;
+		Box<TypeMetadata> type_metadata;
 	};
 }
