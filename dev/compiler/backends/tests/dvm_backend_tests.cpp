@@ -6,8 +6,10 @@
 #define DVM_BACKEND_TEST
 #include "backend_tests.hpp"
 
-void DVMBackendTest::testWithLir(CRef<compiler::lir::Function> lir_function) {
+void DVMBackendTest::testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function) {
 	using namespace compiler::backend_vm;
+
+	lir_function->debugPrint(ctx, std::cout);
 
 	auto vm_module = Module(base::StrID("test_module"));
 	vm_module.addLirFunction(lir_function);

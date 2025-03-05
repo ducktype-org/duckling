@@ -1,30 +1,16 @@
 #include "builders.hpp"
 #include "backends/vm/elements.hpp"
 #include "backends/vm/instructions.hpp"
+#include "base/exceptions.hpp"
+#include "base/str_utils.hpp"
+#include "base/variant.hpp"
 #include <base/ref.hpp>
 #include <preprocessor/parser/types_of_data.hpp>
 #include <ranges>
 
-void compiler::backend_vm::BlockBuilder::addBlock(const BlockBuilder& block) {
-	types.insert(types.end(), block.types.begin(), block.types.end());
-	instructions.insert(instructions.end(), block.instructions.begin(), block.instructions.end());
-}
-
-compiler::backend_vm::Block compiler::backend_vm::BlockBuilder::build() const {
-	auto block = Block();
-
-	for (auto& type: types) block.instructions.emplace_back(Op_init_type{ type });
-	block.instructions.insert(block.instructions.end(), instructions.begin(), instructions.end());
-	for (auto& _: types | std::views::reverse) block.instructions.emplace_back(Op_deinit{});
-
-	return block;
-}
-
-compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build(
-	const base::HashMap<base::StrID, CRef<vm::TypeOfData>>& available_types
-) const {
+compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build() const {
 	Function function;
-	function.body = body.build();
+	function.body = instructions;
 	function.name = name;
 
 	function.stack_size    = 1'337;
@@ -43,9 +29,8 @@ void compiler::backend_vm::CodeFileBuilder::addType(const vm::TypeOfData& type) 
 	if (type_map.atMaybe(typeName(type))) {
 		// Type already exists, check if it's the same and if true, skip
 	} else {
-		types.push_back(type);
-		auto type_ref = base::CRef<vm::TypeOfData>(&types.back());
-		type_map.put(typeName(type), type_ref);
+		auto [it, _] = type_map.put(typeName(type), type);
+		types.emplace_back(&it->second);
 	}
 }
 
@@ -54,18 +39,55 @@ compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() co
 	file.types     = types;
 	file.functions = std::ranges::to<std::deque<Function>>(
 		functions | std::views::transform([&](const auto& function_builder) {
-			return function_builder.build(type_map);
+			return function_builder.build();
 		})
 	);
 	return file;
 }
 
-void compiler::backend_vm::BlockBuilder::addInstruction(const VmInstruction& instruction) {
+void compiler::backend_vm::FunctionBuilder::addInstruction(const VmInstruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-compiler::backend_vm::FunctionBuilder::FunctionBuilder(base::StrID name): name(name) {}
+compiler::backend_vm::FunctionBuilder::FunctionBuilder(
+	base::StrID name, const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+):
+	  name(name),
+	  available_types(available_types) {}
 
-void compiler::backend_vm::FunctionBuilder::addBlock(const BlockBuilder& block) {
-	body.addBlock(block);
+const base::HashMap<base::StrID, vm::TypeOfData>&
+	compiler::backend_vm::CodeFileBuilder::getAvailableTypes() const {
+	return type_map;
 }
+
+usize getTypeSize(const vm::TypeOfData& tp) {
+	variant_match(tp) {
+		variant_case(vm::PrimitiveType, primitive) { return primitive.size; }
+		variant_default throw base::NotYetImplemented(base::strConcat("Cannot get type of: ", tp));
+	}
+}
+
+usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
+	instructions.emplace_back(Op_init_type{ tp });
+
+	const vm::TypeOfData& vm_type   = available_types[tp];
+	const usize           type_size = getTypeSize(vm_type);
+	usize                 offset    = 0;
+
+	if (!local_stack.empty()) {
+		const LocalStackEntry& prev_entry = local_stack.back();
+		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
+	}
+
+	local_stack.emplace_back(tp, offset, CRef(&vm_type), type_size);
+	return offset;
+}
+
+void compiler::backend_vm::FunctionBuilder::deinitType() {
+	instructions.emplace_back(Op_deinit{});
+	// This is most likely redundant as well.
+	CORE_ASSERT(!local_stack.empty(), "Popping from empty variable stack");
+	local_stack.pop_back();
+}
+
+usize compiler::backend_vm::FunctionBuilder::getLocalSize() const { return local_stack.size(); }

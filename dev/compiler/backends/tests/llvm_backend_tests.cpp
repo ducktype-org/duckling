@@ -4,7 +4,7 @@
 #define LLVM_BACKEND_TEST
 #include "backend_tests.hpp"
 
-void LLVMBackendTest::testWithLir(CRef<compiler::lir::Function> lir_function) {
+void LLVMBackendTest::testWithLir(query::Context&, CRef<compiler::lir::Function> lir_function) {
 	auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_function);
 
 	// debug print for coverage only:

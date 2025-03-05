@@ -1,17 +1,18 @@
 #include "backend.hpp"
+#include "base/string_id.hpp"
 #include "builders.hpp"
+#include "query_framework/utils/with_context_do.hpp"
 #include "serializer.hpp"
 #include <algorithm>
 #include <base/variant.hpp>
 #include "instructions.hpp"
+#include <ostream>
 #include <preprocessor/parser/types_of_data.hpp>
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <ranges>
 
 namespace compiler::backend_vm {
-	namespace {}
-
 	void Module::buildRepr(std::ostream& out) const { serialize(file_builder.build(), out); }
 
 	vm::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
@@ -60,22 +61,42 @@ namespace compiler::backend_vm {
 
 	void Module::addLirFunction(CRef<lir::Function> lir_function) {
 		std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
-		FunctionBuilder function(lir_function->name);
 
 		insertTypes(&file_builder, lir_function);
 
-		auto block_to_id = lir_function->getBlockIDs();
+		FunctionBuilder function(lir_function->name, file_builder.getAvailableTypes());
+
+		auto                              variable_to_id = lir_function->getLocalVariableIDs();
+		auto                              block_to_id    = lir_function->getBlockIDs();
+		base::HashMap<usize, base::StrID> block_id_to_label;
+
+		base::HashMap<lir::LocalRef, usize>          lir_local_to_stack;
+		base::HashMap<lir::LocalRef, vm::TypeOfData> lir_local_types;
+
+		for (auto&& var: lir_function->local_list) {
+			// This is most likely redundant
+			CORE_ASSERT(!lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
+
+			auto vm_type = getTypeFromLayout(var->layout);
+			lir_local_types.put(var.ref(), vm_type);
+
+			auto tp_name   = VISIT(vm_type, tp, return tp.name);
+			auto offset = function.initType(tp_name);
+			lir_local_to_stack.put(var.ref(), offset);
+
+		}
+
 		for (auto&& lir_block: lir_function->blocks) {
 			// block->terminator
-			auto         id = block_to_id.atMaybe(lir_block.ref()).expect("id of block not found");
-			BlockBuilder block;
+			auto id = block_to_id.atMaybe(lir_block.ref()).expect("id of block not found");
 
-			std::string label_str = base::strConcat(lir_function->name, "_label_", id);
-			block.addInstruction(Op_label{ base::StrID(label_str.data()) });
+			auto label_name       = base::strConcat(lir_function->name, "_label_", id);
+			auto [block_entry, _] = block_id_to_label.put(id, base::StrID(label_name.data()));
+			function.addInstruction(Op_label{ block_entry->second });
 
 			for (auto& lir_instruction: lir_block->instructions) {
 				// @TODO
-				block.addInstruction(Comment{ base::StrID(
+				function.addInstruction(Comment{ base::StrID(
 					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
 						.data()
 				) });
@@ -86,8 +107,8 @@ namespace compiler::backend_vm {
 
 				switch (lir_instruction.operation) {
 				case lir::Operation::Assign: {
-					const auto output = lir_instruction.output.value();
-					const auto arg0   = lir_instruction.arguments.at(0);
+					const lir::LocalRef output = lir_instruction.output.value();
+					const auto          arg0   = lir_instruction.arguments.at(0);
 					break;
 				}
 				case lir::Operation::IntegerAdd:
@@ -111,7 +132,7 @@ namespace compiler::backend_vm {
 			}
 
 			// @TODO
-			block.addInstruction(Comment{ base::StrID(
+			function.addInstruction(Comment{ base::StrID(
 				base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
 					.data()
 			) });
@@ -133,7 +154,6 @@ namespace compiler::backend_vm {
 				// 		"Invalid terminator: ", base::enumToStr(lir_block->terminator.operation)
 				// 	);
 			}
-			function.addBlock(block);
 		}
 		file_builder.addFunction(function);
 	}

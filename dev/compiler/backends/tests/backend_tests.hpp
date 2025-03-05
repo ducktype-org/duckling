@@ -32,7 +32,7 @@ public:
 	}
 
 protected:
-	void testWithLir(CRef<compiler::lir::Function> lir_function);
+	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
 
 private:
 	void runTestForModuleWithSingleFunction(std::string module_path) {
@@ -45,7 +45,7 @@ private:
 
 			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level.functions[0] });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
-			testWithLir(lir_fun);
+			testWithLir(ctx, lir_fun);
 		});
 	}
 

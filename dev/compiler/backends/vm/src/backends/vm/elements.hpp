@@ -8,27 +8,25 @@
 
 namespace compiler::backend_vm {
 	struct VmElement {
-		virtual ~VmElement()                            = default;
+		virtual ~VmElement() = default;
 	};
 
 	/**
 	 * @brief Represents a block of instructions.
 	 */
-	struct Block: public VmElement {
-		std::deque<VmInstruction> instructions;
-	};
+	using CodeBlock = std::deque<VmInstruction>;
 
 	/**
 	 * @brief Represents bytecode a function.
 	 */
 	struct Function: public VmElement {
 		base::StrID name;
-		usize stack_size    = 0;
-		usize arg_size      = 0;
-		usize next_arg_size = 0;
-		usize ret_size      = 0;
+		usize       stack_size    = 0;
+		usize       arg_size      = 0;
+		usize       next_arg_size = 0;
+		usize       ret_size      = 0;
 
-		Block body;
+		CodeBlock body;
 	};
 
 	/**
