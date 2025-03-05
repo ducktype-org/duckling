@@ -337,6 +337,21 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_void)(FUNCTION_ARGS) {
+		{
+			// For explanation go to op_ret_l64.
+			frame--;
+
+			thread.runtime_data.local_stack_top = local_stack;
+
+			// Load previous frame
+			instr       = frame->instr;  // This is already a pointer to next instr
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
 			auto type     = thread.process_types.getType(vm::TypeID(instr->arg0));

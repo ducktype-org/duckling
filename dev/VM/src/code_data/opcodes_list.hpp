@@ -53,34 +53,63 @@
 	(__VA_ARGS__)
 #endif
 
-DEF_OPCODE(mov_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+DEF_OPCODE(mov_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+// DEF_OPCODE(mov_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
 
-DEF_OPCODE(mov_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(cmov_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
+DEF_OPCODE(mov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(cmov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 
-DEF_OPCODE(mov_l64_r0, vm::opargs::StackOffset)
-DEF_OPCODE(mov_r0_l64, vm::opargs::StackOffset)
+// DEF_OPCODE(mov_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(cmov_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
 
-DEF_OPCODE(add_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(add_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+
+DEF_OPCODE(mov_l64_r0, vm::opargs::StackLocalI64)
+DEF_OPCODE(mov_r0_l64, vm::opargs::StackLocalI64)
+
+
+DEF_OPCODE(add_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(add_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+
+// DEF_OPCODE(add_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(add_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
+
 
 // DEF_OPCODE(sub_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(sub_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(sub_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+DEF_OPCODE(sub_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(sub_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+
+// DEF_OPCODE(sub_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(sub_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
+
 
 // DEF_OPCODE(mul_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(mul_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+DEF_OPCODE(mul_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
 
-DEF_OPCODE(mod_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(mod_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+// DEF_OPCODE(mul_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
+
+
+DEF_OPCODE(mod_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(mod_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+
+// DEF_OPCODE(mod_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(mod_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+
 
 // DEF_OPCODE(div_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(div_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+DEF_OPCODE(div_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
 
-DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
-DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackOffset, vm::opargs::StackOffset)
-DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI64)
+// DEF_OPCODE(div_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
+
+
+DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+
+// DEF_OPCODE(cmpEq_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(cmpEq_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
+// DEF_OPCODE(cmpG_l32_l32, vm::opargs::StackOffset, vm::opargs::StackOffset)
+// DEF_OPCODE(cmpG_l32_imm, vm::opargs::StackOffset, vm::opargs::ImmediateI32)
 
 DEF_OPCODE(label, vm::opargs::Label)
 
@@ -88,49 +117,51 @@ DEF_OPCODE(jmpRel_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
 
-DEF_OPCODE(getFstArg_l64, vm::opargs::StackOffset)
-DEF_OPCODE(getFstArg_lptr, vm::opargs::StackOffset)
+DEF_OPCODE(getFstArg_l64, vm::opargs::StackLocalI64)
+DEF_OPCODE(getFstArg_lptr, vm::opargs::StackLocalPtr)
 
-DEF_OPCODE(mov_l64_arg64, vm::opargs::StackOffset, vm::opargs::ArgsOffset)
-DEF_OPCODE(mov_lptr_argptr, vm::opargs::StackOffset, vm::opargs::ArgsOffset)
+DEF_OPCODE(mov_l64_arg64, vm::opargs::StackLocalI64, vm::opargs::ArgsOffset)
+DEF_OPCODE(mov_lptr_argptr, vm::opargs::StackLocalPtr, vm::opargs::ArgsOffset)
 
-DEF_OPCODE(setFstArg_l64, vm::opargs::StackOffset)
-DEF_OPCODE(setFstArg_lptr, vm::opargs::StackOffset)
+DEF_OPCODE(setFstArg_l64, vm::opargs::StackLocalI64)
+DEF_OPCODE(setFstArg_lptr, vm::opargs::StackLocalPtr)
 
-DEF_OPCODE(mov_arg64_l64, vm::opargs::ArgsOffset, vm::opargs::StackOffset)
-DEF_OPCODE(mov_argptr_lptr, vm::opargs::ArgsOffset, vm::opargs::StackOffset)
+DEF_OPCODE(mov_arg64_l64, vm::opargs::ArgsOffset, vm::opargs::StackLocalI64)
+DEF_OPCODE(mov_argptr_lptr, vm::opargs::ArgsOffset, vm::opargs::StackLocalPtr)
 
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 
 // return while performing a tail call
 DEF_OPCODE(ret_tailcall, vm::opargs::FunctionName)
 // return 64-bit primitive value
-DEF_OPCODE(ret_l64, vm::opargs::StackOffset)
+DEF_OPCODE(ret_l64, vm::opargs::StackLocalI64)
 // return immediate value
 DEF_OPCODE(ret_imm, vm::opargs::ImmediateI64)
+// void return
+DEF_OPCODE(ret_void)
 
 // initialize local variable on local stack with given type
 DEF_OPCODE(init_type, vm::opargs::Type)
 // pop variable from local stack
 DEF_OPCODE(deinit)
 
-DEF_OPCODE(input_l64, vm::opargs::StackOffset)
-DEF_OPCODE(output_l64, vm::opargs::StackOffset)
+DEF_OPCODE(input_l64, vm::opargs::StackLocalI64)
+DEF_OPCODE(output_l64, vm::opargs::StackLocalI64)
 
 DEF_OPCODE(nop)
 
 // allocates given type, stores pointer
-DEF_OPCODE(alloc_lptr_type, vm::opargs::StackOffset, vm::opargs::Type)
+DEF_OPCODE(alloc_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // frees block under pointer
-DEF_OPCODE(free_lptr, vm::opargs::StackOffset)
+DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
 // load 64-bit primitive value from `lptr + ofs`
 // expects `ext_l64` to be the next instruction
-DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackOffset, vm::opargs::StackOffset)
+DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalPtr)
 // stores 64-bit primitive value under `lptr + ofs`
 // expects `ext_l64` to be the next instruction
-DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackOffset, vm::opargs::StackOffset)
+DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
 // passes additional argument to preceding opcode
-DEF_OPCODE(ext_l64, vm::opargs::StackOffset)
+DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
 
 // terminates execution
 DEF_OPCODE(exit)
