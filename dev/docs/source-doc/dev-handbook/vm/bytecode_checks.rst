@@ -8,8 +8,13 @@ Init deinit
 - Missing init or deinit
 - Using stack before init
 - Using stack after deinit
-- Moving between two data types
 - Using stack between init and deinit (legal)
+
+Types
+-----
+
+- Moving between two data types
+.. - Arithmetical operations on pointer type
 
 Pointers
 --------
@@ -17,7 +22,6 @@ Pointers
 Ref is not implemented yet, so I used `ref_lptr arg0 arg1` as a placeholder. It's equivalent to `arg0 = &arg1` in C.
 
 - Deref a pointer after deinit
-- Arithmetical operations on pointer type
 - Deref a pointer to a wrong type
 
 Jumps
