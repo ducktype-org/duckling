@@ -74,15 +74,11 @@ namespace compiler::helios::code {
 		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
-		out << base::strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
+		out << strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
 	BinaryOperatorExpr::BinaryOperatorExpr(
-		query::Context& ctx,
-		ScopeID         scope,
-		BuiltinBinary   operation,
-		base::Box<Expr> lhs,
-		base::Box<Expr> rhs
+		query::Context& ctx, ScopeID scope, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
 	):
 		  Expr(
 			  scope,
@@ -132,14 +128,20 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, base::Box<Expr> inner):
+	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, Box<Expr> inner):
 		  Expr(scope, inner->type_desc),
 		  inner(std::move(inner)) {}
 
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
+		query::Context& ctx, ScopeID scope, std::vector<Box<Expr>> elements
 	):
-		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
+		  Expr(
+			  scope,
+			  tsh::TypeDesc{
+				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  }
+		  ),
 		  elements(std::move(elements)) {}
 
 	void TupleTypeConstructorExpr::debugPrint(std::ostream& out) const {
@@ -163,9 +165,15 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
+		query::Context& ctx, ScopeID scope, std::vector<Box<Expr>> subtypes
 	):
-		  Expr(scope, ctx.query<tsh::QueryMetaType>({})),
+		  Expr(
+			  scope,
+			  tsh::TypeDesc{
+				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
+			  }
+		  ),
 		  subtypes(std::move(subtypes)) {}
 
 	void LinkedIdentifierExpr::debugPrint(std::ostream& out) const {
@@ -181,7 +189,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::TypeDesc(
 				  ctx.query<QueryTypeOfSymbol>(symbols.back())
 					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
@@ -189,9 +197,7 @@ namespace compiler::helios::code {
 		  ),
 		  symbols(std::move(symbols)) {}
 
-	UnaryOperatorExpr::UnaryOperatorExpr(
-		ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr
-	):
+	UnaryOperatorExpr::UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, Box<Expr> expr):
 		  Expr(scope, expr->type_desc),
 		  operation(operation),
 		  expr(std::move(expr)) {}

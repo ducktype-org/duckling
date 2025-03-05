@@ -21,15 +21,15 @@ namespace tester {
 		return result;
 	}
 
-	constexpr usize header_line_length = 40;
+	constexpr usize HEADER_LINE_LENGTH = 40;
 
-	usize beginEqualSignL(usize name_l) { return header_line_length / 2 - (name_l / 2); }
+	usize beginEqualSignL(usize name_l) { return HEADER_LINE_LENGTH / 2 - (name_l / 2); }
 
 	usize endEqualSignL(usize name_l) {
-		return header_line_length / 2 - (name_l / 2) - (name_l % 2);
+		return HEADER_LINE_LENGTH / 2 - (name_l / 2) - (name_l % 2);
 	}
 
-	usize fullEqualSignL([[maybe_unused]] usize name_l) { return header_line_length; }
+	usize fullEqualSignL([[maybe_unused]] usize name_l) { return HEADER_LINE_LENGTH; }
 
 	const char* TestSuite::CritTestError::what() const noexcept {
 		return "This shouldn't be called";
@@ -104,10 +104,10 @@ namespace tester {
 			message(panic.getPosition());
 			message("Error:");
 			message(panic.what());
-		} catch (const base::LogicError& logicError) {
+		} catch (const base::LogicError& logic_error) {
 			curr_global_res->success = false;
 			message("Logic Error occurred:");
-			message(logicError.what());
+			message(logic_error.what());
 		} catch (const base::NotYetImplemented& nyi) {
 			curr_global_res->success = false;
 			message("NotYetImplemented error:");
@@ -153,7 +153,7 @@ namespace tester {
 	}
 
 	void TestSuite::epilog(usize passed, usize failed, double time) {
-		streamPrinter.print({ {
+		stream_printer.print({ {
 			"\n",
 			std::string(fullEqualSignL(name.length() + 2), '='),
 			"\n",
