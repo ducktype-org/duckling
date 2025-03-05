@@ -4,36 +4,25 @@
 #include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
+#include "code_data/opcode_args.hpp"
 #include "instructions.hpp"
+#include <cstdint>
 #include <deque>
 #include "elements.hpp"
 #include <lir/lir_structure/lir_structure.hpp>
 
+#define NOIMPL_CASE(tp, reason)                                                          \
+	variant_case(tp, _) {                                                                \
+		throw base::NotYetImplemented(                                                   \
+			base::strConcat("Unsupported type ", base::typeName<tp>(), " for: ", reason) \
+		);                                                                               \
+	}
+
 namespace compiler::backend_vm {
-
-	// /**
-	//  * @brief Creates a block of instructions.
-	//  */
-	// class BlockBuilder {
-	// 	// @TODO: Decide if we need it.
-
-	// 	// Jump instructions are only allowed in context
-	// 	// of a single block.
-
-	// 	std::deque<base::StrID>   types{};
-	// 	std::deque<VmInstruction> instructions{};
-
-	// public:
-	// 	virtual ~BlockBuilder() = default;
-	// 	BlockBuilder()          = default;
-
-	// 	void initType(base::StrID name);
-	// 	void addBlock(const BlockBuilder& block);
-
-	// 	void addInstruction(const VmInstruction& instruction);
-
-	// 	[[nodiscard]] virtual Block build() const;
-	// };
+	class InstructionBuilder {
+	public:
+		[[nodiscard]] VmInstruction build() const;
+	};
 
 	/**
 	 * @brief Creates a VM function from blocks.
@@ -45,7 +34,7 @@ namespace compiler::backend_vm {
 		struct LocalStackEntry {
 			base::StrID          tp;
 			usize                local_stack_position;
-			usize type_size;
+			usize                type_size;
 			CRef<vm::TypeOfData> data_type;
 		};
 
@@ -57,7 +46,9 @@ namespace compiler::backend_vm {
 		const base::HashMap<base::StrID, vm::TypeOfData>& available_types;
 
 	public:
-		FunctionBuilder(base::StrID name, const base::HashMap<base::StrID, vm::TypeOfData>&);
+		FunctionBuilder(
+			base::StrID name, const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+		);
 
 		usize               initType(base::StrID tp);
 		void                deinitType();

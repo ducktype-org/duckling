@@ -104,7 +104,7 @@ namespace compiler::backend_vm {
 			withIdentWriteLine("code: {");
 			indentUp();
 
-			for (const auto& instruction: function.body.instructions)
+			for (const auto& instruction: function.body)
 				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
 
 			indentDown();

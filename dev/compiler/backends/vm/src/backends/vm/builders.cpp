@@ -35,8 +35,8 @@ void compiler::backend_vm::CodeFileBuilder::addType(const vm::TypeOfData& type) 
 }
 
 compiler::backend_vm::CodeFile compiler::backend_vm::CodeFileBuilder::build() const {
-	auto file      = CodeFile();
-	file.types     = types;
+	auto file = CodeFile();
+	for (auto&& tp: types) file.types.push_back(*tp);
 	file.functions = std::ranges::to<std::deque<Function>>(
 		functions | std::views::transform([&](const auto& function_builder) {
 			return function_builder.build();
@@ -61,10 +61,16 @@ const base::HashMap<base::StrID, vm::TypeOfData>&
 }
 
 usize getTypeSize(const vm::TypeOfData& tp) {
-	variant_match(tp) {
-		variant_case(vm::PrimitiveType, primitive) { return primitive.size; }
-		variant_default throw base::NotYetImplemented(base::strConcat("Cannot get type of: ", tp));
-	}
+	variant_match(tp){ variant_case(vm::PrimitiveType, primitive){ return primitive.size;
+}
+NOIMPL_CASE(vm::PointerType, "get size of")
+NOIMPL_CASE(vm::StaticTableType, "get size of")
+NOIMPL_CASE(vm::DynamicTableType, "get size of")
+NOIMPL_CASE(vm::DataType, "get size of")
+NOIMPL_CASE(vm::VariantType, "get size of")
+NOIMPL_CASE(vm::FunctionType, "get size of")
+}
+CORE_UNREACHABLE();
 }
 
 usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
@@ -79,7 +85,8 @@ usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
 		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
 	}
 
-	local_stack.emplace_back(tp, offset, CRef(&vm_type), type_size);
+	local_stack.emplace_back(LocalStackEntry{
+		.tp = tp, .local_stack_position = offset, .type_size = type_size, .data_type = &vm_type });
 	return offset;
 }
 

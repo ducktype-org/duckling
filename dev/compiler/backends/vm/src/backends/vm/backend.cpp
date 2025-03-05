@@ -1,5 +1,7 @@
 #include "backend.hpp"
+#include "base/exceptions.hpp"
 #include "base/string_id.hpp"
+#include "base/type_traits.hpp"
 #include "builders.hpp"
 #include "query_framework/utils/with_context_do.hpp"
 #include "serializer.hpp"
@@ -70,8 +72,8 @@ namespace compiler::backend_vm {
 		auto                              block_to_id    = lir_function->getBlockIDs();
 		base::HashMap<usize, base::StrID> block_id_to_label;
 
-		base::HashMap<lir::LocalRef, usize>          lir_local_to_stack;
-		base::HashMap<lir::LocalRef, vm::TypeOfData> lir_local_types;
+		base::Map<lir::LocalRef, usize>          lir_local_to_stack;
+		base::Map<lir::LocalRef, vm::TypeOfData> lir_local_types;
 
 		for (auto&& var: lir_function->local_list) {
 			// This is most likely redundant
@@ -80,10 +82,9 @@ namespace compiler::backend_vm {
 			auto vm_type = getTypeFromLayout(var->layout);
 			lir_local_types.put(var.ref(), vm_type);
 
-			auto tp_name   = VISIT(vm_type, tp, return tp.name);
-			auto offset = function.initType(tp_name);
+			auto tp_name = VISIT(vm_type, tp, return tp.name);
+			auto offset  = function.initType(tp_name);
 			lir_local_to_stack.put(var.ref(), offset);
-
 		}
 
 		for (auto&& lir_block: lir_function->blocks) {
@@ -100,15 +101,55 @@ namespace compiler::backend_vm {
 					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
 						.data()
 				) });
-				// std::string args;
-				// for(auto&& arg: lir_instruction.arguments)
-				// args += arg.
-				// block.addInstruction(Comment {lir_instruction.arguments})
 
 				switch (lir_instruction.operation) {
 				case lir::Operation::Assign: {
 					const lir::LocalRef output = lir_instruction.output.value();
 					const auto          arg0   = lir_instruction.arguments.at(0);
+					VmInstruction       instr;
+
+					auto&& var_type = lir_local_types[output];
+					variant_match(var_type) {
+						variant_case(vm::PrimitiveType, primitive) {
+							if (primitive.size != 8)
+								throw base::NotYetImplemented(base::strConcat(
+									"Primitives of sizes different than 64 bits are not "
+									"supported YET, name: ",
+									primitive.name,
+									", size: ",
+									primitive.size
+								));
+							variant_match(arg0.getVariant()) {
+								variant_case(i64, value) {
+									instr = Op_mov_l64_imm{ .arg0
+										                    = { i64(lir_local_to_stack[output]) },
+										                    .arg1 = { value } };
+								}
+								variant_case(bool, value) {
+									instr = Op_mov_l64_imm{ .arg0
+										                    = { i64(lir_local_to_stack[output]) },
+										                    .arg1 = { value } };
+								}
+								variant_case(lir::LocalRef, local_ref) {
+									instr = Op_mov_l64_l64{
+										.arg0 = { i64(lir_local_to_stack[output]) },
+										.arg1 = { i64(lir_local_to_stack[local_ref]) }
+									};
+								}
+								variant_case(lir::BlockRef, block_ref) {
+									CORE_PANIC("Cannot assign block to variable");
+								}
+							}
+						}
+
+						NOIMPL_CASE(vm::PointerType, "assignment")
+						NOIMPL_CASE(vm::StaticTableType, "assignment")
+						NOIMPL_CASE(vm::DynamicTableType, "assignment")
+						NOIMPL_CASE(vm::DataType, "assignment")
+						NOIMPL_CASE(vm::VariantType, "assignment")
+						NOIMPL_CASE(vm::FunctionType, "assignment")
+					}
+					function.addInstruction(instr);
 					break;
 				}
 				case lir::Operation::IntegerAdd:
