@@ -23,6 +23,7 @@ Ref is not implemented yet, so I used `ref_lptr arg0 arg1` as a placeholder. It'
 
 - Deref a pointer after deinit
 - Deref a pointer to a wrong type
+- Deref a pointer after deinit and init
 
 Jumps
 -----
