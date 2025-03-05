@@ -122,157 +122,47 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) += derefStack<i64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; }                   \
+		FUNCTION_CONT(1);                                                                \
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) += instr->arg1; }
-		FUNCTION_CONT(1);
+	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
+	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
+	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
+	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
+	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
+	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
+	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
+	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
+	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
+	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
+
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
+		{                                                                                  \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)                 \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                  \
+		FUNCTION_CONT(1);                                                                  \
+	}                                                                                      \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {            \
+		{ frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; } \
+		FUNCTION_CONT(1);                                                                  \
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l32_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) += derefStack<i32>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l32_imm)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) += instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) -= derefStack<i64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) -= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l32_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) -= derefStack<i32>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l32_imm)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) -= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) *= derefStack<i64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) *= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l32_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) *= derefStack<i32>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l32_imm)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) *= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) %= derefStack<i64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) %= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l32_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) %= derefStack<i32>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l32_imm)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) %= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(div_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) /= derefStack<i64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(div_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) /= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(div_l32_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) /= derefStack<i32>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(div_l32_imm)(FUNCTION_ARGS) {
-		{ derefStack<i32>(local_stack, instr->arg0) /= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_l64)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<i64>(local_stack, instr->arg0)
-			                 == derefStack<i64>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<i64>(local_stack, instr->arg0) == instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_l64)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<i64>(local_stack, instr->arg0)
-			                  > derefStack<i64>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<i64>(local_stack, instr->arg0) > instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l32_l32)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<i32>(local_stack, instr->arg0)
-			                 == derefStack<i32>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l32_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<i32>(local_stack, instr->arg0) == instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l32_l32)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<i32>(local_stack, instr->arg0)
-			                  > derefStack<i32>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l32_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<i32>(local_stack, instr->arg0) > instr->arg1; }
-		FUNCTION_CONT(1);
-	}
+	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
+	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
+	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
+	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRel_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
