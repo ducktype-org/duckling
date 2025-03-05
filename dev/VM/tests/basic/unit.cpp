@@ -1,4 +1,4 @@
-#include "tester/tester.hpp"
+#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
 class VmUnitTest: public VmTestSuite {

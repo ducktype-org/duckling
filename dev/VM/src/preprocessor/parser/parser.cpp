@@ -27,6 +27,7 @@
 #include <base/variant.hpp>
 #include <base/string_id.hpp>
 #include <expected>
+#include <base/int_conv.hpp>
 #include "errors.hpp"
 #include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
@@ -501,7 +502,7 @@ namespace assemble {
 						state.getPosition(), "arg_size argument is not num-literal"
 					);
 				try {
-					out->arg_size = strIDToNum(value.getValue());
+					out->arg_size = base::safeIntConv<usize>(strIDToNum(value.getValue()));
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "arg_size argument is not num-literal"
@@ -526,7 +527,7 @@ namespace assemble {
 					);
 				}
 				try {
-					out->next_arg_size = strIDToNum(value.getValue());
+					out->next_arg_size = base::safeIntConv<usize>(strIDToNum(value.getValue()));
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.ctokens().peek().getPosition(),
@@ -547,7 +548,7 @@ namespace assemble {
 						state.getPosition(), "local_size argument is not num-literal"
 					);
 				try {
-					out->local_size = strIDToNum(value.getValue());
+					out->local_size = base::safeIntConv<usize>(strIDToNum(value.getValue()));
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "local_size argument is not num-literal"
@@ -568,7 +569,7 @@ namespace assemble {
 						state.getPosition(), "ret_size argument is not num-literal"
 					);
 				try {
-					out->ret_size = base::strIDToNum(value.getValue());
+					out->ret_size = base::safeIntConv<usize>(base::strIDToNum(value.getValue()));
 				} catch (std::logic_error& e) {
 					state.err.failAndLog(
 						state.getPosition(), "ret_size argument is not num-literal"
@@ -888,6 +889,7 @@ namespace assemble {
 #else
 				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
 #endif
+					auto function_id = base::safeIntConv<usize>(op.arg0);
 					CORE_ASSERT(
 						func.arg_size == func.next_arg_size,
 						"Invalid Tailcall! Caller signature must have arg_size "
@@ -896,21 +898,21 @@ namespace assemble {
 						"next_arg_size"
 					);
 					CORE_ASSERT(
-						functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
+						functions[function_id].arg_size == functions[function_id].next_arg_size,
 						"Invalid Tailcall! Called function signature must have "
 						"arg_size == "
 						"next_arg_size"
 					);
 					CORE_ASSERT(
-						func.arg_size == functions[op.arg0].arg_size,
+						func.arg_size == functions[function_id].arg_size,
 						"Invalid Tailcall! Caller and called arg size unmatched"
 					);
 					CORE_ASSERT(
-						func.stack_size == functions[op.arg0].stack_size,
+						func.stack_size == functions[function_id].stack_size,
 						"Invalid Tailcall! Caller and called stack size unmatched"
 					);
 					CORE_ASSERT(
-						func.ret_size == functions[op.arg0].ret_size,
+						func.ret_size == functions[function_id].ret_size,
 						"Invalid Tailcall! Caller and called ret size unmatched"
 					);
 				}
@@ -941,7 +943,7 @@ namespace assemble {
 			}
 			variant_case(vm::opargs::FunctionName, func) {
 				for (i64 i = 0; i < functions.size(); i++)
-					if (functions[i]->name == func.function_name) return i;
+					if (functions[base::safeIntConv<u64>(i)]->name == func.function_name) return i;
 				log.log(
 					makeBox<vm::parser::UnknownFunction>(opcode_arg.position, func.function_name)
 				);
@@ -977,7 +979,7 @@ namespace assemble {
 		func_data.stack_size    = func->local_size;
 		func_data.ret_size      = func->ret_size;
 
-		for (i64 op_idx = 0; op_idx < func->code->opcodes.size(); op_idx++) {
+		for (u64 op_idx = 0; op_idx < func->code->opcodes.size(); op_idx++) {
 			auto&& op    = func->code->opcodes[op_idx];
 			i64    arg_0 = 0;
 			i64    arg_1 = 0;

@@ -27,11 +27,12 @@
  */
 
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+#include <code_data/instruction.hpp>
+#include <core/process/vmprocess.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
-#include <code_data/instruction.hpp>
-#include <core/process/vmprocess.hpp>
 
 
 #ifdef DEBUG_OPCODES
@@ -112,12 +113,12 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
+		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
-		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
+		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
 		FUNCTION_CONT(1);
 	}
 
@@ -160,7 +161,7 @@ namespace vm {
 		{ derefStack<i32>(local_stack, instr->arg0) -= instr->arg1; }
 		FUNCTION_CONT(1);
 	}
-	
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l64_l64)(FUNCTION_ARGS) {
 		{ derefStack<i64>(local_stack, instr->arg0) *= derefStack<i64>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
@@ -170,7 +171,7 @@ namespace vm {
 		{ derefStack<i64>(local_stack, instr->arg0) *= instr->arg1; }
 		FUNCTION_CONT(1);
 	}
-	
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l32_l32)(FUNCTION_ARGS) {
 		{ derefStack<i32>(local_stack, instr->arg0) *= derefStack<i32>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
@@ -360,7 +361,7 @@ namespace vm {
 			// Prepare new frame.
 			auto* prev_frame = frame;
 			frame++;
-			i32 function_id = instr->arg0;
+			auto function_id = base::safeIntConv<u32>(instr->arg0);
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 			frame->args = prev_frame->next_args;
 
@@ -389,7 +390,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
 		{
-			auto function_id = instr->arg0;
+			auto function_id = base::safeIntConv<u32>(instr->arg0);
 
 			instr = thread.executing_code->functions[function_id].bc.data();
 
@@ -413,7 +414,7 @@ namespace vm {
 			// substracting one from the pointer will give us the previous frame.
 			// The `instr`, `local_stack` and `frame` values should be restored from the previous
 			// call stack frame.
-			u64 ret_val = derefStack<u64>(local_stack, instr->arg0);
+			auto ret_val = derefStack<i64>(local_stack, instr->arg0);
 
 			frame--;
 
@@ -436,7 +437,7 @@ namespace vm {
 				frame->block_stack.pop_back();
 			}
 
-			u64 ret_val = derefStack<u32>(local_stack, instr->arg0);
+			i32 ret_val = derefStack<i32>(local_stack, instr->arg0);
 
 			frame--;
 
@@ -496,7 +497,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
-			auto type     = thread.process_types.getType(vm::TypeID(instr->arg0));
+			auto type
+				= thread.process_types.getType(vm::TypeID(base::safeIntConv<u32>(instr->arg0)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			frame->block_stack.push_back(block);
@@ -539,7 +541,8 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type  = thread.process_types.getType(vm::TypeID(instr->arg1));
+			auto type
+				= thread.process_types.getType(vm::TypeID(base::safeIntConv<u32>(instr->arg1)));
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}

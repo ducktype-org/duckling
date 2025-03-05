@@ -2,6 +2,7 @@
 
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
+#include <base/int_conv.hpp>
 #include "token_stream.hpp"
 #include "base_element.hpp"
 #include "common_elements.hpp"
@@ -80,7 +81,7 @@ namespace tpc {
 		 * @brief Logs an error relatively to the current token
 		 */
 		void fail(usize rel_pos, const std::string& message) {
-			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
+			err.failAndLog(ctokens().peek(base::safeIntConv<i64>(rel_pos)).getPosition(), message);
 		}
 
 		/**
