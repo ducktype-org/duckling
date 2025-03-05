@@ -53,11 +53,11 @@
 	(__VA_ARGS__)
 #endif
 
-DEF_OPCODE(mov_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(mov_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(mov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(cmov_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 
-DEF_OPCODE(mov_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(mov_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(mov_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
 DEF_OPCODE(cmov_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
 
@@ -67,49 +67,49 @@ DEF_OPCODE(mov_r0_l64, vm::opargs::StackLocalI64)
 
 
 DEF_OPCODE(add_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(add_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(add_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(add_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(add_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(add_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 
 DEF_OPCODE(sub_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(sub_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(sub_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(sub_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(sub_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(sub_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 
 DEF_OPCODE(mul_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(mul_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(mul_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(mul_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(mul_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(mul_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 
 DEF_OPCODE(mod_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(mod_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(mod_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(mod_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(mod_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(mod_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 
 DEF_OPCODE(div_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(div_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(div_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(div_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
-DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackLocalI64, vm::opargs::ImmediateI64)
+DEF_OPCODE(cmpG_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
 DEF_OPCODE(cmpEq_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(cmpEq_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(cmpEq_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l32_l32, vm::opargs::StackLocalI32, vm::opargs::StackLocalI32)
-DEF_OPCODE(cmpG_l32_imm, vm::opargs::StackLocalI32, vm::opargs::ImmediateI32)
+DEF_OPCODE(cmpG_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 
 DEF_OPCODE(label, vm::opargs::Label)
 
@@ -137,7 +137,7 @@ DEF_OPCODE(ret_tailcall, vm::opargs::FunctionName)
 DEF_OPCODE(ret_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(ret_l32, vm::opargs::StackLocalI32)
 // return immediate value
-DEF_OPCODE(ret_imm, vm::opargs::ImmediateI64)
+DEF_OPCODE(ret_imm, vm::opargs::Immediate)
 // void return
 DEF_OPCODE(ret_void)
 

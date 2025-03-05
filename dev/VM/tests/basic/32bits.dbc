@@ -1,13 +1,13 @@
 function foo {
-    arg_size: 0;
+	arg_size: 0;
 	next_arg_size: 0;
 	local_size: 24;
 	ret_size: 4;
 
 	# 0 -> a
 	# 4 -> b
-    code: {
-        mov_l32_imm 4, 3;
+	code: {
+		mov_l32_imm 4, 3;
 		mov_l32_l32 0, 4;
 		# a = 3, b = 3
 
@@ -46,13 +46,13 @@ function foo {
 
 		add_l32_l32 4, 0;
 		# b = 4
-        ret_l32 4;
+		ret_l32 4;
 		
 		label fail;
 		mov_l64_imm 8, 2137;
 		output_l64  8;
 		ret_l32 0;
-    }
+	}
 }
 
 function main {
@@ -62,10 +62,10 @@ function main {
 	ret_size: 0;
 
 	code: {
-        call_func foo;
-        mov_l64_r0 0;
-        output_l64 0;
+		call_func foo;
+		mov_l64_r0 0;
+		output_l64 0;
 
-		ret_l64 0;
+		ret_void;
 	}
 }

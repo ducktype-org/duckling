@@ -10,12 +10,8 @@
  */
 namespace vm::opargs {
 
-	struct ImmediateI64 {
+	struct Immediate {
 		i64 value = 0;
-	};
-
-	struct ImmediateI32 {
-		i32 value = 0;
 	};
 
 	struct StackLocalI32 {
@@ -47,8 +43,7 @@ namespace vm::opargs {
 	};
 
 	using OpCodeArg = std::variant<
-		ImmediateI64,
-		ImmediateI32,
+		Immediate,
 		StackLocalI32,
 		StackLocalI64,
 		StackLocalPtr,
