@@ -14,7 +14,7 @@ public:
 private:
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0"); }
 
-	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", ""); }
+	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4"); }
 };
 
 TESTER_COMMON_MAIN("/VM/tests/basic/");
