@@ -42,7 +42,7 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnAbstractType);
 
-	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnDesc, bool) {
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnExpressionType, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey& key) -> PResult {
@@ -67,5 +67,5 @@ namespace tsh {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnDesc);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnExpressionType);
 }

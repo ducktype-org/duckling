@@ -4,6 +4,7 @@
 
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
+#include <base/optional.hpp>
 
 namespace tsh {
 	namespace {
@@ -103,7 +104,7 @@ namespace tsh {
 
 		// Go over named arguments.
 		for (auto named_arg: named_args) {
-			u32 param_with_matching_name_idx = u32(-1);
+			base::Optional<u32> param_with_matching_name_idx{};
 			for (u32 i = 0; i < parameters.size(); i++) {
 				auto param = parameters[i];
 				if (!param_was_provided[i] && param.name == named_arg.name) {
@@ -113,9 +114,9 @@ namespace tsh {
 			}
 
 			// Name mismatch case.
-			if (param_with_matching_name_idx == u32(-1)) return non_matches;
+			if (param_with_matching_name_idx.empty()) return non_matches;
 			AbstractType provided_type = named_arg.type;
-			AbstractType expected_type = parameters[param_with_matching_name_idx].type;
+			AbstractType expected_type = parameters[param_with_matching_name_idx.value()].type;
 			if (provided_type != expected_type) {
 				// Type mismatch case.
 				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,
@@ -123,7 +124,7 @@ namespace tsh {
 					return non_matches;
 				coercion_present = true;
 			}
-			param_was_provided[param_with_matching_name_idx] = true;
+			param_was_provided[param_with_matching_name_idx.value()] = true;
 		}
 
 		// Check that all unprovided parameters have default values.

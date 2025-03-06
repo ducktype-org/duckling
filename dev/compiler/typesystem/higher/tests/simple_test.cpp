@@ -473,19 +473,19 @@ private:
 			= ExpressionType<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i3_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i3_const }),
 			"Smaller int value should be coercible into a bigger one."
 		);
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i2_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i2_const }),
 			"Mutable value should be coercible to an immutable one."
 		);
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i3_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i3_const }),
 			"Mutable value should be coercible to a bigger, immutable one."
 		);
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i2_mut }),
+			!query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i2_mut }),
 			"Immutable value should not be coercible to a mutable one."
 		);
 	}

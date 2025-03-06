@@ -86,9 +86,9 @@ namespace tsh {
 	)
 
 	/**
-	 * @brief Key for QueryImplicitCoercibilityOnDesc.
+	 * @brief Key for QueryImplicitCoercibilityOnExpressionType.
 	 */
-	struct KeyFor_QueryImplicitCoercibilityOnDesc final {
+	struct KeyFor_QueryImplicitCoercibilityOnExpressionType final {
 		/**
 		 * @brief Source value description of the coercion.
 		 */
@@ -99,19 +99,19 @@ namespace tsh {
 		 */
 		ExpressionType<> target;
 
-		KeyFor_QueryImplicitCoercibilityOnDesc(
+		KeyFor_QueryImplicitCoercibilityOnExpressionType(
 			const ExpressionType<>& source, const ExpressionType<>& target
 		):
 			  source(source),
 			  target(target) {}
 
 		[[nodiscard]]
-		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnDesc&) const
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnExpressionType&) const
 			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnDesc, u64> hashes{};
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnExpressionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 
@@ -125,5 +125,9 @@ namespace tsh {
 	 * @brief Query to check whether implicit coercion from one value described by ExpressionType to
 	 * another is allowed.
 	 */
-	DECLARE_QUERY(QueryImplicitCoercibilityOnDesc, KeyFor_QueryImplicitCoercibilityOnDesc, bool)
+	DECLARE_QUERY(
+		QueryImplicitCoercibilityOnExpressionType,
+		KeyFor_QueryImplicitCoercibilityOnExpressionType,
+		bool
+	)
 }

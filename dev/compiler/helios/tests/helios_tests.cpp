@@ -82,7 +82,7 @@ private:
 		const auto first_class_info
 			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)
 		          ->valueOrThrow();
-		const auto first_class_typeinfo
+		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow();
 
@@ -104,7 +104,7 @@ private:
 		ASSERT_EQUAL(0, second_class_info.constructors.size());
 		ASSERT_TRUE(not second_class_info.destructor.has_value());
 		ASSERT_TRUE(second_class_info.base.has_value());
-		ASSERT_EQUAL(first_class_typeinfo, second_class_info.base);
+		ASSERT_EQUAL(first_class_abstract_type, second_class_info.base);
 		ASSERT_EQUAL("SecondClass", second_class_info.name);
 	}
 

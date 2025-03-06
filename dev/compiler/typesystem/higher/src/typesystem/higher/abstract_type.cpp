@@ -1,9 +1,6 @@
 /**
  * @file abstract_type.cpp
  * @brief Implementation of AbstractType.
- *
- * This file is not included outside the Type System module and can thus have full knowledge of the
- * underlying implementation hierarchy.
  */
 
 #include "abstract_type.hpp"
