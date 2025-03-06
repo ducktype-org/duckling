@@ -1,13 +1,13 @@
 #include "types.hpp"
 
-#include "../internal/type_info_impl.hpp"
+#include "../internal/abstract_type_impl.hpp"
 
 #include <query_framework/query_impl.hpp>
 
 namespace tsh {
-	struct IMPLEMENT_QUERY(QueryUnitType, UnitInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryUnitType, UnitAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto unit_impl = internal::UnitInfoImpl{};
+			static auto unit_impl = internal::UnitAbstractTypeImpl{};
 			return &unit_impl;
 		}
 
@@ -16,9 +16,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryUnitType)
 
-	struct IMPLEMENT_QUERY(QueryVoidType, VoidInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryVoidType, VoidAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto void_impl = internal::VoidInfoImpl{};
+			static auto void_impl = internal::VoidAbstractTypeImpl{};
 			return &void_impl;
 		}
 
@@ -27,9 +27,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVoidType)
 
-	struct IMPLEMENT_QUERY(QueryByteType, ByteInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryByteType, ByteAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto byte_impl = internal::ByteInfoImpl{};
+			static auto byte_impl = internal::ByteAbstractTypeImpl{};
 			return &byte_impl;
 		}
 
@@ -38,9 +38,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryByteType)
 
-	struct IMPLEMENT_QUERY(QueryBoolType, BoolInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryBoolType, BoolAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto bool_impl = internal::BoolInfoImpl{};
+			static auto bool_impl = internal::BoolAbstractTypeImpl{};
 			return &bool_impl;
 		}
 
@@ -49,9 +49,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryBoolType)
 
-	struct IMPLEMENT_QUERY(QueryCharType, CharInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryCharType, CharAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto char_impl = internal::CharInfoImpl{};
+			static auto char_impl = internal::CharAbstractTypeImpl{};
 			return &char_impl;
 		}
 
@@ -60,7 +60,7 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryCharType)
 
-	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryIntegralType, IntegralAbstractType::Pimpl) {
 		class ErrorBadIntegralSize final: public dia::Error {
 			usize requested_size;
 
@@ -94,7 +94,7 @@ namespace tsh {
 		};
 
 		static auto provide(Context& context, const QKey key) -> PResult {
-			using Impl = IntegralInfo::Impl;
+			using Impl = IntegralAbstractType::Impl;
 
 			static std::map<std::pair<usize, bool>, Impl> cache = {
 				{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
@@ -122,7 +122,7 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryIntegralType)
 
-	struct IMPLEMENT_QUERY(QueryFloatType, FloatInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryFloatType, FloatAbstractType::Pimpl) {
 		class ErrorBadFloatSize final: public dia::Error {
 			usize requested_size;
 
@@ -156,7 +156,7 @@ namespace tsh {
 		};
 
 		static auto provide(Context& context, const QKey size) -> PResult {
-			using Impl = FloatInfo::Impl;
+			using Impl = FloatAbstractType::Impl;
 
 			static std::map<usize, Impl> cache = {
 				{ 16, Impl{ 16 } },    // For certain GPU applications
@@ -181,12 +181,12 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFloatType)
 
-	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerInfo::Pimpl) {
-		static auto provide(Context&, QKey key) -> PResult {
-			static auto rawPointer_impl = std::array<internal::RawPointerInfoImpl, 2>{
-				internal::RawPointerInfoImpl{ false }, internal::RawPointerInfoImpl{ true }
-			};
-			return &rawPointer_impl.at(key);
+	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			static auto raw_pointer_impl
+				= std::array{ internal::RawPointerAbstractTypeImpl{ false },
+				              internal::RawPointerAbstractTypeImpl{ true } };
+			return &raw_pointer_impl.at(key);
 		}
 
 		QUERY_AUTO_NO_CACHE
@@ -194,10 +194,10 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryRawPointerType)
 
-	struct IMPLEMENT_QUERY(QueryPointerType, PointerInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryPointerType, PointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
-			const auto pointer_pimpl = new internal::PointerInfoImpl{ key };
-			pushType(Box<internal::PointerInfoImpl>::fromPointer(pointer_pimpl));
+			const auto pointer_pimpl = new internal::PointerAbstractTypeImpl{ key };
+			pushType(Box<internal::PointerAbstractTypeImpl>::fromPointer(pointer_pimpl));
 			return pointer_pimpl;
 		}
 
@@ -206,10 +206,10 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
-	struct IMPLEMENT_QUERY(QueryTupleType, TupleInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto tuple_pimpl = new internal::TupleInfoImpl{ key.components };
-			pushType(Box<internal::TupleInfoImpl>::fromPointer(tuple_pimpl));
+			const auto tuple_pimpl = new internal::TupleAbstractTypeImpl{ key.components };
+			pushType(Box<internal::TupleAbstractTypeImpl>::fromPointer(tuple_pimpl));
 			return tuple_pimpl;
 		}
 
@@ -218,10 +218,11 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTupleType)
 
-	struct IMPLEMENT_QUERY(QueryVariantType, VariantInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto variant_pimpl = new internal::VariantInfoImpl{ key.underlying_types };
-			pushType(Box<internal::VariantInfoImpl>::fromPointer(variant_pimpl));
+			const auto variant_pimpl
+				= new internal::VariantAbstractTypeImpl{ key.underlying_types };
+			pushType(Box<internal::VariantAbstractTypeImpl>::fromPointer(variant_pimpl));
 			return variant_pimpl;
 		}
 
@@ -230,12 +231,12 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryVariantType)
 
-	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryFunctionType, FunctionAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto [params, result, pure, free] = key;
 			const auto function_pimpl
-				= new internal::FunctionInfoImpl{ params, result, pure, free };
-			pushType(Box<internal::FunctionInfoImpl>::fromPointer(function_pimpl));
+				= new internal::FunctionAbstractTypeImpl{ params, result, pure, free };
+			pushType(Box<internal::FunctionAbstractTypeImpl>::fromPointer(function_pimpl));
 			return function_pimpl;
 		}
 
@@ -244,10 +245,10 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
 
-	struct IMPLEMENT_QUERY(QueryClassType, ClassInfo::Pimpl) {
-		static auto provide(Context&, QKey key) -> PResult {
-			const auto class_pimpl = new internal::ClassInfoImpl{ key };
-			pushType(Box<internal::ClassInfoImpl>::fromPointer(class_pimpl));
+	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			const auto class_pimpl = new internal::ClassAbstractTypeImpl{ key };
+			pushType(Box<internal::ClassAbstractTypeImpl>::fromPointer(class_pimpl));
 			return class_pimpl;
 		}
 
@@ -256,9 +257,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassType)
 
-	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryNamespaceType, NamespaceAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto namespace_impl = internal::NamespaceInfoImpl{};
+			static auto namespace_impl = internal::NamespaceAbstractTypeImpl{};
 			return &namespace_impl;
 		}
 
@@ -267,9 +268,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryNamespaceType)
 
-	struct IMPLEMENT_QUERY(QueryModuleType, ModuleInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryModuleType, ModuleAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto module_impl = internal::ModuleInfoImpl{};
+			static auto module_impl = internal::ModuleAbstractTypeImpl{};
 			return &module_impl;
 		}
 
@@ -278,9 +279,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleType)
 
-	struct IMPLEMENT_QUERY(QueryMetaType, MetaInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryMetaType, MetaAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto meta_impl = internal::MetaInfoImpl{};
+			static auto meta_impl = internal::MetaAbstractTypeImpl{};
 			return &meta_impl;
 		}
 
@@ -289,9 +290,9 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMetaType)
 
-	struct IMPLEMENT_QUERY(QueryImportType, ImportInfo::Pimpl) {
+	struct IMPLEMENT_QUERY(QueryImportType, ImportAbstractType::Pimpl) {
 		static auto provide(Context&, QKey) -> PResult {
-			static auto import_impl = internal::ImportInfoImpl{};
+			static auto import_impl = internal::ImportAbstractTypeImpl{};
 			return &import_impl;
 		}
 
