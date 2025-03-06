@@ -149,6 +149,50 @@ namespace compiler::backend_vm {
 			}
 			CORE_UNREACHABLE();
 		}
+
+		OpKind lirOpToOpKind(lir::Operation operation) {
+			switch (operation) {
+			case lir::Operation::Assign:
+				return OpKind::mov;
+			case lir::Operation::IntegerAdd:
+				return OpKind::add;
+			case lir::Operation::IntegerSub:
+				return OpKind::sub;
+				break;
+			case lir::Operation::IntegerMul:
+				return OpKind::mul;
+			case lir::Operation::IntegerUDiv:
+				return OpKind::div;
+			case lir::Operation::IntegerSDiv:
+				return OpKind::div;
+			case lir::Operation::IntegerUMod:
+				return OpKind::mod;
+			case lir::Operation::IntegerSMod:
+				return OpKind::mod;
+			case lir::Operation::IntegerNeg:
+				return OpKind::neg;
+			case lir::Operation::IntegerULt:
+			case lir::Operation::IntegerSLt:
+			default:
+				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
+			}
+			CORE_UNREACHABLE();
+		}
+
+		OpKind lirTerminatorToOpKind(lir::Operation terminator) {
+			switch (terminator) {
+			case lir::Operation::Jump:
+				return OpKind::jmp;
+			case lir::Operation::ReturnVoid:
+				return OpKind::ret;
+			case lir::Operation::ReturnValue:
+				return OpKind::ret;
+			case lir::Operation::Branch:
+			default:
+				CORE_PANIC("Invalid terminator: ", base::enumToStr(terminator));
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 
 	void Module::addLirFunction(CRef<lir::Function> lir_function) {
@@ -170,45 +214,7 @@ namespace compiler::backend_vm {
 				) });
 
 				InstructionBuilder instr;
-
-				switch (lir_instruction.operation) {
-				case lir::Operation::Assign:
-					instr.setKind(OpKind::mov);
-					break;
-				case lir::Operation::IntegerAdd:
-					instr.setKind(OpKind::add);
-					break;
-				case lir::Operation::IntegerSub:
-					instr.setKind(OpKind::sub);
-					break;
-				case lir::Operation::IntegerMul:
-					instr.setKind(OpKind::mul);
-					break;
-				case lir::Operation::IntegerUDiv:
-					instr.setKind(OpKind::div);
-					break;
-				case lir::Operation::IntegerSDiv:
-					instr.setKind(OpKind::div);
-					break;
-				case lir::Operation::IntegerUMod:
-					instr.setKind(OpKind::mod);
-					break;
-				case lir::Operation::IntegerSMod:
-					instr.setKind(OpKind::mod);
-					break;
-				case lir::Operation::IntegerNeg:
-					instr.setKind(OpKind::neg);
-					break;
-				case lir::Operation::IntegerULt:
-				case lir::Operation::IntegerSLt:
-				default:
-					std::cerr << base::strConcat(
-						"Invalid operation: ", base::enumToStr(lir_instruction.operation)
-					) << '\n';
-					// default:
-					// 	CORE_PANIC("Invalid operation: ",
-					// base::enumToStr(lir_instruction.operation));
-				}
+				instr.setKind(lirOpToOpKind(lir_instruction.operation));
 
 				// Add output as an argument.
 				instr.pushArg(lirOutputToOpArg(ctx, lir_instruction));
@@ -226,28 +232,8 @@ namespace compiler::backend_vm {
 			) });
 
 			InstructionBuilder terminator_instr;
-			switch (lir_block->terminator.operation) {
-			case lir::Operation::Jump:
-				terminator_instr.setKind(OpKind::jmp);
-				break;
-			case lir::Operation::ReturnVoid:
-				terminator_instr.setKind(OpKind::ret);
-				break;
-			case lir::Operation::ReturnValue:
-				terminator_instr.setKind(OpKind::ret);
-				break;
-			case lir::Operation::Branch:
-			case lir::Operation::COUNT:
-			case lir::Operation::Uninitialized:
-			default:
-				std::cerr << base::strConcat(
-					"Invalid terminator: ", base::enumToStr(lir_block->terminator.operation)
-				) << '\n';
-				// default:
-				// 	CORE_PANIC(
-				// 		"Invalid terminator: ", base::enumToStr(lir_block->terminator.operation)
-				// 	);
-			}
+			terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
+
 			for (auto&& lir_location: lir_block->terminator.arguments)
 				terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
 
