@@ -5,7 +5,7 @@
 #include <set>
 
 namespace tsh {
-	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnInfo, bool) {
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey key) -> PResult {
@@ -23,16 +23,16 @@ namespace tsh {
 		}
 
 	private:
-		static std::set<TypeInfo> getImplicitConversionsFrom(
-			[[maybe_unused]] TypeInfo source, [[maybe_unused]] Context& context
+		static std::set<AbstractType> getImplicitConversionsFrom(
+			[[maybe_unused]] AbstractType source, [[maybe_unused]] Context& context
 		) {
 			// @TODO: Add implementation when query for extracting implicit
 			// conversion operators for types appears.
 			return {};
 		}
 
-		static std::set<TypeInfo> getImplicitConstructorsOf(
-			[[maybe_unused]] TypeInfo target, [[maybe_unused]] Context& context
+		static std::set<AbstractType> getImplicitConstructorsOf(
+			[[maybe_unused]] AbstractType target, [[maybe_unused]] Context& context
 		) {
 			// @TODO: Add implementation when query for extracting implicit
 			// single-argument constructors for types appears.
@@ -40,14 +40,16 @@ namespace tsh {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnInfo);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnAbstractType);
 
-	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnDesc, bool) {
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnExpressionType, bool) {
 		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
 
 		static auto provide(Context& context, const QKey& key) -> PResult {
-			bool type_coercibility = context.query<QueryImplicitCoercibilityOnInfo>(
-				KeyFor_QueryImplicitCoercibilityOnInfo(key.source.getType(), key.target.getType())
+			bool type_coercibility = context.query<QueryImplicitCoercibilityOnAbstractType>(
+				KeyFor_QueryImplicitCoercibilityOnAbstractType(
+					key.source.getType(), key.target.getType()
+				)
 			);
 			bool vc_coercibility
 				= key.source.getValueCategory().contains(key.target.getValueCategory());
@@ -65,5 +67,5 @@ namespace tsh {
 		}
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnDesc);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnExpressionType);
 }

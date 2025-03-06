@@ -51,7 +51,7 @@ duck_add_test(base defer_tests tests/defer_test.cpp
         USES Base)
 
 duck_add_test(base strong_id_test tests/strong_id_test.cpp
-        USES Base Tester)
+        USES Base)
 
 duck_add_test(base at_maybe_test tests/at_maybe_test.cpp
         USES Base)

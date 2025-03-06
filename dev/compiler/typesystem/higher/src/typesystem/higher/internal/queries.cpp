@@ -2,12 +2,12 @@
 
 #include <query_framework/query_impl.hpp>
 
-#include "type_info_impl.hpp"
+#include "abstract_type_impl.hpp"
 
 namespace tsh::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
 		static auto provide(Context& ctx, const QKey key) -> PResult {
-			compiler::helios::SymID symbol = key.value->getSymbol();
+			const compiler::helios::SymID symbol = key.value->getSymbol();
 			auto& field_syms = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 			                       ->expect("Handling ERRORS in TS is not supported yet...")
 			                       .members;
@@ -15,13 +15,13 @@ namespace tsh::internal {
 
 			std::set<InterfaceElement> elements;
 
-			for (auto field_sym: field_syms) {
-				TypeInfo field_type
+			for (const compiler::helios::QueryTypeOfSymbol::QKey field_sym: field_syms) {
+				AbstractType field_type
 					= ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym)->expect(
 						"Handling ERRORS in TS is not supported yet..."
 					);
 				elements.insert(
-					InterfaceElement(field_sym, key.value->toTypeInfo(), {}, field_type, {})
+					InterfaceElement(field_sym, key.value->toAbstractType(), {}, field_type, {})
 				);
 			}
 

@@ -10,8 +10,7 @@
 #include <helios/lookup_result.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
-#include <base/box.hpp>
-#include <typesystem/higher/type_info.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/scope_symbol_id.hpp>
 
@@ -119,7 +118,7 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>)
 
-	using QueryType_Result = errors::HResult<tsh::TypeInfo, errors::Failed>;
+	using QueryType_Result = errors::HResult<tsh::AbstractType, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
@@ -127,7 +126,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QueryType_Result>);
 
 	/**
-	 * @brief Query tsh::TypeInfo from a symbol definition (like class definition).
+	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
 	 *
 	 * Example:
 	 * class T {
@@ -146,29 +145,29 @@ namespace compiler::helios {
 		 */
 		base::StrID name;
 		/**
-		 * @brief Class'es declared methods.
+		 * @brief Class's declared methods.
 		 */
 		std::vector<SymID> methods;
 		/**
-		 * @brief Class'es declared constructors.
+		 * @brief Class's declared constructors.
 		 */
 		std::vector<SymID> constructors;
 		/**
-		 * @brief Class'es declared destructor.
+		 * @brief Class's declared destructor.
 		 */
 		base::Optional<SymID> destructor;
 		/**
-		 * @brief Class'es declared member variables.
+		 * @brief Class's declared member variables.
 		 */
 		std::vector<SymID> members;
 		/**
-		 * @brief Class'es base class.
+		 * @brief Class's base class.
 		 */
-		base::Optional<tsh::TypeInfo> base;
+		base::Optional<tsh::AbstractType> base;
 		/**
-		 * @brief Class'es implemented interfaces.
+		 * @brief Class's implemented interfaces.
 		 */
-		std::vector<tsh::TypeInfo> implements;
+		std::vector<tsh::AbstractType> implements;
 	};
 
 	using QueryClassSymbolData_Result = errors::HResult<ClassSymbolData, errors::Failed>;
@@ -176,7 +175,7 @@ namespace compiler::helios {
 	/**
 	 * @brief Query all the information about a class definition.
 	 * Panics if the given `SymID` is not a class.
-	 * More information on `ClassSymbolData` in it's definition.
+	 * More information on `ClassSymbolData` in its definition.
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
 }

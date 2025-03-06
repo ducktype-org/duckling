@@ -16,7 +16,7 @@ namespace compiler::mir {
 
 	Function::Function(
 		base::StrID                  name,
-		tsh::TypeInfo                return_type,
+		tsh::AbstractType            return_type,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -257,8 +257,10 @@ namespace compiler::mir {
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
 			const auto function_return_type
-				= tsh::FunctionInfo(ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
-			                            ->expect("Handling errors in HOUT is not supported yet"))
+				= tsh::FunctionAbstractType(
+					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
+						  ->expect("Handling errors in HOUT is not supported yet")
+				)
 			          .getResultType();
 
 			return Function{
@@ -290,7 +292,7 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::TypeInfo type, const helios::ScopeID scope) {
+		LocalRef addTmp(const tsh::AbstractType type, const helios::ScopeID scope) {
 			const auto key
 				= local_list.emplaceBack(MirLocal{ tsh::ComponentType{ .type = type }, scope });
 			return local_list.getRef(key).value();
@@ -607,10 +609,10 @@ namespace compiler::mir {
 		/**
 		 * Get the type of a location, assuming that it is a local value.
 		 * @param location A MIR location which holds a local value.
-		 * @param ctx The query context for TypeInfo generation.
+		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::TypeInfo locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::AbstractType locationType(const MirLocation location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return ctx.query<tsh::QueryIntegralType>({ 64 });
