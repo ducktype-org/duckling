@@ -31,4 +31,6 @@ Jumps
 - Jump into a block
 - Jump out of a block
 - Jump between blocks
+- Multiple labels with the same name
+- Label does not exist
 - Skip a block with a jump (legal)
