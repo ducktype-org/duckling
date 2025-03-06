@@ -13,47 +13,6 @@
 
 namespace vm {
 	namespace {
-		void assertTailcallsSignatures(base::StableVector<FuncData>& functions) {
-			// void assertTailcallsSignatures(std::vector<FuncData>& functions) {
-			for (const auto& func: functions) {
-				for (const auto& op: func->bc) {
-#ifdef USE_TAIL_CALLS
-					if (op.opfun
-					    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall)
-					    )) {
-#else
-					if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
-#endif
-						CORE_ASSERT(
-							func->arg_size == func->next_arg_size,
-							"Invalid Tailcall! Caller signature must have arg_size "
-							"equal "
-							"to "
-							"next_arg_size"
-						);
-						CORE_ASSERT(
-							functions[op.arg0].arg_size == functions[op.arg0].next_arg_size,
-							"Invalid Tailcall! Called function signature must have "
-							"arg_size == "
-							"next_arg_size"
-						);
-						CORE_ASSERT(
-							func->arg_size == functions[op.arg0].arg_size,
-							"Invalid Tailcall! Caller and called arg size unmatched"
-						);
-						CORE_ASSERT(
-							func->stack_size == functions[op.arg0].stack_size,
-							"Invalid Tailcall! Caller and called stack size unmatched"
-						);
-						CORE_ASSERT(
-							func->ret_size == functions[op.arg0].ret_size,
-							"Invalid Tailcall! Caller and called ret size unmatched"
-						);
-					}
-				}
-			}
-		}
-
 		i64 getOpCodeArgValue(
 			const std::vector<Box<parser::Func>>& functions,
 			Ref<vm::TypeMetadata>                 types,
@@ -163,9 +122,6 @@ namespace vm {
 			return func_data;
 		}
 
-		// @TODO: this function returns errors as string, in the future `StreamPrinter`
-		// like object should be returned, that can produce both human readable and json
-		// error output
 		base::Optional<vm::VMProgram>
 			getCode(Ref<parser::ParsedProgram> parsed_program, dia::Logger& log) {
 			std::vector<vm::FuncData> converted_functions;
@@ -179,20 +135,9 @@ namespace vm {
 					log
 				);
 				converted_functions.push_back(converted_func);
-
-				// bool res = program.addFunction(func->name, converted_func);
-				// @ TODO: This should be moved to Validator
-				// if (!res) {  // Duplicate function name
-				// log.log(makeBox<vm::parser::DuplicateFunctionDeclarationError>(
-				// parsed_program->position
-				// ));
-				// }
 			}
 
 			vm::VMProgram program(converted_functions, std::move(parsed_program->type_metadata));
-
-			// @TODO: This should be moved to Validator
-			assertTailcallsSignatures(program.functions);
 
 			return program;
 		}

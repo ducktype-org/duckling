@@ -2,6 +2,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include "base/box.hpp"
+#include "base/string_id.hpp"
 #include "code_data/opcode_args.hpp"
 #include "core/process/type_metadata/type_metadata.hpp"
 #include "token_file/file.hpp"
@@ -10,7 +11,6 @@
 #include <token_parser_core/tpc.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
-#include <type_traits>
 #include <vector>
 
 namespace vm::parser {
@@ -153,7 +153,7 @@ namespace vm::parser {
 	 * from all files with type metadata.
 	 */
 	struct ParsedProgram {
-		// base::HashMap<Ref<Func>, base::FilePath> map;
+		base::HashMap<base::StrID, Ref<Func>>  name_to_func;
 		std::vector<Box<Func>>                 functions;
 		std::vector<Box<Type>>                 types;
 		std::vector<Box<tokenizer::TokenFile>> token_files;

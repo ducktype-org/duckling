@@ -199,4 +199,39 @@ namespace vm::parser {
 			  dia::Error(pos),
 			  reason(base::StrID(reason.data())) {}
 	};
-}
+
+	class DuplicatedFunctionDeclarationNote final: public dia::NoteWithPosition {
+		public:
+			constexpr static std::string_view ERR_MSG = "Previous function declaration here.";
+	
+		protected:
+			[[nodiscard]]
+			std::string toStringBrief() const override {
+				return ERR_MSG.data();
+			}
+	
+		public:
+		DuplicatedFunctionDeclarationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		};
+
+
+		class DuplicatedFunctionDeclarationError final: public dia::Error {
+			public:
+				constexpr static std::string_view ERR_MSG = "Duplicated function declaration.";
+		
+			protected:
+				[[nodiscard]]
+				std::string toStringBrief() const override {
+					return ERR_MSG.data();
+				}
+		
+			public:
+				[[nodiscard]]
+				Domain getDomain() const override {
+					return Domain::Parser;
+				}
+		
+				DuplicatedFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
+			};
+
+	}

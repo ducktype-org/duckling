@@ -28,6 +28,7 @@
 #include <base/variant.hpp>
 #include <base/string_id.hpp>
 #include <expected>
+#include "base/box.hpp"
 #include "errors.hpp"
 #include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
@@ -614,8 +615,21 @@ namespace vm::parser {
 			parsed_program.token_files.push_back(tokenizeFile(file));
 			auto parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
 
-			for (auto& func: parsed.value()->functions)
+			for (auto& func: parsed.value()->functions) {
+				auto func_name = func->name.value;
+				if (parsed_program.name_to_func.contains(func_name)) {
+					auto msg
+						= makeBox<vm::parser::DuplicateFunctionDeclarationError>(*func->position);
+					auto dup_func = parsed_program.name_to_func.atMaybe(func_name);
+					msg->addNote(makeBox<vm::parser::DuplicatedFunctionDeclarationNote>(
+						*dup_func.value()->position
+					));
+					log.log(std::move(msg));
+				}
+
 				parsed_program.functions.push_back(std::move(func));
+				parsed_program.name_to_func.put(func_name, parsed_program.functions.back().refMut());
+			}
 
 			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));
 

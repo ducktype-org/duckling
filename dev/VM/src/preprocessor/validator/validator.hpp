@@ -12,9 +12,10 @@ namespace vm::validator {
 		std::expected<bool, std::string> validateProgram(const parser::ParsedProgram& program);
 
 	private:
-		bool validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log);
-		bool validateTailcallSignatures(const parser::ParsedProgram& program, dia::Logger& log);
-		bool validateDuplicateFunctionDeclarations(
+		void preprocessProgram(const parser::ParsedProgram& program, dia::Logger& log);
+		void validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log);
+		void validateTailcallSignatures(const parser::ParsedProgram& program, dia::Logger& log);
+		void validateDuplicateFunctionDeclarations(
 			const parser::ParsedProgram& program, dia::Logger& log
 		);
 	};
