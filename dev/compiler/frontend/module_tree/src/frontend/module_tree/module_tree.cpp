@@ -299,10 +299,10 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
  * QueryFilePST *
  ****************/
 struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
-	static auto provide(Context&, QKey key) -> PResult {
+	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto& file = files.at(key);
 		auto& pst  = file.getPST();
-		root_element_file_back_map.put(pst.getRootElement()->getID(), key);
+		root_element_file_back_map.put(pst.getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
 		if (pst.getLogger().bad()) {
@@ -322,12 +322,12 @@ struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
 ModuleID
-	compiler::frontend::extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element) {
+	compiler::frontend::extendQueryModuleIDOfPST(query::Context& ctx, pst::AccessLocked<pst::LangElement> element) {
 	// get top-level:
-	while (element->getParent().has_value()) element = element->getParent().value();
+	while (element.unlock(ctx)->getParent().unlock(ctx)) element = element.unlock(ctx)->getParent();
 
 	// this access depends of global state that might become a problem in incremental compilation:
-	auto file_id = root_element_file_back_map[element->getID()];
+	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
 	auto result  = files.at(file_id).linked_module;
 	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 

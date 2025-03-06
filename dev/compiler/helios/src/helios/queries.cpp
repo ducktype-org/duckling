@@ -53,9 +53,9 @@ namespace compiler::helios {
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
 			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
 			code::CodeBlock block(scope, {});
-			for (const auto& stmt: *container) {
+			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
-				stmt->acceptVisitor(stmt_maker);
+				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
@@ -71,7 +71,7 @@ namespace compiler::helios {
 
 			template<class T>
 			ScopeID scopeOf(const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&element) });
+				return ctx.query<QueryPrimaryCodeScopeFor>( element );
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -88,7 +88,7 @@ namespace compiler::helios {
 
 			void visitReturn(const pst::Return& stmt) override {
 				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ val.value()->getExpr() })
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
 					                .expect("Not handling errors here yet... (return expr)");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
@@ -102,7 +102,7 @@ namespace compiler::helios {
 
 			void visitExprStmt(const pst::ExprStmt& stmt) override {
 				// @TODO: handle null here
-				auto inner_expr = stmt.getExpr().toOpt().value()->getExpr();
+				auto inner_expr = stmt.getExpr().unlock(ctx)->getExpr().unlock(ctx);
 
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:
@@ -148,7 +148,7 @@ namespace compiler::helios {
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition()->getExpr() })
+				auto condition = ctx.query<QueryHoutOfExpr>( stmt.getCondition().unlock(ctx)->getExpr())
 				                     .expect("Not handling errors here yet");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
@@ -170,7 +170,7 @@ namespace compiler::helios {
 				// for now initial value is assumed to always be present:
 				// this will probably change:
 				auto initial_value
-					= ctx.query<QueryHoutOfExpr>({ stmt.getValue()->getExpr() })
+					= ctx.query<QueryHoutOfExpr>(stmt.getValue().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
 				output(
@@ -217,12 +217,12 @@ namespace compiler::helios {
 
 				std::vector<code::Parameter> parameters;
 
-				for (auto param: *stmt.getParams()) {
+				for (auto param: *stmt.getParams().unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
 
-					auto value = param->getValue();
+					auto value = param.unlock(ctx)->getValue();
 
 					if (param_type->hasError()) {
 						// we just fail here, because we can't continue without type
@@ -235,7 +235,7 @@ namespace compiler::helios {
 						);
 					} else {
 						auto initial_value
-							= ctx.query<QueryHoutOfExpr>({ value.value()->getExpr() });
+							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
 
 						if (initial_value.hasError()) {
 							// we just fail here, because we can't continue without correct initial

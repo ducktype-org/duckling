@@ -5,6 +5,8 @@
 
 #include <query_framework/query_int.hpp>
 
+#include "lang_parser_element.hpp"
+
 namespace pst {
 	/**
 	 * @brief Some kind of id in the future
@@ -46,6 +48,11 @@ namespace pst {
 		template<typename T>
 		Access(Access<T>&& other): ref(std::move(other.ref)) {}
 
+		template<typename T>
+		Access<T> dynamicCast() const {
+			return {{dynamic_cast<const T*>(&*ref)}};
+		}
+
 		EXPOSE_MREF_INTERFACE(ref)
 	};
 
@@ -62,30 +69,45 @@ namespace pst {
 		friend class AccessInternal;
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
+		friend class LangElement;
+
+		template<std::derived_from<LangElement> T = LangElement>
+		struct GenericPSTQueryKey;
 
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
 
 	public:
 		AccessLocked()               = delete;
-		AccessLocked(AccessLocked&)  = default;
+		AccessLocked(const AccessLocked&)  = default;
 		AccessLocked(AccessLocked&&) = default;
+		template <typename E>
+		AccessLocked(const Access<E>& oth) noexcept: ref(oth.ref) {}
 
 		template<typename T>
-		AccessLocked(AccessLocked<T> other): ref(other.ref) {}
-
-		template<typename T>
-		AccessLocked(AccessLocked<T>& other): ref(other.ref) {}
+		AccessLocked(const AccessLocked<T>& other) noexcept: ref(other.ref) {}
 
 		template<std::derived_from<Element> Desc>
 		AccessLocked<Desc> cast() const {
 			return { dynamic_cast<const Desc*>(&*ref) };
 		}
 
-		Access<Element> unlock(PSTAccessKey key) const { return { ref, key }; }
+		Access<Element> illegalAccess() const { return { ref };}
 
 		Access<Element> unlock(query::detail::ContextType& ctx) const {
 			detail::notifyContext(ctx);
 			return { ref };
+		}
+
+		template<typename E>
+		AccessLocked& operator=(const Access<E>& oth) noexcept {
+			ref = oth.ref;
+			return *this;
+		}
+
+		template<typename E>
+		AccessLocked& operator=(AccessLocked<E>&& oth) noexcept {
+			ref = std::move(oth.ref);
+			return *this;
 		}
 	};
 

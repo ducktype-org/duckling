@@ -12,7 +12,7 @@
 
 namespace compiler::helios {
 	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-	using StmtList = std::vector<MCRef<Stmt>>;
+	using StmtList = std::vector<pst::AccessLocked<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given LangElement
@@ -26,5 +26,5 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(MCRef<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(query::detail::ContextType&, pst::AccessLocked<pst::LangElement>);
 }

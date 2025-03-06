@@ -110,9 +110,9 @@ int main(int argc, char** argv) {
 		pst.dprint(std::cerr);
 		std::cerr << "\n";
 	}
-	if (pst.getRootElement() != nullptr) {
+	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, pst.getRootElement());
+		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess()));
 		hdl.writeToSVG(argv[2]);
 	}
 }

@@ -11,17 +11,21 @@ namespace pst {
 	 */
 	template<std::derived_from<LangElement> T = LangElement>
 	struct GenericPSTQueryKey {
+		template<typename E>
+		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element) {};
+		template<typename E>
+		GenericPSTQueryKey(const E& element) noexcept: element(element) {};
 		/**
 		 * @brief Element for which the query is run.
 		 * @TODO: this is an MCRef, since all keys ware defined like this
 		 * after PST "boxification". We should decide how HELIOS handles PST nulls,
 		 * and have a single convention.
 		 */
-		MCRef<T> element;
+		AccessLocked<T> element;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			return element->getID().asInt();
+			return element.illegalAccess()->getID().asInt();
 		}
 
 		bool operator==(const GenericPSTQueryKey&) const = default;

@@ -86,12 +86,12 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement().unlock({})->getStatements()) {
+			for (const auto& stmt: pst.getRootElement().illegalAccess()->getStatements()) {
 				assertThrows<base::Panic>(
-					[&] { stmt.unlock({})->acceptVisitor(panicky_vistor); },
+					[&] { stmt.illegalAccess()->acceptVisitor(panicky_vistor); },
 					"Stmt did not call it\'s visitor"
 				);
-				stmt.unlock({})->acceptVisitor(empty_vistor);
+				stmt.illegalAccess()->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
@@ -101,8 +101,8 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement().unlock({})->getStatements()) {
-				pst::Access<pst::LangElement> lang_stmt = stmt.unlock({});
+			for (const auto& stmt: pst.getRootElement().illegalAccess()->getStatements()) {
+				pst::Access<pst::LangElement> lang_stmt = stmt.illegalAccess();
 				assertThrows<base::Panic>(
 					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
 					"LangElement did not call it\'s visitor"
@@ -202,10 +202,10 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = pst.getRootElement().unlock({})->getStatements()[0].cast<pst::Fun>().unlock({});
+		auto fun = pst.getRootElement().illegalAccess()->getStatements()[0].cast<pst::Fun>().illegalAccess();
 		ASSERT_TRUE(fun);
 
-		auto params = fun->getParams().unlock({});
+		auto params = fun->getParams().illegalAccess();
 		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
@@ -226,7 +226,7 @@ private:
 		usize i = 0;
 		for (auto param: *params) {
 			PstParamVisitor visitor(base::StrID(names.at(i)));
-			param.unlock({})->acceptVisitor(visitor);
+			param.illegalAccess()->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}

@@ -32,7 +32,7 @@ namespace compiler::helios {
 		 * @brief PST element for which the scope was created.
 		 * Empty for root scope.
 		 */
-		base::Optional<MCRef<pst::LangElement>> related_pst_element;
+		base::Optional<pst::AccessLocked<pst::LangElement>> related_pst_element;
 
 		/**
 		 * @brief Module, the scope was defined in
@@ -114,8 +114,9 @@ namespace compiler::helios {
 	/**
 	 * Determines scope kind for given PST element.
 	 */
-	ElementScopeKind getScopeKind(MCRef<pst::LangElement> element) {
+	ElementScopeKind getScopeKind(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
+		auto element = locked.unlock(ctx);
 
 		switch (element->getElementKind()) {
 		case pst::ElementKind::TopLevel:
@@ -127,7 +128,7 @@ namespace compiler::helios {
 
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
-			auto parent_kind = element->getParent().value()->getElementKind();
+			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::CodeBlockOrStmt)
 				return ElementScopeKind::Transparent;
 			else
@@ -139,7 +140,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassBlock: {
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().value()->getElementKind();
+			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::Class)
 				return ElementScopeKind::Standard;
 			else
@@ -223,11 +224,12 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
-		static auto provide(Context& ctx, QKey element) -> PResult {
-			auto element_scope_kind = getScopeKind(element.element);
+		static auto provide(Context& ctx, QKey elementKey) -> PResult {
+			auto element = elementKey.element.unlock(ctx);
+			auto element_scope_kind = getScopeKind(ctx, elementKey.element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
-				auto element_ptr = &*element.element;
+				auto element_ptr = &*element;
 				CORE_PANIC(base::strConcat(
 					"Scope of element for which scope does not make sense (or was not added.): ",
 					typeid(*element_ptr).name()
@@ -235,10 +237,10 @@ namespace compiler::helios {
 			}
 
 			ScopeID parent
-				= element.element->getParent().has_value()
-			        ? ctx.query<QueryPrimaryCodeScopeFor>({ element.element->getParent().value() })
+				= element->getParent().unlock(ctx)
+			        ? ctx.query<QueryPrimaryCodeScopeFor>( element->getParent())
 			        : ctx.query<QueryRootScopeOf>(
-						  { frontend::extendQueryModuleIDOfPST(ctx, element.element) }
+						  { frontend::extendQueryModuleIDOfPST(ctx, element) }
 					  );
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
@@ -246,18 +248,18 @@ namespace compiler::helios {
 			// simple parent sanity check:
 			// it is technically not needed anymore, but it left as an additional
 			// layer of bug detection.
-			if (parent_map.contains(element.element->getID())) {
+			if (parent_map.contains(element->getID())) {
 				CORE_ASSERT(
-					parent_map.at(element.element->getID()) == parent,
+					parent_map.at(element->getID()) == parent,
 					"Parent mismatch in QueryPrimaryCodeScopeFor"
 				);
 			} else {
-				parent_map.put(element.element->getID(), parent);
+				parent_map.put(element->getID(), parent);
 			}
 
 			return putInScopeTable(ScopeData{
 				.parent              = parent,
-				.related_pst_element = element.element,
+				.related_pst_element = element,
 				.parent_module       = module(parent),
 				.symbols             = {},
 				.depth               = scopeDepth(parent) + 1,
@@ -306,8 +308,8 @@ namespace compiler::helios {
 			filterSymbolsFromStmtList(query::Context& ctx, const StmtList<Stmt>& list) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
-				if (stmt->isDeclaration()) {
-					auto sym_id = ctx.query<QuerySymbolOfSTMT>({ stmt });
+				if (stmt.unlock(ctx)->isDeclaration()) {
+					auto sym_id = ctx.query<QuerySymbolOfSTMT>(stmt);
 					symbols.emplace_back(sym_id);
 				}
 			}
@@ -336,8 +338,8 @@ namespace compiler::helios {
 				// Scope of "fun →()← {}"
 
 				std::vector<SymID> out;
-				for (auto params: *fun.getParams())
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>({ params }));
+				for (auto params: *fun.getParams().unlock(ctx))
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>( params));
 
 				output(std::move(out));
 			}
@@ -363,7 +365,7 @@ namespace compiler::helios {
 				CORE_ASSERT(key.ref->is_root, "Non root scope without PST element!");
 				return {};
 			}
-			auto base_element = key.ref->related_pst_element.value();
+			auto base_element = key.ref->related_pst_element.value().unlock(ctx);
 
 			if (base_element->isStatementAggregate()) {
 				return filterSymbolsFromStmtList(ctx, getStmtsFromStmtAggregate(base_element));
