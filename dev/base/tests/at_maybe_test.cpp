@@ -1,5 +1,5 @@
 #include <tester/tester.hpp>
-#include <base/perfect_hash.hpp>
+#include <base/maps.hpp>
 
 class AtMaybeTest final: public tester::TestSuite {
 #undef TESTER_CLASS

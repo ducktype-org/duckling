@@ -50,7 +50,7 @@ duck_add_test(base defer_tests tests/defer_test.cpp
         USES Base)
 
 duck_add_test(base strong_id_test tests/strong_id_test.cpp
-        USES Base Tester)
+        USES Base)
 
 duck_add_test(base at_maybe_test tests/at_maybe_test.cpp
         USES Base)
@@ -98,4 +98,7 @@ duck_add_test(base bits_and_bytes_test tests/bits_and_bytes_test.cpp
         USES Base)
 
 duck_add_test(base is_complete_test tests/is_complete_test.cpp
+        USES Base)
+
+duck_add_test(base type_name_test tests/type_name_test.cpp
         USES Base)

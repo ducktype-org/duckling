@@ -52,7 +52,7 @@ namespace tsh {
 		 * @param type_info The source type description, from the TypeInfo hierarchy.
 		 * @param value_category The value category of the described value.
 		 */
-		TypeDesc(TYPE_INFO type_info, const ValueCategory value_category = {}):
+		TypeDesc(const TYPE_INFO type_info, const ValueCategory value_category):
 			  type_info(type_info),
 			  value_category(value_category) {}
 

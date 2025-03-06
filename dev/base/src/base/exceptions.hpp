@@ -14,6 +14,7 @@
 #include <exception>
 #include <string>
 #include "str_utils.hpp"
+#include "define_helper.hpp"
 
 namespace base {
 	/**
@@ -68,25 +69,28 @@ namespace base {
 	};
 }
 
-#define DETAIL_LANG_STR2(X) #X
-#define DETAIL_LANG_STR(X)  DETAIL_LANG_STR2(X)
+/**
+ * Base helper macro, don't use it directly.
+ */
+#define DETAIL_THROW_PANIC(panic_title, ...)                            \
+	throw base::Panic(                                                  \
+		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
+		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
+	)
+
 
 /**
  * @brief base::Panic based assert that allows catching for testing purposes.
  */
-#define CORE_ASSERT(cond, what...) \
-	if (!(cond)) _THROW_PANIC("    Assertion failed: `" #cond "`\n", what)
+#define CORE_ASSERT(cond, what, ...) \
+	if (!(cond))                     \
+	DETAIL_THROW_PANIC("    Assertion failed: `" #cond "`\n", what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * @brief base::Panic based throw that allows catching for testing purposes
  */
-#define CORE_PANIC(what...) _THROW_PANIC("    Panic thrown:\n", what)
-
-#define _THROW_PANIC(panic_title, what...)                \
-	throw base::Panic(                                    \
-		"    In " __FILE__ ":" DETAIL_LANG_STR(__LINE__), \
-		base::strConcat(panic_title, "    ", what)        \
-	)
+#define CORE_PANIC(what, ...) \
+	DETAIL_THROW_PANIC("    Panic thrown:\n", what __VA_OPT__(, ) __VA_ARGS__)
 
 /**
  * @brief Wrapper for CORE_PANIC intended to be used
@@ -99,4 +103,4 @@ namespace base {
  * * `if (cond) CORE_PANIC("error description")`,
  * * `default: CORE_PANIC("unhandled case")`.
  */
-#define CORE_UNREACHABLE() _THROW_PANIC("    Unreachable code reached! Panic.", "")
+#define CORE_UNREACHABLE() DETAIL_THROW_PANIC("    Unreachable code reached! Panic.")
