@@ -24,6 +24,14 @@
 constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
 constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
 
+namespace {
+	/**
+	 * @brief Whether main should throw compiler exceptions.
+	 * Used by let-it-throw option.
+	 */
+	constinit bool throwing_main = false;
+}
+
 /**
  * @brief Type of command callback. The returned int value is the value
  * that will be returned by hole application (i.e. exit status).
@@ -124,10 +132,10 @@ clap::Clap getClapForMain() {
 	// custom options of main:
 	clap.add(clap::ParamBuilder::ofFlag()
 	             .addLongName(LET_IT_THROW_NAME)
-				 .addShortDesc("Disables exception handling in main (debug option).")
+	             .addShortDesc("Disables exception handling in main (debug option).")
 	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                           "It should be used for debugging only in order to preserve "
-	                           "stack-trace. It can prevent stack-unwinding from happening.")
+	                          "It should be used for debugging only in order to preserve "
+	                          "stack-trace. It can prevent stack-unwinding from happening.")
 	             .build());
 
 	return clap;
@@ -142,6 +150,12 @@ clap::Clap getClapForMain() {
 clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) {
 	// standard options:
 	auto res = config::configureWith(clap, args);
+
+	CORE_ASSERT(
+		throwing_main == res.isFlag("let-it-throw"),
+		"Internal error: let-it-throw flag was not parsed correctly."
+	);
+
 	return res;
 }
 
@@ -367,8 +381,7 @@ int main(int argc, const char* argv[]) {
 	// --let-it-throw is still included in clap options.
 	// for showing help.
 
-	bool throwing_main = false;
-
+	throwing_main = false;
 	for (int i = 1; i < argc; i++) {
 		if (std::string_view(argv[i]) == LET_IT_THROW_OPTION) {
 			throwing_main = true;
