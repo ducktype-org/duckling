@@ -4,7 +4,6 @@
  */
 
 #pragma once
-#include <base/exceptions.hpp>
 #include <base/stringifyable_enum.hpp>
 
 // clang-format off
@@ -19,7 +18,7 @@ MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
 		Each class of types is described with a different Kind.
 	*/,
 
-	/** @brief The kind of the general TypeInfo(Impl). */
+	/** @brief The kind of the general AbstractType(Impl). */
 	Any = -1,
 
 	Unit,

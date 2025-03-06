@@ -1,5 +1,5 @@
 #include "all.hpp"
-#include "internal/type_info_impl.hpp"
+#include "internal/abstract_type_impl.hpp"
 
 namespace tsh {
 	static bool was_init = false;

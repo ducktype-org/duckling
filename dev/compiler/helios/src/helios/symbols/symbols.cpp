@@ -7,19 +7,15 @@
 #include <base/stable_hashmap.hpp>
 #include <base/stable_container.hpp>
 #include <base/variant.hpp>
-#include <base/unique_pointer.hpp>
 #include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <typesystem/higher/type_info.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <typesystem/higher/queries/types.hpp>
-
-#include <helios/hout/elements.hpp>
-#include <helios/hout/visitors.hpp>
 
 #include <helios/comp_time/type_eval.hpp>
 #include <helios/comp_time/int_eval.hpp>
@@ -517,10 +513,10 @@ namespace compiler::helios {
 
 			// @TODO: make failure more explicit
 
-			void setTypeOfSymbol(const tsh::TypeInfo& type) {
-				if (symbol_type_info.has_value())
+			void setTypeOfSymbol(const tsh::AbstractType& type) {
+				if (symbol_abstract_type.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type_info = type;
+				symbol_abstract_type = type;
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
@@ -531,7 +527,7 @@ namespace compiler::helios {
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			base::Optional<tsh::TypeInfo> symbol_type_info;
+			base::Optional<tsh::AbstractType> symbol_abstract_type;
 
 			void visitConst(const pst::Const& stmt) final {
 				setTypeOfSymbol(stmt.getType()->getExpr());
@@ -549,7 +545,7 @@ namespace compiler::helios {
 				auto params = fun.getParams();
 				auto ret    = fun.getRet();
 
-				std::vector<tsh::TypeInfo> param_types{};
+				std::vector<tsh::AbstractType> param_types{};
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
@@ -563,7 +559,7 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
+				tsh::AbstractType ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
 					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
 					if (parsed.hasValue()) {
@@ -599,7 +595,7 @@ namespace compiler::helios {
 			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_element->acceptVisitor(visitor);
 
-			if_opt_some(visitor.symbol_type_info, type) return type;
+			if_opt_some(visitor.symbol_abstract_type, type) return type;
 			return errors::HError(errors::Failed());
 		}
 
@@ -613,19 +609,19 @@ namespace compiler::helios {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfDefinition(const tsh::TypeInfo& type) {
-				if (definition_type_info.has_value())
+			void setTypeOfDefinition(const tsh::AbstractType& type) {
+				if (definition_abstract_type.has_value())
 					CORE_PANIC("Attempted to set type of definition in visitor a second time.");
-				definition_type_info = type;
+				definition_abstract_type = type;
 			}
 
 		public:
 			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<tsh::TypeInfo> definition_type_info;
+			base::Optional<tsh::AbstractType> definition_abstract_type;
 
 			void visitClass(const pst::Class&) final {
-				definition_type_info = ctx.query<tsh::QueryClassType>(key);
+				definition_abstract_type = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
 
@@ -634,7 +630,7 @@ namespace compiler::helios {
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
 			symbol_ref->pst_element->acceptVisitor(visitor);
-			return visitor.definition_type_info.value();
+			return visitor.definition_abstract_type.value();
 		}
 
 		QUERY_AUTO_CACHE_REF;

@@ -3,7 +3,7 @@
  * @brief Value category definition.
  *
  * Value category describes properties of the value that are not directly tied to its type.
- * Every TypeDesc has a ValueCategory object associated with it.
+ * Every ExpressionType has a ValueCategory object associated with it.
  */
 
 #pragma once
@@ -54,7 +54,7 @@ namespace tsh {
 		/**
 		 * Primary category of a value.
 		 */
-		PrimaryCategory category{ PrimaryCategory::Local };
+		PrimaryCategory category;
 		/**
 		 * If a value is mutable it can be implicitly changed by the coder.
 		 */
@@ -74,7 +74,11 @@ namespace tsh {
 		ValueSemantics force_semantic{};
 
 	public:
-		ValueCategory() = default;
+		// It is not obvious what the default value category should be,
+		// so the default constructor is disabled.
+		ValueCategory() = delete;
+
+		ValueCategory(const ValueCategory&) = default;
 
 		explicit ValueCategory(const PrimaryCategory&);
 
