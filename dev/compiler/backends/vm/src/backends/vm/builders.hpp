@@ -61,7 +61,7 @@ namespace compiler::backend_vm {
 		void setKind(OpKind kind);
 		void pushArg(const vm::opargs::OpCodeArg& arg);
 
-		[[nodiscard]] VmInstruction build() const;
+		[[nodiscard]] std::deque<VmInstruction> build() const;
 	};
 
 	/**
@@ -95,6 +95,7 @@ namespace compiler::backend_vm {
 		[[nodiscard]] usize getLocalSize() const;
 
 		void addInstruction(const VmInstruction& instruction);
+		void addInstruction(const InstructionBuilder& instruction);
 
 		[[nodiscard]] Function build() const;
 	};

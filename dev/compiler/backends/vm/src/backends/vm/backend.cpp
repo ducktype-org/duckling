@@ -216,7 +216,7 @@ namespace compiler::backend_vm {
 				// Add other arguments.
 				for (auto&& lir_location: lir_instruction.arguments)
 					instr.pushArg(lirArgToOpArg(ctx, lir_location));
-				ctx.func_builder.addInstruction(instr.build());
+				ctx.func_builder.addInstruction(instr);
 			}
 
 			// @TODO
@@ -251,7 +251,7 @@ namespace compiler::backend_vm {
 			for (auto&& lir_location: lir_block->terminator.arguments)
 				terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
 
-			ctx.func_builder.addInstruction(terminator_instr.build());
+			ctx.func_builder.addInstruction(terminator_instr);
 		}
 
 		file_builder.addFunction(ctx.func_builder);

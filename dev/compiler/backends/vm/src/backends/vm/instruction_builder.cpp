@@ -126,39 +126,89 @@ void compiler::backend_vm::InstructionBuilder::setKind(OpKind kind) {
 	kind_set   = true;
 }
 
-compiler::backend_vm::VmInstruction compiler::backend_vm::InstructionBuilder::build() const {
+std::deque<compiler::backend_vm::VmInstruction>
+	compiler::backend_vm::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
 
-	std::deque real_args = args;
-	if (real_args.size() == 3) {
-		if (areEqual(real_args[0], real_args[1])) real_args.pop_front();
+	std::deque<compiler::backend_vm::VmInstruction> result;
+
+	std::deque new_args = args;
+
+	// Transforms arguments.
+	if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul || kind == OpKind::div
+	    || kind == OpKind::mod) {
+		if (new_args.size() == 3) {
+			if (areEqual(new_args[0], new_args[1])) {
+				// This resolves e.g. `a = a + b;` by doing `a = b`
+				new_args.pop_front();
+			} else {
+				// This resolves e.g. `a = b + c;`
+				// by splitting it into two instructions:
+				// a = b;
+				// a += c;
+				InstructionBuilder instr_mov;
+
+				instr_mov.setKind(OpKind::mov);
+				instr_mov.pushArg(new_args[0]);
+				instr_mov.pushArg(new_args[1]);
+
+				auto built = instr_mov.build();
+				result.insert(result.end(), built.begin(), built.end());
+				new_args.pop_front();
+				new_args.pop_front();
+				new_args.push_front(args.front());
+			}
+		}
+	} else if (kind == OpKind::neg) {
+		if (new_args.size() == 2) {
+			InstructionBuilder instr_mov;
+
+			instr_mov.setKind(OpKind::mov);
+			instr_mov.pushArg(new_args[0]);
+			instr_mov.pushArg(new_args[1]);
+
+			auto built = instr_mov.build();
+			result.insert(result.end(), built.begin(), built.end());
+
+			new_args.pop_back();
+		}
+	} else if(kind == OpKind::load || kind == OpKind::store) {
+		InstructionBuilder load_or_store_instr;
+		load_or_store_instr.kind = kind;
+		load_or_store_instr.pushArg(new_args[0]);
+		load_or_store_instr.pushArg(new_args[1]);
+		auto built = load_or_store_instr.build();
+		result.insert(result.end(), built.begin(), built.end());
+
+		InstructionBuilder ext;
+		ext.kind = OpKind::ext;
+		ext.pushArg(new_args[2]);
+		auto built2 = load_or_store_instr.build();
+		result.insert(result.end(), built2.begin(), built2.end());
+		return result;
 	}
 
-	usize             arg_count = real_args.size();
+	CORE_ASSERT(new_args.size() <= 2, "Cannot handle more than 2 args here");
+
+	usize             arg_count = new_args.size();
 	std::stringstream name_stream;
 	buildOpName(kind, name_stream);
 	for (usize i = 0; i < arg_count; i++) {
 		name_stream << "_";
-		buildOpName(real_args[i], name_stream);
+		buildOpName(new_args[i], name_stream);
 	}
 
 	std::string opcode_name = name_stream.str();
-	std::cerr << opcode_name << '\n';
 
-	switch (arg_count) {
-	case 0: {
-		return OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)();
-	}
-	case 1: {
-		return OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(real_args[0]);
-	}
-	case 2: {
-		return OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(real_args[0], real_args[1]);
-	}
-	default:
-		std::cerr << base::strConcat("Opcode: ", opcode_name, " does not exist!\n");
-		return Op_nop{};
-		// CORE_PANIC("Opcode: ", opcode_name, " does not exist!");
-	}
-	CORE_UNREACHABLE();
+	if (arg_count == 0)
+		result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
+	else if (arg_count == 1)
+		result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
+	else if (arg_count == 2)
+		result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
+	else
+		CORE_PANIC("Opcode: ", opcode_name, " does not exist!");
+
+	CORE_ASSERT(!result.empty(), "No instructions were created.");
+	return result;
 }

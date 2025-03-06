@@ -103,3 +103,7 @@ usize compiler::backend_vm::FunctionBuilder::getLocalSize() const { return local
 void compiler::backend_vm::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) {
 	args.push_back(arg);
 }
+
+void compiler::backend_vm::FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
+	for (auto&& instr: instruction.build()) this->instructions.push_back(instr);
+}
