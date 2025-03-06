@@ -50,12 +50,104 @@ namespace compiler::backend_vm {
 	}
 
 	namespace {
+		struct AddLirFuncContext {
+			CRef<lir::Function> lir_function;
+			FunctionBuilder     func_builder;
+
+			base::HashMap<usize, base::StrID>        block_id_to_label;
+			base::Map<lir::LocalRef, usize>          lir_local_to_stack;
+			base::Map<lir::LocalRef, vm::TypeOfData> lir_local_types;
+
+			base::Map<lir::LocalRef, u64> variable_to_id;
+			base::Map<lir::BlockRef, u64> block_to_id;
+
+			AddLirFuncContext(
+				CRef<lir::Function>                               lir_function,
+				const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+			):
+				  lir_function(lir_function),
+				  func_builder(lir_function->name, available_types) {
+				variable_to_id = lir_function->getLocalVariableIDs();
+				block_to_id    = lir_function->getBlockIDs();
+
+				for (auto&& var: lir_function->local_list) {
+					// This is most likely redundant
+					CORE_ASSERT(!lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
+
+					auto vm_type = getTypeFromLayout(var->layout);
+					lir_local_types.put(var.ref(), vm_type);
+
+					auto tp_name = VISIT(vm_type, tp, return tp.name);
+					auto offset  = func_builder.initType(tp_name);
+					lir_local_to_stack.put(var.ref(), offset);
+				}
+			}
+		};
+
 		void insertTypes(Ref<CodeFileBuilder> file_builder, CRef<lir::Function> lir_function) {
 			auto&& local_layouts
 				= lir_function->local_list
 			    | std::views::transform([](auto&& local) { return local->layout; });
 
 			for (auto&& layout: local_layouts) file_builder->addType(getTypeFromLayout(layout));
+		}
+
+		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
+			auto id = ctx.block_to_id.atMaybe(block).expect("id of block not found");
+
+			auto label_name       = base::strConcat(ctx.lir_function->name, "_label_", id);
+			auto [block_entry, _] = ctx.block_id_to_label.put(id, base::StrID(label_name.data()));
+			ctx.func_builder.addInstruction(Op_label{ block_entry->second });
+		}
+
+		vm::opargs::OpCodeArg
+			lirOutputToOpArg(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
+			const lir::LocalRef output   = lir_instruction.output.value();
+			auto&&              var_type = ctx.lir_local_types[output];
+
+			variant_match(var_type) {
+				variant_case(vm::PrimitiveType, primitive) {
+					if (primitive.size != 8 && primitive.size != 4)
+						throw base::NotYetImplemented(base::strConcat(
+							"Primitives of sizes different than 64 | 32 bits are not "
+							"supported YET, name: ",
+							primitive.name,
+							", size: ",
+							primitive.size
+						));
+					if (primitive.size == 8)
+						return vm::opargs::StackLocalI64{ i64(ctx.lir_local_to_stack[output]) };
+					if (primitive.size == 4)
+						return vm::opargs::StackLocalI32{ i64(ctx.lir_local_to_stack[output]) };
+				}
+
+				variant_case(vm::PointerType, pointer) {
+					return vm::opargs::StackLocalPtr(i64(ctx.lir_local_to_stack[output]));
+				}
+				NOIMPL_CASE(vm::StaticTableType, "add_instr")
+				NOIMPL_CASE(vm::DynamicTableType, "add_instr")
+				NOIMPL_CASE(vm::DataType, "add_instr")
+				NOIMPL_CASE(vm::VariantType, "add_instr")
+				variant_case(vm::FunctionType, function_tp) {
+					return vm::opargs::FunctionName(function_tp.name);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
+		vm::opargs::OpCodeArg
+			lirArgToOpArg(AddLirFuncContext& ctx, const lir::LirLocation& lir_location) {
+			variant_match(lir_location.getVariant()) {
+				variant_case(i64, value) return vm::opargs::Immediate{ value };
+				variant_case(bool, value) return vm::opargs::Immediate{ value };
+				variant_case(lir::LocalRef, local_ref) return vm::opargs::StackLocalI64{
+					i64(ctx.lir_local_to_stack[local_ref])
+				};
+				variant_case(lir::BlockRef, block_ref) {
+					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
+				}
+			}
+			CORE_UNREACHABLE();
 		}
 	}
 
@@ -64,38 +156,15 @@ namespace compiler::backend_vm {
 
 		insertTypes(&file_builder, lir_function);
 
-		FunctionBuilder function(lir_function->name, file_builder.getAvailableTypes());
-
-		auto                              variable_to_id = lir_function->getLocalVariableIDs();
-		auto                              block_to_id    = lir_function->getBlockIDs();
-		base::HashMap<usize, base::StrID> block_id_to_label;
-
-		base::Map<lir::LocalRef, usize>          lir_local_to_stack;
-		base::Map<lir::LocalRef, vm::TypeOfData> lir_local_types;
-
-		for (auto&& var: lir_function->local_list) {
-			// This is most likely redundant
-			CORE_ASSERT(!lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
-
-			auto vm_type = getTypeFromLayout(var->layout);
-			lir_local_types.put(var.ref(), vm_type);
-
-			auto tp_name = VISIT(vm_type, tp, return tp.name);
-			auto offset  = function.initType(tp_name);
-			lir_local_to_stack.put(var.ref(), offset);
-		}
+		AddLirFuncContext ctx(lir_function, file_builder.getAvailableTypes());
 
 		for (auto&& lir_block: lir_function->blocks) {
-			// block->terminator
-			auto id = block_to_id.atMaybe(lir_block.ref()).expect("id of block not found");
-
-			auto label_name       = base::strConcat(lir_function->name, "_label_", id);
-			auto [block_entry, _] = block_id_to_label.put(id, base::StrID(label_name.data()));
-			function.addInstruction(Op_label{ block_entry->second });
-
 			for (auto& lir_instruction: lir_block->instructions) {
-				// @TODO
-				function.addInstruction(Comment{ base::StrID(
+				addBlockLabel(ctx, lir_block.ref());
+
+				// Insert a comment about operation type.
+				// @TODO: Improve this to contain more information.
+				ctx.func_builder.addInstruction(Comment{ base::StrID(
 					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
 						.data()
 				) });
@@ -141,72 +210,33 @@ namespace compiler::backend_vm {
 					// base::enumToStr(lir_instruction.operation));
 				}
 
-
 				// Add output as an argument.
-				const lir::LocalRef output   = lir_instruction.output.value();
-				auto&&              var_type = lir_local_types[output];
-
-				variant_match(var_type) {
-					variant_case(vm::PrimitiveType, primitive) {
-						if (primitive.size != 8 && primitive.size != 4)
-							throw base::NotYetImplemented(base::strConcat(
-								"Primitives of sizes different than 64 | 32 bits are not "
-								"supported YET, name: ",
-								primitive.name,
-								", size: ",
-								primitive.size
-							));
-						if (primitive.size == 8)
-							instr.pushArg(vm::opargs::StackLocalI64{
-								i64(lir_local_to_stack[output]) });
-						if (primitive.size == 4)
-							instr.pushArg(vm::opargs::StackLocalI32{
-								i64(lir_local_to_stack[output]) });
-					}
-
-					variant_case(vm::PointerType, pointer) {
-						instr.pushArg(vm::opargs::StackLocalPtr(i64(lir_local_to_stack[output])));
-					}
-					NOIMPL_CASE(vm::StaticTableType, "add_instr")
-					NOIMPL_CASE(vm::DynamicTableType, "add_instr")
-					NOIMPL_CASE(vm::DataType, "add_instr")
-					NOIMPL_CASE(vm::VariantType, "add_instr")
-					variant_case(vm::FunctionType, function_tp) {
-						instr.pushArg(vm::opargs::FunctionName(function_tp.name));
-					}
-				}
+				instr.pushArg(lirOutputToOpArg(ctx, lir_instruction));
 
 				// Add other arguments.
-				for (auto&& arg: lir_instruction.arguments) {
-					variant_match(arg.getVariant()) {
-						variant_case(i64, value) instr.pushArg(vm::opargs::Immediate{ value });
-						variant_case(bool, value) instr.pushArg(vm::opargs::Immediate{ value });
-						variant_case(lir::LocalRef, local_ref) instr.pushArg(
-							vm::opargs::StackLocalI64{ i64(lir_local_to_stack[local_ref]) }
-						);
-						variant_case(lir::BlockRef, block_ref) {
-							instr.pushArg(vm::opargs::Label{ base::StrID(
-								base::strConcat(lir_function->name, "_label_", id).data()
-							) });
-						}
-					}
-				}
-				function.addInstruction(instr.build());
+				for (auto&& lir_location: lir_instruction.arguments)
+					instr.pushArg(lirArgToOpArg(ctx, lir_location));
+				ctx.func_builder.addInstruction(instr.build());
 			}
 
 			// @TODO
-			function.addInstruction(Comment{ base::StrID(
+			ctx.func_builder.addInstruction(Comment{ base::StrID(
 				base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
 					.data()
 			) });
 
+			InstructionBuilder terminator_instr;
 			switch (lir_block->terminator.operation) {
-			case lir::Operation::ReturnVoid: {
-			}
-			case lir::Operation::ReturnValue:
 			case lir::Operation::Jump:
+				terminator_instr.setKind(OpKind::jmp);
+				break;
+			case lir::Operation::ReturnVoid:
+				terminator_instr.setKind(OpKind::ret);
+				break;
+			case lir::Operation::ReturnValue:
+				terminator_instr.setKind(OpKind::ret);
+				break;
 			case lir::Operation::Branch:
-
 			case lir::Operation::COUNT:
 			case lir::Operation::Uninitialized:
 			default:
@@ -218,9 +248,13 @@ namespace compiler::backend_vm {
 				// 		"Invalid terminator: ", base::enumToStr(lir_block->terminator.operation)
 				// 	);
 			}
+			for (auto&& lir_location: lir_block->terminator.arguments)
+				terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
+
+			ctx.func_builder.addInstruction(terminator_instr.build());
 		}
 
-		file_builder.addFunction(function);
+		file_builder.addFunction(ctx.func_builder);
 	}
 
 	Module::Module(base::StrID module_id): module_id(module_id) {}

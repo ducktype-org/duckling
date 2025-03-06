@@ -141,7 +141,7 @@ DEF_OPCODE(ret_l32, vm::opargs::StackLocalI32)
 // return immediate value
 DEF_OPCODE(ret_imm, vm::opargs::Immediate)
 // void return
-DEF_OPCODE(ret_void)
+DEF_OPCODE(ret)
 
 // initialize local variable on local stack with given type
 DEF_OPCODE(init_type, vm::opargs::Type)

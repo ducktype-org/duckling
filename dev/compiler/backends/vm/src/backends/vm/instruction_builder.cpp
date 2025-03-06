@@ -88,6 +88,36 @@ namespace compiler::backend_vm {
 		void buildOpName(const OpKind& kind, std::stringstream& out) {
 			out << base::enumToStr(kind).strView();
 		}
+
+		bool areEqual(const vm::opargs::OpCodeArg& arg0, const vm::opargs::OpCodeArg& arg1) {
+			using namespace vm::opargs;
+			if (arg0.index() != arg1.index()) return false;
+			variant_match(arg0) {
+				variant_case(Immediate, imm0) {}
+				variant_case(StackLocalI32, l32) {
+					return l32.offset == std::get<StackLocalI32>(arg1).offset;
+				}
+				variant_case(StackLocalI64, l64) {
+					return l64.offset == std::get<StackLocalI64>(arg1).offset;
+				}
+				variant_case(StackLocalPtr, lptr) {
+					return lptr.offset == std::get<StackLocalPtr>(arg1).offset;
+				}
+				variant_case(ArgsOffset, arg) {
+					return arg.offset == std::get<ArgsOffset>(arg1).offset;
+				}
+				variant_case(Type, tp) { return tp.type_name == std::get<Type>(arg1).type_name; }
+				variant_case(FunctionName, func) {
+					return func.function_name == std::get<FunctionName>(arg1).function_name;
+				}
+
+				variant_case(Label, label) {
+					return label.label_name == std::get<Label>(arg1).label_name;
+				}
+				variant_default CORE_PANIC("Unhandled arg type opcode arg comparision (==).");
+			}
+			CORE_UNREACHABLE();
+		}
 	}
 }
 
@@ -98,12 +128,18 @@ void compiler::backend_vm::InstructionBuilder::setKind(OpKind kind) {
 
 compiler::backend_vm::VmInstruction compiler::backend_vm::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
-	usize             arg_count = args.size();
+
+	std::deque real_args = args;
+	if (real_args.size() == 3) {
+		if (areEqual(real_args[0], real_args[1])) real_args.pop_front();
+	}
+
+	usize             arg_count = real_args.size();
 	std::stringstream name_stream;
 	buildOpName(kind, name_stream);
 	for (usize i = 0; i < arg_count; i++) {
 		name_stream << "_";
-		buildOpName(args[i], name_stream);
+		buildOpName(real_args[i], name_stream);
 	}
 
 	std::string opcode_name = name_stream.str();
@@ -114,10 +150,10 @@ compiler::backend_vm::VmInstruction compiler::backend_vm::InstructionBuilder::bu
 		return OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)();
 	}
 	case 1: {
-		return OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(args[0]);
+		return OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(real_args[0]);
 	}
 	case 2: {
-		return OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(args[0], args[1]);
+		return OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(real_args[0], real_args[1]);
 	}
 	default:
 		std::cerr << base::strConcat("Opcode: ", opcode_name, " does not exist!\n");
