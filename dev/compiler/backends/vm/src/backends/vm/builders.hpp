@@ -1,10 +1,11 @@
 #pragma once
 
 #include <base/ref.hpp>
-#include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
+#include <preprocessor/parser/types_of_data.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include "code_data/opcode_args.hpp"
+#include <code_data/opcode_args.hpp>
+#include <base/stringifyable_enum.hpp>
 #include "instructions.hpp"
 #include <cstdint>
 #include <deque>
@@ -18,9 +19,48 @@
 		);                                                                               \
 	}
 
+
+MAKE_STRINGIFYABLE_ENUM(
+	compiler::backend_vm,
+	std::uint8_t,
+	OpKind,
+	init,
+	deinit,
+	mov,
+	cmov,
+	add,
+	sub,
+	mul,
+	div,
+	mod,
+	neg,
+	cmpEq,
+	cmpG,
+	jmp,
+	jmpIf,
+	jmpNotIf,
+	call,
+	ret,
+	input,
+	output,
+	alloc,
+	free,
+	load,
+	store,
+	ext,
+	exit
+)
+
 namespace compiler::backend_vm {
 	class InstructionBuilder {
+		std::deque<vm::opargs::OpCodeArg> args;
+		OpKind                            kind;
+		bool                              kind_set = false;
+
 	public:
+		void setKind(OpKind kind);
+		void pushArg(const vm::opargs::OpCodeArg& arg);
+
 		[[nodiscard]] VmInstruction build() const;
 	};
 

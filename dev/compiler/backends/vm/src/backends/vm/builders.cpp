@@ -4,6 +4,7 @@
 #include "base/exceptions.hpp"
 #include "base/str_utils.hpp"
 #include "base/variant.hpp"
+#include "code_data/opcode_args.hpp"
 #include <base/ref.hpp>
 #include <preprocessor/parser/types_of_data.hpp>
 #include <ranges>
@@ -98,3 +99,7 @@ void compiler::backend_vm::FunctionBuilder::deinitType() {
 }
 
 usize compiler::backend_vm::FunctionBuilder::getLocalSize() const { return local_stack.size(); }
+
+void compiler::backend_vm::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) {
+	args.push_back(arg);
+}

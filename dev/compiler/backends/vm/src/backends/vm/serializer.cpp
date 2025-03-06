@@ -7,9 +7,13 @@
 #include "preprocessor/parser/types_of_data.hpp"
 
 namespace compiler::backend_vm {
-	std::string toString(vm::opargs::ImmediateI64 arg) { return std::to_string(arg.value); }
+	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
 
-	std::string toString(vm::opargs::StackOffset arg) { return std::to_string(arg.offset); }
+	std::string toString(vm::opargs::StackLocalI32 arg) { return std::to_string(arg.offset); }
+
+	std::string toString(vm::opargs::StackLocalI64 arg) { return std::to_string(arg.offset); }
+
+	std::string toString(vm::opargs::StackLocalPtr arg) { return std::to_string(arg.offset); }
 
 	std::string toString(vm::opargs::ArgsOffset arg) { return std::to_string(arg.offset); }
 

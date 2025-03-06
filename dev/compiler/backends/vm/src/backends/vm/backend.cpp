@@ -1,11 +1,9 @@
 #include "backend.hpp"
 #include "base/exceptions.hpp"
 #include "base/string_id.hpp"
-#include "base/type_traits.hpp"
 #include "builders.hpp"
-#include "query_framework/utils/with_context_do.hpp"
+#include "code_data/opcode_args.hpp"
 #include "serializer.hpp"
-#include <algorithm>
 #include <base/variant.hpp>
 #include "instructions.hpp"
 #include <ostream>
@@ -102,66 +100,38 @@ namespace compiler::backend_vm {
 						.data()
 				) });
 
+				InstructionBuilder instr;
+
 				switch (lir_instruction.operation) {
-				case lir::Operation::Assign: {
-					const lir::LocalRef output = lir_instruction.output.value();
-					const auto          arg0   = lir_instruction.arguments.at(0);
-					VmInstruction       instr;
-
-					auto&& var_type = lir_local_types[output];
-					variant_match(var_type) {
-						variant_case(vm::PrimitiveType, primitive) {
-							if (primitive.size != 8)
-								throw base::NotYetImplemented(base::strConcat(
-									"Primitives of sizes different than 64 bits are not "
-									"supported YET, name: ",
-									primitive.name,
-									", size: ",
-									primitive.size
-								));
-							variant_match(arg0.getVariant()) {
-								variant_case(i64, value) {
-									instr = Op_mov_l64_imm{ .arg0
-										                    = { i64(lir_local_to_stack[output]) },
-										                    .arg1 = { value } };
-								}
-								variant_case(bool, value) {
-									instr = Op_mov_l64_imm{ .arg0
-										                    = { i64(lir_local_to_stack[output]) },
-										                    .arg1 = { value } };
-								}
-								variant_case(lir::LocalRef, local_ref) {
-									instr = Op_mov_l64_l64{
-										.arg0 = { i64(lir_local_to_stack[output]) },
-										.arg1 = { i64(lir_local_to_stack[local_ref]) }
-									};
-								}
-								variant_case(lir::BlockRef, block_ref) {
-									CORE_PANIC("Cannot assign block to variable");
-								}
-							}
-						}
-
-						NOIMPL_CASE(vm::PointerType, "assignment")
-						NOIMPL_CASE(vm::StaticTableType, "assignment")
-						NOIMPL_CASE(vm::DynamicTableType, "assignment")
-						NOIMPL_CASE(vm::DataType, "assignment")
-						NOIMPL_CASE(vm::VariantType, "assignment")
-						NOIMPL_CASE(vm::FunctionType, "assignment")
-					}
-					function.addInstruction(instr);
+				case lir::Operation::Assign:
+					instr.setKind(OpKind::mov);
 					break;
-				}
 				case lir::Operation::IntegerAdd:
+					instr.setKind(OpKind::add);
+					break;
 				case lir::Operation::IntegerSub:
+					instr.setKind(OpKind::sub);
+					break;
 				case lir::Operation::IntegerMul:
+					instr.setKind(OpKind::mul);
+					break;
 				case lir::Operation::IntegerUDiv:
+					instr.setKind(OpKind::div);
+					break;
 				case lir::Operation::IntegerSDiv:
+					instr.setKind(OpKind::div);
+					break;
 				case lir::Operation::IntegerUMod:
+					instr.setKind(OpKind::mod);
+					break;
 				case lir::Operation::IntegerSMod:
+					instr.setKind(OpKind::mod);
+					break;
+				case lir::Operation::IntegerNeg:
+					instr.setKind(OpKind::neg);
+					break;
 				case lir::Operation::IntegerULt:
 				case lir::Operation::IntegerSLt:
-				case lir::Operation::IntegerNeg:
 				default:
 					std::cerr << base::strConcat(
 						"Invalid operation: ", base::enumToStr(lir_instruction.operation)
@@ -170,6 +140,58 @@ namespace compiler::backend_vm {
 					// 	CORE_PANIC("Invalid operation: ",
 					// base::enumToStr(lir_instruction.operation));
 				}
+
+
+				// Add output as an argument.
+				const lir::LocalRef output   = lir_instruction.output.value();
+				auto&&              var_type = lir_local_types[output];
+
+				variant_match(var_type) {
+					variant_case(vm::PrimitiveType, primitive) {
+						if (primitive.size != 8 && primitive.size != 4)
+							throw base::NotYetImplemented(base::strConcat(
+								"Primitives of sizes different than 64 | 32 bits are not "
+								"supported YET, name: ",
+								primitive.name,
+								", size: ",
+								primitive.size
+							));
+						if (primitive.size == 8)
+							instr.pushArg(vm::opargs::StackLocalI64{
+								i64(lir_local_to_stack[output]) });
+						if (primitive.size == 4)
+							instr.pushArg(vm::opargs::StackLocalI32{
+								i64(lir_local_to_stack[output]) });
+					}
+
+					variant_case(vm::PointerType, pointer) {
+						instr.pushArg(vm::opargs::StackLocalPtr(i64(lir_local_to_stack[output])));
+					}
+					NOIMPL_CASE(vm::StaticTableType, "add_instr")
+					NOIMPL_CASE(vm::DynamicTableType, "add_instr")
+					NOIMPL_CASE(vm::DataType, "add_instr")
+					NOIMPL_CASE(vm::VariantType, "add_instr")
+					variant_case(vm::FunctionType, function_tp) {
+						instr.pushArg(vm::opargs::FunctionName(function_tp.name));
+					}
+				}
+
+				// Add other arguments.
+				for (auto&& arg: lir_instruction.arguments) {
+					variant_match(arg.getVariant()) {
+						variant_case(i64, value) instr.pushArg(vm::opargs::Immediate{ value });
+						variant_case(bool, value) instr.pushArg(vm::opargs::Immediate{ value });
+						variant_case(lir::LocalRef, local_ref) instr.pushArg(
+							vm::opargs::StackLocalI64{ i64(lir_local_to_stack[local_ref]) }
+						);
+						variant_case(lir::BlockRef, block_ref) {
+							instr.pushArg(vm::opargs::Label{ base::StrID(
+								base::strConcat(lir_function->name, "_label_", id).data()
+							) });
+						}
+					}
+				}
+				function.addInstruction(instr.build());
 			}
 
 			// @TODO
@@ -177,6 +199,7 @@ namespace compiler::backend_vm {
 				base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
 					.data()
 			) });
+
 			switch (lir_block->terminator.operation) {
 			case lir::Operation::ReturnVoid: {
 			}
@@ -196,6 +219,7 @@ namespace compiler::backend_vm {
 				// 	);
 			}
 		}
+
 		file_builder.addFunction(function);
 	}
 

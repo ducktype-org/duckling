@@ -6,8 +6,8 @@
 #pragma once
 
 #include <variant>
-#include "../../../../../../VM/src/code_data/opcode_args.hpp"
-#include "base/exceptions.hpp"
+#include <code_data/opcode_args.hpp>
+#include <base/exceptions.hpp>
 
 namespace compiler::backend_vm {
 #define HANDLE_OPCODE_0ARGS(opcode) \
@@ -22,7 +22,7 @@ namespace compiler::backend_vm {
 		arg1_type arg1;                                   \
 	};
 
-#include "../../../../../../VM/src/code_data/opcodes_list.hpp"
+#include <code_data/opcodes_list.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -42,7 +42,7 @@ namespace compiler::backend_vm {
 	using VmInstruction = std::variant<
 
 #define HANDLE_OPCODE(opcode) Op_##opcode,
-#include "../../../../../../VM/src/code_data/opcodes_list.hpp"
+#include <code_data/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		Comment,
 		Guardian>;
