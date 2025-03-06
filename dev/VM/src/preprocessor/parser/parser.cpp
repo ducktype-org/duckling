@@ -28,7 +28,7 @@
 #include <base/variant.hpp>
 #include <base/string_id.hpp>
 #include <expected>
-#include "base/box.hpp"
+#include <base/box.hpp>
 #include "errors.hpp"
 #include <token_parser_core/common_elements.hpp>
 #include <lexer/token.hpp>
@@ -614,7 +614,7 @@ namespace vm::parser {
 		for (const auto& file: files) {
 			parsed_program.token_files.push_back(tokenizeFile(file));
 			auto parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
-			
+
 			parsed_program.files_src_pos.push_back(std::move(parsed.value()->position));
 
 			for (auto& func: parsed.value()->functions) {
@@ -630,7 +630,9 @@ namespace vm::parser {
 				}
 
 				parsed_program.functions.push_back(std::move(func));
-				parsed_program.name_to_func.put(func_name, parsed_program.functions.back().refMut());
+				parsed_program.name_to_func.put(
+					func_name, parsed_program.functions.back().refMut()
+				);
 			}
 
 			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));

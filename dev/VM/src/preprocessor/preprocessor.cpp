@@ -1,7 +1,7 @@
 #include "preprocessor.hpp"
 #include <core/process/vmprocess.hpp>
-#include "code_data/program.hpp"
-#include "diagnostic/logger.hpp"
+#include <code_data/program.hpp>
+#include <diagnostic/logger.hpp>
 #include "parser/parser.hpp"
 #include <code_data/opcode_args.hpp>
 #include <code_data/opcodes.hpp>

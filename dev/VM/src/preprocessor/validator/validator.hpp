@@ -1,8 +1,8 @@
 #pragma once
 
-#include "preprocessor/parser/elements.hpp"
+#include <preprocessor/parser/elements.hpp>
 #include <code_data/program.hpp>
-#include "diagnostic/logger.hpp"
+#include <diagnostic/logger.hpp>
 
 namespace vm::validator {
 	class Validator {

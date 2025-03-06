@@ -1,17 +1,16 @@
 #include "validator.hpp"
-#include "base/box.hpp"
-#include "base/exceptions.hpp"
-#include "base/variant.hpp"
-#include "code_data/opcode_args.hpp"
+#include <base/box.hpp>
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+#include <code_data/opcode_args.hpp>
 #include "errors.hpp"
-#include "preprocessor/parser/elements.hpp"
-#include "preprocessor/preprocessor.hpp"
+#include <preprocessor/parser/elements.hpp>
+#include <preprocessor/preprocessor.hpp>
 #include <expected>
 #include <sstream>
 
 namespace vm::validator {
-	base::Optional<std::string> Validator::validateProgram(const parser::ParsedProgram& program
-	) {
+	base::Optional<std::string> Validator::validateProgram(const parser::ParsedProgram& program) {
 		auto log = dia::Logger();
 
 		validateMainExistance(program, log);
@@ -35,8 +34,7 @@ namespace vm::validator {
 			}
 		}
 
-		if (!main_found)
-			log.log(makeBox<vm::validator::NoMainError>(*program.files_src_pos[0]));
+		if (!main_found) log.log(makeBox<vm::validator::NoMainError>(*program.files_src_pos[0]));
 	}
 
 	void Validator::validateTailcallSignatures(

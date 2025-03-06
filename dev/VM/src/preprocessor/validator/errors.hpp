@@ -24,9 +24,21 @@ namespace vm::validator {
 
 
 	DEFINE_DEFAULT_VALIDATOR_ERROR(NoMainError, "Provided program does not have `main` function.");
-	DEFINE_DEFAULT_VALIDATOR_ERROR(CallerArgSizeMismatch, "Invalid Tailcall! Caller signature must have arg_size equal to next_arg_size");
-	DEFINE_DEFAULT_VALIDATOR_ERROR(CalledArgSizeMismatch, "Invalid Tailcall! Called function signature must have arg_size == next_arg_size");
-	DEFINE_DEFAULT_VALIDATOR_ERROR(CallerCalledArgSizeMismatch, "Invalid Tailcall! Caller and called arg size unmatched");
-	DEFINE_DEFAULT_VALIDATOR_ERROR(CallerCalledStackSizeMismatch, "Invalid Tailcall! Caller and called stack size unmatched");
-	DEFINE_DEFAULT_VALIDATOR_ERROR(CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched");
+	DEFINE_DEFAULT_VALIDATOR_ERROR(
+		CallerArgSizeMismatch,
+		"Invalid Tailcall! Caller signature must have arg_size equal to next_arg_size"
+	);
+	DEFINE_DEFAULT_VALIDATOR_ERROR(
+		CalledArgSizeMismatch,
+		"Invalid Tailcall! Called function signature must have arg_size == next_arg_size"
+	);
+	DEFINE_DEFAULT_VALIDATOR_ERROR(
+		CallerCalledArgSizeMismatch, "Invalid Tailcall! Caller and called arg size unmatched"
+	);
+	DEFINE_DEFAULT_VALIDATOR_ERROR(
+		CallerCalledStackSizeMismatch, "Invalid Tailcall! Caller and called stack size unmatched"
+	);
+	DEFINE_DEFAULT_VALIDATOR_ERROR(
+		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
+	);
 };

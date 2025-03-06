@@ -207,7 +207,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this, validate_code) {
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this, VALIDATE_CODE) {
 		vm_threads.emplace_back(*this);
 	}
 
