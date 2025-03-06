@@ -7,7 +7,7 @@
 
 #include <base/ints.hpp>
 #include <base/box.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 
 namespace compiler::helios::code {
 	class HoutStmtVisitor;

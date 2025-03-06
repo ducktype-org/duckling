@@ -18,7 +18,7 @@ namespace vm {
 
 	// Non-VLA data:
 	struct Registers {
-		u64     p64_reg_0;
+		i64     p64_reg_0;
 		Pointer pointer_reg_0;
 	};
 

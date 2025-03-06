@@ -10,19 +10,19 @@
  */
 namespace vm::opargs {
 
-	struct ImmediateI64 {
+	struct Immediate {
 		i64 value = 0;
 	};
 
-	struct StackLocal64 {
+	struct StackLocalI32 {
 		i64 offset = 0;
 	};
 
-	struct StackLocal32 {
+	struct StackLocalI64 {
 		i64 offset = 0;
 	};
 
-	struct StackPtr64 {
+	struct StackLocalPtr {
 		i64 offset = 0;
 	};
 
@@ -42,6 +42,13 @@ namespace vm::opargs {
 		base::StrID label_name = base::StrID("");
 	};
 
-	using OpCodeArg = std::
-		variant<ImmediateI64, StackLocal64, StackLocal32, StackPtr64, ArgsOffset, Type, FunctionName, Label>;
+	using OpCodeArg = std::variant<
+		Immediate,
+		StackLocalI32,
+		StackLocalI64,
+		StackLocalPtr,
+		ArgsOffset,
+		Type,
+		FunctionName,
+		Label>;
 }
