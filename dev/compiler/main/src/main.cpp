@@ -124,7 +124,8 @@ clap::Clap getClapForMain() {
 	// custom options of main:
 	clap.add(clap::ParamBuilder::ofFlag()
 	             .addLongName(LET_IT_THROW_NAME)
-	             .addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
+				 .addShortDesc("Disables exception handling in main (debug option).")
+	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
 	                           "It should be used for debugging only in order to preserve "
 	                           "stack-trace. It can prevent stack-unwinding from happening.")
 	             .build());
