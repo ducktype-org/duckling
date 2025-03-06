@@ -2,7 +2,6 @@
 
 #include <diagnostic/message.hpp>
 #include <diagnostic/source_position.hpp>
-#include <base/int_conv.hpp>
 #include "token_stream.hpp"
 #include "base_element.hpp"
 #include "common_elements.hpp"
