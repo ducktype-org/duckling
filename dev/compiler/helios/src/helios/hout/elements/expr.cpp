@@ -27,7 +27,7 @@ namespace compiler::helios::code {
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
 				  ctx.query<tsh::QueryIntegralType>({ 64 }),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
@@ -40,7 +40,7 @@ namespace compiler::helios::code {
 	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::ExpressionType<>(
 				  ctx.query<tsh::QueryBoolType>({}),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -49,10 +49,10 @@ namespace compiler::helios::code {
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
 
-	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type):
+	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::ExpressionType<>(
 				  ctx.query<tsh::QueryMetaType>({}),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
@@ -82,7 +82,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc<>(
+			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
 				  ctx.query<tsh::QueryIntegralType>({ 64 }),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
@@ -129,7 +129,7 @@ namespace compiler::helios::code {
 	}
 
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, Box<Expr> inner):
-		  Expr(scope, inner->type_desc),
+		  Expr(scope, inner->expression_type),
 		  inner(std::move(inner)) {}
 
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
@@ -137,7 +137,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc{
+			  tsh::ExpressionType{
 				  ctx.query<tsh::QueryMetaType>({}),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
@@ -169,7 +169,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc{
+			  tsh::ExpressionType{
 				  ctx.query<tsh::QueryMetaType>({}),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
@@ -189,7 +189,7 @@ namespace compiler::helios::code {
 	):
 		  Expr(
 			  scope,
-			  tsh::TypeDesc(
+			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(symbols.back())
 					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
@@ -198,7 +198,7 @@ namespace compiler::helios::code {
 		  symbols(std::move(symbols)) {}
 
 	UnaryOperatorExpr::UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, Box<Expr> expr):
-		  Expr(scope, expr->type_desc),
+		  Expr(scope, expr->expression_type),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 

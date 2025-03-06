@@ -1,5 +1,6 @@
 #pragma once
 
+#include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/ref.hpp>
 #include <base/raw_view.hpp>
@@ -30,7 +31,9 @@ namespace vm {
 
 		void movePointer(i64 move_by) {
 			if (block == nullptr) CORE_PANIC("Accessing null pointer");
-			offset += move_by;
+			if (move_by < 0 && base::safeIntConv<u64>(-move_by) > offset)
+				CORE_PANIC("Moving offset to negative value");
+			offset = base::safeIntConv<u64>(base::safeIntConv<i64>(offset) + move_by);
 		}
 
 		[[nodiscard]]
