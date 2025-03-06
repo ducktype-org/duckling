@@ -13,6 +13,8 @@
 #include <string>
 #include <printer/stream_printer.hpp>
 #include <base/define_helper.hpp>
+#include <base/ints.hpp>
+#include <base/exceptions.hpp>
 #include <init/init.hpp>  // IWYU pragma: export
 
 
@@ -56,7 +58,7 @@ namespace tester {
 			const char* what() const noexcept final;
 		};
 
-		printer::StreamPrinter streamPrinter;
+		printer::StreamPrinter stream_printer;
 
 		struct TestData final {
 			TestType    test;
@@ -131,14 +133,15 @@ namespace tester {
  * @brief Only use this macro if single class test file
  * and after defining proper TESTER_CLASS
  */
-#define TESTER_COMMON_MAIN(test_path)                                                \
-	int main(int argc, const char* argv[]) {                                         \
-		init::InitObject _;                                                          \
-                                                                                     \
-		auto config = tester::testConfigFromArgs({ (usize) argc, argv }, test_path); \
-                                                                                     \
-		TESTER_CLASS test(std::move(config));                                        \
-		if (!test.run()) return 1;                                                   \
+#define TESTER_COMMON_MAIN(test_path)                           \
+	int main(int argc, const char* const*) {                    \
+		init::InitObject _;                                     \
+		if (argc != 1) CORE_PANIC("Test expects no arguments"); \
+                                                                \
+		auto config = tester::getTestConfig(test_path);         \
+                                                                \
+		TESTER_CLASS test(std::move(config));                   \
+		if (!test.run()) return 1;                              \
 	}
 
 }

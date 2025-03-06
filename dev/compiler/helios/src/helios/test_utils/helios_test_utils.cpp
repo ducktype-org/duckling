@@ -4,6 +4,7 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {
 	std::pair<frontend::ModuleID, ScopeID> getModule(const fs::FilePath& path) {
