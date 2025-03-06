@@ -11,7 +11,6 @@
 #include <core/process/memory/memory.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <core/process/proc_io.hpp>
-#include <code_data/code.hpp>
 #include <condition_variable>
 #include <shared_mutex>
 #include <base/optional.hpp>
@@ -61,7 +60,7 @@ namespace vm {
 		Preprocessor preprocessor;
 
 		//@TODO: For now assume that bytecode validation is always turned on.
-		static const bool validate_code = true;
+		static const bool VALIDATE_CODE = true;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.

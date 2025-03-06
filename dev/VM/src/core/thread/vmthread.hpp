@@ -1,6 +1,7 @@
 #pragma once
 
 #include "blocking_queue.hpp"
+#include "code_data/program.hpp"
 
 #include <api/data/core_operation_error.hpp>
 #include <api/data/response.hpp>
@@ -12,7 +13,6 @@
 #include <core/process/memory/thread_stack.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
-#include <code_data/code.hpp>
 
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>

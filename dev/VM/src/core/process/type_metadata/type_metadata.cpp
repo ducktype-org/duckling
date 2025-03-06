@@ -1,5 +1,4 @@
 #include "type_metadata.hpp"
-#include <iostream>
 
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {

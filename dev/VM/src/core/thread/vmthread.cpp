@@ -7,7 +7,6 @@
 #include <base/optional.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/opcodes.hpp>
-#include <code_data/code.hpp>
 #include <core/process/type_metadata/type.hpp>
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>

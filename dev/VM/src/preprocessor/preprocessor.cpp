@@ -66,7 +66,6 @@ namespace vm {
 			} catch (std::out_of_range& err) {
 				// @TODO: better errors
 				CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
-				return 0;
 			}
 		}
 
@@ -78,7 +77,6 @@ namespace vm {
 		) {
 			vm::FuncData func_data;
 			func_data.name          = func->name.value;
-			func_data.ret_size      = 0;
 			func_data.arg_size      = func->arg_size;
 			func_data.next_arg_size = func->next_arg_size;
 			func_data.stack_size    = func->local_size;
@@ -168,7 +166,7 @@ std::expected<vm::VMProgram, std::string>
 	if (!maybe_parsed_program) return std::unexpected(maybe_parsed_program.error());
 
 	auto is_valid = validator.validateProgram(maybe_parsed_program.value());
-	if (!is_valid) return std::unexpected(is_valid.error());
+	if (is_valid.has_value()) return std::unexpected(is_valid.value());
 
 	auto program = vm::changeParsedProgramToVMProgram(&*maybe_parsed_program);
 	if (!program) return std::unexpected(program.error());

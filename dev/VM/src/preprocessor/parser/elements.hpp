@@ -2,6 +2,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include "base/box.hpp"
+#include "base/maps.hpp"
 #include "base/string_id.hpp"
 #include "code_data/opcode_args.hpp"
 #include "core/process/type_metadata/type_metadata.hpp"
@@ -153,6 +154,7 @@ namespace vm::parser {
 	 * from all files with type metadata.
 	 */
 	struct ParsedProgram {
+		std::vector<base::Box<dia::SourcePosition>>       files_src_pos;
 		base::HashMap<base::StrID, Ref<Func>>  name_to_func;
 		std::vector<Box<Func>>                 functions;
 		std::vector<Box<Type>>                 types;

@@ -614,6 +614,8 @@ namespace vm::parser {
 		for (const auto& file: files) {
 			parsed_program.token_files.push_back(tokenizeFile(file));
 			auto parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
+			
+			parsed_program.files_src_pos.push_back(std::move(parsed.value()->position));
 
 			for (auto& func: parsed.value()->functions) {
 				auto func_name = func->name.value;

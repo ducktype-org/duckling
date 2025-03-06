@@ -9,7 +9,7 @@ namespace vm::validator {
 	public:
 		Validator() = default;
 
-		std::expected<bool, std::string> validateProgram(const parser::ParsedProgram& program);
+		base::Optional<std::string> validateProgram(const parser::ParsedProgram& program);
 
 	private:
 		void preprocessProgram(const parser::ParsedProgram& program, dia::Logger& log);

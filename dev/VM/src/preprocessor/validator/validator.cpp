@@ -10,20 +10,20 @@
 #include <sstream>
 
 namespace vm::validator {
-	std::expected<bool, std::string> Validator::validateProgram(const parser::ParsedProgram& program
+	base::Optional<std::string> Validator::validateProgram(const parser::ParsedProgram& program
 	) {
 		auto log = dia::Logger();
 
 		validateMainExistance(program, log);
 		validateTailcallSignatures(program, log);
 		validateDuplicateFunctionDeclarations(program, log);
-		
+
 		if (log.bad()) {
 			std::stringstream stream;
 			log.dumpLogAndClear(true, stream);
-			return std::unexpected(stream.str());
+			return stream.str();
 		}
-		return true;
+		return {};
 	}
 
 	void Validator::validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log) {
@@ -36,8 +36,7 @@ namespace vm::validator {
 		}
 
 		if (!main_found)
-			// @TODO: Change that to real position
-			log.log(makeBox<vm::validator::NoMainError>(dia::SourcePosition::fakePosition()));
+			log.log(makeBox<vm::validator::NoMainError>(*program.files_src_pos[0]));
 	}
 
 	void Validator::validateTailcallSignatures(
