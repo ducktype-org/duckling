@@ -3,11 +3,9 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 #include <code_data/opcode_args.hpp>
-#include "diagnostic/logger.hpp"
+#include <diagnostic/logger.hpp>
 #include "errors.hpp"
 #include <preprocessor/parser/elements.hpp>
-#include <preprocessor/preprocessor.hpp>
-#include <expected>
 #include <sstream>
 
 namespace vm::validator {

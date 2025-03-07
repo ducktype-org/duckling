@@ -9,9 +9,7 @@ class BCValidationTests: public VmTestSuite {
 #define TESTER_CLASS BCValidationTests
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(noMain);
-	}
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(noMain); }
 
 private:
 	/**

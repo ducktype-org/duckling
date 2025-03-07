@@ -23,7 +23,7 @@ namespace vm {
 		friend VMProcess;
 
 	private:
-		bool                 validate_program;
+		bool validate_program;
 
 		/**
 		 * @brief Changes the program representation from parser representation

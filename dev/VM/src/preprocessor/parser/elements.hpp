@@ -8,6 +8,8 @@
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <token_file/file.hpp>
 #include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/token_stream.hpp>
 #include "type_data.hpp"
 #include <token_parser_core/tpc.hpp>
 #include <token_parser_core/base_element.hpp>
@@ -16,7 +18,13 @@
 
 namespace vm::parser {
 
-	class F8ParserState;
+	class F8ParserState final: public tpc::ParserState {
+	public:
+		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+			  tpc::ParserState(std::move(stream), err) {}
+
+		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
+	};
 
 	struct OpCodeArgAndPosition {
 		vm::opargs::OpCodeArg arg;

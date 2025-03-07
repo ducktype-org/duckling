@@ -1,4 +1,5 @@
 add_files(preprocessor.cpp
+          parser/elements.cpp
           parser/parser.cpp
           validator/validator.cpp)
 
