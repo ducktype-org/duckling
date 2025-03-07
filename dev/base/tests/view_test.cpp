@@ -1,5 +1,4 @@
 #include <tester/tester.hpp>
-#include <filesystem/file.hpp>
 #include <base/raw_view.hpp>
 
 class ViewTest: public tester::TestSuite {

@@ -119,7 +119,7 @@ private:
 			{
 				base::strConcat(
 					vm::parser::InvalidLiteral::ERR_MSG,
-					"Not a valid number for `vm::opargs::StackOffset`"
+					"Not a valid number for `vm::opargs::StackLocalI64`"
 				),
 			}
 		);

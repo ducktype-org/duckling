@@ -36,13 +36,23 @@ namespace vm::parser {
 		auto parseArg(F8ParserState& state) -> ArgType;
 
 		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::ImmediateI64 {
-			return { parseInt<i64, vm::opargs::ImmediateI64>(state) };
+		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
+			return { parseInt<i32, vm::opargs::Immediate>(state) };
 		}
 
 		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackOffset {
-			return { parseInt<i64, vm::opargs::StackOffset>(state) };
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI32 {
+			return { parseInt<i64, vm::opargs::StackLocalI32>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI64 {
+			return { parseInt<i64, vm::opargs::StackLocalI64>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalPtr {
+			return { parseInt<i64, vm::opargs::StackLocalPtr>(state) };
 		}
 
 		template<>

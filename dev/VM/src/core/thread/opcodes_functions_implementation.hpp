@@ -27,11 +27,11 @@
  */
 
 #include <base/exceptions.hpp>
+#include <code_data/instruction.hpp>
+#include <core/process/vmprocess.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
-#include <code_data/instruction.hpp>
-#include <core/process/vmprocess.hpp>
 
 
 #ifdef DEBUG_OPCODES
@@ -74,102 +74,94 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = instr->arg1; }
+		{ derefStack<i64>(local_stack, instr->arg0) = instr->arg1; }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = derefStack<u64>(local_stack, instr->arg1); }
+		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l64_l64)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag)
-				derefStack<u64>(local_stack, instr->arg0)
-					= derefStack<u64>(local_stack, instr->arg1);
+				derefStack<i64>(local_stack, instr->arg0)
+					= derefStack<i64>(local_stack, instr->arg1);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l32_imm)(FUNCTION_ARGS) {
+		{ derefStack<i32>(local_stack, instr->arg0) = instr->arg1; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l32_l32)(FUNCTION_ARGS) {
+		{ derefStack<i32>(local_stack, instr->arg0) = derefStack<i32>(local_stack, instr->arg1); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l32_l32)(FUNCTION_ARGS) {
+		{
+			if (frame->flags.flag)
+				derefStack<i32>(local_stack, instr->arg0)
+					= derefStack<i32>(local_stack, instr->arg1);
 		}
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_r0)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
+		{ derefStack<i64>(local_stack, instr->arg0) = frame->regs.p64_reg_0; }
 		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
-		{ frame->regs.p64_reg_0 = derefStack<u64>(local_stack, instr->arg0); }
+		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) += derefStack<u64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; }                   \
+		FUNCTION_CONT(1);                                                                \
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(add_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) += instr->arg1; }
-		FUNCTION_CONT(1);
+	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
+	DEFINE_ARITHMETIC_OP(add, 32, i32, +=)
+	DEFINE_ARITHMETIC_OP(sub, 64, i64, -=)
+	DEFINE_ARITHMETIC_OP(sub, 32, i32, -=)
+	DEFINE_ARITHMETIC_OP(mul, 64, i64, *=)
+	DEFINE_ARITHMETIC_OP(mul, 32, i32, *=)
+	DEFINE_ARITHMETIC_OP(mod, 64, i64, %=)
+	DEFINE_ARITHMETIC_OP(mod, 32, i32, %=)
+	DEFINE_ARITHMETIC_OP(div, 64, i64, /=)
+	DEFINE_ARITHMETIC_OP(div, 32, i32, /=)
+
+#define DEFINE_COMPARISON_OP(NAME, BITS_SIZE, TYPE, OP)                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
+		{                                                                                  \
+			frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0)                 \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                  \
+		FUNCTION_CONT(1);                                                                  \
+	}                                                                                      \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {            \
+		{ frame->flags.flag = derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; } \
+		FUNCTION_CONT(1);                                                                  \
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) -= derefStack<u64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(sub_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) -= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mul_l64_imm)(FUNCTION_ARGS) {
-		{
-			// @TODO: check types
-			derefStack<u64>(local_stack, instr->arg0) *= instr->arg1;
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) %= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mod_l64_l64)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) %= derefStack<u64>(local_stack, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(div_l64_imm)(FUNCTION_ARGS) {
-		{ derefStack<u64>(local_stack, instr->arg0) /= instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_l64)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                 == derefStack<u64>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpEq_l64_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) == instr->arg1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_l64)(FUNCTION_ARGS) {
-		{
-			frame->flags.flag = derefStack<u64>(local_stack, instr->arg0)
-			                  > derefStack<u64>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmpG_l64_imm)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<u64>(local_stack, instr->arg0) > instr->arg1; }
-		FUNCTION_CONT(1);
-	}
+	DEFINE_COMPARISON_OP(cmpEq, 64, i64, ==)
+	DEFINE_COMPARISON_OP(cmpG, 64, i64, >)
+	DEFINE_COMPARISON_OP(cmpEq, 32, i32, ==)
+	DEFINE_COMPARISON_OP(cmpG, 32, i32, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRel_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
@@ -258,7 +250,7 @@ namespace vm {
 			// Prepare new frame.
 			auto* prev_frame = frame;
 			frame++;
-			i32 function_id = instr->arg0;
+			auto function_id = static_cast<u32>(instr->arg0);
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 			frame->args = prev_frame->next_args;
 
@@ -287,7 +279,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
 		{
-			auto function_id = instr->arg0;
+			auto function_id = static_cast<u32>(instr->arg0);
 
 			instr = thread.executing_code->functions[function_id].bc.data();
 
@@ -296,9 +288,14 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
+	// @TODO: refactor op_rets to reduce code duplication
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_l64)(FUNCTION_ARGS) {
 		{
-			// @TODO: refactor op_rets to reduce code duplication
+			while (!frame->block_stack.empty()) {
+				auto block = frame->block_stack.back();
+				thread.process.getMemory().freeBlock(block);
+				frame->block_stack.pop_back();
+			}
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -306,7 +303,30 @@ namespace vm {
 			// substracting one from the pointer will give us the previous frame.
 			// The `instr`, `local_stack` and `frame` values should be restored from the previous
 			// call stack frame.
-			u64 ret_val = derefStack<u64>(local_stack, instr->arg0);
+			auto ret_val = derefStack<i64>(local_stack, instr->arg0);
+
+			frame--;
+
+			frame->regs.p64_reg_0               = ret_val;
+			thread.runtime_data.local_stack_top = local_stack;
+
+			// Load previous frame
+			instr       = frame->instr;  // This is already a pointer to next instr
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_l32)(FUNCTION_ARGS) {
+		{
+			while (!frame->block_stack.empty()) {
+				auto block = frame->block_stack.back();
+				thread.process.getMemory().freeBlock(block);
+				frame->block_stack.pop_back();
+			}
+
+			i32 ret_val = derefStack<i32>(local_stack, instr->arg0);
 
 			frame--;
 
@@ -323,6 +343,12 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_imm)(FUNCTION_ARGS) {
 		{
+			while (!frame->block_stack.empty()) {
+				auto block = frame->block_stack.back();
+				thread.process.getMemory().freeBlock(block);
+				frame->block_stack.pop_back();
+			}
+
 			// For explanation go to op_ret_l64.
 			frame--;
 
@@ -337,9 +363,32 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_void)(FUNCTION_ARGS) {
+		{
+			while (!frame->block_stack.empty()) {
+				auto block = frame->block_stack.back();
+				thread.process.getMemory().freeBlock(block);
+				frame->block_stack.pop_back();
+			}
+
+			// For explanation go to op_ret_l64.
+			frame--;
+
+			thread.runtime_data.local_stack_top = local_stack;
+
+			// Load previous frame
+			instr       = frame->instr;  // This is already a pointer to next instr
+			local_stack = frame->local_stack;
+		}
+		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
-			auto type     = thread.executing_code->type_metadata->getType(vm::TypeID(instr->arg0));
+			auto type = thread.executing_code->type_metadata->getType(
+				vm::TypeID(static_cast<u32>(instr->arg0))
+			);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			frame->block_stack.push_back(block);
@@ -382,7 +431,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type  = thread.executing_code->type_metadata->getType(vm::TypeID(instr->arg1));
+			auto type = thread.executing_code->type_metadata->getType(
+				vm::TypeID(static_cast<u32>(instr->arg1))
+			);
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}

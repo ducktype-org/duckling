@@ -22,8 +22,10 @@ namespace vm {
 			dia::Logger&                          log
 		) {
 			variant_match(opcode_arg.arg) {
-				variant_case(vm::opargs::ImmediateI64, imm) return imm.value;
-				variant_case(vm::opargs::StackOffset, offset) return offset.offset;
+				variant_case(vm::opargs::Immediate, imm) return imm.value;
+				variant_case(vm::opargs::StackLocalI32, offset) return offset.offset;
+				variant_case(vm::opargs::StackLocalI64, offset) return offset.offset;
+				variant_case(vm::opargs::StackLocalPtr, offset) return offset.offset;
 				variant_case(vm::opargs::ArgsOffset, offset) return offset.offset;
 				variant_case(vm::opargs::Type, type_arg) {
 					auto type_obj = types->getTypeByName(type_arg.type_name);
@@ -36,7 +38,8 @@ namespace vm {
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < functions.size(); i++)
-						if (functions[i]->name == func.function_name) return i;
+						if (functions[base::safeIntConv<u64>(i)]->name == func.function_name)
+							return i;
 					log.log(makeBox<vm::parser::UnknownFunction>(
 						opcode_arg.position, func.function_name
 					));

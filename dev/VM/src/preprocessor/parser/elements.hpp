@@ -66,8 +66,14 @@ namespace vm::parser {
 			out << "        " << opcode_name.view().stringView() << " ";
 			for (auto& arg: args) {
 				variant_match(arg.arg) {
-					variant_case(vm::opargs::ImmediateI64, num_arg) { out << num_arg.value << " "; }
-					variant_case(vm::opargs::StackOffset, stack_offset_arg) {
+					variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
+					variant_case(vm::opargs::StackLocalI32, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::StackLocalI64, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::StackLocalPtr, stack_offset_arg) {
 						out << stack_offset_arg.offset << " ";
 					}
 					variant_case(vm::opargs::ArgsOffset, args_offset_arg) {
