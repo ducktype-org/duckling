@@ -11,6 +11,7 @@
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <ranges>
+#include "utils.hpp"
 
 namespace compiler::backend_vm {
 	void Module::buildRepr(std::ostream& out) const { serialize(file_builder.build(), out); }
@@ -158,21 +159,22 @@ namespace compiler::backend_vm {
 				return OpKind::add;
 			case lir::Operation::IntegerSub:
 				return OpKind::sub;
-				break;
 			case lir::Operation::IntegerMul:
 				return OpKind::mul;
 			case lir::Operation::IntegerUDiv:
-				return OpKind::div;
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSDiv:
 				return OpKind::div;
 			case lir::Operation::IntegerUMod:
-				return OpKind::mod;
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSMod:
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
 				return OpKind::neg;
 			case lir::Operation::IntegerULt:
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSLt:
+				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			default:
 				CORE_PANIC("Invalid operation: ", base::enumToStr(operation));
 			}

@@ -1,10 +1,10 @@
 #include <iomanip>
 
-#include "base/int_conv.hpp"
+#include <base/int_conv.hpp>
 #include "instructions.hpp"
 #include "elements.hpp"
-#include "../../../../../../VM/src/code_data/opcode_args.hpp"
-#include "preprocessor/parser/types_of_data.hpp"
+#include <code_data/opcode_args.hpp>
+#include <preprocessor/parser/types_of_data.hpp>
 
 namespace compiler::backend_vm {
 	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }

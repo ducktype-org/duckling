@@ -1,3 +1,3 @@
 add_subdirectory(llvm)
-add_subdirectory(vm)
+add_subdirectory(dvm)
 add_subdirectory(tests)

@@ -1,10 +1,9 @@
 #pragma once
 
 #include <deque>
-#include <ostream>
-#include "../../../../../../VM/src/preprocessor/parser/types_of_data.hpp"
-#include "backends/vm/instructions.hpp"
-#include "base/string_id.hpp"
+#include <preprocessor/parser/types_of_data.hpp>
+#include <backends/dvm/instructions.hpp>
+#include <base/string_id.hpp>
 
 namespace compiler::backend_vm {
 	struct VmElement {

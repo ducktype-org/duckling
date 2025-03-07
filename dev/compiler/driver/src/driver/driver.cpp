@@ -6,7 +6,7 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <backends/llvm/llvm_backend.hpp>
-#include <backends/vm/backend.hpp>
+#include <backends/dvm/backend.hpp>
 
 #include "driver.hpp"
 #include "base/exceptions.hpp"

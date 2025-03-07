@@ -545,9 +545,9 @@ namespace assemble {
 				} else {
 					out->datatype
 						= vm::StaticTableType{ .name  = name,
-						                   .inner = type_name.getValue(),
-						                   .table_size
-						                   = static_cast<usize>(strIDToNum(size.getValue())) };
+						                       .inner = type_name.getValue(),
+						                       .table_size
+						                       = static_cast<usize>(strIDToNum(size.getValue())) };
 				}
 			}
 			break;
@@ -572,7 +572,8 @@ namespace assemble {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
 				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				fields.emplace_back(vm::Field{ .name = field_name.value, .type = field_type.value });
+				fields.emplace_back(vm::Field{ .name = field_name.value, .type = field_type.value }
+				);
 
 				if (state.empty()) break;
 
@@ -636,7 +637,8 @@ namespace assemble {
 			state.goUpAndSkip();
 			tpc::Identifier result;
 			state.parse().one(&result);
-			out->datatype = vm::FunctionType{ .name = name, .parameters = arguments, .result = result };
+			out->datatype
+				= vm::FunctionType{ .name = name, .parameters = arguments, .result = result };
 			break;
 		}
 		default: {
@@ -771,9 +773,10 @@ namespace assemble {
 			for (const auto& op: func.bc) {
 #ifdef USE_TAIL_CALLS
 				if (op.opfun
-				    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall))) {
+				    == vm::OpFuns::OPFUNS.at(static_cast<uint16_t>(vm::OpcodeFix8::ret_tailcall_func
+				    ))) {
 #else
-				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall) {
+				if (static_cast<vm::OpcodeFix8>(op.opcode) == vm::OpcodeFix8::ret_tailcall_func) {
 #endif
 					auto function_id = base::safeIntConv<usize>(op.arg0);
 					CORE_ASSERT(

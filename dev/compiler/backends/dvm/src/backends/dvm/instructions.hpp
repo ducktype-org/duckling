@@ -1,6 +1,5 @@
 /**
- * @brief This file contains a list of instructions. This is temporary and should be integrated into
- * VM itself.
+ * @brief This file contains a list of structures representing DVM opcodes.
  */
 
 #pragma once
@@ -29,12 +28,10 @@ namespace compiler::backend_vm {
 #undef HANDLE_OPCODE_2ARGS
 
 	/**
-	 * @brief This type is here just to make templates work with our macros.
+	 * @brief An extra instruction that represents a comment.
+	 * @note It also helps with macro, because without it the template
+	 * below would finish with a `,`, which does not compile.
 	 */
-	struct Guardian {
-		Guardian() { CORE_PANIC("Should not instantiate Guardian"); }
-	};
-
 	struct Comment {
 		base::StrID comment;
 	};
@@ -44,6 +41,5 @@ namespace compiler::backend_vm {
 #define HANDLE_OPCODE(opcode) Op_##opcode,
 #include <code_data/opcodes_list.hpp>
 #undef HANDLE_OPCODE
-		Comment,
-		Guardian>;
+		Comment>;
 }

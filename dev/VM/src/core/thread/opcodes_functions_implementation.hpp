@@ -287,7 +287,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
 

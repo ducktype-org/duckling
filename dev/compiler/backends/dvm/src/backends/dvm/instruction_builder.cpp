@@ -1,8 +1,9 @@
-#include "base/exceptions.hpp"
-#include "base/stringifyable_enum.hpp"
-#include "base/variant.hpp"
 #include "builders.hpp"
-#include "code_data/opcode_args.hpp"
+
+#include <backends/dvm/utils.hpp>
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+#include <code_data/opcode_args.hpp>
 
 namespace compiler::backend_vm {
 	namespace {
@@ -89,35 +90,7 @@ namespace compiler::backend_vm {
 			out << base::enumToStr(kind).strView();
 		}
 
-		bool areEqual(const vm::opargs::OpCodeArg& arg0, const vm::opargs::OpCodeArg& arg1) {
-			using namespace vm::opargs;
-			if (arg0.index() != arg1.index()) return false;
-			variant_match(arg0) {
-				variant_case(Immediate, imm0) {}
-				variant_case(StackLocalI32, l32) {
-					return l32.offset == std::get<StackLocalI32>(arg1).offset;
-				}
-				variant_case(StackLocalI64, l64) {
-					return l64.offset == std::get<StackLocalI64>(arg1).offset;
-				}
-				variant_case(StackLocalPtr, lptr) {
-					return lptr.offset == std::get<StackLocalPtr>(arg1).offset;
-				}
-				variant_case(ArgsOffset, arg) {
-					return arg.offset == std::get<ArgsOffset>(arg1).offset;
-				}
-				variant_case(Type, tp) { return tp.type_name == std::get<Type>(arg1).type_name; }
-				variant_case(FunctionName, func) {
-					return func.function_name == std::get<FunctionName>(arg1).function_name;
-				}
 
-				variant_case(Label, label) {
-					return label.label_name == std::get<Label>(arg1).label_name;
-				}
-				variant_default CORE_PANIC("Unhandled arg type opcode arg comparision (==).");
-			}
-			CORE_UNREACHABLE();
-		}
 	}
 }
 
@@ -138,7 +111,7 @@ std::deque<compiler::backend_vm::VmInstruction>
 	if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul || kind == OpKind::div
 	    || kind == OpKind::mod) {
 		if (new_args.size() == 3) {
-			if (areEqual(new_args[0], new_args[1])) {
+			if (utils::areArgsEqual(new_args[0], new_args[1])) {
 				// This resolves e.g. `a = a + b;` by doing `a = b`
 				new_args.pop_front();
 			} else {
@@ -172,7 +145,7 @@ std::deque<compiler::backend_vm::VmInstruction>
 
 			new_args.pop_back();
 		}
-	} else if(kind == OpKind::load || kind == OpKind::store) {
+	} else if (kind == OpKind::load || kind == OpKind::store) {
 		InstructionBuilder load_or_store_instr;
 		load_or_store_instr.kind = kind;
 		load_or_store_instr.pushArg(new_args[0]);

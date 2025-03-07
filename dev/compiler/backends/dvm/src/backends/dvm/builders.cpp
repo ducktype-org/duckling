@@ -1,23 +1,25 @@
 #include "builders.hpp"
-#include "backends/vm/elements.hpp"
-#include "backends/vm/instructions.hpp"
-#include "base/exceptions.hpp"
-#include "base/str_utils.hpp"
-#include "base/variant.hpp"
-#include "code_data/opcode_args.hpp"
+#include <backends/dvm/elements.hpp>
+#include <backends/dvm/instructions.hpp>
+#include <base/exceptions.hpp>
+#include <base/str_utils.hpp>
+#include <base/variant.hpp>
+#include <code_data/opcode_args.hpp>
 #include <base/ref.hpp>
 #include <preprocessor/parser/types_of_data.hpp>
 #include <ranges>
+#include "utils.hpp"
 
 compiler::backend_vm::Function compiler::backend_vm::FunctionBuilder::build() const {
 	Function function;
 	function.body = instructions;
 	function.name = name;
 
-	function.stack_size    = 1'337;
-	function.arg_size      = 1'337;
-	function.next_arg_size = 1'337;
-	function.ret_size      = 1'337;
+	// @TODO: ret_size should be fixed somehow.
+	function.stack_size    = max_stack_size;
+	function.ret_size      = ret_size;
+	function.arg_size      = 0;
+	function.next_arg_size = 0;
 
 	return function;
 }
@@ -62,16 +64,17 @@ const base::HashMap<base::StrID, vm::TypeOfData>&
 }
 
 usize getTypeSize(const vm::TypeOfData& tp) {
-	variant_match(tp){ variant_case(vm::PrimitiveType, primitive){ return primitive.size;
-}
-NOIMPL_CASE(vm::PointerType, "get size of")
-NOIMPL_CASE(vm::StaticTableType, "get size of")
-NOIMPL_CASE(vm::DynamicTableType, "get size of")
-NOIMPL_CASE(vm::DataType, "get size of")
-NOIMPL_CASE(vm::VariantType, "get size of")
-NOIMPL_CASE(vm::FunctionType, "get size of")
-}
-CORE_UNREACHABLE();
+	variant_match(tp) {
+		variant_case(vm::PrimitiveType, primitive) return primitive.size;
+
+		NOIMPL_CASE(vm::PointerType, "get size of")
+		NOIMPL_CASE(vm::StaticTableType, "get size of")
+		NOIMPL_CASE(vm::DynamicTableType, "get size of")
+		NOIMPL_CASE(vm::DataType, "get size of")
+		NOIMPL_CASE(vm::VariantType, "get size of")
+		NOIMPL_CASE(vm::FunctionType, "get size of")
+	}
+	CORE_UNREACHABLE();
 }
 
 usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
@@ -87,14 +90,16 @@ usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
 	}
 
 	local_stack.emplace_back(LocalStackEntry{
-		.tp = tp, .local_stack_position = offset, .type_size = type_size, .data_type = &vm_type });
+		.tp = tp, .local_stack_position = offset, .type_size = type_size });
+
+	max_stack_size = std::max(max_stack_size, offset + type_size);
+
 	return offset;
 }
 
 void compiler::backend_vm::FunctionBuilder::deinitType() {
-	instructions.emplace_back(Op_deinit{});
-	// This is most likely redundant as well.
 	CORE_ASSERT(!local_stack.empty(), "Popping from empty variable stack");
+	instructions.emplace_back(Op_deinit{});
 	local_stack.pop_back();
 }
 
@@ -107,3 +112,5 @@ void compiler::backend_vm::InstructionBuilder::pushArg(const vm::opargs::OpCodeA
 void compiler::backend_vm::FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 	for (auto&& instr: instruction.build()) this->instructions.push_back(instr);
 }
+
+compiler::backend_vm::InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }

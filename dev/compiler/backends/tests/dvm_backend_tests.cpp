@@ -1,5 +1,5 @@
 
-#include <backends/vm/backend.hpp>
+#include <backends/dvm/backend.hpp>
 
 
 #define TESTER_CLASS DVMBackendTest
