@@ -104,9 +104,10 @@ namespace vm::parser {
 
 		for (const auto& file: files) {
 			parsed_program.token_files.push_back(tokenizeFile(file));
-			auto maybe_parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
-			
-			if (!maybe_parsed || log.bad()) {
+			auto maybe_parsed
+				= parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
+
+			if (log.bad()) {
 				std::stringstream stream;
 				log.dumpLogAndClear(true, stream);
 				return std::unexpected(stream.str());
@@ -134,7 +135,6 @@ namespace vm::parser {
 			}
 
 			for (auto& type: parsed->types) parsed_program.types.push_back(std::move(type));
-
 		}
 
 		defineTypes(&parsed_program, log);

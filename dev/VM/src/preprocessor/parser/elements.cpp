@@ -41,6 +41,16 @@ namespace vm::parser {
 		}
 
 		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI8 {
+			return { parseInt<i64, vm::opargs::StackLocalI8>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI16 {
+			return { parseInt<i64, vm::opargs::StackLocalI16>(state) };
+		}
+
+		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI32 {
 			return { parseInt<i64, vm::opargs::StackLocalI32>(state) };
 		}
@@ -408,7 +418,7 @@ namespace vm::parser {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = DataType{ name, fields };
+			out->datatype = DataType{ .name = name, .fields = fields };
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {

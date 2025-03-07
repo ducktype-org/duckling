@@ -119,7 +119,7 @@ namespace vm {
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
@@ -151,7 +151,8 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+
 
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
@@ -176,7 +177,8 @@ namespace vm {
 			}
 		}
 	End:
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+
 
 #endif
 	}

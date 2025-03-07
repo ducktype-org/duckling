@@ -36,7 +36,7 @@ namespace vm {
 			for (auto& func: functions) addFunction(func.name, func);
 		}
 
-		base::Optional<CRef<FuncData>>     getFuncByName(base::StrID name) const;
+		base::Optional<CRef<FuncData>> getFuncByName(base::StrID name) const;
 		base::Optional<CRef<FuncData>> getFuncByID(usize id) const;
 
 		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;

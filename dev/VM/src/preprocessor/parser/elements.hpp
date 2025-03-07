@@ -67,6 +67,12 @@ namespace vm::parser {
 			for (auto& arg: args) {
 				variant_match(arg.arg) {
 					variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
+					variant_case(vm::opargs::StackLocalI8, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::StackLocalI16, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
 					variant_case(vm::opargs::StackLocalI32, stack_offset_arg) {
 						out << stack_offset_arg.offset << " ";
 					}

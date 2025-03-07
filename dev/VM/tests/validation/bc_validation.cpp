@@ -13,7 +13,7 @@ public:
 
 private:
 	/**
-	 * @brief Parses a file containing a program which violates static verification guidelines. 
+	 * @brief Parses a file containing a program which violates static verification guidelines.
 	 * Asserts that `error_keywords` are present in the error message.
 	 */
 	void parseInvalidDbc(

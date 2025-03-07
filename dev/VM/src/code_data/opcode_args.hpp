@@ -14,6 +14,14 @@ namespace vm::opargs {
 		i64 value = 0;
 	};
 
+	struct StackLocalI8 {
+		i64 offset = 0;
+	};
+
+	struct StackLocalI16 {
+		i64 offset = 0;
+	};
+
 	struct StackLocalI32 {
 		i64 offset = 0;
 	};
@@ -44,6 +52,8 @@ namespace vm::opargs {
 
 	using OpCodeArg = std::variant<
 		Immediate,
+		StackLocalI8,
+		StackLocalI16,
 		StackLocalI32,
 		StackLocalI64,
 		StackLocalPtr,
