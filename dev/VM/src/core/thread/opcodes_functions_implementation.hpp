@@ -229,6 +229,16 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
+		{ derefStack<i64>(frame->next_args, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
+		{ derefStack<i32>(frame->next_args, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		{
 			// We have to change variables passed in the arguments (FUNCTION_ARGS). After this
