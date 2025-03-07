@@ -194,6 +194,9 @@ namespace lexer {
 		SIMPLE_INIT_GUARD_END
 	}
 
+	// This call we keep in cpp files,
+	// since it strictly realted to Classifications class
+	// which is implemented here.
 	RUN_BEFORE_MAIN(init::registerForInit(Classifications::init));
 
 	/**

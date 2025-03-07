@@ -3,7 +3,6 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 #include <base/init_guard.hpp>
-#include <init/init.hpp>
 #include <array>
 
 namespace lang_def {
@@ -232,8 +231,6 @@ namespace lang_def {
 
 		SIMPLE_INIT_GUARD_END;
 	}
-
-	RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
 
 	Keyword strAsKeyword(base::StrID id) {
 		switch (keyword_mode) {

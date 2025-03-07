@@ -38,11 +38,25 @@ namespace init {
 
 /**
  * Runs peace of code during static initialization phase.
+ * 
+ * It is usually used with `registerForInit` function, like this:
+ * `RUN_BEFORE_MAIN(init::registerForInit(some_init_func));`
+ *
+ * If you place this macro in CPP file it will run:
+ * * once if given cpp files is used
+ * * it wont run if cpp file is never used (this is due to how linek behaves)
+ *
+ * If yuu place this macro in header file it will run:
+ * * once per each (used) translation unit that includes this header.
+ *
+ * When used for inits it is generally safer to put in in header files (e.g. some_module/init.hpp), and include this header file in every cpp/hpp file that requires init to be done.
+ *
+ * Putting it in cpp file is will work most of the time, but you need to be aware of the fact that it will not work if the cpp file is not used. It is usually best to schedule inits this way only when we are dealing with single-file (hpp+cpp) module
+ * 
  * @note This is completely independent from InitObject.
  * @note This macro should only be used in global/namespace scope.
- * @note This macro should only be used in cpp files, to avoid duplication.
  * @note For technical reasons the macro should be used at most once per line.
- * Unfortunately C++26 `_` identifier don't work here, as it is a global variable.
+ * Unfortunately C++26 `_` identifier don't work here, as it is a global variable. 
  */
 #define RUN_BEFORE_MAIN(code)                                                           \
 	namespace {                                                                         \

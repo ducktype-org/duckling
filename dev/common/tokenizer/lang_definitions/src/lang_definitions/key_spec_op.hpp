@@ -13,6 +13,7 @@
 
 #include <base/string_id.hpp>
 #include <base/flag.hpp>
+#include <init/init.hpp>
 
 namespace lang_def {
 
@@ -204,8 +205,14 @@ namespace lang_def {
 		/**
 		 * @brief Initializes the key_spec_op module.
 		 * It will run automagically when InitObject is used.
+		 * It is currently registered in cpp files, since
+		 * it is a single file-module.
 		 */
 		void init();
+		
+		// note: it might be valid to put this init in cpp
+		// but it is safer to have it here.
+		RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
 	}
 
 	void setKeywordMode(KeywordMode mode);

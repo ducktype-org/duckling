@@ -26,7 +26,6 @@ namespace base::detail {
  * and SIMPLE_INIT_GUARD_END should be used at the end.
  */
 #define SIMPLE_INIT_GUARD_BEGIN                                                 \
-	::base::detail::logInitFunction(__PRETTY_FUNCTION__);                       \
 	static ::base::detail::InitState _detail_init_state                         \
 		= ::base::detail::InitState::NotInitialized;                            \
                                                                                 \
@@ -36,7 +35,9 @@ namespace base::detail {
 		CORE_PANIC("Cycle detected in initialization function!");               \
 	} else {                                                                    \
 		return;                                                                 \
-	}
+	}                                                                           \
+	::base::detail::logInitFunction(__PRETTY_FUNCTION__);
+
 
 
 #define SIMPLE_INIT_GUARD_END _detail_init_state = ::base::detail::InitState::Initialized;
