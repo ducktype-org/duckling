@@ -12,9 +12,9 @@ namespace pst {
 	template<std::derived_from<LangElement> T = LangElement>
 	struct GenericPSTQueryKey {
 		template<typename E>
-		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element) {};
+		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element){};
 		template<typename E>
-		GenericPSTQueryKey(const E& element) noexcept: element(element) {};
+		GenericPSTQueryKey(const E& element) noexcept: element(element){};
 		/**
 		 * @brief Element for which the query is run.
 		 * @TODO: this is an MCRef, since all keys ware defined like this

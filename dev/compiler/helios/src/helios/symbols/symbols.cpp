@@ -87,7 +87,9 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
-	pst::Access<pst::Stmt> stmt(query::detail::ContextType& ctx, SymID id) { return getSymRef(id)->stmtCast(ctx); }
+	pst::Access<pst::Stmt> stmt(query::detail::ContextType& ctx, SymID id) {
+		return getSymRef(id)->stmtCast(ctx);
+	}
 
 	namespace {
 		/**
@@ -269,8 +271,9 @@ namespace compiler::helios {
 		 * Should be in.
 		 * @note This has to be consistant with QuerySymbolsInScope
 		 */
-		static ScopeID
-			getPSTElementParentScope(query::Context& ctx, pst::AccessLocked<pst::LangElement> element) {
+		static ScopeID getPSTElementParentScope(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+		) {
 			// note: this might become more complicated in the future:
 			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent());
 		}
@@ -441,7 +444,8 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto alias_definition = getSymRef(key)->pst_element.unlock(ctx).dynamicCast<pst::Alias>();
+			auto alias_definition
+				= getSymRef(key)->pst_element.unlock(ctx).dynamicCast<pst::Alias>();
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -547,8 +551,8 @@ namespace compiler::helios {
 
 			void visitFun(const pst::Fun& fun) final {
 				auto locked_params = fun.getParams();
-				auto params = locked_params.unlock(ctx);
-				auto ret    = fun.getRet();
+				auto params        = locked_params.unlock(ctx);
+				auto ret           = fun.getRet();
 
 				std::vector<tsh::TypeInfo> param_types{};
 				param_types.reserve(params->size());
@@ -648,7 +652,7 @@ namespace compiler::helios {
 
 			ClassDataParser(query::Context& ctx): ctx(ctx) {}
 
-			base::Optional<base::StrID>                name;
+			base::Optional<base::StrID>                            name;
 			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
 			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
 

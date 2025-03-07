@@ -50,7 +50,7 @@ namespace pst {
 
 		template<typename T>
 		Access<T> dynamicCast() const {
-			return {{dynamic_cast<const T*>(&*ref)}};
+			return { { dynamic_cast<const T*>(&*ref) } };
 		}
 
 		EXPOSE_MREF_INTERFACE(ref)
@@ -77,10 +77,11 @@ namespace pst {
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
 
 	public:
-		AccessLocked()               = delete;
-		AccessLocked(const AccessLocked&)  = default;
-		AccessLocked(AccessLocked&&) = default;
-		template <typename E>
+		AccessLocked()                    = delete;
+		AccessLocked(const AccessLocked&) = default;
+		AccessLocked(AccessLocked&&)      = default;
+
+		template<typename E>
 		AccessLocked(const Access<E>& oth) noexcept: ref(oth.ref) {}
 
 		template<typename T>
@@ -91,7 +92,7 @@ namespace pst {
 			return { dynamic_cast<const Desc*>(&*ref) };
 		}
 
-		Access<Element> illegalAccess() const { return { ref };}
+		Access<Element> illegalAccess() const { return { ref }; }
 
 		Access<Element> unlock(query::detail::ContextType& ctx) const {
 			detail::notifyContext(ctx);

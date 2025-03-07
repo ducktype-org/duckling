@@ -8,7 +8,11 @@ namespace compiler::helios {
 	// @TODO: in the future: make some base for all elements that can be used here
 
 	namespace detail {
-		void visitClassStmts(query::detail::ContextType& ctx, StmtList<pst::ClassStmt>& out, pst::AccessLocked<pst::ClassStmt> stmt) {
+		void visitClassStmts(
+			query::detail::ContextType&       ctx,
+			StmtList<pst::ClassStmt>&         out,
+			pst::AccessLocked<pst::ClassStmt> stmt
+		) {
 			if (auto accessBlock = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>())
 				for (auto e: *accessBlock->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
 			else
@@ -21,7 +25,9 @@ namespace compiler::helios {
 		 *
 		 * @return StmtList
 		 */
-		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> elem) {
+		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(
+			query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> elem
+		) {
 			if (auto classBlock = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
 				StmtList<pst::ClassStmt> out;
 				for (auto&& e: *classBlock) detail::visitClassStmts(ctx, out, e);
@@ -35,7 +41,9 @@ namespace compiler::helios {
 		}
 	}
 
-	StmtList<> getStmtsFromStmtAggregate(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked) {
+	StmtList<> getStmtsFromStmtAggregate(
+		query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked
+	) {
 		auto elem = locked.unlock(ctx);
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto codeBlock = elem.dynamicCast<pst::CodeBlock>()) {

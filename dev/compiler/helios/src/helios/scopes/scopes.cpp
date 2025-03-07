@@ -114,7 +114,8 @@ namespace compiler::helios {
 	/**
 	 * Determines scope kind for given PST element.
 	 */
-	ElementScopeKind getScopeKind(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked) {
+	ElementScopeKind
+		getScopeKind(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
 		auto element = locked.unlock(ctx);
 
@@ -225,7 +226,7 @@ namespace compiler::helios {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
 		static auto provide(Context& ctx, QKey elementKey) -> PResult {
-			auto element = elementKey.element.unlock(ctx);
+			auto element            = elementKey.element.unlock(ctx);
 			auto element_scope_kind = getScopeKind(ctx, elementKey.element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
@@ -236,12 +237,11 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent
-				= element->getParent().unlock(ctx)
-			        ? ctx.query<QueryPrimaryCodeScopeFor>( element->getParent())
-			        : ctx.query<QueryRootScopeOf>(
-						  { frontend::extendQueryModuleIDOfPST(ctx, element) }
-					  );
+			ScopeID parent = element->getParent().unlock(ctx)
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent())
+			                   : ctx.query<QueryRootScopeOf>(
+									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
+								 );
 
 			if (element_scope_kind == ElementScopeKind::Transparent) return parent;
 
@@ -339,7 +339,7 @@ namespace compiler::helios {
 
 				std::vector<SymID> out;
 				for (auto params: *fun.getParams().unlock(ctx))
-					out.emplace_back(ctx.query<QuerySymbolOfSTMT>( params));
+					out.emplace_back(ctx.query<QuerySymbolOfSTMT>(params));
 
 				output(std::move(out));
 			}

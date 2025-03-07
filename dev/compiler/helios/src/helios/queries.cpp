@@ -71,7 +71,7 @@ namespace compiler::helios {
 
 			template<class T>
 			ScopeID scopeOf(const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>( element );
+				return ctx.query<QueryPrimaryCodeScopeFor>(element);
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -148,8 +148,9 @@ namespace compiler::helios {
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>( stmt.getCondition().unlock(ctx)->getExpr())
-				                     .expect("Not handling errors here yet");
+				auto condition
+					= ctx.query<QueryHoutOfExpr>(stmt.getCondition().unlock(ctx)->getExpr())
+				          .expect("Not handling errors here yet");
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
 

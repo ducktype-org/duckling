@@ -202,7 +202,11 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = pst.getRootElement().illegalAccess()->getStatements()[0].cast<pst::Fun>().illegalAccess();
+		auto fun = pst.getRootElement()
+		               .illegalAccess()
+		               ->getStatements()[0]
+		               .cast<pst::Fun>()
+		               .illegalAccess();
 		ASSERT_TRUE(fun);
 
 		auto params = fun->getParams().illegalAccess();

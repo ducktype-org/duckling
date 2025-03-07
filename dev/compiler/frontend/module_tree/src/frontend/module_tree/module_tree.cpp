@@ -321,8 +321,9 @@ struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryFilePST);
 
-ModuleID
-	compiler::frontend::extendQueryModuleIDOfPST(query::Context& ctx, pst::AccessLocked<pst::LangElement> element) {
+ModuleID compiler::frontend::extendQueryModuleIDOfPST(
+	query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+) {
 	// get top-level:
 	while (element.unlock(ctx)->getParent().unlock(ctx)) element = element.unlock(ctx)->getParent();
 

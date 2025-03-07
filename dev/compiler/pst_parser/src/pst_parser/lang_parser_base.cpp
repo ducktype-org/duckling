@@ -5,9 +5,8 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	AccessLocked<LangElement> LangElement::getParent() const {
-		return { parent->toMRef() };
-	}
+	AccessLocked<LangElement> LangElement::getParent() const { return { parent->toMRef() }; }
+
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
