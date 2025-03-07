@@ -601,7 +601,7 @@ namespace assemble {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = vm::DataType{ .name=name, .fields=fields };
+			out->datatype = vm::DataType{ .name = name, .fields = fields };
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
