@@ -96,9 +96,9 @@ namespace compiler::backend_vm {
 		 * @brief Represents a local stack variable.
 		 */
 		struct LocalStackEntry {
-			base::StrID          tp;
-			usize                local_stack_position;
-			usize                type_size;
+			base::StrID tp;
+			usize       local_stack_position;
+			usize       type_size;
 		};
 
 		std::deque<LocalStackEntry> local_stack;
@@ -124,7 +124,7 @@ namespace compiler::backend_vm {
 	};
 
 	/**
-	* @brief Helper to compose bytecode files.
+	 * @brief Helper to compose bytecode files.
 	 */
 	class CodeFileBuilder {
 		std::deque<FunctionBuilder> functions{};

@@ -50,8 +50,6 @@ namespace compiler::backend_vm {
 	struct InstructionSerializerVisitor {
 		std::ostream& out;
 
-		void operator()(Guardian) { CORE_PANIC("Should not serialize Guardian"); }
-
 		void operator()(const Comment& comment) { writeComment(comment.comment.strView(), out); }
 
 #define HANDLE_OPCODE_0ARGS(opcode) \

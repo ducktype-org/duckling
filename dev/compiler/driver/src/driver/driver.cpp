@@ -9,7 +9,7 @@
 #include <backends/dvm/backend.hpp>
 
 #include "driver.hpp"
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 
 namespace compiler::driver {
 

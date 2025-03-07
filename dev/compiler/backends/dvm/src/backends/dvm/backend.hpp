@@ -14,13 +14,13 @@ namespace compiler::backend_vm {
 		Module(base::StrID module_id);
 
 		/**
-		* @brief Inserts a function into the module.
-		*/
+		 * @brief Inserts a function into the module.
+		 */
 		void addLirFunction(CRef<lir::Function> lir_function);
 
 		/**
-		* @brief Builds a module representation as parse-able bytecode.
-		*/
+		 * @brief Builds a module representation as parse-able bytecode.
+		 */
 		void buildRepr(std::ostream& out) const;
 
 	private:

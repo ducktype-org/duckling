@@ -13,22 +13,21 @@
 #include <lir/lir_lowering/lir_lowering.hpp>
 
 class TESTER_CLASS: public tester::TestSuite {
-
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		#ifdef DVM_BACKEND_TEST
+#ifdef DVM_BACKEND_TEST
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
-		#elif defined(LLVM_BACKEND_TEST)
+#elif defined(LLVM_BACKEND_TEST)
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
-		#else
-		#error "Unknown backend test"
-		#endif
+#else
+	#error "Unknown backend test"
+#endif
 	}
 
 protected:
