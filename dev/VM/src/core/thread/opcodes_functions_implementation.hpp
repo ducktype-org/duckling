@@ -29,8 +29,7 @@
 #include <base/exceptions.hpp>
 #include <code_data/instruction.hpp>
 #include <core/process/vmprocess.hpp>
-#include "base/int_conv.hpp"
-#include "base/ints.hpp"
+#include <base/ints.hpp>
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
