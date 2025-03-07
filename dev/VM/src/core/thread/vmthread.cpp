@@ -263,10 +263,10 @@ namespace vm {
 	 */
 	void VMThread::run(CRef<VMProgram> program) {
 		respondExecutionRequest(ExecutionResponse::Running);
-		executing_code = program;
+		executing_program = program;
 		try {
 			internalCallMain(
-				executing_code->getFuncByName(base::StrID("main")).expect("Expected main!")
+				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
 			);
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
@@ -327,8 +327,8 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_code->getNumberOfFunctions(); ++index) {
-					const auto& func = executing_code->functions[index];
+				for (size_t index = 0; index < executing_program->getNumberOfFunctions(); ++index) {
+					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
 							.function_id  = static_cast<u64>(index),  // Assuming function_id is int

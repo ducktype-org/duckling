@@ -143,7 +143,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<const VMProgram> executing_code = nullptr;
+		MCRef<const VMProgram> executing_program = nullptr;
 
 		/**
 		 * @TODO:

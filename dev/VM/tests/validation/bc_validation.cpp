@@ -13,8 +13,8 @@ public:
 
 private:
 	/**
-	 * @brief Parses a syntactically incorrect file. Asserts that `error_keywords` are present in
-	 * the error message.
+	 * @brief Parses a file containing a program which violates static verification guidelines. 
+	 * Asserts that `error_keywords` are present in the error message.
 	 */
 	void parseInvalidDbc(
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords

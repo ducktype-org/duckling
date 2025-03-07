@@ -31,13 +31,13 @@ namespace vm {
 	 */
 	class VMProgram {
 	public:
-		VMProgram(const std::vector<vm::FuncData>& functions, Box<TypeMetadata> type_metadata):
+		VMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> type_metadata):
 			  type_metadata(std::move(type_metadata)) {
 			for (auto& func: functions) addFunction(func.name, func);
 		}
 
 		base::Optional<CRef<FuncData>>     getFuncByName(base::StrID name) const;
-		base::Optional<CRef<vm::FuncData>> getFuncByID(usize id) const;
+		base::Optional<CRef<FuncData>> getFuncByID(usize id) const;
 
 		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;
 		CRef<Type>                 getTypeByID(TypeID id) const;

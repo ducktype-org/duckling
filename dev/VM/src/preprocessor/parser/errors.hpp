@@ -79,25 +79,6 @@ namespace vm::parser {
 		RepeatedLabelNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class DuplicateFunctionDeclarationError final: public dia::Error {
-	public:
-		constexpr static std::string_view ERR_MSG = "Function with this name already exists.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		DuplicateFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	class DuplicatedTypeError final: public dia::Error {
 	public:
 		constexpr static std::string_view ERR_MSG = "Duplicated type.";
@@ -200,23 +181,9 @@ namespace vm::parser {
 			  reason(base::StrID(reason.data())) {}
 	};
 
-	class DuplicatedFunctionDeclarationNote final: public dia::NoteWithPosition {
+	class DuplicateFunctionDeclarationError final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "Previous function declaration here.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		DuplicatedFunctionDeclarationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
-	};
-
-	class DuplicatedFunctionDeclarationError final: public dia::Error {
-	public:
-		constexpr static std::string_view ERR_MSG = "Duplicated function declaration.";
+		constexpr static std::string_view ERR_MSG = "Function with this name already exists.";
 
 	protected:
 		[[nodiscard]]
@@ -230,7 +197,20 @@ namespace vm::parser {
 			return Domain::Parser;
 		}
 
-		DuplicatedFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicateFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class DuplicatedFunctionDeclarationNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static std::string_view ERR_MSG = "Previous function declaration here.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		DuplicatedFunctionDeclarationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+	};
 }

@@ -255,15 +255,15 @@ namespace vm {
 			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
-			instr = thread.executing_code->functions[function_id].bc.data();
+			instr = thread.executing_program->functions[function_id].bc.data();
 
-			u64 local_stack_size = thread.executing_code->functions[function_id].stack_size;
+			u64 local_stack_size = thread.executing_program->functions[function_id].stack_size;
 			local_stack          = runtime_data.local_stack_top;
 			runtime_data.local_stack_top += local_stack_size;
 
 			frame->next_args = runtime_data.local_stack_top;
 			runtime_data.local_stack_top
-				+= thread.executing_code->functions[function_id].next_arg_size;
+				+= thread.executing_program->functions[function_id].next_arg_size;
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
@@ -281,7 +281,7 @@ namespace vm {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
 
-			instr = thread.executing_code->functions[function_id].bc.data();
+			instr = thread.executing_program->functions[function_id].bc.data();
 
 			swap(frame->args, frame->next_args);
 		}
@@ -386,7 +386,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_code->type_metadata->getType(
+			auto type = thread.executing_program->type_metadata->getType(
 				vm::TypeID(static_cast<u32>(instr->arg0))
 			);
 			auto data_ptr = local_stack + frame->local_stack_head;
@@ -431,7 +431,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_code->type_metadata->getType(
+			auto type = thread.executing_program->type_metadata->getType(
 				vm::TypeID(static_cast<u32>(instr->arg1))
 			);
 			auto block = thread.process_memory.allocateHeap(type);

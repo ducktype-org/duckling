@@ -104,11 +104,18 @@ namespace vm::parser {
 
 		for (const auto& file: files) {
 			parsed_program.token_files.push_back(tokenizeFile(file));
-			auto parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
+			auto maybe_parsed = parseFile(parsed_program.token_files.back().refMut(), log).toOptBox();
+			
+			if (!maybe_parsed || log.bad()) {
+				std::stringstream stream;
+				log.dumpLogAndClear(true, stream);
+				return std::unexpected(stream.str());
+			}
 
-			parsed_program.files_src_pos.push_back(std::move(parsed.value()->position));
+			auto& parsed = maybe_parsed.value();
+			parsed_program.files_src_pos.push_back(std::move(parsed->position));
 
-			for (auto& func: parsed.value()->functions) {
+			for (auto& func: parsed->functions) {
 				auto func_name = func->name.value;
 				if (parsed_program.name_to_func.contains(func_name)) {
 					auto msg
@@ -126,13 +133,8 @@ namespace vm::parser {
 				);
 			}
 
-			for (auto& type: parsed.value()->types) parsed_program.types.push_back(std::move(type));
+			for (auto& type: parsed->types) parsed_program.types.push_back(std::move(type));
 
-			if (!parsed || log.bad()) {
-				std::stringstream stream;
-				log.dumpLogAndClear(true, stream);
-				return std::unexpected(stream.str());
-			}
 		}
 
 		defineTypes(&parsed_program, log);
