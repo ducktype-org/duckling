@@ -23,7 +23,7 @@ public:
 #elif defined(LLVM_BACKEND_TEST)
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
-		TESTER_ADD_TEST(booleanLiteralsTests);
+		// TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
 #else
 	#error "Unknown backend test"

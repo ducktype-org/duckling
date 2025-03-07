@@ -108,9 +108,10 @@ namespace compiler::backend_vm {
 
 			variant_match(var_type) {
 				variant_case(vm::PrimitiveType, primitive) {
-					if (primitive.size != 8 && primitive.size != 4)
+					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
+					    && primitive.size != 1)
 						throw base::NotYetImplemented(base::strConcat(
-							"Primitives of sizes different than 64 | 32 bits are not "
+							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
 							"supported YET, name: ",
 							primitive.name,
 							", size: ",
@@ -120,6 +121,10 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalI64{ i64(ctx.lir_local_to_stack[output]) };
 					if (primitive.size == 4)
 						return vm::opargs::StackLocalI32{ i64(ctx.lir_local_to_stack[output]) };
+					if (primitive.size == 2)
+						return vm::opargs::StackLocalI16{ i64(ctx.lir_local_to_stack[output]) };
+					if (primitive.size == 1)
+						return vm::opargs::StackLocalI8{ i64(ctx.lir_local_to_stack[output]) };
 				}
 
 				variant_case(vm::PointerType, pointer) {

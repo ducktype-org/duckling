@@ -75,6 +75,8 @@ namespace compiler::backend_vm {
 			using namespace vm::opargs;
 			variant_match(arg) {
 				variant_case_novalue(Immediate) out << "imm";
+				variant_case_novalue(StackLocalI8) out << "l8";
+				variant_case_novalue(StackLocalI16) out << "l16";
 				variant_case_novalue(StackLocalI32) out << "l32";
 				variant_case_novalue(StackLocalI64) out << "l64";
 				variant_case_novalue(StackLocalPtr) out << "lptr";

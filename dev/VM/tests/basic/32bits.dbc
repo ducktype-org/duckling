@@ -66,6 +66,6 @@ function main {
 		mov_l64_r0 0;
 		output_l64 0;
 
-		ret_void;
+		ret;
 	}
 }
