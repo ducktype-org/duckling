@@ -205,8 +205,6 @@ namespace lang_def {
 		/**
 		 * @brief Initializes the key_spec_op module.
 		 * It will run automagically when InitObject is used.
-		 * It is currently registered in cpp files, since
-		 * it is a single file-module.
 		 */
 		void init();
 

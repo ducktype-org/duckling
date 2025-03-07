@@ -43,11 +43,11 @@ namespace init {
  * `RUN_BEFORE_MAIN(init::registerForInit(some_init_func));`
  *
  * If you place this macro in CPP file it will run:
- * * once if given cpp files is used
- * * it wont run if cpp file is never used (this is due to how linek behaves)
+ * * once if given cpp files is used,
+ * * zero times if cpp file is never used (this is due to how linker behaves).
  *
  * If yuu place this macro in header file it will run:
- * * once per each (used) translation unit that includes this header.
+ * * once per each (used) translation unit that includes the given header.
  *
  * When used for inits it is generally safer to put in in header files (e.g. some_module/init.hpp),
  * and include this header file in every cpp/hpp file that requires init to be done.
