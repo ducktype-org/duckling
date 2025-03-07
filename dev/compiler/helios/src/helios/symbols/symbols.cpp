@@ -58,15 +58,15 @@ namespace compiler::helios {
 		bool        dependent   = false;
 		SymbolKind  kind;
 
-		CRef<pst::LangElement> pst_element;
+		pst::AccessLocked<pst::LangElement> pst_element;
 
 		/**
 		 * Return associated pst_element cast to Stmt.
 		 * Panics if element is not a statement.
 		 */
 		[[nodiscard]]
-		CRef<pst::Stmt> stmtCast() const {
-			return dynamic_cast<const pst::Stmt*>(&*pst_element);
+		pst::Access<pst::Stmt> stmtCast(query::detail::ContextType& ctx) const {
+			return pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};
 
@@ -87,7 +87,7 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
-	CRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->stmtCast(); }
+	pst::Access<pst::Stmt> stmt(query::detail::ContextType& ctx, SymID id) { return getSymRef(id)->stmtCast(ctx); }
 
 	namespace {
 		/**
@@ -115,7 +115,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	Ref<SymbolData> makeSymbolFromStatement(ScopeID scope, CRef<pst::Stmt> stmt) {
+	Ref<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		switch (stmt->getStmtKind()) {
@@ -251,8 +251,8 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	Ref<SymbolData> makeSymbolFromPSTElement(ScopeID scope, CRef<pst::LangElement> element) {
-		if (auto parameter = dynamic_cast<const pst::FunParam*>(&*element)) {
+	Ref<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+		if (auto parameter = element.dynamicCast<pst::FunParam>()) {
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = parameter->getName(),
@@ -270,24 +270,24 @@ namespace compiler::helios {
 		 * @note This has to be consistant with QuerySymbolsInScope
 		 */
 		static ScopeID
-			getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+			getPSTElementParentScope(query::Context& ctx, pst::AccessLocked<pst::LangElement> element) {
 			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
+			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
 			CORE_ASSERT(
-				key.element.toOpt().has_value(),
+				key.element.unlock(ctx),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
 				"calling it)"
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element))
-				return PResult{ makeSymbolFromStatement(scope, stmt) };
+			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+				return PResult{ makeSymbolFromStatement(scope, std::move(stmt)) };
 			else
-				return PResult{ makeSymbolFromPSTElement(scope, key.element.toOpt().value()) };
+				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
 		// @OPT: opt it?
@@ -405,14 +405,14 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			switch (key.ref->kind) {
 			case SymbolKind::Namespace:
-				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast());
+				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast(ctx));
 
 
 			// Special cases for "wildcards":
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->pst_element->acceptVisitor(visitor);
+				key.ref->pst_element.unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default:
@@ -441,7 +441,7 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto alias_definition = dynamic_cast<const pst::Alias*>(&*getSymRef(key)->pst_element);
+			auto alias_definition = getSymRef(key)->pst_element.unlock(ctx).dynamicCast<pst::Alias>();
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -501,9 +501,9 @@ namespace compiler::helios {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
 			const auto const_symbol
-				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
+				= getSymRef(key)->pst_element.unlock(ctx).dynamicCast<pst::Const>();
 
-			return ctx.query<EvalExprToI64>({ const_symbol->getValue()->getExpr() });
+			return ctx.query<EvalExprToI64>(const_symbol->getValue().unlock(ctx)->getExpr());
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -523,7 +523,7 @@ namespace compiler::helios {
 				symbol_type_info = type;
 			}
 
-			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
+			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
 				auto tp = ctx.query<EvalExprToType>({ expr });
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
@@ -534,19 +534,20 @@ namespace compiler::helios {
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
 			void visitConst(const pst::Const& stmt) final {
-				setTypeOfSymbol(stmt.getType()->getExpr());
+				setTypeOfSymbol(stmt.getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void visitVariable(const pst::Variable& stmt) final {
-				setTypeOfSymbol(stmt.getType()->getExpr());
+				setTypeOfSymbol(stmt.getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void visitField(const pst::Field& field) final {
-				setTypeOfSymbol(field.getType()->getExpr());
+				setTypeOfSymbol(field.getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void visitFun(const pst::Fun& fun) final {
-				auto params = fun.getParams();
+				auto locked_params = fun.getParams();
+				auto params = locked_params.unlock(ctx);
 				auto ret    = fun.getRet();
 
 				std::vector<tsh::TypeInfo> param_types{};
@@ -565,7 +566,7 @@ namespace compiler::helios {
 				}
 				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
+					auto parsed = ctx.query<EvalExprToType>(ret.value().unlock(ctx)->getExpr());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -589,7 +590,7 @@ namespace compiler::helios {
 			}
 
 			void visitFunParam(const pst::FunParam& param) final {
-				setTypeOfSymbol(param.getType()->getExpr());
+				setTypeOfSymbol(param.getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};
 
@@ -597,7 +598,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeOf visitor(ctx);
-			symbol_ref->pst_element->acceptVisitor(visitor);
+			symbol_ref->pst_element.unlock(ctx)->acceptVisitor(visitor);
 
 			if_opt_some(visitor.symbol_type_info, type) return type;
 			return errors::HError(errors::Failed());
@@ -633,7 +634,7 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-			symbol_ref->pst_element->acceptVisitor(visitor);
+			symbol_ref->pst_element.unlock(ctx)->acceptVisitor(visitor);
 			return visitor.definition_type_info.value();
 		}
 
@@ -643,14 +644,18 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstVisitorPanicky {
+			query::Context& ctx;
+
+			ClassDataParser(query::Context& ctx): ctx(ctx) {}
+
 			base::Optional<base::StrID>                name;
-			base::Optional<MCRef<pst::ExprElement>>    base_class;
-			base::Optional<MCRef<pst::ImplementsList>> implements;
+			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
+			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
 
 			void visitClass(const pst::Class& stmt) final {
 				name = stmt.getName();
-				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
-				if (auto implements = stmt.getImplements(); implements != nullptr)
+				if (auto base = stmt.getBase().unlock(ctx); base) base_class = base;
+				if (auto implements = stmt.getImplements().unlock(ctx); implements)
 					this->implements = implements;
 			}
 		};
@@ -658,7 +663,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
 
-			auto class_stmt = getSymRef(key)->stmtCast();
+			auto class_stmt = getSymRef(key)->stmtCast(ctx);
 
 			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
 			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
@@ -688,7 +693,7 @@ namespace compiler::helios {
 				}
 			}
 			// Find the name
-			auto class_data_parser = ClassDataParser();
+			auto class_data_parser = ClassDataParser(ctx);
 			class_stmt->acceptVisitor(class_data_parser);
 			class_info.name = class_data_parser.name.value();
 
@@ -703,8 +708,8 @@ namespace compiler::helios {
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
-				for (auto&& interface: *implements) {
-					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
+				for (auto&& interface: *implements.unlock(ctx)) {
+					auto tp = ctx.query<EvalExprToType>(interface.unlock(ctx)->getExpr());
 					if (tp.hasValue()) {
 						class_info.implements.push_back(tp.value());
 					} else {
