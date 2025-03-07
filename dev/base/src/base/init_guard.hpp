@@ -39,5 +39,4 @@ namespace base::detail {
 	::base::detail::logInitFunction(__PRETTY_FUNCTION__);
 
 
-
 #define SIMPLE_INIT_GUARD_END _detail_init_state = ::base::detail::InitState::Initialized;

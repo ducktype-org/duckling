@@ -209,7 +209,7 @@ namespace lang_def {
 		 * it is a single file-module.
 		 */
 		void init();
-		
+
 		// note: it might be valid to put this init in cpp
 		// but it is safer to have it here.
 		RUN_BEFORE_MAIN(init::registerForInit(key_spec_op::init));
