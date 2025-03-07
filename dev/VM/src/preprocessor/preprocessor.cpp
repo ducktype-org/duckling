@@ -165,7 +165,7 @@ std::expected<vm::VMProgram, std::string>
 	auto maybe_parsed_program = parser::assemble(files);
 	if (!maybe_parsed_program) return std::unexpected(maybe_parsed_program.error());
 
-	auto is_valid = validator.validateProgram(maybe_parsed_program.value());
+	auto is_valid = validator::verify(maybe_parsed_program.value());
 	if (is_valid.has_value()) return std::unexpected(is_valid.value());
 
 	auto program = vm::changeParsedProgramToVMProgram(&*maybe_parsed_program);

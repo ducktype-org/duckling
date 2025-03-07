@@ -1,23 +1,16 @@
 #pragma once
 
+#include "base/optional.hpp"
 #include <preprocessor/parser/elements.hpp>
 #include <code_data/program.hpp>
 #include <diagnostic/logger.hpp>
 
 namespace vm::validator {
-	class Validator {
-	public:
-		Validator() = default;
-
-		base::Optional<std::string> validateProgram(const parser::ParsedProgram& program);
-
-	private:
-		void preprocessProgram(const parser::ParsedProgram& program, dia::Logger& log);
-		void validateMainExistance(const parser::ParsedProgram& program, dia::Logger& log);
-		void validateTailcallSignatures(const parser::ParsedProgram& program, dia::Logger& log);
-		void validateDuplicateFunctionDeclarations(
-			const parser::ParsedProgram& program, dia::Logger& log
-		);
-	};
-
+	/**
+	 * @brief Validates the program.
+	 * Returns an empty optional in case of success and an error string on failure.
+	 *
+	 * @return base::Optional<std::string>
+	 */
+	base::Optional<std::string> verify(const parser::ParsedProgram& program);
 }

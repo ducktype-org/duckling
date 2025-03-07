@@ -4,8 +4,6 @@
 #include <code_data/program.hpp>
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
-#include <expected>
-#include "validator/validator.hpp"
 #include "parser/parser.hpp"
 
 namespace vm {
@@ -26,7 +24,6 @@ namespace vm {
 
 	private:
 		bool                 validate_program;
-		validator::Validator validator;
 
 		/**
 		 * @brief Changes the program representation from parser representation
