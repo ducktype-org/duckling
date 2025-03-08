@@ -213,6 +213,16 @@ namespace assemble {
 		}
 
 		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI8 {
+			return { parseInt<i64, vm::opargs::StackLocalI8>(state) };
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI16 {
+			return { parseInt<i64, vm::opargs::StackLocalI16>(state) };
+		}
+
+		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI32 {
 			return { parseInt<i64, vm::opargs::StackLocalI32>(state) };
 		}
@@ -334,6 +344,12 @@ namespace assemble {
 			for (auto& arg: args) {
 				variant_match(arg.arg) {
 					variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
+					variant_case(vm::opargs::StackLocalI8, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
+					variant_case(vm::opargs::StackLocalI16, stack_offset_arg) {
+						out << stack_offset_arg.offset << " ";
+					}
 					variant_case(vm::opargs::StackLocalI32, stack_offset_arg) {
 						out << stack_offset_arg.offset << " ";
 					}
@@ -921,6 +937,8 @@ namespace assemble {
 	) {
 		variant_match(opcode_arg.arg) {
 			variant_case(vm::opargs::Immediate, imm) return imm.value;
+			variant_case(vm::opargs::StackLocalI8, offset) return offset.offset;
+			variant_case(vm::opargs::StackLocalI16, offset) return offset.offset;
 			variant_case(vm::opargs::StackLocalI32, offset) return offset.offset;
 			variant_case(vm::opargs::StackLocalI64, offset) return offset.offset;
 			variant_case(vm::opargs::StackLocalPtr, offset) return offset.offset;
