@@ -16,6 +16,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
+#include <init/init.hpp>
 #include "key_spec_op.hpp"
 
 namespace lang_def {
@@ -26,6 +27,8 @@ namespace lang_def {
 		 * Will be called automagically when InitObject is used.
 		 */
 		void init();
+
+		RUN_BEFORE_MAIN(init::registerForInit(operator_precedence::init));
 	}
 
 	enum class OperatorType { Binary, UnaryLeft, UnaryRight, Nullary };
