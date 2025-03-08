@@ -11,7 +11,7 @@ namespace vm {
 
 	/**
 	 * @brief Service that loads the program file to the VM.
-	 * Current preprocessor pipline is as follows:
+	 * Current preprocessor pipeline is as follows:
 	 * 1) Parse the program from a given list of files and create
 	 *    a ParsedProgram object, enriched in source positions
 	 *    of every opcode, type etc.

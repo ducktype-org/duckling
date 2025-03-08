@@ -179,5 +179,5 @@ std::expected<vm::VMProgram, std::string>
 	return program;
 }
 
-vm::Preprocessor::Preprocessor(VMProcess& process, bool validate_program):
+vm::Preprocessor::Preprocessor([[maybe_unused]] VMProcess& process, bool validate_program):
 	  validate_program(validate_program) {}
