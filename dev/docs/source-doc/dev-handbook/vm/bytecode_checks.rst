@@ -34,3 +34,11 @@ Jumps
 - Multiple labels with the same name
 - Label does not exist
 - Skip a block with a jump (legal)
+
+Functions
+---------
+
+- Too small next_arg_size
+- Multiple functions with the same name
+- Wrong return size
+- Too small arg size
