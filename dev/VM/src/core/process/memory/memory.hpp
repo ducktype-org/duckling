@@ -94,8 +94,19 @@ namespace vm {
 		}
 
 		inline auto destroyPointer(Pointer pointer) -> void {
-			std::unique_lock lock(*pointer.block->shared_mutex);
-			destroyReference(pointer.block.toOpt()->get());
+			if_opt_some(pointer.block.toOpt(), block) {
+				std::unique_lock lock(*block->shared_mutex);
+				destroyReference(block);
+			}
+		}
+
+		inline auto setPointer(Pointer& dst, Pointer src) -> void {
+			destroyPointer(dst);
+			if_opt_some(src.block.toOpt(), block) {
+				std::unique_lock lock(*block->shared_mutex);
+				block->refcount++;
+				dst = src;
+			}
 		}
 
 		// ======================== Requests ========================

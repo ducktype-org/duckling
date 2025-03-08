@@ -1,0 +1,26 @@
+type primitive: int64 8
+type pointer: p64 int64
+
+function main {
+    arg_size: 0;
+    next_arg_size: 0;
+    ret_size: 0;
+    
+    # x - 0
+    # y - 8
+    # p - 16
+    local_size: 32;
+    
+    code: {
+        init_type int64;           # x
+        init_type int64;           # y
+        init_type p64;             # p
+
+        ref_lptr_l64 16, 0;        # p := &x
+        mov_l64_imm 8, 42;         # y := 42
+        store_lptr_l64_ofs 16, 8;  # *p := y
+        output_l64 0;              # print(x)
+
+        ret_imm 0;
+    }
+}

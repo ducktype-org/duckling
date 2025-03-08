@@ -300,6 +300,7 @@ namespace vm {
 				thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
 			}
+			frame->local_offset_to_block_idx.clear();
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -329,6 +330,7 @@ namespace vm {
 				thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
 			}
+			frame->local_offset_to_block_idx.clear();
 
 			i32 ret_val = derefStack<i32>(local_stack, instr->arg0);
 
@@ -352,6 +354,7 @@ namespace vm {
 				thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
 			}
+			frame->local_offset_to_block_idx.clear();
 
 			// For explanation go to op_ret_l64.
 			frame--;
@@ -374,6 +377,7 @@ namespace vm {
 				thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
 			}
+			frame->local_offset_to_block_idx.clear();
 
 			// For explanation go to op_ret_l64.
 			frame--;
@@ -393,6 +397,9 @@ namespace vm {
 			auto type     = thread.process_types.getType(vm::TypeID(static_cast<u32>(instr->arg0)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
+			frame->local_offset_to_block_idx.put(
+				frame->local_stack_head, frame->block_stack.size()
+			);
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize();
 		}
@@ -406,6 +413,7 @@ namespace vm {
 			frame->block_stack.pop_back();
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
+			frame->local_offset_to_block_idx.erase(frame->local_stack_head);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -500,6 +508,16 @@ namespace vm {
 			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
 		}
 		FUNCTION_CONT(next);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_l64)(FUNCTION_ARGS) {
+		{
+			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u32>(instr->arg1)];
+			auto  block     = frame->block_stack[block_idx];
+			thread.process.getMemory().setPointer(pointer, Memory::getPointer(block));
+		}
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
