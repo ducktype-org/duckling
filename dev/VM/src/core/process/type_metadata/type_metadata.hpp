@@ -3,7 +3,9 @@
 #include "type.hpp"
 
 namespace vm {
-	class VMProcess;
+	namespace parser {
+		struct ParsedProgram;
+	}
 
 	/**
 	 * @brief Holds metadata about all types in the VCPU.
@@ -21,9 +23,9 @@ namespace vm {
 
 		TypeMetadataState state;
 
-	public:
 		TypeMetadata(): state(TypeMetadataState::AddingTypes) {}
 
+	public:
 		TypeRef addType(Type&& type);
 
 		/**
@@ -42,6 +44,6 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
 
-		friend class VMProcess;
+		friend parser::ParsedProgram;
 	};
 }

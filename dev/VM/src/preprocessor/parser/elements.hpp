@@ -179,7 +179,8 @@ namespace vm::parser {
 		std::vector<Box<Func>>                      functions;
 		std::vector<Box<Type>>                      types;
 		std::vector<Box<tokenizer::TokenFile>>      token_files;
-		Box<vm::TypeMetadata>                       type_metadata = makeBox<vm::TypeMetadata>();
+		Box<vm::TypeMetadata>                       type_metadata
+			= Box<vm::TypeMetadata>::fromPointer(new vm::TypeMetadata);
 
 		void dprint(std::ostream& out) const {
 			for (auto& type: types) {
