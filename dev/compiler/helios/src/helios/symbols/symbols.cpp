@@ -47,12 +47,16 @@ namespace compiler::helios {
 	struct SymbolData final {
 		// created when creating SymbolData:
 		ScopeID     scope;
+		
 		base::StrID name;
-		bool        anonymous   = false;
+		SymbolKind  kind;
+
+		// wildcard symbols are symbols like `using a.*`
 		bool        is_wildcard = false;
 		bool        is_alias    = false;
+
+		// dependent symbols are symbols that can't be "calculated" without some context, e.g. class fields
 		bool        dependent   = false;
-		SymbolKind  kind;
 
 		CRef<pst::LangElement> pst_element;
 
