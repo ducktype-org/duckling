@@ -179,10 +179,10 @@ DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalP
 // stores 64-bit primitive value under `lptr + ofs`
 // expects `ext_l64` to be the next instruction
 DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
-// stores reference to local 64-bit primitive in pointer
-DEF_OPCODE(ref_lptr_l64, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
 // passes additional argument to preceding opcode
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
+// stores reference to local object of any type T in pointer<T>
+DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 
 
 // terminates execution
