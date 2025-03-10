@@ -1,6 +1,7 @@
 #pragma once
 
 #include "blocking_queue.hpp"
+#include <code_data/program.hpp>
 
 #include <api/data/core_operation_error.hpp>
 #include <api/data/response.hpp>
@@ -12,7 +13,6 @@
 #include <core/process/memory/thread_stack.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <code_data/instruction.hpp>
-#include <code_data/code.hpp>
 
 #include <api/data/request.hpp>
 #include <api/data/status.hpp>
@@ -102,10 +102,8 @@ namespace vm {
 		/**
 		 * @brief Process link as well as some of it's resources.
 		 */
-		VMProcess&    process;
-		Memory&       process_memory;
-		TypeMetadata& process_types;
-
+		VMProcess& process;
+		Memory&    process_memory;
 
 		// This might change:
 		std::condition_variable pause_cv;
@@ -145,7 +143,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<Code> executing_code = nullptr;
+		MCRef<VMProgram> executing_program = nullptr;
 
 		/**
 		 * @TODO:
@@ -163,7 +161,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(const FuncData&);
+		u64 internalCallMain(CRef<FuncData>);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -182,7 +180,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<vm::Code> code);
+		bool initThreadAndRun(CRef<VMProgram> program);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -218,7 +216,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<Code>);
+		void run(CRef<VMProgram>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 

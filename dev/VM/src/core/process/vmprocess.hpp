@@ -11,7 +11,6 @@
 #include <core/process/memory/memory.hpp>
 #include <core/process/type_metadata/type_metadata.hpp>
 #include <core/process/proc_io.hpp>
-#include <code_data/code.hpp>
 #include <condition_variable>
 #include <shared_mutex>
 #include <base/optional.hpp>
@@ -19,6 +18,7 @@
 #include <core/thread/vmthread.hpp>
 #include <api/data/request.hpp>
 #include <preprocessor/preprocessor.hpp>
+#include <code_data/program.hpp>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -50,15 +50,17 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::Code> loaded_code = {};
+		base::Optional<vm::VMProgram> loaded_program = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 
-		Memory       memory;
-		TypeMetadata type_meta_data;
+		Memory memory;
 
 		// @TODO: Read Processors' docs and do the TODO there...
 		Preprocessor preprocessor;
+
+		//@TODO: For now assume that bytecode validation is always turned on.
+		static const bool VALIDATE_CODE = true;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.
@@ -153,9 +155,6 @@ namespace vm {
 		void onEvent(const api::ProcStatus& event) noexcept override;
 
 		Memory& getMemory();
-
-		// This should be moved to a code/program object...
-		TypeMetadata& getTypeMetadata();
 
 		/**
 		 * Can be safely called from Execution Thread only
