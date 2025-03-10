@@ -4,7 +4,7 @@
 #include <variant>
 #include <helios/scopes/scopes.hpp>
 #include <typesystem/higher/types.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -101,20 +101,20 @@ namespace compiler::mir {
 
 		// Locals without a helios_id are locals created for temporary values
 		base::Optional<helios::SymID> helios_id;
-		tsh::TypeDesc<>               type;
+		tsh::ComponentType            type;
 		helios::ScopeID               lifetime_scope;
 
 	private:
 		// @note: Constructing MirLocal from helios_id
 		// might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id, tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+		MirLocal(helios::SymID helios_id, tsh::ComponentType type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
-		MirLocal(tsh::TypeDesc<> type, helios::ScopeID lifetime_scope):
+		MirLocal(tsh::ComponentType type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id({}),
 			  type(type),
@@ -287,7 +287,7 @@ namespace compiler::mir {
 	 */
 	struct Function final {
 		base::StrID                  name;
-		tsh::TypeInfo                return_type;
+		tsh::AbstractType            return_type;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -309,7 +309,7 @@ namespace compiler::mir {
 
 		Function(
 			base::StrID                  name,
-			tsh::TypeInfo                return_type,
+			tsh::AbstractType            return_type,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,

@@ -32,24 +32,31 @@
 
 namespace base {
 	namespace detail {
-		template<template<typename...> class Template, typename>
-		struct IsInstantiationOfImpl: std::false_type {};
-
-		template<template<typename...> class Template, typename... Args>
-		struct IsInstantiationOfImpl<Template, Template<Args...>>: std::true_type {};
-
-		template<class, template<class> class>
+		template<class, class>
 		struct IsOfSameClassImpl: public std::false_type {};
 
-		template<class T2, template<class> class U>
-		struct IsOfSameClassImpl<U<T2>, U>: public std::true_type {};
+		template<class T1, class T2, template<class> class U>
+		struct IsOfSameClassImpl<U<T1>, U<T2>>: public std::true_type {};
 	}
 
 	/**
 	 * @brief Checks if type `T` is an instantiation of template `Template`.
+	 * @note This concept works only for templates that have only type template parameters
 	 */
-	template<template<typename...> class Template, typename T>
-	concept IsInstantiationOf = detail::IsInstantiationOfImpl<Template, T>::value;
+	template<typename T, template<typename...> typename Template>
+	concept IsInstantiationOf = requires(T t) {
+		[]<typename... Args>(Template<Args...>) requires std::is_same_v<Template<Args...>, T> {}(t);
+	};
+
+	/**
+	 * @brief Checks if type `T` is an instantiation of template `Template`.
+	 * @note This concept works only for templates that take one type and one value template
+	 * parameter
+	 */
+	template<typename T, template<typename, auto> class Template>
+	concept IsInstantiationOfTypeValue = requires(T t) {
+		[]<typename U, auto V>(Template<U, V>) requires std::is_same_v<Template<U, V>, T> {}(t);
+	};
 
 	/**
 	 * @brief Checks if type `T` is an integral or floating point number.
@@ -72,7 +79,7 @@ namespace base {
 	 * static_assert(IsOfSameClass<A<int>, A<bool>>); // passes
 	 * @n static_assert(IsOfSameClass<A<int>, B<int>>);  // fails
 	 */
-	template<class TypeA, template<class> class TypeB>
+	template<class TypeA, class TypeB>
 	concept IsOfSameClass = detail::IsOfSameClassImpl<TypeA, TypeB>::value;
 
 	/**
@@ -86,24 +93,26 @@ namespace base {
 	 *
 	 * @note From https://stackoverflow.com/a/56766138
 	 */
-	template<class T>
+	template<class T, bool pretty = true>
 	constexpr auto typeName() {
 		std::string_view name, prefix, suffix;
 #ifdef __clang__
 		name   = __PRETTY_FUNCTION__;
 		prefix = "auto base::typeName() [T = ";
-		suffix = "]";
+		suffix = ", pretty = true]";
 #elif defined(__GNUC__)
 		name   = __PRETTY_FUNCTION__;
 		prefix = "constexpr auto base::typeName() [with T = ";
-		suffix = "]";
+		suffix = "; bool pretty = true]";
 #elif defined(_MSC_VER)
 		name   = __FUNCSIG__;
 		prefix = "auto __cdecl base::type_name<";
-		suffix = ">(void)";
+		suffix = ",true>(void)";
 #endif
-		name.remove_prefix(prefix.size());
-		name.remove_suffix(suffix.size());
+		if constexpr (pretty) {
+			name.remove_prefix(prefix.size());
+			name.remove_suffix(suffix.size());
+		}
 		return name;
 	}
 }

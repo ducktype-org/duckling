@@ -12,7 +12,6 @@
 #include <filesystem/file.hpp>
 #include <base/variant.hpp>
 #include <base/int_conv.hpp>
-#include <base/define_helper.hpp>
 
 PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"

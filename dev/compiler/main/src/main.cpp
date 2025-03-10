@@ -21,11 +21,15 @@
 #include <init/init.hpp>
 #include <driver/driver.hpp>
 
+constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
+constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
+
 namespace {
 	/**
 	 * @brief Whether main should throw compiler exceptions.
+	 * Used by let-it-throw option.
 	 */
-	bool throwing_main = true;
+	constinit bool throwing_main = false;
 }
 
 /**
@@ -126,15 +130,13 @@ clap::Clap getClapForMain() {
 	auto clap = config::standardOptions();
 
 	// custom options of main:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
-			.build()
-	);
+	clap.add(clap::ParamBuilder::ofFlag()
+	             .addLongName(LET_IT_THROW_NAME)
+	             .addShortDesc("Disables exception handling in main (debug option).")
+	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                          "It should be used for debugging only in order to preserve "
+	                          "stack-trace. It can prevent stack-unwinding from happening.")
+	             .build());
 
 	return clap;
 }
@@ -149,8 +151,10 @@ clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) 
 	// standard options:
 	auto res = config::configureWith(clap, args);
 
-	// custom options of main:
-	throwing_main = res.isFlag("let-it-throw");
+	CORE_ASSERT(
+		throwing_main == res.isFlag("let-it-throw"),
+		"Internal error: let-it-throw flag was not parsed correctly."
+	);
 
 	return res;
 }
@@ -371,22 +375,37 @@ int mainProcedure(int argc, const char* const* argv) {
 }
 
 int main(int argc, const char* argv[]) {
+	// We have to see if --let-it-throw was passed
+	// before anything else happens.
+	// Thats why we do it here, bypassing typical clap usage.
+	// --let-it-throw is still included in clap options.
+	// for showing help.
+
+	throwing_main = false;
+	for (int i = 1; i < argc; i++) {
+		if (std::string_view(argv[i]) == LET_IT_THROW_OPTION) {
+			throwing_main = true;
+			break;
+		}
+	}
+
+	if (throwing_main) return mainProcedure(argc, argv);
+
+	// else we just catch exceptions and print them:
+
 	try {
 		return mainProcedure(argc, argv);
 	} catch (const base::Exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (const std::exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (...) {
-		if (throwing_main) throw;
 		std::cerr
 			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
 		return 1;

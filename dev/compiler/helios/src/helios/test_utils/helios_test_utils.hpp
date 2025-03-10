@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vector>
-#include <tester/tester.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 
@@ -40,7 +39,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope);
+	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the type associated with the last symbol in a symbol chain in a given scope.
@@ -49,7 +48,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	tsh::AbstractType getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * @brief returns hout-expr of the initialization value of given const.

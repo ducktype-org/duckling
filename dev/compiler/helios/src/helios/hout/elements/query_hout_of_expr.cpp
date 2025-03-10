@@ -112,8 +112,8 @@ namespace compiler::helios::code {
 				// @TODO: this whole section could be moved to a separate file
 				// // when refactoring it remember about unaryBuiltin
 
-				auto lhs_type = lhs->type_desc;
-				auto rhs_type = rhs->type_desc;
+				auto lhs_type = lhs->expression_type;
+				auto rhs_type = rhs->expression_type;
 
 				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 				bool is_rhs_integer = rhs_type.getType().getKind() == tsh::Kind::Integral;
@@ -124,8 +124,8 @@ namespace compiler::helios::code {
 					return {};
 				}
 
-				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
-				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
+				auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
+				auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
 				// we only do the most simplest version here:
 				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
@@ -162,7 +162,7 @@ namespace compiler::helios::code {
 				// note: this is mock that works only for very simple int op int.
 				// when refactoring it remember about binaryBuiltin
 
-				auto expr_type = expr->type_desc;
+				auto expr_type = expr->expression_type;
 
 				if (expr_type.getType().getKind() != tsh::Kind::Integral) {
 					// we don't have builtins for this case for now:

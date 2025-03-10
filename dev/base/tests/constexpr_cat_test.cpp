@@ -1,5 +1,4 @@
 #include <tester/tester.hpp>
-#include <filesystem/file.hpp>
 #include <base/constexpr_cat.hpp>
 
 class ConstexprCatTest: public tester::TestSuite {
