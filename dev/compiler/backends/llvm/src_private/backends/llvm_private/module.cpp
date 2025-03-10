@@ -5,7 +5,7 @@
 #include "llvm_lowering.hpp"
 #include "compile_llvm.hpp"
 #include "module_impl.hpp"
-#include "../llvm_backend.hpp"
+#include <backends/llvm/llvm_backend.hpp>
 
 namespace base::extend {
 	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
