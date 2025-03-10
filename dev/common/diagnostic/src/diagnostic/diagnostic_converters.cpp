@@ -45,6 +45,8 @@ namespace dia {
 			return "Lookup";
 		case TypeCheck:
 			return "Type checking";
+		case StaticVerification:
+			return "Static verification";
 		case CompileTimeExecution:
 			return "Compile time execution";
 		case SafetyViolation:

@@ -12,7 +12,6 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multipleLabels);
 		TESTER_ADD_TEST(invalidOpcode);
-		TESTER_ADD_TEST(noMain);
 		TESTER_ADD_TEST(repeatedTypes);
 		TESTER_ADD_TEST(noSemicolon);
 		TESTER_ADD_TEST(labelNotFound);
@@ -64,15 +63,6 @@ private:
 			"invalid_opcode.dbc",
 			{
 				base::strConcat(vm::parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
-			}
-		);
-	}
-
-	void noMain() {
-		parseInvalidDbc(
-			"no_main.dbc",
-			{
-				vm::parser::NoMainError::ERR_MSG,
 			}
 		);
 	}

@@ -16,8 +16,6 @@
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }
 
-	TypeMetadata& VMProcess::getTypeMetadata() { return type_meta_data; }
-
 	ServiceManager& VMProcess::getServices() { return service_manager; }
 
 	api::ProcStatus VMProcess::getStatus() {
@@ -29,10 +27,10 @@ namespace vm {
 		VMProcess::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = preprocessor.getCode(path);
+		auto code_result = preprocessor.getProgram(path);
 
 		if (code_result.has_value()) {
-			loaded_code = base::Optional(code_result.value());
+			loaded_program.emplace(std::move(code_result.value()));
 			return api::Response(api::response::Empty());
 		} else {
 			return cpp::failure(api::LoadProgramError{ code_result.error() });
@@ -41,10 +39,10 @@ namespace vm {
 
 	cpp::result<api::Response, api::CoreOperationError> VMProcess::run() {
 		std::unique_lock lock(rw_global);
-		if (!loaded_code.has_value())
+		if (!loaded_program.has_value())
 			return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_code));
+		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_program));
 		if (!response) return cpp::failure(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -165,7 +163,7 @@ namespace vm {
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
 				auto res
-					= type_meta_data.getTypeByName(base::StrID(type_request.type_name.c_str()));
+					= loaded_program->getTypeByName(base::StrID(type_request.type_name.c_str()));
 				match_optional(res) {
 					opt_some(value) { response = value; }
 					opt_none {
@@ -209,7 +207,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this) {
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this, VALIDATE_CODE) {
 		vm_threads.emplace_back(*this);
 	}
 

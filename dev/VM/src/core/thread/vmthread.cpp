@@ -7,7 +7,6 @@
 #include <base/optional.hpp>
 #include <code_data/instruction.hpp>
 #include <code_data/opcodes.hpp>
-#include <code_data/code.hpp>
 #include <core/process/type_metadata/type.hpp>
 #include <core/supervisor/supervisor.hpp>
 #include <core/kill_process_exception.hpp>
@@ -19,13 +18,13 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+#include <iostream>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
-		  process_memory(process.getMemory()),
-		  process_types(process.getTypeMetadata()) {}
+		  process_memory(process.getMemory()) {}
 
 	/**
 	 * @brief Tail call written function that handles the execution pause request.
@@ -92,7 +91,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(const FuncData& main_func) {
+	u64 VMThread::internalCallMain(CRef<FuncData> main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -111,16 +110,16 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func.stack_size;
+		runtime_data.local_stack_top += main_func->stack_size;
 
 		frame->next_args = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func.next_arg_size;
+		runtime_data.local_stack_top += main_func->next_arg_size;
 
-		auto* instr = main_func.bc.data();
+		auto* instr = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
@@ -152,7 +151,8 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+
 
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
@@ -177,7 +177,8 @@ namespace vm {
 			}
 		}
 	End:
-		return runtime_data.frame_stack_base->regs.p64_reg_0;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+
 
 #endif
 	}
@@ -262,11 +263,13 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(CRef<Code> code) {
+	void VMThread::run(CRef<VMProgram> program) {
 		respondExecutionRequest(ExecutionResponse::Running);
-		executing_code = code;
+		executing_program = program;
 		try {
-			internalCallMain(executing_code->functions[code->main_id]);
+			internalCallMain(
+				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
+			);
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
@@ -326,8 +329,8 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_code->functions.size(); ++index) {
-					const auto& func = executing_code->functions[index];
+				for (size_t index = 0; index < executing_program->getNumberOfFunctions(); ++index) {
+					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
 							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
@@ -360,13 +363,13 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(CRef<vm::Code> code) {
+	bool VMThread::initThreadAndRun(CRef<vm::VMProgram> program) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 
-		exec_thread = std::thread([this, code] {
+		exec_thread = std::thread([this, program] {
 			try {
-				run(code);
+				run(program);
 
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
