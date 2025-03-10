@@ -34,7 +34,7 @@ namespace base {
 	const char* LogicError::what() const noexcept { return message.data(); }
 
 	NotYetImplemented::NotYetImplemented(const std::string& message):
-		  message("The feature is not implemented yet: ") {
+		  message("The feature is not implemented yet.\n") {
 		this->message += message;
 		this->message += '\0';
 	}

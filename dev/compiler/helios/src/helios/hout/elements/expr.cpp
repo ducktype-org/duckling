@@ -220,8 +220,11 @@ namespace compiler::helios::code {
 	}
 
 	namespace {
+		/**
+		 * @brief Infers a resulting type from a call operation.
+		 * @note This will be here until we have a proper overload resolution.
+		 */
 		tsh::AbstractType getCallResultType(tsh::AbstractType tp) {
-			// @TODO: Handle overload resolution
 			if (tp.getKind() == tsh::Kind::Function) {
 				auto func = tsh::FunctionAbstractType(tp);
 				return func.getResultType();
