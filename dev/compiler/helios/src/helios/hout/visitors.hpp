@@ -4,7 +4,7 @@
 namespace compiler::helios::code {
 
 // visitors:
-#define HOUT_VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
+#define HOUT_VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0
 
 	/**
 	 * HoutStmtVisitor is a simple base class for VisitorPattern in `hout::Stmt`s.
@@ -38,6 +38,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD(LinkedIdentifierExpr);
+		HOUT_VISITOR_METHOD(CallExpr);
 
 		virtual ~HoutExprVisitor() = default;
 	};
@@ -81,6 +82,7 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD_PANIC(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_PANIC(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_PANIC(LinkedIdentifierExpr);
+		HOUT_VISITOR_METHOD_PANIC(CallExpr);
 	};
 
 	class HoutExprVisitorEmpty: public HoutExprVisitor {
@@ -95,5 +97,6 @@ namespace compiler::helios::code {
 		HOUT_VISITOR_METHOD_EMPTY(TupleTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(VariantTypeConstructorExpr);
 		HOUT_VISITOR_METHOD_EMPTY(LinkedIdentifierExpr);
+		HOUT_VISITOR_METHOD_EMPTY(CallExpr);
 	};
 }

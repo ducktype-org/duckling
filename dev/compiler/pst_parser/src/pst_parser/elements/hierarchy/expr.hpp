@@ -5,6 +5,7 @@
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
 
+#include <lexer/token.hpp>
 #include "meta.hpp"
 #include "lists.hpp"           // IWYU pragma: keep
 #include "not_statements.hpp"  // IWYU pragma: keep
@@ -311,6 +312,10 @@ namespace pst {
 			~Call() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]] lexer::Token::BracketType getType() const;
+
+			[[nodiscard]] MCRef<CallList> getArgs() const;
 
 			[[nodiscard]]
 			std::string elementType() const override {

@@ -39,6 +39,11 @@ namespace compiler::helios {
 				output(expr.value_type);
 			}
 
+			void visitCallExpr(const code::CallExpr& call) final {
+				// @TODO: I'm not entirely sure this is correct.
+				output(call.expression_type.getType());
+			}
+
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
 				// @todo this only works if the identifier is a class.
 				// this should be changed in the future

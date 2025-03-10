@@ -5,6 +5,13 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
+#include <base/exceptions.hpp>
+#include <base/stringifyable_enum.hpp>
+#include <helios/symbols/symbols.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/kind.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <query_framework/query_impl.hpp>
 
@@ -23,6 +30,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
+	EXPR_VISITOR(CallExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
@@ -209,5 +217,48 @@ namespace compiler::helios::code {
 			expr->debugPrint(out);
 			break;
 		}
+	}
+
+	namespace {
+		tsh::AbstractType getCallResultType(tsh::AbstractType tp) {
+			// @TODO: Handle overload resolution
+			if (tp.getKind() == tsh::Kind::Function) {
+				auto func = tsh::FunctionAbstractType(tp);
+				return func.getResultType();
+			}
+			if (tp.getKind() == tsh::Kind::Class)
+				throw base::NotYetImplemented("Calling class type");
+			CORE_PANIC("Invalid kind to call: ", base::enumToStr(tp.getKind()));
+		}
+	}
+
+	CallExpr::CallExpr(
+		query::Context&,
+		ScopeID                     scope,
+		Box<LinkedIdentifierExpr>   callee,
+		std::deque<base::Box<Expr>> arguments
+	):
+		  Expr(
+			  scope,
+
+			  tsh::ExpressionType(
+				  getCallResultType(callee->expression_type.getType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  callee(std::move(callee)),
+		  callee_symbol(this->callee->symbols.back()),
+		  arguments(std::move(arguments)) {}
+
+	void CallExpr::debugPrint(std::ostream& out) const {
+		callee->debugPrint(out);
+		out << "(";
+		bool add_comma = false;
+		for (auto&& arg: arguments) {
+			if (add_comma) out << ", ";
+			arg->debugPrint(out);
+			add_comma = true;
+		}
+		out << ")";
 	}
 }
