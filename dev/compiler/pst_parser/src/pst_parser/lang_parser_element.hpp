@@ -37,9 +37,6 @@ namespace pst {
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
 
-		template<std::derived_from<LangElement> Element>
-		friend class LangElementAccess;
-
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {}

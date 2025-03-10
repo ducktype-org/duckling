@@ -12,7 +12,7 @@
 
 #define PSTVISITOR_METHOD(name)                        \
 	bool visited_##name = false;                       \
-	void visit##name(const pst::name& stmt) override { \
+	void visit##name(pst::Access<pst::name> stmt) override { \
 		if (!visited_##name) {                         \
 			visited_##name = true;                     \
 			counter++;                                 \
@@ -205,8 +205,8 @@ private:
 		auto fun = pst.getRootElement()
 		               .illegalAccess()
 		               ->getStatements()[0]
-		               .cast<pst::Fun>()
-		               .illegalAccess();
+					   .illegalAccess()
+		               .dynamicCast<pst::Fun>();
 		ASSERT_TRUE(fun);
 
 		auto params = fun->getParams().illegalAccess();
@@ -219,9 +219,9 @@ private:
 
 			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
 
-			void visitFunParam(const pst::FunParam& param) override {
+			void visitFunParam(pst::Access<pst::FunParam> param) override {
 				counter++;
-				good_name = param.getName() == expected_name;
+				good_name = param->getName() == expected_name;
 			}
 		};
 

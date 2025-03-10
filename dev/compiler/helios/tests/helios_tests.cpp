@@ -702,13 +702,13 @@ private:
 			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
 				ASSERT_TRUE(expr->isTopLevel());
 				auto expected_scope
-					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
+					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr.toMRef());
 
 				// this can't be auto because of recursive lambda
 				std::function<void(CRef<pst::LangElement>)> sub_test_expr =
 					[&](CRef<pst::LangElement> inner_expr) {
 						auto inner_scope
-							= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
+							= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(inner_expr.toMRef());
 						ASSERT_EQUAL(expected_scope, inner_scope);
 
 						for (auto sub_inner: inner_expr->viewSubElements()) {
@@ -725,7 +725,7 @@ private:
 			};
 
 			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
-				pst->getRootElement().toOpt().value()
+				&*pst->getRootElement().illegalAccess()
 			);
 
 			// We test that each expr_holder and all its sub expressions
@@ -736,7 +736,7 @@ private:
 					test_expr(expr_holder);
 				} else {
 					// test that element has a top-expr parent
-					auto element = expr_holder->getParent().value();
+					auto element = expr_holder->getParent().illegalAccess();
 
 					while (true) {
 						if (auto holder = dynamic_cast<const pst::ExprHolder*>(&*element)) {
@@ -747,7 +747,7 @@ private:
 						}
 						// if parent doesn't exist, we will
 						// hit panic here at some point:
-						element = element->getParent().value();
+						element = element->getParent().illegalAccess();
 					}
 				}
 			}

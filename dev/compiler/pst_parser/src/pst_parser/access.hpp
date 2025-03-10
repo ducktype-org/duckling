@@ -29,14 +29,16 @@ namespace pst {
 		friend class AccessLocked;
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class Access;
+		friend Element;
 
 		MCRef<Element> ref;
 
 		Access(MCRef<Element> ref): ref(ref) {}
+		Access(const Element& ref): ref(&ref) {}
 
 	public:
 		Access()               = delete;
-		Access(const Access&)  = delete;
+		Access(const Access&)  = default;
 		Access(Access&& other) = default;
 
 		template<typename E>
@@ -70,9 +72,8 @@ namespace pst {
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
 		friend class LangElement;
-
-		template<std::derived_from<LangElement> T = LangElement>
-		struct GenericPSTQueryKey;
+		template<std::derived_from<LangElement> T>
+		friend struct GenericPSTQueryKey;
 
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
 
@@ -82,19 +83,14 @@ namespace pst {
 		AccessLocked(AccessLocked&&)      = default;
 
 		template<typename E>
-		AccessLocked(const Access<E>& oth) noexcept: ref(oth.ref) {}
+		AccessLocked(const Access<E> oth) noexcept: ref(oth.ref) {}
 
 		template<typename T>
-		AccessLocked(const AccessLocked<T>& other) noexcept: ref(other.ref) {}
-
-		template<std::derived_from<Element> Desc>
-		AccessLocked<Desc> cast() const {
-			return { dynamic_cast<const Desc*>(&*ref) };
-		}
+		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref) {}
 
 		Access<Element> illegalAccess() const { return { ref }; }
 
-		Access<Element> unlock(query::detail::ContextType& ctx) const {
+		Access<Element> unlock(query::Context& ctx) const {
 			detail::notifyContext(ctx);
 			return { ref };
 		}

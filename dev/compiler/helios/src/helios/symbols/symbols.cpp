@@ -87,8 +87,12 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
 
-	pst::Access<pst::Stmt> stmt(query::detail::ContextType& ctx, SymID id) {
+	pst::Access<pst::Stmt> stmt(query::Context& ctx, SymID id) {
 		return getSymRef(id)->stmtCast(ctx);
+	}
+
+	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
+		return getSymRef(id)->pst_element;
 	}
 
 	namespace {
@@ -122,7 +126,7 @@ namespace compiler::helios {
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
-			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
+			auto function = stmt.dynamicCast<pst::Fun>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = function->getName(),
@@ -131,7 +135,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Namespace: {
-			auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*stmt);
+			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = namespace_stmt->getName(),
@@ -140,7 +144,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Const: {
-			auto const_stmt = dynamic_cast<const pst::Const*>(&*stmt);
+			auto const_stmt = stmt.dynamicCast<pst::Const>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = const_stmt->getName(),
@@ -149,7 +153,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Class: {
-			auto class_stmt = dynamic_cast<const pst::Class*>(&*stmt);
+			auto class_stmt = stmt.dynamicCast<pst::Class>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = class_stmt->getName(),
@@ -158,7 +162,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Alias: {
-			auto alias = dynamic_cast<const pst::Alias*>(&*stmt);
+			auto alias = stmt.dynamicCast<pst::Alias>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = alias->getName(),
@@ -168,7 +172,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Using: {
-			auto using_stmt = dynamic_cast<const pst::Using*>(&*stmt);
+			auto using_stmt = stmt.dynamicCast<pst::Using>();
 			return putInSymtable(SymbolData{
 				.scope = scope,
 				.name
@@ -181,7 +185,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Variable: {
-			auto variable = dynamic_cast<const pst::Variable*>(&*stmt);
+			auto variable = stmt.dynamicCast<pst::Variable>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = variable->getName(),
@@ -193,7 +197,7 @@ namespace compiler::helios {
 		}
 		case pst::StmtKind::Import: {
 			// For now only non-wildcard import exist
-			auto import = dynamic_cast<const pst::Import*>(&*stmt);
+			auto import = stmt.dynamicCast<pst::Import>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = import->getAlias(),
@@ -204,7 +208,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Method: {
-			auto method = dynamic_cast<const pst::Method*>(&*stmt);
+			auto method = stmt.dynamicCast<pst::Method>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = method->getName(),
@@ -213,7 +217,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Field: {
-			auto field = dynamic_cast<const pst::Field*>(&*stmt);
+			auto field = stmt.dynamicCast<pst::Field>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = field->getName(),
@@ -222,7 +226,7 @@ namespace compiler::helios {
 			});
 		}
 		case pst::StmtKind::Constructor: {
-			auto constructor = dynamic_cast<const pst::Constructor*>(&*stmt);
+			auto constructor = stmt.dynamicCast<pst::Constructor>();
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = constructor->getName(),
@@ -380,8 +384,8 @@ namespace compiler::helios {
 				result_scope.emplace(out);
 			}
 
-			void visitUsing(const pst::Using& using_stmt) final {
-				auto names      = using_stmt.getPointed();
+			void visitUsing(pst::Access<pst::Using> using_stmt) final {
+				auto names      = using_stmt->getPointed();
 				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
@@ -391,10 +395,10 @@ namespace compiler::helios {
 				output(ret);
 			}
 
-			void visitImport(const pst::Import& import_stmt) final {
+			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt.getModulePath()
+										   ctx, module(scope(key)), import_stmt->getModulePath()
 				)
 				                           .value();
 
@@ -528,7 +532,7 @@ namespace compiler::helios {
 			}
 
 			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
-				auto tp = ctx.query<EvalExprToType>({ expr });
+				auto tp = ctx.query<EvalExprToType>(pst::AccessLocked<pst::ExprElement>(expr));
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
@@ -537,22 +541,22 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> symbol_type_info;
 
-			void visitConst(const pst::Const& stmt) final {
-				setTypeOfSymbol(stmt.getType().unlock(ctx)->getExpr().unlock(ctx));
+			void visitConst(pst::Access<pst::Const> stmt) final {
+				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitVariable(const pst::Variable& stmt) final {
-				setTypeOfSymbol(stmt.getType().unlock(ctx)->getExpr().unlock(ctx));
+			void visitVariable(pst::Access<pst::Variable> stmt) final {
+				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitField(const pst::Field& field) final {
-				setTypeOfSymbol(field.getType().unlock(ctx)->getExpr().unlock(ctx));
+			void visitField(pst::Access<pst::Field> field) final {
+				setTypeOfSymbol(field->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitFun(const pst::Fun& fun) final {
-				auto locked_params = fun.getParams();
+			void visitFun(pst::Access<pst::Fun> fun) final {
+				auto locked_params = fun->getParams();
 				auto params        = locked_params.unlock(ctx);
-				auto ret           = fun.getRet();
+				auto ret           = fun->getRet();
 
 				std::vector<tsh::TypeInfo> param_types{};
 				param_types.reserve(params->size());
@@ -581,20 +585,20 @@ namespace compiler::helios {
 				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
 			}
 
-			void visitClass(const pst::Class&) final {
+			void visitClass(pst::Access<pst::Class>) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
 			}
 
-			void visitNamespace(const pst::Namespace&) final {
+			void visitNamespace(pst::Access<pst::Namespace>) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 
-			void visitImport(const pst::Import&) final {
+			void visitImport(pst::Access<pst::Import>) final {
 				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(const pst::FunParam& param) final {
-				setTypeOfSymbol(param.getType().unlock(ctx)->getExpr().unlock(ctx));
+			void visitFunParam(pst::Access<pst::FunParam> param) final {
+				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};
 
@@ -629,7 +633,7 @@ namespace compiler::helios {
 
 			base::Optional<tsh::TypeInfo> definition_type_info;
 
-			void visitClass(const pst::Class&) final {
+			void visitClass(pst::Access<pst::Class>) final {
 				definition_type_info = ctx.query<tsh::QueryClassType>(key);
 			}
 		};
@@ -656,10 +660,10 @@ namespace compiler::helios {
 			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
 			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
 
-			void visitClass(const pst::Class& stmt) final {
-				name = stmt.getName();
-				if (auto base = stmt.getBase().unlock(ctx); base) base_class = base;
-				if (auto implements = stmt.getImplements().unlock(ctx); implements)
+			void visitClass(pst::Access<pst::Class> stmt) final {
+				name = stmt->getName();
+				if (auto base = stmt->getBase().unlock(ctx); base) base_class = base;
+				if (auto implements = stmt->getImplements().unlock(ctx); implements)
 					this->implements = implements;
 			}
 		};

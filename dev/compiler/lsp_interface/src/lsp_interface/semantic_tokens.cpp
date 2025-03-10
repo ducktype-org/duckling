@@ -81,7 +81,7 @@ namespace lsp {
 		getSemanticTokens(element, tokens);
 
 		std::vector<std::string> token_strings(tokens.size());
-		for (int i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
+		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
 
 		return jsonList(token_strings);
 	}

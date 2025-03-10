@@ -648,7 +648,7 @@ namespace pst {
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			auto getChain() const {
+			auto getExpressions() const {
 				using namespace std::views;
 				static auto give_one
 					= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };

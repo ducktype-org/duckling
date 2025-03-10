@@ -12,6 +12,7 @@ add_library(PstParser
 	src/pst_parser/parser.cpp
 	src/pst_parser/lang_parser_base.cpp
 	src/pst_parser/test_utils/pst_test_utils.cpp
+	src/pst_parser/access.cpp
 
 	# LSP files are commented out for merge purposes:
 	# src/pst_parser/lsp_elements/lsp_elements.cpp

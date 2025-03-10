@@ -3,6 +3,7 @@
 #include "lang_parser_element.hpp"
 #include <base/ref.hpp>
 #include <concepts>
+#include <pst_parser/access.hpp>
 
 namespace pst {
 	/**
@@ -14,7 +15,9 @@ namespace pst {
 		template<typename E>
 		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element){};
 		template<typename E>
-		GenericPSTQueryKey(const E& element) noexcept: element(element){};
+		GenericPSTQueryKey(const Access<E>& element) noexcept: element(element){};
+		template<typename E>
+		GenericPSTQueryKey(const MCRef<E>& ref) noexcept: element(ref){};
 		/**
 		 * @brief Element for which the query is run.
 		 * @TODO: this is an MCRef, since all keys ware defined like this
@@ -28,6 +31,8 @@ namespace pst {
 			return element.illegalAccess()->getID().asInt();
 		}
 
-		bool operator==(const GenericPSTQueryKey&) const = default;
+		bool operator==(const GenericPSTQueryKey& other) const {
+			return &*element.illegalAccess() == &*other.element.illegalAccess();
+		}
 	};
 }

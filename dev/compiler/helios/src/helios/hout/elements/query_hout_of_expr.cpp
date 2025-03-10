@@ -17,18 +17,17 @@ namespace compiler::helios::code {
 		 * QueryHoutOfExpr is mostly a wrapper for future cache.
 		 * @note This is a private function of this file.
 		 */
-		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element);
+		ExprConstructionResult fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element);
 
-		void getVariantSubExprsInPlace(
-			MCRef<pst::ExprElement> expr, std::vector<CRef<pst::ExprElement>>& sub_exprs_append
+		void getVariantSubExprsInPlace(query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr, std::vector<pst::AccessLocked<pst::ExprElement>>& sub_exprs_append
 		) {
-			if (auto bin_op = dynamic_cast<const pst::expr::BinaryOperator*>(&*expr)) {
+			if (auto bin_op = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				if (bin_op->getOperator().str() == "|") {
-					getVariantSubExprsInPlace(bin_op->getLeftOperand(), sub_exprs_append);
-					getVariantSubExprsInPlace(bin_op->getRightOperand(), sub_exprs_append);
+					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
+					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
 				}
 			} else {
-				sub_exprs_append.emplace_back(expr.toOpt().value());
+				sub_exprs_append.emplace_back(expr);
 			}
 		}
 
@@ -36,12 +35,12 @@ namespace compiler::helios::code {
 		 * @brief Extracts sub expressions from a variant operator.
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
-		std::vector<CRef<pst::ExprElement>> getVariantSubExprs(const pst::expr::BinaryOperator& expr
+		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
-			CORE_ASSERT(expr.getOperator().str() == "|", "Not a variant operator");
-			std::vector<CRef<pst::ExprElement>> sub_exprs;
-			getVariantSubExprsInPlace(expr.getLeftOperand(), sub_exprs);
-			getVariantSubExprsInPlace(expr.getRightOperand(), sub_exprs);
+			CORE_ASSERT(expr.unlock(ctx)->getOperator().str() == "|", "Not a variant operator");
+			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
+			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getLeftOperand(), sub_exprs);
+			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
 
@@ -97,9 +96,9 @@ namespace compiler::helios::code {
 
 			base::Optional<base::Box<Expr>> node;
 
-			void visitExprValue(const pst::expr::ExprValue& stmt) override {
+			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt.getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt->getValue().str()));
 			}
 
 			/**
@@ -180,9 +179,9 @@ namespace compiler::helios::code {
 					return {};
 			}
 
-			void visitBinaryOperator(const pst::expr::BinaryOperator& stmt) override {
+			void visitBinaryOperator(pst::Access<pst::expr::BinaryOperator> stmt) override {
 				// handle variants:
-				if (stmt.getOperator().str() == "|") {
+				if (stmt->getOperator().str() == "|") {
 					// @todo HOUT 2.0:
 					// Here we assume that "|" always produces a variant (likely valid).
 					// If it does not, and "|" will remain a binary operator,
@@ -190,7 +189,7 @@ namespace compiler::helios::code {
 					// (likely if-out if all sub expressions are meta or non-meta, throw otherwise,
 					// (require parentheses))
 
-					auto sub_exprs = getVariantSubExprs(stmt);
+					auto sub_exprs = getVariantSubExprs(ctx, stmt);
 					// @todo HOUT 2.0:
 					// validate that all sub types are meta
 
@@ -208,8 +207,8 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				auto lhs_res = fromPST(ctx, stmt.getLeftOperand());
-				auto rhs_res = fromPST(ctx, stmt.getRightOperand());
+				auto lhs_res = fromPST(ctx, stmt->getLeftOperand());
+				auto rhs_res = fromPST(ctx, stmt->getRightOperand());
 
 				// @todo: make failure more explicit...
 				if (lhs_res.hasError() or rhs_res.hasError()) return;  // failed
@@ -225,24 +224,24 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = binaryBuiltin(stmt.getOperator(), std::move(lhs), std::move(rhs));
+				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
 				} else {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt.getSourcePosition(), "No builtin operator found"
+							stmt->getSourcePosition(), "No builtin operator found"
 						)
 					);
 					// failed
 				}
 			}
 
-			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
+			void visitChainExpr(pst::Access<pst::expr::ChainExpr> stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
 
-				auto atom_expr = fromPST(ctx, stmt.getAtom());
+				auto atom_expr = fromPST(ctx, stmt->getAtom());
 				if (!atom_expr) {
 					// Report an error?
 					return;
@@ -255,8 +254,8 @@ namespace compiler::helios::code {
 
 				SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
-				for (auto&& el: stmt.getChain()) {
-					auto pst_access = dynamic_cast<pst::expr::Access*>(&*el);
+				for (auto&& el: stmt->getChain()) {
+					auto pst_access = el.unlock(ctx).dynamicCast<pst::expr::Access>();
 					CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
 					CORE_ASSERT(
 						pst_access->getType() == ".", "Not handling .? access operator yet"
@@ -285,15 +284,15 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void visitRoundExpr(const pst::expr::RoundExpr& stmt) override {
+			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
 				PstExprToHoutExprVisitor vis(ctx, scope);
-				stmt.getInner()->acceptExprVisitor(vis);
+				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
 				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
 			}
 
-			void visitIdentifierLiteral(const pst::expr::IdentifierLiteral& stmt) override {
+			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
 				auto&& sym_list
-					= *ctx.query<QueryLookupInScopeAndParents>({ scope, stmt.getName().value, true }
+					= *ctx.query<QueryLookupInScopeAndParents>({ scope, stmt->getName().value, true }
 				    );
 
 				auto res = sym_list.getAsSingle();
@@ -307,8 +306,8 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void visitKeywordLiteral(const pst::expr::KeywordLiteral& stmt) override {
-				switch (stmt.getKeyword()) {
+			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
+				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
 					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
@@ -406,10 +405,10 @@ namespace compiler::helios::code {
 				}
 			}
 
-			void visitComma(const pst::expr::Comma& stmt) override {
+			void visitComma(pst::Access<pst::expr::Comma> stmt) override {
 				std::vector<Box<Expr>> expressions;
-				for (auto& ex: stmt.getExpressions()) {
-					auto res = fromPST(ctx, ex.ref());
+				for (auto ex: stmt->getExpressions()) {
+					auto res = fromPST(ctx, ex);
 					if (res.hasError()) {
 						// Error has occurred.
 						return;
@@ -420,16 +419,16 @@ namespace compiler::helios::code {
 				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
 			}
 
-			void visitSuffixOperator(const pst::expr::SuffixOperator&) override {
+			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
 				// note: here we will have to compile things like `a++`, `a--`, `T?`.
 				throw base::NotYetImplemented(
 					"Suffix operators are not yet implemented in HOUT, since there are any for now"
 				);
 			}
 
-			void visitPrefixOperator(const pst::expr::PrefixOperator& stmt) override {
+			void visitPrefixOperator(pst::Access<pst::expr::PrefixOperator> stmt) override {
 				// @NOTE: This is a mockup
-				auto inner = fromPST(ctx, stmt.getExpr());
+				auto inner = fromPST(ctx, stmt->getExpr());
 				if (inner.hasError()) return;  // failed
 
 				// @todo here we should:
@@ -440,7 +439,7 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = unaryBuiltin(stmt.getOperator().value, std::move(inner.value()));
+				auto builtin = unaryBuiltin(stmt->getOperator().value, std::move(inner.value()));
 
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
@@ -448,7 +447,7 @@ namespace compiler::helios::code {
 				} else {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt.getSourcePosition(), "No builtin operator found"
+							stmt->getSourcePosition(), "No builtin operator found"
 						)
 					);
 					// failed
@@ -456,15 +455,15 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult fromPST(query::Context& ctx, MCRef<pst::ExprElement> element) {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ element });
+		ExprConstructionResult fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
+			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
 
 			// std::cerr << "\nExpr: \n";
 			// root->debugPrint(std::cerr);
 			// std::cerr << '\n'
 
 			PstExprToHoutExprVisitor visitor(ctx, scope);
-			element->acceptExprVisitor(visitor);
+			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
 			return errors::HError(errors::Failed());
@@ -479,7 +478,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
-			CORE_ASSERT(key.element.toOpt().has_value(), "Nullptr provided to QueryHoutOfExpr");
+			CORE_ASSERT(key.element.unlock(ctx), "Nullptr provided to QueryHoutOfExpr");
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
