@@ -14,9 +14,33 @@
 
 namespace compiler::helios {
 
+	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @TODO get all module scopes
+			auto scopes = ctx.query<QueryScopesInModule>(key);
+
+			HOUTUnit out;
+			for (auto scope: *scopes) {
+				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				for (auto sym: *symbols_in_scope) {
+					// grab constants:
+					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					// grab functions:
+					if (kind(sym) == SymbolKind::Function)
+						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+				}
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
+
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// go over all to level symbols and get theirs hout
+			// go over all top level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
 
@@ -26,15 +50,13 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
-			// grab constants:
-			for (auto sym: *symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root) {
+				// grab constants:
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
-
-
-			// grab functions:
-			for (auto sym: *symbols_in_module_root)
+				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+			}
 
 			return out;
 		}
