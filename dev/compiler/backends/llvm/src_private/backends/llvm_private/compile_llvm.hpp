@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../llvm_backend.hpp"
+#include <backends/llvm/llvm_backend.hpp>
 
 namespace compiler::backend_llvm {
 	/**
