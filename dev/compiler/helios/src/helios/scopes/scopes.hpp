@@ -115,6 +115,12 @@ namespace compiler::helios {
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
 
 	/**
+	 * @brief Query all scopes defined in a given module.
+	 * Only scopes currently stored in the HELIOS scope_table are considered.
+	 */
+	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
+
+	/**
 	 * @brief Root scope of main module file.
 	 * It is currently the "effective" root scope of a module.
 	 * See: QueryRootScope for details

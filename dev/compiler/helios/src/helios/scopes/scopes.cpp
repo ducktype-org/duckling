@@ -297,6 +297,21 @@ namespace compiler::helios {
 		return visitor.out.value();
 	}
 
+	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<ScopeID> out;
+
+			for (auto scope: getAllHeliosScopes()) {
+				if(ScopeAccess_Functor::get(scope)->parent_module == key) out.push_back(scope);
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
+
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
