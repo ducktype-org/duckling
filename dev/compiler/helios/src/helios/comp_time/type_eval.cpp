@@ -1,5 +1,4 @@
 #include "type_eval.hpp"
-#include "base/exceptions.hpp"
 #include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_impl.hpp>
