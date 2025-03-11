@@ -8,9 +8,7 @@
 #include "../visitors.hpp"
 #include "query_hout_of_expr.hpp"
 #include <base/exceptions.hpp>
-#include <base/stringifyable_enum.hpp>
 #include "expr.hpp"
-#include <lexer/token.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
 
 namespace compiler::helios::code {
@@ -260,9 +258,9 @@ namespace compiler::helios::code {
 				SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
 				// @note If optional is not empty it means there has been a call.
-				base::Optional<std::deque<Box<Expr>>> call_arguments;
+				base::Optional<std::vector<Box<Expr>>> call_arguments;
 
-				for (auto&& el: stmt.getChain()) {
+				for (const auto& el: stmt.getChain()) {
 					// This is a mock. It asserts call expression is the last in the chain.
 					if (call_arguments.has_value())
 						throw base::NotYetImplemented("Call expr not last on the chain");
@@ -290,12 +288,11 @@ namespace compiler::helios::code {
 							new_symbols_single.value().end()
 						);
 					} else if (auto pst_call = dynamic_cast<pst::expr::Call*>(&*el)) {
-						// @fix
-						// if (pst_call->getType() != lexer::Token::Round) {
-						// 	throw base::NotYetImplemented(base::strConcat(
-						// 		"HOUT call with invalid bracket type: ", char(pst_call->getType())
-						// 	));
-						// }
+						if (pst_call->getType() != lexer::Token::Round) {
+							throw base::NotYetImplemented(base::strConcat(
+								"HOUT call with invalid bracket type: ", char(pst_call->getType())
+							));
+						}
 
 						call_arguments.emplace();
 						for (auto&& arg: *pst_call->getArgs()) {
@@ -311,14 +308,12 @@ namespace compiler::helios::code {
 				}
 
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
-					auto linked_identifier
-						= makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
 					if (call_arguments)
 						node = makeBox<CallExpr>(
-							ctx, scope, std::move(linked_identifier), std::move(*call_arguments)
+							ctx, scope, dealiased.back(), std::move(*call_arguments)
 						);
 					else
-						node = std::move(linked_identifier);
+						node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
 				}
 			}
 

@@ -4,7 +4,7 @@
 namespace compiler::helios::code {
 
 // visitors:
-#define HOUT_VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0
+#define HOUT_VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
 
 	/**
 	 * HoutStmtVisitor is a simple base class for VisitorPattern in `hout::Stmt`s.
@@ -12,12 +12,12 @@ namespace compiler::helios::code {
 	 */
 	class HoutStmtVisitor {
 	public:
-		HOUT_VISITOR_METHOD(ReturnStmt);
-		HOUT_VISITOR_METHOD(VoidReturnStmt);
-		HOUT_VISITOR_METHOD(ExprStmt);
-		HOUT_VISITOR_METHOD(IfStmt);
-		HOUT_VISITOR_METHOD(VariableStmt);
-		HOUT_VISITOR_METHOD(AssignmentStmt);
+		HOUT_VISITOR_METHOD(ReturnStmt)
+		HOUT_VISITOR_METHOD(VoidReturnStmt)
+		HOUT_VISITOR_METHOD(ExprStmt)
+		HOUT_VISITOR_METHOD(IfStmt)
+		HOUT_VISITOR_METHOD(VariableStmt)
+		HOUT_VISITOR_METHOD(AssignmentStmt)
 
 		virtual ~HoutStmtVisitor() = default;
 	};
@@ -28,17 +28,17 @@ namespace compiler::helios::code {
 	 */
 	class HoutExprVisitor {
 	public:
-		HOUT_VISITOR_METHOD(LiteralIntExpr);
-		HOUT_VISITOR_METHOD(LiteralBoolExpr);
-		HOUT_VISITOR_METHOD(LiteralTypeExpr);
-		HOUT_VISITOR_METHOD(IdentifierExpr);
-		HOUT_VISITOR_METHOD(BinaryOperatorExpr);
-		HOUT_VISITOR_METHOD(UnaryOperatorExpr);
-		HOUT_VISITOR_METHOD(ParenthesisExpr);
-		HOUT_VISITOR_METHOD(TupleTypeConstructorExpr);
-		HOUT_VISITOR_METHOD(VariantTypeConstructorExpr);
-		HOUT_VISITOR_METHOD(LinkedIdentifierExpr);
-		HOUT_VISITOR_METHOD(CallExpr);
+		HOUT_VISITOR_METHOD(LiteralIntExpr)
+		HOUT_VISITOR_METHOD(LiteralBoolExpr)
+		HOUT_VISITOR_METHOD(LiteralTypeExpr)
+		HOUT_VISITOR_METHOD(IdentifierExpr)
+		HOUT_VISITOR_METHOD(BinaryOperatorExpr)
+		HOUT_VISITOR_METHOD(UnaryOperatorExpr)
+		HOUT_VISITOR_METHOD(ParenthesisExpr)
+		HOUT_VISITOR_METHOD(TupleTypeConstructorExpr)
+		HOUT_VISITOR_METHOD(VariantTypeConstructorExpr)
+		HOUT_VISITOR_METHOD(LinkedIdentifierExpr)
+		HOUT_VISITOR_METHOD(CallExpr)
 
 		virtual ~HoutExprVisitor() = default;
 	};

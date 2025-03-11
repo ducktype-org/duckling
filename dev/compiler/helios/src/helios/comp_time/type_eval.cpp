@@ -1,4 +1,5 @@
 #include "type_eval.hpp"
+#include "base/exceptions.hpp"
 #include <helios/hout/elements/expr.hpp>
 
 #include <query_framework/query_impl.hpp>
@@ -39,9 +40,8 @@ namespace compiler::helios {
 				output(expr.value_type);
 			}
 
-			void visitCallExpr(const code::CallExpr& call) final {
-				// @TODO: I'm not entirely sure this is correct.
-				output(call.expression_type.getType());
+			void visitCallExpr(const code::CallExpr&) final {
+				throw base::NotYetImplemented("ShortPath CallExpr");
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {

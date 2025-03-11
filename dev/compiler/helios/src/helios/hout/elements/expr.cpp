@@ -5,14 +5,7 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
-#include <base/exceptions.hpp>
-#include <base/stringifyable_enum.hpp>
-#include <helios/symbols/symbols.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <typesystem/higher/kind.hpp>
-#include <typesystem/higher/types.hpp>
-
+#include "helios/symbols/symbols.hpp"
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -229,33 +222,27 @@ namespace compiler::helios::code {
 				auto func = tsh::FunctionAbstractType(tp);
 				return func.getResultType();
 			}
-			if (tp.getKind() == tsh::Kind::Class)
-				throw base::NotYetImplemented("Calling class type");
 			CORE_PANIC("Invalid kind to call: ", base::enumToStr(tp.getKind()));
 		}
 	}
 
 	CallExpr::CallExpr(
-		query::Context&,
-		ScopeID                     scope,
-		Box<LinkedIdentifierExpr>   callee,
-		std::deque<base::Box<Expr>> arguments
+		query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
 	):
 		  Expr(
 			  scope,
-
 			  tsh::ExpressionType(
-				  getCallResultType(callee->expression_type.getType()),
+				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)->expect(
+					  base::strConcat("Calling invalid symbol: ", name(callee))
+				  )),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
-		  callee(std::move(callee)),
-		  callee_symbol(this->callee->symbols.back()),
+		  callee(callee),
 		  arguments(std::move(arguments)) {}
 
 	void CallExpr::debugPrint(std::ostream& out) const {
-		callee->debugPrint(out);
-		out << "(";
+		out << name(callee).strView() << "(";
 		bool add_comma = false;
 		for (auto&& arg: arguments) {
 			if (add_comma) out << ", ";

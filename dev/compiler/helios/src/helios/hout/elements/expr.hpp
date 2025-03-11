@@ -229,15 +229,11 @@ namespace compiler::helios::code {
 	 * @note This is a mock, with this representation it's impossible to handle overloads.
 	 */
 	struct CallExpr final: public Expr {
-		Box<LinkedIdentifierExpr>   callee;
-		SymID                       callee_symbol;  /// This is callee.symbols.back()
-		std::deque<base::Box<Expr>> arguments;
+		SymID                        callee;
+		std::vector<base::Box<Expr>> arguments;
 
 		CallExpr(
-			query::Context&             ctx,
-			ScopeID                     scope,
-			Box<LinkedIdentifierExpr>   callee,
-			std::deque<base::Box<Expr>> arguments
+			query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
 		);
 
 		void debugPrint(std::ostream& out) const final;

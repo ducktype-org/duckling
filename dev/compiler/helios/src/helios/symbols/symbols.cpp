@@ -1,4 +1,5 @@
 #include "symbols.hpp"
+#include "typesystem/higher/types.hpp"
 
 #include <vector>
 

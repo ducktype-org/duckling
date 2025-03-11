@@ -777,7 +777,7 @@ private:
 		);
 		ASSERT_TRUE(call_expr != nullptr);
 		auto square_symbol = getChain("square", scope).back();
-		ASSERT_EQUAL(square_symbol, call_expr->callee_symbol);
+		ASSERT_EQUAL(square_symbol, call_expr->callee);
 	}
 
 	void testScopeParentsAndDepth() {
