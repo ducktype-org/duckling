@@ -19,6 +19,7 @@ import { handleSemanticTokensFull } from "./semanticTokens";
 import { preloadKeywords } from "./preloadKeywords";
 import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
+import { handleFoldingRanges } from './foldingRanges';
 
 // Create a connection between the client and the server
 const connection = createConnection(ProposedFeatures.all);
@@ -175,7 +176,7 @@ connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): Com
 
 // This handler provides the folding ranges
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	return [];
+	return handleFoldingRanges(params, documents);
 });
 
 // Make the compiler daemon client exit when the connection exits

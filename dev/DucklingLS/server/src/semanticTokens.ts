@@ -2,13 +2,6 @@ import { Connection, SemanticTokens, SemanticTokensBuilder, SemanticTokensParams
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 
-interface CommentMarker {
-	line: number;
-	startCharacter: number;
-	type: "line" | "blockStart" | "blockEnd";
-}
-
-
 interface Token {
 	line: number;
 	startCharacter: number;
