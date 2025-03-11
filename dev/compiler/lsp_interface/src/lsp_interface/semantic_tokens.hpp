@@ -48,18 +48,18 @@ namespace lsp {
 	public:
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 
-		SemanticToken(base::c_borrow_ptr<lexer::Token>);
+		SemanticToken(CRef<lexer::Token>);
 
 		static Type translateType(lexer::Token::Type);
 
 		std::string toJSON();
 
 	private:
-		base::c_borrow_ptr<lexer::Token> source_token;
-		u64                              line;
-		u64                              start_character;
-		u64                              length;
-		Type                             type;
+		CRef<lexer::Token> source_token;
+		u64                line;
+		u64                start_character;
+		u64                length;
+		Type               type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
