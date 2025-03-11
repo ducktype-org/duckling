@@ -5,7 +5,6 @@
 #include <filesystem/file.hpp>
 #include <core/process/vmprocess.hpp>
 #include <api/api.hpp>
-#include <base/smart_pointers.hpp>
 
 namespace vm {
 	class Supervisor {
