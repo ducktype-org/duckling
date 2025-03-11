@@ -1,5 +1,4 @@
 import { spawn, ChildProcess } from "child_process";
-import { DucklingElement, ducklingElementFactory } from "./lsptree/elements/elements";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection } from "vscode-languageserver";
 
@@ -7,6 +6,15 @@ import { Connection } from "vscode-languageserver";
 const BINARY_PATH = __dirname + "/../../bin/";
 const DAEMON_PORT = "14369";
 const DAEMON_ADRESS = "http://localhost:" + DAEMON_PORT;
+
+export interface Token {
+	line: number;
+	startCharacter: number;
+	length: number;
+	tokenType: number;
+	tokenModifiers: number;
+}
+
 
 /**
  * @brief A client for the compiler daemon.
@@ -50,7 +58,7 @@ export class CompilerDaemonClient {
 
 	// This function is called to update the file in the daemon
 	public async putFile(filePath: string, fileContent: string, connection: Connection): Promise<void> {
-		this.waitForReady(connection);
+		await this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 		const base64FileContent: string = Buffer.from(fileContent).toString('base64');
@@ -70,33 +78,59 @@ export class CompilerDaemonClient {
 		return response.then(handleResponse).catch(handleCatch);
 	}
 
-	// This function is called to get the LSPTree from the daemon for a file
-	public async getLSPT(filePath: string, connection: Connection): Promise<DucklingElement | null> {
-		this.waitForReady(connection);
+	// This function is called to get the semantic tokens from the daemon for a file
+	public async getSemanticTokens(filePath: string, connection: Connection): Promise<Token[]> {
+		await this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
-		const response = fetch(`${DAEMON_ADRESS}/get_lsptree/${base64FilePath}`);
+		try {
+			const response = await fetch(`${DAEMON_ADRESS}/get_semantic_tokens/${base64FilePath}`);
+			
+			// Print the response status and headers
+			console.log(`Response status: ${response.status}`);
+			const headers: { [key: string]: string } = {};
+			response.headers.forEach((value, key) => {
+				headers[key] = value;
+			});
+			console.log(`Response headers: ${JSON.stringify(headers)}`);
+	
+			if (!response.ok) {
+				console.log("Response not ok!!!!!!!");
+				throw new Error(`Error: ${response.status} ${response.statusText}`);
+			}
 
-		function handleResponse(res: Response) {
-			return res.json();
+			// Read and print the response body as text
+			const responseBody = await response.text();
+			console.log(`Response body: ${responseBody}`);
+	
+
+			const jsonResponse = await response.json();
+			console.log(`getSemanticTokens response: ${JSON.stringify(jsonResponse)}\n`);
+
+			// Assuming the response is a JSON array of Token elements
+			const tokens: Token[] = jsonResponse.map((token: any) => ({
+				line: token.line,
+				startCharacter: token.startCharacter,
+				length: token.length,
+				tokenType: token.tokenType,
+				tokenModifiers: token.tokenModifiers
+			}));
+
+			return tokens;
+		} catch (error) {
+			if (error instanceof Error) {
+				console.error(`getSemanticTokens error: ${error.message}`);
+			} else {
+				console.error(`getSemanticTokens error: ${String(error)}`);
+			}
+			return [];
 		}
-
-		function handleJSON(json: any): DucklingElement | null {
-			return ducklingElementFactory.createDefined(json); // LSPT is created here from JSON
-		}
-
-		function handleCatch(error: any) : null {
-			console.error(error);
-			return null;
-		}
-
-		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
 	}
 
 	// This function is called to get the errors from the daemon for a file
 	public async getErrors(filePath: string, connection: Connection): Promise<DucklingParserError[]> {
-		this.waitForReady(connection);
+		await this.waitForReady(connection);
 
 		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
 
@@ -120,7 +154,7 @@ export class CompilerDaemonClient {
 
 	// This function is called to get all of the keywords from the daemon
 	public async getKeywords(connection: Connection): Promise<LSPKeywordData> {
-		this.waitForReady(connection);
+		await this.waitForReady(connection);
 
 		const response = fetch(`${DAEMON_ADRESS}/export_keywords`);
 

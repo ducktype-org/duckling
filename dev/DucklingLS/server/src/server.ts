@@ -16,12 +16,9 @@ import {
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { handleSemanticTokensFull } from "./semanticTokens";
-import { getCompletionItems, onCompletionResolve, preloadKeywords } from "./completion";
+import { preloadKeywords } from "./preloadKeywords";
 import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
-import { getFoldingRanges } from './foldingRanges';
-import { DucklingElement } from './lsptree/elements/elements';
-import { Token } from './semanticTokensDeclarations';
 require("./lsptree/elements/index");
 
 // Create a connection between the client and the server
@@ -38,8 +35,6 @@ let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
 
 // Storing LSPT for documents
-const lsptCache: Map<string, DucklingElement | null> = new Map();
-const semanticTokensCache: Map<string, Token[]> = new Map();
 
 // Semantic tokens legend
 const semanticTokensLegend = {
@@ -103,7 +98,7 @@ connection.onInitialized(() => {
 
 // Register the handler for semantic tokens
 connection.onRequest("textDocument/semanticTokens/full", (params) => 
-	handleSemanticTokensFull(params, documents, lsptCache, semanticTokensCache, compilerDaemonClient, connection)
+	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
 );
 
 // The example settings
@@ -157,8 +152,8 @@ documents.onDidChangeContent(change => {
 	// The document has changed, so we need to update it in the compiler daemon
 	compilerDaemonClient.putFile(change.document.uri, change.document.getText(), connection).then(() => {
 		// Get the LSPTree for the document
-		compilerDaemonClient.getLSPT(change.document.uri, connection).then((LSPTree) => {
-			lsptCache.set(change.document.uri, LSPTree);
+		compilerDaemonClient.getSemanticTokens(change.document.uri, connection).then((LSPTree) => {
+			console.log("SERVER: semantic tokens received");
 			console.log(LSPTree);
 		});
 
@@ -173,15 +168,15 @@ connection.onDidChangeWatchedFiles(_change => {
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-	return getCompletionItems(_textDocumentPosition, documents, lsptCache);
+	return [];
 });
 
 // This handler resolves additional information for the item selected in the completion list.
-connection.onCompletionResolve(onCompletionResolve);
+// connection.onCompletionResolve(onCompletionResolve);
 
 // This handler provides the folding ranges
 connection.onFoldingRanges((params: FoldingRangeParams): FoldingRange[] | null => {
-	return getFoldingRanges(params, documents, semanticTokensCache, lsptCache);
+	return [];
 });
 
 // Make the compiler daemon client exit when the connection exits
