@@ -19,7 +19,6 @@ import { handleSemanticTokensFull } from "./semanticTokens";
 import { preloadKeywords } from "./preloadKeywords";
 import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
-require("./lsptree/elements/index");
 
 // Create a connection between the client and the server
 const connection = createConnection(ProposedFeatures.all);
