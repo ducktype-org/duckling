@@ -1,4 +1,4 @@
-file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS 
+file(GLOB ElementImplementationFiles CONFIGURE_DEPENDS
 	"src/pst_parser/elements/implementations/statements/*.cpp"
 	"src/pst_parser/elements/implementations/meta/*.cpp"
 	"src/pst_parser/elements/implementations/not_statements/*.cpp"
@@ -24,9 +24,6 @@ add_library(PstParser
 
 make_module(PstParser USES Lexer Printer TPC)
 
-duck_add_test(compiler parser_test_simple tests/test.cpp
-	USES PstParser)
-duck_add_test(compiler parser_test_builder tests/builder_tests.cpp
-	USES PstParser)
-duck_add_test(compiler parser_test_errors tests/error_tests.cpp
-	USES PstParser)
+duck_add_test(compiler parser USES PstParser)
+duck_add_test(compiler parser_builder USES PstParser)
+duck_add_test(compiler parser_errors USES PstParser)

@@ -4,5 +4,4 @@ add_library(SystemCommand
 
 make_module(SystemCommand USES Base)
 
-duck_add_test(common system_command_test tests/tests.cpp
-	USES SystemCommand Base)
+duck_add_test(common system_command USES SystemCommand Base)

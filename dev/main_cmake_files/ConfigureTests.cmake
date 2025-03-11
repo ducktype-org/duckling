@@ -6,7 +6,7 @@ endfunction()
 
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
-	
+
 	find_program(LCOV lcov REQUIRED)
 
 	if (NOT GCOV_VERSION)
@@ -14,7 +14,7 @@ if(ENABLE_COVERAGE)
 	endif()
 
 	find_program(GCOV_PATH ${GCOV_VERSION} REQUIRED)
-	
+
 	message(STATUS "GCOV path: ${GCOV_PATH}")
 
 	find_program(GENHTML genhtml REQUIRED)
@@ -22,7 +22,7 @@ if(ENABLE_COVERAGE)
 	add_custom_target(build_all_coverage_targets)
 
 	# This target is used to generate coverage report.
-	# We do it in two steps since by default lcov 
+	# We do it in two steps since by default lcov
 	# does not generate coverage data for files not linked by the tests.
 	# https://stackoverflow.com/a/78554322
 	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
@@ -31,37 +31,37 @@ if(ENABLE_COVERAGE)
 	# 2. run this target
 	add_custom_target(coverage
 		# Initial coverage created for all files in the project.
-		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}" 
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
 						--gcov-tool "${GCOV_PATH}"
-						--initial 
-						--capture 
-						--base-directory "${CMAKE_SOURCE_DIR}" 
-						--no-external 
+						--initial
+						--capture
+						--base-directory "${CMAKE_SOURCE_DIR}"
+						--no-external
 						--output-file coverage_base.info
 		# Creating coverage data for the tests.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
 						--gcov-tool "${GCOV_PATH}"
-						--capture 
-						--base-directory "${CMAKE_SOURCE_DIR}" 
-						--no-external 
+						--capture
+						--base-directory "${CMAKE_SOURCE_DIR}"
+						--no-external
 						--output-file coverage_test.info
 		# Merging the two coverage data files.
-		COMMAND ${LCOV} --add-tracefile coverage_base.info 
-						--add-tracefile coverage_test.info 
+		COMMAND ${LCOV} --add-tracefile coverage_base.info
+						--add-tracefile coverage_test.info
 						--output-file coverage_unfiltered.info
 						--gcov-tool "${GCOV_PATH}"
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
-						--remove coverage_unfiltered.info 
+						--remove coverage_unfiltered.info
 						"docs/**"
 						"integration_tests/**"
 						"scripts/**"
-						"**/tests/**" 
+						"**/tests/**"
 						"**/playground/**"
 						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
 						--output-file coverage.info
 						--gcov-tool "${GCOV_PATH}"
-		
+
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
 		VERBATIM
@@ -77,15 +77,20 @@ include(CTest)
 enable_testing()
 
 # Common functions:
-function(duck_add_test test_pack test_name source USES)
+function(duck_add_test test_pack test_base_name USES)
 	if(${USES} STREQUAL "USES")
-		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${source})
+		set(test_name ${test_base_name}_test)
+
+		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/tests/${test_name}.cpp)
 		target_link_libraries(${test_name} Tester ${ARGN})
 
 		add_test(NAME "${test_name}" COMMAND ${test_name})
 
 		# It is needed in case tests are run on multiple threads.
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
+		# set_target_properties(${test_name} PROPERTIES
+		# 	RUNTIME_OUTPUT_DIRECTORY ${TEST_OUTPUT_DIRECTORY}
+		# )
 		add_dependencies(build_${test_pack}_tests ${test_name})
 		set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
 
