@@ -94,9 +94,7 @@ namespace pst::detail {
 
 	/**
 	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T> >).
-	 * It is needed because Box beeing base::unique_ptr cannot be "copied".
-	 * This iterator returns ParserCBorrowRef when dereferenced
-	 * which is a wrapper for base::borrow_ptr.
+	 * It is needed because Box beeing Box cannot be "copied".
 	 *
 	 * @tparam ParserElement Element contained in the reference
 	 * @tparam Container Container that of Boxs to the @p ParserElement .
