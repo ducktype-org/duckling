@@ -45,7 +45,7 @@ duck_add_test(base box_ref USES Base)
 
 duck_add_test(base bits_and_bytes USES Base)
 
-duck_add_test(base is_complete_test USES Base)
+duck_add_test(base is_complete USES Base)
 
 duck_add_test(base type_name USES Base)
 

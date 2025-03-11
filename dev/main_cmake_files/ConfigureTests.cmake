@@ -77,20 +77,18 @@ include(CTest)
 enable_testing()
 
 # Common functions:
-function(duck_add_test test_pack test_base_name USES)
+function(duck_add_test_custom test_pack test_name test_source USES)
 	if(${USES} STREQUAL "USES")
-		set(test_name ${test_base_name}_test)
-
-		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/tests/${test_name}.cpp)
+		add_executable(${test_name} ${CMAKE_CURRENT_LIST_DIR}/${test_source})
 		target_link_libraries(${test_name} Tester ${ARGN})
 
 		add_test(NAME "${test_name}" COMMAND ${test_name})
 
 		# It is needed in case tests are run on multiple threads.
 		set_target_properties(${test_name} PROPERTIES DEPENDS build_${test_pack}_tests)
-		# set_target_properties(${test_name} PROPERTIES
-		# 	RUNTIME_OUTPUT_DIRECTORY ${TEST_OUTPUT_DIRECTORY}
-		# )
+		set_target_properties(${test_name} PROPERTIES
+			RUNTIME_OUTPUT_DIRECTORY ${TEST_OUTPUT_DIRECTORY}
+		)
 		add_dependencies(build_${test_pack}_tests ${test_name})
 		set_property(TEST "${test_name}" PROPERTY LABELS "${test_pack}")
 
@@ -105,8 +103,13 @@ function(duck_add_test test_pack test_base_name USES)
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 		add_to_coverage(${test_name})
 	else()
-		message(FATAL_ERROR "duck_add_test lacks uses clause")
+		message(FATAL_ERROR "Test lacks uses clause")
 	endif()
+endfunction()
+
+function(duck_add_test test_pack test_base_name USES)
+	set(test_name ${test_base_name}_test)
+	duck_add_test_custom(${test_pack} ${test_name} tests/${test_name}.cpp USES ${ARGN})
 endfunction()
 
 add_custom_target(build_all_tests)

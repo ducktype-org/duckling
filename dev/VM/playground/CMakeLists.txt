@@ -1,6 +1,2 @@
-add_executable(parser_f8_testing parser_f8_testing.cpp)
-
-target_include_directories(parser_f8_testing PRIVATE ../src)
-
-target_link_libraries(parser_f8_testing LibVM Base Listener Clap Crow::Crow Filesystem TPC)
-
+duck_add_playground(parser_f8 USES LibVM Base Listener Clap Crow::Crow Filesystem TPC)
+target_include_directories(parser_f8_playground PRIVATE ../src)
