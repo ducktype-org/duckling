@@ -1,5 +1,5 @@
 #pragma once
-// Heavily inspired by (actually copied): https://www.scs.stanford.edu/~dm/blog/va-opt.html
+// Heavily inspired by (actually copied from): https://www.scs.stanford.edu/~dm/blog/va-opt.html
 
 #define PARENS ()
 
@@ -10,8 +10,7 @@
 #define EXPAND1(...) __VA_ARGS__
 
 /**
- * @brief Macro that applies `to_apply` on all arguments.
- * @note Number of arguments is currently limited to 30, but it can be easily increased.
+ * @brief Macro that applies `macro` on all arguments.
  *
  * @example:
  * ```cpp
