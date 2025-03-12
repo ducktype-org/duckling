@@ -415,7 +415,6 @@ namespace vm {
 			frame->block_stack.pop_back();
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
-			frame->local_offset_to_block_idx.erase(frame->local_stack_head);
 		}
 		FUNCTION_CONT(1);
 	}
