@@ -17,6 +17,7 @@ namespace compiler::helios::code {
 		ParenthesisExpr,
 		TupleTypeConstructorExpr,
 		VariantTypeConstructorExpr,
-		LinkedIdentifierExpr
+		LinkedIdentifierExpr,
+		CallExpr
 	);
 }

@@ -120,7 +120,7 @@ namespace compiler::helios::code {
 	/**
 	 * Builtin binary operation.
 	 */
-	enum class BuiltinBinary {
+	enum class BuiltinBinary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -158,7 +158,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Builtin unary operations.
 	 */
-	enum class BuiltinUnary {
+	enum class BuiltinUnary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -224,6 +224,19 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
-	// @todo HOUT 2.0: function call expression
-	// it should hold SymID of a function and vector of arguments
+	/**
+	 * @brief Represents a call in an expression.
+	 * @note This is a mock, with this representation it's impossible to handle overloads.
+	 */
+	struct CallExpr final: public Expr {
+		SymID                        callee;
+		std::vector<base::Box<Expr>> arguments;
+
+		CallExpr(
+			query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
 }
