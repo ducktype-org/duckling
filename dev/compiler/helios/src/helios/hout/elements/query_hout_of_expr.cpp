@@ -243,6 +243,7 @@ namespace compiler::helios::code {
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
+				// @TODO / @NOTE This methods will be reworked.
 
 				auto atom_expr = fromPST(ctx, stmt.getAtom());
 				if (!atom_expr) {
@@ -297,7 +298,10 @@ namespace compiler::helios::code {
 						call_arguments.emplace();
 						for (auto&& arg: *pst_call->getArgs()) {
 							auto arg_expr = fromPST(ctx, arg->getExpr());
-							if (!arg_expr) return;
+							if (!arg_expr) {
+								// Error
+								return;
+							}
 							call_arguments->emplace_back(std::move(arg_expr.value()));
 						}
 					} else {

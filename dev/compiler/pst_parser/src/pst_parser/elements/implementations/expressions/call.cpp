@@ -29,7 +29,7 @@ namespace pst::expr {
 			));
 		}
 
-		auto out = makeBox<Call>(state.getPosition());
+		auto out  = makeBox<Call>(state.getPosition());
 		out->type = state[0].getBracketType();
 
 		state.parse(out).goDown();
