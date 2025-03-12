@@ -98,16 +98,15 @@ export function handleFoldingRanges(
     const stack: number[] = [];
     lines.forEach((line, lineIndex) => {
         for (let j = 0; j < line.length; j++) {
-            const char = line[j];
-            if (char === "{") {
+            if (line[j] === "{") {
                 stack.push(lineIndex);
-            } else if (char === "}") {
+            } else if (line[j] === "}") {
                 if (stack.length > 0) {
                     const startLine = stack.pop()!;
-                    if (startLine < lineIndex) {
+                    if (startLine < lineIndex - 1) {
                         foldingRanges.push({
                             startLine: startLine,
-                            endLine: lineIndex,
+                            endLine: lineIndex - 1,
                             kind: FoldingRangeKind.Region
                         });
                     }
@@ -115,19 +114,11 @@ export function handleFoldingRanges(
             }
         }
     });
+    
+
 
     // Sort folding ranges by start line
     foldingRanges.sort((a, b) => a.startLine - b.startLine);
 
-    // Filter out unnecessary or overlapping ranges
-    const filteredFoldingRanges: FoldingRange[] = [];
-    let lastEndLine = -1;
-    for (const range of foldingRanges) {
-        if (range.startLine > lastEndLine) {
-            filteredFoldingRanges.push(range);
-            lastEndLine = range.endLine;
-        }
-    }
-
-    return filteredFoldingRanges;
+    return foldingRanges;
 }
