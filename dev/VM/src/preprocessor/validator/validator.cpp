@@ -5,6 +5,7 @@
 #include <code_data/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include "errors.hpp"
+#include "preprocessor/validator/detail/stack_state.hpp"
 #include <preprocessor/parser/elements.hpp>
 #include <sstream>
 
@@ -39,6 +40,12 @@ namespace vm::validator {
 			void validateMainExistance();
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
+			void validateX() {
+				StackState state(*program.type_metadata);
+				for(auto&& instr: program.functions[0]->code->opcodes) {
+					state.consume(instr.ref());
+				}
+			}
 		};
 
 		base::Optional<std::string> Validator::validateProgram() {
