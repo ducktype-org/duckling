@@ -1,5 +1,5 @@
 #pragma once
-#include <base/macro_magic.hpp>
+#include <base/for_each.hpp>
 
 #define VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
 
@@ -30,5 +30,21 @@
 		FOR_EACH(VISITOR_PANIC_METHOD, __VA_ARGS__)              \
 	}
 
+/**
+ * @brief Creates visitors. Ex:
+ * ```cpp
+ * struct Base { virtual void acceptVisitor(MyVisitor& vis) = 0; };
+ * struct A : Base { void acceptVisitor(MyVisitor& vis) { vis.visitA(*this); } };
+ * struct B : Base { void acceptVisitor(MyVisitor& vis) { vis.visitB(*this); } };
+ * struct C : Base { void acceptVisitor(MyVisitor& vis) { vis.visitC(*this); } };
+ * MAKE_VISITOR(My, A, B, C);
+ * ```
+ * Creates MyVisitor, MyVisitorPanicky and MyVisitorEmpty
+ * which are visitors for the A, B, C classes.
+ * * MyVisitor has no implementations.
+ * * MyVisitorEmpty has empty implementations.
+ * * MyVisitorPanicky methods panic by default.
+ *
+ */
 #define MAKE_VISITOR(name, ...) \
 	MAKE_VISITOR_IMPL(name##Visitor, name##VisitorPanicky, name##VisitorEmpty, __VA_ARGS__)
