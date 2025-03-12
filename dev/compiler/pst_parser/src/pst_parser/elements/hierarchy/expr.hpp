@@ -312,6 +312,10 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
+			[[nodiscard]] lexer::Token::BracketType getType() const;
+
+			[[nodiscard]] MCRef<CallList> getArgs() const;
+
 			[[nodiscard]]
 			std::string elementType() const override {
 				return "Call Expression";
