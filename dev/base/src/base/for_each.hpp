@@ -1,5 +1,5 @@
 #pragma once
-// Heavily inspired by (actually copied): https://www.scs.stanford.edu/~dm/blog/va-opt.html
+// Heavily inspired by (actually copied from): https://www.scs.stanford.edu/~dm/blog/va-opt.html
 
 #define PARENS ()
 
