@@ -16,7 +16,6 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO get all module scopes
 			auto scopes = ctx.query<QueryScopesInModule>(key);
 
 			HOUTUnit out;
@@ -37,6 +36,22 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
+
+	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, std::vector<HOUTUnit>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<HOUTUnit> out = {ctx.query<QueryModuleHOUT>(key)};
+
+			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
+			for (auto submodule: *submodules) {
+				out.push_back(ctx.query<QueryModuleHOUTRecursively>(submodule));
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUTRecursively);
 
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
