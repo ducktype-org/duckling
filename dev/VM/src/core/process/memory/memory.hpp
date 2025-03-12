@@ -83,8 +83,8 @@ namespace vm {
 		// @todo panics slows down the execution of the code in executor
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
-		static __attribute__((always_inline)
-		) auto getPointerData(Pointer pointer, u64 size_bytes) -> base::ModRawView {
+		static __attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
+			-> base::ModRawView {
 			std::shared_lock lock(*pointer.block->shared_mutex);
 			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
 			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
