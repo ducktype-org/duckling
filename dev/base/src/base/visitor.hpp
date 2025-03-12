@@ -1,33 +1,47 @@
 #pragma once
 #include <base/for_each.hpp>
+#include <base/type_traits.hpp>
 
+/**
+ * @brief Helper for MAKE_VISITOR. Creates virtual method implementation.
+ */
 #define VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
 
-#define VISITOR_EMPTY_METHOD(type, ...) \
+/**
+ * @brief Helper for MAKE_VISITOR. Creates empty implementation.
+ */
+#define VISITOR_EMPTY_METHOD(type) \
 	void visit##type(const type&) override {}
 
-#define VISITOR_PANIC_METHOD(type) \
-	void visit##type(const type&) override { CORE_PANIC("Panicky visitor has visited: " #type); }
+/**
+ * @brief Helper for MAKE_VISITOR. Creates panicky implementation.
+ */
+#define VISITOR_PANIC_METHOD(tp, type)                                    \
+	void visit##type(const type&) override {                              \
+		CORE_PANIC(base::typeName<tp>(), " visitor has visited: " #type); \
+	}
 
-#define VISITOR_EMPTY_METHODS_AGAIN(...) __VA_OPT__(VISITOR_EMPTY_METHODS(__VA_ARGS__))
 
-#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, ...) \
-	class BaseName {                                             \
-	public:                                                      \
-		virtual ~BaseName() = default;                           \
-		FOR_EACH(VISITOR_METHOD, __VA_ARGS__)                    \
-	};                                                           \
-                                                                 \
-	class EmptyName: public BaseName {                           \
-	public:                                                      \
-		~EmptyName() override = default;                         \
-		FOR_EACH(VISITOR_EMPTY_METHOD, __VA_ARGS__)              \
-	};                                                           \
-                                                                 \
-	class PanickyName: public BaseName {                         \
-	public:                                                      \
-		~PanickyName() override = default;                       \
-		FOR_EACH(VISITOR_PANIC_METHOD, __VA_ARGS__)              \
+/**
+ * @brief Helper for MAKE_VISITOR. Creates visitor classes.
+ */
+#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, ...)     \
+	class BaseName {                                                 \
+	public:                                                          \
+		virtual ~BaseName() = default;                               \
+		FOR_EACH(VISITOR_METHOD, __VA_ARGS__)                        \
+	};                                                               \
+                                                                     \
+	class EmptyName: public BaseName {                               \
+	public:                                                          \
+		~EmptyName() override = default;                             \
+		FOR_EACH(VISITOR_EMPTY_METHOD, __VA_ARGS__)                  \
+	};                                                               \
+                                                                     \
+	class PanickyName: public BaseName {                             \
+	public:                                                          \
+		~PanickyName() override = default;                           \
+		FOR_EACH_ARG(VISITOR_PANIC_METHOD, PanickyName, __VA_ARGS__) \
 	}
 
 /**
