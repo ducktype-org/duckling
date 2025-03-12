@@ -48,4 +48,3 @@
 #define FOR_EACH_HELPER_2ARG(macro, arg0, arg1, a1, ...) \
 	macro(arg0, arg1, a1) __VA_OPT__(FOR_EACH_AGAIN_2ARG PARENS(macro, arg0, arg1, __VA_ARGS__))
 #define FOR_EACH_AGAIN_2ARG() FOR_EACH_HELPER_2ARG
-
