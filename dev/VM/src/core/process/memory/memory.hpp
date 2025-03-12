@@ -66,7 +66,7 @@ namespace vm {
 		// =================== Block operations ===================
 
 		[[nodiscard]]
-		static inline auto getBlockType(Ref<Block> block) -> TypeCRef {
+		static auto getBlockType(Ref<Block> block) -> TypeCRef {
 			std::shared_lock lock(*block->shared_mutex);
 			return block->data.element_type;
 		}
@@ -74,7 +74,7 @@ namespace vm {
 		// ======================== Pointers ========================
 
 		[[nodiscard]]
-		static inline auto getPointer(Ref<Block> block) -> Pointer {
+		static auto getPointer(Ref<Block> block) -> Pointer {
 			std::unique_lock lock(*block->shared_mutex);
 			block->refcount++;
 			return { block, 0 };
@@ -84,7 +84,7 @@ namespace vm {
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
 		static __attribute__((always_inline)
-		) inline auto getPointerData(Pointer pointer, u64 size_bytes) -> base::ModRawView {
+		) auto getPointerData(Pointer pointer, u64 size_bytes) -> base::ModRawView {
 			std::shared_lock lock(*pointer.block->shared_mutex);
 			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
 			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
@@ -93,14 +93,14 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
-		inline auto destroyPointer(Pointer pointer) -> void {
+		auto destroyPointer(Pointer pointer) -> void {
 			if_opt_some(pointer.block.toOpt(), block) {
 				std::unique_lock lock(*block->shared_mutex);
 				destroyReference(block);
 			}
 		}
 
-		inline auto setPointer(Pointer& dst, Pointer src) -> void {
+		auto setPointer(Pointer& dst, Pointer src) -> void {
 			destroyPointer(dst);
 			if_opt_some(src.block.toOpt(), block) {
 				std::unique_lock lock(*block->shared_mutex);
