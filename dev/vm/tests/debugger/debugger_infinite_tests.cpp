@@ -86,4 +86,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/VM/tests/debugger/");
+TESTER_COMMON_MAIN("/vm/tests/debugger/");

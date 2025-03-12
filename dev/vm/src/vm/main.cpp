@@ -3,7 +3,6 @@
 #include <init/init.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
-#include "base/int_conv.hpp"
 #include "cli.hpp"
 #include "server.hpp"
 

@@ -126,4 +126,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/VM/tests/parsing/");
+TESTER_COMMON_MAIN("/vm/tests/parsing/");

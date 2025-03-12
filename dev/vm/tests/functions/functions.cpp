@@ -40,4 +40,4 @@ private:
 	void test_preserved_flag() { runTestOnVm("preserved_flag.dbc", "", "1"); }
 };
 
-TESTER_COMMON_MAIN("/VM/tests/functions/");
+TESTER_COMMON_MAIN("/vm/tests/functions/");

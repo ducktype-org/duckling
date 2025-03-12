@@ -49,4 +49,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/VM/tests/validation/");
+TESTER_COMMON_MAIN("/vm/tests/validation/");

@@ -17,4 +17,4 @@ private:
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4"); }
 };
 
-TESTER_COMMON_MAIN("/VM/tests/basic/");
+TESTER_COMMON_MAIN("/vm/tests/basic/");
