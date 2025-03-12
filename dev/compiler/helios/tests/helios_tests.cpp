@@ -1,3 +1,6 @@
+#include <base/exceptions.hpp>
+#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <base/optional.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/scopes/scopes.hpp>
@@ -49,10 +52,11 @@ public:
 		TESTER_ADD_TEST(testKeywordLiterals);
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
+		TESTER_ADD_TEST(testFunctionCallExpr);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(scopeParentsAndDepthTests);
+		TESTER_ADD_TEST(testScopeParentsAndDepth);
 	}
 
 private:
@@ -756,7 +760,27 @@ private:
 		});
 	}
 
-	void scopeParentsAndDepthTests() {
+	void testFunctionCallExpr() {
+		auto [module, scope] = getModule(fs::FilePath(path("test_modules/function_calls")));
+
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		ASSERT_EQUAL(2, hout.functions.size());
+		std::cerr << hout.debugPrint() << '\n';
+		auto function = hout.functions.at(1);
+		ASSERT_EQUAL(function.original_name, "foo");
+		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
+			function.content.body->statements.at(0).ref().get()
+		);
+		ASSERT_TRUE(variable != nullptr);
+		auto call_expr = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			variable->initial_value->ref().get()
+		);
+		ASSERT_TRUE(call_expr != nullptr);
+		auto square_symbol = getChain("square", scope).back();
+		ASSERT_EQUAL(square_symbol, call_expr->callee);
+	}
+
+	void testScopeParentsAndDepth() {
 		auto all_scopes = compiler::helios::getAllHeliosScopes();
 		message(base::strConcat("Scope count: ", all_scopes.size()));
 		for (auto scope: all_scopes) {
