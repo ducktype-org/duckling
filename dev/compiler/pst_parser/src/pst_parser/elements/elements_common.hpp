@@ -5,7 +5,10 @@
 
 namespace pst {
 	class PstVisitor;
-	class PstExprVisitor;
+
+	namespace expr {
+		class PstExprVisitor;
+	}
 }
 
 namespace pst::detail {
