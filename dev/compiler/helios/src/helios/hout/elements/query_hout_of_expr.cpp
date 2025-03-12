@@ -89,7 +89,7 @@ namespace compiler::helios::code {
 			}
 		};
 
-		struct PstExprToHoutExprVisitor final: public pst::PstExprVisitorPanicky {
+		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
