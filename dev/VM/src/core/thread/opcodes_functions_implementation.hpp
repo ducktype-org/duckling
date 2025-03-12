@@ -517,7 +517,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u32>(instr->arg1)];
+			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto  block     = frame->block_stack[block_idx];
 			thread.process.getMemory().setPointer(pointer, Memory::getPointer(block));
 		}

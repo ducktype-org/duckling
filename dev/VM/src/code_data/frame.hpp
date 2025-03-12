@@ -72,6 +72,13 @@ namespace vm {
 		 * and destroyed with deinit.
 		 */
 		std::vector<Ref<Block>> block_stack;
+
+		/**
+		 * @brief Mapping from stack offset to ID of block
+		 * responisble for data on that offset.
+		 *
+		 * Used when creating pointers to local variables.
+		 */
 		base::HashMap<u64, u64> local_offset_to_block_idx;
 
 		/**
