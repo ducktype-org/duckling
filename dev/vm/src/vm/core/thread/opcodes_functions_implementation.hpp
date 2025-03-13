@@ -506,6 +506,13 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_lptr_lptr)(FUNCTION_ARGS) {
+		{
+            // thread.process.getMemory().setPo
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;
