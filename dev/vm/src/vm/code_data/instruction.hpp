@@ -6,9 +6,10 @@
 #pragma once
 
 #include "frame.hpp"
-#include <vm/config.hpp>
-#include <base/ints.hpp>
+
 #include <array>
+#include <base/ints.hpp>
+#include <vm/config.hpp>
 
 // #define USE_COMPACT_INSTRUCTION
 

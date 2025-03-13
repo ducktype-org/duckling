@@ -8,9 +8,10 @@
 
 #pragma once
 #include "abstract_type.hpp"
-#include <helios/scope_symbol_id.hpp>
-#include <base/optional.hpp>
+
 #include <base/bits_and_bytes.hpp>
+#include <base/optional.hpp>
+#include <helios/scope_symbol_id.hpp>
 
 namespace tsh {
 	namespace internal {

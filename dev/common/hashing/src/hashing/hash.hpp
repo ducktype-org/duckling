@@ -1,14 +1,13 @@
 #pragma once
 
-#include <type_traits>
-
-#include <base/type_traits.hpp>
-
-#include "hashing_algorithms.hpp"
 #include "add_to_hash.hpp"
+#include "hashing_algorithms.hpp"
+#include "type_code.hpp"
 #include "type_hash_code.hpp"
 #include "type_unique_code.hpp"
-#include "type_code.hpp"
+
+#include <base/type_traits.hpp>
+#include <type_traits>
 
 namespace hashing {
 

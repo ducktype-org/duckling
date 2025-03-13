@@ -1,4 +1,5 @@
 #include "mir_structure.hpp"
+
 #include <base/variant.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <sstream>

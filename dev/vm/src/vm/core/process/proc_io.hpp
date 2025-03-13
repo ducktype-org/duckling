@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vm/core/thread/vmthread.hpp>
 #include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <vm/core/thread/vmthread.hpp>
 
 namespace vm {
 	// Decisions made are based on this great article:

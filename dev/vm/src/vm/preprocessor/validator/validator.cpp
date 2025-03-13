@@ -1,12 +1,14 @@
 #include "validator.hpp"
+
+#include "errors.hpp"
+
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <vm/code_data/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
-#include "errors.hpp"
-#include <vm/preprocessor/parser/elements.hpp>
 #include <sstream>
+#include <vm/code_data/opcode_args.hpp>
+#include <vm/preprocessor/parser/elements.hpp>
 
 namespace vm::validator {
 	namespace {

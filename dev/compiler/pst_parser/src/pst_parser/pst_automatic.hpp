@@ -22,8 +22,9 @@
  */
 #pragma once
 
-#include <token_parser_core/automatic.hpp>
 #include "lang_parser_element.hpp"
+
+#include <token_parser_core/automatic.hpp>
 
 namespace pst {
 	using lang_def::Keyword;

@@ -1,9 +1,9 @@
-#include <query_framework/query_impl.hpp>
 #include "query_framework_decl.hpp"  // query declaration
 
-#include <base/str_utils.hpp>        // base::strConcat
-#include <base/optional.hpp>         // base::Optional
 #include <base/maps.hpp>             // base::Map
+#include <base/optional.hpp>         // base::Optional
+#include <base/str_utils.hpp>        // base::strConcat
+#include <query_framework/query_impl.hpp>
 
 /**
  * PResult type for MyQuery

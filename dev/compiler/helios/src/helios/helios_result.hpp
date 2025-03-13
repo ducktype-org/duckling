@@ -2,13 +2,12 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
+#include <base/define_helper.hpp>
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
 #include <type_traits>
 #include <variant>
-
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
-#include <base/define_helper.hpp>
-#include <base/optional.hpp>
 
 namespace compiler::helios::errors {
 	namespace impl {

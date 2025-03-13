@@ -17,12 +17,12 @@ int main() {
 
 #pragma once
 
-#include <token_file/forward.hpp>
+#include <base/ref.hpp>
 #include <filesystem/file.hpp>
 #include <memory>
 #include <printer/printer_content.hpp>
 #include <string>
-#include <base/ref.hpp>
+#include <token_file/forward.hpp>
 
 namespace dia {
 	/**

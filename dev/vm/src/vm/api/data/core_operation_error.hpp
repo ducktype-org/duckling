@@ -1,8 +1,9 @@
 #pragma once
 
-#include <variant>
-#include <json/json.hpp>
 #include "load_program_error.hpp"
+
+#include <json/json.hpp>
+#include <variant>
 
 namespace vm::api {
 	struct ResumeError {};

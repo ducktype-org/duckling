@@ -9,10 +9,9 @@
 #pragma once
 
 #include <base/ints.hpp>
-
 #include <base/optional.hpp>
-#include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/memory/block.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 
 namespace vm {
 

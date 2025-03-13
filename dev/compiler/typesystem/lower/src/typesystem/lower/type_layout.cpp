@@ -1,4 +1,5 @@
 #include "type_layout.hpp"
+
 #include "queries.hpp"
 
 #include <query_framework/query_impl.hpp>

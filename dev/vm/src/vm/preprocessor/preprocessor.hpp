@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/code_data/program.hpp>
-#include <filesystem/file.hpp>
-#include <base/optional.hpp>
 #include "parser/parser.hpp"
+
+#include <base/optional.hpp>
+#include <filesystem/file.hpp>
+#include <vm/code_data/program.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm {
 	class VMProcess;

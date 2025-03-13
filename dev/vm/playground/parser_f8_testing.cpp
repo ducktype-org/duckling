@@ -1,6 +1,6 @@
-#include <vm/api/vm.hpp>
 #include <base/variant.hpp>
 #include <iostream>
+#include <vm/api/vm.hpp>
 
 int main(int argc, char** argv) {
 	if (argc != 2) {

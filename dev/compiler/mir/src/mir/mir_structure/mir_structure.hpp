@@ -1,15 +1,15 @@
 #pragma once
 
-#include <vector>
-#include <variant>
-#include <helios/scopes/scopes.hpp>
-#include <typesystem/higher/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <base/stable_container.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <base/stringifyable_enum.hpp>
-
 #include "mir_local_ref.hpp"
+
+#include <base/stable_container.hpp>
+#include <base/stringifyable_enum.hpp>
+#include <base/strongly_typed_id.hpp>
+#include <helios/scopes/scopes.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/types.hpp>
+#include <variant>
+#include <vector>
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.

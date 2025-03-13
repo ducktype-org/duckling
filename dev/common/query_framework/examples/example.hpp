@@ -1,7 +1,7 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
 #include <cstdint>
+#include <query_framework/query_int.hpp>
 
 DECLARE_QUERY(Query1, uint64_t, uint64_t)
 

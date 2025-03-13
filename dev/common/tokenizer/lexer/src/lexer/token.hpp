@@ -5,17 +5,16 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "char.hpp"
 #include "token_common.hpp"
 
-#include <diagnostic/source_position.hpp>
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
+#include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
+#include <string>
+#include <vector>
 
 namespace lexer {
 	using lang_def::Keyword;

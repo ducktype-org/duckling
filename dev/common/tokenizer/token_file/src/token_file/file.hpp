@@ -1,18 +1,17 @@
 #pragma once
 
-#include <set>
-#include <span>
+#include "forward.hpp"
 
 #include <base/raw_view.hpp>
-#include <lexer/char.hpp>
 #include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
 #include <filesystem/encoding.hpp>
-#include <lexer/token.hpp>
+#include <filesystem/file.hpp>
+#include <lexer/char.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
-
-#include "forward.hpp"
+#include <lexer/token.hpp>
+#include <set>
+#include <span>
 
 namespace tokenizer {
 	/**

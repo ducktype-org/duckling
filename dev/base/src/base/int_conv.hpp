@@ -1,8 +1,9 @@
 #pragma once
 
-#include <utility>
-#include <concepts>
 #include "exceptions.hpp"
+
+#include <concepts>
+#include <utility>
 
 namespace base {
 	/**

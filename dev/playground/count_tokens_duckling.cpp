@@ -6,9 +6,9 @@
  * @note Outputs and returns -1 on error in code;
  */
 
-#include <iostream>
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
+#include <iostream>
 #include <printer/stream_printer.hpp>
 #include <token_file/file.hpp>
 

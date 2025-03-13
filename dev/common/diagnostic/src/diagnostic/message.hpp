@@ -79,11 +79,11 @@
 
 #pragma once
 
-#include <printer/printer_content.hpp>
-#include <concepts>
+#include "source_position.hpp"
 
 #include <base/box.hpp>
-#include "source_position.hpp"
+#include <concepts>
+#include <printer/printer_content.hpp>
 
 namespace dia {
 	/**

@@ -1,9 +1,9 @@
+#include <exec/ctv.hpp>
 #include <exec/exec.hpp>
+#include <exec/operators/builtinoperators.hpp>
+#include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
-#include <exec/operators/builtinoperators.hpp>
-#include <exec/ctv.hpp>
-#include <operations/operation.hpp>
 using namespace exec;
 
 class SimpleExecTest: public tester::TestSuite {

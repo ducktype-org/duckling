@@ -1,14 +1,13 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
 #include <pst_parser/generic_query_key.hpp>
+#include <query_framework/query_int.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
 // this is needed here so constraint from GenericPSTQueryKey is satisfied:
-#include <pst_parser/elements/hierarchy/expr.hpp>
-
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
+#include <pst_parser/elements/hierarchy/expr.hpp>
 
 namespace compiler::helios {
 

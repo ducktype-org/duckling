@@ -1,11 +1,10 @@
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <tester/tester.hpp>
-#include <typesystem/higher/all.hpp>
-
 #include <base/variant.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
+#include <typesystem/higher/all.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;

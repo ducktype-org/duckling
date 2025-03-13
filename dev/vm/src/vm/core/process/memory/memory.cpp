@@ -1,6 +1,7 @@
+#include "memory.hpp"
+
 #include <base/exceptions.hpp>
 #include <mutex>
-#include "memory.hpp"
 
 namespace vm {
 

@@ -187,7 +187,7 @@ ReferenceAlignment: Pointer
 
 
 # Includes and directives
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories:
   - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
     Priority:        2
@@ -210,7 +210,7 @@ MacroBlockEnd:   ''
 
 # Sorting
 SortUsingDeclarations: LexicographicNumeric
-SortIncludes:    Never
+SortIncludes:    CaseSensitive
 
 
 # Penalties

@@ -5,10 +5,10 @@
 
 #pragma once
 
+#include <base/exceptions.hpp>
 #include <exec/ctv.hpp>
 #include <exec/operators/builtinoperators.hpp>
 #include <operations/operation.hpp>
-#include <base/exceptions.hpp>
 #include <vector>
 
 namespace exec::operators {

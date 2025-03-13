@@ -2,19 +2,16 @@
 
 #include "../../lang_parser_state.hpp"
 #include "../elements_common.hpp"
-
-#include <diagnostic/source_position.hpp>
-
-#include <token_parser_core/token_stream.hpp>
-#include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/base_element.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
+#include "lists.hpp"  // clangd says its not used directly @todo #404
+#include "meta.hpp"
 
 #include <base/string_id.hpp>
-
-#include "meta.hpp"
-#include "lists.hpp"  // clangd says its not used directly @todo #404
+#include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/token_stream.hpp>
 
 namespace pst {
 

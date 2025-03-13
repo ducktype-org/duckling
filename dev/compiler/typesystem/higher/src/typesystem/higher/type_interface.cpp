@@ -2,9 +2,9 @@
 
 #include "queries.hpp"
 
+#include <base/optional.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
-#include <base/optional.hpp>
 
 namespace tsh {
 	namespace {

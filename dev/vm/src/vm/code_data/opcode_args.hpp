@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/string_id.hpp>
 #include <base/ints.hpp>
+#include <base/string_id.hpp>
 #include <variant>
 
 /**

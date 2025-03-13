@@ -1,17 +1,15 @@
 #pragma once
 
-#include "../../symbols/symbols.hpp"  // @todo ... #404
 #include "../../scope_symbol_id.hpp"
+#include "../../symbols/symbols.hpp"  // @todo ... #404
 
-#include <vector>
-
-#include <base/ints.hpp>
 #include <base/box.hpp>
-
+#include <base/ints.hpp>
+#include <helios/lookup_result.hpp>
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <helios/lookup_result.hpp>
+#include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;

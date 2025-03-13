@@ -6,10 +6,10 @@
 
 #pragma once
 
-#include <string>
 #include <clap/clap.hpp>
-#include <sstream>
 #include <iomanip>
+#include <sstream>
+#include <string>
 
 namespace clap {
 

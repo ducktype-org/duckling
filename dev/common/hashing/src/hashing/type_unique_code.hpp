@@ -1,12 +1,11 @@
 #pragma once
 
-#include <concepts>
-#include <limits>
+#include "type_code.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
-
-#include "type_code.hpp"
+#include <concepts>
+#include <limits>
 
 namespace hashing {
 

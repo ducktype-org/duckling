@@ -1,18 +1,16 @@
-#include <unordered_map>
-#include <map>
-#include <variant>
-#include <vector>
-
-#include <tester/tester.hpp>
 #include <base/ints.hpp>
-
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_unique_code.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/add_to_hash.hpp>
 #include <hashing/type_code.hpp>
-#include <hashing/hash.hpp>
+#include <hashing/type_hash_code.hpp>
+#include <hashing/type_unique_code.hpp>
+#include <map>
+#include <tester/tester.hpp>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 
 using namespace hashing;

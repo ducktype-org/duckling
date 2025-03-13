@@ -3,14 +3,15 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include <diagnostic/logger.hpp>
-#include <token_file/file.hpp>
-#include <lang_definitions/key_spec_op.hpp>
+#include "lexer.hpp"
+
+#include "classifications.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
-
-#include "lexer.hpp"
-#include "classifications.hpp"
+#include <diagnostic/logger.hpp>
+#include <lang_definitions/key_spec_op.hpp>
+#include <token_file/file.hpp>
 
 namespace lexer {
 	void init() {

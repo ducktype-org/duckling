@@ -1,13 +1,13 @@
 #pragma once
 
+#include "char.hpp"
+#include "token.hpp"
+
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_file/file.hpp>
 #include <vector>
-
-#include "char.hpp"
-#include "token.hpp"
 
 namespace lexer {
 

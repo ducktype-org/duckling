@@ -1,7 +1,7 @@
 #include <filesystem/file.hpp>
+#include <iostream>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
-#include <iostream>
 
 int main(int argc, char** argv) {
 	if (argc != 2) {

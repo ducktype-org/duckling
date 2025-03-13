@@ -2,16 +2,15 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#include <iostream>
+#include <base/int_conv.hpp>
+#include <base/variant.hpp>
 #include <base64.hpp>
-
 #include <clap/clap.hpp>
+#include <filesystem/file.hpp>
+#include <iostream>
+#include <lexer/lexer.hpp>
 #include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <filesystem/file.hpp>
-#include <base/variant.hpp>
-#include <base/int_conv.hpp>
 
 PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -20,13 +19,13 @@ PUSH_DIAGNOSTIC
 POP_DIAGNOSTIC
 
 // vm includes:
-#include <vm/server.hpp>
-#include <vm/cli.hpp>
-#include <vm/config.hpp>
-
-#include "utils.hpp"
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
+#include "utils.hpp"
+
+#include <vm/cli.hpp>
+#include <vm/config.hpp>
+#include <vm/server.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.

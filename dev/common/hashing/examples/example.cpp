@@ -1,16 +1,14 @@
+#include <base/ints.hpp>
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hash.hpp>
+#include <hashing/hash_algorithm_utils.hpp>
+#include <hashing/hashing_algorithms.hpp>
+#include <hashing/type_hash_code.hpp>
+#include <hashing/type_unique_code.hpp>
 #include <iostream>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
-#include <tuple>
-
-#include <base/ints.hpp>
-
-#include <hashing/hash.hpp>
-#include <hashing/add_to_hash.hpp>
-#include <hashing/hashing_algorithms.hpp>
-#include <hashing/hash_algorithm_utils.hpp>
-#include <hashing/type_unique_code.hpp>
-#include <hashing/type_hash_code.hpp>
 
 // example usage of hashing utilities
 

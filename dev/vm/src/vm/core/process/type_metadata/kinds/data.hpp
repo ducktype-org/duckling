@@ -1,9 +1,10 @@
 #pragma once
 
+#include "../definitions.hpp"
+
+#include <base/string_id.hpp>
 #include <unordered_map>
 #include <vector>
-#include <base/string_id.hpp>
-#include "../definitions.hpp"
 
 namespace vm::kind {
 

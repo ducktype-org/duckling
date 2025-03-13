@@ -1,16 +1,15 @@
 #pragma once
 
+#include "element_kind.hpp"
+
+#include <base/box.hpp>
+#include <base/ref.hpp>
+#include <base/strongly_typed_id.hpp>
+#include <ranges>
+#include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/automatic.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <base/ref.hpp>
-#include <base/box.hpp>
-#include <ranges>
-
 #include <variant>
-
-#include "element_kind.hpp"
 
 namespace pst {
 	class Import;

@@ -1,21 +1,20 @@
 #pragma once
 
-#include <string_view>
-#include <type_traits>
-#include <concepts>
-#include <ranges>
-#include <vector>
-#include <string>
-#include <tuple>
-#include <array>
-#include <span>
-#include <bit>
-
-#include <base/type_traits.hpp>
-#include <base/ints.hpp>
-
 #include "hash_algorithm_utils.hpp"
 #include "type_code.hpp"
+
+#include <array>
+#include <base/ints.hpp>
+#include <base/type_traits.hpp>
+#include <bit>
+#include <concepts>
+#include <ranges>
+#include <span>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 namespace hashing {
 

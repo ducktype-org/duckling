@@ -1,9 +1,10 @@
 #include "key_spec_op.hpp"
-#include <base/maps.hpp>
-#include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
-#include <base/init_guard.hpp>
+
 #include <array>
+#include <base/exceptions.hpp>
+#include <base/init_guard.hpp>
+#include <base/maps.hpp>
+#include <base/raw_view.hpp>
 
 namespace lang_def {
 	namespace {

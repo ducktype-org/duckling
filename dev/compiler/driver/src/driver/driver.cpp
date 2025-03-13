@@ -1,13 +1,13 @@
+#include "driver.hpp"
+
+#include <backends/llvm/llvm_backend.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
-#include <system_command/system_command.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <backends/llvm/llvm_backend.hpp>
-
-#include "driver.hpp"
+#include <system_command/system_command.hpp>
 
 namespace compiler::driver {
 

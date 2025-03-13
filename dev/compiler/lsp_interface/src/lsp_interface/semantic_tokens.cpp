@@ -4,13 +4,13 @@
  * semantic tokens in JSON format.
  */
 #include "semantic_tokens.hpp"
+
 #include "utils.hpp"
 
-#include <base/variant.hpp>
 #include <base/stringifyable_enum.hpp>
-
-#include <string>
+#include <base/variant.hpp>
 #include <map>
+#include <string>
 
 namespace lsp {
 	SemanticToken::SemanticToken(CRef<lexer::Token> source):

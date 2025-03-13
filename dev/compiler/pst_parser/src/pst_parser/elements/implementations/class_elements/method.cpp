@@ -1,5 +1,5 @@
-#include "preamble.hpp"
 #include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<Method> Method::parse(LangParserState& state, const ClassContext& ctx) {

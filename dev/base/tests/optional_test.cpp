@@ -3,8 +3,8 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <tester/tester.hpp>
 #include <base/optional.hpp>
+#include <tester/tester.hpp>
 
 using base::Optional;
 

@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
+#include <tester/tester.hpp>
 
 class SimpleLangDefTest: public tester::TestSuite {
 #undef TESTER_CLASS

@@ -4,11 +4,11 @@
  */
 
 #include <filesystem/file.hpp>
+#include <init/init.hpp>
+#include <iostream>
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
 #include <token_file/file.hpp>
-#include <init/init.hpp>
-#include <iostream>
 
 using namespace fs;
 

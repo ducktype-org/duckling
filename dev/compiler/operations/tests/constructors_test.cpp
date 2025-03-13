@@ -1,10 +1,10 @@
+#include <base/string_id.hpp>
 #include <exec/ctv.hpp>
+#include <operations/constructors.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>
-#include <typesystem/typesystem.hpp>
-#include <operations/constructors.hpp>
 #include <typesystem/types.hpp>
-#include <base/string_id.hpp>
+#include <typesystem/typesystem.hpp>
 
 class OperationsTest: public tester::TestSuite {
 #undef TESTER_CLASS

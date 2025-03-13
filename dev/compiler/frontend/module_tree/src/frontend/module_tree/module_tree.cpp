@@ -5,12 +5,12 @@
 
 #include "module_tree.hpp"
 
-#include <pst_parser/parser.hpp>
+#include "queries.hpp"
+
 #include <base/maps.hpp>
 #include <base/stable_hashmap.hpp>
+#include <pst_parser/parser.hpp>
 #include <query_framework/query_impl.hpp>
-
-#include "queries.hpp"
 
 using fs::FsTree;
 using std::regex;

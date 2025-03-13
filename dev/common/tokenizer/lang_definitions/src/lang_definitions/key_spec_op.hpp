@@ -11,8 +11,8 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
 #include <base/flag.hpp>
+#include <base/string_id.hpp>
 
 // @TODO: Implement reflection for those enums
 

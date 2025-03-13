@@ -1,15 +1,17 @@
 #include "preprocessor.hpp"
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/code_data/program.hpp>
-#include <diagnostic/logger.hpp>
-#include "parser/parser.hpp"
-#include <vm/code_data/opcode_args.hpp>
-#include <vm/code_data/opcodes.hpp>
-#include <expected>
-#include <vector>
+
 #include "parser/elements.hpp"
 #include "parser/errors.hpp"
+#include "parser/parser.hpp"
 #include "validator/validator.hpp"
+
+#include <diagnostic/logger.hpp>
+#include <expected>
+#include <vector>
+#include <vm/code_data/opcode_args.hpp>
+#include <vm/code_data/opcodes.hpp>
+#include <vm/code_data/program.hpp>
+#include <vm/core/process/vmprocess.hpp>
 
 namespace vm {
 	namespace {

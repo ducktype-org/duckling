@@ -1,7 +1,7 @@
 #pragma once
 
-#include <variant>
 #include <json/json.hpp>
+#include <variant>
 
 namespace vm::api {
 	struct ExecutionNotStarted {};

@@ -1,5 +1,5 @@
-#include "preamble.hpp"
 #include "../../hierarchy/expr.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class ForBracketError final: public dia::Error {

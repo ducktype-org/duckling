@@ -1,12 +1,12 @@
-#include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
+#include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <clap/clap.hpp>
-#include <iostream>
-#include <query_framework/query_entry_point.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
 #include <init/init.hpp>
+#include <iostream>
+#include <lexer/lexer.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <pst_parser/parser.hpp>
+#include <query_framework/query_entry_point.hpp>
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;

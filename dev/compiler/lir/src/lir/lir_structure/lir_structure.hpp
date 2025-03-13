@@ -1,12 +1,11 @@
 #pragma once
 
-#include <typesystem/lower/type_layout.hpp>
+#include "function_forward.hpp"
+
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
-
 #include <mir/mir_structure/mir_local_ref.hpp>
-
-#include "function_forward.hpp"
+#include <typesystem/lower/type_layout.hpp>
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.

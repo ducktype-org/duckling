@@ -1,25 +1,23 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include <vm/code_data/program.hpp>
 
-#include <vm/api/data/core_operation_error.hpp>
-#include <vm/api/data/response.hpp>
+#include <atomic>
 #include <base/box.hpp>
-#include <base/optional.hpp>
 #include <base/ints.hpp>
+#include <base/optional.hpp>
 #include <condition_variable>
+#include <mutex>
+#include <result.hpp>
+#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
+#include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/code_data/instruction.hpp>
+#include <vm/code_data/program.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/code_data/instruction.hpp>
-
-#include <vm/api/data/request.hpp>
-#include <vm/api/data/status.hpp>
-
-#include <mutex>
-#include <atomic>
-#include <result.hpp>
 
 /**
  * For now only single threaded execution is suported

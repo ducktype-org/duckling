@@ -6,9 +6,10 @@
 #pragma once
 
 #include "ints.hpp"
+#include "stringifyable_enum.hpp"
+
 #include <compare>
 #include <sstream>
-#include "stringifyable_enum.hpp"
 
 #define MAKE_FLAG_TYPE(namespace_name, enum_name, flag_name, ...)                              \
 	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                       \

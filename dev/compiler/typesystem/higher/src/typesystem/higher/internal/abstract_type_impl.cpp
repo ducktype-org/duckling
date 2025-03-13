@@ -1,4 +1,5 @@
 #include "abstract_type_impl.hpp"
+
 #include <query_framework/query_impl.hpp>
 #include <utility>
 

@@ -1,9 +1,8 @@
-#include <variant>
 #include <iostream>
-#include <string>
-#include <vector>
-
 #include <json/json.hpp>
+#include <string>
+#include <variant>
+#include <vector>
 
 struct Foo {
 	int         a;

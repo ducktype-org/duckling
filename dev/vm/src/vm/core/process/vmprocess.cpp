@@ -1,17 +1,17 @@
 #include "vmprocess.hpp"
-#include <vm/api/data/response.hpp>
-#include <vm/api/data/status.hpp>
-#include <vm/api/data/core_operation_error.hpp>
-#include <base/exceptions.hpp>
-#include <vm/core/process/memory/memory.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
-#include <vm/core/thread/vmthread.hpp>
 
-#include <mutex>
+#include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <vm/api/data/request.hpp>
+#include <mutex>
 #include <shared_mutex>
 #include <variant>
+#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
+#include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/core/process/memory/memory.hpp>
+#include <vm/core/thread/vmthread.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
 
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }

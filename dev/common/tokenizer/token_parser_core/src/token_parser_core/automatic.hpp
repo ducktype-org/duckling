@@ -25,14 +25,13 @@
  */
 #pragma once
 
-#include "parser_state.hpp"
-#include "common_elements.hpp"
-#include <lang_definitions/key_spec_op.hpp>
-
 #include "base_element.hpp"
-#include <diagnostic/source_position.hpp>
+#include "common_elements.hpp"
+#include "parser_state.hpp"
 
 #include <concepts>
+#include <diagnostic/source_position.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 
 namespace tpc {
 	using lang_def::Keyword;

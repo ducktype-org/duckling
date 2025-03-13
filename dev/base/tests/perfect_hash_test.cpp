@@ -1,5 +1,5 @@
-#include <tester/tester.hpp>
 #include <base/perfect_hash.hpp>
+#include <tester/tester.hpp>
 
 struct TypeWithHash {
 	u64 a;

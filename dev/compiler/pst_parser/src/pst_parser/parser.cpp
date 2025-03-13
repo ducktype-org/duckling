@@ -4,6 +4,7 @@
  */
 
 #include "parser.hpp"
+
 #include <base/init_guard.hpp>
 #include <lexer/lexer.hpp>
 #include <token_parser_core/tpc.hpp>

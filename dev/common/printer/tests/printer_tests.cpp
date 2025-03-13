@@ -13,10 +13,10 @@
  message. | Then reaching maximum amount of all messages. | Then ensures that nothing is printed if
  minimal level of a message is set sufficiently high.
 */
-#include <tester/tester.hpp>
 #include <printer/stream_printer.hpp>
-#include <utility>
 #include <sstream>
+#include <tester/tester.hpp>
+#include <utility>
 
 using namespace printer;
 

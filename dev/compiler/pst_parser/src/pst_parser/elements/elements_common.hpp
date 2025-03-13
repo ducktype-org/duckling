@@ -1,7 +1,7 @@
 #pragma once
 
-#include "elements_list.hpp"
 #include "../lang_parser_state.hpp"
+#include "elements_list.hpp"
 
 namespace pst {
 	class PstVisitor;

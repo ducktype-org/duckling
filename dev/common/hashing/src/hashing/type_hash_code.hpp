@@ -1,13 +1,12 @@
 #pragma once
 
-#include <concepts>
-#include <span>
+#include "hashing_algorithms.hpp"
+#include "type_code.hpp"
 
 #include <base/ints.hpp>
 #include <base/type_traits.hpp>
-
-#include "type_code.hpp"
-#include "hashing_algorithms.hpp"
+#include <concepts>
+#include <span>
 
 namespace hashing {
 
