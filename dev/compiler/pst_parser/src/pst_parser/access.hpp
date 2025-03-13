@@ -2,6 +2,7 @@
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
+#include <base/optional.hpp>
 
 #include <query_framework/query_int.hpp>
 
@@ -31,9 +32,9 @@ namespace pst {
 		friend class Access;
 		friend Element;
 
-		MCRef<Element> ref;
+		CRef<Element> ref;
 
-		Access(MCRef<Element> ref): ref(ref) {}
+		Access(CRef<Element> ref): ref(ref) {}
 		Access(const Element& ref): ref(&ref) {}
 
 	public:
@@ -50,16 +51,23 @@ namespace pst {
 		template<typename T>
 		Access(Access<T>&& other): ref(std::move(other.ref)) {}
 
+		/**
+		 * @brief This should be fine for now, casting might end up as null which would be potentially bad for knowing about accesses
+		 */
 		template<typename T>
-		Access<T> dynamicCast() const {
+		base::Optional<Access<T>> dynamicCast() const {
 			return { { dynamic_cast<const T*>(&*ref) } };
 		}
 
-		EXPOSE_MREF_INTERFACE(ref)
+		EXPOSE_REF_INTERFACE(ref)
 	};
 
 	namespace detail {
 		void notifyContext(query::detail::ContextType& ctx);
+		/**
+		 * @brief Some smart throw based on context.
+		 */
+		void notifyBadAccess(query::detail::ContextType&);
 	}
 
 	template</*std::derived_from<LangElement>*/ typename Element>
@@ -88,11 +96,29 @@ namespace pst {
 		template<typename T>
 		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref) {}
 
-		Access<Element> illegalAccess() const { return { ref }; }
+		auto illegalAccess() const { 
+			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> {return {ref};}); 
+		}
+
+		/**
+		 * @brief This should be fine for now, casting might end up as null which would be potentially bad for knowing about accesses
+		 */
+		template<typename T>
+		AccessLocked<T> dynamicCast() const {
+			return { { dynamic_cast<const T*>(&*ref) } };
+		}
+
+		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
+			detail::notifyContext(ctx);
+			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> {return {ref};}); 
+		}
 
 		Access<Element> unlock(query::Context& ctx) const {
+			if (!ref.toOpt()) {
+				detail::notifyBadAccess(ctx);
+			}
 			detail::notifyContext(ctx);
-			return { ref };
+			return { ref.toOpt().value() };
 		}
 
 		template<typename E>

@@ -13,8 +13,10 @@ namespace compiler::helios {
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {
-			if (auto accessBlock = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>())
+			if (auto accessBlockOpt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+				auto accessBlock = accessBlockOpt.value();
 				for (auto e: *accessBlock->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
+			}
 			else
 				out.push_back(stmt);
 		}
@@ -30,7 +32,7 @@ namespace compiler::helios {
 		) {
 			if (auto classBlock = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
 				StmtList<pst::ClassStmt> out;
-				for (auto&& e: *classBlock) detail::visitClassStmts(ctx, out, e);
+				for (auto&& e: *classBlock.value()) detail::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
 				const auto& element = *elem.unlock(ctx);
@@ -48,17 +50,17 @@ namespace compiler::helios {
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto codeBlock = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;
-			for (auto&& e: *codeBlock) out.emplace_back(e);
+			for (auto&& e: *codeBlock.value()) out.emplace_back(e);
 			return out;
 		}
 		if (auto codeBlockOrStmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			StmtList<> out;
-			for (auto&& e: *codeBlockOrStmt) out.emplace_back(e);
+			for (auto&& e: *codeBlockOrStmt.value()) out.emplace_back(e);
 			return out;
 		}
 		if (auto topLevel = elem.dynamicCast<pst::TopLevel>()) {
 			StmtList<> out;
-			for (auto e: topLevel->getStatements()) out.emplace_back(e);
+			for (auto e: topLevel.value()->getStatements()) out.emplace_back(e);
 			return out;
 		}
 		if (elem.dynamicCast<pst::ClassBlock>()) {

@@ -62,11 +62,11 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitConst(pst::Access<pst::Const> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess()->getExpr());
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess();
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -83,11 +83,11 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess()->getExpr());
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = symbolPst(sym).illegalAccess();
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 

@@ -28,11 +28,13 @@ namespace pst {
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			return element.illegalAccess()->getID().asInt();
+			return element.illegalAccess().value()->getID().asInt();
 		}
 
 		bool operator==(const GenericPSTQueryKey& other) const {
-			return &*element.illegalAccess() == &*other.element.illegalAccess();
+			if (element.illegalAccess().has_value() == other.element.illegalAccess().has_value()) return true;
+			if (!element.illegalAccess().has_value() || !other.element.illegalAccess().has_value()) return false;
+			return &*element.illegalAccess().value() == &*other.element.illegalAccess().value();
 		}
 	};
 }

@@ -72,7 +72,7 @@ namespace compiler::helios {
 	 * @todo should this be an external API? It might depend on incremental compilation
 	 * implementation
 	 */
-	pst::Access<pst::Stmt> stmt(query::Context&, SymID);
+	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);
 
 
 	pst::AccessLocked<pst::LangElement> symbolPst(SymID);

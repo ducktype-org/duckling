@@ -106,7 +106,8 @@ namespace compiler::helios {
 
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:
-				if (auto assignment = inner_expr.dynamicCast<pst::expr::Assignment>()) {
+				if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
+					auto assignment = assignment_opt.value();
 					CORE_ASSERT(
 						assignment->getAssignmentType() == base::StrID("="),
 						"Unsupported assignment type"
@@ -272,7 +273,7 @@ namespace compiler::helios {
 			);
 
 			HOUTFunctionMaker func_maker(ctx, key);
-			stmt(ctx, key)->acceptVisitor(func_maker);
+			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
 			return func_maker.out.value();
 		}

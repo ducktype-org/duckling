@@ -725,7 +725,7 @@ private:
 			};
 
 			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
-				&*pst->getRootElement().illegalAccess()
+				&*pst->getRootElement().illegalAccess().value()
 			);
 
 			// We test that each expr_holder and all its sub expressions
@@ -739,15 +739,15 @@ private:
 					auto element = expr_holder->getParent().illegalAccess();
 
 					while (true) {
-						if (auto holder = dynamic_cast<const pst::ExprHolder*>(&*element)) {
-							if (holder->isTopLevel()) {
+						if (auto holder = element.value().dynamicCast<pst::ExprHolder>()) {
+							if (holder.value()->isTopLevel()) {
 								// OK, we found parent
 								break;
 							}
 						}
 						// if parent doesn't exist, we will
 						// hit panic here at some point:
-						element = element->getParent().illegalAccess();
+						element = element.value()->getParent().illegalAccess();
 					}
 				}
 			}

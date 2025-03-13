@@ -183,7 +183,7 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprHolder: {
 			// note: top expr creates a scope for lifetimes
-			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>(); 
+			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value(); 
 			if (as_expr_holder->isTopLevel())
 				return ElementScopeKind::Standard;
 			else
@@ -237,7 +237,7 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = element->getParent().unlock(ctx)
+			ScopeID parent = element->getParent().unlockOpt(ctx)
 			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent())
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
@@ -377,7 +377,7 @@ namespace compiler::helios {
 				);
 
 				SymbolGrabVisitor symbol_grab(ctx, key);
-				auto              as_stmt = base_element.dynamicCast<pst::Stmt>();
+				auto              as_stmt = base_element.dynamicCast<pst::Stmt>().value();
 				as_stmt->acceptVisitor(symbol_grab);
 				return std::move(symbol_grab.out.value());
 			} else if (base_element->getElementKind() == pst::ElementKind::ExprHolder) {
@@ -509,7 +509,7 @@ namespace compiler::helios {
 		while (true) {
 			std::cerr << iter_scope.customPerfectHash() << "("
 					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value().illegalAccess()->elementType()
+			                  ? iter_scope.ref->related_pst_element.value().illegalAccess().value()->elementType()
 			                  : "ROOT")
 					  << ")" << " -> ";
 

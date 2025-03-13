@@ -325,7 +325,7 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 ) {
 	// get top-level:
-	while (element.unlock(ctx)->getParent().unlock(ctx)) element = element.unlock(ctx)->getParent();
+	while (element.unlock(ctx)->getParent().unlockOpt(ctx)) element = element.unlock(ctx)->getParent();
 
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];

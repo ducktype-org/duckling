@@ -21,7 +21,8 @@ namespace compiler::helios::code {
 
 		void getVariantSubExprsInPlace(query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr, std::vector<pst::AccessLocked<pst::ExprElement>>& sub_exprs_append
 		) {
-			if (auto bin_op = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
+			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
+				auto bin_op = bin_op_opt.value();
 				if (bin_op->getOperator().str() == "|") {
 					getVariantSubExprsInPlace(ctx, bin_op->getLeftOperand(), sub_exprs_append);
 					getVariantSubExprsInPlace(ctx, bin_op->getRightOperand(), sub_exprs_append);
@@ -255,8 +256,9 @@ namespace compiler::helios::code {
 				SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
 				for (auto&& el: stmt->getChain()) {
-					auto pst_access = el.unlock(ctx).dynamicCast<pst::expr::Access>();
-					CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
+					auto pst_access_opt = el.unlock(ctx).dynamicCast<pst::expr::Access>();
+					CORE_ASSERT(pst_access_opt, "Not handling non-AccessExprs yet");
+					auto pst_access = pst_access_opt.value();
 					CORE_ASSERT(
 						pst_access->getType() == ".", "Not handling .? access operator yet"
 					);
@@ -478,7 +480,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
-			CORE_ASSERT(key.element.unlock(ctx), "Nullptr provided to QueryHoutOfExpr");
+			CORE_ASSERT(key.element.unlockOpt(ctx), "Nullptr provided to QueryHoutOfExpr");
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);

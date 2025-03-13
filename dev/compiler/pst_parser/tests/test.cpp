@@ -86,12 +86,13 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement().illegalAccess()->getStatements()) {
+			for (const auto& stmt_locked: pst.getRootElement().illegalAccess().value()->getStatements()) {
+				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { stmt.illegalAccess()->acceptVisitor(panicky_vistor); },
+					[&] { stmt->acceptVisitor(panicky_vistor); },
 					"Stmt did not call it\'s visitor"
 				);
-				stmt.illegalAccess()->acceptVisitor(empty_vistor);
+				stmt->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
@@ -101,13 +102,13 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt: pst.getRootElement().illegalAccess()->getStatements()) {
-				pst::Access<pst::LangElement> lang_stmt = stmt.illegalAccess();
+			for (const auto& stmt_locked: pst.getRootElement().illegalAccess().value()->getStatements()) {
+				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
+					[&] { stmt->acceptVisitor(panicky_vistor); },
 					"LangElement did not call it\'s visitor"
 				);
-				lang_stmt->acceptVisitor(empty_vistor);
+				stmt->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
@@ -202,14 +203,15 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = pst.getRootElement()
-		               .illegalAccess()
+		auto fun_opt = pst.getRootElement()
+		               .illegalAccess().value()
 		               ->getStatements()[0]
-					   .illegalAccess()
+					   .illegalAccess().value()
 		               .dynamicCast<pst::Fun>();
-		ASSERT_TRUE(fun);
+		ASSERT_TRUE(fun_opt.has_value());
+		auto fun =  fun_opt.value();
 
-		auto params = fun->getParams().illegalAccess();
+		auto params = fun->getParams().illegalAccess().value();
 		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
@@ -230,7 +232,7 @@ private:
 		usize i = 0;
 		for (auto param: *params) {
 			PstParamVisitor visitor(base::StrID(names.at(i)));
-			param.illegalAccess()->acceptVisitor(visitor);
+			param.illegalAccess().value()->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}
