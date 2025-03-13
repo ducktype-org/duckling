@@ -23,6 +23,12 @@ namespace vm::validator {
 	public:
 		StackState(const TypeMetadata& meta_data);
 
-		void consume(CRef<parser::OpCode> opcode);
+		/**
+		 * @brief Takes an instruction and updates the stack.
+		 *
+		 * Returns true if the stack everything is fine.
+		 * Otherwise, returns false.
+		 */
+		bool consume(CRef<parser::OpCode> opcode);
 	};
 }
