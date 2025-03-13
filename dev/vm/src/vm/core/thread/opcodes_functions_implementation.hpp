@@ -33,7 +33,7 @@
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <vm/code_data/instruction.hpp>
-#include "vm/code_data/opcodes.hpp"
+#include <vm/code_data/opcodes.hpp>
 #include <vm/core/process/vmprocess.hpp>
 
 
