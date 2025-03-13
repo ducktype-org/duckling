@@ -1,10 +1,10 @@
 #pragma once
 
 #include <base/ref.hpp>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 #include <base/stringifyable_enum.hpp>
 #include "instructions.hpp"
 #include <cstdint>
@@ -106,11 +106,12 @@ namespace compiler::backend_vm {
 		usize max_stack_size = 0;
 		usize ret_size       = 0;
 
-		const base::HashMap<base::StrID, vm::TypeOfData>& available_types;
+		const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types;
 
 	public:
 		FunctionBuilder(
-			base::StrID name, const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+			base::StrID                                               name,
+			const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types
 		);
 
 		usize               initType(base::StrID tp);
@@ -129,17 +130,17 @@ namespace compiler::backend_vm {
 	class CodeFileBuilder {
 		std::deque<FunctionBuilder> functions{};
 
-		std::deque<CRef<vm::TypeOfData>>           types{};
-		base::HashMap<base::StrID, vm::TypeOfData> type_map{};
+		std::deque<CRef<vm::parser::TypeOfData>>           types{};
+		base::HashMap<base::StrID, vm::parser::TypeOfData> type_map{};
 
 	public:
 		CodeFileBuilder() = default;
 
 		void addFunction(const FunctionBuilder& function);
 
-		void addType(const vm::TypeOfData& type);
+		void addType(const vm::parser::TypeOfData& type);
 
-		const base::HashMap<base::StrID, vm::TypeOfData>& getAvailableTypes() const;
+		const base::HashMap<base::StrID, vm::parser::TypeOfData>& getAvailableTypes() const;
 
 		[[nodiscard]] CodeFile build() const;
 	};

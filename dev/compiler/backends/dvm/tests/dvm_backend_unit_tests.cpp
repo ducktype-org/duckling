@@ -6,10 +6,10 @@
 #include <backends/dvm/elements.hpp>
 #include <backends/dvm/utils.hpp>
 #include <base/string_id.hpp>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 #include <backends/dvm/instructions.hpp>
 #include <base/exceptions.hpp>
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 #include <tester/tester.hpp>
 #include <backends/dvm/builders.hpp>
 #include <backends/dvm/serializer.hpp>
@@ -79,9 +79,9 @@ private:
 	}
 
 	void testFunctionBuilder() {
-		base::HashMap<base::StrID, vm::TypeOfData> available_types;
-		auto                                       int32 = base::StrID("int32");
-		auto                                       int64 = base::StrID("int64");
+		base::HashMap<base::StrID, vm::parser::TypeData> available_types;
+		auto                                             int32 = base::StrID("int32");
+		auto                                             int64 = base::StrID("int64");
 		available_types.put(int32, vm::PrimitiveType{ .name = int32, .size = 4 });
 		available_types.put(int64, vm::PrimitiveType{ .name = int64, .size = 8 });
 		FunctionBuilder func_builder(base::StrID("test"), available_types);

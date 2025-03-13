@@ -1,7 +1,7 @@
 #pragma once
 
 #include <backends/dvm/instructions.hpp>
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \

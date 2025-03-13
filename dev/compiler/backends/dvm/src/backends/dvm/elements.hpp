@@ -1,7 +1,7 @@
 #pragma once
 
 #include <deque>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 #include <backends/dvm/instructions.hpp>
 #include <base/string_id.hpp>
 
@@ -33,7 +33,7 @@ namespace compiler::backend_vm {
 	 * functions and type definitions.
 	 */
 	struct CodeFile: public VmElement {
-		std::deque<vm::TypeOfData> types;
-		std::deque<Function>       functions;
+		std::deque<vm::parser::TypeOfData> types;
+		std::deque<Function>               functions;
 	};
 }

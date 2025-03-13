@@ -4,9 +4,9 @@
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 #include <base/ref.hpp>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 #include <ranges>
 #include "utils.hpp"
 
@@ -28,7 +28,7 @@ void compiler::backend_vm::CodeFileBuilder::addFunction(const FunctionBuilder& f
 	functions.push_back(function);
 }
 
-void compiler::backend_vm::CodeFileBuilder::addType(const vm::TypeOfData& type) {
+void compiler::backend_vm::CodeFileBuilder::addType(const vm::parser::TypeOfData& type) {
 	if (type_map.atMaybe(typeName(type))) {
 		// Type already exists, check if it's the same and if true, skip
 	} else {
@@ -53,26 +53,25 @@ void compiler::backend_vm::FunctionBuilder::addInstruction(const VmInstruction& 
 }
 
 compiler::backend_vm::FunctionBuilder::FunctionBuilder(
-	base::StrID name, const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+	base::StrID name, const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types
 ):
 	  name(name),
 	  available_types(available_types) {}
 
-const base::HashMap<base::StrID, vm::TypeOfData>&
+const base::HashMap<base::StrID, vm::parser::TypeOfData>&
 	compiler::backend_vm::CodeFileBuilder::getAvailableTypes() const {
 	return type_map;
 }
 
-usize getTypeSize(const vm::TypeOfData& tp) {
+usize getTypeSize(const vm::parser::TypeOfData& tp) {
 	variant_match(tp) {
-		variant_case(vm::PrimitiveType, primitive) return primitive.size;
-
-		NOIMPL_CASE(vm::PointerType, "get size of")
-		NOIMPL_CASE(vm::StaticTableType, "get size of")
-		NOIMPL_CASE(vm::DynamicTableType, "get size of")
-		NOIMPL_CASE(vm::DataType, "get size of")
-		NOIMPL_CASE(vm::VariantType, "get size of")
-		NOIMPL_CASE(vm::FunctionType, "get size of")
+		variant_case(vm::parser::PrimitiveType, primitive) return primitive.size;
+		NOIMPL_CASE(vm::parser::PointerType, "get size of")
+		NOIMPL_CASE(vm::parser::StaticTableType, "get size of")
+		NOIMPL_CASE(vm::parser::DynamicTableType, "get size of")
+		NOIMPL_CASE(vm::parser::DataType, "get size of")
+		NOIMPL_CASE(vm::parser::VariantType, "get size of")
+		NOIMPL_CASE(vm::parser::FunctionType, "get size of")
 	}
 	CORE_UNREACHABLE();
 }
@@ -80,9 +79,9 @@ usize getTypeSize(const vm::TypeOfData& tp) {
 usize compiler::backend_vm::FunctionBuilder::initType(base::StrID tp) {
 	instructions.emplace_back(Op_init_type{ tp });
 
-	const vm::TypeOfData& vm_type   = available_types[tp];
-	const usize           type_size = getTypeSize(vm_type);
-	usize                 offset    = 0;
+	const vm::parser::TypeOfData& vm_type   = available_types[tp];
+	const usize                   type_size = getTypeSize(vm_type);
+	usize                         offset    = 0;
 
 	if (!local_stack.empty()) {
 		const LocalStackEntry& prev_entry = local_stack.back();

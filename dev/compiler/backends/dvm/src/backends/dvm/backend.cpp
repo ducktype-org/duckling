@@ -2,12 +2,12 @@
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 #include "builders.hpp"
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 #include "serializer.hpp"
 #include <base/variant.hpp>
 #include "instructions.hpp"
 #include <ostream>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <ranges>
@@ -16,10 +16,10 @@
 namespace compiler::backend_vm {
 	void Module::buildRepr(std::ostream& out) const { serialize(file_builder.build(), out); }
 
-	vm::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
+	vm::parser::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) {
-				return vm::PrimitiveType{ .name = base::StrID("void"), .size = 0 };
+				return vm::parser::PrimitiveType{ .name = base::StrID("void"), .size = 0 };
 			}
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				auto bits = usize(layout.getSize());
@@ -27,7 +27,8 @@ namespace compiler::backend_vm {
 				usize       bytes = bits / 8;
 				std::string name  = "i" + std::to_string(bits);
 
-				return vm::PrimitiveType{ .name = base::StrID(name.c_str()), .size = bytes };
+				return vm::parser::PrimitiveType{ .name = base::StrID(name.c_str()),
+					                              .size = bytes };
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
 				auto bits = usize(layout.getSize());
@@ -39,7 +40,8 @@ namespace compiler::backend_vm {
 				usize       bytes = bits / 8;
 				std::string name  = "f" + std::to_string(bits);
 
-				return vm::PrimitiveType{ .name = base::StrID(name.c_str()), .size = bytes };
+				return vm::parser::PrimitiveType{ .name = base::StrID(name.c_str()),
+					                              .size = bytes };
 			}
 			variant_default {
 				CORE_PANIC(
@@ -55,16 +57,16 @@ namespace compiler::backend_vm {
 			CRef<lir::Function> lir_function;
 			FunctionBuilder     func_builder;
 
-			base::HashMap<usize, base::StrID>        block_id_to_label;
-			base::Map<lir::LocalRef, usize>          lir_local_to_stack;
-			base::Map<lir::LocalRef, vm::TypeOfData> lir_local_types;
+			base::HashMap<usize, base::StrID>                block_id_to_label;
+			base::Map<lir::LocalRef, usize>                  lir_local_to_stack;
+			base::Map<lir::LocalRef, vm::parser::TypeOfData> lir_local_types;
 
 			base::Map<lir::LocalRef, u64> variable_to_id;
 			base::Map<lir::BlockRef, u64> block_to_id;
 
 			AddLirFuncContext(
-				CRef<lir::Function>                               lir_function,
-				const base::HashMap<base::StrID, vm::TypeOfData>& available_types
+				CRef<lir::Function>                                       lir_function,
+				const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types
 			):
 				  lir_function(lir_function),
 				  func_builder(lir_function->name, available_types) {
@@ -107,7 +109,7 @@ namespace compiler::backend_vm {
 			auto&&              var_type = ctx.lir_local_types[output];
 
 			variant_match(var_type) {
-				variant_case(vm::PrimitiveType, primitive) {
+				variant_case(vm::parser::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
 						throw base::NotYetImplemented(base::strConcat(
@@ -127,14 +129,14 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalI8{ i64(ctx.lir_local_to_stack[output]) };
 				}
 
-				variant_case(vm::PointerType, pointer) {
+				variant_case(vm::parser::PointerType, pointer) {
 					return vm::opargs::StackLocalPtr(i64(ctx.lir_local_to_stack[output]));
 				}
-				NOIMPL_CASE(vm::StaticTableType, "add_instr")
-				NOIMPL_CASE(vm::DynamicTableType, "add_instr")
-				NOIMPL_CASE(vm::DataType, "add_instr")
-				NOIMPL_CASE(vm::VariantType, "add_instr")
-				variant_case(vm::FunctionType, function_tp) {
+				NOIMPL_CASE(vm::parser::StaticTableType, "add_instr")
+				NOIMPL_CASE(vm::parser::DynamicTableType, "add_instr")
+				NOIMPL_CASE(vm::parser::DataType, "add_instr")
+				NOIMPL_CASE(vm::parser::VariantType, "add_instr")
+				variant_case(vm::parser::FunctionType, function_tp) {
 					return vm::opargs::FunctionName(function_tp.name);
 				}
 			}

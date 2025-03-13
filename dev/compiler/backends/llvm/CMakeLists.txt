@@ -1,7 +1,7 @@
 add_library(LLVMBackend
-        src/backends/llvm/detail/llvm_lowering.cpp
-        src/backends/llvm/detail/compile_llvm.cpp
-        src/backends/llvm/detail/module.cpp
+        src_private/backends/llvm_private/llvm_lowering.cpp
+        src_private/backends/llvm_private/compile_llvm.cpp
+        src_private/backends/llvm_private/module.cpp
 )
 
 llvm_map_components_to_libnames(llvm_libs

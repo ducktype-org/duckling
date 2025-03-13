@@ -3,8 +3,8 @@
 #include <base/int_conv.hpp>
 #include "instructions.hpp"
 #include "elements.hpp"
-#include <code_data/opcode_args.hpp>
-#include <preprocessor/parser/types_of_data.hpp>
+#include <vm/code_data/opcode_args.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
 
 namespace compiler::backend_vm {
 	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
@@ -65,7 +65,7 @@ namespace compiler::backend_vm {
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include "../../../../../../VM/src/code_data/opcodes_list.hpp"
+#include <vm/code_data/opcodes_list.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -136,49 +136,51 @@ namespace compiler::backend_vm {
 	};
 
 	class TypeSerializer {
-		std::ostream&         out;
-		const vm::TypeOfData& type;
+		std::ostream&                 out;
+		const vm::parser::TypeOfData& type;
 
 	private:
 		struct TypeSerializerVisitor {
 			std::ostream& out;
 
-			void operator()(const vm::PrimitiveType& type) {
+			void operator()(const vm::parser::PrimitiveType& type) {
 				out << "type primitive: ";
 				out << type.name.strView() << " ";
 				out << type.size;
 			}
 
-			void operator()(const vm::PointerType&) {
+			void operator()(const vm::parser::PointerType&) {
 				throw base::NotYetImplemented("PointerType serialization");
 			}
 
-			void operator()(const vm::StaticTableType& type) {
+			void operator()(const vm::parser::StaticTableType& type) {
 				out << "type static_table: ";
 				out << type.name.strView() << " ";
 				out << type.inner.strView() << " ";
 				out << type.table_size;
 			}
 
-			void operator()(const vm::DynamicTableType&) {
+			void operator()(const vm::parser::DynamicTableType&) {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::DataType&) {
+			void operator()(const vm::parser::DataType&) {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::VariantType&) {
+			void operator()(const vm::parser::VariantType&) {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const vm::FunctionType&) {
+			void operator()(const vm::parser::FunctionType&) {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 		};
 
 	public:
-		TypeSerializer(std::ostream& out, const vm::TypeOfData& type): out(out), type(type) {}
+		TypeSerializer(std::ostream& out, const vm::parser::TypeOfData& type):
+			  out(out),
+			  type(type) {}
 
 		void write() { std::visit(TypeSerializerVisitor{ out }, type); }
 	};

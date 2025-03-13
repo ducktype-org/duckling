@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include <helios/hout/elements/expr.hpp>
 #include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
@@ -570,6 +571,10 @@ namespace compiler::mir {
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+		void visitCallExpr(const hc::CallExpr&) override {
+			throw base::NotYetImplemented("call expr");
 		}
 
 	private:

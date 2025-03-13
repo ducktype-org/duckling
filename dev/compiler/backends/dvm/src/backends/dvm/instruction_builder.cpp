@@ -3,7 +3,7 @@
 #include <backends/dvm/utils.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <code_data/opcode_args.hpp>
+#include <vm/code_data/opcode_args.hpp>
 
 namespace compiler::backend_vm {
 	namespace {
@@ -33,7 +33,7 @@ namespace compiler::backend_vm {
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map<std::string, VmInstruction (*)()> OPCODE_TO_0_ARGS_FACTORY = {
-#include <code_data/opcodes_list.hpp>
+#include <vm/code_data/opcodes_list.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -47,7 +47,7 @@ namespace compiler::backend_vm {
 
 		const std::unordered_map<std::string, VmInstruction (*)(vm::opargs::OpCodeArg)>
 			OPCODE_TO_1_ARGS_FACTORY = {
-#include <code_data/opcodes_list.hpp>
+#include <vm/code_data/opcodes_list.hpp>
 			};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -63,7 +63,7 @@ namespace compiler::backend_vm {
 			std::string,
 			VmInstruction (*)(vm::opargs::OpCodeArg, vm::opargs::OpCodeArg)>
 			OPCODE_TO_2_ARGS_FACTORY = {
-#include <code_data/opcodes_list.hpp>
+#include <vm/code_data/opcodes_list.hpp>
 			};
 
 #undef HANDLE_OPCODE_0ARGS
