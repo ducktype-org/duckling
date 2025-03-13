@@ -9,7 +9,7 @@ if(ENABLE_COVERAGE)
 
 	find_program(LCOV lcov REQUIRED)
 
-	if (NOT GCOV_VERSION)
+	if(NOT GCOV_VERSION)
 		message(FATAL_ERROR "GCOV_VERSION is not set.")
 	endif()
 
@@ -30,37 +30,41 @@ if(ENABLE_COVERAGE)
 	# 1. compile and run the tests
 	# 2. run this target
 	add_custom_target(coverage
+
 		# Initial coverage created for all files in the project.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
-						--gcov-tool "${GCOV_PATH}"
-						--initial
-						--capture
-						--base-directory "${CMAKE_SOURCE_DIR}"
-						--no-external
-						--output-file coverage_base.info
+		--gcov-tool "${GCOV_PATH}"
+		--initial
+		--capture
+		--base-directory "${CMAKE_SOURCE_DIR}"
+		--no-external
+		--output-file coverage_base.info
+
 		# Creating coverage data for the tests.
 		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
-						--gcov-tool "${GCOV_PATH}"
-						--capture
-						--base-directory "${CMAKE_SOURCE_DIR}"
-						--no-external
-						--output-file coverage_test.info
+		--gcov-tool "${GCOV_PATH}"
+		--capture
+		--base-directory "${CMAKE_SOURCE_DIR}"
+		--no-external
+		--output-file coverage_test.info
+
 		# Merging the two coverage data files.
 		COMMAND ${LCOV} --add-tracefile coverage_base.info
-						--add-tracefile coverage_test.info
-						--output-file coverage_unfiltered.info
-						--gcov-tool "${GCOV_PATH}"
+		--add-tracefile coverage_test.info
+		--output-file coverage_unfiltered.info
+		--gcov-tool "${GCOV_PATH}"
+
 		# Removing unwanted files from the coverage report.
 		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
-						--remove coverage_unfiltered.info
-						"docs/**"
-						"integration_tests/**"
-						"scripts/**"
-						"**/tests/**"
-						"**/playground/**"
-						"${CMAKE_BINARY_DIR}/**"  # Especially we should exclude the dependencies.
-						--output-file coverage.info
-						--gcov-tool "${GCOV_PATH}"
+		--remove coverage_unfiltered.info
+		"docs/**"
+		"integration_tests/**"
+		"scripts/**"
+		"**/tests/**"
+		"**/playground/**"
+		"${CMAKE_BINARY_DIR}/**" # Especially we should exclude the dependencies.
+		--output-file coverage.info
+		--gcov-tool "${GCOV_PATH}"
 
 		COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
 		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -103,13 +107,19 @@ function(duck_add_test_custom test_pack test_name test_source USES)
 		set_target_properties(${test_name} PROPERTIES EXCLUDE_FROM_ALL true)
 		add_to_coverage(${test_name})
 	else()
-		message(FATAL_ERROR "Test lacks uses clause")
+		message(FATAL_ERROR "Test lacks `USES` clause")
 	endif()
 endfunction()
 
-function(duck_add_test test_pack test_base_name USES)
+function(duck_add_test test_pack test_base_name test_user_source USES)
 	set(test_name ${test_base_name}_test)
-	duck_add_test_custom(${test_pack} ${test_name} tests/${test_name}.cpp USES ${ARGN})
+	set(test_source tests/${test_name}.cpp)
+
+	if(${test_source} STREQUAL ${test_user_source})
+		duck_add_test_custom(${test_pack} ${test_name} ${test_source} USES ${ARGN})
+	else()
+		message(FATAL_ERROR "Test `${test_base_name}` source file should be `${test_source}` but is `${test_user_source}`")
+	endif()
 endfunction()
 
 add_custom_target(build_all_tests)

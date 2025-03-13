@@ -4,4 +4,4 @@ add_library(Init
 
 make_module(Init USES Base)
 
-duck_add_test(common init USES Base Init)
+duck_add_test(common init tests/init_test.cpp USES Base Init)

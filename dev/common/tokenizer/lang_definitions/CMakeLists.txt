@@ -5,4 +5,4 @@ add_library(LexerDefinitions
 
 make_module(LexerDefinitions USES Base)
 
-duck_add_test(common lang_definitions USES LexerDefinitions)
+duck_add_test(common lang_definitions tests/lang_definitions_test.cpp USES LexerDefinitions)

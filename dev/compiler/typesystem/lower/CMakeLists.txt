@@ -5,4 +5,4 @@ add_library(TypeSystemLower
 
 make_module(TypeSystemLower USES Base QueryFramework TypeSystemHigher)
 
-duck_add_test(compiler tsl_simple USES TypeSystemLower)
+duck_add_test(compiler tsl_simple tests/tsl_simple_test.cpp USES TypeSystemLower)

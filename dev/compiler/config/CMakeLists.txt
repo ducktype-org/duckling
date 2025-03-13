@@ -4,5 +4,4 @@ add_library(Config
 
 make_module(Config USES Base Clap Lexer Diagnostic)
 
-duck_add_test(compiler config USES Config Tester)
-
+duck_add_test(compiler config tests/config_test.cpp USES Config Tester)
