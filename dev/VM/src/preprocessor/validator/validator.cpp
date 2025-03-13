@@ -40,11 +40,10 @@ namespace vm::validator {
 			void validateMainExistance();
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
+
 			void validateX() {
 				StackState state(*program.type_metadata);
-				for(auto&& instr: program.functions[0]->code->opcodes) {
-					state.consume(instr.ref());
-				}
+				for (auto&& instr: program.functions[0]->code->opcodes) state.consume(instr.ref());
 			}
 		};
 
