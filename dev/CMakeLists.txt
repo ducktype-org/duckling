@@ -52,7 +52,7 @@ insertLLVM()
 add_subdirectory(base)
 add_subdirectory(common)
 add_subdirectory(compiler)
-add_subdirectory(VM)
+add_subdirectory(vm)
 add_subdirectory(playground)
 
 # Scripts:
