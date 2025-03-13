@@ -43,7 +43,9 @@ namespace compiler::helios {
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
 			for (auto submodule: *submodules) {
-				out.push_back(ctx.query<QueryModuleHOUTRecursively>(submodule));
+				// @TODO optimize multiple concatenations
+				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
+				out.insert(out.end(), submodule_hout.begin(), submodule_hout.end());
 			}
 			return out;
 		}
