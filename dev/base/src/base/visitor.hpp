@@ -3,46 +3,58 @@
 #include <base/type_traits.hpp>
 
 /**
+ * @brief Helper for MAKE_VISITOR. Default method interface.
+ * @note You can customize visitor interface by using `MAKE_VISITOR_CUSTOM_INTERFACE`.
+ */
+#define VISITOR_DEFAULT_METHOD_INTERFACE(type) void visit##type(const type&)
+
+/**
  * @brief Helper for MAKE_VISITOR. Creates virtual method implementation.
  */
-#define VISITOR_METHOD(type) virtual void visit##type(const type& val) = 0;
+#define VISITOR_METHOD(INTERFACE, type) virtual INTERFACE(type) = 0;
 
 /**
  * @brief Helper for MAKE_VISITOR. Creates empty implementation.
  */
-#define VISITOR_EMPTY_METHOD(type) \
-	void visit##type(const type&) override {}
+#define VISITOR_EMPTY_METHOD(INTERFACE, type) \
+	INTERFACE(type) override {}
 
 /**
  * @brief Helper for MAKE_VISITOR. Creates panicky implementation.
  */
-#define VISITOR_PANIC_METHOD(tp, type)                                    \
-	void visit##type(const type&) override {                              \
-		CORE_PANIC(base::typeName<tp>(), " visitor has visited: " #type); \
-	}
+#define VISITOR_PANIC_METHOD(INTERFACE, name, type) \
+	INTERFACE(type) override { CORE_PANIC(base::typeName<name>(), " visitor has visited: " #type); }
 
 
 /**
  * @brief Helper for MAKE_VISITOR. Creates visitor classes.
  */
-#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, ...)     \
-	class BaseName {                                                 \
-	public:                                                          \
-		virtual ~BaseName() = default;                               \
-		FOR_EACH(VISITOR_METHOD, __VA_ARGS__)                        \
-	};                                                               \
-                                                                     \
-	class EmptyName: public BaseName {                               \
-	public:                                                          \
-		~EmptyName() override = default;                             \
-		FOR_EACH(VISITOR_EMPTY_METHOD, __VA_ARGS__)                  \
-	};                                                               \
-                                                                     \
-	class PanickyName: public BaseName {                             \
-	public:                                                          \
-		~PanickyName() override = default;                           \
-		FOR_EACH_ARG(VISITOR_PANIC_METHOD, PanickyName, __VA_ARGS__) \
+#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, interface, ...)      \
+	class BaseName {                                                             \
+	public:                                                                      \
+		virtual ~BaseName() = default;                                           \
+		FOR_EACH_ARG(VISITOR_METHOD, interface, __VA_ARGS__)                     \
+	};                                                                           \
+                                                                                 \
+	class EmptyName: public BaseName {                                           \
+	public:                                                                      \
+		~EmptyName() override = default;                                         \
+		FOR_EACH_ARG(VISITOR_EMPTY_METHOD, interface, __VA_ARGS__)               \
+	};                                                                           \
+                                                                                 \
+	class PanickyName: public BaseName {                                         \
+	public:                                                                      \
+		~PanickyName() override = default;                                       \
+		FOR_EACH_2ARG(VISITOR_PANIC_METHOD, interface, PanickyName, __VA_ARGS__) \
 	}
+
+/**
+ * @brief Creates visitors, but uses custom visitor method interface `interface`.
+ */
+#define MAKE_VISITOR_CUSTOM_INTERFACE(name, INTERFACE, ...)                             \
+	MAKE_VISITOR_IMPL(                                                                  \
+		name##Visitor, name##VisitorPanicky, name##VisitorEmpty, INTERFACE, __VA_ARGS__ \
+	)
 
 /**
  * @brief Creates visitors. Ex:
@@ -61,4 +73,4 @@
  *
  */
 #define MAKE_VISITOR(name, ...) \
-	MAKE_VISITOR_IMPL(name##Visitor, name##VisitorPanicky, name##VisitorEmpty, __VA_ARGS__)
+	MAKE_VISITOR_CUSTOM_INTERFACE(name, VISITOR_DEFAULT_METHOD_INTERFACE, __VA_ARGS__)
