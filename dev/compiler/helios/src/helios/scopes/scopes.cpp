@@ -298,18 +298,14 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
-		// @TODO this wont work, is just a placekolder
-		// write a proper visitor and traverse PST to get all scopes
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<ScopeID> out;
-
-			for (auto scope: getAllHeliosScopes()) {
-				if(ScopeAccess_Functor::get(scope)->parent_module == key) out.push_back(scope);
-			}
+			// @TODO 
+			// write a proper visitor and traverse PST to get all scopes
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);

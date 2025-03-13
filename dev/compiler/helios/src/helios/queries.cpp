@@ -45,7 +45,7 @@ namespace compiler::helios {
 			for (auto submodule: *submodules) {
 				// @TODO optimize multiple concatenations
 				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
-				out.insert(out.end(), submodule_hout.begin(), submodule_hout.end());
+				for (auto i: submodule_hout) out.push_back(i);
 			}
 			return out;
 		}
