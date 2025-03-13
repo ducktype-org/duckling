@@ -20,9 +20,9 @@ PUSH_DIAGNOSTIC
 POP_DIAGNOSTIC
 
 // vm includes:
-#include <server.hpp>
-#include <cli.hpp>
-#include <config.hpp>
+#include <vm/server.hpp>
+#include <vm/cli.hpp>
+#include <vm/config.hpp>
 
 #include "utils.hpp"
 #include "export_keywords.hpp"

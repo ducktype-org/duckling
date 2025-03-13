@@ -31,6 +31,10 @@ namespace compiler::helios {
 				);
 			}
 
+			void visitCallExpr(const code::CallExpr&) final {
+				throw base::NotYetImplemented("Evaluation of calls");
+			}
+
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr&) final {
 				throw base::NotYetImplemented("Evaluation of type values is not implemented yet");
 			}

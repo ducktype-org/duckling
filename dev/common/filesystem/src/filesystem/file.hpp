@@ -13,7 +13,6 @@
 #include <unordered_map>
 #include <memory>
 #include <base/raw_view.hpp>
-#include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/perfect_hash.hpp>
