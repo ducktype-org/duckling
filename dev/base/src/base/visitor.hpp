@@ -29,23 +29,23 @@
 /**
  * @brief Helper for MAKE_VISITOR. Creates visitor classes.
  */
-#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, interface, ...)      \
+#define MAKE_VISITOR_IMPL(BaseName, PanickyName, EmptyName, INTERFACE, ...)      \
 	class BaseName {                                                             \
 	public:                                                                      \
 		virtual ~BaseName() = default;                                           \
-		FOR_EACH_ARG(VISITOR_METHOD, interface, __VA_ARGS__)                     \
+		FOR_EACH_ARG(VISITOR_METHOD, INTERFACE, __VA_ARGS__)                     \
 	};                                                                           \
                                                                                  \
 	class EmptyName: public BaseName {                                           \
 	public:                                                                      \
 		~EmptyName() override = default;                                         \
-		FOR_EACH_ARG(VISITOR_EMPTY_METHOD, interface, __VA_ARGS__)               \
+		FOR_EACH_ARG(VISITOR_EMPTY_METHOD, INTERFACE, __VA_ARGS__)               \
 	};                                                                           \
                                                                                  \
 	class PanickyName: public BaseName {                                         \
 	public:                                                                      \
 		~PanickyName() override = default;                                       \
-		FOR_EACH_2ARG(VISITOR_PANIC_METHOD, interface, PanickyName, __VA_ARGS__) \
+		FOR_EACH_2ARG(VISITOR_PANIC_METHOD, INTERFACE, PanickyName, __VA_ARGS__) \
 	}
 
 /**
