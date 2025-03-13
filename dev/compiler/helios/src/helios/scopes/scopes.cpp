@@ -183,7 +183,7 @@ namespace compiler::helios {
 
 		case pst::ElementKind::ExprHolder: {
 			// note: top expr creates a scope for lifetimes
-			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value(); 
+			auto as_expr_holder = element.dynamicCast<pst::ExprHolder>().value();
 			if (as_expr_holder->isTopLevel())
 				return ElementScopeKind::Standard;
 			else
@@ -276,7 +276,7 @@ namespace compiler::helios {
 		// We might add more in the future, but this function should remain a simple one.
 
 		struct QueryBodyScopeVisitor: pst::PstVisitorPanicky {
-			query::Context&  ctx;
+			query::Context&              ctx;
 			pst::AccessLocked<pst::Stmt> stmt;
 
 			QueryBodyScopeVisitor(query::Context& ctx, pst::AccessLocked<pst::Stmt> stmt):
@@ -351,7 +351,9 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
-			void visitExprStmt(pst::Access<pst::ExprStmt>) override { output(std::vector<SymID>()); }
+			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
+				output(std::vector<SymID>());
+			}
 		};
 
 		/**
@@ -509,7 +511,10 @@ namespace compiler::helios {
 		while (true) {
 			std::cerr << iter_scope.customPerfectHash() << "("
 					  << (iter_scope.ref->related_pst_element.has_value()
-			                  ? iter_scope.ref->related_pst_element.value().illegalAccess().value()->elementType()
+			                  ? iter_scope.ref->related_pst_element.value()
+			                        .illegalAccess()
+			                        .value()
+			                        ->elementType()
 			                  : "ROOT")
 					  << ")" << " -> ";
 

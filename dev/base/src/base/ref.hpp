@@ -222,7 +222,7 @@ namespace base {
 
 
 // ...
-#define EXPOSE_REF_INTERFACE(element_name)                        \
+#define EXPOSE_REF_INTERFACE(element_name)                         \
 	auto  operator->() const { return element_name.operator->(); } \
 	auto& operator*() const { return element_name.operator*(); }
 

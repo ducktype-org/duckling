@@ -17,9 +17,13 @@ namespace compiler::helios::code {
 		 * QueryHoutOfExpr is mostly a wrapper for future cache.
 		 * @note This is a private function of this file.
 		 */
-		ExprConstructionResult fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element);
+		ExprConstructionResult
+			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element);
 
-		void getVariantSubExprsInPlace(query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr, std::vector<pst::AccessLocked<pst::ExprElement>>& sub_exprs_append
+		void getVariantSubExprsInPlace(
+			query::Context&                                   ctx,
+			pst::AccessLocked<pst::ExprElement>               expr,
+			std::vector<pst::AccessLocked<pst::ExprElement>>& sub_exprs_append
 		) {
 			if (auto bin_op_opt = expr.unlock(ctx).dynamicCast<pst::expr::BinaryOperator>()) {
 				auto bin_op = bin_op_opt.value();
@@ -36,7 +40,8 @@ namespace compiler::helios::code {
 		 * @brief Extracts sub expressions from a variant operator.
 		 * This flattens PST `a | b | c` expression (only if there are no parenthesis).
 		 */
-		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
+		std::vector<pst::AccessLocked<pst::ExprElement>> getVariantSubExprs(
+			query::Context& ctx, pst::AccessLocked<pst::expr::BinaryOperator> expr
 		) {
 			CORE_ASSERT(expr.unlock(ctx)->getOperator().str() == "|", "Not a variant operator");
 			std::vector<pst::AccessLocked<pst::ExprElement>> sub_exprs;
@@ -293,9 +298,9 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				auto&& sym_list
-					= *ctx.query<QueryLookupInScopeAndParents>({ scope, stmt->getName().value, true }
-				    );
+				auto&& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
+					{ scope, stmt->getName().value, true }
+				);
 
 				auto res = sym_list.getAsSingle();
 				if (res.hasError()) {
@@ -457,7 +462,8 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
+		ExprConstructionResult
+			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
 			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
 
 			// std::cerr << "\nExpr: \n";

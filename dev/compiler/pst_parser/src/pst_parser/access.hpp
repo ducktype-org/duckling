@@ -35,6 +35,7 @@ namespace pst {
 		CRef<Element> ref;
 
 		Access(CRef<Element> ref): ref(ref) {}
+
 		Access(const Element& ref): ref(&ref) {}
 
 	public:
@@ -52,7 +53,8 @@ namespace pst {
 		Access(Access<T>&& other): ref(std::move(other.ref)) {}
 
 		/**
-		 * @brief This should be fine for now, casting might end up as null which would be potentially bad for knowing about accesses
+		 * @brief This should be fine for now, casting might end up as null which would be
+		 * potentially bad for knowing about accesses
 		 */
 		template<typename T>
 		base::Optional<Access<T>> dynamicCast() const {
@@ -96,12 +98,13 @@ namespace pst {
 		template<typename T>
 		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref) {}
 
-		auto illegalAccess() const { 
-			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> {return {ref};}); 
+		auto illegalAccess() const {
+			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
 		/**
-		 * @brief This should be fine for now, casting might end up as null which would be potentially bad for knowing about accesses
+		 * @brief This should be fine for now, casting might end up as null which would be
+		 * potentially bad for knowing about accesses
 		 */
 		template<typename T>
 		AccessLocked<T> dynamicCast() const {
@@ -110,13 +113,11 @@ namespace pst {
 
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
 			detail::notifyContext(ctx);
-			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> {return {ref};}); 
+			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
 		Access<Element> unlock(query::Context& ctx) const {
-			if (!ref.toOpt()) {
-				detail::notifyBadAccess(ctx);
-			}
+			if (!ref.toOpt()) detail::notifyBadAccess(ctx);
 			detail::notifyContext(ctx);
 			return { ref.toOpt().value() };
 		}

@@ -91,9 +91,7 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
-		return getSymRef(id)->pst_element;
-	}
+	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) { return getSymRef(id)->pst_element; }
 
 	namespace {
 		/**

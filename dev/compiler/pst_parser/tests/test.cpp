@@ -10,15 +10,15 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
-#define PSTVISITOR_METHOD(name)                        \
-	bool visited_##name = false;                       \
+#define PSTVISITOR_METHOD(name)                              \
+	bool visited_##name = false;                             \
 	void visit##name(pst::Access<pst::name> stmt) override { \
-		if (!visited_##name) {                         \
-			visited_##name = true;                     \
-			counter++;                                 \
-		}                                              \
-		std::cout << "Visited " << #name << '\n';      \
-		T::visit##name(stmt);                          \
+		if (!visited_##name) {                               \
+			visited_##name = true;                           \
+			counter++;                                       \
+		}                                                    \
+		std::cout << "Visited " << #name << '\n';            \
+		T::visit##name(stmt);                                \
 	}
 
 template<class T>
@@ -86,11 +86,11 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt_locked: pst.getRootElement().illegalAccess().value()->getStatements()) {
+			for (const auto& stmt_locked:
+			     pst.getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { stmt->acceptVisitor(panicky_vistor); },
-					"Stmt did not call it\'s visitor"
+					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 				);
 				stmt->acceptVisitor(empty_vistor);
 			}
@@ -102,7 +102,8 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (const auto& stmt_locked: pst.getRootElement().illegalAccess().value()->getStatements()) {
+			for (const auto& stmt_locked:
+			     pst.getRootElement().illegalAccess().value()->getStatements()) {
 				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
 					[&] { stmt->acceptVisitor(panicky_vistor); },
@@ -204,12 +205,14 @@ private:
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
 		auto fun_opt = pst.getRootElement()
-		               .illegalAccess().value()
-		               ->getStatements()[0]
-					   .illegalAccess().value()
-		               .dynamicCast<pst::Fun>();
+		                   .illegalAccess()
+		                   .value()
+		                   ->getStatements()[0]
+		                   .illegalAccess()
+		                   .value()
+		                   .dynamicCast<pst::Fun>();
 		ASSERT_TRUE(fun_opt.has_value());
-		auto fun =  fun_opt.value();
+		auto fun = fun_opt.value();
 
 		auto params = fun->getParams().illegalAccess().value();
 		ASSERT_EQUAL(params->size(), 4);

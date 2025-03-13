@@ -137,9 +137,9 @@ namespace pst {
 /**
  * @brief Macro used to define PstVisitor methods
  */
-#define PANIC_VISITOR_VISIT_METHOD(type)                               \
+#define PANIC_VISITOR_VISIT_METHOD(type)                                \
 	void visit##type([[maybe_unused]] Access<type> pst_node) override { \
-		CORE_PANIC("PstVisitorPanicky visited " #type);                \
+		CORE_PANIC("PstVisitorPanicky visited " #type);                 \
 	}
 
 	/**

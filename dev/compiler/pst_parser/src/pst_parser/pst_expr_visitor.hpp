@@ -67,11 +67,11 @@ namespace pst {
 
 		void visitExprValue([[maybe_unused]] Access<expr::ExprValue> stmt) override {}
 
-		void visitTemplateSpecifier([[maybe_unused]] Access<expr::TemplateSpecifier> stmt) override {
-		}
+		void visitTemplateSpecifier([[maybe_unused]] Access<expr::TemplateSpecifier> stmt
+		) override {}
 
-		void visitIdentifierLiteral([[maybe_unused]] Access<expr::IdentifierLiteral> stmt) override {
-		}
+		void visitIdentifierLiteral([[maybe_unused]] Access<expr::IdentifierLiteral> stmt
+		) override {}
 
 		void visitKeywordLiteral([[maybe_unused]] Access<expr::KeywordLiteral> stmt) override {}
 
@@ -97,9 +97,9 @@ namespace pst {
 /**
  * @brief Macro used to define PstExprVisitor methods
  */
-#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)                            \
+#define PANIC_EXPR_VISITOR_VISIT_METHOD(type)                             \
 	void visit##type([[maybe_unused]] Access<expr::type> stmt) override { \
-		CORE_PANIC("PstExprVisitorPanicky visited " #type);              \
+		CORE_PANIC("PstExprVisitorPanicky visited " #type);               \
 	}
 
 	/**

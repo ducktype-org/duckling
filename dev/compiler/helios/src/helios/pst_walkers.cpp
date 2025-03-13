@@ -16,8 +16,7 @@ namespace compiler::helios {
 			if (auto accessBlockOpt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
 				auto accessBlock = accessBlockOpt.value();
 				for (auto e: *accessBlock->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
-			}
-			else
+			} else
 				out.push_back(stmt);
 		}
 

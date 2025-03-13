@@ -137,7 +137,7 @@ namespace compiler::helios {
 
 				// else just create an expression statement:
 
-				auto expr = ctx.query<QueryHoutOfExpr>({inner_expr})
+				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })
 				                .expect("Not handling errors here yet... (ExprStmt)");
 
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
