@@ -4,8 +4,7 @@
 #include <helios/helios_result.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
-// this is needed here so contraint from GenericPSTQueryKey is satisfied:
-#include <pst_parser/elements/hierarchy/expr.hpp>
+#include <pst_parser/elements/hierarchy/expr.hpp> // this is needed here so contraint from GenericPSTQueryKey is satisfied
 
 namespace compiler::helios {
 
