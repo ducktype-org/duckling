@@ -181,6 +181,8 @@ DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalP
 DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
 // passes additional argument to preceding opcode
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
+// stores reference to local object of any type T in pointer<T>
+DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
 DEF_OPCODE(set_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
