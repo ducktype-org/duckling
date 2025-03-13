@@ -513,10 +513,11 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(set_lptr_lptr)(FUNCTION_ARGS) {
 		{
-            // thread.process.getMemory().setPo
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process.getMemory().setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
