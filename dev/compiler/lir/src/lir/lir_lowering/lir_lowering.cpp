@@ -138,7 +138,7 @@ namespace compiler::lir {
 			 * @param loc
 			 * @return LIRValue
 			 */
-			LIRValue getLocation(const mir::MirValue& loc) {
+			LIRValue getLocation(const mir::MIRValue& loc) {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LIRValue{ integer.value };
@@ -206,7 +206,7 @@ namespace compiler::lir {
 			 * @param locs
 			 * @return std::vector<LIRValue>
 			 */
-			std::vector<LIRValue> getLocations(const std::vector<mir::MirValue>& locs) {
+			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
 				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs) result.push_back(getLocation(loc));
@@ -250,7 +250,7 @@ namespace compiler::lir {
 				}
 			}
 
-			static bool isArgSigned(const mir::MirValue location) {
+			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {

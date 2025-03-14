@@ -145,7 +145,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
-	struct MirValue final {
+	struct MIRValue final {
 	private:
 		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
@@ -156,17 +156,17 @@ namespace compiler::mir {
 		ValueType value;
 
 	public:
-		MirValue(MirIntegerConst value): value(value) {}
+		MIRValue(MirIntegerConst value): value(value) {}
 
-		MirValue(MirBoolConst value): value(value) {}
+		MIRValue(MirBoolConst value): value(value) {}
 
-		MirValue(LocalRef value): value(value) {}
+		MIRValue(LocalRef value): value(value) {}
 
-		MirValue(BlockID value): value(value) {}
+		MIRValue(BlockID value): value(value) {}
 
-		MirValue(MirFunctionLiteral value): value(value) {}
+		MIRValue(MirFunctionLiteral value): value(value) {}
 
-		bool operator==(const MirValue& other) const = default;
+		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -177,7 +177,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in MirValue.
+		 * stored in MIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -214,7 +214,7 @@ namespace compiler::mir {
 
 		base::Optional<LocalRef> output;
 
-		std::vector<MirValue> arguments;
+		std::vector<MIRValue> arguments;
 
 		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
@@ -240,7 +240,7 @@ namespace compiler::mir {
 		Instruction(
 			Operation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirValue>      arguments,
+			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			helios::ScopeID            scope
 		):

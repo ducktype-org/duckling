@@ -129,7 +129,7 @@ namespace compiler::mir {
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
 	}
 
-	void MirValue::debugPrint(std::ostream& output) const {
+	void MIRValue::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
 			variant_case(LocalRef, local) { local->debugPrint(output); }
 			variant_case(MirIntegerConst, value) { output << value.value; }
