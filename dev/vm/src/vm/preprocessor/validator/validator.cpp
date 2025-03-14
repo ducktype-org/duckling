@@ -40,16 +40,6 @@ namespace vm::validator {
 			void validateMainExistance();
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
-
-			void validateX() {
-				StackState state(*program.type_metadata);
-				for (auto&& instr: program.functions[0]->code->opcodes) {
-					bool everything_fine = state.consume(instr.ref());
-					if (!everything_fine) {
-						// error - stack violated
-					}
-				}
-			}
 		};
 
 		base::Optional<std::string> Validator::validateProgram() {
