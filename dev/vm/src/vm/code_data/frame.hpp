@@ -48,6 +48,7 @@ namespace vm {
 
 		/**
 		 * @brief Return value of the function call.
+		 * @todo This won't be needed after making function calls, stack based
 		 */
 		u64 ret_val{};
 

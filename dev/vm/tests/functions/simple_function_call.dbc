@@ -28,7 +28,7 @@ function main {
         input_l64           0;
 		call_func          	check;
 
-		ret_imm         0;
+		ret;
 	}
 
 }

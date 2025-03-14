@@ -150,8 +150,8 @@ DEF_OPCODE(deinit)
 DEF_OPCODE(input_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(output_l64, vm::opargs::StackLocalI64)
 
-DEF_OPCODE(input_l32, vm::opargs::StackLocalI64)
-DEF_OPCODE(output_l32, vm::opargs::StackLocalI64)
+DEF_OPCODE(input_l32, vm::opargs::StackLocalI32)
+DEF_OPCODE(output_l32, vm::opargs::StackLocalI32)
 
 DEF_OPCODE(nop)
 

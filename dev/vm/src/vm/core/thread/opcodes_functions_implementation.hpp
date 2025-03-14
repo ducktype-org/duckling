@@ -177,6 +177,16 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
+		{ derefStack<i64>(local_stack, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
+		{ derefStack<i32>(local_stack, instr->arg0) *= -1; }
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		{
 			// We have to change variables passed in the arguments (FUNCTION_ARGS). After this
@@ -190,21 +200,17 @@ namespace vm {
 			// so the callee doesn't override them.
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
-			// frame->passed_args =
 
 			// Save the last frame
 			auto* prev_frame = frame;
 
-			//
 			auto function_id = static_cast<u32>(instr->arg0);
 			auto function    = thread.executing_program->functions[function_id];
 
-			// Prepare new frame. New frame_address
-			auto return_arg_size = function.arg_size + function.ret_size;
+			// Size of the shared function space
+			auto shared_func_space_size = function.arg_size + function.ret_size;
 
-
-			// runtime_data.local_stack_top - function.arg_size
-			// Save the passed arguments
+			// Save the copy of arguments passed to callee in caller stack frame.
 			// @TODO: Make it a box, without the malloc
 			prev_frame->passed_args = new std::byte[function.arg_size];
 			prev_frame->passed_args_size = function.arg_size;
@@ -214,31 +220,22 @@ namespace vm {
 				function.arg_size
 			);
 
-			std::cout << "Previous frame: " << prev_frame << '\n';
-			std::cout << "Prev frame stack head: " << prev_frame->local_stack_head << '\n';
-			std::cout << "Current frame local stack: " << prev_frame->local_stack << '\n';
-
 			frame++;
 
-			std::cout << "Current frame: " << frame << '\n';
-			std::cout << "Current frame local stack: " << frame->local_stack << '\n';
-			std::cout << "Current frame stack head: " << frame->local_stack_head << '\n';
-
-			// @TODO: Figure out what to do with that
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 
 			// Update values passed as arguments.
 			instr = thread.executing_program->functions[function_id].bc.data();
 
 			u64 local_stack_size = thread.executing_program->functions[function_id].stack_size;
-			std::cout << "Local stack top: " << runtime_data.local_stack_top << '\n';
-			std::cout << "Local stack base: " << runtime_data.local_stack_base << '\n';
-			std::cout << "Local stack base: " << local_stack << '\n';
-			local_stack = runtime_data.local_stack_top - return_arg_size;
-			runtime_data.local_stack_top += local_stack_size;
+			local_stack = runtime_data.local_stack_top - shared_func_space_size;
 
-			runtime_data.local_stack_top
-				+= thread.executing_program->functions[function_id].next_arg_size;
+			// This assumes, that local_size is the sum of sizes of: ret_val + passed_args + new_local_args
+			runtime_data.local_stack_top = local_stack + local_stack_size;
+
+			// First few frames are already initialized with the return value spot and args passed to the function
+			// First free spot in the local stack is the one after them.
+			frame->local_stack_head = shared_func_space_size;
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");

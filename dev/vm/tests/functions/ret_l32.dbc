@@ -7,7 +7,7 @@ type primitive: int32 4
 function check {
 	arg_size: 0;
 	next_arg_size: 0;
-	ret_size: 0;
+	ret_size: 4;
 	local_size: 4;
 
 	code: {
