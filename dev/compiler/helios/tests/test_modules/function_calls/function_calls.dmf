@@ -3,7 +3,8 @@ fun square(a: i32) -> i32 = {
 }
 
 fun foo(a: i32, b: i32) -> i32 = {
-    let a_squared: i64 = square(123);
+    let x : i32 = 123;
+    let a_squared: i64 = square(x);
 
     return square(a_squared + 3);
 }

@@ -579,6 +579,7 @@ namespace compiler::mir {
 
 			auto sub_continuation = continuation;
 			std::vector<MirLocation> args;
+			args.emplace_back(MirFunctionLiteral{expr.callee});
 			for (const auto& arg: expr.arguments) {
 				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
 				args.push_back(sub_res);

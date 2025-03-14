@@ -87,6 +87,15 @@ namespace compiler::mir {
 		bool operator==(const MirBoolConst& other) const = default;
 	};
 
+	/**
+	 * Represent a direct reference to a function linked to a HELIOS SymID.
+	 */
+	struct MirFunctionLiteral final {
+		helios::SymID helios_id;
+
+		bool operator==(const MirFunctionLiteral& other) const = default;
+	};
+
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
@@ -138,10 +147,10 @@ namespace compiler::mir {
 	 */
 	struct MirLocation final {
 	private:
-		// @TODO: global, literal, func-literal, ...
+		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
+		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
@@ -153,6 +162,8 @@ namespace compiler::mir {
 		MirLocation(LocalRef value): value(value) {}
 
 		MirLocation(BlockID value): value(value) {}
+		
+		MirLocation(MirFunctionLiteral value): value(value) {}
 
 		bool operator==(const MirLocation& other) const = default;
 
