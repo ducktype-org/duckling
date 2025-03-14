@@ -50,12 +50,12 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MirValue
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-		MirLocation     value;
+		MirValue     value;
 	};
 
 	/**
@@ -496,11 +496,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+			output({ continuation, MirValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+			output({ continuation, MirValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
@@ -508,7 +508,7 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
+			output({ continuation, MirValue{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -578,7 +578,7 @@ namespace compiler::mir {
 			const auto call_result = function.addTmp(expr.expression_type.getType(), expr.lifetime_scope);
 
 			auto sub_continuation = continuation;
-			std::vector<MirLocation> args;
+			std::vector<MirValue> args;
 			args.emplace_back(MirFunctionLiteral{expr.callee});
 			for (const auto& arg: expr.arguments) {
 				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
@@ -641,7 +641,7 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::AbstractType locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::AbstractType locationType(const MirValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return ctx.query<tsh::QueryIntegralType>({ 64 });
