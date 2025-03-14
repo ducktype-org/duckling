@@ -62,21 +62,21 @@ namespace compiler::lir {
 	/**
 	 * @brief Any value in LIR representation
 	 */
-	struct LirValue {
+	struct LIRValue {
 	private:
 		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
 		ValueType value;
 
 	public:
-		LirValue(i64 value): value(value) {}
+		LIRValue(i64 value): value(value) {}
 
-		LirValue(bool value): value(value) {}
+		LIRValue(bool value): value(value) {}
 
-		LirValue(LocalRef value): value(value) {}
+		LIRValue(LocalRef value): value(value) {}
 
-		LirValue(BlockRef value): value(value) {}
+		LIRValue(BlockRef value): value(value) {}
 
-		bool operator==(const LirValue& other) const = default;
+		bool operator==(const LIRValue& other) const = default;
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -85,7 +85,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in LirValue.
+		 * stored in LIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -142,7 +142,7 @@ namespace compiler::lir {
 	struct Instruction final {
 		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
-		std::vector<LirValue>    arguments;
+		std::vector<LIRValue>    arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -155,7 +155,7 @@ namespace compiler::lir {
 		Instruction(
 			const Operation                operation,
 			const base::Optional<LocalRef> output,
-			std::vector<LirValue>          arguments
+			std::vector<LIRValue>          arguments
 		):
 			  operation(operation),
 			  output(output),

@@ -194,7 +194,7 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
-		 * @brief Maps LirValue to LLVM Value.
+		 * @brief Maps LIRValue to LLVM Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
 		 * when loading the value of a local variable (which we store behind a pointer
@@ -204,11 +204,11 @@ namespace compiler::backend_llvm {
 		 *
 		 * @note In llvm a lot of things can be treated as values, and
 		 * it's based on inheritance.
-		 * @param lir_location The LirValue to convert into an LLVM Value.
+		 * @param lir_location The LIRValue to convert into an LLVM Value.
 		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
 		 * @return llvm::Value*
 		 */
-		auto lirValue2LLVM(const lir::LirValue& lir_location, llvm::IRBuilder<>& builder)
+		auto lirValue2LLVM(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
@@ -230,7 +230,7 @@ namespace compiler::backend_llvm {
 		}
 
 		auto lirValueList2LLVM(
-			const std::vector<lir::LirValue>& lir_locations, llvm::IRBuilder<>& builder
+			const std::vector<lir::LIRValue>& lir_locations, llvm::IRBuilder<>& builder
 		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());

@@ -136,17 +136,17 @@ namespace compiler::lir {
 			 * @brief Converts MIR location to LIR location.
 			 *
 			 * @param loc
-			 * @return LirValue
+			 * @return LIRValue
 			 */
-			LirValue getLocation(const mir::MirLocation& loc) {
+			LIRValue getLocation(const mir::MirLocation& loc) {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
-						return LirValue{ integer.value };
+						return LIRValue{ integer.value };
 					}
-					variant_case(mir::MirBoolConst, boolean) { return LirValue{ boolean.value }; }
-					variant_case(mir::LocalRef, local) { return LirValue{ getLocal(local) }; }
+					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
+					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
-						return LirValue{ BlockRef(mir_to_lir_block.at(block)) };
+						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
 					}
 				}
 				CORE_PANIC("Unhandled variant in getLocation");
@@ -204,10 +204,10 @@ namespace compiler::lir {
 			 * @brief Maps list of MIR locations to LIR locations.
 			 *
 			 * @param locs
-			 * @return std::vector<LirValue>
+			 * @return std::vector<LIRValue>
 			 */
-			std::vector<LirValue> getLocations(const std::vector<mir::MirLocation>& locs) {
-				std::vector<LirValue> result;
+			std::vector<LIRValue> getLocations(const std::vector<mir::MirLocation>& locs) {
+				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs) result.push_back(getLocation(loc));
 				return result;
