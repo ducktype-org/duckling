@@ -1,10 +1,16 @@
-fun square(a: i32) -> i32 = {
-    return 2;
+fun arg1(a: i64) -> i64 = return 0;
+fun arg0() -> i64 = return 0;
+
+fun foo() -> i64 = {
+    let x: i64 = 123;
+    
+    let y: i64 = arg1(x);
+    let z: i64 = arg1(arg0());
+
+    arg0();
+    arg1(1);
+
+    return arg1(z);
 }
 
-fun foo(a: i32, b: i32) -> i32 = {
-    let x : i32 = 123;
-    let a_squared: i64 = square(x);
 
-    return square(a_squared + 3);
-}

@@ -48,7 +48,7 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "Function " << name.strView() << ": TODO -> TODO\n";
+		output << "Function " << name.strView() << ": TODO -> " << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
