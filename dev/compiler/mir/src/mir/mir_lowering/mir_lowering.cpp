@@ -496,11 +496,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ continuation, MirValue{ MirIntegerConst{ expr.value } } });
+			output({ .begin = continuation, .value = MirValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ continuation, MirValue{ MirBoolConst{ expr.value } } });
+			output({ .begin = continuation, .value = MirValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
@@ -508,7 +508,8 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirValue{ function.findLocal(expr.symbol).get() } });
+			output({ .begin = continuation,
+			         .value = MirValue{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
