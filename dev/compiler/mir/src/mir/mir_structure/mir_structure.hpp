@@ -150,7 +150,8 @@ namespace compiler::mir {
 		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
+		using ValueType
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
@@ -162,7 +163,7 @@ namespace compiler::mir {
 		MirValue(LocalRef value): value(value) {}
 
 		MirValue(BlockID value): value(value) {}
-		
+
 		MirValue(MirFunctionLiteral value): value(value) {}
 
 		bool operator==(const MirValue& other) const = default;
@@ -239,7 +240,7 @@ namespace compiler::mir {
 		Instruction(
 			Operation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirValue>   arguments,
+			std::vector<MirValue>      arguments,
 			std::vector<OperationFlag> flags,
 			helios::ScopeID            scope
 		):

@@ -5,7 +5,7 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp> // @TODO #404: relax it to just context
+#include <query_framework/query_impl.hpp>  // @TODO #404: relax it to just context
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <init/init.hpp>
 
@@ -15,7 +15,6 @@ void printContextErrors() {
 		query::Context::logger.dumpLog(true, std::cerr);
 	}
 }
-
 
 int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
@@ -64,7 +63,6 @@ int notMain(int argc, const char* const* argv) {
 
 	return 0;
 }
-
 
 int main(int argc, const char* argv[]) {
 	// note: we need to catch exception here,

@@ -215,19 +215,19 @@ private:
 			u64 count_of_calls = 0;
 
 			static std::array functions_to_call = {
-				base::StrID("arg1"),
-				base::StrID("arg0"),
-				base::StrID("arg1"),
-				base::StrID("arg0"),
-				base::StrID("arg1"),
-				base::StrID("arg1"),
+				base::StrID("arg1"), base::StrID("arg0"), base::StrID("arg1"),
+				base::StrID("arg0"), base::StrID("arg1"), base::StrID("arg1"),
 			};
 
 			auto entry_block = foo_mir->entry_block;
-			for (auto& instruction : foo_mir->blocks.at(u64(entry_block)).instructions) {
+			for (auto& instruction: foo_mir->blocks.at(u64(entry_block)).instructions) {
 				if (instruction.operation == compiler::mir::Operation::Call) {
-					auto callee = instruction.arguments.at(0).get<compiler::mir::MirFunctionLiteral>();
-					ASSERT_EQUAL(compiler::helios::name(callee.helios_id), functions_to_call.at(count_of_calls));
+					auto callee
+						= instruction.arguments.at(0).get<compiler::mir::MirFunctionLiteral>();
+					ASSERT_EQUAL(
+						compiler::helios::name(callee.helios_id),
+						functions_to_call.at(count_of_calls)
+					);
 					count_of_calls++;
 				}
 			}

@@ -48,7 +48,8 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "Function " << name.strView() << ": TODO -> " << this->return_type.toString() << "\n";
+		output << "Function " << name.strView() << ": TODO -> " << this->return_type.toString()
+			   << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
@@ -134,7 +135,9 @@ namespace compiler::mir {
 			variant_case(MirIntegerConst, value) { output << value.value; }
 			variant_case(MirBoolConst, value) { output << (value.value ? "true" : "false"); }
 			variant_case(BlockID, block) { output << "Block(" << u64(block) << ")"; }
-			variant_case(MirFunctionLiteral, func) { output << "Function(" << name(func.helios_id).strView() << ")"; }
+			variant_case(MirFunctionLiteral, func) {
+				output << "Function(" << name(func.helios_id).strView() << ")";
+			}
 			variant_default { CORE_PANIC("Unexpected MirLocal alternative in mir debugPrint"); }
 		}
 	}

@@ -55,7 +55,7 @@ namespace compiler::mir {
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-		MirValue     value;
+		MirValue        value;
 	};
 
 	/**
@@ -554,7 +554,7 @@ namespace compiler::mir {
 				expr.lifetime_scope,
 			});
 
-			output({ .begin = sub_continuation, .value =  target_location });
+			output({ .begin = sub_continuation, .value = target_location });
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -574,12 +574,13 @@ namespace compiler::mir {
 		}
 
 		void visitCallExpr(const hc::CallExpr& expr) override {
-			auto call =  continuation->addHole();
-			const auto call_result = function.addTmp(expr.expression_type.getType(), expr.lifetime_scope);
+			auto       call = continuation->addHole();
+			const auto call_result
+				= function.addTmp(expr.expression_type.getType(), expr.lifetime_scope);
 
-			auto sub_continuation = continuation;
+			auto                  sub_continuation = continuation;
 			std::vector<MirValue> args;
-			args.emplace_back(MirFunctionLiteral{expr.callee});
+			args.emplace_back(MirFunctionLiteral{ expr.callee });
 			for (const auto& arg: expr.arguments) {
 				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
 				args.push_back(sub_res);
