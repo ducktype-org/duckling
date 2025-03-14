@@ -79,11 +79,11 @@ private:
 	}
 
 	void testFunctionBuilder() {
-		base::HashMap<base::StrID, vm::parser::TypeData> available_types;
+		base::HashMap<base::StrID, vm::parser::TypeOfData> available_types;
 		auto                                             int32 = base::StrID("int32");
 		auto                                             int64 = base::StrID("int64");
-		available_types.put(int32, vm::PrimitiveType{ .name = int32, .size = 4 });
-		available_types.put(int64, vm::PrimitiveType{ .name = int64, .size = 8 });
+		available_types.put(int32, vm::parser::PrimitiveType{ .name = int32, .size = 4 });
+		available_types.put(int64, vm::parser::PrimitiveType{ .name = int64, .size = 8 });
 		FunctionBuilder func_builder(base::StrID("test"), available_types);
 
 		auto a = func_builder.initType(int32);
@@ -125,8 +125,8 @@ private:
 
 		auto int32 = base::StrID("int32");
 		auto int64 = base::StrID("int64");
-		file_builder.addType(vm::PrimitiveType(int32, 4));
-		file_builder.addType(vm::PrimitiveType(int64, 8));
+		file_builder.addType(vm::parser::PrimitiveType(int32, 4));
+		file_builder.addType(vm::parser::PrimitiveType(int64, 8));
 
 		FunctionBuilder func_builder(base::StrID("main"), file_builder.getAvailableTypes());
 		auto            a = func_builder.initType(int64);
