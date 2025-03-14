@@ -61,6 +61,11 @@ namespace vm::parser {
 		}
 
 		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalAny {
+			return { parseInt<i64, vm::opargs::StackLocalAny>(state) };
+		}
+
+		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalPtr {
 			return { parseInt<i64, vm::opargs::StackLocalPtr>(state) };
 		}
