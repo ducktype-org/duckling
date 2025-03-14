@@ -67,7 +67,7 @@ namespace compiler::lir {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
-		void printLocation(const LirLocation& location) {
+		void printLocation(const LirValue& location) {
 			variant_match(location.getVariant()) {
 				variant_case(i64, value) { output << value; }
 				variant_case(bool, value) { output << (value ? "true" : "false"); }
