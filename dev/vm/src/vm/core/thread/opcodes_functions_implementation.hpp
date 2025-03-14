@@ -513,21 +513,21 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_lptr_lptr)(FUNCTION_ARGS) {
-		{
-			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
-			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
-			thread.process.getMemory().setPointer(dst, src);
-		}
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto  block     = frame->block_stack[block_idx];
 			thread.process.getMemory().setPointer(pointer, Memory::getPointer(block));
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process.getMemory().setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
