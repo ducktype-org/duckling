@@ -554,7 +554,7 @@ namespace compiler::mir {
 				expr.lifetime_scope,
 			});
 
-			output({ sub_continuation, target_location });
+			output({ .begin = sub_continuation, .value =  target_location });
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -573,8 +573,31 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("linked identifier expr");
 		}
 
-		void visitCallExpr(const hc::CallExpr&) override {
-			throw base::NotYetImplemented("call expr");
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			auto call =  continuation->addHole();
+			const auto call_result = function.addTmp(expr.expression_type.getType(), expr.lifetime_scope);
+
+			auto sub_continuation = continuation;
+			std::vector<MirLocation> args;
+			for (const auto& arg: expr.arguments) {
+				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
+				args.push_back(sub_res);
+				sub_continuation = expr_continuation;
+			}
+
+			// @TODO: #505 here in the future we (probably) will have to handle
+			// move operations related to the passing of the arguments to the function
+
+			call.fill(Instruction{
+				Operation::Call,
+				{ call_result },
+				args,
+				{ flagConstruct(call_result) },
+				expr.lifetime_scope,
+			});
+
+
+			return output({ .begin = sub_continuation, .value = call_result });
 		}
 
 	private:

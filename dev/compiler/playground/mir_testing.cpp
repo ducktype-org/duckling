@@ -5,10 +5,19 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp> // @TODO #404: relax it to just context
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <init/init.hpp>
 
-int main(int argc, const char* argv[]) {
+void printContextErrors() {
+	if (query::Context::logger.messageCount() > 0) {
+		std::cerr << "Compilation errors logged in context: \n";
+		query::Context::logger.dumpLog(true, std::cerr);
+	}
+}
+
+
+int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 	// @TODO: add to helios init
 	lexer::init();
@@ -26,7 +35,7 @@ int main(int argc, const char* argv[]) {
 	clap::ParsingResult options;
 
 	try {
-		options = clap.parse(argc, argv);
+		options = clap.parse(usize(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;
@@ -34,6 +43,8 @@ int main(int argc, const char* argv[]) {
 		std::cerr << e.what() << '\n';
 		return 1;
 	}
+
+	defer(printContextErrors());
 
 	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
 
@@ -50,4 +61,16 @@ int main(int argc, const char* argv[]) {
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";
 	}
+
+	return 0;
+}
+
+
+int main(int argc, const char* argv[]) {
+	// note: we need to catch exception here,
+	// because otherwise stack unwinding might not happen,
+	// and defers might not be called.
+	try {
+		return notMain(argc, argv);
+	} catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
 }

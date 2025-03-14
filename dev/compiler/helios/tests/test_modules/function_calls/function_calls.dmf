@@ -1,9 +1,9 @@
 fun square(a: i32) -> i32 = {
-    return a * a;
+    return 2;
 }
 
 fun foo(a: i32, b: i32) -> i32 = {
-    let a_squared: i32 = square(a);
+    let a_squared: i64 = square(123);
 
-    return square(a_squared + b);
+    return square(a_squared + 3);
 }
