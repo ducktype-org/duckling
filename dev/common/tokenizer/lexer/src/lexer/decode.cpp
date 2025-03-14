@@ -1,7 +1,6 @@
 #include "decode.hpp"
 #include "classifications.hpp"
 
-#include <base/borrow_pointer.hpp>
 #include <diagnostic/source_position.hpp>
 #include <token_file/forward.hpp>
 #include <base/convert.hpp>

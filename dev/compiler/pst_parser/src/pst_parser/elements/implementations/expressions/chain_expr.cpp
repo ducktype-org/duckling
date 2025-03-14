@@ -109,4 +109,8 @@ namespace pst::expr {
 	lexer::Operator PrefixOperator::getOperator() const { return op; }
 
 	MCRef<ExprElement> PrefixOperator::getExpr() const { return expr.ref(); }
+
+	lexer::Token::BracketType Call::getType() const { return type; }
+
+	MCRef<CallList> Call::getArgs() const { return args.ref(); }
 }

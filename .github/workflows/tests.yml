@@ -144,7 +144,7 @@ jobs:
         id: build-deployables
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- all
+        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- all build_all_playgrounds
         continue-on-error: true
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries

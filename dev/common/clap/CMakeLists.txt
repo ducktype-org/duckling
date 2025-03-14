@@ -18,11 +18,9 @@ add_library(Clap
 
 make_module(Clap USES Base Filesystem)
 
-duck_add_test(common clap_tester tests/clap_tests.cpp
-	USES Clap Base)
+duck_add_test(common clap tests/clap_test.cpp USES Clap Base)
 
-duck_add_test(common clap_parser_tester tests/clap_parser_tests.cpp
-	USES Clap Base)
+duck_add_test(common clap_parser tests/clap_parser_test.cpp USES Clap Base)
 
 add_example(clap_example_cat examples/clap_example_cat.cpp
 	USES Clap Base)
