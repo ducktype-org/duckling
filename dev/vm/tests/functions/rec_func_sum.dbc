@@ -3,6 +3,8 @@
 # input = n
 # output = n * (n + 1) / 2
 
+type primitive: int64 8
+
 function sum {
 	arg_size: 8;
 	next_arg_size: 8;
@@ -10,21 +12,23 @@ function sum {
 	local_size: 16;
 
 	code: {
-        getFstArg_l64       0;
         cmpEq_l64_imm       0,  0;
         jmpRelIf_label      ret_label;
         # if arg != 0:
+            init_type           int64; # [8, 16)
             mov_l64_l64         8,  0;
             sub_l64_imm         0,  1;
-            setFstArg_l64       0;
-
+            
+            init_type           int64; # [16, 24) init a return value spot for sum()
+            init_type           int64; # [24, 32) init an arg0 spot for sum()
+            mov_l64_l64         24, 0;
             call_func           sum;
 
-            mov_l64_r0          0;
+            mov_l64_l64         0, 16;
             add_l64_l64         0,  8;
 
         label ret_label;
-		ret_l64 		    0;
+		ret; # The result already is on the 0 offset
 	}
 }
 
@@ -33,19 +37,18 @@ function main {
 	arg_size: 0;
 	next_arg_size: 8;
 	ret_size: 0;
-
-	local_size: 8;
+	local_size: 16;
 
 	code: {
+        init_type           int64; # sum return value
+        init_type           int64; # sum arg0
         input_l64           0;
-        setFstArg_l64       0;
 
         call_func          	sum;
 
-        mov_l64_r0          0;
         output_l64          0;
 
-		ret_imm             0;
+		ret;
 	}
 
 }

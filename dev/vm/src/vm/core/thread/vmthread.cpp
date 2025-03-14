@@ -113,7 +113,7 @@ namespace vm {
 		runtime_data.local_stack_top += main_func->stack_size;
 
 		frame->next_args = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func->next_arg_size;
+		// runtime_data.local_stack_top += main_func->next_arg_size;
 
 		auto* instr = main_func->bc.data();
 

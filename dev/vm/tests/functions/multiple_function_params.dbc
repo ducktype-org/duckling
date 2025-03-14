@@ -1,0 +1,44 @@
+# Tests a function call with multiple parameters.
+# input = ""
+# output = 1234
+
+type primitive: int64 8
+
+function check {
+	arg_size: 32;
+	next_arg_size: 0;
+	ret_size: 0;
+	local_size: 32;
+
+	code: {
+        output_l64          0;
+        output_l64          8;
+        output_l64          16;
+        output_l64          24;
+		ret;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	next_arg_size: 32;
+	ret_size: 0;
+	local_size: 32;
+
+	code: {
+		init_type int64;
+		init_type int64;
+		init_type int64;
+		init_type int64;
+
+        mov_l64_imm 0, 1;
+        mov_l64_imm 8, 2;
+        mov_l64_imm 16, 3;
+        mov_l64_imm 24, 4;
+		call_func          	check;
+
+		ret;
+	}
+
+}

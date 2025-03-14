@@ -1,0 +1,57 @@
+type primitive: int64 8
+
+
+function out {
+    arg_size: 16;
+    next_arg_size: 0;
+    ret_size: 8;
+    local_size:   32;
+
+    code: {
+        # W tym miejscu pierwsze 3 sloty są preinitialized
+        # local_stack[0] - miejsce na ret_val
+        # local_stack[8] - arg0
+        # local_stack[16] - arg1
+        # W sprawdzaniu struktury init_deinit trzeba pamiętać, że mamy tyle "krypto_initów"
+        # ile jest argumentów w funckji
+
+        output_l64     8; # print(X)
+        output_l64     16; # print(Y)
+
+        init_type     int64; # [24, 32)
+        input_l64      24; # c = Z
+        mov_l64_l64    0, 24; # Wkładamy preinitialized miejsce na ret_val
+        ret; # Tutaj jeżeli ret robi wszystkie deinity(nie pamiętam na czym w końcu stanęło) to trzeba uważać, żeby nie zdeinitiować nic na offsecie [0, arg_size + ret_size)
+    }
+}
+
+
+function main {
+    arg_size: 0;
+    next_arg_size: 16;
+    ret_size: 0;
+
+    local_size: 40;
+
+    code: {
+        init_type int64; # a [0,8)
+        init_type int64; # b [8,16)
+    
+        input_l64           0; # a = X
+        input_l64           8; # b = Y
+
+        # (tutaj robie sobie coś, ale do funkcji chce potem przekazać a i b)
+        
+        init_type       int64; # [16, 24) out return value 
+        init_type       int64; # [24, 32) out arg1
+        init_type       int64; # [32, 40) out arg2
+        mov_l64_l64     24, 0;
+        mov_l64_l64     32, 8;
+        call_func       out;
+
+        # (teraz tutaj moje ret_val jest w local_stack[16])
+
+        output_l64      16; # print(Z)
+        ret_imm         0;
+    }
+}

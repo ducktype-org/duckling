@@ -37,7 +37,6 @@ namespace vm {
 		 * It is only updated when the new function is called.
 		 */
 		const struct Fix8Instruction* instr = nullptr;
-		;
 
 		/**
 		 * @brief Memory array where the local variables are stored.
@@ -52,19 +51,13 @@ namespace vm {
 		 */
 		u64 ret_val{};
 
-		/**
-		 * @brief Place where the arguments for the
-		 * future function call are stored (called "next arg stack").
-		 */
-		std::byte* next_args = nullptr;
-		;
 
 		/**
-		 * @brief Place where the arguments for the
-		 * current function call are stored (called "arg stack").
+		 * @brief Place where arguments passed to a function are copied to
+		 * so callee doesn't overide them.
 		 */
-		std::byte* args = nullptr;
-		;
+		std::byte* passed_args      = nullptr;
+		u64        passed_args_size = 0;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type

@@ -3,6 +3,8 @@
 # output == 1 <- test passed
 # output == 0 <- test failed
 
+type primitive: int64 8
+
 function check {
 	arg_size: 0;
 	next_arg_size: 0;
@@ -10,9 +12,10 @@ function check {
 	local_size: 8;
 
 	code: {
-        mov_l64_imm         0,   15;
-        cmpEq_l64_imm       0,   14;
-        ret_imm             0;
+		init_type 			int64;
+		mov_l64_imm         0,   15;
+		cmpEq_l64_imm       0,   14;
+		ret;
 	}
 }
 
@@ -25,25 +28,27 @@ function main {
 	local_size: 16;
 
 	code: {
-        mov_l64_imm         0,  1;
-        cmpEq_l64_imm       0,  1;
+		init_type           int64; # [0, 8)
+		init_type           int64; # [8, 16)
 
-        call_func          	check;
+		mov_l64_imm         0,  1;
+		cmpEq_l64_imm       0,  1;
 
-        mov_l64_imm         0,  1;
-        mov_l64_imm         8,  0;
+		call_func          	check;
 
-        # flag from cmpEq should be on
-        jmpRelIf_label      ok_label;
+		mov_l64_imm         0,  1;
+		mov_l64_imm         8,  0;
 
-        # print "0" (failed)
-        output_l64          8;
-        ret_imm             0;
+		# flag from cmpEq should be on
+		jmpRelIf_label      ok_label;
 
-        label ok_label;
-        # print "1" (passed)
-        output_l64          0;
-		ret_imm             0;
+		# print "0" (failed)
+		output_l64          8;
+		ret;
+
+		label ok_label;
+		# print "1" (passed)
+		output_l64          0;
+		ret;
 	}
-
 }

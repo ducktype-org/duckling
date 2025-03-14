@@ -2,55 +2,66 @@
 # Also if the stacks are seperate.
 # output = input + 1110
 
+type primitive: int64 8
+
 function add1000 {
 	arg_size: 8;
 	next_arg_size: 0;
-	ret_size: 0;
-	local_size: 16;
+	ret_size: 8;
+	local_size: 0;
 
 	code: {
-        mov_l64_imm    0,   1000;
-        getFstArg_l64    		8;
-        add_l64_l64         0, 8;
-		ret_l64 		    0;
+		# [0, 8) -> ret_val
+		# [8, 16) -> arg0
+
+        mov_l64_imm    0, 1000;
+		add_l64_l64    0, 8;
+		ret;
 	}
 }
 
 function add1100 {
 	arg_size: 8;
 	next_arg_size: 8;
-	ret_size: 0;
+	ret_size: 8;
 	local_size: 16;
 
 	code: {
-        mov_l64_imm    0,   100;
-        getFstArg_l64    		8;
+		# [0, 8) -> ret_val
+		# [8, 16) -> arg0
 
-        setFstArg_l64       8;
+        mov_l64_imm    		0, 100;
+
+		init_type 			int64; # [24, 32) add1000 ret_val
+		init_type 			int64; # [32, 40) add1000 arg0
+		mov_l64_l64			32, 8
         call_func           add1000;
-        mov_l64_r0          8;
 
-        add_l64_l64    0,   8;
-		ret_l64 		    0;
+        add_l64_l64    0,   24;
+		ret;
 	}
 }
 
 function add1110 {
 	arg_size: 8;
 	next_arg_size: 8;
-	ret_size: 0;
+	ret_size: 8;
 	local_size: 16;
 
 	code: {
-        mov_l64_imm    0,   10;
-        getFstArg_l64    		8;
+		# [0, 8) -> ret_val
+		# [8, 16) -> arg0
 
-        setFstArg_l64       8;
+        mov_l64_imm    		0, 10;
+
+		init_type 			int64; # [24, 32) add1100 ret_val
+		init_type 			int64; # [32, 40) add1100 arg0
+		mov_l64_l64			32, 8;
+
         call_func           add1100;
-        mov_l64_r0          8;
 
-        add_l64_l64    0,   8;
-		ret_l64 		    0;
+        add_l64_l64    		0, 24; # += add1100()
+		ret;
 	}
 }
 
@@ -60,18 +71,17 @@ function main {
 	next_arg_size: 8;
 	ret_size: 0;
 
-	local_size: 8;
+	local_size: 16;
 
 	code: {
-        input_l64           0;
-        setFstArg_l64       0;
+        init_type 			int64; # add1110 ret_val
+        init_type 			int64; # add1110 arg0
+		input_l64           8;
 
         call_func          	add1110;
-
-        mov_l64_r0          0;
         output_l64          0;
 
-		ret_imm             0;
+		ret;
 	}
 
 }

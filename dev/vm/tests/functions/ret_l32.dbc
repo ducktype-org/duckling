@@ -1,16 +1,18 @@
-# Tests ret_l64 opcode.
+# Tests returning other values than i64
 # input = n
 # output = n
+
+type primitive: int32 4
 
 function check {
 	arg_size: 0;
 	next_arg_size: 0;
 	ret_size: 0;
-	local_size: 8;
+	local_size: 4;
 
 	code: {
-		input_l64       0;
-		ret_l64 		0;
+		input_l32       0;
+		ret;
 	}
 }
 
@@ -20,15 +22,14 @@ function main {
 	next_arg_size: 0;
 	ret_size: 0;
 
-	local_size: 8;
+	local_size: 4;
 
 	code: {
+		init_type 			int32; # place for check() ret_val
 		call_func          	check;
-		mov_l64_r0         	0;
-
-		output_l64 			0;
-
-		ret_imm         0;
+		
+		output_l32 			0;
+		ret;
 	}
 
 }

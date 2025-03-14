@@ -30,6 +30,7 @@
 #include <vm/code_data/instruction.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
+#include "base/box.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
@@ -176,68 +177,6 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l64_arg64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, instr->arg1); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_argptr)(FUNCTION_ARGS) {
-		{
-			derefStack<Pointer>(local_stack, instr->arg0)
-				= derefStack<Pointer>(frame->args, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(getFstArg_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(local_stack, instr->arg0) = derefStack<i64>(frame->args, 0); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(getFstArg_lptr)(FUNCTION_ARGS) {
-		{ derefStack<Pointer>(local_stack, instr->arg0) = derefStack<Pointer>(frame->args, 0); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(setFstArg_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(frame->next_args, 0) = derefStack<i64>(local_stack, instr->arg0); }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(setFstArg_lptr)(FUNCTION_ARGS) {
-		{
-			derefStack<Pointer>(frame->next_args, 0)
-				= derefStack<Pointer>(local_stack, instr->arg0);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_arg64_l64)(FUNCTION_ARGS) {
-		{
-			derefStack<i64>(frame->next_args, instr->arg0)
-				= derefStack<i64>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_argptr_lptr)(FUNCTION_ARGS) {
-		{
-			derefStack<Pointer>(frame->next_args, instr->arg0)
-				= derefStack<Pointer>(local_stack, instr->arg1);
-		}
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {
-		{ derefStack<i64>(frame->next_args, instr->arg0) *= -1; }
-		FUNCTION_CONT(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l32)(FUNCTION_ARGS) {
-		{ derefStack<i32>(frame->next_args, instr->arg0) *= -1; }
-		FUNCTION_CONT(1);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		{
 			// We have to change variables passed in the arguments (FUNCTION_ARGS). After this
@@ -247,25 +186,57 @@ namespace vm {
 			// the frame of the caller.
 			auto& runtime_data = thread.runtime_data;
 
-			// Save current registers and flow.
+			// Save current registers and flow, as well as arguments passed to the called function,
+			// so the callee doesn't override them.
 			frame->instr       = instr + 1;
 			frame->local_stack = local_stack;
+			// frame->passed_args =
 
-			// Prepare new frame.
+			// Save the last frame
 			auto* prev_frame = frame;
-			frame++;
+
+			//
 			auto function_id = static_cast<u32>(instr->arg0);
+			auto function    = thread.executing_program->functions[function_id];
+
+			// Prepare new frame. New frame_address
+			auto return_arg_size = function.arg_size + function.ret_size;
+
+
+			// runtime_data.local_stack_top - function.arg_size
+			// Save the passed arguments
+			// @TODO: Make it a box, without the malloc
+			prev_frame->passed_args = new std::byte[function.arg_size];
+			prev_frame->passed_args_size = function.arg_size;
+			std::memcpy(
+				prev_frame->passed_args,
+				runtime_data.local_stack_top - function.arg_size,
+				function.arg_size
+			);
+
+			std::cout << "Previous frame: " << prev_frame << '\n';
+			std::cout << "Prev frame stack head: " << prev_frame->local_stack_head << '\n';
+			std::cout << "Current frame local stack: " << prev_frame->local_stack << '\n';
+
+			frame++;
+
+			std::cout << "Current frame: " << frame << '\n';
+			std::cout << "Current frame local stack: " << frame->local_stack << '\n';
+			std::cout << "Current frame stack head: " << frame->local_stack_head << '\n';
+
+			// @TODO: Figure out what to do with that
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
-			frame->args = prev_frame->next_args;
 
 			// Update values passed as arguments.
 			instr = thread.executing_program->functions[function_id].bc.data();
 
 			u64 local_stack_size = thread.executing_program->functions[function_id].stack_size;
-			local_stack          = runtime_data.local_stack_top;
+			std::cout << "Local stack top: " << runtime_data.local_stack_top << '\n';
+			std::cout << "Local stack base: " << runtime_data.local_stack_base << '\n';
+			std::cout << "Local stack base: " << local_stack << '\n';
+			local_stack = runtime_data.local_stack_top - return_arg_size;
 			runtime_data.local_stack_top += local_stack_size;
 
-			frame->next_args = runtime_data.local_stack_top;
 			runtime_data.local_stack_top
 				+= thread.executing_program->functions[function_id].next_arg_size;
 
@@ -285,91 +256,21 @@ namespace vm {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
 
-			instr = thread.executing_program->functions[function_id].bc.data();
+			auto function = thread.executing_program->functions[function_id]; 
+			instr = function.bc.data();
 
-			swap(frame->args, frame->next_args);
+			// No need for coping the arguments since we won't use them.
+			// Just move the pointer where the true args are.
+			auto& runtime_data = thread.runtime_data;
+			auto return_arg_size = function.arg_size + function.ret_size;
+			local_stack = runtime_data.local_stack_top - return_arg_size;
 		}
-		FUNCTION_CONT_CHECK_STRATEGY(0);
-	}
-
-	// @TODO: refactor op_rets to reduce code duplication
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_l64)(FUNCTION_ARGS) {
-		{
-			while (!frame->block_stack.empty()) {
-				auto block = frame->block_stack.back();
-				thread.process.getMemory().freeBlock(block);
-				frame->block_stack.pop_back();
-			}
-
-			// We have to update values passed in arguments.
-			// Old `instr` and `local_stack` are stored on the previous frame.
-			// Previous frame is just before current frame in the array, so that
-			// substracting one from the pointer will give us the previous frame.
-			// The `instr`, `local_stack` and `frame` values should be restored from the previous
-			// call stack frame.
-			auto ret_val = derefStack<i64>(local_stack, instr->arg0);
-
-			frame--;
-
-			frame->regs.p64_reg_0               = ret_val;
-			thread.runtime_data.local_stack_top = local_stack;
-
-			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_l32)(FUNCTION_ARGS) {
-		{
-			while (!frame->block_stack.empty()) {
-				auto block = frame->block_stack.back();
-				thread.process.getMemory().freeBlock(block);
-				frame->block_stack.pop_back();
-			}
-
-			i32 ret_val = derefStack<i32>(local_stack, instr->arg0);
-
-			frame--;
-
-			frame->regs.p64_reg_0               = ret_val;
-			thread.runtime_data.local_stack_top = local_stack;
-
-			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
-		FUNCTION_CONT_CHECK_STRATEGY(0);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_imm)(FUNCTION_ARGS) {
-		{
-			while (!frame->block_stack.empty()) {
-				auto block = frame->block_stack.back();
-				thread.process.getMemory().freeBlock(block);
-				frame->block_stack.pop_back();
-			}
-
-			// For explanation go to op_ret_l64.
-			frame--;
-
-			frame->regs.p64_reg_0               = instr->arg0;
-			thread.runtime_data.local_stack_top = local_stack;
-
-			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
-			while (!frame->block_stack.empty()) {
+			while (frame->block_stack.size() > 1) {
 				auto block = frame->block_stack.back();
 				thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
@@ -383,6 +284,15 @@ namespace vm {
 			// Load previous frame
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
+
+			// Copy the previous function arguments back in place
+			std::memcpy(
+				local_stack + frame->local_stack_head - frame->passed_args_size,
+				frame->passed_args,
+				frame->passed_args_size
+			);
+			delete frame->passed_args;
+			frame->passed_args_size = 0;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
@@ -396,6 +306,16 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			frame->block_stack.push_back(block);
+			std::cout << "=============================\n";
+			std::cout << "Initialized type of size: " << type->getSize() << '\n';
+			std::cout << "Local stack address: " << local_stack << '\n';
+			std::cout << "Relative address: " << frame->local_stack_head << '\n';
+			std::cout << "Global address: " << data_ptr << '\n';
+			std::cout << "local_stack_size after init: "
+					  << frame->local_stack_head + type->getSize() << '\n';
+			std::cout << "Global local_stack_size after init: "
+					  << local_stack + frame->local_stack_head + type->getSize() << '\n';
+			std::cout << "=============================\n";
 			frame->local_stack_head += type->getSize();
 		}
 		FUNCTION_CONT(1);
@@ -424,6 +344,21 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(output_l64)(FUNCTION_ARGS) {
 		{ thread.process.getIO().writeOutput(derefStack<u64>(local_stack, instr->arg0)); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
+		{
+			thread.setProcessStatus(api::WaitingForInput{});
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i32>(thread);
+			thread.setProcessStatus(api::Running{});
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(output_l32)(FUNCTION_ARGS) {
+		{ thread.process.getIO().writeOutput(derefStack<u32>(local_stack, instr->arg0)); }
 		FUNCTION_CONT(1);
 	}
 

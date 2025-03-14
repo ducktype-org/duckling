@@ -1,31 +1,32 @@
-# Tests ret_imm opcode.
-# output == 17 <- test passed
-# output != 17 <- test failed
+# Tests a simple function call.
+# input = n
+# output = n
+
+type primitive: int64 8
 
 function check {
-	arg_size: 0;
+	arg_size: 8;
 	next_arg_size: 0;
 	ret_size: 0;
 	local_size: 8;
 
 	code: {
-		ret_imm 		17;
+        output_l64          0;
+		ret;
 	}
 }
 
 
 function main {
 	arg_size: 0;
-	next_arg_size: 0;
+	next_arg_size: 8;
 	ret_size: 0;
-
 	local_size: 8;
 
 	code: {
+		init_type int64;
+        input_l64           0;
 		call_func          	check;
-		mov_l64_r0         	0;
-
-		output_l64 			0;
 
 		ret_imm         0;
 	}
