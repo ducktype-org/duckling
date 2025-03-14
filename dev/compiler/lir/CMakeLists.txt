@@ -5,5 +5,4 @@ add_library(LIR
 
 make_module(LIR USES Base QueryFramework MIR TypeSystemLower)
 
-duck_add_test(compiler lir_test tests/lir_tests.cpp
-	USES Base TypeSystemHigher PstParser HELIOS MIR LIR)
+duck_add_test(compiler lir tests/lir_test.cpp USES Base TypeSystemHigher PstParser HELIOS MIR LIR)

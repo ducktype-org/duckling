@@ -7,10 +7,8 @@ add_library(Filesystem
 
 make_module(Filesystem USES Base)
 
-duck_add_test(common filesystem_test_simple tests/test.cpp
-	USES Filesystem)
-duck_add_test(common filesystem_test_fstree tests/fs_tree_test.cpp
-	USES Filesystem)
+duck_add_test(common filesystem tests/filesystem_test.cpp USES Filesystem)
+duck_add_test(common filesystem_tree tests/filesystem_tree_test.cpp USES Filesystem)
 
 add_example(filesystem_temp_path_example examples/temp_path_creation.cpp
 	USES Filesystem)
