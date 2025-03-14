@@ -143,9 +143,7 @@ namespace compiler::lir {
 					variant_case(mir::MirIntegerConst, integer) {
 						return LirValue{ integer.value };
 					}
-					variant_case(mir::MirBoolConst, boolean) {
-						return LirValue{ boolean.value };
-					}
+					variant_case(mir::MirBoolConst, boolean) { return LirValue{ boolean.value }; }
 					variant_case(mir::LocalRef, local) { return LirValue{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
 						return LirValue{ BlockRef(mir_to_lir_block.at(block)) };

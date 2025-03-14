@@ -239,14 +239,14 @@ namespace compiler::backend_llvm {
 			return llvm_locations;
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                            \
-	{                                                                                   \
-		const auto output = lir_instruction.output.value();                             \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                         \
+	{                                                                                \
+		const auto output = lir_instruction.output.value();                          \
 		const auto lhs    = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
 		const auto rhs    = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
-		const auto value  = builder.Create##op(lhs, rhs);                               \
-		builder.CreateStore(value, local_register_map[output].get());                   \
-		break;                                                                          \
+		const auto value  = builder.Create##op(lhs, rhs);                            \
+		builder.CreateStore(value, local_register_map[output].get());                \
+		break;                                                                       \
 	}
 
 		/**

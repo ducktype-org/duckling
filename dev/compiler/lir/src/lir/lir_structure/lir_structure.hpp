@@ -142,7 +142,7 @@ namespace compiler::lir {
 	struct Instruction final {
 		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
-		std::vector<LirValue> arguments;
+		std::vector<LirValue>    arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -155,7 +155,7 @@ namespace compiler::lir {
 		Instruction(
 			const Operation                operation,
 			const base::Optional<LocalRef> output,
-			std::vector<LirValue>       arguments
+			std::vector<LirValue>          arguments
 		):
 			  operation(operation),
 			  output(output),
