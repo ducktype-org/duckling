@@ -57,7 +57,7 @@ jobs:
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
+        run: sudo apt -y install libgraphviz-dev pdfarranger
 
       - name: Install GCC 14 and gcov-14
         run: |
