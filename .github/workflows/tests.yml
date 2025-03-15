@@ -41,7 +41,7 @@ jobs:
 
     timeout-minutes: 16  # (Per matrix run)
 
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted-mati-pi-arm-ubuntu-24
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
@@ -57,11 +57,10 @@ jobs:
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
+        run: sudo apt -y install libgraphviz-dev pdfarranger
 
       - name: Install GCC 14 and gcov-14
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
           sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
 
@@ -73,7 +72,7 @@ jobs:
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-binaries -s ccache
+        run: sudo apt install -y ccache
 
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.

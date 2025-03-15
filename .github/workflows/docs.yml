@@ -19,7 +19,7 @@ env:
 jobs:
   docs:
     if: github.repository == 'ducktype-org/duckling'
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted-mati-pi-arm-ubuntu-24
 
     steps:
       - name: Checkout repository
@@ -45,7 +45,7 @@ jobs:
            -B ${{ env.BUILD_DIR }} \
            -D BUILD_DOCS=ON \
            -D CMAKE_BUILD_TYPE=Debug
-      
+
       - name: Build docs
         working-directory: ${{ env.DEV_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- docs
@@ -60,10 +60,10 @@ jobs:
           echo "${{ secrets.WWW_SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           echo "${{ secrets.WWW_SERVER_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-      
+
       # Move "sphinx" and "doxygen" to specified directory on server.
       # The destination directory is ignored by the server and preconfigured one is used.
-      # rsync is a tool for syncing files between two locations and avoiding 
+      # rsync is a tool for syncing files between two locations and avoiding
       # unnecessary copying.
       # -a: archive mode, preserves permissions, timestamps, enables recursion,
       # -z: compresses data during transfer,
