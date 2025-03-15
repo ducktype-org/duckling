@@ -765,11 +765,21 @@ struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto symbol_ref = getSymRef(key);
 
-		PstVisitor_GetTypeOf visitor(ctx);
-		symbol_ref->getPSTData()->pst_element->acceptVisitor(visitor);
-
-		if_opt_some(visitor.symbol_abstract_type, type) return type;
-		return errors::HError(errors::Failed());
+		variant_match(symbol_ref->other) {
+			variant_case(PstSymbolData, pst_data) {
+				PstVisitor_GetTypeOf visitor(ctx);
+				pst_data.pst_element->acceptVisitor(visitor);
+				if_opt_some(visitor.symbol_abstract_type, type) return type;
+				return errors::HError(errors::Failed());		
+			}
+			variant_case(builtin::BuiltinFunctionData, builtin_data) {
+				return builtin_data.type;
+			}
+			variant_default {
+				CORE_PANIC("Unknown symbol data type");
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	QUERY_AUTO_CACHE_REF
