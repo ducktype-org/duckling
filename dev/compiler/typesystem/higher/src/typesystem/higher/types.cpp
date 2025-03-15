@@ -49,7 +49,9 @@ namespace tsh {
 
 	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
-	SymbolType<> PointerAbstractType::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
+	SymbolType<> PointerAbstractType::getComponent() const {
+		return toCPimpl(pimpl)->getComponent();
+	}
 
 	AbstractType PointerAbstractType::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();

@@ -126,9 +126,7 @@ namespace tsh {
 	 * another is allowed.
 	 */
 	DECLARE_QUERY(
-		QueryImplicitCoercibilityOnSymbolType,
-		KeyFor_QueryImplicitCoercibilityOnSymbolType,
-		bool
+		QueryImplicitCoercibilityOnSymbolType, KeyFor_QueryImplicitCoercibilityOnSymbolType, bool
 	)
 
 	/**

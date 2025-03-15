@@ -411,10 +411,7 @@ private:
 		using enum ValueSemanticsOptions;
 
 		const auto vc = ValueCategory(
-			PrimaryCategory::Local,
-			false,
-			MOVE | COPY | REINIT | USE | DESTROY,
-			ValueSemantics()
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, ValueSemantics()
 		);
 		assertTrue(
 			vc.getCategory() == PrimaryCategory::Local,
@@ -433,16 +430,12 @@ private:
 		);
 
 		const auto vc_1 = ValueCategory(
-			PrimaryCategory::Local,
-			false,
-			(MOVE | COPY | REINIT | USE | DESTROY),
-			ValueSemantics()
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, ValueSemantics()
 		);
 		assertTrue(vc == vc_1, "Value categories constructed the same way should be equal.");
 
-		const auto vc_2 = ValueCategory(
-			PrimaryCategory::Local, false, (COPY | REINIT | USE), ValueSemantics()
-		);
+		const auto vc_2
+			= ValueCategory(PrimaryCategory::Local, false, COPY | REINIT | USE, ValueSemantics());
 		assertTrue(
 			vc_1.contains(vc_2),
 			"Value category with full allows_semantic should contain same value category with "

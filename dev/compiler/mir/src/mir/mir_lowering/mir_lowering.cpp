@@ -519,7 +519,7 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type = locationType(right_res, function.getContext());
+			const auto argument_type       = locationType(right_res, function.getContext());
 			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),

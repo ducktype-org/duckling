@@ -18,8 +18,7 @@ namespace tsl {
 			getLayoutVector(const std::vector<tsh::SymbolType<>>& types, query::Context& ctx) {
 			std::vector<TypeLayout> layouts;
 			layouts.reserve(types.size());
-			for (const auto& type: types)
-				layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
+			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
 			return layouts;
 		}
 

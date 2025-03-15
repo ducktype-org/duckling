@@ -81,13 +81,13 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		virtual std::string toStringIdentification() const {
-			return "Layout of " + std::string(
-				reference_kind == tsh::ReferenceKind::DIRECT
-					? ""
-					: reference_kind == tsh::ReferenceKind::REF
-						? "ref "
-						: "box "
-			) + source_type.toString() + " : " + std::to_string(getSize());
+			return "Layout of "
+			     + std::string(
+					   reference_kind == tsh::ReferenceKind::DIRECT ? ""
+					   : reference_kind == tsh::ReferenceKind::REF  ? "ref "
+																	: "box "
+				 )
+			     + source_type.toString() + " : " + std::to_string(getSize());
 		}
 
 		virtual ~TypeLayoutABC() = default;
@@ -119,7 +119,8 @@ namespace tsl {
 	 */
 	class EmptyTypeLayout final: public TypeLayoutABC {
 	public:
-		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type): TypeLayoutABC(Bits(0), unit_type) {}
+		explicit EmptyTypeLayout(const tsh::UnitAbstractType unit_type):
+			  TypeLayoutABC(Bits(0), unit_type) {}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
