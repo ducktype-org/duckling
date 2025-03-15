@@ -1,0 +1,5 @@
+
+fun main() = {
+    let x: i64 = btn_input_i64();
+    btn_output_i64(x + 1);
+}

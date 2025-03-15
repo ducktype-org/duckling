@@ -11,5 +11,7 @@ namespace query {
 		base::HashT customPerfectHash() const {
 			return 0;
 		}
+		[[nodiscard]]
+		bool operator==(const EmptyKey&) const { return true; }
 	};
 }
