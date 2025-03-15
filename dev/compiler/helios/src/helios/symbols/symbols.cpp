@@ -20,6 +20,8 @@
 #include <helios/comp_time/type_eval.hpp>
 #include <helios/comp_time/int_eval.hpp>
 
+#include "builtins/functions.hpp"
+
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -42,13 +44,14 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
 	/**
-	 * @brief Stores generic symbol data
+	 * Symbol data shared by all symbols.
 	 */
-	struct SymbolData final {
-		// created when creating SymbolData:
-		ScopeID     scope;
-		
+	struct CommonSymbolData {
 		base::StrID name;
+		
+		// for now there are no anonymous symbols
+		// in the future we might have ones for lambdas for example
+		bool        anonymous   = false;
 		SymbolKind  kind;
 
 		// wildcard symbols are symbols like `using a.*`
@@ -57,16 +60,50 @@ namespace compiler::helios {
 
 		// dependent symbols are symbols that can't be "calculated" without some context, e.g. class fields
 		bool        dependent   = false;
+	};
 
+	/**
+	 * @brief Symbol data for all symbols that are created from PST elements.
+	 */
+	struct PstSymbolData {
+		ScopeID     scope;
 		CRef<pst::LangElement> pst_element;
+	};
+
+	/**
+	 * @brief Stores generic symbol data.
+	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
+	 * SymbolData is by design a "read-only" structure.
+	 */
+	struct SymbolData final {
+		using OtherData = std::variant<PstSymbolData, builtin::BuiltinFunctionData>;
+
+		CommonSymbolData common;
+		OtherData other;
+
+		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
+			return SymbolData{
+				.common = common_data,
+				.other  = pst_data,
+			};
+		}
+
+		template <class T>
+		CRef<const T> getData() const {
+			return &std::get<T>(other);
+		}
+
+		CRef<PstSymbolData> getPSTData() const {
+			return getData<PstSymbolData>();
+		}
 
 		/**
 		 * Return associated pst_element cast to Stmt.
-		 * Panics if element is not a statement.
+		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
 		CRef<pst::Stmt> stmtCast() const {
-			return dynamic_cast<const pst::Stmt*>(&*pst_element);
+			return dynamic_cast<const pst::Stmt*>(&*getData<PstSymbolData>()->pst_element);
 		}
 	};
 
@@ -79,13 +116,13 @@ namespace compiler::helios {
 
 	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
-	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
+	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
-	base::StrID name(SymID id) { return getSymRef(id)->name; }
+	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
+	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
 
 	CRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->stmtCast(); }
 
@@ -95,7 +132,7 @@ namespace compiler::helios {
 		 * @note: in the future it might not be needed once
 		 * we will move toward more pure Query Model
 		 */
-		base::StableVector<SymbolData> symbol_table;
+		base::StableVector<const SymbolData> symbol_table;
 
 		template<class... T>
 		auto putInSymtable(T&&... args) {
@@ -121,12 +158,16 @@ namespace compiler::helios {
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
+			return putInSymtable(SymbolData::makePSTSymbolData({
 				.name        = function->getName(),
 				.kind        = SymbolKind::Function,
+			},
+			{
+				.scope       = scope,
+				
 				.pst_element = stmt,
-			});
+			}
+	));
 		}
 		case pst::StmtKind::Namespace: {
 			auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*stmt);
@@ -160,8 +201,8 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = alias->getName(),
-				.is_alias    = true,
 				.kind        = SymbolKind::Alias,
+				.is_alias    = true,
 				.pst_element = stmt,
 			});
 		}
@@ -173,8 +214,8 @@ namespace compiler::helios {
 				= base::StrID(base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()
 			    ),
 				.is_wildcard = true,
-				.is_alias    = true,
 				.kind        = SymbolKind::Using,
+				.is_alias    = true,
 				.pst_element = stmt,
 			});
 		}
@@ -183,9 +224,9 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = variable->getName(),
+				.kind        = SymbolKind::Variable,
 				.is_wildcard = false,
 				.is_alias    = false,
-				.kind        = SymbolKind::Variable,
 				.pst_element = stmt,
 			});
 		}
@@ -195,9 +236,9 @@ namespace compiler::helios {
 			return putInSymtable(SymbolData{
 				.scope       = scope,
 				.name        = import->getAlias(),
+				.kind        = SymbolKind::Import,
 				.is_wildcard = false,
 				.is_alias    = false,
-				.kind        = SymbolKind::Import,
 				.pst_element = stmt,
 			});
 		}
