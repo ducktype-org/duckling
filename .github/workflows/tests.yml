@@ -72,7 +72,7 @@ jobs:
 
       - name: Install ccache
         working-directory: ${{ env.WORKSPACE }}
-        run: ./toolbox.py download-binaries -s ccache
+        run: sudo apt install -y ccache
 
       # Generate a timestamp and save it to a variable.
       # Timestamp is appended to the key in caching, so each cache has a unique key.
