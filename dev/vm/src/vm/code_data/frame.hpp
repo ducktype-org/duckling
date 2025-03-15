@@ -47,10 +47,16 @@ namespace vm {
 		FlagData  flags{};
 
 		/**
-		 * @brief Place where arguments passed to a function are copied to
-		 * so callee doesn't overide them.
+		 * @brief Size of arguments that were passed to a called function.
+		 * Needed to restore the local_stack_head when returning from a function.
+		 * @todo This is not needed if we change the local_stack_head in call_func.
 		 */
-		u64        passed_args_size = 0;
+		u64 passed_args_size = 0;
+
+		/**
+		 * @brief Size of the stack space shared in between called functions.
+		 */
+		u64 shared_func_space_size = 0;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type

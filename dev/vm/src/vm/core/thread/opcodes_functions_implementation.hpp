@@ -205,12 +205,16 @@ namespace vm {
 			auto* prev_frame = frame;
 
 			auto function_id = static_cast<u32>(instr->arg0);
-			auto called_func    = thread.executing_program->functions[function_id];
+			auto called_func = thread.executing_program->functions[function_id];
 
 			// Size of the shared function space
 			auto shared_func_space_size = called_func.arg_size + called_func.ret_size;
 
-			prev_frame->passed_args_size = called_func.arg_size;
+			prev_frame->passed_args_size       = called_func.arg_size;
+			prev_frame->shared_func_space_size = shared_func_space_size;
+			// Arguments passed on the top of the stack are deinitialized by the call, thus we move
+			// the stack head back by their size.
+			// prev_frame->local_stack_head -= called_func.arg_size;
 
 			frame++;
 
@@ -220,30 +224,49 @@ namespace vm {
 			instr = called_func.bc.data();
 
 			u64 local_stack_size = called_func.stack_size;
-			local_stack = runtime_data.local_stack_top - shared_func_space_size;
+			local_stack          = runtime_data.local_stack_top - shared_func_space_size;
 
-			// This assumes, that local_size is the sum of sizes of: ret_val + passed_args + new_local_args
+			// This assumes, that local_size is the sum of sizes of: ret_val + passed_args +
+			// new_local_args
 			runtime_data.local_stack_top = local_stack + local_stack_size;
 
-			// First few frames are already initialized with the return value spot and args passed to the function
-			// First free spot in the local stack is the one after them.
+			// First few frames are already initialized with the return value spot and args passed
+			// to the function First free spot in the local stack is the one after them.
 			frame->local_stack_head = shared_func_space_size;
 
 
-			// @TODO: We have to copy caller arguments to callee's block_stack. 
-			// For that, we need to know the number of arguments a function takes(number of blocks to copy),
-			// not just the arg_size
-			std::cout << "NUMBER OF ARGUMENTS OF THE CALLED FUNCTION: " << called_func.arg_count << '\n';
-
+			// @TODO: We have to copy caller arguments to callee's block_stack.
+			// For that, we need to know the number of arguments a function takes(number of blocks
+			// to copy), not just the arg_size
 			std::cout << "**********CALL_FUNC**************\n";
+			std::cout << "NUMBER OF ARGUMENTS OF THE CALLED FUNCTION: " << called_func.arg_count
+					  << '\n';
+			std::cout << "Callers block_stack size before: " << prev_frame->block_stack.size()
+					  << '\n';
+			std::cout << "Callees block_stack size before: " << frame->block_stack.size() << '\n';
+			// Move block with hte return value and arguments into callee's block stack.
+
+			// This is the id of the callee's ret_val block.
+			auto shared_blocks_start_ix = prev_frame->block_stack.size() - called_func.arg_count;
+
+			// If a non-void function is called we also push ret_val block into callees block_stack
+			if (called_func.ret_size != 0) shared_blocks_start_ix--;
+
+			// Move shared block into callee's block stack
+			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++)
+				frame->block_stack.push_back(prev_frame->block_stack[i]);
+
+			// Remove the argument blocks from callers block stack.
+			for (u64 i = 0; i < called_func.arg_count; i++) prev_frame->block_stack.pop_back();
+
+			std::cout << "Callers block_stack size after: " << prev_frame->block_stack.size()
+					  << '\n';
+			std::cout << "Callees block_stack size after: " << frame->block_stack.size() << '\n';
 			std::cout << "PrevFrame passed args size: " << prev_frame->passed_args_size << '\n';
 			std::cout << "Shared function_space_size: " << shared_func_space_size << '\n';
 			std::cout << "New local stack address: " << local_stack << '\n';
 			std::cout << "runtime local_stack_top: " << runtime_data.local_stack_top << '\n';
 			std::cout << "******************************\n";
-
-
-
 
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
@@ -262,31 +285,40 @@ namespace vm {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
 
-			auto function = thread.executing_program->functions[function_id]; 
-			instr = function.bc.data();
+			auto function = thread.executing_program->functions[function_id];
+			instr         = function.bc.data();
 
 			// No need for coping the arguments since we won't use them.
 			// Just move the pointer where the true args are.
-			auto& runtime_data = thread.runtime_data;
-			auto return_arg_size = function.arg_size + function.ret_size;
-			local_stack = runtime_data.local_stack_top - return_arg_size;
+			auto& runtime_data    = thread.runtime_data;
+			auto  return_arg_size = function.arg_size + function.ret_size;
+			local_stack           = runtime_data.local_stack_top - return_arg_size;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
-			// Deinit everything, but the return value
-			while (frame->block_stack.size() > 1) {
+			// If the function we're returning from is non-void, we don't deinitialize the first
+			// frame on the block_stack, since it's being used by the caller (it contains the return
+			// value). We just pop it.
+			bool non_void = frame->shared_func_space_size > frame->passed_args_size;
+			while (!frame->block_stack.empty()) {
 				auto block = frame->block_stack.back();
-				thread.process.getMemory().freeBlock(block);
+				if (!(non_void && frame->block_stack.size() == 1))
+					thread.process.getMemory().freeBlock(block);
 				frame->block_stack.pop_back();
 			}
 
-			// For explanation go to op_ret_l64.
-			// @TODO: Move that comment here since ret_l64 doesn't exist anymore.
+
+			// We have to update values passed in arguments.
+			// Old `instr` and `local_stack` are stored on the previous frame.
+			// Previous frame is just before current frame in the array, so that
+			// substracting one from the pointer will give us the previous frame.
+			// The `instr`, `local_stack` and `frame` values should be restored from the previous
+			// call stack frame.
 			frame--;
-			
+
 			// New local_stack_top is the current address of the previous local_stack
 			thread.runtime_data.local_stack_top = frame->local_stack + frame->local_stack_head;
 
@@ -294,20 +326,22 @@ namespace vm {
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 
-			// call_func deinits the arguments passed to a function, so 
-			// when returning our stack_head should moved by arg_size. 
+			// call_func deinits the arguments passed to a function, so
+			// when returning our stack_head should moved by arg_size.
 			frame->local_stack_head -= frame->passed_args_size;
 
 
-			std::cout <<"%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
+			std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
 			std::cout << "Stack top after return: " << thread.runtime_data.local_stack_top << '\n';
 			std::cout << "Local stack address after return: " << local_stack << '\n';
 			std::cout << "Old local stack head: " << frame->local_stack_head << '\n';
 			std::cout << "old passed_args_size: " << frame->passed_args_size << '\n';
-			std::cout << "Where we copy passed_args: " << local_stack + frame->local_stack_head - frame->passed_args_size << '\n';
-			std::cout <<"%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
+			std::cout << "Where we copy passed_args: "
+					  << local_stack + frame->local_stack_head - frame->passed_args_size << '\n';
+			std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
 
 			frame->passed_args_size = 0;
+			frame->shared_func_space_size = 0;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
