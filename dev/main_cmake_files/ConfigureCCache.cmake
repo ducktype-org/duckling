@@ -3,7 +3,7 @@ option(USE_CCACHE "Use ccache" OFF)
 if(USE_CCACHE)
 	message(NOTICE "Ccache might not work with generators other then make or ninja!")
 
-	find_program(CCACHE "ccache" NO_DEFAULT_PATH REQUIRED)
+	find_program(CCACHE "ccache" REQUIRED)
 
 	if(CCACHE)
 		message(STATUS "Ccache set to: ${CCACHE}")
