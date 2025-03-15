@@ -145,6 +145,7 @@ namespace lang_def {
 		BCRetSize,
 		BCArgSize,
 		BCNextArgSize,
+		BCArgumentCount,
 		BCDefine,
 		BCArg,
 		BCLocal,

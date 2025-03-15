@@ -129,6 +129,7 @@ namespace vm::parser {
 		usize           next_arg_size = SIZE_T_MAX;
 		usize           local_size    = SIZE_T_MAX;
 		usize           ret_size      = SIZE_T_MAX;
+		usize           arg_count      = SIZE_T_MAX;
 		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);

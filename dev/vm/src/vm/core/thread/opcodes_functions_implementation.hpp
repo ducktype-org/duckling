@@ -233,6 +233,7 @@ namespace vm {
 			// @TODO: We have to copy caller arguments to callee's block_stack. 
 			// For that, we need to know the number of arguments a function takes(number of blocks to copy),
 			// not just the arg_size
+			std::cout << "NUMBER OF ARGUMENTS OF THE CALLED FUNCTION: " << called_func.arg_count << '\n';
 
 			std::cout << "**********CALL_FUNC**************\n";
 			std::cout << "PrevFrame passed args size: " << prev_frame->passed_args_size << '\n';
