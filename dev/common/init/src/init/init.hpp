@@ -49,7 +49,7 @@ namespace init {
  * If you place this macro in header file it will run:
  * * once per each (used) translation unit that includes the given header.
  *
- * When used for inits it is generally safer to put in in header files (e.g. some_module/init.hpp),
+ * When used for inits it is generally safer to put it in header files (e.g. some_module/init.hpp),
  * and include this header file in every cpp/hpp file that requires init to be done.
  *
  * Putting it in cpp file is will work most of the time, but you need to be aware of the fact that
