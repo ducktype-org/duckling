@@ -41,7 +41,7 @@ jobs:
 
     timeout-minutes: 16  # (Per matrix run)
 
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted-mati-pi-arm-ubuntu-24
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}

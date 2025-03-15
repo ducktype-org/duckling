@@ -13,7 +13,7 @@ jobs:
   cpp-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    runs-on: self-hosted-mati-pi-arm-ubuntu-24
     steps:
       - uses: actions/checkout@v4
 
