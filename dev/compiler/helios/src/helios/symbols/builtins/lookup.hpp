@@ -4,9 +4,9 @@
 
 namespace compiler::helios::builtin {
 
-    /**
-     * Lookup a builtin symbol by name.
-     */
-    LookupResult lookup(base::StrID name);
+	/**
+	 * Lookup a builtin symbol by name.
+	 */
+	LookupResult lookup(base::StrID name);
 
 }

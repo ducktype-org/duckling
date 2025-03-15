@@ -414,9 +414,8 @@ namespace compiler::helios {
 				);
 			}
 
-			if (key.ref->is_root) {
+			if (key.ref->is_root)
 				CORE_ASSERT(output.empty(), "Root scope should not have any symbols.");
-			}
 
 			return output;
 		}
@@ -436,7 +435,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScope, LookupResult) {
-
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
