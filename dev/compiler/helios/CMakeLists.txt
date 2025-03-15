@@ -1,6 +1,5 @@
 add_library(HELIOS
 	src/helios/symbols/symbols.cpp
-	src/helios/symbols/builtins/lookup.cpp
 	src/helios/scopes/scopes.cpp
 	src/helios/scopes/scopes.hpp
 	src/helios/pst_walkers.cpp

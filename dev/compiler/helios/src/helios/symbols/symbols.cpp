@@ -20,8 +20,6 @@
 #include <helios/comp_time/type_eval.hpp>
 #include <helios/comp_time/int_eval.hpp>
 
-#include "builtins/functions.hpp"
-
 namespace compiler::helios {
 	/**
 	 * @TODO: move to some docs
@@ -71,6 +69,15 @@ namespace compiler::helios {
 		CRef<pst::LangElement> pst_element;
 	};
 
+	namespace builtin {
+		struct BuiltinFunctionData final {
+			tsh::FunctionAbstractType type;
+
+			BuiltinFunctionData(tsh::FunctionAbstractType type): type(type) {}
+		};
+	}
+	
+
 	/**
 	 * @brief Stores generic symbol data.
 	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
@@ -89,11 +96,23 @@ namespace compiler::helios {
 			};
 		}
 
+		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+			return SymbolData{
+				.common = {
+					.name = name,
+					.kind = SymbolKind::BuiltinFunction,
+				},
+				.other  = builtin_data,
+			};
+		}
+
 		template<class T>
-		CRef<const T> getData() const {
+		[[nodiscard]]
+		CRef<T> getData() const {
 			return &std::get<T>(other);
 		}
 
+		[[nodiscard]]
 		CRef<PstSymbolData> getPSTData() const { return getData<PstSymbolData>(); }
 
 		/**
@@ -385,6 +404,19 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
+
+
+	namespace builtins {
+		LookupResult lookupBuiltins(base::StrID name) {
+			LookupResult output{};
+	
+			if (name == base::StrID("btn_test_symbol")) {
+				// output.leaves.push_back(/* ... */);
+			}
+	
+			return output;
+		}
+	}
 
 	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {

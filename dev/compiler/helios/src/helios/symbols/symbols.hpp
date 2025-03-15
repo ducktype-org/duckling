@@ -182,4 +182,11 @@ namespace compiler::helios {
 	 * More information on `ClassSymbolData` in its definition.
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
+
+	namespace builtin {
+		/**
+		* Lookup a builtin symbol by name.
+		*/
+		LookupResult lookup(base::StrID name);
+	}
 }
