@@ -61,7 +61,6 @@ jobs:
 
       - name: Install GCC 14 and gcov-14
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
           sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
 
