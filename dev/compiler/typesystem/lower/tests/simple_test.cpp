@@ -40,7 +40,7 @@ private:
 	using enum Mutability;
 
 	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::DIRECT, is_mutable ? MUTABLE : IMMUTABLE };
+		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	void basicTypesTest() {
@@ -226,9 +226,9 @@ private:
 			const SymbolType<> f16_type = st(ctx.query<QueryFloatType>(16));
 			const SymbolType<> f64_type = st(ctx.query<QueryFloatType>(64));
 			const SymbolType<> f16_ref
-				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::REF, IMMUTABLE };
+				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::Ref, Immutable };
 			const SymbolType<> f16_box
-				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::BOX, IMMUTABLE };
+				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::Box, Immutable };
 			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
                 { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });

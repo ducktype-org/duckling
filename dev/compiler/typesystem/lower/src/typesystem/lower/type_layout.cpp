@@ -339,7 +339,7 @@ namespace tsl {
 		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType(), symbol_type.getRefKind()),
 		  pointee(makeBox<TypeLayout>(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType()))) {
 		CORE_ASSERT(
-			symbol_type.getRefKind() != tsh::ReferenceKind::DIRECT,
+			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
 			"Construction of pointer layout from symbol type "
 			"without reference indirection is forbidden."
 		);

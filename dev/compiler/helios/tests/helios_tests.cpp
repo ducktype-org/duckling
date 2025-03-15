@@ -63,8 +63,8 @@ private:
 	static tsh::SymbolType<> st(const tsh::AbstractType abstract_type) {
 		return tsh::SymbolType{
 			abstract_type,
-			tsh::ReferenceKind::DIRECT,
-			MUTABLE,
+			tsh::ReferenceKind::Direct,
+			Mutable,
 		};
 	}
 

@@ -13,11 +13,11 @@ namespace tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
 	 */
-	enum class ReferenceKind {
+	enum class ReferenceKind : uint8_t {
 		/**
 		 * @brief A reference of this kind is a non-reference. It is the value taken directly.
 		 */
-		DIRECT,
+		Direct,
 
 		/**
 		 * @brief A reference of this kind owns its referee.
@@ -26,7 +26,7 @@ namespace tsh {
 		 * The reference does not give access to explicit destruction of the referee, because
 		 * destruction is automatic.
 		 */
-		BOX,
+		Box,
 
 		/**
 		 * @brief A reference of this kind specifically does **not** own its referee.
@@ -35,43 +35,43 @@ namespace tsh {
 		 * Additionally, the reference does not give access to explicit destruction of the referee.
 		 * This kind of reference can only be constructed from a DIRECT or BOX reference.
 		 */
-		REF,
+		Ref,
 	};
 
-	enum class Mutability {
+	enum class Mutability : bool {
 		/**
 		 * @brief The value is mutable.
 		 */
-		MUTABLE,
+		Mutable,
 
 		/**
 		 * @brief The value is immutable.
 		 */
-		IMMUTABLE,
+		Immutable,
 	};
 
-	enum class Leakage {
+	enum class Leakage : bool {
 		/**
 		 * @brief The value can leak outside the defining scope.
 		 */
-		LEAKING,
+		Leaking,
 
 		/**
 		 * @brief The value cannot leak outside the defining scope.
 		 */
-		NON_LEAKING,
+		NonLeaking,
 	};
 
-	enum class Uniqueness {
+	enum class Uniqueness : bool {
 		/**
 		 * @brief The value is unique, no other references to it can exist.
 		 */
-		UNIQUE,
+		Unique,
 
 		/**
 		 * @brief The value is not unique, other references to it are permitted.
 		 */
-		NOT_UNIQUE,
+		NonUnique,
 	};
 
 	/**
@@ -104,7 +104,12 @@ namespace tsh {
 		 * @param other The source SymbolType.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
-		SymbolType(SymbolType<OTHER_ABSTRACT_TYPE> other): abstract_type(other.getType()) {}
+		SymbolType(SymbolType<OTHER_ABSTRACT_TYPE> other):
+			  abstract_type(other.getType()),
+			  reference_kind(other.getRefKind()),
+			  mutability(other.getMutability()),
+			  leakage(other.getLeakage()),
+			  uniqueness(other.getUniqueness()) {}
 
 		/**
 		 * @brief Constructs the SymbolType directly from its contents.
@@ -118,8 +123,8 @@ namespace tsh {
 			const ABSTRACT_TYPE abstract_type,
 			const ReferenceKind reference_kind,
 			const Mutability    mutability,
-			const Leakage       leakage    = Leakage::NON_LEAKING,
-			const Uniqueness    uniqueness = Uniqueness::NOT_UNIQUE
+			const Leakage       leakage    = Leakage::NonLeaking,
+			const Uniqueness    uniqueness = Uniqueness::NonUnique
 		):
 			  abstract_type(abstract_type),
 			  reference_kind(reference_kind),
@@ -223,11 +228,11 @@ namespace tsh {
 		std::string toString() const {
 			using enum ReferenceKind;
 			return base::strConcat(
-				uniqueness == Uniqueness::UNIQUE ? "unique " : "",
-				leakage == Leakage::LEAKING ? "leaking " : "",
-				mutability == Mutability::MUTABLE ? "" : "const ",
-				reference_kind == DIRECT ? ""
-				: reference_kind == BOX  ? "box "
+				uniqueness == Uniqueness::Unique ? "unique " : "",
+				leakage == Leakage::Leaking ? "leaking " : "",
+				mutability == Mutability::Mutable ? "" : "const ",
+				reference_kind == Direct ? ""
+				: reference_kind == Box  ? "box "
 										 : "ref ",
 				abstract_type.toString()
 			);

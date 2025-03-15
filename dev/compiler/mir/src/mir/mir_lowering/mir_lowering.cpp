@@ -618,15 +618,15 @@ namespace compiler::mir {
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryIntegralType>({ 64 }),
-						tsh::ReferenceKind::DIRECT,
-						tsh::Mutability::IMMUTABLE,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
 					};
 				}
 				variant_case_novalue(MirBoolConst) {
 					return tsh::SymbolType<>{
 						ctx.query<tsh::QueryBoolType>({}),
-						tsh::ReferenceKind::DIRECT,
-						tsh::Mutability::IMMUTABLE,
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
 					};
 				}
 				variant_case(LocalRef, local) { return local->type; }

@@ -42,8 +42,8 @@ namespace tsh {
 					   key.source.getType(),
 					   key.target.getType(),
 				   })
-			   and (key.source.getMutability() == Mutability::MUTABLE
-			        or key.target.getMutability() == Mutability::IMMUTABLE);
+			   and (key.source.getMutability() == Mutability::Mutable
+			        or key.target.getMutability() == Mutability::Immutable);
 		}
 
 		QUERY_AUTO_CACHE_COPY

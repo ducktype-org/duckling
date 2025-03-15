@@ -29,8 +29,7 @@ namespace tsh {
 		else {
 			// @TODO: Add .is_mutable and .pure when additional method specifiers are supported.
 			std::vector<SymbolType<>> all_parameter_types{};
-			all_parameter_types.push_back(SymbolType{
-				source, ReferenceKind::REF, Mutability::MUTABLE });
+			all_parameter_types.emplace_back(source, ReferenceKind::Ref, Mutability::Mutable);
 			for (const auto& par: parameters.value()) all_parameter_types.push_back(par.type);
 			return SymbolType{
 				ctx.query<QueryFunctionType>({
@@ -39,8 +38,8 @@ namespace tsh {
 					.pure            = false,
 					.free            = false,
 				}),
-				ReferenceKind::DIRECT,
-				Mutability::IMMUTABLE,
+				ReferenceKind::Direct,
+				Mutability::Immutable,
 			};
 		}
 	}

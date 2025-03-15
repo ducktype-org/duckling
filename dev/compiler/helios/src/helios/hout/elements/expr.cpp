@@ -31,8 +31,8 @@ namespace compiler::helios::code {
 				  // @TODO: Select type of expression based on type of literal.
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -47,8 +47,8 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryBoolType>({}),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -63,8 +63,8 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
@@ -98,8 +98,8 @@ namespace compiler::helios::code {
 				  // @TODO: Select type of expression based on result type of the operation.
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryIntegralType>({ 64 }),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
@@ -156,8 +156,8 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
@@ -192,8 +192,8 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType{
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryMetaType>({}),
-					  tsh::ReferenceKind::DIRECT,
-					  tsh::Mutability::IMMUTABLE,
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }

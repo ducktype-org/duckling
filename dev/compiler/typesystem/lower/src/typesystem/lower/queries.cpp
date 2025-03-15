@@ -43,7 +43,7 @@ namespace tsl {
 
 	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
-			if (key.getRefKind() == tsh::ReferenceKind::DIRECT)
+			if (key.getRefKind() == tsh::ReferenceKind::Direct)
 				return ctx.query<QueryAbstractTypeLayout>(key.getType());
 			return PointerTypeLayout(key, ctx);
 		}

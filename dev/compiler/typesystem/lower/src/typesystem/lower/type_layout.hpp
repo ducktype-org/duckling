@@ -83,8 +83,8 @@ namespace tsl {
 		virtual std::string toStringIdentification() const {
 			return "Layout of "
 			     + std::string(
-					   reference_kind == tsh::ReferenceKind::DIRECT ? ""
-					   : reference_kind == tsh::ReferenceKind::REF  ? "ref "
+					   reference_kind == tsh::ReferenceKind::Direct ? ""
+					   : reference_kind == tsh::ReferenceKind::Ref  ? "ref "
 																	: "box "
 				 )
 			     + source_type.toString() + " : " + std::to_string(getSize());
@@ -96,7 +96,7 @@ namespace tsl {
 		TypeLayoutABC(
 			const Bits               size,
 			const tsh::AbstractType  source_type,
-			const tsh::ReferenceKind reference_kind = tsh::ReferenceKind::DIRECT
+			const tsh::ReferenceKind reference_kind = tsh::ReferenceKind::Direct
 		):
 			  size(size),
 			  source_type(source_type),

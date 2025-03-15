@@ -526,8 +526,8 @@ namespace compiler::helios {
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
 				symbol_abstract_type = tsh::SymbolType{
 					type,
-					tsh::ReferenceKind::DIRECT,
-					tsh::Mutability::MUTABLE,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
 				};
 			}
 
@@ -575,8 +575,8 @@ namespace compiler::helios {
 				// Default return type is a direct unit.
 				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryUnitType>({}),
-					tsh::ReferenceKind::DIRECT,
-					tsh::Mutability::MUTABLE,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
 				};
 
 				if (ret.has_value()) {

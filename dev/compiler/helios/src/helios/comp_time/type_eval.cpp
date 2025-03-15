@@ -110,8 +110,8 @@ namespace compiler::helios {
 
 			return tsh::SymbolType<>{
 				short_path_result.value(),
-				tsh::ReferenceKind::DIRECT,
-				tsh::Mutability::MUTABLE,
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Mutable,
 			};
 		}
 

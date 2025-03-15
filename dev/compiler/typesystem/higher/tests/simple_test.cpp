@@ -192,7 +192,7 @@ private:
 	using enum Mutability;
 
 	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
-		return SymbolType{ abstract_type, ReferenceKind::DIRECT, is_mutable ? MUTABLE : IMMUTABLE };
+		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
 	}
 
 	/**
