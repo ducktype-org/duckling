@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/code_data/program.hpp>
+#include <vm/program/lower/program.hpp>
 #include <filesystem/file.hpp>
 #include <base/optional.hpp>
 #include "parser/parser.hpp"
@@ -16,7 +16,7 @@ namespace vm {
 	 *    a ParsedProgram object, enriched in source positions
 	 *    of every opcode, type etc.
 	 * 2) Perform static verification of the code using the Validator module
-	 * 3) Convert ParsedProgram object into VMProgram which will be used to
+	 * 3) Convert ParsedProgram object intoLowVMProgram which will be used to
 	 *    execute the code.
 	 */
 	class Preprocessor {
@@ -30,10 +30,10 @@ namespace vm {
 		 * (with source positions) to a program format executable by the VM.
 		 *
 		 * @param parsed_program
-		 * @return std::expected<vm::VMProgram, std::string>
+		 * @return std::expected<vm::LowVMProgram, std::string>
 		 */
-		std::expected<vm::VMProgram, std::string>
-			changeParsedProgramToVMProgram(const parser::ParsedProgram& parsed_program);
+		std::expected<vm::LowVMProgram, std::string>
+			changeParsedProgramTLowVMProgram(const parser::ParsedProgram& parsed_program);
 
 		Preprocessor(VMProcess& process, bool validate_program);
 
@@ -45,9 +45,9 @@ namespace vm {
 		 * @brief Parses the file, returns the representation of the program with type metadata.
 		 *
 		 * @param file
-		 * @return std::expected<vm::VMProgram, std::string>
+		 * @return std::expected<vm::LowVMProgram, std::string>
 		 */
-		std::expected<vm::VMProgram, std::string> getProgram(const fs::FilePath& file);
+		std::expected<vm::LowVMProgram, std::string> getProgram(const fs::FilePath& file);
 
 
 		/**
@@ -55,9 +55,9 @@ namespace vm {
 		 * metadata.
 		 *
 		 * @param files
-		 * @return std::expected<vm::VMProgram, std::string>
+		 * @return std::expected<vm::LowVMProgram, std::string>
 		 */
-		std::expected<vm::VMProgram, std::string> getProgram(const std::vector<fs::FilePath>& files
-		);
+		std::expected<vm::LowVMProgram, std::string>
+			getProgram(const std::vector<fs::FilePath>& files);
 	};
 }

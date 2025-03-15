@@ -27,7 +27,7 @@
  */
 
 #include <base/exceptions.hpp>
-#include <vm/code_data/instruction.hpp>
+#include <vm/program/lower/instruction.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
 #include "op_case.hpp"
@@ -281,7 +281,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
 

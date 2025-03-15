@@ -5,8 +5,8 @@
 #include <base/ints.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
-#include <vm/code_data/instruction.hpp>
-#include <vm/code_data/opcodes.hpp>
+#include <vm/program/lower/instruction.hpp>
+#include <vm/program/lower/opcodes.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -131,7 +131,7 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 			};
 
@@ -147,7 +147,7 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 	End:
@@ -168,7 +168,7 @@ namespace vm {
 			break;                                                          \
 		}                                                                   \
 	}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {
@@ -263,7 +263,7 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(CRef<VMProgram> program) {
+	void VMThread::run(CRef<LowVMProgram> program) {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
@@ -363,7 +363,7 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(CRef<vm::VMProgram> program) {
+	bool VMThread::initThreadAndRun(CRef<vm::LowVMProgram> program) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 

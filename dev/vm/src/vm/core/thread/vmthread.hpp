@@ -1,7 +1,7 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include <vm/code_data/program.hpp>
+#include <vm/program/lower/program.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/response.hpp>
@@ -12,7 +12,7 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/code_data/instruction.hpp>
+#include <vm/program/lower/instruction.hpp>
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -143,7 +143,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<VMProgram> executing_program = nullptr;
+		MCRef<LowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @TODO:
@@ -180,7 +180,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<VMProgram> program);
+		bool initThreadAndRun(CRef<LowVMProgram> program);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -216,7 +216,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<VMProgram>);
+		void run(CRef<LowVMProgram>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 

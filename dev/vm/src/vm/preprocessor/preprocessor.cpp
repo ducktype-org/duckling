@@ -1,10 +1,10 @@
 #include "preprocessor.hpp"
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/code_data/program.hpp>
+#include <vm/program/lower/program.hpp>
 #include <diagnostic/logger.hpp>
 #include "parser/parser.hpp"
-#include <vm/code_data/opcode_args.hpp>
-#include <vm/code_data/opcodes.hpp>
+#include <vm/program/opcode_args.hpp>
+#include <vm/program/lower/opcodes.hpp>
 #include <expected>
 #include <vector>
 #include "parser/elements.hpp"
@@ -126,7 +126,7 @@ namespace vm {
 			return func_data;
 		}
 
-		base::Optional<vm::VMProgram>
+		base::Optional<vm::LowVMProgram>
 			getCode(Ref<parser::ParsedProgram> parsed_program, dia::Logger& log) {
 			std::vector<vm::FuncData> converted_functions;
 			converted_functions.reserve(parsed_program->functions.size());
@@ -141,13 +141,13 @@ namespace vm {
 				converted_functions.push_back(converted_func);
 			}
 
-			vm::VMProgram program(converted_functions, std::move(parsed_program->type_metadata));
+			vm::LowVMProgram program(converted_functions, std::move(parsed_program->type_metadata));
 
 			return program;
 		}
 
-		std::expected<vm::VMProgram, std::string>
-			changeParsedProgramToVMProgram(Ref<parser::ParsedProgram> parsed_program) {
+		std::expected<vm::LowVMProgram, std::string>
+			changeParsedProgramTLowVMProgram(Ref<parser::ParsedProgram> parsed_program) {
 			auto log = dia::Logger();
 
 			auto program = getCode(parsed_program, log);
@@ -162,11 +162,12 @@ namespace vm {
 	}
 }
 
-std::expected<vm::VMProgram, std::string> vm::Preprocessor::getProgram(const fs::FilePath& file) {
+std::expected<vm::LowVMProgram, std::string> vm::Preprocessor::getProgram(const fs::FilePath& file
+) {
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::VMProgram, std::string>
+std::expected<vm::LowVMProgram, std::string>
 	vm::Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
 	auto maybe_parsed_program = parser::assemble(files);
 	if (!maybe_parsed_program) return std::unexpected(maybe_parsed_program.error());
@@ -174,7 +175,7 @@ std::expected<vm::VMProgram, std::string>
 	auto is_valid = validator::verify(maybe_parsed_program.value());
 	if (is_valid.has_value()) return std::unexpected(is_valid.value());
 
-	auto program = vm::changeParsedProgramToVMProgram(&*maybe_parsed_program);
+	auto program = vm::changeParsedProgramTLowVMProgram(&*maybe_parsed_program);
 	if (!program) return std::unexpected(program.error());
 
 	return program;
