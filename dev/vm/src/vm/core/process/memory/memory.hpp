@@ -11,7 +11,7 @@
 #include <base/stable_container.hpp>
 #include <base/maps.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
-#include <vm/program/lower/frame.hpp>
+#include "frame.hpp"
 
 #include "block.hpp"
 #include "pointer.hpp"

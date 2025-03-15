@@ -1,10 +1,10 @@
 #include "preprocessor.hpp"
 #include <vm/core/process/vmprocess.hpp>
-#include <vm/program/lower/program.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 #include <diagnostic/logger.hpp>
 #include "parser/parser.hpp"
 #include <vm/program/opcode_args.hpp>
-#include <vm/program/lower/opcodes.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 #include <expected>
 #include <vector>
 #include "parser/elements.hpp"
@@ -23,13 +23,11 @@ namespace vm {
 		) {
 			variant_match(opcode_arg.arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
-				variant_case(vm::opargs::StackLocalI8, offset) return offset.offset;
-				variant_case(vm::opargs::StackLocalI16, offset) return offset.offset;
-				variant_case(vm::opargs::StackLocalI32, offset) return offset.offset;
-				variant_case(vm::opargs::StackLocalI64, offset) return offset.offset;
-				variant_case(vm::opargs::StackLocalAny, offset) return offset.offset;
-				variant_case(vm::opargs::StackLocalPtr, offset) return offset.offset;
-				variant_case(vm::opargs::ArgsOffset, offset) return offset.offset;
+
+#define HANDLE_OFFSET(Type) variant_case(vm::opargs::Type, offset_type) return offset_type.offset;
+				FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
+#undef HANDLE_OFFSET
+
 				variant_case(vm::opargs::Type, type_arg) {
 					auto type_obj = types->getTypeByName(type_arg.type_name);
 					if (type_obj)
@@ -68,20 +66,20 @@ namespace vm {
 
 		u16 nameToOpcodeValue(base::StrID str) {
 			try {
-				return static_cast<u16>(vm::STR_TO_OPCODE_FIX8.at(str.str()));
+				return static_cast<u16>(vm::low::STR_TO_OPCODE_FIX8.at(str.str()));
 			} catch (std::out_of_range& err) {
 				// @TODO: better errors
 				CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
 			}
 		}
 
-		vm::FuncData changeFuncToFuncData(
+		vm::low::FuncData changeFuncToFuncData(
 			const std::vector<Box<parser::Func>>& functions,
 			CRef<parser::Func>                    func,
 			Ref<vm::TypeMetadata>                 types,
 			dia::Logger&                          log
 		) {
-			vm::FuncData func_data;
+			vm::low::FuncData func_data;
 			func_data.name          = func->name.value;
 			func_data.arg_size      = func->arg_size;
 			func_data.next_arg_size = func->next_arg_size;
@@ -126,9 +124,9 @@ namespace vm {
 			return func_data;
 		}
 
-		base::Optional<vm::LowVMProgram>
+		base::Optional<vm::low::LowVMProgram>
 			getCode(Ref<parser::ParsedProgram> parsed_program, dia::Logger& log) {
-			std::vector<vm::FuncData> converted_functions;
+			std::vector<vm::low::FuncData> converted_functions;
 			converted_functions.reserve(parsed_program->functions.size());
 
 			for (auto& func: parsed_program->functions) {
@@ -141,12 +139,14 @@ namespace vm {
 				converted_functions.push_back(converted_func);
 			}
 
-			vm::LowVMProgram program(converted_functions, std::move(parsed_program->type_metadata));
+			vm::low::LowVMProgram program(
+				converted_functions, std::move(parsed_program->type_metadata)
+			);
 
 			return program;
 		}
 
-		std::expected<vm::LowVMProgram, std::string>
+		std::expected<vm::low::LowVMProgram, std::string>
 			changeParsedProgramTLowVMProgram(Ref<parser::ParsedProgram> parsed_program) {
 			auto log = dia::Logger();
 
@@ -162,12 +162,12 @@ namespace vm {
 	}
 }
 
-std::expected<vm::LowVMProgram, std::string> vm::Preprocessor::getProgram(const fs::FilePath& file
-) {
+std::expected<vm::low::LowVMProgram, std::string>
+	vm::Preprocessor::getProgram(const fs::FilePath& file) {
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::LowVMProgram, std::string>
+std::expected<vm::low::LowVMProgram, std::string>
 	vm::Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
 	auto maybe_parsed_program = parser::assemble(files);
 	if (!maybe_parsed_program) return std::unexpected(maybe_parsed_program.error());
@@ -181,5 +181,4 @@ std::expected<vm::LowVMProgram, std::string>
 	return program;
 }
 
-vm::Preprocessor::Preprocessor([[maybe_unused]] VMProcess& process, bool validate_program):
-	  validate_program(validate_program) {}
+vm::Preprocessor::Preprocessor(bool validate_program): validate_program(validate_program) {}

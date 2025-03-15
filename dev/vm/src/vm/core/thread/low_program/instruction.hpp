@@ -10,7 +10,8 @@
 #include <array>
 
 // #define USE_COMPACT_INSTRUCTION
-#include "frame.hpp"
+#include <vm/core/process/memory/frame.hpp>
+
 #define OPFUN_ARGS                                                    \
 	const Fix8Instruction *IF_NOT_TC(&) instr [[maybe_unused]],       \
 		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
@@ -34,7 +35,7 @@ namespace {
 	constexpr u16 countOpCases() {
 		u16 count = 0;
 #define HANDLE_OPCODE(opcode) count++;
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		return count;
 	}
@@ -89,11 +90,11 @@ namespace vm {
 	class OpFuns {
 	public:
 #define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 
 #define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 
 		// NOLINTBEGIN(readability-identifier-naming)
@@ -109,7 +110,7 @@ namespace vm {
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define HANDLE_OPCODE(opcode) op_##opcode,
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		};
 
@@ -118,7 +119,7 @@ namespace vm {
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_OPCODE(opcode) op_debug_##opcode,
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		};
 

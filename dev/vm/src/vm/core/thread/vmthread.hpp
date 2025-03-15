@@ -1,7 +1,7 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include <vm/program/lower/program.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/response.hpp>
@@ -12,7 +12,7 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/program/lower/instruction.hpp>
+#include "low_program/instruction.hpp"
 
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -143,7 +143,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<LowVMProgram> executing_program = nullptr;
+		MCRef<low::LowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @TODO:
@@ -161,7 +161,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<FuncData>);
+		u64 internalCallMain(CRef<low::FuncData>);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -180,7 +180,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<LowVMProgram> program);
+		bool initThreadAndRun(CRef<low::LowVMProgram> program);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -216,7 +216,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<LowVMProgram>);
+		void run(CRef<low::LowVMProgram>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 

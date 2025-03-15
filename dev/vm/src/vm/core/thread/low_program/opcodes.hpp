@@ -27,16 +27,16 @@
  */
 
 
-namespace vm {
+namespace vm::low {
 	enum class OpcodeFix8 : u16 {
 #define HANDLE_OPCODE(opcode) opcode,
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 	};
 	// @TODO: Add constructors to base::HashMap to allow usage of base::HashMap here.
 	const std::unordered_map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
 #define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
-#include "../opcodes_list.hpp"
+#include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 	};
 }
