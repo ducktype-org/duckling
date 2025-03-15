@@ -5,7 +5,6 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
-
 #include <query_framework/query_impl.hpp>
 
 namespace compiler::helios::code {
@@ -23,6 +22,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
+	EXPR_VISITOR(CallExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
@@ -233,5 +233,46 @@ namespace compiler::helios::code {
 			expr->debugPrint(out);
 			break;
 		}
+	}
+
+	namespace {
+		/**
+		 * @brief Infers a resulting type from a call operation.
+		 * @note This will be here until we have a proper overload resolution.
+		 */
+		tsh::SymbolType<> getCallResultType(tsh::AbstractType tp) {
+			if (tp.getKind() == tsh::Kind::Function) {
+				auto func = tsh::FunctionAbstractType(tp);
+				return func.getResultType();
+			}
+			CORE_PANIC("Invalid kind to call: ", base::enumToStr(tp.getKind()));
+		}
+	}
+
+	CallExpr::CallExpr(
+		query::Context& ctx, ScopeID scope, SymID callee, std::vector<Box<Expr>> arguments
+	):
+		  Expr(
+			  scope,
+			  tsh::ExpressionType(
+				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee))
+	                                    )
+	                                    .getType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  callee(callee),
+		  arguments(std::move(arguments)) {}
+
+	void CallExpr::debugPrint(std::ostream& out) const {
+		out << name(callee).strView() << "(";
+		bool add_comma = false;
+		for (auto&& arg: arguments) {
+			if (add_comma) out << ", ";
+			arg->debugPrint(out);
+			add_comma = true;
+		}
+		out << ")";
 	}
 }

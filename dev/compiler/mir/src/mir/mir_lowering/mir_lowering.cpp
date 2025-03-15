@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include <helios/hout/elements/expr.hpp>
 #include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
@@ -49,12 +50,12 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-		MirLocation     value;
+		MIRValue        value;
 	};
 
 	/**
@@ -495,11 +496,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
@@ -507,7 +508,8 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
+			output({ .begin = continuation,
+			         .value = MIRValue{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -554,7 +556,7 @@ namespace compiler::mir {
 				expr.lifetime_scope,
 			});
 
-			output({ sub_continuation, target_location });
+			output({ .begin = sub_continuation, .value = target_location });
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -571,6 +573,35 @@ namespace compiler::mir {
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			auto       call = continuation->addHole();
+			const auto call_result
+				= function.addTmp(expr.expression_type.getSymbolType(), expr.lifetime_scope);
+
+			auto                  sub_continuation = continuation;
+			std::vector<MIRValue> args;
+			args.emplace_back(MirFunctionLiteral{ expr.callee });
+			for (const auto& arg: expr.arguments) {
+				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
+				args.push_back(sub_res);
+				sub_continuation = expr_continuation;
+			}
+
+			// @TODO: #505 here in the future we (probably) will have to handle
+			// move operations related to the passing of the arguments to the function
+
+			call.fill(Instruction{
+				Operation::Call,
+				{ call_result },
+				args,
+				{ flagConstruct(call_result) },
+				expr.lifetime_scope,
+			});
+
+
+			return output({ .begin = sub_continuation, .value = call_result });
 		}
 
 	private:
@@ -613,7 +644,7 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::SymbolType<> locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return tsh::SymbolType<>{

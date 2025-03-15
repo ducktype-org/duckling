@@ -10,6 +10,7 @@ function(make_module MODULE_NAME)
 	set_property(TARGET clean-modules APPEND PROPERTY MODULE_DIRECTORIES ${CMAKE_CURRENT_BINARY_DIR})
 
 	target_include_directories(${MODULE_NAME} PUBLIC src ${make_module_INCLUDE})
+	target_include_directories(${MODULE_NAME} PRIVATE src_private)
 	target_link_libraries(${MODULE_NAME} ${make_module_USES})
 	add_to_coverage(${MODULE_NAME})
 endfunction()

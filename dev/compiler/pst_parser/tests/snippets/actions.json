@@ -111,7 +111,7 @@
 																"sourceEnd": 44
 															},
 															"Call Expression": {
-																"type": "[]",
+																"type": "()",
 																"arguments": {
 																	"position": {
 																		"sourceStart": 44,

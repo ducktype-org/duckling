@@ -87,6 +87,15 @@ namespace compiler::mir {
 		bool operator==(const MirBoolConst& other) const = default;
 	};
 
+	/**
+	 * Represent a direct reference to a function linked to a HELIOS SymID.
+	 */
+	struct MirFunctionLiteral final {
+		helios::SymID helios_id;
+
+		bool operator==(const MirFunctionLiteral& other) const = default;
+	};
+
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
@@ -136,25 +145,28 @@ namespace compiler::mir {
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
-	struct MirLocation final {
+	struct MIRValue final {
 	private:
-		// @TODO: global, literal, func-literal, ...
+		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
+		using ValueType
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
 	public:
-		MirLocation(MirIntegerConst value): value(value) {}
+		MIRValue(MirIntegerConst value): value(value) {}
 
-		MirLocation(MirBoolConst value): value(value) {}
+		MIRValue(MirBoolConst value): value(value) {}
 
-		MirLocation(LocalRef value): value(value) {}
+		MIRValue(LocalRef value): value(value) {}
 
-		MirLocation(BlockID value): value(value) {}
+		MIRValue(BlockID value): value(value) {}
 
-		bool operator==(const MirLocation& other) const = default;
+		MIRValue(MirFunctionLiteral value): value(value) {}
+
+		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -165,7 +177,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in MirLocation.
+		 * stored in MIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -202,7 +214,7 @@ namespace compiler::mir {
 
 		base::Optional<LocalRef> output;
 
-		std::vector<MirLocation> arguments;
+		std::vector<MIRValue> arguments;
 
 		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
@@ -228,7 +240,7 @@ namespace compiler::mir {
 		Instruction(
 			Operation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirLocation>   arguments,
+			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			helios::ScopeID            scope
 		):

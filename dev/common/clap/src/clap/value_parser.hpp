@@ -8,7 +8,6 @@
 
 #include <base/box.hpp>
 #include <any>
-#include <base/smart_pointers.hpp>
 #include <base/exceptions.hpp>
 #include <base/type_traits.hpp>
 #include <base/optional.hpp>

@@ -40,6 +40,10 @@ namespace compiler::helios {
 				output(expr.value_type);
 			}
 
+			void visitCallExpr(const code::CallExpr&) final {
+				throw base::NotYetImplemented("ShortPath CallExpr");
+			}
+
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
 				// @todo this only works if the identifier is a class.
 				// this should be changed in the future

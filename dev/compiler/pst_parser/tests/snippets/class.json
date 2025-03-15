@@ -275,7 +275,7 @@
 																		"sourceEnd": 114
 																	},
 																	"Call Expression": {
-																		"type": "[]",
+																		"type": "()",
 																		"arguments": {
 																			"position": {
 																				"sourceStart": 113,
@@ -567,7 +567,7 @@
 																					"sourceEnd": 217
 																				},
 																				"Call Expression": {
-																					"type": "[]",
+																					"type": "()",
 																					"arguments": {
 																						"position": {
 																							"sourceStart": 216,

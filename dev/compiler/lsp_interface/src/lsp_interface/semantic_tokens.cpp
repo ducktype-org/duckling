@@ -13,7 +13,7 @@
 #include <map>
 
 namespace lsp {
-	SemanticToken::SemanticToken(base::c_borrow_ptr<lexer::Token> source):
+	SemanticToken::SemanticToken(CRef<lexer::Token> source):
 		  source_token(source),
 		  line(source->getPosition().getStartLineColumn().first),
 		  start_character(source->getPosition().getStartLineColumn().second),
@@ -81,7 +81,7 @@ namespace lsp {
 		getSemanticTokens(element, tokens);
 
 		std::vector<std::string> token_strings(tokens.size());
-		for (int i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
+		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
 
 		return jsonList(token_strings);
 	}
