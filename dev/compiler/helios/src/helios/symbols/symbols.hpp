@@ -185,8 +185,8 @@ namespace compiler::helios {
 
 	namespace builtin {
 		/**
-		* Lookup a builtin symbol by name.
-		*/
+		 * Lookup a builtin symbol by name.
+		 */
 		LookupResult lookup(base::StrID name);
 	}
 }
