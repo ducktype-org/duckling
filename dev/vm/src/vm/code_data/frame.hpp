@@ -47,17 +47,9 @@ namespace vm {
 		FlagData  flags{};
 
 		/**
-		 * @brief Return value of the function call.
-		 * @todo This won't be needed after making function calls, stack based
-		 */
-		u64 ret_val{};
-
-
-		/**
 		 * @brief Place where arguments passed to a function are copied to
 		 * so callee doesn't overide them.
 		 */
-		std::byte* passed_args      = nullptr;
 		u64        passed_args_size = 0;
 
 		/**

@@ -23,17 +23,18 @@ function check {
 function main {
 	arg_size: 0;
 	next_arg_size: 20;
-	ret_size: 0;
-	local_size: 20;
+	ret_size: 8;
+	local_size: 28;
 
 	code: {
-		init_type int64; # [0, 8)
-		init_type int32; # [8, 12)
-		init_type int64; # [12, 20)
+		# [0, 8) main ret_val
+		init_type int64; # [8, 16)
+		init_type int32; # [16, 20)
+		init_type int64; # [20, 28)
 
-        mov_l64_imm 0, 3;
-        mov_l32_imm 8, 2;
-        mov_l64_imm 12, 1;
+        mov_l64_imm 8, 3;
+        mov_l32_imm 16, 2;
+        mov_l64_imm 20, 1;
 		call_func          	check;
 
 		ret;

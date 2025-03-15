@@ -40,6 +40,6 @@ function main {
             jmpRelIf_label  Loop;
 
         output_l64      16;
-        ret_l64         16;       
+        ret;       
     }
 }

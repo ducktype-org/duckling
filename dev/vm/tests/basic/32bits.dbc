@@ -1,70 +1,77 @@
+type primitive: int32 4
+type primitive: int64 8
+
 function foo {
 	arg_size: 0;
 	next_arg_size: 0;
-	local_size: 24;
+	local_size: 20;
 	ret_size: 4;
 
-	# 0 -> a
-	# 4 -> b
+	# [0, 4) -> ret_val
+	# [4, 8) -> a
+	# [8, 12) -> b
 	code: {
-		mov_l32_imm 4, 3;
-		mov_l32_l32 0, 4;
+		mov_l32_imm 		8, 3;
+		mov_l32_l32 		4, 8;
 		# a = 3, b = 3
 
-		cmov_l32_l32 0, 0;
-		add_l32_l32 0, 4;
-		add_l32_imm 4, 1;
+		cmov_l32_l32 		4, 4;
+		add_l32_l32 		4, 8;
+		add_l32_imm 		8, 1;
 		# a = 6, b = 4
 
-		sub_l32_l32 0, 4;
-		sub_l32_imm 4, 1;
+		sub_l32_l32 		4, 8;
+		sub_l32_imm 		8, 1;
 		# a = 2, b = 3
 
-		mul_l32_l32 0, 4;
-		mul_l32_imm 4, 3;
+		mul_l32_l32 		4, 8;
+		mul_l32_imm 		8, 3;
 		# a = 6, b = 9
 
-		mod_l32_l32 0, 4;
-		mod_l32_imm 4, 7;
+		mod_l32_l32 		4, 8;
+		mod_l32_imm 		8, 7;
 		# a = 6, b = 2;
 
-		div_l32_l32 0, 4;
-		div_l32_imm 4, 2;
+		div_l32_l32 		4, 8;
+		div_l32_imm 		8, 2;
 		# a = 3, b = 1 
 
-		cmpEq_l32_l32 0, 4;
-		jmpRelIf_label fail;
+		cmpEq_l32_l32 		4, 8;
+		jmpRelIf_label 		fail;
 		
-		cmpEq_l32_imm 4, 1;
-		jmpRelNotIf_label fail;
+		cmpEq_l32_imm 		8, 1;
+		jmpRelNotIf_label 	fail;
 
-		cmpG_l32_l32 0, 4;
-		jmpRelNotIf_label fail;
+		cmpG_l32_l32 		4, 8;
+		jmpRelNotIf_label 	fail;
 
-		cmpG_l32_imm 4, 2;
-		jmpRelIf_label fail;
+		cmpG_l32_imm 		8, 2;
+		jmpRelIf_label 		fail;
 
-		add_l32_l32 4, 0;
+		add_l32_l32 		8, 4;
 		# b = 4
-		ret_l32 4;
+		mov_l32_l32 		0, 8
+		ret;
 		
 		label fail;
-		mov_l64_imm 8, 2137;
-		output_l64  8;
-		ret_l32 0;
+		init_type		 	int64; # [12, 20)
+		mov_l64_imm 		12, 2137;
+		output_l64  		12;
+		mov_l64_l64 		0, 4;
+		ret;
 	}
 }
 
 function main {
 	arg_size: 0;
 	next_arg_size: 0;
-	local_size: 24;
+	local_size: 4;
 	ret_size: 0;
 
 	code: {
-		call_func foo;
-		mov_l64_r0 0;
-		output_l64 0;
+		init_type 	int32; # [0, 4) foo() ret_val
+		call_func 	foo;
+		output_l32 	0;
 
 		ret;
 	}

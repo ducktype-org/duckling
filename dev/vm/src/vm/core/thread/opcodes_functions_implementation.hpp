@@ -205,29 +205,21 @@ namespace vm {
 			auto* prev_frame = frame;
 
 			auto function_id = static_cast<u32>(instr->arg0);
-			auto function    = thread.executing_program->functions[function_id];
+			auto called_func    = thread.executing_program->functions[function_id];
 
 			// Size of the shared function space
-			auto shared_func_space_size = function.arg_size + function.ret_size;
+			auto shared_func_space_size = called_func.arg_size + called_func.ret_size;
 
-			// Save the copy of arguments passed to callee in caller stack frame.
-			// @TODO: Make it a box, without the malloc
-			prev_frame->passed_args = new std::byte[function.arg_size];
-			prev_frame->passed_args_size = function.arg_size;
-			std::memcpy(
-				prev_frame->passed_args,
-				runtime_data.local_stack_top - function.arg_size,
-				function.arg_size
-			);
+			prev_frame->passed_args_size = called_func.arg_size;
 
 			frame++;
 
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 
 			// Update values passed as arguments.
-			instr = thread.executing_program->functions[function_id].bc.data();
+			instr = called_func.bc.data();
 
-			u64 local_stack_size = thread.executing_program->functions[function_id].stack_size;
+			u64 local_stack_size = called_func.stack_size;
 			local_stack = runtime_data.local_stack_top - shared_func_space_size;
 
 			// This assumes, that local_size is the sum of sizes of: ret_val + passed_args + new_local_args
@@ -236,6 +228,22 @@ namespace vm {
 			// First few frames are already initialized with the return value spot and args passed to the function
 			// First free spot in the local stack is the one after them.
 			frame->local_stack_head = shared_func_space_size;
+
+
+			// @TODO: We have to copy caller arguments to callee's block_stack. 
+			// For that, we need to know the number of arguments a function takes(number of blocks to copy),
+			// not just the arg_size
+
+			std::cout << "**********CALL_FUNC**************\n";
+			std::cout << "PrevFrame passed args size: " << prev_frame->passed_args_size << '\n';
+			std::cout << "Shared function_space_size: " << shared_func_space_size << '\n';
+			std::cout << "New local stack address: " << local_stack << '\n';
+			std::cout << "runtime local_stack_top: " << runtime_data.local_stack_top << '\n';
+			std::cout << "******************************\n";
+
+
+
+
 
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
@@ -267,6 +275,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
+			// Deinit everything, but the return value
 			while (frame->block_stack.size() > 1) {
 				auto block = frame->block_stack.back();
 				thread.process.getMemory().freeBlock(block);
@@ -274,21 +283,29 @@ namespace vm {
 			}
 
 			// For explanation go to op_ret_l64.
+			// @TODO: Move that comment here since ret_l64 doesn't exist anymore.
 			frame--;
-
-			thread.runtime_data.local_stack_top = local_stack;
+			
+			// New local_stack_top is the current address of the previous local_stack
+			thread.runtime_data.local_stack_top = frame->local_stack + frame->local_stack_head;
 
 			// Load previous frame
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
 
-			// Copy the previous function arguments back in place
-			std::memcpy(
-				local_stack + frame->local_stack_head - frame->passed_args_size,
-				frame->passed_args,
-				frame->passed_args_size
-			);
-			delete frame->passed_args;
+			// call_func deinits the arguments passed to a function, so 
+			// when returning our stack_head should moved by arg_size. 
+			frame->local_stack_head -= frame->passed_args_size;
+
+
+			std::cout <<"%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
+			std::cout << "Stack top after return: " << thread.runtime_data.local_stack_top << '\n';
+			std::cout << "Local stack address after return: " << local_stack << '\n';
+			std::cout << "Old local stack head: " << frame->local_stack_head << '\n';
+			std::cout << "old passed_args_size: " << frame->passed_args_size << '\n';
+			std::cout << "Where we copy passed_args: " << local_stack + frame->local_stack_head - frame->passed_args_size << '\n';
+			std::cout <<"%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
+
 			frame->passed_args_size = 0;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
@@ -303,7 +320,8 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			frame->block_stack.push_back(block);
-			std::cout << "=============================\n";
+			std::cout << "==========INIT_TYPE=============\n";
+			std::cout << "Block stack size: " << frame->block_stack.size() << '\n';
 			std::cout << "Initialized type of size: " << type->getSize() << '\n';
 			std::cout << "Local stack address: " << local_stack << '\n';
 			std::cout << "Relative address: " << frame->local_stack_head << '\n';

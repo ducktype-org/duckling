@@ -2,71 +2,103 @@ type primitive: int64 8
 
 function ackermann {
     arg_size: 16;
-    next_arg_size: 24;
+    next_arg_size: 16;
     ret_size: 8;
 
     # m, n, nPtr
-    local_size: 16;
+    local_size: 48;
     code: {
-        getFstArg_l64       0;
-        mov_l64_arg64       8, 8;
+        # [0, 8) -> ret_val
+        # [8, 16) -> arg0
+        # [16, 24) -> arg1
 
-        cmpEq_l64_imm       0, 0;
-        jmpRelIf_label      M0;
+
+        # getFstArg_l64       0; # Wszystko co było 0 to jest 8
+        # mov_l64_arg64       8, 8; # Wszystko co było 8 to jest 16
 
         cmpEq_l64_imm       8, 0;
+        jmpRelIf_label      M0;
+
+        cmpEq_l64_imm       16, 0;
         jmpRelIf_label      N0;
 
         # m, n > 0
         # return A(m-1, A(m, n-1))
-        sub_l64_imm         8, 1;
-        setFstArg_l64       0;
-        mov_arg64_l64       8, 8;
+        # sub_l64_imm         8, 1;
+        # setFstArg_l64       0;
+        # mov_arg64_l64       8, 8;
+
+        init_type           int64; # [24, 32) A(m, n-1) ret_val
+        init_type           int64; # [32, 40) A(m, n-1) arg0
+        init_type           int64; # [40, 48) A(m, n-1) arg1
+        mov_l64_l64         32, 8;
+        mov_l64_l64         40, 16;
+        sub_l64_imm         40, 1;
+
         call_func           ackermann; # A(m, n-1)
-        mov_l64_r0          8;
-        sub_l64_imm         0, 1;
-        setFstArg_l64       0;
-        mov_arg64_l64       8, 8;
+
+        # mov_l64_r0          8;
+        # ret_val in 24
+
+        # sub_l64_imm         0, 1;
+        # setFstArg_l64       0;
+        # mov_arg64_l64       8, 8;
+
+        sub_l64_imm         32, 1; # m already was in [32, 40)
+        mov_l64_l64         40, 24;
+
         call_func           ackermann;  # A(m-1, A(m, n-1))
-        mov_l64_r0          0;
-        ret_l64             0;
+        
+        mov_l64_l64         0, 24;
+        ret;
 
         label N0;
         # return A(m-1, 1)
-        sub_l64_imm         0, 1;
-        setFstArg_l64       0;
-        mov_l64_imm         8, 1;
-        mov_arg64_l64       8, 8;
+
+        # sub_l64_imm         0, 1;
+        # setFstArg_l64       0;
+        # mov_l64_imm         8, 1;
+        # mov_arg64_l64       8, 8;
+
+        init_type           int64; # [24, 32) A(m-1, 1) ret_val
+        init_type           int64; # [32, 40) A(m-1, 1) arg0
+        init_type           int64; # [40, 48) A(m-1, 1) arg1
+        
+        mov_l64_l64         32, 8;
+        sub_l64_imm         32, 1;
+        mov_l64_imm         40, 1;
+
         call_func           ackermann;
-        mov_l64_r0          0;
-        ret_l64             0;
+        mov_l64_l64         0, 24;
+        ret;
 
         label M0;
         # return n+1
-        add_l64_imm         8, 1;
-        ret_l64             8;
+        mov_l64_l64         0, 16;
+        add_l64_imm         0, 1;
+        ret;
     }
 }
 
 function main {
     arg_size: 0;
     next_arg_size: 16;
-    ret_size: 8;
+    ret_size: 0;
 
     # m, n
 
-    local_size: 32;
+    local_size: 24;
 
     code: {
-        input_l64           0;
-        setFstArg_l64       0;
+        init_type           int64; # [0, 8) ackermann ret_val
+        init_type           int64; # [8, 16) ackermann arg0
+        init_type           int64; # [16, 24) ackermann arg1
 
         input_l64           8;
-        mov_arg64_l64  8, 8;
-
+        input_l64           16;
         call_func           ackermann;
-        mov_l64_r0          0;
+
         output_l64          0;
-        ret_imm             0;
+        ret;
     }
 }

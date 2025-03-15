@@ -20,15 +20,16 @@ function check {
 function main {
 	arg_size: 0;
 	next_arg_size: 0;
-	ret_size: 0;
-
-	local_size: 4;
+	ret_size: 8;
+	local_size: 12;
 
 	code: {
-		init_type 			int32; # place for check() ret_val
+		# [0, 8) main ret_val
+
+		init_type 			int32; # [8, 12) check() ret_val
 		call_func          	check;
+		output_l32 			8;
 		
-		output_l32 			0;
 		ret;
 	}
 

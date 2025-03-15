@@ -1,24 +1,26 @@
+type primitive: int64 8
 
 function collatz {
 	arg_size: 8;
 	next_arg_size: 0;
-	ret_size: 0;
+	ret_size: 8;
 
-	# n - 0
-	# j - 8
-	# tmp1 - 16
-	local_size: 24;
+	# ret_val - 0
+	# n - 8
+	# j - 16
+	# tmp1 - 24
+	local_size: 32;
 
 	code: {
-
-		# n := argument
-		getFstArg_l64	         0;
+		# [0, 8) ret_val
+		# [8, 16) arg0
 
 		# j := 0
-		mov_l64_imm           8, 0;
+		init_type		int64; # [16, 24)
+		mov_l64_imm		16, 0;
 
 		# if n == 1: end
-		cmpEq_l64_imm         0, 1;
+		cmpEq_l64_imm         8, 1;
 		jmpRelIf_label        End;
 
 		# do-while (n != 1):
@@ -28,38 +30,41 @@ function collatz {
 
 			# if condition:
 				# tmp := n
-				mov_l64_l64          16, 0;
+				init_type			int64; # [24, 32)
+				mov_l64_l64         24, 8;
+
 				# tmp %= 2
-				mod_l64_imm          16, 2;
-				cmpEq_l64_imm        16, 0;
-				jmpRelIf_label       else;
+				mod_l64_imm         24, 2;
+				cmpEq_l64_imm       24, 0;
+				jmpRelIf_label      else;
 
 			# if code:
 				# n = 3n + 1;
-				mul_l64_imm		     0, 3;
-				add_l64_imm          0, 1;
-				jmpRel_label         afterIf;
+				mul_l64_imm		    8, 3;
+				add_l64_imm         8, 1;
+				jmpRel_label        afterIf;
 
 			# else
 				label else;
 
 				# else code:
 					# n = n / 2
-					div_l64_imm  0, 2;
+					div_l64_imm  8, 2;
 
 			label afterIf;
 
 			# if n > j: # j := n
-			cmpG_l64_l64     0, 8;
-			cmov_l64_l64     8, 0;
+			cmpG_l64_l64     	8, 16;
+			cmov_l64_l64     	16, 8;
 
-			cmpEq_l64_imm         0, 1;
-			jmpRelNotIf_label     WhileNneq0;
+			cmpEq_l64_imm       8, 1;
+			jmpRelNotIf_label   WhileNneq0;
 
 		label End;
 
 		# return j
-		ret_l64 8;
+		mov_l64_l64 	0, 16;
+		ret;
 	}
 }
 
@@ -73,9 +78,14 @@ function main {
 	# s - 8
 	# i - 16
 	# tmp - 24
-	local_size: 32;
+	local_size: 48;
 
 	code: {
+		init_type 		int64; # [0, 8) x
+		init_type 		int64; # [8, 16) s
+		init_type 		int64; # [16, 24) i
+		init_type 		int64; # [24, 32) tmp
+
 		# x := input
 		input_l64       0;
 
@@ -90,9 +100,12 @@ function main {
 			# output_l64         16;
 
 			# tmp := collatz(i)
-			setFstArg_l64			 16;
-			call_func          collatz;
-			mov_l64_r0         24;
+
+			init_type int64; # [32, 40) collatz(i) ret_val
+			init_type int64; # [40, 48) collatz(i) arg0
+			mov_l64_l64 		40, 16;
+			call_func          	collatz;
+			mov_l64_l64 		24, 32; # tmp := collatz(i)
 
 			# if tmp > s:
 			cmpG_l64_l64       24, 8;
@@ -112,7 +125,7 @@ function main {
 
 		output_l64      8;
 
-		ret_l64         16;
+		ret;
 	}
 
 }

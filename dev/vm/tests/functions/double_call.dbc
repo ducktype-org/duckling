@@ -1,0 +1,56 @@
+# Tests if call_func effectively deinit's it's parameters
+# input = ""
+# output = 121343
+
+type primitive: int64 8
+
+function foo {
+    arg_size: 16;
+    next_arg_size: 0;
+    ret_size: 8;
+    local_size:   24;
+
+    code: {
+        # [0, 8) -> ret_val
+		# [8, 16) -> arg0
+		# [16, 24) -> arg1
+
+        output_l64      8;
+        output_l64      16;
+
+        mov_l64_l64     0, 8;
+        ret;
+    }
+}
+
+
+function main {
+    arg_size: 0;
+    next_arg_size: 16;
+    ret_size: 8;
+    local_size: 32;
+
+    code: {
+        # [0, 8) main ret_val
+
+        init_type       int64; # [8, 16) foo ret_val
+        init_type       int64; # [16, 24) foo arg0
+        init_type       int64; # [24, 32) foo arg1
+        mov_l64_imm     16, 1;    
+        mov_l64_imm     24, 2;    
+        call_func       foo;
+
+        # Here [16, 24) and [24, 32) should be deinitialized
+        output_l64      8;
+
+        init_type       int64; # [16, 24) foo arg0
+        init_type       int64; # [24, 32) foo arg1
+        mov_l64_imm     16, 3;    
+        mov_l64_imm     24, 4;
+        call_func       foo;    
+
+        output_l64      8;
+
+        ret;
+    }
+}

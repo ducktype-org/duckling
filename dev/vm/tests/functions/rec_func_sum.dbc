@@ -15,13 +15,12 @@ function sum {
         # [0, 8) -> ret_val
         # [8, 16) -> arg0
 
-        mov_l64_imm         0, 0; # This is already preinitialized with 0?
         cmpEq_l64_imm       8,  0;
         jmpRelIf_label      ret_label;
         # if arg != 0:
             init_type           int64; # [16, 24) init a return value spot for sum()
             init_type           int64; # [24, 32) init an arg0 spot for sum()
-            mov_l64_l64         24,  8; #
+            mov_l64_l64         24,  8;
             sub_l64_imm         24,  1;
 
             call_func           sum;
@@ -38,17 +37,20 @@ function sum {
 function main {
 	arg_size: 0;
 	next_arg_size: 8;
-	ret_size: 0;
-	local_size: 16;
+	ret_size: 8;
+	local_size: 24;
 
 	code: {
-        init_type           int64; # [0, 8) sum return value
-        init_type           int64; # [8, 16) sum arg0
-        input_l64           8;
+        # [0, 8) main ret_val
+
+
+        init_type           int64; # [8, 16) sum return value
+        init_type           int64; # [16, 24) sum arg0
+        input_l64           16;
 
         call_func          	sum;
 
-        output_l64          0;
+        output_l64          8;
 
 		ret;
 	}

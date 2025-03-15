@@ -18,6 +18,7 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+#include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <iostream>
 
 namespace vm {
@@ -107,16 +108,20 @@ namespace vm {
 		pre_frame->instr       = &exit_instr;
 		pre_frame->local_stack = runtime_data.local_stack_top;
 
-		// Frame of the main function.
+		// Frame of the main function. Main has one return value of size 8;
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
 		runtime_data.local_stack_top += main_func->stack_size;
+
+		// O offset off the stack is reserved for the main ret_val
+		frame->local_stack_head += 8;
 
 		auto* instr = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		// return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
@@ -148,7 +153,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
 
 
 		POP_DIAGNOSTIC
@@ -174,7 +179,7 @@ namespace vm {
 			}
 		}
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
 
 
 #endif
