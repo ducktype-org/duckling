@@ -18,7 +18,6 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
-#include "../builtins/lookup.hpp"
 
 namespace compiler::helios {
 
@@ -48,9 +47,10 @@ namespace compiler::helios {
 
 		u64 depth;
 
+		// @TODO: decide on it, it was commented out due to aggregate initialization
 		// This delete is important, to prevent any copy of scope data:
-		ScopeData(const ScopeData&)            = delete;
-		ScopeData& operator=(const ScopeData&) = delete;
+		// ScopeData(const ScopeData&)            = delete;
+		// ScopeData& operator=(const ScopeData&) = delete;
 	};
 
 	struct ScopeAccess_Functor final {
@@ -446,7 +446,7 @@ namespace compiler::helios {
 			auto scope_data = getScopeRef(key.scope);
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-				return builtin::lookup(key.name);
+				return builtin::lookupBuiltins(ctx, key.name);
 			}
 
 			LookupResult result{ .leaves = {}, .children = {} };
