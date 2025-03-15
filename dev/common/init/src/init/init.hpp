@@ -46,7 +46,7 @@ namespace init {
  * * once if given cpp files is used,
  * * zero times if cpp file is never used (this is due to how linker behaves).
  *
- * If yuu place this macro in header file it will run:
+ * If you place this macro in header file it will run:
  * * once per each (used) translation unit that includes the given header.
  *
  * When used for inits it is generally safer to put in in header files (e.g. some_module/init.hpp),
