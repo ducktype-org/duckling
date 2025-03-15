@@ -41,20 +41,6 @@ namespace tsh {
 	|   POINTER TYPES   |
 	\*******************/
 
-	std::string ComponentType::toString() const {
-		return (is_mutable ? "mut " : "") + type.toString();
-	}
-
-	bool ComponentType::isImplicitlyCoercible(
-		const ComponentType target, query::detail::ContextType& ctx
-	) const {
-		return type.isImplicitlyCoercible(target.type, ctx) && (is_mutable || !target.is_mutable);
-	}
-
-	base::HashT ComponentType::customPerfectHash() const {
-		return reinterpret_cast<std::size_t>(type.getPimpl()) + is_mutable;
-	}
-
 	Bits IntegralAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
 	Bits FloatAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
@@ -63,15 +49,11 @@ namespace tsh {
 
 	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
-	ComponentType PointerAbstractType::getComponent() const {
-		return toCPimpl(pimpl)->getComponent();
-	}
+	SymbolType<> PointerAbstractType::getComponent() const { return toCPimpl(pimpl)->getComponent(); }
 
 	AbstractType PointerAbstractType::getUnderlyingType() const {
 		return toCPimpl(pimpl)->getUnderlyingType();
 	}
-
-	bool PointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
 	struct ReferenceConstructionRecord {
 		AbstractType  underlying_type;
@@ -81,54 +63,19 @@ namespace tsh {
 		auto operator<=>(const ReferenceConstructionRecord&) const = default;
 	};
 
-	ReferenceAbstractType ReferenceAbstractType::create(
-		const AbstractType  underlying_type,
-		const ReferenceKind ref_kind,
-		const bool          leaking,
-		const bool          nullable,
-		const bool          unique
-	) {
-		static base::Map<ReferenceConstructionRecord, ReferenceAbstractType> references;
-
-		const auto ref_record
-			= ReferenceConstructionRecord{ underlying_type, ref_kind, leaking, nullable, unique };
-
-		if (!references.contains(ref_record)) {
-			auto reference = makeBox<Impl>(underlying_type, ref_kind, leaking, nullable, unique);
-			references.put(ref_record, ReferenceAbstractType(reference.refMut().get()));
-			pushType(std::move(reference));
-		}
-
-		return references[ref_record];
-	}
-
-	AbstractType ReferenceAbstractType::getUnderlyingType() const {
-		return toCPimpl(pimpl)->getUnderlyingType();
-	}
-
-	ReferenceKind ReferenceAbstractType::getReferenceKind() const {
-		return toCPimpl(pimpl)->getReferenceKind();
-	}
-
-	bool ReferenceAbstractType::isLeaking() const { return toCPimpl(pimpl)->isLeaking(); }
-
-	bool ReferenceAbstractType::isNullable() const { return toCPimpl(pimpl)->isNullable(); }
-
-	bool ReferenceAbstractType::isUnique() const { return toCPimpl(pimpl)->isUnique(); }
-
 	/*******************\
 	|  COMPOSITE TYPES  |
 	\*******************/
 
-	const std::vector<ComponentType>& TupleAbstractType::getComponents() const {
+	const std::vector<SymbolType<>>& TupleAbstractType::getComponents() const {
 		return toCPimpl(pimpl)->getComponents();
 	}
 
-	std::vector<AbstractType> TupleAbstractType::getComponentTypes() const {
-		const std::vector<ComponentType>& components = getComponents();
-		std::vector<AbstractType>         component_types;
+	std::vector<AbstractType> TupleAbstractType::getComponentAbstractTypes() const {
+		const std::vector<SymbolType<>>& components = getComponents();
+		std::vector<AbstractType>        component_types;
 		component_types.reserve(components.size());
-		for (const auto& [type, _]: components) component_types.push_back(type);
+		for (const auto& component: components) component_types.push_back(component.getType());
 		return component_types;
 	}
 
@@ -140,11 +87,11 @@ namespace tsh {
 		auto operator<=>(const FunctionConstructionRecord&) const = default;
 	};
 
-	const std::vector<AbstractType>& FunctionAbstractType::getParameterTypes() const {
+	const std::vector<SymbolType<>>& FunctionAbstractType::getParameterTypes() const {
 		return toCPimpl(pimpl)->getParameterTypes();
 	}
 
-	AbstractType FunctionAbstractType::getResultType() const {
+	SymbolType<> FunctionAbstractType::getResultType() const {
 		return toCPimpl(pimpl)->getResult();
 	}
 
@@ -156,11 +103,11 @@ namespace tsh {
 	|  NOMINAL TYPES  |
 	\*****************/
 
-	const std::vector<AbstractType>& VariantAbstractType::getUnderlyingTypes() const {
+	const std::vector<SymbolType<>>& VariantAbstractType::getUnderlyingTypes() const {
 		return toCPimpl(pimpl)->getUnderlyingTypes();
 	}
 
-	AbstractType VariantAbstractType::getMember(const usize index) const {
+	SymbolType<> VariantAbstractType::getMember(const usize index) const {
 		return toCPimpl(pimpl)->getMember(index);
 	}
 
@@ -188,7 +135,7 @@ namespace tsh {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
-	AbstractType ClassAbstractType::getMemberType(
+	SymbolType<> ClassAbstractType::getMemberType(
 		const compiler::helios::SymID sym, query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getMemberType(sym, ctx);
@@ -217,7 +164,6 @@ namespace tsh {
 	INSTANTIATE_CHECKED_CAST(IntegralAbstractType)
 	INSTANTIATE_CHECKED_CAST(FloatAbstractType)
 	INSTANTIATE_CHECKED_CAST(RawPointerAbstractType)
-	INSTANTIATE_CHECKED_CAST(ReferenceAbstractType)
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)

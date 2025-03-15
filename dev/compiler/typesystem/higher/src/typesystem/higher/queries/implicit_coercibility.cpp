@@ -6,8 +6,6 @@
 
 namespace tsh {
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {
-		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
-
 		static auto provide(Context& context, const QKey key) -> PResult {
 			return key.source == key.target
 			    || getImplicitConversionsFrom(key.source, context).contains(key.target)
@@ -15,12 +13,7 @@ namespace tsh {
 			    || key.source.isImplicitlyCoercible(key.target, context);
 		}
 
-		static auto load(const QKey key) -> LoadResult { return cache.atMaybeCopy(key); }
-
-		static auto store(const QKey key, const PResult res, const query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
-			return res;
-		}
+		QUERY_AUTO_CACHE_COPY
 
 	private:
 		static std::set<AbstractType> getImplicitConversionsFrom(
@@ -42,29 +35,33 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnAbstractType);
 
-	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnExpressionType, bool) {
-		inline static base::Map<QKey, query::CacheEntry<QResult>> cache;
-
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnSymbolType, bool) {
 		static auto provide(Context& context, const QKey& key) -> PResult {
-			bool type_coercibility = context.query<QueryImplicitCoercibilityOnAbstractType>(
-				KeyFor_QueryImplicitCoercibilityOnAbstractType(
-					key.source.getType(), key.target.getType()
-				)
+			// @TODO: #584
+			return context.query<QueryImplicitCoercibilityOnAbstractType>({
+					   key.source.getType(),
+					   key.target.getType(),
+				   })
+			   and (key.source.getMutability() == Mutability::MUTABLE
+			        or key.target.getMutability() == Mutability::IMMUTABLE);
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnSymbolType);
+
+	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnExpressionType, bool) {
+		static auto provide(Context& context, const QKey& key) -> PResult {
+			bool symbol_type_coercibility = context.query<QueryImplicitCoercibilityOnSymbolType>(
+				{ key.source.getSymbolType(), key.target.getSymbolType() }
 			);
 			bool vc_coercibility
 				= key.source.getValueCategory().contains(key.target.getValueCategory());
-			return type_coercibility && vc_coercibility;
+			return symbol_type_coercibility && vc_coercibility;
 		}
 
-		static auto load(const QKey& key) -> LoadResult {
-			if (cache.contains(key)) return cache.at(key);
-			return {};
-		}
-
-		static auto store(const QKey& key, const PResult res, const query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
-			return res;
-		}
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryImplicitCoercibilityOnExpressionType);

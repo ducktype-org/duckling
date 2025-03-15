@@ -37,10 +37,16 @@ private:
 		}
 	}
 
+	using enum Mutability;
+
+	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
+		return SymbolType{ abstract_type, ReferenceKind::DIRECT, is_mutable ? MUTABLE : IMMUTABLE };
+	}
+
 	void basicTypesTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
-			TypeLayout             unit_layout = ctx.query<QueryTypeLayout>(unit_type);
+			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
 
 			assertTrue(unit_layout.getSize() == Bits(0), "Empty layout should have size zero.");
 			assertTrue(
@@ -59,7 +65,7 @@ private:
 				ctx.query<QueryCharType>({}),
 			};
 			for (AbstractType byte_sized_type: byte_sized_types) {
-				TypeLayout byte_sized_layout = ctx.query<QueryTypeLayout>(byte_sized_type);
+				TypeLayout byte_sized_layout = ctx.query<QueryAbstractTypeLayout>(byte_sized_type);
 				assertTrue(
 					byte_sized_layout.getSize() == BYTE_SIZE,
 					"Integral layout should have size equal to that of the source type."
@@ -78,7 +84,7 @@ private:
 			for (constexpr std::array<usize, 5> int_sizes{ 8, 16, 32, 64, 128 };
 			     usize                          size: int_sizes) {
 				IntegralAbstractType int_type   = ctx.query<QueryIntegralType>(size);
-				TypeLayout           int_layout = ctx.query<QueryTypeLayout>(int_type);
+				TypeLayout           int_layout = ctx.query<QueryAbstractTypeLayout>(int_type);
 				assertTrue(
 					int_layout.getSize() == Bits(size),
 					"Integral layout should have size equal to that of the source type."
@@ -97,7 +103,7 @@ private:
 			for (constexpr std::array<usize, 5> float_sizes{ 16, 32, 64, 80, 128 };
 			     usize                          size: float_sizes) {
 				FloatAbstractType float_type   = ctx.query<QueryFloatType>(size);
-				TypeLayout        float_layout = ctx.query<QueryTypeLayout>(float_type);
+				TypeLayout        float_layout = ctx.query<QueryAbstractTypeLayout>(float_type);
 				assertTrue(
 					float_layout.getSize() == Bits(size),
 					"Float layout should have size equal to that of the source type."
@@ -114,8 +120,8 @@ private:
 			}
 
 			const FunctionAbstractType function_type
-				= ctx.query<QueryFunctionType>({ {}, unit_type });
-			TypeLayout functional_layout = ctx.query<QueryTypeLayout>(function_type);
+				= ctx.query<QueryFunctionType>({ {}, st(unit_type) });
+			TypeLayout functional_layout = ctx.query<QueryAbstractTypeLayout>(function_type);
 			assertTrue(
 				functional_layout.getSize() == POINTER_SIZE,
 				"Functional layout should have size equal to the size of a pointer."
@@ -131,7 +137,7 @@ private:
 			testPrinting(functional_layout, ctx);
 
 			const RawPointerAbstractType raw_pointer_type = ctx.query<QueryRawPointerType>({});
-			TypeLayout raw_pointer_layout = ctx.query<QueryTypeLayout>(raw_pointer_type);
+			TypeLayout raw_pointer_layout = ctx.query<QueryAbstractTypeLayout>(raw_pointer_type);
 			assertTrue(
 				raw_pointer_layout.getSize() == POINTER_SIZE,
 				"Raw pointer layout should have size equal to the size of a pointer."
@@ -149,8 +155,8 @@ private:
 			testPrinting(raw_pointer_layout, ctx);
 
 			const PointerAbstractType unit_pointer_type
-				= ctx.query<QueryPointerType>({ unit_type });
-			TypeLayout unit_pointer_layout = ctx.query<QueryTypeLayout>(unit_pointer_type);
+				= ctx.query<QueryPointerType>({ st(unit_type) });
+			TypeLayout unit_pointer_layout = ctx.query<QueryAbstractTypeLayout>(unit_pointer_type);
 			assertTrue(
 				unit_pointer_layout.getSize() == POINTER_SIZE,
 				"Typed pointer layout should have size equal to the size of a pointer."
@@ -175,11 +181,11 @@ private:
 
 	void variant_test() {
 		withContextDo([&](query::Context& ctx) -> void {
-			IntegralAbstractType      i8_type  = ctx.query<QueryIntegralType>({ 8 });
-			FloatAbstractType         f16_type = ctx.query<QueryFloatType>(16);
+			SymbolType<>              i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
+			SymbolType<>              f16_type = st(ctx.query<QueryFloatType>(16));
 			const VariantAbstractType variant_type
 				= ctx.query<QueryVariantType>({ { i8_type, f16_type } });
-			TypeLayout variant_layout = ctx.query<QueryTypeLayout>(variant_type);
+			TypeLayout variant_layout = ctx.query<QueryAbstractTypeLayout>(variant_type);
 
 			assertTrue(
 				variant_layout.getSize() == BYTE_SIZE * 2 + Bits(16),
@@ -216,17 +222,21 @@ private:
 
 	void tuple_test() {
 		withContextDo([&](query::Context& ctx) -> void {
-			const IntegralAbstractType i8_type      = ctx.query<QueryIntegralType>({ 8 });
-			const FloatAbstractType    f16_type     = ctx.query<QueryFloatType>(16);
-			const FloatAbstractType    f64_type     = ctx.query<QueryFloatType>(64);
-			const TupleAbstractType    tuple_type   = ctx.query<QueryTupleType>({
-                { { .type = i8_type }, { .type = f16_type }, { .type = f64_type } },
+			const SymbolType<> i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
+			const SymbolType<> f16_type = st(ctx.query<QueryFloatType>(16));
+			const SymbolType<> f64_type = st(ctx.query<QueryFloatType>(64));
+			const SymbolType<> f16_ref
+				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::REF, IMMUTABLE };
+			const SymbolType<> f16_box
+				= SymbolType<>{ ctx.query<QueryFloatType>(16), ReferenceKind::BOX, IMMUTABLE };
+			const TupleAbstractType tuple_type   = ctx.query<QueryTupleType>({
+                { i8_type, f16_type, f64_type, f16_ref, f16_box },
             });
-			TypeLayout                 tuple_layout = ctx.query<QueryTypeLayout>(tuple_type);
+			TypeLayout              tuple_layout = ctx.query<QueryAbstractTypeLayout>(tuple_type);
 
 			assertTrue(
-				tuple_layout.getSize() == BYTE_SIZE * 16,
-				"Tuple layout size should account for data alignment."
+				tuple_layout.getSize() == BYTE_SIZE * 16 + POINTER_SIZE * 2,
+				"Tuple layout size should account for data alignment and references."
 			);
 			assertTrue(
 				tuple_layout.getSourceType() == tuple_type,
@@ -247,6 +257,7 @@ private:
 	}
 
 	void class_test() {
+		// @TODO: Add reference fields to class layout test #608.
 		using namespace compiler::helios;
 		using namespace test_utils;
 
@@ -276,7 +287,7 @@ private:
 				CORE_PANIC("Could not resolve field.");
 			}();
 
-			TypeLayout my_class_layout = ctx.query<QueryTypeLayout>(my_class_type);
+			TypeLayout my_class_layout = ctx.query<QueryAbstractTypeLayout>(my_class_type);
 			assertTrue(
 				my_class_layout.getSize() == BYTE_SIZE * 16,
 				"Class layout size should account for data alignment."

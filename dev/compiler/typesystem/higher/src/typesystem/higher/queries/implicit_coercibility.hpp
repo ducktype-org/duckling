@@ -86,6 +86,52 @@ namespace tsh {
 	)
 
 	/**
+	 * @brief Key for QueryImplicitCoercibilityOnSymbolType.
+	 */
+	struct KeyFor_QueryImplicitCoercibilityOnSymbolType final {
+		/**
+		 * @brief Source value description of the coercion.
+		 */
+		SymbolType<> source;
+
+		/**
+		 * @brief Target value description of the coercion.
+		 */
+		SymbolType<> target;
+
+		KeyFor_QueryImplicitCoercibilityOnSymbolType(
+			const SymbolType<>& source, const SymbolType<>& target
+		):
+			  source(source),
+			  target(target) {}
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnSymbolType&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnSymbolType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to check whether implicit coercion from one value described by SymbolType to
+	 * another is allowed.
+	 */
+	DECLARE_QUERY(
+		QueryImplicitCoercibilityOnSymbolType,
+		KeyFor_QueryImplicitCoercibilityOnSymbolType,
+		bool
+	)
+
+	/**
 	 * @brief Key for QueryImplicitCoercibilityOnExpressionType.
 	 */
 	struct KeyFor_QueryImplicitCoercibilityOnExpressionType final {

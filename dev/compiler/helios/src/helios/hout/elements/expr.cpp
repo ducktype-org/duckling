@@ -29,7 +29,11 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -41,7 +45,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -53,7 +61,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -84,7 +96,11 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
@@ -138,7 +154,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -170,7 +190,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::DIRECT,
+					  tsh::Mutability::IMMUTABLE,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),

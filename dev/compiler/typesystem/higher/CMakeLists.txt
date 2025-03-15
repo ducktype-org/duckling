@@ -11,7 +11,7 @@ add_library(TypeSystemHigher
 )
 
 # @FIXME: adding HELIOS dependency for SymID introduces cyclic dependency (but everything compiles).
-make_module(TypeSystemHigher USES Base HELIOS QueryFramework)
+make_module(TypeSystemHigher USES Hashing Base HELIOS QueryFramework)
 
 duck_add_test(compiler tsh_simple_test tests/simple_test.cpp USES TypeSystemHigher)
 

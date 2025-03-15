@@ -43,8 +43,12 @@ namespace compiler::helios::test_utils {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
-	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
+	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
+	}
+
+	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
+		return getSymbolTypeOf(chain, scope).getType();
 	}
 
 	tsh::AbstractType getTypeFromDefinition(const std::string_view chain, ScopeID scope) {

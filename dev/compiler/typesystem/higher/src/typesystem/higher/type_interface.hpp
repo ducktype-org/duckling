@@ -16,6 +16,8 @@
 #include <base/optional.hpp>
 
 #include "abstract_type.hpp"
+#include "symbol_type.hpp"
+
 #include <helios/scope_symbol_id.hpp>
 #include <base/string_id.hpp>
 #include <variant>
@@ -35,7 +37,7 @@ namespace tsh {
 		 */
 		struct Parameter final {
 			base::StrID          name;
-			AbstractType         type;
+			SymbolType<>         type;
 			bool                 has_default_value;
 			std::strong_ordering operator<=>(const Parameter& other) const = default;
 		};
@@ -73,7 +75,7 @@ namespace tsh {
 		/**
 		 * @brief The type of a field or the return type of a method.
 		 */
-		AbstractType result_type;
+		SymbolType<> result_type;
 
 		/**
 		 * @brief The visibility of an element of the interface.
@@ -98,7 +100,7 @@ namespace tsh {
 			const compiler::helios::SymID          symbol,
 			const AbstractType                     source,
 			base::Optional<std::vector<Parameter>> parameters,
-			const AbstractType                     result_type,
+			const SymbolType<>                     result_type,
 			const Visibility                       visibility
 		):
 			  symbol(symbol),
@@ -169,7 +171,7 @@ namespace tsh {
 		 * @return The result type of this element.
 		 */
 		[[nodiscard]]
-		AbstractType getResultType() const {
+		SymbolType<> getResultType() const {
 			return result_type;
 		}
 
@@ -184,7 +186,7 @@ namespace tsh {
 		 * @return The type of this element.
 		 */
 		[[nodiscard]]
-		AbstractType getType(query::Context& ctx) const;
+		SymbolType<> getType(query::Context& ctx) const;
 
 		/**
 		 * @brief Gets the visibility of this element.

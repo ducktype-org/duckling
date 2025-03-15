@@ -507,16 +507,28 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QuerySymbolType_Result) {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
 			// @TODO: make failure more explicit
 
-			void setTypeOfSymbol(const tsh::AbstractType& type) {
+			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
 				if (symbol_abstract_type.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
 				symbol_abstract_type = type;
+			}
+
+			// @todo Remove this function (or change appropriately) when handling references
+			// to type expressions is implemented. #608
+			void setTypeOfSymbol(const tsh::AbstractType& type) {
+				if (symbol_abstract_type.has_value())
+					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_abstract_type = tsh::SymbolType{
+					type,
+					tsh::ReferenceKind::DIRECT,
+					tsh::Mutability::MUTABLE,
+				};
 			}
 
 			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
@@ -527,7 +539,7 @@ namespace compiler::helios {
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			base::Optional<tsh::AbstractType> symbol_abstract_type;
+			base::Optional<tsh::SymbolType<>> symbol_abstract_type;
 
 			void visitConst(const pst::Const& stmt) final {
 				setTypeOfSymbol(stmt.getType()->getExpr());
@@ -545,7 +557,7 @@ namespace compiler::helios {
 				auto params = fun.getParams();
 				auto ret    = fun.getRet();
 
-				std::vector<tsh::AbstractType> param_types{};
+				std::vector<tsh::SymbolType<>> param_types{};
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
@@ -559,7 +571,14 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				tsh::AbstractType ret_type = ctx.query<tsh::QueryUnitType>({});
+
+				// Default return type is a direct unit.
+				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::DIRECT,
+					tsh::Mutability::MUTABLE,
+				};
+
 				if (ret.has_value()) {
 					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
 					if (parsed.hasValue()) {
@@ -604,7 +623,7 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryAbstractType_Result) {
 		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
@@ -691,7 +710,9 @@ namespace compiler::helios {
 			if_opt_some(class_data_parser.base_class, base) {
 				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
-					class_info.base = tp.value();
+					// Parsing a symbol type just to get the abstract type is a temporary hack.
+					// #608
+					class_info.base = tp.value().getType();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
 					return errors::HError(errors::Failed());
@@ -702,7 +723,9 @@ namespace compiler::helios {
 				for (auto&& interface: *implements) {
 					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
 					if (tp.hasValue()) {
-						class_info.implements.push_back(tp.value());
+						// Parsing a symbol type just to get the abstract type is a temporary hack.
+						// #608
+						class_info.implements.push_back(tp.value().getType());
 					} else {
 						// We just fail here, error should be reported by EvalExprToType
 						return errors::HError(errors::Failed());

@@ -15,6 +15,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
 
@@ -118,12 +119,14 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>)
 
-	using QueryType_Result = errors::HResult<tsh::AbstractType, errors::Failed>;
+	using QuerySymbolType_Result = errors::HResult<tsh::SymbolType<>, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QueryType_Result>);
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>);
+
+	using QueryAbstractType_Result = errors::HResult<tsh::AbstractType, errors::Failed>;
 
 	/**
 	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
@@ -134,7 +137,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryType_Result>);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryAbstractType_Result>);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.

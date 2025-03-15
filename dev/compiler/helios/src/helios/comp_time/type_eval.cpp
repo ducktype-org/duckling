@@ -21,6 +21,7 @@ namespace compiler::helios {
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
 		 * @note It might be changed to virtual function on expr in the future for performance.
 		 * For now it is kept as a visitor for code simplicity.
+		 * @todo Handle reference specification. #608
 		 */
 		struct ShortPathVisitor: code::HoutExprVisitorPanicky {
 			query::Context& ctx;
@@ -51,7 +52,7 @@ namespace compiler::helios {
 
 			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::ComponentType> subtypes;
+				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.elements) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
@@ -62,7 +63,7 @@ namespace compiler::helios {
 						// @todo: False here means all subtypes of a tuple are immutable.
 						// this is likely wrong, we will have to change it with
 						// type info, expression type, component type refactor
-						subtypes.emplace_back(sub_type_result.value(), false);
+						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
 				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
@@ -70,7 +71,7 @@ namespace compiler::helios {
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::AbstractType> subtypes;
+				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
@@ -107,7 +108,11 @@ namespace compiler::helios {
 				}
 			}
 
-			return short_path_result.value();
+			return tsh::SymbolType<>{
+				short_path_result.value(),
+				tsh::ReferenceKind::DIRECT,
+				tsh::Mutability::MUTABLE,
+			};
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

@@ -17,37 +17,24 @@ namespace tsh::internal {
 	 * @param types Vector of component types to stringify.
 	 * @return A human-readable string representing a sequence of component types.
 	 */
-	std::string stringifyTypeVector(const std::vector<ComponentType>& types) {
+	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
 		res << "(";
-		if (!types.empty()) res << (types[0].is_mutable ? "mut " : "") << types[0].type.toString();
-		for (const auto& [type, is_mutable]: types | std::views::drop(1))
-			res << ", " << (is_mutable ? "mut " : "") << type.toString();
+		if (!types.empty()) res << types[0].toString();
+		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
 		res << ")";
 
 		return res.str();
 	}
 
-	/**
-	 * @brief Creates a human-readable string representation of a vector of types.
-	 * @param types Vector of types to stringify.
-	 * @return A human-readable string representing a sequence of types.
-	 */
-	std::string stringifyTypeVector(const std::vector<AbstractType>& types) {
-		std::vector<ComponentType> immutable_types;
-		immutable_types.reserve(types.size());
-		for (const auto& t: types) immutable_types.emplace_back(t, false);
-		return stringifyTypeVector(immutable_types);
-	}
-
-	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<ComponentType> components):
+	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
 	FunctionAbstractTypeImpl::FunctionAbstractTypeImpl(
-		std::vector<AbstractType> parameter_types,
-		const AbstractType        result_type,
+		std::vector<SymbolType<>> parameter_types,
+		const SymbolType<>        result_type,
 		const bool                pure,
 		const bool                free
 	):
@@ -78,18 +65,16 @@ namespace tsh::internal {
 		}
 
 		for (usize i = 0; i < parameter_types.size(); i++)
-			if (!context.query<QueryImplicitCoercibilityOnAbstractType>({
-					target_function.getParameterTypes()[i],
-					parameter_types[i],
-				}))
+			if (!context.query<QueryImplicitCoercibilityOnSymbolType>(
+					{ target_function.getParameterTypes()[i], parameter_types[i] }
+				))
 				return false;
-		return context.query<QueryImplicitCoercibilityOnAbstractType>({
-			result_type,
-			target_function.getResultType(),
-		});
+		return context.query<QueryImplicitCoercibilityOnSymbolType>(
+			{ result_type, target_function.getResultType() }
+		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<AbstractType>& variant_types
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types
 	):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
