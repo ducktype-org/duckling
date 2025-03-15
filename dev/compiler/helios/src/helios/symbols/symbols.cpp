@@ -420,29 +420,28 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymID> output;
 
-					auto i64_type = ctx.query<tsh::QueryIntegralType>({ 64, true });
+					auto i64_type  = ctx.query<tsh::QueryIntegralType>({ 64, true });
 					auto unit_type = ctx.query<tsh::QueryUnitType>({});
 
-					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data = {
-						{
-							{
-								base::StrID("btn_input_i64"),
-								ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
-							},
-							{
-								base::StrID("btn_output_i64"),
-								ctx.query<tsh::QueryFunctionType>(
-									{ { i64_type }, unit_type }
-								),
-							},
-						},
-					};
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
+						= {
+							  {
+								  {
+									  base::StrID("btn_input_i64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
+								  },
+								  {
+									  base::StrID("btn_output_i64"),
+									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, unit_type }
+						              ),
+								  },
+							  },
+						  };
 
 					for (auto& [name, type]: function_data) {
-						auto sym_data_ref = putInSymtable(SymbolData::makeBuiltinFunction(
-							name,
-							BuiltinFunctionData{ type }
-						));
+						auto sym_data_ref = putInSymtable(
+							SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type })
+						);
 						output.push_back(GetSymRef_Functor::make(sym_data_ref));
 					}
 
@@ -467,435 +466,442 @@ namespace compiler::helios {
 		}
 	}
 
-struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		switch (key.symbol.ref->common.kind) {
-		case SymbolKind::Using:
-		case SymbolKind::Namespace:
-		case SymbolKind::Import: {
-			// @NOTE: for now imports are done via linked scope that looks at root
-			// module scope, but in the future it might be changed to custom code
+	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (key.symbol.ref->common.kind) {
+			case SymbolKind::Using:
+			case SymbolKind::Namespace:
+			case SymbolKind::Import: {
+				// @NOTE: for now imports are done via linked scope that looks at root
+				// module scope, but in the future it might be changed to custom code
 
-			// @note: this will probably brake for usings,
-			// when they look at a symbol without linked scope.
-			// We might just delete QueryLinkedScope at some point,
-			// when QueryLookupInSymbol will get more and more
-			// per-symbol-kind cases.
+				// @note: this will probably brake for usings,
+				// when they look at a symbol without linked scope.
+				// We might just delete QueryLinkedScope at some point,
+				// when QueryLookupInSymbol will get more and more
+				// per-symbol-kind cases.
 
-			auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-			return *ctx.query<QueryLookupInScope>({ linked_scope, key.name, key.follow_wildcards });
+				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
+				return *ctx.query<QueryLookupInScope>(
+					{ linked_scope, key.name, key.follow_wildcards }
+				);
+			}
+
+			// @note: here case for variables will be calling TS
+			default:
+				throw base::NotYetImplemented("Lookup in symbol...");
+			}
 		}
 
-		// @note: here case for variables will be calling TS
-		default:
-			throw base::NotYetImplemented("Lookup in symbol...");
-		}
-	}
-
-	QUERY_AUTO_CACHE_REF
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
-
-struct LookupChainKey final {
-	std::vector<base::StrID> names;
-	ScopeID                  begin_scope;
-	bool                     follow_wildcards;
-};
-
-/**
- * @brief Query extension for looking-up chain of names
- */
-errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
-	lookupChain(query::Context& ctx, const LookupChainKey& key) {
-	CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
-
-	// initial symbol:
-	auto first = ctx.query<QueryLookupInScopeAndParents>(
-		{ key.begin_scope, key.names[0], key.follow_wildcards }
-	);
-
-	UNPACK_RESULT(SymbolList result =, first->getAsSingle());
-
-	if (key.names.size() == 1) return result;
-
-	for (usize i = 1; i < key.names.size(); i++) {
-		auto append_res = ctx.query<QueryLookupInSymbol>({
-			result.back(),
-			key.names[i],
-			key.follow_wildcards,
-		});
-
-		UNPACK_RESULT(auto single_append_res =, append_res->getAsSingle());
-		result.insert(result.end(), single_append_res.begin(), single_append_res.end());
-	}
-	return result;
-}
-
-struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
-	struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
-		query::Context& ctx;
-		QKey            key;
-
-		QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
-
-		base::Optional<ScopeID> result_scope;
-
-		void output(ScopeID out) {
-			CORE_ASSERT(result_scope.empty(), "Output already set");
-			result_scope.emplace(out);
-		}
-
-		void visitUsing(const pst::Using& using_stmt) final {
-			auto names      = using_stmt.getPointed();
-			auto lookup_res = lookupChain(
-				ctx,
-				LookupChainKey{
-					.names = names, .begin_scope = scope(key), .follow_wildcards = false }
-			);
-			CORE_ASSERT(
-				lookup_res.hasValue() && not lookup_res.value().empty(),
-				"Using points to something that does not exists or is empty"
-			);
-			auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
-			output(ret);
-		}
-
-		void visitImport(const pst::Import& import_stmt) final {
-			// @TODO: proper error handling
-			auto imported_module
-				= frontend::getRelativeModule(ctx, module(scope(key)), import_stmt.getModulePath())
-			          .value();
-
-			// Here we don't access just root scope, because root scopes are currently empty:
-			auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
-
-			output(linked_scope);
-		}
+		QUERY_AUTO_CACHE_REF
 	};
 
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		switch (key.ref->common.kind) {
-		case SymbolKind::Namespace:
-			return queryBodyCodeScopeFor(ctx, key.ref->stmtCast());
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
 
+	struct LookupChainKey final {
+		std::vector<base::StrID> names;
+		ScopeID                  begin_scope;
+		bool                     follow_wildcards;
+	};
 
-		// Special cases for "wildcards":
-		case SymbolKind::Using:
-		case SymbolKind::Import: {
-			QueryLinkedScopeVisitor visitor(ctx, key);
-			key.ref->getPSTData()->pst_element->acceptVisitor(visitor);
-			return visitor.result_scope.value();
+	/**
+	 * @brief Query extension for looking-up chain of names
+	 */
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
+		lookupChain(query::Context& ctx, const LookupChainKey& key) {
+		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
+
+		// initial symbol:
+		auto first = ctx.query<QueryLookupInScopeAndParents>(
+			{ key.begin_scope, key.names[0], key.follow_wildcards }
+		);
+
+		UNPACK_RESULT(SymbolList result =, first->getAsSingle());
+
+		if (key.names.size() == 1) return result;
+
+		for (usize i = 1; i < key.names.size(); i++) {
+			auto append_res = ctx.query<QueryLookupInSymbol>({
+				result.back(),
+				key.names[i],
+				key.follow_wildcards,
+			});
+
+			UNPACK_RESULT(auto single_append_res =, append_res->getAsSingle());
+			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
 		}
-		default:
-			throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
-		}
-	}
-
-	QUERY_AUTO_CACHE_COPY
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
-
-base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
-	auto hash_1 = base::perfectHash(symbol);
-	auto hash_2 = std::hash<base::StrID>()(name);
-
-	// @FIXME: this does not work:
-	return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
-}
-
-struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		// @TODO: this does not handle usings.
-		if (kind(key) == SymbolKind::Using)
-			std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
-
-		if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
-
-		CRef alias_definition
-			= dynamic_cast<const pst::Alias*>(&*getSymRef(key)->getPSTData()->pst_element);
-
-		bool       first_symbol = true;
-		SymbolList result;
-		for (auto pointed: alias_definition->getPointed()) {
-			auto pointed_symbol_lookup
-				= first_symbol
-			        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
-			        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
-			auto path = pointed_symbol_lookup->getAsSingle();
-			if (path.hasError()) {
-				variant_match(path.error()) {
-					variant_case(errors::Ambiguity, _) {
-						// this error might need to be reported earlier:
-						ctx.log(
-							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-								alias_definition->getSourcePosition(), "Ambiguity in dealias"
-							)
-						);
-
-						return errors::HError(errors::Failed());
-					}
-					variant_case(errors::SymbolNotFound, _) {
-						// this error might need to be reported earlier:
-						ctx.log(
-							dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-								alias_definition->getSourcePosition(), "Symbol not found in dealias"
-							)
-						);
-
-						return errors::HError(errors::Failed());
-					}
-				}
-				CORE_PANIC("Invalid state");
-			}
-			for (auto path_symbol: path.value()) {
-				UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
-			}
-
-			first_symbol = false;
-		}
-
 		return result;
 	}
 
-	QUERY_AUTO_CACHE_REF
-};
+	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
+		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
+			query::Context& ctx;
+			QKey            key;
 
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
+			QueryLinkedScopeVisitor(query::Context& ctx, QKey key): ctx(ctx), key(key) {}
 
-struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i64 COMMA errors::Failed>) {
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
+			base::Optional<ScopeID> result_scope;
 
-		CRef const_symbol
-			= dynamic_cast<const pst::Const*>(&*getSymRef(key)->getPSTData()->pst_element);
-
-		return ctx.query<EvalExprToI64>({ const_symbol->getValue()->getExpr() });
-	}
-
-	QUERY_AUTO_CACHE_COPY
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
-
-struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
-	class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
-		Context& ctx;
-
-		// @TODO: make failure more explicit
-
-		void setTypeOfSymbol(const tsh::AbstractType& type) {
-			if (symbol_abstract_type.has_value())
-				CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-			symbol_abstract_type = type;
-		}
-
-		void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-			auto tp = ctx.query<EvalExprToType>({ expr });
-			if (tp.hasValue()) setTypeOfSymbol(tp.value());
-		}
-
-	public:
-		PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
-
-		base::Optional<tsh::AbstractType> symbol_abstract_type;
-
-		void visitConst(const pst::Const& stmt) final {
-			setTypeOfSymbol(stmt.getType()->getExpr());
-		}
-
-		void visitVariable(const pst::Variable& stmt) final {
-			setTypeOfSymbol(stmt.getType()->getExpr());
-		}
-
-		void visitField(const pst::Field& field) final {
-			setTypeOfSymbol(field.getType()->getExpr());
-		}
-
-		void visitFun(const pst::Fun& fun) final {
-			auto params = fun.getParams();
-			auto ret    = fun.getRet();
-
-			std::vector<tsh::AbstractType> param_types{};
-			param_types.reserve(params->size());
-
-			for (auto param: *params) {
-				auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-				auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-
-				if (param_type->hasValue()) {
-					param_types.emplace_back(param_type->value());
-				} else {
-					// we just fail here, because we can't continue without type
-					return;
-				}
+			void output(ScopeID out) {
+				CORE_ASSERT(result_scope.empty(), "Output already set");
+				result_scope.emplace(out);
 			}
-			tsh::AbstractType ret_type = ctx.query<tsh::QueryUnitType>({});
-			if (ret.has_value()) {
-				auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
-				if (parsed.hasValue()) {
-					ret_type = parsed.value();
-				} else {
-					// we just fail here, because we can't continue without type
-					return;
-				}
+
+			void visitUsing(const pst::Using& using_stmt) final {
+				auto names      = using_stmt.getPointed();
+				auto lookup_res = lookupChain(
+					ctx,
+					LookupChainKey{
+						.names = names, .begin_scope = scope(key), .follow_wildcards = false }
+				);
+				CORE_ASSERT(
+					lookup_res.hasValue() && not lookup_res.value().empty(),
+					"Using points to something that does not exists or is empty"
+				);
+				auto ret = ctx.query<QueryLinkedScope>({ lookup_res.value().back() });
+				output(ret);
 			}
-			setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
-		}
 
-		void visitClass(const pst::Class&) final {
-			setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
-		}
+			void visitImport(const pst::Import& import_stmt) final {
+				// @TODO: proper error handling
+				auto imported_module = frontend::getRelativeModule(
+										   ctx, module(scope(key)), import_stmt.getModulePath()
+				)
+				                           .value();
 
-		void visitNamespace(const pst::Namespace&) final {
-			setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
-		}
+				// Here we don't access just root scope, because root scopes are currently empty:
+				auto linked_scope = queryRootScopeOfMainModuleFile(ctx, imported_module);
 
-		void visitImport(const pst::Import&) final {
-			setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
-		}
-
-		void visitFunParam(const pst::FunParam& param) final {
-			setTypeOfSymbol(param.getType()->getExpr());
-		}
-	};
-
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		auto symbol_ref = getSymRef(key);
-
-		variant_match(symbol_ref->other) {
-			variant_case(PstSymbolData, pst_data) {
-				PstVisitor_GetTypeOf visitor(ctx);
-				pst_data.pst_element->acceptVisitor(visitor);
-				if_opt_some(visitor.symbol_abstract_type, type) return type;
-				return errors::HError(errors::Failed());		
+				output(linked_scope);
 			}
-			variant_case(builtin::BuiltinFunctionData, builtin_data) {
-				return builtin_data.type;
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			switch (key.ref->common.kind) {
+			case SymbolKind::Namespace:
+				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast());
+
+
+			// Special cases for "wildcards":
+			case SymbolKind::Using:
+			case SymbolKind::Import: {
+				QueryLinkedScopeVisitor visitor(ctx, key);
+				key.ref->getPSTData()->pst_element->acceptVisitor(visitor);
+				return visitor.result_scope.value();
 			}
-			variant_default {
-				CORE_PANIC("Unknown symbol data type");
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
-	QUERY_AUTO_CACHE_REF
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
-
-struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
-	class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
-		Context&    ctx;
-		const QKey& key;
-
-		void setTypeOfDefinition(const tsh::AbstractType& type) {
-			if (definition_abstract_type.has_value())
-				CORE_PANIC("Attempted to set type of definition in visitor a second time.");
-			definition_abstract_type = type;
-		}
-
-	public:
-		PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
-
-		base::Optional<tsh::AbstractType> definition_abstract_type;
-
-		void visitClass(const pst::Class&) final {
-			definition_abstract_type = ctx.query<tsh::QueryClassType>(key);
-		}
-	};
-
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		auto symbol_ref = getSymRef(key);
-
-		PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-		symbol_ref->getPSTData()->pst_element->acceptVisitor(visitor);
-		return visitor.definition_abstract_type.value();
-	}
-
-	QUERY_AUTO_CACHE_REF
-};
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
-
-struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
-	struct ClassDataParser final: pst::PstVisitorPanicky {
-		base::Optional<base::StrID>                name;
-		base::Optional<MCRef<pst::ExprElement>>    base_class;
-		base::Optional<MCRef<pst::ImplementsList>> implements;
-
-		void visitClass(const pst::Class& stmt) final {
-			name = stmt.getName();
-			if (auto base = stmt.getBase(); base != nullptr) base_class = base;
-			if (auto implements = stmt.getImplements(); implements != nullptr)
-				this->implements = implements;
-		}
-	};
-
-	static auto provide(Context& ctx, QKey key) -> PResult {
-		CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
-
-		auto class_stmt = getSymRef(key)->stmtCast();
-
-		auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
-		auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
-
-		ClassSymbolData class_info;
-		for (auto sym: *class_symbols) {
-			switch (kind(sym)) {
-			case SymbolKind::Method:
-				class_info.methods.push_back(sym);
-				break;
-			case SymbolKind::Constructor:
-				class_info.constructors.push_back(sym);
-				break;
-			case SymbolKind::Destructor:
-				// This doesn't catch multiple destructors
-				class_info.destructor = sym;
-				break;
-			case SymbolKind::Field:
-				class_info.members.push_back(sym);
-				break;
 			default:
-				throw base::NotYetImplemented(base::strConcat(
-					"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
-				));
-			}
-		}
-		// Find the name
-		auto class_data_parser = ClassDataParser();
-		class_stmt->acceptVisitor(class_data_parser);
-		class_info.name = class_data_parser.name.value();
-
-		if_opt_some(class_data_parser.base_class, base) {
-			auto tp = ctx.query<EvalExprToType>({ base });
-			if (tp.hasValue()) {
-				class_info.base = tp.value();
-			} else {
-				// We just fail here, error should be reported by EvalExprToType
-				return errors::HError(errors::Failed());
+				throw base::NotYetImplemented("Getting linked scope for some SymbolKind...");
 			}
 		}
 
-		if_opt_some(class_data_parser.implements, implements) {
-			for (auto&& interface: *implements) {
-				auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
+
+	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
+		auto hash_1 = base::perfectHash(symbol);
+		auto hash_2 = std::hash<base::StrID>()(name);
+
+		// @FIXME: this does not work:
+		return (hash_1 * 143 + hash_2 * 7) * 2 + follow_wildcards;
+	}
+
+	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			// @TODO: this does not handle usings.
+			if (kind(key) == SymbolKind::Using)
+				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
+
+			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
+
+			CRef alias_definition
+				= dynamic_cast<const pst::Alias*>(&*getSymRef(key)->getPSTData()->pst_element);
+
+			bool       first_symbol = true;
+			SymbolList result;
+			for (auto pointed: alias_definition->getPointed()) {
+				auto pointed_symbol_lookup
+					= first_symbol
+				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
+				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
+				auto path = pointed_symbol_lookup->getAsSingle();
+				if (path.hasError()) {
+					variant_match(path.error()) {
+						variant_case(errors::Ambiguity, _) {
+							// this error might need to be reported earlier:
+							ctx.log(
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
+									make(
+										alias_definition->getSourcePosition(),
+										"Ambiguity in dealias"
+									)
+							);
+
+							return errors::HError(errors::Failed());
+						}
+						variant_case(errors::SymbolNotFound, _) {
+							// this error might need to be reported earlier:
+							ctx.log(
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
+									make(
+										alias_definition->getSourcePosition(),
+										"Symbol not found in dealias"
+									)
+							);
+
+							return errors::HError(errors::Failed());
+						}
+					}
+					CORE_PANIC("Invalid state");
+				}
+				for (auto path_symbol: path.value()) {
+					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
+					result.insert(result.end(), dealiased.begin(), dealiased.end());
+				}
+
+				first_symbol = false;
+			}
+
+			return result;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDealias);
+
+	struct IMPLEMENT_QUERY(QueryConstValueOf, errors::HResult<i64 COMMA errors::Failed>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
+
+			CRef const_symbol
+				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->getPSTData()->pst_element);
+
+			return ctx.query<EvalExprToI64>({ const_symbol->getValue()->getExpr() });
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
+
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
+		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
+			Context& ctx;
+
+			// @TODO: make failure more explicit
+
+			void setTypeOfSymbol(const tsh::AbstractType& type) {
+				if (symbol_abstract_type.has_value())
+					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_abstract_type = type;
+			}
+
+			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
+				auto tp = ctx.query<EvalExprToType>({ expr });
+				if (tp.hasValue()) setTypeOfSymbol(tp.value());
+			}
+
+		public:
+			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
+
+			base::Optional<tsh::AbstractType> symbol_abstract_type;
+
+			void visitConst(const pst::Const& stmt) final {
+				setTypeOfSymbol(stmt.getType()->getExpr());
+			}
+
+			void visitVariable(const pst::Variable& stmt) final {
+				setTypeOfSymbol(stmt.getType()->getExpr());
+			}
+
+			void visitField(const pst::Field& field) final {
+				setTypeOfSymbol(field.getType()->getExpr());
+			}
+
+			void visitFun(const pst::Fun& fun) final {
+				auto params = fun.getParams();
+				auto ret    = fun.getRet();
+
+				std::vector<tsh::AbstractType> param_types{};
+				param_types.reserve(params->size());
+
+				for (auto param: *params) {
+					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
+					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
+
+					if (param_type->hasValue()) {
+						param_types.emplace_back(param_type->value());
+					} else {
+						// we just fail here, because we can't continue without type
+						return;
+					}
+				}
+				tsh::AbstractType ret_type = ctx.query<tsh::QueryUnitType>({});
+				if (ret.has_value()) {
+					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
+					if (parsed.hasValue()) {
+						ret_type = parsed.value();
+					} else {
+						// we just fail here, because we can't continue without type
+						return;
+					}
+				}
+				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
+			}
+
+			void visitClass(const pst::Class&) final {
+				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
+			}
+
+			void visitNamespace(const pst::Namespace&) final {
+				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
+			}
+
+			void visitImport(const pst::Import&) final {
+				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
+			}
+
+			void visitFunParam(const pst::FunParam& param) final {
+				setTypeOfSymbol(param.getType()->getExpr());
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto symbol_ref = getSymRef(key);
+
+			variant_match(symbol_ref->other) {
+				variant_case(PstSymbolData, pst_data) {
+					PstVisitor_GetTypeOf visitor(ctx);
+					pst_data.pst_element->acceptVisitor(visitor);
+					if_opt_some(visitor.symbol_abstract_type, type) return type;
+					return errors::HError(errors::Failed());
+				}
+				variant_case(builtin::BuiltinFunctionData, builtin_data) {
+					return builtin_data.type;
+				}
+				variant_default { CORE_PANIC("Unknown symbol data type"); }
+			}
+			CORE_UNREACHABLE();
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
+
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
+		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
+			Context&    ctx;
+			const QKey& key;
+
+			void setTypeOfDefinition(const tsh::AbstractType& type) {
+				if (definition_abstract_type.has_value())
+					CORE_PANIC("Attempted to set type of definition in visitor a second time.");
+				definition_abstract_type = type;
+			}
+
+		public:
+			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+
+			base::Optional<tsh::AbstractType> definition_abstract_type;
+
+			void visitClass(const pst::Class&) final {
+				definition_abstract_type = ctx.query<tsh::QueryClassType>(key);
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto symbol_ref = getSymRef(key);
+
+			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
+			symbol_ref->getPSTData()->pst_element->acceptVisitor(visitor);
+			return visitor.definition_abstract_type.value();
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
+
+	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
+		struct ClassDataParser final: pst::PstVisitorPanicky {
+			base::Optional<base::StrID>                name;
+			base::Optional<MCRef<pst::ExprElement>>    base_class;
+			base::Optional<MCRef<pst::ImplementsList>> implements;
+
+			void visitClass(const pst::Class& stmt) final {
+				name = stmt.getName();
+				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
+				if (auto implements = stmt.getImplements(); implements != nullptr)
+					this->implements = implements;
+			}
+		};
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
+
+			auto class_stmt = getSymRef(key)->stmtCast();
+
+			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
+			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
+
+			ClassSymbolData class_info;
+			for (auto sym: *class_symbols) {
+				switch (kind(sym)) {
+				case SymbolKind::Method:
+					class_info.methods.push_back(sym);
+					break;
+				case SymbolKind::Constructor:
+					class_info.constructors.push_back(sym);
+					break;
+				case SymbolKind::Destructor:
+					// This doesn't catch multiple destructors
+					class_info.destructor = sym;
+					break;
+				case SymbolKind::Field:
+					class_info.members.push_back(sym);
+					break;
+				default:
+					throw base::NotYetImplemented(base::strConcat(
+						"Using ",
+						typeid(kind(sym)).name(),
+						" inside a class is not yet implemented."
+					));
+				}
+			}
+			// Find the name
+			auto class_data_parser = ClassDataParser();
+			class_stmt->acceptVisitor(class_data_parser);
+			class_info.name = class_data_parser.name.value();
+
+			if_opt_some(class_data_parser.base_class, base) {
+				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
-					class_info.implements.push_back(tp.value());
+					class_info.base = tp.value();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
 					return errors::HError(errors::Failed());
 				}
 			}
+
+			if_opt_some(class_data_parser.implements, implements) {
+				for (auto&& interface: *implements) {
+					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
+					if (tp.hasValue()) {
+						class_info.implements.push_back(tp.value());
+					} else {
+						// We just fail here, error should be reported by EvalExprToType
+						return errors::HError(errors::Failed());
+					}
+				}
+			}
+
+			return class_info;
 		}
 
-		return class_info;
-	}
+		QUERY_AUTO_CACHE_REF
+	};
 
-	QUERY_AUTO_CACHE_REF
-};
-
-QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 }
