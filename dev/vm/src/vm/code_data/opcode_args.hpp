@@ -30,6 +30,10 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
+	struct StackLocalAny {
+		i64 offset = 0;
+	};
+
 	struct StackLocalPtr {
 		i64 offset = 0;
 	};
@@ -56,6 +60,7 @@ namespace vm::opargs {
 		StackLocalI16,
 		StackLocalI32,
 		StackLocalI64,
+		StackLocalAny,
 		StackLocalPtr,
 		ArgsOffset,
 		Type,

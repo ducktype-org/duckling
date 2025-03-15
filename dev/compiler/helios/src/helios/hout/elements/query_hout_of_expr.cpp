@@ -244,6 +244,7 @@ namespace compiler::helios::code {
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
 				// @TODO / @NOTE This methods will be reworked.
+				// @TODO: add compiler errors, typecheck and coercions in function calls
 
 				auto atom_expr = fromPST(ctx, stmt.getAtom());
 				if (!atom_expr) {
