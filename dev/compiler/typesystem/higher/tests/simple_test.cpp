@@ -42,7 +42,7 @@ public:
 		TESTER_ADD_TEST(simpleFunction);
 		TESTER_ADD_TEST(simpleLanguageElements);
 		TESTER_ADD_TEST(simpleMeta);
-		TESTER_ADD_TEST(simpleTypeDesc);
+		TESTER_ADD_TEST(simpleExpressionType);
 		TESTER_ADD_TEST(simpleValueCategory);
 		TESTER_ADD_TEST(simpleImplicitCoercibility);
 	}
@@ -51,15 +51,15 @@ private:
 	using enum Kind;
 
 	/**
-	 * Test that the specialized TypeInfo to TypeInfo dynamic cast works as intended.
+	 * Test that the specialized AbstractType to AbstractType dynamic cast works as intended.
 	 * Also, test that assignment works.
 	 */
 	void trivialCastAndAssignment() {
-		const TypeInfo type_1{ query::entryPoint<QueryVoidType>({}) };
-		TypeInfo       type_2 = type_1;
+		const AbstractType type_1{ query::entryPoint<QueryVoidType>({}) };
+		AbstractType       type_2 = type_1;
 		assertTrue(type_1 == type_2, "The trivial dynamic cast should not change any objects.");
 		type_2 = query::entryPoint<QueryUnitType>({});
-		assertTrue(type_1 != type_2, "Assignment on TypeInfo should change the target object.");
+		assertTrue(type_1 != type_2, "Assignment on AbstractType should change the target object.");
 	}
 
 	/**
@@ -78,12 +78,12 @@ private:
 
 		assertTrue(void_1 != unit_1, "Void and Unit should be different types.");
 
-		const TypeInfo type_void = void_1;
-		const VoidInfo void_3    = type_void;
+		const AbstractType     type_void = void_1;
+		const VoidAbstractType void_3    = type_void;
 		assertTrue(void_3.getKind() == Void, "Void should survive casting.");
 
-		const TypeInfo type_unit = unit_1;
-		const UnitInfo unit_3    = type_unit;
+		const AbstractType     type_unit = unit_1;
+		const UnitAbstractType unit_3    = type_unit;
 		assertTrue(unit_3.getKind() == Unit, "Unit should survive casting.");
 	}
 
@@ -112,16 +112,16 @@ private:
 			"Byte-sized types of the same kind should be equal."
 		);
 
-		const TypeInfo type_byte = byte_1;
-		const ByteInfo byte_3    = type_byte;
+		const AbstractType     type_byte = byte_1;
+		const ByteAbstractType byte_3    = type_byte;
 		assertTrue(byte_3.getKind() == Byte, "Byte should survive casting.");
 
-		const TypeInfo type_bool = bool_1;
-		const BoolInfo bool_3    = type_bool;
+		const AbstractType     type_bool = bool_1;
+		const BoolAbstractType bool_3    = type_bool;
 		assertTrue(bool_3.getKind() == Bool, "Bool should survive casting.");
 
-		const TypeInfo type_char = char_1;
-		const CharInfo char_3    = type_char;
+		const AbstractType     type_char = char_1;
+		const CharAbstractType char_3    = type_char;
 		assertTrue(char_3.getKind() == Char, "Byte should survive casting.");
 	}
 
@@ -145,8 +145,8 @@ private:
 				"Ints of the same size but different signedness should be the different."
 			);
 
-			TypeInfo     type_int = int_1;
-			IntegralInfo int_3    = type_int;
+			AbstractType         type_int = int_1;
+			IntegralAbstractType int_3    = type_int;
 			assertTrue(int_3.getKind() == Integral, "Int should survive casting.");
 
 			ASSERT_TRUE(int_1.getSignedness());
@@ -178,8 +178,8 @@ private:
 			assertTrue(float_1 == float_2, "Floats of the same size should be the same.");
 			assertTrue(float_1.getKind() == Float, "Floats should have float kind.");
 
-			TypeInfo  type_float = float_1;
-			FloatInfo float_3    = type_float;
+			AbstractType      type_float = float_1;
+			FloatAbstractType float_3    = type_float;
 			assertTrue(float_3.getKind() == Float, "Float should survive casting.");
 		}
 
@@ -191,7 +191,7 @@ private:
 
 	/**
 	 * Test that Raw Pointer and Pointer types correctly cast
-	 * between each other and retain information as expected.
+	 * between each other and retain AbstractTypermation as expected.
 	 */
 	void simplePointer() {
 		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
@@ -206,8 +206,8 @@ private:
 		const auto raw_4 = query::entryPoint<QueryRawPointerType>(true);
 		assertTrue(raw_2 == raw_4, "There should be only one mutable Raw Pointer.");
 
-		const TypeInfo       type_raw = raw_1;
-		const RawPointerInfo raw_5    = type_raw;
+		const AbstractType           type_raw = raw_1;
+		const RawPointerAbstractType raw_5    = type_raw;
 		assertTrue(raw_5.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
 		const auto ptr_1 = query::entryPoint<QueryPointerType>({ raw_1 });
@@ -219,8 +219,8 @@ private:
 		const auto ptr_4 = query::entryPoint<QueryPointerType>({ raw_1, true });
 		assertTrue(ptr_1 != ptr_4, "Pointers of different mutability should be different.");
 
-		const TypeInfo    type_ptr = ptr_4;
-		const PointerInfo ptr_5    = type_ptr;
+		const AbstractType        type_ptr = ptr_4;
+		const PointerAbstractType ptr_5    = type_ptr;
 		assertTrue(
 			ptr_5.getKind() == Pointer && ptr_5.getUnderlyingType() == ptr_4.getUnderlyingType()
 				&& ptr_5.isMutable() == ptr_4.isMutable(),
@@ -244,8 +244,8 @@ private:
 		);
 		assertTrue(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
 
-		const TypeInfo  type_tup = tup_1;
-		const TupleInfo tup_2    = type_tup;
+		const AbstractType      type_tup = tup_1;
+		const TupleAbstractType tup_2    = type_tup;
 		assertTrue(tup_2.getKind() == Tuple, "Tuple should survive casting.");
 
 		const auto tup_3 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
@@ -269,13 +269,13 @@ private:
 		const auto var_1 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
 
 		assertTrue(
-			var_1.getUnderlyingTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
+			var_1.getUnderlyingTypes() == std::vector<AbstractType>({ int_16, int_32 }),
 			"Underlying types should be as constructed."
 		);
 		assertTrue(var_1.getKind() == Variant, "Variant should have kind Variant.");
 
-		const TypeInfo    type_var = var_1;
-		const VariantInfo var_2    = type_var;
+		const AbstractType        type_var = var_1;
+		const VariantAbstractType var_2    = type_var;
 		assertTrue(var_2.getKind() == Variant, "Tuple should survive casting.");
 
 		const auto var_3 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
@@ -296,15 +296,15 @@ private:
 		const auto fun_1 = query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
 
 		assertTrue(
-			fun_1.getParameterTypes() == std::vector<TypeInfo>({ int_16, int_32 }),
+			fun_1.getParameterTypes() == std::vector<AbstractType>({ int_16, int_32 }),
 			"Parameter types should be as constructed."
 		);
 		assertTrue(fun_1.getResultType() == int_32, "Result type should be as constructed.");
 		assertTrue(!fun_1.isPure(), "Purity should be as constructed.");
 		assertTrue(!fun_1.isFree(), "Freedom should be as constructed.");
 
-		const TypeInfo     type_fun = fun_1;
-		const FunctionInfo fun2     = type_fun;
+		const AbstractType         type_fun = fun_1;
+		const FunctionAbstractType fun2     = type_fun;
 		assertTrue(fun2.getKind() == Function, "Function should survive casting.");
 
 		const auto fun_identical
@@ -329,8 +329,8 @@ private:
 			fun_1 != fun_different_flags, "Functions with different flags should be different."
 		);
 
-		const TypeInfo     type_fun_different_flags = fun_different_flags;
-		const FunctionInfo fun_different_flags_2    = type_fun_different_flags;
+		const AbstractType         type_fun_different_flags = fun_different_flags;
+		const FunctionAbstractType fun_different_flags_2    = type_fun_different_flags;
 		assertTrue(
 			fun_different_flags == fun_different_flags_2, "Function flags should survive casting."
 		);
@@ -344,8 +344,8 @@ private:
 
 		assertTrue(nspace.getKind() == Namespace, "NamespaceType should have kind Meta.");
 
-		const TypeInfo      nspace_type = nspace;
-		const NamespaceInfo nspace_3    = nspace_type;
+		const AbstractType          nspace_type = nspace;
+		const NamespaceAbstractType nspace_3    = nspace_type;
 		assertTrue(nspace_3.getKind() == Namespace, "NamespaceType should survive casting.");
 
 		const auto module   = query::entryPoint<QueryModuleType>({});
@@ -355,8 +355,8 @@ private:
 
 		assertTrue(module.getKind() == Module, "ModuleType should have kind Meta.");
 
-		const TypeInfo   module_type = module;
-		const ModuleInfo module_3    = module_type;
+		const AbstractType       module_type = module;
+		const ModuleAbstractType module_3    = module_type;
 		assertTrue(module_3.getKind() == Module, "ModuleType should survive casting.");
 	}
 
@@ -368,32 +368,32 @@ private:
 
 		assertTrue(meta.getKind() == Meta, "MetaType should have kind Meta.");
 
-		const TypeInfo meta_type = meta;
-		const MetaInfo met_3     = meta_type;
+		const AbstractType     meta_type = meta;
+		const MetaAbstractType met_3     = meta_type;
 		assertTrue(met_3.getKind() == Meta, "MetaType should survive casting.");
 	}
 
-	void simpleTypeDesc() {
+	void simpleExpressionType() {
 		const auto void_i = query::entryPoint<QueryVoidType>({});
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
-		const TypeDesc int_desc(int_i);
+		const ExpressionType int_desc(int_i, ValueCategory(PrimaryCategory::Local));
 
 		try {
-			TypeDesc<IntegralInfo>{ void_i };
+			ExpressionType<IntegralAbstractType>{ void_i, ValueCategory(PrimaryCategory::Local) };
 			fail("Created IntegralDesc for Void type.");
 		} catch (const base::LogicError&) {
 			// expected
 		}
 
-		TypeDesc<>{ void_i };
+		ExpressionType<>{ void_i, ValueCategory(PrimaryCategory::Local) };
 
-		const TypeDesc really_int_desc = int_desc;
+		const ExpressionType really_int_desc = int_desc;
 
 		assertTrue(int_desc.getType().getKind() == Integral, "IntDesc type is not int");
 		assertTrue(
 			really_int_desc.getType().getKind() == Integral,
-			"IntDesc type after conversion to TypeDesc is not int"
+			"IntDesc type after conversion to ExpressionType is not int"
 		);
 	}
 
@@ -450,42 +450,42 @@ private:
 		const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 2) });
 		const auto int_3 = query::entryPoint<QueryIntegralType>({ 8U * (1 << 3) });
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnInfo>({ int_2, int_3 }),
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_2, int_3 }),
 			"Smaller int should be coercible into a bigger one."
 		);
 
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnInfo>({ int_3, int_2 }),
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ int_3, int_2 }),
 			"Bigger int should not be coercible into a smaller one."
 		);
 
 		const auto void_type = query::entryPoint<QueryVoidType>({});
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnInfo>({ void_type, int_2 }),
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ void_type, int_2 }),
 			"Void should not be coercible to anything."
 		);
 
 		const auto i2_const
-			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 		const auto i2_mut
-			= TypeDesc<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
+			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
 		const auto i3_const
-			= TypeDesc<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
 
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i3_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i3_const }),
 			"Smaller int value should be coercible into a bigger one."
 		);
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i2_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i2_const }),
 			"Mutable value should be coercible to an immutable one."
 		);
 		assertTrue(
-			query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_mut, i3_const }),
+			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_mut, i3_const }),
 			"Mutable value should be coercible to a bigger, immutable one."
 		);
 		assertTrue(
-			!query::entryPoint<QueryImplicitCoercibilityOnDesc>({ i2_const, i2_mut }),
+			!query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i2_mut }),
 			"Immutable value should not be coercible to a mutable one."
 		);
 	}

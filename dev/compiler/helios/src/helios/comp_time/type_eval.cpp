@@ -15,7 +15,7 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= errors::HResult<tsh::TypeInfo, CouldNotEvalShortPath, errors::Failed>;
+			= errors::HResult<tsh::AbstractType, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
@@ -37,6 +37,10 @@ namespace compiler::helios {
 
 			void visitLiteralTypeExpr(const code::LiteralTypeExpr& expr) override {
 				output(expr.value_type);
+			}
+
+			void visitCallExpr(const code::CallExpr&) final {
+				throw base::NotYetImplemented("ShortPath CallExpr");
 			}
 
 			void visitIdentifierExpr(const code::IdentifierExpr& expr) override {
@@ -61,7 +65,7 @@ namespace compiler::helios {
 					} else {
 						// @todo: False here means all subtypes of a tuple are immutable.
 						// this is likely wrong, we will have to change it with
-						// type info, type desc, component type refactor
+						// type info, expression type, component type refactor
 						subtypes.emplace_back(sub_type_result.value(), false);
 					}
 				}
@@ -70,7 +74,7 @@ namespace compiler::helios {
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::TypeInfo> subtypes;
+				std::vector<tsh::AbstractType> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
@@ -116,7 +120,7 @@ namespace compiler::helios {
 
 			// note: this assert might be changed to a compiler error in the future:
 			CORE_ASSERT(
-				parsed.value()->type_desc.getType().getKind() == tsh::Kind::Meta,
+				parsed.value()->expression_type.getType().getKind() == tsh::Kind::Meta,
 				"Expression provided to EvalExprToType has non-meta type."
 			);
 

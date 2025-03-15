@@ -69,3 +69,11 @@ Json module
 
   Module implementing lexing of any text according to rules defined by Duckling Programming Language,
   keywords, specials and operators definitions provided by `lang_definition` module.
+
+## hashing
+
+\subpage hashing-module
+
+  This module implements hashing utilities that allow to easily add hashing support to any type and
+  to hash any set of objects using a hashing algorithm of choice. Module provides some ready
+  algorithms and allows to add more.

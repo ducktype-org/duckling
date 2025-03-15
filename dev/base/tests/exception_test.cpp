@@ -1,5 +1,4 @@
 #include <tester/tester.hpp>
-#include <filesystem/file.hpp>
 #include <base/str_utils.hpp>
 #include <cstring>
 
@@ -85,7 +84,7 @@ public:
 		} catch (base::NotYetImplemented& nyi) {
 			assertTrue(
 				compareCstr(
-					nyi.what(), "The feature is not implemented yet.\nNotYetImplemented test"
+					nyi.what(), "The feature is not implemented yet: NotYetImplemented test"
 				),
 				"Bad NotYetImplemented reason"
 			);

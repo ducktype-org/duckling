@@ -69,21 +69,16 @@ namespace base {
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {          \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                             \
 				::base::detail::StrToEnumType<namespace_name::name> out;                           \
-				for (base_type i = 0; i < string_vector.size(); i++) {                             \
-					out.put(                                                                       \
-						base::StrID(string_vector[i].data()), static_cast<namespace_name::name>(i) \
-					);                                                                             \
+				for (base_type i = 0; const auto& string: string_vector) {                         \
+					out.put(base::StrID(string.data()), static_cast<namespace_name::name>(i++));   \
 				}                                                                                  \
 				return out;                                                                        \
 			}                                                                                      \
 			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {          \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                             \
 				::base::detail::EnumToStrType<namespace_name::name> out;                           \
-				for (base_type i = 0; i < string_vector.size(); i++) {                             \
-					out.put(                                                                       \
-						static_cast<namespace_name::name>(i),                                      \
-						::base::StrID(string_vector[i].data())                                     \
-					);                                                                             \
+				for (base_type i = 0; const auto& string: string_vector) {                         \
+					out.put(static_cast<namespace_name::name>(i++), ::base::StrID(string.data())); \
 				}                                                                                  \
 				return out;                                                                        \
 			}                                                                                      \

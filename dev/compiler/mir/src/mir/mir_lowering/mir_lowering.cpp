@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include <helios/hout/elements/expr.hpp>
 #include "mir_lifetimes.hpp"
 #include <query_framework/query_impl.hpp>
 #include <helios/hout/elements.hpp>
@@ -16,7 +17,7 @@ namespace compiler::mir {
 
 	Function::Function(
 		base::StrID                  name,
-		tsh::TypeInfo                return_type,
+		tsh::AbstractType            return_type,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -257,8 +258,10 @@ namespace compiler::mir {
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
 			const auto function_return_type
-				= tsh::FunctionInfo(ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
-			                            ->expect("Handling errors in HOUT is not supported yet"))
+				= tsh::FunctionAbstractType(
+					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
+						  ->expect("Handling errors in HOUT is not supported yet")
+				)
 			          .getResultType();
 
 			return Function{
@@ -281,19 +284,18 @@ namespace compiler::mir {
 		LocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
-				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-					"Handling ERRORS in MIR is not supported yet..."
-				),
+				tsh::ComponentType{ .type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+										"Handling ERRORS in MIR is not supported yet..."
+									) },
 				scope(helios_id),
 			});
 			return local_list.getRef(key).value();
 		}
 
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::TypeInfo type, const helios::ScopeID scope) {
-			const auto type_desc
-				= tsh::TypeDesc<>{ type, tsh::ValueCategory{ tsh::PrimaryCategory::Temporary } };
-			const auto key = local_list.emplaceBack(MirLocal{ type_desc, scope });
+		LocalRef addTmp(const tsh::AbstractType type, const helios::ScopeID scope) {
+			const auto key
+				= local_list.emplaceBack(MirLocal{ tsh::ComponentType{ .type = type }, scope });
 			return local_list.getRef(key).value();
 		}
 
@@ -532,7 +534,7 @@ namespace compiler::mir {
 				{ flagConstruct(target_location) },
 				expr.lifetime_scope,
 			});
-			output({ l_continuation, target_location });
+			output({ .begin = l_continuation, .value = target_location });
 		}
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
@@ -569,6 +571,10 @@ namespace compiler::mir {
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+		void visitCallExpr(const hc::CallExpr&) override {
+			throw base::NotYetImplemented("call expr");
 		}
 
 	private:
@@ -608,16 +614,16 @@ namespace compiler::mir {
 		/**
 		 * Get the type of a location, assuming that it is a local value.
 		 * @param location A MIR location which holds a local value.
-		 * @param ctx The query context for TypeInfo generation.
+		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::TypeInfo locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::AbstractType locationType(const MirLocation location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
 					return ctx.query<tsh::QueryIntegralType>({ 64 });
 				}
 				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
-				variant_case(LocalRef, local) { return local->type.getType(); }
+				variant_case(LocalRef, local) { return local->type.type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();

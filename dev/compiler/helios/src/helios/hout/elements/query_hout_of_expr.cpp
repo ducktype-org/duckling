@@ -7,7 +7,9 @@
 #include "../../scopes/scopes.hpp"
 #include "../visitors.hpp"
 #include "query_hout_of_expr.hpp"
+#include <base/exceptions.hpp>
 #include "expr.hpp"
+#include <pst_parser/elements/hierarchy/expr.hpp>
 
 namespace compiler::helios::code {
 	namespace {
@@ -87,7 +89,7 @@ namespace compiler::helios::code {
 			}
 		};
 
-		struct PstExprToHoutExprVisitor final: public pst::PstExprVisitorPanicky {
+		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
 				  ctx(ctx),
 				  scope(scope) {}
@@ -112,8 +114,8 @@ namespace compiler::helios::code {
 				// @TODO: this whole section could be moved to a separate file
 				// // when refactoring it remember about unaryBuiltin
 
-				auto lhs_type = lhs->type_desc;
-				auto rhs_type = rhs->type_desc;
+				auto lhs_type = lhs->expression_type;
+				auto rhs_type = rhs->expression_type;
 
 				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
 				bool is_rhs_integer = rhs_type.getType().getKind() == tsh::Kind::Integral;
@@ -124,8 +126,8 @@ namespace compiler::helios::code {
 					return {};
 				}
 
-				auto lhs_as_integer = tsh::IntegralInfo(lhs_type.getType());
-				auto rhs_as_integer = tsh::IntegralInfo(rhs_type.getType());
+				auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
+				auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
 				// we only do the most simplest version here:
 				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
@@ -162,7 +164,7 @@ namespace compiler::helios::code {
 				// note: this is mock that works only for very simple int op int.
 				// when refactoring it remember about binaryBuiltin
 
-				auto expr_type = expr->type_desc;
+				auto expr_type = expr->expression_type;
 
 				if (expr_type.getType().getKind() != tsh::Kind::Integral) {
 					// we don't have builtins for this case for now:
@@ -241,6 +243,7 @@ namespace compiler::helios::code {
 
 			void visitChainExpr(const pst::expr::ChainExpr& stmt) override {
 				// @TODO: Add a compiler log or some kind of information if lookup fails.
+				// @TODO / @NOTE This methods will be reworked.
 
 				auto atom_expr = fromPST(ctx, stmt.getAtom());
 				if (!atom_expr) {
@@ -255,33 +258,66 @@ namespace compiler::helios::code {
 
 				SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
 
-				for (auto&& el: stmt.getChain()) {
-					auto pst_access = dynamic_cast<pst::expr::Access*>(&*el);
-					CORE_ASSERT(pst_access, "Not handling non-AccessExprs yet");
-					CORE_ASSERT(
-						pst_access->getType() == ".", "Not handling .? access operator yet"
-					);
+				// @note If optional is not empty it means there has been a call.
+				base::Optional<std::vector<Box<Expr>>> call_arguments;
 
-					std::cout << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
-							  << pst_access->getName().value.strView() << "\n";
-					auto new_symbols = *ctx.query<QueryLookupInSymbol>(
-						{ looked_up_symbol.back(), pst_access->getName().value, true }
-					);
+				for (const auto& el: stmt.getChain()) {
+					// This is a mock. It asserts call expression is the last in the chain.
+					if (call_arguments.has_value())
+						throw base::NotYetImplemented("Call expr not last on the chain");
+					if (auto pst_access = dynamic_cast<pst::expr::Access*>(&*el)) {
+						CORE_ASSERT(
+							pst_access->getType() == ".", "Not handling .? access operator yet"
+						);
 
-					auto new_symbols_single = new_symbols.getAsSingle();
-					CORE_ASSERT(
-						new_symbols_single.hasValue(),
-						"Access failed because couldn\'t getAsSingle()"
-					);
+						std::cerr << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
+								  << pst_access->getName().value.strView() << "\n";
 
-					looked_up_symbol.insert(
-						looked_up_symbol.end(),
-						new_symbols_single.value().begin(),
-						new_symbols_single.value().end()
-					);
+						auto new_symbols = *ctx.query<QueryLookupInSymbol>(
+							{ looked_up_symbol.back(), pst_access->getName().value, true }
+						);
+
+						auto new_symbols_single = new_symbols.getAsSingle();
+						CORE_ASSERT(
+							new_symbols_single.hasValue(),
+							"Access failed because couldn\'t getAsSingle()"
+						);
+
+						looked_up_symbol.insert(
+							looked_up_symbol.end(),
+							new_symbols_single.value().begin(),
+							new_symbols_single.value().end()
+						);
+					} else if (auto pst_call = dynamic_cast<pst::expr::Call*>(&*el)) {
+						if (pst_call->getType() != lexer::Token::Round) {
+							throw base::NotYetImplemented(base::strConcat(
+								"HOUT call with invalid bracket type: ", char(pst_call->getType())
+							));
+						}
+
+						call_arguments.emplace();
+						for (auto&& arg: *pst_call->getArgs()) {
+							auto arg_expr = fromPST(ctx, arg->getExpr());
+							if (!arg_expr) {
+								// Error
+								return;
+							}
+							call_arguments->emplace_back(std::move(arg_expr.value()));
+						}
+					} else {
+						throw base::NotYetImplemented(
+							"ChainExpr visitor handles only calls and accesses."
+						);
+					}
 				}
+
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
-					node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
+					if (call_arguments)
+						node = makeBox<CallExpr>(
+							ctx, scope, dealiased.back(), std::move(*call_arguments)
+						);
+					else
+						node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
 				}
 			}
 
@@ -479,7 +515,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
-			CORE_ASSERT(key.element.toOpt().has_value(), "Nullptr provided to QueryHoutOfExpr");
+			CORE_ASSERT(key.element != nullptr, "Nullptr provided to QueryHoutOfExpr");
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);

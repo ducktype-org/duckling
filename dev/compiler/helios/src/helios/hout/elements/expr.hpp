@@ -9,12 +9,9 @@
 #include <base/box.hpp>
 
 #include <query_framework/query_int.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <helios/helios_errors.hpp>
 #include <helios/lookup_result.hpp>
-#include <lang_definitions/key_spec_op.hpp>
-#include <lexer/token_common.hpp>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
@@ -29,11 +26,11 @@ namespace compiler::helios::code {
 		/**
 		 * The type of the expression, and its value category.
 		 */
-		tsh::TypeDesc<> type_desc;
+		tsh::ExpressionType<> expression_type;
 
-		Expr(ScopeID lifetime_scope, tsh::TypeDesc<> type_desc):
+		Expr(ScopeID lifetime_scope, tsh::ExpressionType<> expression_type):
 			  lifetime_scope(lifetime_scope),
-			  type_desc(type_desc) {}
+			  expression_type(expression_type) {}
 
 		virtual ~Expr()                                  = default;
 		virtual void debugPrint(std::ostream& out) const = 0;
@@ -75,9 +72,9 @@ namespace compiler::helios::code {
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
-		tsh::TypeInfo value_type;
+		tsh::AbstractType value_type;
 
-		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type);
+		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -123,7 +120,7 @@ namespace compiler::helios::code {
 	/**
 	 * Builtin binary operation.
 	 */
-	enum class BuiltinBinary {
+	enum class BuiltinBinary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -161,7 +158,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Builtin unary operations.
 	 */
-	enum class BuiltinUnary {
+	enum class BuiltinUnary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -227,6 +224,19 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
-	// @todo HOUT 2.0: function call expression
-	// it should hold SymID of a function and vector of arguments
+	/**
+	 * @brief Represents a call in an expression.
+	 * @note This is a mock, with this representation it's impossible to handle overloads.
+	 */
+	struct CallExpr final: public Expr {
+		SymID                        callee;
+		std::vector<base::Box<Expr>> arguments;
+
+		CallExpr(
+			query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
 }

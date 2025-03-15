@@ -25,9 +25,6 @@ duck_add_test(base test_flag_type tests/flag_type_test.cpp
 duck_add_test(base stable_container_test_simple tests/stable_container_test.cpp
         USES Base)
 
-duck_add_test(base test_smart_pointer tests/pointer_tests.cpp
-        USES Base)
-
 duck_add_test(base string_id_test_simple tests/string_id_test.cpp
         USES Base)
 
@@ -50,7 +47,7 @@ duck_add_test(base defer_tests tests/defer_test.cpp
         USES Base)
 
 duck_add_test(base strong_id_test tests/strong_id_test.cpp
-        USES Base Tester)
+        USES Base)
 
 duck_add_test(base at_maybe_test tests/at_maybe_test.cpp
         USES Base)
@@ -76,9 +73,6 @@ add_example(optional_simple_example src/base/examples/optional_simple_example.cp
 add_example(perfect_hash_example src/base/examples/perfect_hash_example.cpp
         USES Base)
 
-add_example(smart_pointers_example src/base/examples/smart_pointers_example.cpp
-        USES Base)
-
 add_example(str_utils_example src/base/examples/str_utils_example.cpp
         USES Base)
 
@@ -98,4 +92,7 @@ duck_add_test(base bits_and_bytes_test tests/bits_and_bytes_test.cpp
         USES Base)
 
 duck_add_test(base is_complete_test tests/is_complete_test.cpp
+        USES Base)
+
+duck_add_test(base type_name_test tests/type_name_test.cpp
         USES Base)
