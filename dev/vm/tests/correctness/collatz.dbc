@@ -2,21 +2,24 @@ type primitive: int64 8
 
 function collatz {
 	arg_size: 8;
+	arg_count: 1;
 	next_arg_size: 0;
 	ret_size: 8;
 
 	# ret_val - 0
 	# n - 8
 	# j - 16
-	# tmp1 - 24
+	# tmp - 24
 	local_size: 32;
 
 	code: {
 		# [0, 8) ret_val
 		# [8, 16) arg0
 
+		init_type		int64; # [16, 24) j
+		init_type		int64; # [24, 32) tmp
+
 		# j := 0
-		init_type		int64; # [16, 24)
 		mov_l64_imm		16, 0;
 
 		# if n == 1: end
@@ -30,7 +33,6 @@ function collatz {
 
 			# if condition:
 				# tmp := n
-				init_type			int64; # [24, 32)
 				mov_l64_l64         24, 8;
 
 				# tmp %= 2
@@ -71,60 +73,65 @@ function collatz {
 
 function main {
 	arg_size: 0;
+	arg_count: 0;
 	next_arg_size: 8;
-	ret_size: 0;
+	ret_size: 8;
 
-	# x - 0
-	# s - 8
-	# i - 16
-	# tmp - 24
-	local_size: 48;
+	# x - 8
+	# s - 16
+	# i - 24
+	# tmp - 32
+
+	local_size: 56;
 
 	code: {
-		init_type 		int64; # [0, 8) x
-		init_type 		int64; # [8, 16) s
-		init_type 		int64; # [16, 24) i
-		init_type 		int64; # [24, 32) tmp
+		init_type		int64; # [0, 8) main ret_val
+		init_type 		int64; # [8, 16) x
+		init_type 		int64; # [16, 24) s
+		init_type 		int64; # [24, 32) i
+		init_type 		int64; # [32, 40) tmp
 
 		# x := input
-		input_l64       0;
+		input_l64       8;
 
 		# s := 0
-		mov_l64_imm     8, 0;
+		mov_l64_imm     16, 0;
 
 		# i := 1
-		mov_l64_imm     16, 1;
+		mov_l64_imm     24, 1;
 
 		# do-for (x > i; i++)
 		label Loop;
-			# output_l64         16;
+			# output_l64         24;
 
 			# tmp := collatz(i)
-
-			init_type int64; # [32, 40) collatz(i) ret_val
-			init_type int64; # [40, 48) collatz(i) arg0
-			mov_l64_l64 		40, 16;
+			init_type 			int64; # [40, 48) collatz(i) ret_val
+			init_type 			int64; # [48, 56) collatz(i) arg0
+			mov_l64_l64 		48, 24;
 			call_func          	collatz;
-			mov_l64_l64 		24, 32; # tmp := collatz(i)
+			mov_l64_l64 		32, 40; # tmp := collatz(i)
 
 			# if tmp > s:
-			cmpG_l64_l64       24, 8;
-			jmpRelNotIf_label  EndIF;
-				mov_l64_l64    8, 24;
+			cmpG_l64_l64       	32, 16;
+			jmpRelNotIf_label  	EndIF;
+				mov_l64_l64    	16, 32;
 
 			label EndIF;
 
 			# i++;
-			add_l64_imm      16, 1;
+			add_l64_imm      	24, 1;
 
-			# output_l64       0;
-			# output_l64       16;
+			# output_l64       	8;
+			# output_l64       	24;
+
 			# if x > i : end
-			cmpG_l64_l64     0, 16;
-			jmpRelIf_label   Loop;
+			cmpG_l64_l64     	8, 24;
+			jmpRelIf_label   	Loop;
 
-		output_l64      8;
+		output_l64      16;
 
+		# return i
+		mov_l64_l64		0, 24;
 		ret;
 	}
 
