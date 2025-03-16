@@ -514,17 +514,15 @@ namespace compiler::helios {
 			// @TODO: make failure more explicit
 
 			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
-				if (symbol_abstract_type.has_value())
+				if (symbol_type.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_abstract_type = type;
+				symbol_type = type;
 			}
 
-			// @todo Remove this function (or change appropriately) when handling references
-			// to type expressions is implemented. #608
-			void setTypeOfSymbol(const tsh::AbstractType& type) {
-				if (symbol_abstract_type.has_value())
+			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
+				if (symbol_type.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_abstract_type = tsh::SymbolType{
+				symbol_type = tsh::SymbolType{
 					type,
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
@@ -539,7 +537,7 @@ namespace compiler::helios {
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			base::Optional<tsh::SymbolType<>> symbol_abstract_type;
+			base::Optional<tsh::SymbolType<>> symbol_type;
 
 			void visitConst(const pst::Const& stmt) final {
 				setTypeOfSymbol(stmt.getType()->getExpr());
@@ -588,19 +586,20 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
+				                                                                  ret_type }));
 			}
 
 			void visitClass(const pst::Class&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
 			}
 
 			void visitNamespace(const pst::Namespace&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 
 			void visitImport(const pst::Import&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
 			}
 
 			void visitFunParam(const pst::FunParam& param) final {
@@ -614,7 +613,7 @@ namespace compiler::helios {
 			PstVisitor_GetTypeOf visitor(ctx);
 			symbol_ref->pst_element->acceptVisitor(visitor);
 
-			if_opt_some(visitor.symbol_abstract_type, type) return type;
+			if_opt_some(visitor.symbol_type, type) return type;
 			return errors::HError(errors::Failed());
 		}
 
@@ -623,24 +622,28 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryAbstractType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QuerySymbolType_Result) {
 		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfDefinition(const tsh::AbstractType& type) {
-				if (definition_abstract_type.has_value())
+			void setTypeOfDefinition(const tsh::SymbolType<>& type) {
+				if (definition_symbol_type.has_value())
 					CORE_PANIC("Attempted to set type of definition in visitor a second time.");
-				definition_abstract_type = type;
+				definition_symbol_type = type;
 			}
 
 		public:
 			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<tsh::AbstractType> definition_abstract_type;
+			base::Optional<tsh::SymbolType<>> definition_symbol_type;
 
 			void visitClass(const pst::Class&) final {
-				definition_abstract_type = ctx.query<tsh::QueryClassType>(key);
+				definition_symbol_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryClassType>(key),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 			}
 		};
 
@@ -649,7 +652,7 @@ namespace compiler::helios {
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
 			symbol_ref->pst_element->acceptVisitor(visitor);
-			return visitor.definition_abstract_type.value();
+			return visitor.definition_symbol_type.value();
 		}
 
 		QUERY_AUTO_CACHE_REF;

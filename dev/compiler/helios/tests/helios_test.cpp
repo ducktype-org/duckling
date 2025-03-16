@@ -98,7 +98,8 @@ private:
 		          ->valueOrThrow();
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow();
+		          ->valueOrThrow()
+		          .getType();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -158,12 +159,12 @@ private:
 		const auto classC = getTypeFromDefinition("C", root_scope);
 
 		auto right_tuple = query::entryPoint<tsh::QueryTupleType>({ {
-			st(classA),
-			st(query::entryPoint<tsh::QueryVariantType>({ { st(classB), st(classC) } })),
+			classA,
+			st(query::entryPoint<tsh::QueryVariantType>({ { classB, classC } })),
 		} });
 
 		const auto weird_variant_type
-			= query::entryPoint<tsh::QueryVariantType>({ { st(classA), st(right_tuple) } });
+			= query::entryPoint<tsh::QueryVariantType>({ { classA, st(right_tuple) } });
 
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
@@ -526,19 +527,19 @@ private:
 		{
 			auto& var = get_var_ref(0);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(1);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(2);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			ASSERT_EQUAL(var.type.getType(), i32_or_f32);
+			ASSERT_EQUAL(var.type, st(i32_or_f32));
 		}
 
 		{
@@ -553,7 +554,7 @@ private:
                 *if_stmt.body.statements.at(0)
             );
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
-			ASSERT_EQUAL(var.type.getType(), i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
@@ -659,7 +660,7 @@ private:
 
 				auto& a_param = function.content.parameters->at(0);
 				ASSERT_EQUAL("a", a_param.name);
-				ASSERT_EQUAL(int32_type, a_param.type.getType());
+				ASSERT_EQUAL(st(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
@@ -696,8 +697,8 @@ private:
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
 
-				ASSERT_EQUAL(int32_type, abc_param.type.getType());
-				ASSERT_EQUAL(int64_type, second_param.type.getType());
+				ASSERT_EQUAL(abc_param.type, st(int32_type));
+				ASSERT_EQUAL(second_param.type, st(int64_type));
 
 				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");

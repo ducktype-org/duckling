@@ -15,7 +15,7 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= errors::HResult<tsh::AbstractType, CouldNotEvalShortPath, errors::Failed>;
+			= errors::HResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
@@ -64,13 +64,14 @@ namespace compiler::helios {
 						failed = true;
 						return;
 					} else {
-						// @todo: False here means all subtypes of a tuple are immutable.
-						// this is likely wrong, we will have to change it with
-						// type info, expression type, component type refactor
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryTupleType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
@@ -86,7 +87,11 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(ctx.query<tsh::QueryVariantType>({ subtypes }));
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
@@ -100,7 +105,7 @@ namespace compiler::helios {
 
 			if (visitor.failed) return errors::HError(errors::Failed());
 
-			auto short_path_result = visitor.result.value();
+			ShortPathResult short_path_result = visitor.result.value();
 
 			if (short_path_result.hasError()) {
 				variant_match(short_path_result.error()) {
@@ -112,11 +117,7 @@ namespace compiler::helios {
 				}
 			}
 
-			return tsh::SymbolType<>{
-				short_path_result.value(),
-				tsh::ReferenceKind::Direct,
-				tsh::Mutability::Mutable,
-			};
+			return short_path_result.value();
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

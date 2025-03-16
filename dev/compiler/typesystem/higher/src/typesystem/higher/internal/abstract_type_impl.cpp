@@ -13,9 +13,9 @@ namespace tsh::internal {
 	}
 
 	/**
-	 * @brief Creates a human-readable string representation of a vector of component types.
-	 * @param types Vector of component types to stringify.
-	 * @return A human-readable string representing a sequence of component types.
+	 * @brief Creates a human-readable string representation of a vector of symbol types.
+	 * @param types Vector of symbol types to stringify.
+	 * @return A human-readable string representing a sequence of symbol types.
 	 */
 	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
@@ -25,6 +25,46 @@ namespace tsh::internal {
 		res << ")";
 
 		return res.str();
+	}
+
+	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
+		const AbstractType target, query::Context& ctx
+	) const {
+		// Explicit override without change in implementation to add comment.
+		// Implicit coercions allow checking against null pointer.
+		// We do not allow casting to another (raw) pointer type,
+		// because we forbid implicit type (de)specification in this context.
+		// We only allow dropping mutability.
+		return target.getKind() == Kind::Bool
+		    || (target.getKind() == Kind::Pointer
+		        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
+					{ pointee, PointerAbstractType(target).getPointee() }
+				));
+	}
+
+	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
+		const AbstractType target, query::Context& ctx
+	) const {
+		// Implicit coercions are allowed to other tuples of the same size,
+		// where each component can be coerced independently.
+
+		if (target.getKind() != Kind::Tuple) return false;
+		TupleAbstractType target_tuple = target;
+
+		const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
+		if (target_components.size() != components.size()) return false;
+
+		for (usize i = 0; i < components.size(); i++) {
+			SymbolType component = components[i];
+			if (const SymbolType target_component = target_components[i];
+			    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
+					component,
+					target_component,
+				}))
+				return false;
+		}
+
+		return true;
 	}
 
 	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):

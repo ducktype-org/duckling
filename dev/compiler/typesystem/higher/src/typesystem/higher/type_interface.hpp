@@ -202,7 +202,7 @@ namespace tsh {
 		 * @param other The other InterfaceElement.
 		 * @return A strong_ordering result.
 		 *
-		 * @note We can guarantee the ordering to be strong because all the components can be
+		 * @note We can guarantee the ordering to be strong because all the fields can be
 		 * strongly ordered. Including Optionals, vectors, and Parameters.
 		 */
 		std::strong_ordering operator<=>(const InterfaceElement& other) const = default;

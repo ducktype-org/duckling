@@ -65,7 +65,7 @@ namespace compiler::helios {
 
 		HOUTFunctionContent content;
 
-		tsh::SymbolType<tsh::FunctionAbstractType> type;
+		tsh::FunctionAbstractType type;
 
 		/**
 		 * @brief Lifetime scope, thats higher

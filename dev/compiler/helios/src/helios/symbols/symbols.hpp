@@ -126,8 +126,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>);
 
-	using QueryAbstractType_Result = errors::HResult<tsh::AbstractType, errors::Failed>;
-
 	/**
 	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
 	 *
@@ -137,7 +135,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryAbstractType_Result>);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QuerySymbolType_Result>);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.

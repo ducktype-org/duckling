@@ -228,7 +228,7 @@ private:
 		const AbstractType        type_ptr = ptr_4;
 		const PointerAbstractType ptr_5    = type_ptr;
 		assertTrue(
-			ptr_5.getKind() == Pointer && ptr_5.getComponent() == ptr_4.getComponent(),
+			ptr_5.getKind() == Pointer && ptr_5.getPointee() == ptr_4.getPointee(),
 			"Pointer should survive casting."
 		);
 	}

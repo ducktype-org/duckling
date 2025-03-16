@@ -69,7 +69,11 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value_type(type) {}
+		  value_type(tsh::SymbolType{
+			  type,
+			  tsh::ReferenceKind::Direct,
+			  tsh::Mutability::Mutable,
+		  }) {}
 
 	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
@@ -99,7 +103,7 @@ namespace compiler::helios::code {
 				  tsh::SymbolType{
 					  ctx.query<tsh::QueryIntegralType>({ 64 }),
 					  tsh::ReferenceKind::Direct,
-					  tsh::Mutability::Immutable,
+					  tsh::Mutability::Mutable,
 				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )

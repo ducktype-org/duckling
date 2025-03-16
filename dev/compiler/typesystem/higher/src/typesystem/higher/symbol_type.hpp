@@ -2,13 +2,6 @@
 
 #include "abstract_type.hpp"
 
-#include <hashing/hash.hpp>
-#include <query_framework/query_impl.hpp>
-
-namespace tsh {
-	struct QueryImplicitCoercibilityOnAbstractType;
-}
-
 namespace tsh {
 	/**
 	 * @brief The kind of Reference type. See documentation of each kind for details.
@@ -104,7 +97,7 @@ namespace tsh {
 		 * @param other The source SymbolType.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
-		SymbolType(SymbolType<OTHER_ABSTRACT_TYPE> other):
+		SymbolType(const SymbolType<OTHER_ABSTRACT_TYPE>& other):
 			  abstract_type(other.getType()),
 			  reference_kind(other.getRefKind()),
 			  mutability(other.getMutability()),
@@ -131,11 +124,6 @@ namespace tsh {
 			  mutability(mutability),
 			  leakage(leakage),
 			  uniqueness(uniqueness) {}
-
-		/**
-		 * @brief Defaulted copy constructor.
-		 */
-		SymbolType(const SymbolType& other) = default;
 
 		/**
 		 * @brief Gets the underlying abstract type.
@@ -219,9 +207,11 @@ namespace tsh {
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			return hashing::justHash(
-				abstract_type, reference_kind, mutability, leakage, uniqueness
-			);
+			static base::Map<SymbolType, base::HashT> hashes{};
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+			auto new_hash = hashes.size();
+			hashes.put(*this, new_hash);
+			return new_hash;
 		}
 
 		[[nodiscard]]

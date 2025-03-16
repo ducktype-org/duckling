@@ -334,7 +334,7 @@ namespace tsh::internal {
 	};
 
 	class PointerAbstractTypeImpl final: public AbstractTypeImpl {
-		SymbolType<> component;
+		SymbolType<> pointee;
 
 	public:
 		[[nodiscard]]
@@ -348,32 +348,21 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Pointer;
 
 		[[nodiscard]]
-		SymbolType<> getComponent() const {
-			return component;
+		SymbolType<> getPointee() const {
+			return pointee;
 		}
 
 		[[nodiscard]]
 		AbstractType getUnderlyingType() const {
-			return component.getType();
+			return pointee.getType();
 		}
 
-		explicit PointerAbstractTypeImpl(const SymbolType<> component): component(component) {
+		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
 			representation = base::strConcat("pointer(", component.toString(), ")");
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const override {
-			// Explicit override without change in implementation to add comment.
-			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to another (raw) pointer type,
-			// because we forbid implicit type (de)specification in this context.
-			// We only allow dropping mutability.
-			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::Pointer
-			        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
-						{ component, PointerAbstractType(target).getComponent() }
-					));
-		}
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
@@ -396,28 +385,7 @@ namespace tsh::internal {
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const override {
-			// Implicit coercions are allowed to other tuples of the same size,
-			// where each component can be coerced independently.
-
-			if (target.getKind() != Kind::Tuple) return false;
-			TupleAbstractType target_tuple = target;
-
-			const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
-			if (target_components.size() != components.size()) return false;
-
-			for (usize i = 0; i < components.size(); i++) {
-				SymbolType component = components[i];
-				if (const SymbolType target_component = target_components[i];
-				    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
-						component,
-						target_component,
-					}))
-					return false;
-			}
-
-			return true;
-		}
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
 		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 	};

@@ -200,11 +200,11 @@ namespace tsh {
 		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
 
 		/**
-		 * @brief Gets the underlying component of the Pointer type.
-		 * @return The underlying component of the Pointer type.
+		 * @brief Gets the underlying symbol type of the Pointer type.
+		 * @return The underlying symbol type of the Pointer type.
 		 */
 		[[nodiscard]]
-		SymbolType<> getComponent() const;
+		SymbolType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.

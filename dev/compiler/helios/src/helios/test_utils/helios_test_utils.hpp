@@ -57,7 +57,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	tsh::AbstractType getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * @brief returns hout-expr of the initialization value of given const.
