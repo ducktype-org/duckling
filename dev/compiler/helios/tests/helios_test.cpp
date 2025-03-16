@@ -789,17 +789,20 @@ private:
 		auto function = hout.functions.at(0);
 		ASSERT_EQUAL(function.original_name, "main");
 
-		Ref variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
+		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
 			function.content.body->statements.at(0).ref().get()
 		);
 		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
-			variable->initial_value->ref().get()
+			variable_stmt->initial_value->ref().get()
 		);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1->callee));
 		ASSERT_EQUAL(base::StrID("btn_input_i64"), compiler::helios::name(call_expr_1->callee));
 
-		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(
+		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
 			function.content.body->statements.at(1).ref().get()
+		);
+		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			&*expr_stmt->expr
 		);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
 		ASSERT_EQUAL(base::StrID("btn_output_i64"), compiler::helios::name(call_expr_2->callee));
