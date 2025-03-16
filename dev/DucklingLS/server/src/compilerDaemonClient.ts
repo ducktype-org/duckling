@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
-import { Connection } from "vscode-languageserver";
+import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -172,6 +172,16 @@ export class CompilerDaemonClient {
 		}
 
 		return response.then(handleResponse).then(handleJSON).catch(handleCatch);
+	}
+
+	public async getCompletionItems(filePath: string, _textDocumentPosition: TextDocumentPositionParams,  connection: Connection): Promise<CompletionItem[]> {
+		await this.waitForReady(connection);
+		const base64FilePath: string = Buffer.from(uriToFilePath(filePath)).toString('base64');
+		const line: string = (_textDocumentPosition.position.line).toString();
+		const offset: string = (_textDocumentPosition.position.character).toString();
+		const response = fetch(`${DAEMON_ADRESS}/get_completion_items/${base64FilePath}/${line}/${offset}`);
+
+		return [];
 	}
 }
 
