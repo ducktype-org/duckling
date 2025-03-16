@@ -18,6 +18,7 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+#include "vm/core/process/type_metadata/definitions.hpp"
 #include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <iostream>
 
@@ -112,15 +113,30 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
 		runtime_data.local_stack_top += main_func->stack_size;
+		// Main is a non-void function and it's 0th block can't be deallocated since we need to
+		// obtain the it's return value.
+		frame->is_main = true;
+		frame->local_size = main_func->stack_size;
 
-		// O offset off the stack is reserved for the main ret_val
-		frame->local_stack_head += 8;
+
+		// @TODO: Should the main_ret_val block be preinitialized here or should we expect
+		// from the programmer to always put an extra init at the beginning of the program?
 
 		auto* instr = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+
+		// One block on the main functions block_stack left initialized. We have to deinitialize it
+		// here, after obtaining the return value. For better explanation go to `op_ret`
+		// implementation.
+		auto main_ret_val = base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		// std::cout << "Size of block stack after return from program:" << frame->block_stack.size()
+				//   << '\n';
+		auto ret_val_block = frame->block_stack.back();
+		frame->block_stack.pop_back();
+		process_memory.freeBlock(ret_val_block);
+		return main_ret_val;
 		// return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
@@ -153,7 +169,11 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
-		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		auto main_ret_val  = base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		auto ret_val_block = frame->block_stack.back();
+		frame->block_stack.pop_back();
+		process_memory.freeBlock(ret_val_block);
+		return main_ret_val;
 
 
 		POP_DIAGNOSTIC
@@ -179,7 +199,11 @@ namespace vm {
 			}
 		}
 	End:
-		return base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		auto main_ret_val  = base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
+		auto ret_val_block = frame->block_stack.back();
+		frame->block_stack.pop_back();
+		process_memory.freeBlock(ret_val_block);
+		return main_ret_val;
 
 
 #endif
@@ -269,9 +293,10 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(
+			auto main_ret_val = internalCallMain(
 				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
 			);
+			// std::cout << "Main return value: " << main_ret_val << '\n';
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);

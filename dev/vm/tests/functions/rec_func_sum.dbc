@@ -43,9 +43,7 @@ function main {
 	local_size: 24;
 
 	code: {
-        # [0, 8) main ret_val
-
-
+        init_type           int64; # [0, 8) main ret_val
         init_type           int64; # [8, 16) sum return value
         init_type           int64; # [16, 24) sum arg0
         input_l64           16;

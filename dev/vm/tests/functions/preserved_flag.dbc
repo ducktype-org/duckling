@@ -29,9 +29,9 @@ function main {
 	local_size: 24;
 
 	code: {
-		# [0, 8) -> main ret_val
-		init_type           int64; # [8, 16)
-		init_type           int64; # [16, 24)
+		init_type			int64; # [0, 8) main ret_val
+		init_type           int64; # [8, 16) local_1
+		init_type           int64; # [16, 24) local_2
 
 		mov_l64_imm         8,  1;
 		cmpEq_l64_imm       8,  1;

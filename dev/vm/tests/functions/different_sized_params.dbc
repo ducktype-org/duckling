@@ -1,6 +1,6 @@
 # Tests a function call with multiple parameters of diffrent sizes.
-# input = ""
-# output = 321
+# input = "a b c"
+# output = a * c
 
 type primitive: int32 4
 type primitive: int64 8
@@ -10,12 +10,19 @@ function check {
 	arg_count: 3;
 	next_arg_size: 0;
 	ret_size: 0;
-	local_size: 20;
+	local_size: 28;
 
 	code: {
-        output_l64          0;
-        output_l32          8;
-        output_l64          12;
+		# [0, 8) a
+		# [8, 12) b
+		# [12, 20) c
+
+		init_type 			int64; # [20, 28)
+		mov_l64_imm			20, 1; # acc := 1
+		mul_l64_l64			20, 0; # acc *= a
+		mul_l64_l64			20, 12; # acc *= c
+
+		output_l64			20;
 		ret;
 	}
 }
@@ -29,14 +36,14 @@ function main {
 	local_size: 28;
 
 	code: {
-		# [0, 8) main ret_val
+		init_type int64; # [0, 8) main ret_val
 		init_type int64; # [8, 16)
 		init_type int32; # [16, 20)
 		init_type int64; # [20, 28)
 
-        mov_l64_imm 8, 3;
-        mov_l32_imm 16, 2;
-        mov_l64_imm 20, 1;
+		input_l64	8;
+		input_l32	16;
+		input_l64	20;
 		call_func          	check;
 
 		ret;

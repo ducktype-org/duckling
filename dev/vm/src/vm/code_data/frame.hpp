@@ -47,16 +47,31 @@ namespace vm {
 		FlagData  flags{};
 
 		/**
-		 * @brief Size of arguments that were passed to a called function.
+		 * @brief Size of arguments that were passed to a function called by this one.
 		 * Needed to restore the local_stack_head when returning from a function.
 		 * @todo This is not needed if we change the local_stack_head in call_func.
 		 */
 		u64 passed_args_size = 0;
 
 		/**
-		 * @brief Size of the stack space shared in between called functions.
+		 * @brief Size of the stack space shared with the function called by this one.
 		 */
-		u64 shared_func_space_size = 0;
+		u64 shared_stack_space_size = 0;
+
+		/**
+		 * @brief Local size of the function.
+		 * Needed to restore the local_stack_top when returning from a function.
+		 */
+		u64 local_size = 0;
+
+
+		/**
+		 * @brief Is this function a main function.
+		 * If we're returning from a main function, we don't want to pop the last block on the mains
+		 * block_stack since it contains the return value of the function.
+		 */
+		bool is_main = false;
+
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type

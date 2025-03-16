@@ -26,9 +26,8 @@ function main {
 	local_size: 16;
 
 	code: {
-		# [0, 8) main ret_val
-
-		init_type       int64; # [8, 16) init a place for check() return value
+		init_type 		int64; # [0, 8) main ret_val
+		init_type       int64; # [8, 16) check() ret_val
 		call_func       check;
         output_l64      8;
 

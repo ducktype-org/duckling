@@ -1,6 +1,6 @@
 # Tests if call_func effectively deinit's it's parameters
-# input = ""
-# output = 121343
+# input = "a b c d"
+# output = a + b + c + d
 
 type primitive: int64 8
 
@@ -16,10 +16,8 @@ function foo {
 		# [8, 16) -> arg0
 		# [16, 24) -> arg1
 
-        output_l64      8;
-        output_l64      16;
-
         mov_l64_l64     0, 8;
+        add_l64_l64     0, 16;
         ret;
     }
 }
@@ -30,26 +28,30 @@ function main {
 	arg_count: 0;
     next_arg_size: 16;
     ret_size: 8;
-    local_size: 32;
+    local_size: 40;
 
     code: {
-        # [0, 8) main ret_val
+        init_type       int64; # [0, 8) main ret_val
+        init_type       int64; # [8, 16) accumulator
+        init_type       int64; # [16, 24) foo ret_val
+        init_type       int64; # [24, 32) foo arg0
+        init_type       int64; # [32, 40) foo arg1
 
-        init_type       int64; # [8, 16) foo ret_val
-        init_type       int64; # [16, 24) foo arg0
-        init_type       int64; # [24, 32) foo arg1
-        mov_l64_imm     16, 1;    
-        mov_l64_imm     24, 2;    
+        input_l64       24;
+        input_l64       32;
         call_func       foo;
 
-        # Here [16, 24) and [24, 32) should be deinitialized
-        output_l64      8;
+        # Here [24, 32) and [32, 40) should be deinitialized
+        add_l64_l64     8, 16; # acc := a + b
 
-        init_type       int64; # [16, 24) foo arg0
-        init_type       int64; # [24, 32) foo arg1
-        mov_l64_imm     16, 3;    
-        mov_l64_imm     24, 4;
+        init_type       int64; # [24, 32) foo arg0
+        init_type       int64; # [32, 40) foo arg1
+
+        input_l64       24;
+        input_l64       32;
         call_func       foo;    
+
+        add_l64_l64     8, 16; # acc += c + d
 
         output_l64      8;
 

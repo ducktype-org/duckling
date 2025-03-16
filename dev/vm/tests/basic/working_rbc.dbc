@@ -1,22 +1,30 @@
+type primitive: int64 8
+
 function main {
 	arg_size: 0;
+	arg_count: 0;
 	next_arg_size: 0;
-	local_size: 24;
-	ret_size: 0;
+	local_size: 32;
+	ret_size: 8;
 
 	code: {
-		mov_l64_imm   0, 10;
-		mov_l64_imm   8, 0;
-		mov_l64_imm   16, 1;
+		init_type 		int64; # [0, 8) main ret_val
+		init_type 		int64;
+		init_type 		int64;
+		init_type 		int64;
+
+		mov_l64_imm   8, 10;
+		mov_l64_imm   16, 0;
+		mov_l64_imm   24, 1;
 
 		label Loop;
 
-		output_l64       8;
-		add_l64_l64      8, 16;
+		output_l64       16;
+		add_l64_l64      16, 24;
 
-		cmpEq_l64_l64    8, 0;
+		cmpEq_l64_l64    16, 8;
 		jmpRelNotIf_label Loop;
 
-		ret_l64 0;
+		ret;
 	}
 }

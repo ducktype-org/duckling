@@ -3,14 +3,16 @@ type primitive: int64 8
 
 function foo {
 	arg_size: 0;
+	arg_count: 0;
 	next_arg_size: 0;
 	local_size: 20;
 	ret_size: 4;
 
-	# [0, 4) -> ret_val
-	# [4, 8) -> a
-	# [8, 12) -> b
 	code: {
+		# [0, 4) -> ret_val
+		# [4, 8) -> a
+		# [8, 12) -> b
+
 		mov_l32_imm 		8, 3;
 		mov_l32_l32 		4, 8;
 		# a = 3, b = 3
@@ -50,7 +52,7 @@ function foo {
 
 		add_l32_l32 		8, 4;
 		# b = 4
-		mov_l32_l32 		0, 8
+		mov_l32_l32 		0, 8;
 		ret;
 		
 		label fail;
@@ -64,15 +66,19 @@ function foo {
 
 function main {
 	arg_size: 0;
-	next_arg_size: 0;
+	arg_count: 0;
+	next_arg_size: 4;
 	local_size: 4;
-	ret_size: 0;
+	ret_size: 8;
 
 	code: {
-		init_type 	int32; # [0, 4) foo() ret_val
+		init_type 	int64; # [0, 8) main ret_val
+		init_type 	int32; # [8, 12) foo() ret_val
+		
 		call_func 	foo;
-		output_l32 	0;
-
+		output_l32 	8;
+		
+		deinit;
 		ret;
 	}
 }
