@@ -53,6 +53,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testBuiltinFunctions);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -780,6 +781,30 @@ private:
 		ASSERT_EQUAL(square_symbol, call_expr->callee);
 	}
 
+	void testBuiltinFunctions() {
+		auto [module, scope] = getModule(fs::FilePath(path("test_modules/builtins")));
+		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		ASSERT_EQUAL(1, hout.functions.size());
+
+		auto function = hout.functions.at(0);
+		ASSERT_EQUAL(function.original_name, "main");
+
+		Ref variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
+			function.content.body->statements.at(0).ref().get()
+		);
+		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			variable->initial_value->ref().get()
+		);
+		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1->callee));
+		ASSERT_EQUAL(base::StrID("btn_input_i64"), compiler::helios::name(call_expr_1->callee));
+
+		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			function.content.body->statements.at(1).ref().get()
+		);
+		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
+		ASSERT_EQUAL(base::StrID("btn_output_i64"), compiler::helios::name(call_expr_2->callee));
+	}
+
 	void testScopeParentsAndDepth() {
 		auto all_scopes = compiler::helios::getAllHeliosScopes();
 		message(base::strConcat("Scope count: ", all_scopes.size()));
@@ -808,6 +833,7 @@ private:
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}
 	}
+
 };
 
 TESTER_COMMON_MAIN("/compiler/helios/tests/");
