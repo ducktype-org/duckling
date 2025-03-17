@@ -30,7 +30,6 @@
 #include <vm/code_data/instruction.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
-#include "base/box.hpp"
 #include "op_case.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
@@ -234,13 +233,6 @@ namespace vm {
 			frame->local_size       = called_func.stack_size;
 
 
-			// std::cout << "**********CALL_FUNC**************\n";
-			// std::cout << "NUMBER OF ARGUMENTS OF THE CALLED FUNCTION: " << called_func.arg_count
-			// 		  << '\n';
-			// std::cout << "Callers block_stack size before: " << prev_frame->block_stack.size()
-			// 		  << '\n';
-			// std::cout << "Callees block_stack size before: " << frame->block_stack.size() << '\n';
-
 			// @TODO: called_func.arg_count should be removed one function types are correctly
 			// placed in type_metadata. When that happens, the number of arguments function expects
 			// should be taken from there and arg_count keyword should be removed from the BC and
@@ -271,15 +263,6 @@ namespace vm {
 			// block_stack.
 			for (u64 i = 0; i < called_func.arg_count; i++) prev_frame->block_stack.pop_back();
 
-			// std::cout << "Callers block_stack size after: " << prev_frame->block_stack.size()
-			// 		  << '\n';
-			// std::cout << "Callees block_stack size after: " << frame->block_stack.size() << '\n';
-			// std::cout << "PrevFrame passed args size: " << prev_frame->passed_args_size << '\n';
-			// std::cout << "Shared function_space_size: " << shared_stack_space_size << '\n';
-			// std::cout << "New local stack address: " << local_stack << '\n';
-			// std::cout << "runtime local_stack_top: " << runtime_data.local_stack_top << '\n';
-			// std::cout << "******************************\n";
-
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 		}
@@ -295,15 +278,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
 		{
 			auto function_id = static_cast<u32>(instr->arg0);
-
-			auto function = thread.executing_program->functions[function_id];
-			instr         = function.bc.data();
-
-			// No need for coping the arguments since we won't use them.
-			// Just move the pointer where the true args are.
-			auto& runtime_data    = thread.runtime_data;
-			auto  return_arg_size = function.arg_size + function.ret_size;
-			local_stack           = runtime_data.local_stack_top - return_arg_size;
+			instr            = thread.executing_program->functions[function_id].bc.data();
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
@@ -335,7 +310,6 @@ namespace vm {
 				// If we're returning from the main function, we don't pop the last block on the
 				// stack since it contains the return value of the program that has to be read in
 				// internalCallMain().
-				// if (callees_frame->is_main && callees_frame->block_stack.size() == 1) break;
 
 				auto block = callees_frame->block_stack.back();
 				if (callees_frame->is_main || !(non_void && callees_frame->block_stack.size() == 1))
@@ -344,30 +318,15 @@ namespace vm {
 				callees_frame->block_stack.pop_back();
 			}
 
-
-			// std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
-			// std::cout << "Are we returning from non_void: " << (non_void ? "Yes" : "No") << '\n';
-			// std::cout << "Calles block_stack_size after ret: " << callees_frame->block_stack.size()
-			// 		  << '\n';
-			// std::cout << "Callers block_stack_size after ret: " << frame->block_stack.size()
-			// 		  << '\n';
-
-
 			// New local_stack_top is the current address of the previous local_stack
 			// local_stack_head is moved back by the passed_arg_size, but the local_stack_top stays
 			// the same
 			thread.runtime_data.local_stack_top = frame->local_stack + frame->local_size;
 
 			// Load previous frame
-			instr       = frame->instr;  // This is already a pointer to next instr
-			local_stack = frame->local_stack;
-			// std::cout << "Stack top after return: " << thread.runtime_data.local_stack_top <<
-			// '\n'; std::cout << "Local stack address after return: " << local_stack << '\n';
-			// std::cout << "Old local stack head: " << frame->local_stack_head << '\n';
-			// std::cout << "old passed_args_size: " << frame->passed_args_size << '\n';
-			// std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
-
-			frame->passed_args_size        = 0;
+			instr                   = frame->instr;  // This is already a pointer to next instr
+			local_stack             = frame->local_stack;
+			frame->passed_args_size = 0;
 			frame->shared_stack_space_size = 0;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.
@@ -382,17 +341,6 @@ namespace vm {
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			frame->block_stack.push_back(block);
-			// std::cout << "==========INIT_TYPE=============\n";
-			// std::cout << "Block stack size: " << frame->block_stack.size() << '\n';
-			// std::cout << "Initialized type of size: " << type->getSize() << '\n';
-			// std::cout << "Local stack address: " << local_stack << '\n';
-			// std::cout << "Relative address: " << frame->local_stack_head << '\n';
-			// std::cout << "Global address: " << data_ptr << '\n';
-			// std::cout << "local_stack_size after init: "
-			// 		  << frame->local_stack_head + type->getSize() << '\n';
-			// std::cout << "Global local_stack_size after init: "
-			// 		  << local_stack + frame->local_stack_head + type->getSize() << '\n';
-			// std::cout << "=============================\n";
 			frame->local_stack_head += type->getSize();
 		}
 		FUNCTION_CONT(1);

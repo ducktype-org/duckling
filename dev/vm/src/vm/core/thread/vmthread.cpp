@@ -18,8 +18,6 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
-#include "vm/core/process/type_metadata/definitions.hpp"
-#include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <iostream>
 
 namespace vm {
@@ -118,9 +116,6 @@ namespace vm {
 		frame->is_main    = true;
 		frame->local_size = main_func->stack_size;
 
-		// u64 main_ret_val = 0;
-
-
 		// @TODO: Should the main_ret_val block be preinitialized here or should we expect
 		// from the programmer to always put an extra init at the beginning of the program?
 
@@ -132,14 +127,6 @@ namespace vm {
 		// One block on the main functions block_stack left initialized. We have to deinitialize it
 		// here, after obtaining the return value. For better explanation go to `op_ret`
 		// implementation.
-		// main_ret_val = base::safeIntConv<u64>(derefStack<i64>(local_stack, 0));
-		// std::cout << "Size of block stack after return from program:" <<
-		// frame->block_stack.size()
-		//   << '\n';
-		// auto ret_val_block = frame->block_stack.back();
-		// frame->block_stack.pop_back();
-		// process_memory.freeBlock(ret_val_block);
-		// return main_ret_val;
 		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 
 #elif USE_COMPUTED_GOTO
@@ -159,36 +146,37 @@ namespace vm {
 
 		goto* opcode_label[static_cast<u64>(instr->opcode)];
 
-	#define HANDLE_OPCODE(opcode_name)                                                        \
-		LABEL_##opcode_name: {                                                                \
-			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                   \
-			if constexpr (constexpr std::string_view opcode_str = #opcode_name;               \
-			              opcode_str == "exit") {                                             \
-				goto End;                                                                     \
-			} else {                                                                          \
-				goto* opcode_label[static_cast<u64>(instr->opcode)];                          \
-			}                                                                                 \
+	#define HANDLE_OPCODE(opcode_name)                                          \
+		LABEL_##opcode_name: {                                                  \
+			vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
+			if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
+			              opcode_str == "exit") {                               \
+				goto End;                                                       \
+			} else {                                                            \
+				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+			}                                                                   \
 		}
 	#include <vm/code_data/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		;
 
 
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<OpcodeFix8>(instr->opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                                    \
-	case OpcodeFix8::opcode_name: {                                                       \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                   \
-		if constexpr (constexpr std::string_view opcode_str = #opcode_name;               \
-		              opcode_str == "exit") {                                             \
-			goto End;                                                                     \
-		} else {                                                                          \
-			break;                                                                        \
-		}                                                                                 \
+	#define HANDLE_OPCODE(opcode_name)                                      \
+	case OpcodeFix8::opcode_name: {                                         \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
+		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
+		              opcode_str == "exit") {                               \
+			goto End;                                                       \
+		} else {                                                            \
+			break;                                                          \
+		}                                                                   \
 	}
 	#include <vm/code_data/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
@@ -199,7 +187,8 @@ namespace vm {
 			}
 		}
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);;
+		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		;
 
 
 #endif
@@ -289,10 +278,9 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			auto main_ret_val = internalCallMain(
+			internalCallMain(
 				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
 			);
-			// std::cout << "Main return value: " << main_ret_val << '\n';
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);

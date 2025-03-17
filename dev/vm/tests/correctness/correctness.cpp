@@ -19,14 +19,14 @@ private:
 	// TODO: add more inputs and some corner cases
 	void testAckermannOld() { runTestOnVm("ackermann_old.dbc", "3 3", "61"); }
 
-	void testAckermannNew() { 
-		runTestOnVm("ackermann_new.dbc", "3 3", "61"); 
+	void testAckermannNew() {
+		runTestOnVm("ackermann_new.dbc", "3 3", "61");
 		// runTestOnVm("ackermann_new.dbc", "4 1", "65533");
 	}
 
-	void testCollatz() { 
-		runTestOnVm("collatz.dbc", "10", "52"); 
-		runTestOnVm("collatz.dbc", "4242", "1276936"); 
+	void testCollatz() {
+		runTestOnVm("collatz.dbc", "10", "52");
+		runTestOnVm("collatz.dbc", "4242", "1276936");
 	}
 
 	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875"); }
