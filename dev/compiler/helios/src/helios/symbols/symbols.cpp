@@ -123,7 +123,7 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		CRef<pst::Stmt> stmtCast() const {
-			return dynamic_cast<const pst::Stmt*>(&*getData<PstSymbolData>()->pst_element);
+			return dynamic_cast<const pst::Stmt*>(&*getPSTData()->pst_element);
 		}
 	};
 
