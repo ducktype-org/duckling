@@ -420,7 +420,7 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymID> output;
 
-					auto i64_type  = tsh::SymbolType<>(
+					auto i64_type = tsh::SymbolType<>(
 						ctx.query<tsh::QueryIntegralType>({ 64, true }),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
@@ -801,14 +801,13 @@ namespace compiler::helios {
 				variant_case(PstSymbolData, pst_data) {
 					PstVisitor_GetTypeOf visitor(ctx);
 					pst_data.pst_element->acceptVisitor(visitor);
-					if_opt_some(visitor.symbol_type, type) {
-						return type;
-					}
+					if_opt_some(visitor.symbol_type, type) { return type; }
 					return errors::HError(errors::Failed());
 				}
 				variant_case(builtin::BuiltinFunctionData, builtin_data) {
-					return tsh::SymbolType<>(builtin_data.type, tsh::ReferenceKind::Direct,
-					                         tsh::Mutability::Mutable);
+					return tsh::SymbolType<>(
+						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+					);
 				}
 				variant_default { CORE_PANIC("Unknown symbol data type"); }
 			}
