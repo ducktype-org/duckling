@@ -18,7 +18,6 @@ namespace vm {
 		ByteCode    bc;
 		usize       stack_size;
 		usize       arg_size;
-		usize       next_arg_size;
 		usize       ret_size;
 		usize       arg_count;
 	};

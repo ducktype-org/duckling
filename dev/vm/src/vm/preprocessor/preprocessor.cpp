@@ -83,7 +83,6 @@ namespace vm {
 			vm::FuncData func_data;
 			func_data.name          = func->name.value;
 			func_data.arg_size      = func->arg_size;
-			func_data.next_arg_size = func->next_arg_size;
 			func_data.stack_size    = func->local_size;
 			func_data.ret_size      = func->ret_size;
 			func_data.arg_count     = func->arg_count;

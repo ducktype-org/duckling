@@ -231,32 +231,6 @@ namespace vm::parser {
 				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
-			case lang_def::Keyword::BCNextArgSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->next_arg_size != SIZE_T_MAX) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
-					);
-				}
-				auto value = state.tokens().next();
-
-				if (!value.isNumLiteral()) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"next_arg_size argument is not num-literal"
-					);
-				}
-				try {
-					out->next_arg_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"next_arg_size argument is not num-literal"
-					);
-				}
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
 
 			// @TODO: This keyword is added temporarily. It won't be needed when functions will be
 			// added to type_metadata
@@ -360,7 +334,6 @@ namespace vm::parser {
 
 		if (out->local_size == SIZE_T_MAX) state.fail(0, "Local size not set");
 		if (out->arg_size == SIZE_T_MAX) state.fail(0, "Arg size not set");
-		if (out->next_arg_size == SIZE_T_MAX) state.fail(0, "Next arg size not set");
 		if (out->ret_size == SIZE_T_MAX) state.fail(0, "Ret size not set");
 		if (out->arg_count == SIZE_T_MAX) state.fail(0, "Arg count not set");
 

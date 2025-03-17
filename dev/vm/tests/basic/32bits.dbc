@@ -4,7 +4,6 @@ type primitive: int64 8
 function foo {
 	arg_size: 0;
 	arg_count: 0;
-	next_arg_size: 0;
 	local_size: 20;
 	ret_size: 4;
 
@@ -67,7 +66,6 @@ function foo {
 function main {
 	arg_size: 0;
 	arg_count: 0;
-	next_arg_size: 4;
 	local_size: 4;
 	ret_size: 8;
 

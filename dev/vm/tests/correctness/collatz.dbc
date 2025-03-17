@@ -12,7 +12,6 @@ type primitive: int64 8
 function collatz {
 	arg_size: 8;
 	arg_count: 1;
-	next_arg_size: 0;
 	ret_size: 8;
 	local_size: 32;
 
@@ -82,7 +81,6 @@ function collatz {
 function main {
 	arg_size: 0;
 	arg_count: 0;
-	next_arg_size: 8;
 	ret_size: 8;
 	local_size: 56;
 

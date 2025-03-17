@@ -2,7 +2,6 @@ type primitive: int64 8
 
 function ackermann {
     arg_size: 24;
-    next_arg_size: 24;
     ret_size: 8;
 
     # m, n, nPtr
@@ -60,7 +59,6 @@ function ackermann {
 
 function main {
     arg_size: 0;
-    next_arg_size: 24;
     ret_size: 8;
 
     # m, n

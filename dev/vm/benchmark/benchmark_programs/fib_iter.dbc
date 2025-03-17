@@ -1,6 +1,5 @@
 function main {
     arg_size: 0;
-    next_arg_size: 0;
     ret_size: 8;
     
     # n - 0

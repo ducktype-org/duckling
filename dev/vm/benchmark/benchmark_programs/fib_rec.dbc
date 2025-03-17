@@ -1,6 +1,5 @@
 function fib {
     arg_size: 8;
-	next_arg_size: 8;
     ret_size: 8;
 
     # n - 0
@@ -41,7 +40,6 @@ function fib {
 
 function main {
     arg_size: 0;
-	next_arg_size: 8;
     ret_size: 8;
 
     # n - 0
