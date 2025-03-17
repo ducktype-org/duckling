@@ -420,8 +420,16 @@ namespace compiler::helios {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymID> output;
 
-					auto i64_type  = ctx.query<tsh::QueryIntegralType>({ 64, true });
-					auto unit_type = ctx.query<tsh::QueryUnitType>({});
+					auto i64_type  = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>({ 64, true }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+					auto unit_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryUnitType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
 						= {
