@@ -1,12 +1,14 @@
 
 function foo {
     arg_size: 0;
+    arg_count: 0;
     next_arg_size: 0;
     ret_size: 0;
-    local_size: 16;
+    local_size: 8;
 
     code: {
-        mov_l64_imm 0, 5;
+        init_type       int64;
+        mov_l64_imm     0, 5;
     }
 
 }

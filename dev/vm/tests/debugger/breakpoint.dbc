@@ -2,18 +2,26 @@ type primitive: int64 8
 
 function main {
 	arg_size: 0;
+	arg_count: 0;
 	next_arg_size: 0;
-	local_size: 24;
 	ret_size: 0;
+	local_size: 32;
 
 	code: {
-		mov_l64_imm  0, 0;
-		mov_l64_imm  8, 0;
+		init_type 		int64; # [0, 8) main ret_val
+		init_type 		int64; # [8, 16) 
+		init_type 		int64; # [16, 24)
+		init_type 		int64; # [24, 32)
+
+		mov_l64_imm  	8, 0;
+		mov_l64_imm  	16, 0;
 		breakpoint;
-		mov_l64_imm  0, 0;
-		mov_l64_imm  8, 0;
-		mov_l64_imm 16, 0;
+
+		mov_l64_imm  	8, 0;
+		mov_l64_imm  	16, 0;
+		mov_l64_imm 	24, 0;
 		breakpoint;
-		ret_l64 0;
+
+		ret;
 	}
 }
