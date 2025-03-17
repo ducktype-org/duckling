@@ -29,6 +29,8 @@ namespace tsh {
 		else {
 			// @TODO: Add .is_mutable and .pure when additional method specifiers are supported.
 			std::vector<SymbolType<>> all_parameter_types{};
+			// @note: The first parameter is the implicit self parameter. It might change to
+			// being specified in the method declaration.
 			all_parameter_types.emplace_back(source, ReferenceKind::Ref, Mutability::Mutable);
 			for (const auto& par: parameters.value()) all_parameter_types.push_back(par.type);
 			return SymbolType{

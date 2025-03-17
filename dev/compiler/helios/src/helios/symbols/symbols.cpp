@@ -713,8 +713,8 @@ namespace compiler::helios {
 			if_opt_some(class_data_parser.base_class, base) {
 				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
-					// Parsing a symbol type just to get the abstract type is a temporary hack.
-					// #608
+					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
+					// the base class is given with any specifiers apart from the abstract type.
 					class_info.base = tp.value().getType();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
@@ -726,8 +726,8 @@ namespace compiler::helios {
 				for (auto&& interface: *implements) {
 					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
 					if (tp.hasValue()) {
-						// Parsing a symbol type just to get the abstract type is a temporary hack.
-						// #608
+						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
+						// the interface is given with any specifiers apart from the abstract type.
 						class_info.implements.push_back(tp.value().getType());
 					} else {
 						// We just fail here, error should be reported by EvalExprToType
