@@ -1,0 +1,118 @@
+
+function collatz {
+	arg_size: 8;
+	next_arg_size: 0;
+	ret_size: 0;
+
+	# n - 0
+	# j - 8
+	# tmp1 - 16
+	local_size: 24;
+
+	code: {
+
+		# n := argument
+		getFstArg_l64					0;
+
+		# j := 0
+		mov_l64_imm           8, 0;
+
+		# if n == 1: end
+		cmpEq_l64_imm         0, 1;
+		jmpRelIf_label        End;
+
+		# do-while (n != 1):
+		label WhileNneq0;
+
+			# if n % 2 == 0:
+			
+			# if condition:
+				# tmp := n
+				mov_l64_l64          16, 0;
+				# tmp %= 2
+				mod_l64_imm          16, 2;
+				cmpEq_l64_imm        16, 0;
+				jmpRelIf_label       else;
+
+			# if code:
+				# n = 3n + 1;
+				mul_l64_imm		     0, 3;
+				add_l64_imm          0, 1;
+				jmpRel_label         afterIf;
+			
+			# else 
+				label else;
+
+				# else code:
+					# n = n / 2
+					div_l64_imm  0, 2;
+				
+			label afterIf;
+
+			# if n > j: # j := n
+			cmpG_l64_l64     0, 8;
+			cmov_l64_l64     8, 0;
+
+			cmpEq_l64_imm         0, 1;
+			jmpRelNotIf_label     WhileNneq0;
+
+		label End;
+
+		# return j
+		ret_l64 8;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	next_arg_size: 8;
+	ret_size: 0;
+
+	# x - 0
+	# s - 8
+	# i - 16
+	# tmp - 24
+	local_size: 32;
+
+	code: {
+		# x := input
+		input_l64       0;
+
+		# s := 0
+		mov_l64_imm     8, 0;
+
+		# i := 1
+		mov_l64_imm     16, 1;
+
+		# do-for (x > i; i++)
+		label Loop;
+			# output_l64         16;
+
+			# tmp := collatz(i)
+			setFstArg_l64			 16;
+			call_func          0;
+			mov_l64_r0         24;
+
+			# if tmp > s:
+			cmpG_l64_l64       24, 8;
+			jmpRelNotIf_label  EndIF;
+				mov_l64_l64    8, 24;
+
+			label EndIF;
+
+			# i++;
+			add_l64_imm      16, 1;
+
+			# output_l64       0;
+			# output_l64       16;
+			# if x > i : end
+			cmpG_l64_l64     0, 16;
+			jmpRelIf_label   Loop;
+
+		output_l64      8;
+
+		ret_l64         16;
+	}
+
+}
