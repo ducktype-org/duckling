@@ -107,26 +107,17 @@ namespace vm {
 		pre_frame->instr       = &exit_instr;
 		pre_frame->local_stack = runtime_data.local_stack_top;
 
-		// Frame of the main function. Main has one return value of size 8;
+		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_top;
 		runtime_data.local_stack_top += main_func->stack_size;
-		// Main is a non-void function and it's 0th block can't be deallocated since we need to
-		// obtain the it's return value.
 		frame->is_main    = true;
 		frame->local_size = main_func->stack_size;
-
-		// @TODO: Should the main_ret_val block be preinitialized here or should we expect
-		// from the programmer to always put an extra init at the beginning of the program?
 
 		auto* instr = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-
-		// One block on the main functions block_stack left initialized. We have to deinitialize it
-		// here, after obtaining the return value. For better explanation go to `op_ret`
-		// implementation.
 		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
 
 #elif USE_COMPUTED_GOTO
@@ -161,7 +152,6 @@ namespace vm {
 
 	End:
 		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
-		;
 
 
 		POP_DIAGNOSTIC
@@ -188,7 +178,6 @@ namespace vm {
 		}
 	End:
 		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
-		;
 
 
 #endif

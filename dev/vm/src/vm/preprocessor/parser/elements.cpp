@@ -237,8 +237,6 @@ namespace vm::parser {
 				break;
 			}
 
-			// @TODO: This keyword is added temporarily. It won't be needed when functions will be
-			// added to type_metadata
 			case lang_def::Keyword::BCArgumentCount: {
 				state.parse().one(lang_def::NamedOperator::Colon);
 				if (out->arg_count != SIZE_T_MAX) {

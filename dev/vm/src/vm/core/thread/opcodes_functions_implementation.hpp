@@ -201,16 +201,13 @@ namespace vm {
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
 
 			// Save current registers and flow.
-			frame->instr            = instr + 1;
-			frame->local_stack      = local_stack;
-			frame->passed_args_size = called_func.arg_size;
-			// @TODO: Potentially change tha shared_func_space_size to callee_ret_size to improve
-			// readability.
+			frame->instr                   = instr + 1;
+			frame->local_stack             = local_stack;
+			frame->passed_args_size        = called_func.arg_size;
 			frame->shared_stack_space_size = shared_stack_space_size;
 
 			// Save the last frame
 			auto* prev_frame = frame;
-
 
 			frame++;
 
@@ -218,70 +215,47 @@ namespace vm {
 
 			// Update values passed as arguments.
 			instr = called_func.bc.data();
-
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 
-			// This assumes, that local_size is the sum of sizes of: ret_val + passed_args +
-			// new_local_args
+			// Assumes that local_size = ret_val + passed_args + new_local_args.
 			runtime_data.local_stack_top = local_stack + called_func.stack_size;
-
-			// First few frames are already initialized with the return value spot and args passed
-			// to the function First free spot in the local stack is the one after them.
-			frame->local_stack_head = shared_stack_space_size;
-			frame->local_size       = called_func.stack_size;
-
-
-			// @TODO: called_func.arg_count should be removed one function types are correctly
-			// placed in type_metadata. When that happens, the number of arguments function expects
-			// should be taken from there and arg_count keyword should be removed from the BC and
-			// parser.
-
-
-			// DEINITIALIZING ARGUMENTS IN CALLERS FRAME AND INITIALIZING THEM IN CALLEES FRAME.
-			// Arguments passed on the top of the stack are deinitialized by the call, thus we move
-			// the stack head back by the size of arguments so only the ret_val from a function is
-			// left initialized.
-			// We have to copy caller arguments to callee's block_stack.
-			// For that, we need to know the number of arguments a function takes(number of blocks
-			// to copy), not just the arg_size
-			prev_frame->local_stack_head -= called_func.arg_size;
-
-
-			// This is the id of the callee's arg0 block in the callers block_stack.
-			bool called_non_void = called_func.ret_size != 0;
-			auto shared_blocks_start_ix
-				= called_non_void ? prev_frame->block_stack.size() - called_func.arg_count - 1
-			                      : prev_frame->block_stack.size() - called_func.arg_count;
-
-
-			// If a non-void function is called we also push ret_val block into callees block_stack
+			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
+				CORE_PANIC("VM stack overflow.");
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
+			// This is the id of the first shared block in the callers block_stack. If the called
+			// function is non-void we also count the ret_val block.
+			// @TODO: called_func.arg_count should be removed once it's possible to aquire arg_count
+			// from type_metadata
+			auto shared_blocks_start_ix
+				= called_func.ret_size != 0
+			        ? prev_frame->block_stack.size() - called_func.arg_count - 1
+			        : prev_frame->block_stack.size() - called_func.arg_count;
+
+			frame->local_stack_head = shared_stack_space_size;
+			frame->local_size       = called_func.stack_size;
 			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
 				frame->block_stack.push_back(prev_frame->block_stack[i]);
-				auto local_offset
-					= prev_frame->block_idx_to_local_offset[i];  // offset in the local_stack of the
-				                                                 // caller
+				auto callers_local_offset = prev_frame->block_idx_to_local_offset[i];
+				// This points to the ret_val offset.
 				auto offset_before_ret_val = prev_frame->local_stack_head - called_func.ret_size;
-				auto new_offset            = local_offset - offset_before_ret_val;
+				auto new_offset            = callers_local_offset - offset_before_ret_val;
 
 				frame->local_offset_to_block_idx.put(new_offset, i - shared_blocks_start_ix);
 				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
 			}
-			// Remove the argument blocks from callers block stack. ret_val block stays in callers
-			// block_stack.
+
+			// Remove the argument blocks from callers block stack.
+			prev_frame->local_stack_head -= called_func.arg_size;
 			for (u64 i = 0; i < called_func.arg_count; i++) {
-				u64 block_idx = prev_frame->block_stack.size() - 1;	
+				u64 block_idx    = prev_frame->block_stack.size() - 1;
 				u64 local_offset = prev_frame->block_idx_to_local_offset[block_idx];
 				prev_frame->block_stack.pop_back();
 				prev_frame->block_idx_to_local_offset.erase(block_idx);
 				prev_frame->local_offset_to_block_idx.erase(local_offset);
-
 			}
-			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -309,7 +283,6 @@ namespace vm {
 			if (callees_frame->is_main)
 				callees_frame->regs.p64_reg_0 = derefStack<i64>(local_stack, 0);
 
-
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
 			// Previous frame is just before current frame in the array, so that
@@ -318,16 +291,12 @@ namespace vm {
 			// call stack frame.
 			frame--;  // This is now the callers frame.
 
-			// If the function we're returning from is non-void, we don't deinitialize the first
-			// frame on the block_stack, since it's being used by the caller (it contains the return
-			// value). We just pop it.
-			// @TODO: Make non_void true for main as well.
+			// If the function we're returning from is non-void and not main, we don't deinitialize
+			// the first frame on the block_stack, since it's being used by the caller (it contains
+			// the return value). We just pop it. If we're returning from main, the return value has
+			// been already put in the r0 register, thus we can deinitialize it.
 			bool non_void = frame->shared_stack_space_size > frame->passed_args_size;
 			while (!callees_frame->block_stack.empty()) {
-				// If we're returning from the main function, we don't pop the last block on the
-				// stack since it contains the return value of the program that has to be read in
-				// internalCallMain().
-
 				auto block = callees_frame->block_stack.back();
 				if (callees_frame->is_main || !(non_void && callees_frame->block_stack.size() == 1))
 					thread.process.getMemory().freeBlock(block);
@@ -336,9 +305,7 @@ namespace vm {
 			}
 			callees_frame->local_offset_to_block_idx.clear();
 			callees_frame->block_idx_to_local_offset.clear();
-			// New local_stack_top is the current address of the previous local_stack
-			// local_stack_head is moved back by the passed_arg_size, but the local_stack_top stays
-			// the same
+
 			thread.runtime_data.local_stack_top = frame->local_stack + frame->local_size;
 
 			// Load previous frame
@@ -376,12 +343,12 @@ namespace vm {
 
 			auto block = frame->block_stack.back();
 			auto type  = thread.process_memory.getBlockType(block);
-			
+
 			frame->block_stack.pop_back();
 			auto block_local_offset = frame->block_idx_to_local_offset[block_idx];
 			frame->block_idx_to_local_offset.erase(block_idx);
 			frame->local_offset_to_block_idx[block_local_offset];
-			
+
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
 		}

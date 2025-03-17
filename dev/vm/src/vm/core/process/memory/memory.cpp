@@ -1,5 +1,4 @@
 #include <base/exceptions.hpp>
-#include <iostream>
 #include <mutex>
 #include "memory.hpp"
 
@@ -54,7 +53,6 @@ namespace vm {
 
 	void Memory::freeBlock(Ref<Block> block) {
 		std::unique_lock lock(mutex);
-		// std::cout << "FREE BLOCK\n";
 		block->deallocated = true;
 		block->data.allocator->deallocate(&block->data);
 		if (block->refcount == 0) deleteBlock(block);
