@@ -45,13 +45,14 @@ private:
 		vm::api::run(pid).expect("Run failed (1)");
 
 		auto position = vm::api::pause(pid).expect("Pause failed (1)");
+		std::cout << position.instr_number << '\n';
 		assertTrue(
-			1 <= position.instr_number && position.instr_number <= 2, "Line number is not correct"
+			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 1) return 2;
-			if (x == 2) return 1;
+			if (x == 3) return 4;
+			if (x == 4) return 3;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};

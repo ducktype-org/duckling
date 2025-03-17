@@ -12,11 +12,9 @@ function main {
 		init_type 		int64; # [8, 16) 
 		init_type 		int64; # [16, 24)
 		init_type 		int64; # [24, 32)
-
 		mov_l64_imm  	8, 0;
 		mov_l64_imm  	16, 0;
 		breakpoint;
-
 		mov_l64_imm  	8, 0;
 		mov_l64_imm  	16, 0;
 		mov_l64_imm 	24, 0;
