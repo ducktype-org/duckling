@@ -250,19 +250,36 @@ namespace vm {
 
 
 			// This is the id of the callee's arg0 block in the callers block_stack.
-			auto shared_blocks_start_ix = prev_frame->block_stack.size() - called_func.arg_count;
+			bool called_non_void = called_func.ret_size != 0;
+			auto shared_blocks_start_ix
+				= called_non_void ? prev_frame->block_stack.size() - called_func.arg_count - 1
+			                      : prev_frame->block_stack.size() - called_func.arg_count;
+
 
 			// If a non-void function is called we also push ret_val block into callees block_stack
-			if (called_func.ret_size != 0) shared_blocks_start_ix--;
 
-			// Move shared blocks into callee's block stack
-			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++)
+			// Move shared blocks into callee's block stack and block_local_offset map.
+			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
 				frame->block_stack.push_back(prev_frame->block_stack[i]);
+				auto local_offset
+					= prev_frame->block_idx_to_local_offset[i];  // offset in the local_stack of the
+				                                                 // caller
+				auto offset_before_ret_val = prev_frame->local_stack_head - called_func.ret_size;
+				auto new_offset            = local_offset - offset_before_ret_val;
 
+				frame->local_offset_to_block_idx.put(new_offset, i - shared_blocks_start_ix);
+				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
+			}
 			// Remove the argument blocks from callers block stack. ret_val block stays in callers
 			// block_stack.
-			for (u64 i = 0; i < called_func.arg_count; i++) prev_frame->block_stack.pop_back();
+			for (u64 i = 0; i < called_func.arg_count; i++) {
+				u64 block_idx = prev_frame->block_stack.size() - 1;	
+				u64 local_offset = prev_frame->block_idx_to_local_offset[block_idx];
+				prev_frame->block_stack.pop_back();
+				prev_frame->block_idx_to_local_offset.erase(block_idx);
+				prev_frame->local_offset_to_block_idx.erase(local_offset);
 
+			}
 			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 		}
@@ -317,7 +334,8 @@ namespace vm {
 
 				callees_frame->block_stack.pop_back();
 			}
-
+			callees_frame->local_offset_to_block_idx.clear();
+			callees_frame->block_idx_to_local_offset.clear();
 			// New local_stack_top is the current address of the previous local_stack
 			// local_stack_head is moved back by the passed_arg_size, but the local_stack_top stays
 			// the same
@@ -340,6 +358,12 @@ namespace vm {
 			);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
+			frame->local_offset_to_block_idx.put(
+				frame->local_stack_head, frame->block_stack.size()
+			);
+			frame->block_idx_to_local_offset.put(
+				frame->block_stack.size(), frame->local_stack_head
+			);
 			frame->block_stack.push_back(block);
 			frame->local_stack_head += type->getSize();
 		}
@@ -348,9 +372,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(deinit)(FUNCTION_ARGS) {
 		{
+			u64 block_idx = frame->block_stack.size() - 1;
+
 			auto block = frame->block_stack.back();
 			auto type  = thread.process_memory.getBlockType(block);
+			
 			frame->block_stack.pop_back();
+			auto block_local_offset = frame->block_idx_to_local_offset[block_idx];
+			frame->block_idx_to_local_offset.erase(block_idx);
+			frame->local_offset_to_block_idx[block_local_offset];
+			
 			thread.process_memory.freeBlock(block);
 			frame->local_stack_head -= type->getSize();
 		}
@@ -464,6 +495,16 @@ namespace vm {
 			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
 		}
 		FUNCTION_CONT(next);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
+		{
+			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto  block     = frame->block_stack[block_idx];
+			thread.process.getMemory().setPointer(pointer, Memory::getPointer(block));
+		}
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {

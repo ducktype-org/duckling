@@ -27,6 +27,7 @@ namespace vm {
 				variant_case(vm::opargs::StackLocalI16, offset) return offset.offset;
 				variant_case(vm::opargs::StackLocalI32, offset) return offset.offset;
 				variant_case(vm::opargs::StackLocalI64, offset) return offset.offset;
+				variant_case(vm::opargs::StackLocalAny, offset) return offset.offset;
 				variant_case(vm::opargs::StackLocalPtr, offset) return offset.offset;
 				variant_case(vm::opargs::ArgsOffset, offset) return offset.offset;
 				variant_case(vm::opargs::Type, type_arg) {

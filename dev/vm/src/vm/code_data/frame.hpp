@@ -8,6 +8,7 @@
  */
 #pragma once
 
+#include <base/maps.hpp>
 #include <base/ints.hpp>
 
 #include <base/optional.hpp>
@@ -78,6 +79,23 @@ namespace vm {
 		 * and destroyed with deinit.
 		 */
 		std::vector<Ref<Block>> block_stack;
+
+		/**
+		 * @brief Mapping from stack offset to ID of block
+		 * responisble for data on that offset.
+		 *
+		 * Used when creating pointers to local variables.
+		 */
+		base::HashMap<u64, u64> local_offset_to_block_idx;
+
+		/**
+		 * @brief Mapping from ID of block to the offset on the local stack.
+		 *
+		 * Used when calling and returning from the function to populate the 
+		 * local_offset_to_block_idx of the called function (to make is possible
+		 * to create a pointer to a passed argument).
+		 */
+		 base::HashMap<u64, u64> block_idx_to_local_offset;
 
 		/**
 		 * @brief First free byte in the local stack.
