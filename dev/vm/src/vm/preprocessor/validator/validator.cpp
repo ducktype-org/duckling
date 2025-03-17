@@ -4,6 +4,7 @@
 #include <base/variant.hpp>
 #include <vm/code_data/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
+#include "base/string_id.hpp"
 #include "errors.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
@@ -40,6 +41,7 @@ namespace vm::validator {
 			void validateMainExistance();
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
+			void validateJumpStackStructure();
 		};
 
 		base::Optional<std::string> Validator::validateProgram() {
@@ -116,6 +118,42 @@ namespace vm::validator {
 		}
 
 		void Validator::validateDuplicateFunctionDeclarations() { return; }
+
+		void Validator::validateJumpStackStructure() {
+			for (const auto& func: program.functions) {
+				int instruction_counter = 0;
+				int current_depth = 0;
+				using JumpRange = struct {int depth; int l; int r;};
+				base::HashMap<base::StrID, JumpRange> jump_ranges;
+				for (const auto& op: func->code->opcodes) {
+					if (op->opcode_name.strView() == "init_type") {
+						current_depth++;
+					} else if (op->opcode_name.strView() == "deinit") {
+						current_depth--;
+					} else if (op->opcode_name.strView() == "label" || op->opcode_name.strView() == "jmpRel_label") { // TODO: change to all jumps
+						variant_match(op->args[0].arg) {
+							variant_case(opargs::Label, label) {
+								base::StrID label_name = label.label_name;
+								if (jump_ranges.contains(label_name)) {
+									if (jump_ranges[label_name].depth != current_depth) {
+										// Stack structure invalid!!!
+									}
+									jump_ranges[label_name].r = instruction_counter;
+								}
+								else {
+									jump_ranges[label_name] = {.depth=current_depth, .l=instruction_counter, .r=instruction_counter};
+								}
+							}
+							variant_default {
+								CORE_ASSERT(false, "expected label name after jump opcode");
+							}
+						}
+					}
+					instruction_counter++;
+				}
+				// TODO: check if minimum in range is equal to stored depth
+			}
+		}
 	}
 
 	base::Optional<std::string> verify(const parser::ParsedProgram& program) {
