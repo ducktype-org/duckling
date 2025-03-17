@@ -8,7 +8,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testAckermannOld);
 		TESTER_ADD_TEST(testAckermannNew);
-		// TESTER_ADD_TEST(testCollatz);
+		TESTER_ADD_TEST(testCollatz);
 		TESTER_ADD_TEST(testFibIter);
 		TESTER_ADD_TEST(testFibRec);
 		TESTER_ADD_TEST(testTailCall);
@@ -24,7 +24,10 @@ private:
 		// runTestOnVm("ackermann_new.dbc", "4 1", "65533");
 	}
 
-	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936"); }
+	void testCollatz() { 
+		runTestOnVm("collatz.dbc", "10", "52"); 
+		runTestOnVm("collatz.dbc", "4242", "1276936"); 
+	}
 
 	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875"); }
 

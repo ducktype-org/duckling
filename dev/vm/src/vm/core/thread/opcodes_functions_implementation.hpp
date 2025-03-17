@@ -239,8 +239,7 @@ namespace vm {
 			// 		  << '\n';
 			// std::cout << "Callers block_stack size before: " << prev_frame->block_stack.size()
 			// 		  << '\n';
-			// std::cout << "Callees block_stack size before: " << frame->block_stack.size() <<
-			// '\n';
+			// std::cout << "Callees block_stack size before: " << frame->block_stack.size() << '\n';
 
 			// @TODO: called_func.arg_count should be removed one function types are correctly
 			// placed in type_metadata. When that happens, the number of arguments function expects
@@ -348,9 +347,10 @@ namespace vm {
 
 			// std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
 			// std::cout << "Are we returning from non_void: " << (non_void ? "Yes" : "No") << '\n';
-			// std::cout << "Calles block_stack_size after ret: " <<
-			// callees_frame->block_stack.size() << '\n'; std::cout << "Callers block_stack_size
-			// after ret: " << frame->block_stack.size() << '\n';
+			// std::cout << "Calles block_stack_size after ret: " << callees_frame->block_stack.size()
+			// 		  << '\n';
+			// std::cout << "Callers block_stack_size after ret: " << frame->block_stack.size()
+			// 		  << '\n';
 
 
 			// New local_stack_top is the current address of the previous local_stack
