@@ -72,7 +72,7 @@ namespace compiler::helios::code {
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
-		tsh::AbstractType value_type;
+		tsh::SymbolType<> value_type;
 
 		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type);
 

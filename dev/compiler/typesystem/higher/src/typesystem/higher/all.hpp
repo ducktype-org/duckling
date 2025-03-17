@@ -6,8 +6,9 @@
 #pragma once
 
 #include "kind.hpp"
-#include "expression_type.hpp"
 #include "abstract_type.hpp"
+#include "symbol_type.hpp"
+#include "expression_type.hpp"
 #include "types.hpp"
 #include "type_interface.hpp"
 

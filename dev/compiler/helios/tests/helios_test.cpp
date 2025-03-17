@@ -62,6 +62,16 @@ public:
 private:
 	// @TODO: test_modules/aliases are not used in tests
 
+	using enum tsh::Mutability;
+
+	static tsh::SymbolType<> st(const tsh::AbstractType abstract_type) {
+		return tsh::SymbolType{
+			abstract_type,
+			tsh::ReferenceKind::Direct,
+			Mutable,
+		};
+	}
+
 	void testI32Consts() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/constants")));
 
@@ -88,7 +98,8 @@ private:
 		          ->valueOrThrow();
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
-		          ->valueOrThrow();
+		          ->valueOrThrow()
+		          .getType();
 
 		ASSERT_EQUAL(2, first_class_info.members.size());
 		ASSERT_EQUAL(2, first_class_info.methods.size());
@@ -125,21 +136,20 @@ private:
 		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
 
-		const auto tuple_int_int               = getTypeOf("TupleII", root_scope);
-		const auto tuple_int_int_abstract_type = query::entryPoint<tsh::QueryTupleType>(
-			{ { { .type = INT32_TYPE, .is_mutable = false },
-		        { .type = INT32_TYPE, .is_mutable = false } } }
-		);
+		const auto tuple_int_int = getTypeOf("TupleII", root_scope);
+		const auto tuple_int_int_abstract_type
+			= query::entryPoint<tsh::QueryTupleType>({ { st(INT32_TYPE), st(INT32_TYPE) } });
 		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_abstract_type);
 
 		const auto first_variant = getTypeOf("first_variant", root_scope);
 		const auto first_variant_abstract_type
-			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE } });
+			= query::entryPoint<tsh::QueryVariantType>({ { st(INT32_TYPE), st(F32_TYPE) } });
 		ASSERT_EQUAL(true, first_variant == first_variant_abstract_type);
 
-		const auto second_variant = getTypeOf("second_variant", root_scope);
-		const auto second_variant_abstract_type
-			= query::entryPoint<tsh::QueryVariantType>({ { INT32_TYPE, F32_TYPE, BOOL_TYPE } });
+		const auto second_variant               = getTypeOf("second_variant", root_scope);
+		const auto second_variant_abstract_type = query::entryPoint<tsh::QueryVariantType>(
+			{ { st(INT32_TYPE), st(F32_TYPE), st(BOOL_TYPE) } }
+		);
 		ASSERT_EQUAL(true, second_variant == second_variant_abstract_type);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
@@ -148,13 +158,13 @@ private:
 		const auto classB = getTypeFromDefinition("B", root_scope);
 		const auto classC = getTypeFromDefinition("C", root_scope);
 
-		auto right_tuple = query::entryPoint<tsh::QueryTupleType>(
-			{ { { classA, false },
-		        { query::entryPoint<tsh::QueryVariantType>({ { classB, classC } }), false } } }
-		);
+		auto right_tuple = query::entryPoint<tsh::QueryTupleType>({ {
+			classA,
+			st(query::entryPoint<tsh::QueryVariantType>({ { classB, classC } })),
+		} });
 
 		const auto weird_variant_type
-			= query::entryPoint<tsh::QueryVariantType>({ { classA, right_tuple } });
+			= query::entryPoint<tsh::QueryVariantType>({ { classA, st(right_tuple) } });
 
 		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
 
@@ -165,17 +175,13 @@ private:
 
 		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
 
-		const auto tuple_f16_f32 = query::entryPoint<tsh::QueryTupleType>(
-			{ { { F16_TYPE, false }, { F32_TYPE, false } } }
-		);
-		const auto tuple_i16_i32 = query::entryPoint<tsh::QueryTupleType>(
-			{ { { INT16_TYPE, false }, { INT32_TYPE, false } } }
-		);
+		const auto tuple_f16_f32
+			= query::entryPoint<tsh::QueryTupleType>({ { st(F16_TYPE), st(F32_TYPE) } });
+		const auto tuple_i16_i32
+			= query::entryPoint<tsh::QueryTupleType>({ { st(INT16_TYPE), st(INT32_TYPE) } });
 
-		const auto tuple_ii_ff_abstract_type = query::entryPoint<tsh::QueryTupleType>(
-			{ { { .type = tuple_i16_i32, .is_mutable = false },
-		        { .type = tuple_f16_f32, .is_mutable = false } } }
-		);
+		const auto tuple_ii_ff_abstract_type
+			= query::entryPoint<tsh::QueryTupleType>({ { st(tuple_i16_i32), st(tuple_f16_f32) } });
 
 		ASSERT_EQUAL(tuple_ii_ff, tuple_ii_ff_abstract_type);
 	}
@@ -513,32 +519,33 @@ private:
 		};
 
 
-		auto i32_type   = query::entryPoint<tsh::QueryIntegralType>(32);
-		auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
-		auto i32_or_f32 = query::entryPoint<tsh::QueryVariantType>({ { i32_type, f32_type } });
+		auto i32_type = query::entryPoint<tsh::QueryIntegralType>(32);
+		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
+		auto i32_or_f32
+			= query::entryPoint<tsh::QueryVariantType>({ { st(i32_type), st(f32_type) } });
 
 		{
 			auto& var = get_var_ref(0);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
-			ASSERT_EQUAL(var.type.type, i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(1);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "b");
-			ASSERT_EQUAL(var.type.type, i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(2);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "c");
-			ASSERT_EQUAL(var.type.type, i32_or_f32);
+			ASSERT_EQUAL(var.type, st(i32_or_f32));
 		}
 
 		{
 			auto& var = get_var_ref(3);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "d");
-			ASSERT_EQUAL(var.type.type.getKind(), tsh::Kind::Class);
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
 
 		{
@@ -547,13 +554,13 @@ private:
                 *if_stmt.body.statements.at(0)
             );
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "x");
-			ASSERT_EQUAL(var.type.type, i32_type);
+			ASSERT_EQUAL(var.type, st(i32_type));
 		}
 
 		{
 			auto& var = get_var_ref(5);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
-			ASSERT_EQUAL(var.type.type.getKind(), tsh::Kind::Class);
+			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
 
 		// debug print test just for cov and to see if it does not throw:
@@ -653,7 +660,7 @@ private:
 
 				auto& a_param = function.content.parameters->at(0);
 				ASSERT_EQUAL("a", a_param.name);
-				ASSERT_EQUAL(int32_type, a_param.type.type);
+				ASSERT_EQUAL(st(int32_type), a_param.type);
 				assertTrue(a_param.initial_value.empty(), "No initial value expected");
 
 				// get "a" thru return:
@@ -674,7 +681,8 @@ private:
 
 				ASSERT_EQUAL(int32_type, a_type.getType());
 				ASSERT_EQUAL(
-					int32_type, ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
+					st(int32_type),
+					ctx.query<compiler::helios::QueryTypeOfSymbol>({ a_sym })->value()
 				);
 
 				ASSERT_EQUAL(a_sym, a_param.helios_symbol);
@@ -689,8 +697,8 @@ private:
 				ASSERT_EQUAL("abc", abc_param.name);
 				ASSERT_EQUAL("second", second_param.name);
 
-				ASSERT_EQUAL(int32_type, abc_param.type.type);
-				ASSERT_EQUAL(int64_type, second_param.type.type);
+				ASSERT_EQUAL(abc_param.type, st(int32_type));
+				ASSERT_EQUAL(second_param.type, st(int64_type));
 
 				assertTrue(abc_param.initial_value.has_value(), "Initial value expected");
 				assertTrue(second_param.initial_value.empty(), "No initial value expected");
