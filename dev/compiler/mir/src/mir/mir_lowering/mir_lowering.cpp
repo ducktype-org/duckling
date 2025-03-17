@@ -17,7 +17,7 @@ namespace compiler::mir {
 
 	Function::Function(
 		base::StrID                  name,
-		tsh::AbstractType            return_type,
+		tsh::SymbolType<>            return_type,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -50,12 +50,12 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-		MirLocation     value;
+		MIRValue        value;
 	};
 
 	/**
@@ -258,10 +258,11 @@ namespace compiler::mir {
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
 			const auto function_return_type
-				= tsh::FunctionAbstractType(
+				= tsh::SymbolType<tsh::FunctionAbstractType>(
 					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
 						  ->expect("Handling errors in HOUT is not supported yet")
 				)
+			          .getType()
 			          .getResultType();
 
 			return Function{
@@ -284,18 +285,17 @@ namespace compiler::mir {
 		LocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
-				tsh::ComponentType{ .type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-										"Handling ERRORS in MIR is not supported yet..."
-									) },
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
 				scope(helios_id),
 			});
 			return local_list.getRef(key).value();
 		}
 
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::AbstractType type, const helios::ScopeID scope) {
-			const auto key
-				= local_list.emplaceBack(MirLocal{ tsh::ComponentType{ .type = type }, scope });
+		LocalRef addTmp(const tsh::SymbolType<> type, const helios::ScopeID scope) {
+			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
 			return local_list.getRef(key).value();
 		}
 
@@ -496,11 +496,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
@@ -508,7 +508,8 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
+			output({ .begin = continuation,
+			         .value = MIRValue{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -520,9 +521,10 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type = locationType(right_res, function.getContext());
+			const auto argument_type       = locationType(right_res, function.getContext());
+			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
-				argument_type == locationType(left_res, function.getContext()),
+				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different types"
 			);
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
@@ -554,7 +556,7 @@ namespace compiler::mir {
 				expr.lifetime_scope,
 			});
 
-			output({ sub_continuation, target_location });
+			output({ .begin = sub_continuation, .value = target_location });
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -573,8 +575,33 @@ namespace compiler::mir {
 			throw base::NotYetImplemented("linked identifier expr");
 		}
 
-		void visitCallExpr(const hc::CallExpr&) override {
-			throw base::NotYetImplemented("call expr");
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			auto       call = continuation->addHole();
+			const auto call_result
+				= function.addTmp(expr.expression_type.getSymbolType(), expr.lifetime_scope);
+
+			auto                  sub_continuation = continuation;
+			std::vector<MIRValue> args;
+			args.emplace_back(MirFunctionLiteral{ expr.callee });
+			for (const auto& arg: expr.arguments) {
+				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
+				args.push_back(sub_res);
+				sub_continuation = expr_continuation;
+			}
+
+			// @TODO: #505 here in the future we (probably) will have to handle
+			// move operations related to the passing of the arguments to the function
+
+			call.fill(Instruction{
+				Operation::Call,
+				{ call_result },
+				args,
+				{ flagConstruct(call_result) },
+				expr.lifetime_scope,
+			});
+
+
+			return output({ .begin = sub_continuation, .value = call_result });
 		}
 
 	private:
@@ -617,13 +644,23 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::AbstractType locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
-					return ctx.query<tsh::QueryIntegralType>({ 64 });
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryIntegralType>({ 64 }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
 				}
-				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
-				variant_case(LocalRef, local) { return local->type.type; }
+				variant_case_novalue(MirBoolConst) {
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryBoolType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(LocalRef, local) { return local->type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();

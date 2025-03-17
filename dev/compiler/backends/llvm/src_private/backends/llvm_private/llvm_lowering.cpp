@@ -194,7 +194,7 @@ namespace compiler::backend_llvm {
 		}
 
 		/**
-		 * @brief Maps LIRLocation to LLVM Value.
+		 * @brief Maps LIRValue to LLVM Value.
 		 *
 		 * This function may generate new LLVM instructions if necessary. For example,
 		 * when loading the value of a local variable (which we store behind a pointer
@@ -204,11 +204,11 @@ namespace compiler::backend_llvm {
 		 *
 		 * @note In llvm a lot of things can be treated as values, and
 		 * it's based on inheritance.
-		 * @param lir_location The LirLocation to convert into an LLVM Value.
+		 * @param lir_location The LIRValue to convert into an LLVM Value.
 		 * @param builder The LLVM IRBuilder to use for loading the value, if necessary.
 		 * @return llvm::Value*
 		 */
-		auto lirLocation2LLVM(const lir::LirLocation& lir_location, llvm::IRBuilder<>& builder)
+		auto lirValue2LLVM(const lir::LIRValue& lir_location, llvm::IRBuilder<>& builder)
 			-> llvm::Value* {
 			variant_match(lir_location.getVariant()) {
 				variant_case(i64, value) {
@@ -229,24 +229,24 @@ namespace compiler::backend_llvm {
 			CORE_UNREACHABLE();
 		}
 
-		auto lirLocationList2LLVM(
-			const std::vector<lir::LirLocation>& lir_locations, llvm::IRBuilder<>& builder
+		auto lirValueList2LLVM(
+			const std::vector<lir::LIRValue>& lir_locations, llvm::IRBuilder<>& builder
 		) -> std::vector<llvm::Value*> {
 			std::vector<llvm::Value*> llvm_locations;
 			llvm_locations.reserve(lir_locations.size());
 			for (const auto& lir_location: lir_locations)
-				llvm_locations.push_back(lirLocation2LLVM(lir_location, builder));
+				llvm_locations.push_back(lirValue2LLVM(lir_location, builder));
 			return llvm_locations;
 		}
 
-#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                            \
-	{                                                                                   \
-		const auto output = lir_instruction.output.value();                             \
-		const auto lhs    = lirLocation2LLVM(lir_instruction.arguments.at(0), builder); \
-		const auto rhs    = lirLocation2LLVM(lir_instruction.arguments.at(1), builder); \
-		const auto value  = builder.Create##op(lhs, rhs);                               \
-		builder.CreateStore(value, local_register_map[output].get());                   \
-		break;                                                                          \
+#define LIR_2_LLVM_BINARY_OPERATION_CASE(op)                                         \
+	{                                                                                \
+		const auto output = lir_instruction.output.value();                          \
+		const auto lhs    = lirValue2LLVM(lir_instruction.arguments.at(0), builder); \
+		const auto rhs    = lirValue2LLVM(lir_instruction.arguments.at(1), builder); \
+		const auto value  = builder.Create##op(lhs, rhs);                            \
+		builder.CreateStore(value, local_register_map[output].get());                \
+		break;                                                                       \
 	}
 
 		/**
@@ -263,7 +263,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case ReturnValue: {
-				builder.CreateRet(lirLocation2LLVM(lir_instruction.arguments.at(0), builder));
+				builder.CreateRet(lirValue2LLVM(lir_instruction.arguments.at(0), builder));
 				break;
 			}
 			case Jump: {
@@ -274,7 +274,7 @@ namespace compiler::backend_llvm {
 			}
 			case Branch: {
 				// here for lir locals we need more stuff:
-				const auto cond = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto cond = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto true_block
 					= block_mapping[lir_instruction.arguments.at(1).get<lir::BlockRef>()];
 				const auto false_block
@@ -284,7 +284,7 @@ namespace compiler::backend_llvm {
 			}
 			case Assign: {
 				const auto output = lir_instruction.output.value();
-				const auto value  = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto value  = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
@@ -308,7 +308,7 @@ namespace compiler::backend_llvm {
 				LIR_2_LLVM_BINARY_OPERATION_CASE(ICmpSLT)
 			case IntegerNeg: {
 				const auto output   = lir_instruction.output.value();
-				const auto argument = lirLocation2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
 				const auto value    = builder.CreateNeg(argument);
 				builder.CreateStore(value, local_register_map[output].get());
 				break;

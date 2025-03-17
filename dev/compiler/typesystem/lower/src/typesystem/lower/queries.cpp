@@ -3,7 +3,7 @@
 #include <query_framework/query_impl.hpp>
 
 namespace tsl {
-	struct IMPLEMENT_QUERY(QueryTypeLayout, TypeLayout) {
+	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using enum tsh::Kind;
 			switch (key.getKind()) {
@@ -32,12 +32,24 @@ namespace tsl {
 			case Class:
 				return ClassTypeLayout(tsh::ClassAbstractType(key), ctx);
 			default:
-				CORE_PANIC("Unsupported source type in QueryTypeLayout.");
+				CORE_PANIC("Unsupported source type in QueryAbstractTypeLayout.");
 			}
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeLayout)
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
+
+	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, TypeLayout) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			if (key.getRefKind() == tsh::ReferenceKind::Direct)
+				return ctx.query<QueryAbstractTypeLayout>(key.getType());
+			return PointerTypeLayout(key, ctx);
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)
 }

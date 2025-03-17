@@ -29,6 +29,7 @@ public:
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 		TESTER_ADD_TEST(simpleBools);
+		TESTER_ADD_TEST(simpleFunctionCalls);
 	}
 
 private:
@@ -85,17 +86,17 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 
-			auto i32_type = ctx.query<tsh::QueryIntegralType>(32);
+			auto i32_type = ctx.query<QueryIntegralType>(32);
 
 			{
 				auto a = foo_mir.local_list.getCRef(0).value();
 				ASSERT_EQUAL(a->getName(), "a");
-				ASSERT_EQUAL(a->type.type, i32_type);
+				ASSERT_EQUAL(a->type.getType(), i32_type);
 			}
 			{
 				auto b = foo_mir.local_list.getCRef(1).value();
 				ASSERT_EQUAL(b->getName(), "b");
-				ASSERT_EQUAL(b->type.type, i32_type);
+				ASSERT_EQUAL(b->type.getType(), i32_type);
 			}
 
 			// Test code generation:
@@ -142,7 +143,7 @@ private:
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir->blocks.at(block_id).terminator; };
 			auto get_block_successors = [&](u64 block_id) {
-				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
+				return getTerminatorSuccessors(get_block_terminator(block_id));
 			};
 
 			using compiler::mir::BlockID;
@@ -197,6 +198,41 @@ private:
 
 			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
 			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
+		});
+	}
+
+	void simpleFunctionCalls() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/function_calls")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit.functions;
+			ASSERT_EQUAL(3, functions.size());
+
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+
+			u64 count_of_calls = 0;
+
+			static std::array functions_to_call = {
+				base::StrID("arg1"), base::StrID("arg0"), base::StrID("arg1"),
+				base::StrID("arg0"), base::StrID("arg1"), base::StrID("arg1"),
+			};
+
+			auto entry_block = foo_mir->entry_block;
+			for (auto& instruction: foo_mir->blocks.at(u64(entry_block)).instructions) {
+				if (instruction.operation == compiler::mir::Operation::Call) {
+					auto callee
+						= instruction.arguments.at(0).get<compiler::mir::MirFunctionLiteral>();
+					ASSERT_EQUAL(
+						compiler::helios::name(callee.helios_id),
+						functions_to_call.at(count_of_calls)
+					);
+					count_of_calls++;
+				}
+			}
+
+			ASSERT_EQUAL(count_of_calls, 6);
 		});
 	}
 };
