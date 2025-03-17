@@ -231,7 +231,7 @@ namespace vm {
 			// First few frames are already initialized with the return value spot and args passed
 			// to the function First free spot in the local stack is the one after them.
 			frame->local_stack_head = shared_stack_space_size;
-			frame->local_size = called_func.stack_size;
+			frame->local_size       = called_func.stack_size;
 
 
 			// std::cout << "**********CALL_FUNC**************\n";
@@ -239,7 +239,8 @@ namespace vm {
 			// 		  << '\n';
 			// std::cout << "Callers block_stack size before: " << prev_frame->block_stack.size()
 			// 		  << '\n';
-			// std::cout << "Callees block_stack size before: " << frame->block_stack.size() << '\n';
+			// std::cout << "Callees block_stack size before: " << frame->block_stack.size() <<
+			// '\n';
 
 			// @TODO: called_func.arg_count should be removed one function types are correctly
 			// placed in type_metadata. When that happens, the number of arguments function expects
@@ -313,6 +314,11 @@ namespace vm {
 			// Frame of the function we're returning from.
 			auto* callees_frame = frame;
 
+			// If we're returning form main, we pass the ret_val by the register.
+			if (callees_frame->is_main)
+				callees_frame->regs.p64_reg_0 = derefStack<i64>(local_stack, 0);
+
+
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
 			// Previous frame is just before current frame in the array, so that
@@ -330,10 +336,10 @@ namespace vm {
 				// If we're returning from the main function, we don't pop the last block on the
 				// stack since it contains the return value of the program that has to be read in
 				// internalCallMain().
-				if (callees_frame->is_main && callees_frame->block_stack.size() == 1) break;
+				// if (callees_frame->is_main && callees_frame->block_stack.size() == 1) break;
 
 				auto block = callees_frame->block_stack.back();
-				if (!(non_void && callees_frame->block_stack.size() == 1))
+				if (callees_frame->is_main || !(non_void && callees_frame->block_stack.size() == 1))
 					thread.process.getMemory().freeBlock(block);
 
 				callees_frame->block_stack.pop_back();
@@ -342,8 +348,9 @@ namespace vm {
 
 			// std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
 			// std::cout << "Are we returning from non_void: " << (non_void ? "Yes" : "No") << '\n';
-			// std::cout << "Calles block_stack_size after ret: " << callees_frame->block_stack.size() << '\n';
-			// std::cout << "Callers block_stack_size after ret: " << frame->block_stack.size() << '\n';
+			// std::cout << "Calles block_stack_size after ret: " <<
+			// callees_frame->block_stack.size() << '\n'; std::cout << "Callers block_stack_size
+			// after ret: " << frame->block_stack.size() << '\n';
 
 
 			// New local_stack_top is the current address of the previous local_stack
@@ -354,13 +361,13 @@ namespace vm {
 			// Load previous frame
 			instr       = frame->instr;  // This is already a pointer to next instr
 			local_stack = frame->local_stack;
-			// std::cout << "Stack top after return: " << thread.runtime_data.local_stack_top << '\n';
-			// std::cout << "Local stack address after return: " << local_stack << '\n';
+			// std::cout << "Stack top after return: " << thread.runtime_data.local_stack_top <<
+			// '\n'; std::cout << "Local stack address after return: " << local_stack << '\n';
 			// std::cout << "Old local stack head: " << frame->local_stack_head << '\n';
 			// std::cout << "old passed_args_size: " << frame->passed_args_size << '\n';
 			// std::cout << "%%%%%%%%%%%%%%RET%%%%%%%%%%%%%%%%%\n";
 
-			frame->passed_args_size       = 0;
+			frame->passed_args_size        = 0;
 			frame->shared_stack_space_size = 0;
 		}
 		// Here the argument is `0` becasue of the convention defined in the op_call_func.

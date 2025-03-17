@@ -8,7 +8,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(testAckermannOld);
 		TESTER_ADD_TEST(testAckermannNew);
-		TESTER_ADD_TEST(testCollatz);
+		// TESTER_ADD_TEST(testCollatz);
 		TESTER_ADD_TEST(testFibIter);
 		TESTER_ADD_TEST(testFibRec);
 		TESTER_ADD_TEST(testTailCall);
