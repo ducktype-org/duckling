@@ -39,8 +39,10 @@ function fib {
         add_l64_l64         0, 16;
         mod_l64_imm         0, 8388449;
 
+        deinit; # fib() ret_val
         label               End;
 
+        deinit; # arg0
         ret;
     }
 }
@@ -61,6 +63,7 @@ function main {
         call_func   fib;
 
         output_l64  8;
+        deinit; # fib() ret_val
         ret;
     }
 }

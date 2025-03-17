@@ -81,11 +81,11 @@ namespace vm {
 			dia::Logger&                          log
 		) {
 			vm::FuncData func_data;
-			func_data.name          = func->name.value;
-			func_data.arg_size      = func->arg_size;
-			func_data.stack_size    = func->local_size;
-			func_data.ret_size      = func->ret_size;
-			func_data.arg_count     = func->arg_count;
+			func_data.name       = func->name.value;
+			func_data.arg_size   = func->arg_size;
+			func_data.stack_size = func->local_size;
+			func_data.ret_size   = func->ret_size;
+			func_data.arg_count  = func->arg_count;
 
 			for (usize op_idx = 0; op_idx < func->code->opcodes.size(); op_idx++) {
 				auto&& op    = func->code->opcodes[op_idx];

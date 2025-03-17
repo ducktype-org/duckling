@@ -53,6 +53,10 @@ function ackermann {
 
         free_lptr           48;
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
+        deinit; # A() ret_val
+        deinit; # n
+        deinit; # arg1
+        deinit; # arg0
         ret;
 
         label N0;
@@ -71,12 +75,21 @@ function ackermann {
         free_lptr           48;
 
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
+        
+        deinit; # A() ret_val
+        deinit; # n
+        deinit; # arg1
+        deinit; # arg0
         ret;
 
         label M0;
         # return n+1
         add_l64_imm         24, 1;      # n := n+1
         mov_l64_l64         0, 24;      # ret := n
+
+        deinit; # n
+        deinit; # arg1
+        deinit; # arg0
         ret;
     }
 }
@@ -103,7 +116,9 @@ function main {
 
         free_lptr           32; # I think this is invalid bytecode, but works for now.
         output_l64          16;
-        
+
+        deinit; # A() ret_val
+        deinit; # temp
         ret;
     }
 }

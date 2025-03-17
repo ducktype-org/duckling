@@ -73,6 +73,10 @@ function collatz {
 
 		# return max
 		mov_l64_l64 	0, 16; # ret_val := max
+		
+		deinit; # tmp
+		deinit; # max
+		deinit; # arg0
 		ret;
 	}
 }
@@ -127,6 +131,11 @@ function main {
 
 		# return i
 		mov_l64_l64		0, 24;
+
+		deinit; # tmp
+		deinit;	# i
+		deinit;	# max
+		deinit;	# x
 		ret;
 	}
 

@@ -8,12 +8,13 @@ function main {
 
 	code: {
 		init_type			int64; # [0, 8) main ret_val
-		init_type			int64; # [8, 16) main ret_val
+		init_type			int64; # [8, 16) tmp
         mov_l64_imm         8, 0;
         label Loop;
             cmpEq_l64_imm		8, 0;
             jmpRelIf_label 	  	Loop;
-		
+			
+		deinit; # temp
 		ret;
 	}
 }

@@ -12,16 +12,21 @@ function check {
 	local_size: 28;
 
 	code: {
-		# [0, 8) a
-		# [8, 12) b
-		# [12, 20) c
+		# [0, 8) arg0
+		# [8, 12) arg1
+		# [12, 20) arg2
 
-		init_type 			int64; # [20, 28)
-		mov_l64_imm			20, 1; # acc := 1
-		mul_l64_l64			20, 0; # acc *= a
+		init_type 			int64; 	# [20, 28) temp
+		mov_l64_imm			20, 1; 	# acc := 1
+		mul_l64_l64			20, 0; 	# acc *= a
 		mul_l64_l64			20, 12; # acc *= c
 
 		output_l64			20;
+
+		deinit; # temp
+		deinit; # arg2
+		deinit; # arg1
+		deinit; # arg0
 		ret;
 	}
 }
@@ -35,9 +40,9 @@ function main {
 
 	code: {
 		init_type int64; # [0, 8) main ret_val
-		init_type int64; # [8, 16)
-		init_type int32; # [16, 20)
-		init_type int64; # [20, 28)
+		init_type int64; # [8, 16) check() arg0
+		init_type int32; # [16, 20) check() arg1
+		init_type int64; # [20, 28) check() arg2
 
 		input_l64	8;
 		input_l32	16;

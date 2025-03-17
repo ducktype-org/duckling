@@ -43,6 +43,9 @@ function ackermann {
         # [32, 40) and [40, 48) are deinitialized here
 
         mov_l64_l64         0, 24;
+        deinit; # A() ret_val
+        deinit; # arg1
+        deinit; # arg0
         ret;
 
         label N0;
@@ -56,12 +59,18 @@ function ackermann {
         call_func           ackermann;  # (m-1, 1)
 
         mov_l64_l64         0, 24;
+        deinit; # A() ret_val
+        deinit; # arg1
+        deinit; # arg0
         ret;
 
         label M0;
         # return n+1
         mov_l64_l64         0, 16;  # ret := n
         add_l64_imm         0, 1;   # ret := n+1
+        
+        deinit; # arg1
+        deinit; # arg0
         ret;
     }
 }
@@ -85,6 +94,7 @@ function main {
 
         output_l64          8;
 
+        deinit; # A() ret_val
         ret;
     }
 }

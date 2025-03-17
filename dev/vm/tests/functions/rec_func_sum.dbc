@@ -27,9 +27,12 @@ function sum {
 
             mov_l64_l64         0, 16;
             add_l64_l64         0,  8;
-
+            
+            deinit; # sum() ret_val. arg0 was deinitialized by the call.
         label ret_label;
-		ret; # The result already is on the 0 offset
+        
+        deinit; # arg0
+		ret;    # The result already is on the 0 offset
 	}
 }
 
@@ -42,7 +45,7 @@ function main {
 
 	code: {
         init_type           int64; # [0, 8) main ret_val
-        init_type           int64; # [8, 16) sum return value
+        init_type           int64; # [8, 16) sum ret_val
         init_type           int64; # [16, 24) sum arg0
         input_l64           16;
 
@@ -50,6 +53,7 @@ function main {
 
         output_l64          8;
 
+        deinit; # sum ret_val, sum arg0 is deinitialized by the call
 		ret;
 	}
 

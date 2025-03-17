@@ -61,6 +61,9 @@ function add1110 {
         call_func           add1100;
 
         add_l64_l64    		0, 16; # += add1100()
+
+		deinit; # add1100 ret_val
+		deinit; # arg0
 		ret;
 	}
 }
@@ -81,6 +84,7 @@ function main {
         call_func          	add1110;
         output_l64          8;
 
+		deinit; # add1110 ret_val, arg0 is deinitialized by the call.
 		ret;
 	}
 

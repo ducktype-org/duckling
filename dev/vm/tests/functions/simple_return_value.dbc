@@ -29,6 +29,7 @@ function main {
 		call_func       check;
         output_l64      8;
 
+		deinit;
 		ret;
 	}
 

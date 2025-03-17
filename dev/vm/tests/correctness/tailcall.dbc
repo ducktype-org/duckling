@@ -20,6 +20,8 @@ function dummy {
     label End;
 
     mov_l64_l64       0, 8;
+    
+    deinit; # arg0
     ret;
   }
 }
@@ -41,6 +43,7 @@ function main {
 
     output_l64         8;
 
+    deinit; # dummy ret_val
     ret;
   }
 

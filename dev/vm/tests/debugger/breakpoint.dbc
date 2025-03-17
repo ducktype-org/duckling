@@ -8,9 +8,9 @@ function main {
 
 	code: {
 		init_type 		int64; # [0, 8) main ret_val
-		init_type 		int64; # [8, 16) 
-		init_type 		int64; # [16, 24)
-		init_type 		int64; # [24, 32)
+		init_type 		int64; # [8, 16) a
+		init_type 		int64; # [16, 24) b
+		init_type 		int64; # [24, 32) c
 		mov_l64_imm  	8, 0;
 		mov_l64_imm  	16, 0;
 		breakpoint;
@@ -19,6 +19,9 @@ function main {
 		mov_l64_imm 	24, 0;
 		breakpoint;
 
+		deinit; # c
+		deinit; # b
+		deinit; # a
 		ret;
 	}
 }

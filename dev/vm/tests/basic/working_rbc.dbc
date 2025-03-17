@@ -24,6 +24,9 @@ function main {
 		cmpEq_l64_l64    16, 8;
 		jmpRelNotIf_label Loop;
 
+		deinit;
+		deinit;
+		deinit;
 		ret;
 	}
 }

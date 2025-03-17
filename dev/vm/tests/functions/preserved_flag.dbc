@@ -15,6 +15,7 @@ function check {
 		init_type 			int64;
 		mov_l64_imm         0,   15;
 		cmpEq_l64_imm       0,   14;
+		deinit;
 		ret;
 	}
 }
@@ -49,6 +50,9 @@ function main {
 		label ok_label;
 		# print "1" (passed)
 		output_l64          8;
+
+		deinit;
+		deinit;
 		ret;
 	}
 }

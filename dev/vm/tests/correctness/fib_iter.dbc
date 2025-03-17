@@ -51,11 +51,10 @@ function main {
 
         output_l64      24;
 
-        deinit;
-        deinit;
-        deinit;
-        deinit;
-
+        deinit; # b
+        deinit; # a
+        deinit; # m
+        deinit; # n
         ret;       
     }
 }

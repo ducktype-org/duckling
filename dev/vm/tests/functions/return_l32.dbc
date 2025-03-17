@@ -29,7 +29,8 @@ function main {
 		init_type 			int32; # [8, 12) check() ret_val
 		call_func          	check;
 		output_l32 			8;
-		
+
+		deinit;
 		ret;
 	}
 
