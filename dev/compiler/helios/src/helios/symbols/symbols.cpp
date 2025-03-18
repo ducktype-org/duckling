@@ -205,7 +205,7 @@ namespace compiler::helios {
 	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, CRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
-		PstSymbolData pst_data {
+		PstSymbolData pst_data{
 			.scope       = scope,
 			.pst_element = stmt,
 		};
@@ -323,8 +323,8 @@ namespace compiler::helios {
 			auto field = dynamic_cast<const pst::Field*>(&*stmt);
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name = field->getName(),
-					.kind = SymbolKind::Field,
+					.name      = field->getName(),
+					.kind      = SymbolKind::Field,
 					.dependent = true,
 				},
 				pst_data
