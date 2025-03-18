@@ -5,7 +5,9 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	AccessLocked<LangElement> LangElement::getParent() const { return { parent.map([](auto arg) -> MCRef<LangElement> {return arg;}).value_or(nullptr) }; }
+	AccessLocked<LangElement> LangElement::getParent() const {
+		return { parent.map([](auto arg) -> MCRef<LangElement> { return arg; }).value_or(nullptr) };
+	}
 
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
