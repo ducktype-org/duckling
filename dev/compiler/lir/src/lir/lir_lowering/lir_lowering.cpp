@@ -42,14 +42,14 @@ namespace compiler::lir {
 	 * @return LirLocal
 	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
 		return LirLocal{ mir_local->helios_id, type_layout };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<tsl::QueryTypeLayout>(bool_type);
+		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LirLocal{ bool_layout };
 	}
@@ -147,6 +147,9 @@ namespace compiler::lir {
 					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
 						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
+					}
+					variant_case(mir::MirFunctionLiteral, func) {
+						return LIRValue{ FunctionLiteral{ func.helios_id } };
 					}
 				}
 				CORE_PANIC("Unhandled variant in getLocation");
@@ -254,7 +257,7 @@ namespace compiler::lir {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {
-						const auto arg_type = local->type.type;
+						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness();
 					}
@@ -311,6 +314,14 @@ namespace compiler::lir {
 					// @TODO implement it, once we know how to call destructors
 					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
+				case mir::Operation::Call: {
+					auto output = getLocal(mir_instruction.output.value());
+					auto args   = getLocations(mir_instruction.arguments);
+					curr_block->instructions.emplace_back(
+						lir::Operation::Call, output, std::move(args)
+					);
+					return curr_block;
+				}
 				default:
 					throw base::NotYetImplemented("instruction in LowerToLirFunction");
 				}
@@ -362,11 +373,12 @@ namespace compiler::lir {
 			 */
 			Function get() && {
 				return Function{
-					key.function->name,
-					ctx.query<tsl::QueryTypeLayout>(key.function->return_type),
-					std::move(blocks),
-					std::move(locals),
-					std::move(block_order),
+					.name = key.function->name,
+					.return_type_layout
+					= ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type),
+					.blocks      = std::move(blocks),
+					.local_list  = std::move(locals),
+					.block_order = std::move(block_order),
 				};
 			}
 		};

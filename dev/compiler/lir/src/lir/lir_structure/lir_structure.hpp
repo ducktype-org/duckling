@@ -36,6 +36,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerULt,
 	IntegerSLt,
 	IntegerNeg,
+	Call,
 
 	ReturnVoid,
 	ReturnValue,
@@ -60,11 +61,20 @@ namespace compiler::lir {
 	using BlockRef = CRef<Block>;
 
 	/**
+	 * @brief Reference to a function in LIR.
+	 * @note In the future this might simple store mangled name (string), and possibly an optional
+	 * SymID.
+	 */
+	struct FunctionLiteral {
+		helios::SymID helios_id;
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
@@ -75,6 +85,8 @@ namespace compiler::lir {
 		LIRValue(LocalRef value): value(value) {}
 
 		LIRValue(BlockRef value): value(value) {}
+
+		LIRValue(FunctionLiteral value): value(value) {}
 
 		bool operator==(const LIRValue& other) const = default;
 

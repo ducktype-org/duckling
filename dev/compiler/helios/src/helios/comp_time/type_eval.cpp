@@ -15,12 +15,13 @@ namespace compiler::helios {
 		struct CouldNotEvalShortPath {};
 
 		using ShortPathResult
-			= errors::HResult<tsh::AbstractType, CouldNotEvalShortPath, errors::Failed>;
+			= errors::HResult<tsh::SymbolType<>, CouldNotEvalShortPath, errors::Failed>;
 
 		/**
 		 * A visitor to extract types from simple expression fast (i.e. short path it).
 		 * @note It might be changed to virtual function on expr in the future for performance.
 		 * For now it is kept as a visitor for code simplicity.
+		 * @todo Handle reference specification. #608
 		 */
 		struct ShortPathVisitor: code::HoutExprVisitorPanicky {
 			query::Context& ctx;
@@ -55,7 +56,7 @@ namespace compiler::helios {
 
 			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::ComponentType> subtypes;
+				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.elements) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
@@ -63,18 +64,19 @@ namespace compiler::helios {
 						failed = true;
 						return;
 					} else {
-						// @todo: False here means all subtypes of a tuple are immutable.
-						// this is likely wrong, we will have to change it with
-						// type info, expression type, component type refactor
-						subtypes.emplace_back(sub_type_result.value(), false);
+						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(ctx.query<tsh::QueryTupleType>({ subtypes }));
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryTupleType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
 			void visitVariantTypeConstructorExpr(const code::VariantTypeConstructorExpr& expr
 			) override {
-				std::vector<tsh::AbstractType> subtypes;
+				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.subtypes) {
 					// should we here short-path or not?
 					auto sub_type_result = evalHoutExprToType(ctx, sub_type.ref());
@@ -85,7 +87,11 @@ namespace compiler::helios {
 						subtypes.emplace_back(sub_type_result.value());
 					}
 				}
-				output(ctx.query<tsh::QueryVariantType>({ subtypes }));
+				output(tsh::SymbolType<>{
+					ctx.query<tsh::QueryVariantType>({ subtypes }),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				});
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) override {
@@ -99,7 +105,7 @@ namespace compiler::helios {
 
 			if (visitor.failed) return errors::HError(errors::Failed());
 
-			auto short_path_result = visitor.result.value();
+			ShortPathResult short_path_result = visitor.result.value();
 
 			if (short_path_result.hasError()) {
 				variant_match(short_path_result.error()) {

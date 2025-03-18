@@ -1,5 +1,4 @@
 #include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
@@ -19,12 +18,6 @@ void printContextErrors() {
 int notMain(int argc, const char* const* argv) {
 	init::InitObject _;
 
-	// @TODO: add to helios init
-	lexer::init();
-	pst::init();
-
-
-	// @FUTURE: record all inits somewhere..
 
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
@@ -54,7 +47,7 @@ int notMain(int argc, const char* const* argv) {
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level.debugPrint();
+	std::cerr << top_level->debugPrint();
 
 	return 0;
 }

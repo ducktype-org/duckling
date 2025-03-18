@@ -39,7 +39,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).original_name);
 			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).original_name);
@@ -76,7 +76,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -86,17 +86,17 @@ private:
 			// Test locals:
 			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
 
-			auto i32_type = ctx.query<tsh::QueryIntegralType>(32);
+			auto i32_type = ctx.query<QueryIntegralType>(32);
 
 			{
 				auto a = foo_mir.local_list.getCRef(0).value();
 				ASSERT_EQUAL(a->getName(), "a");
-				ASSERT_EQUAL(a->type.type, i32_type);
+				ASSERT_EQUAL(a->type.getType(), i32_type);
 			}
 			{
 				auto b = foo_mir.local_list.getCRef(1).value();
 				ASSERT_EQUAL(b->getName(), "b");
-				ASSERT_EQUAL(b->type.type, i32_type);
+				ASSERT_EQUAL(b->type.getType(), i32_type);
 			}
 
 			// Test code generation:
@@ -130,7 +130,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -143,7 +143,7 @@ private:
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir->blocks.at(block_id).terminator; };
 			auto get_block_successors = [&](u64 block_id) {
-				return compiler::mir::getTerminatorSuccessors(get_block_terminator(block_id));
+				return getTerminatorSuccessors(get_block_terminator(block_id));
 			};
 
 			using compiler::mir::BlockID;
@@ -170,7 +170,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -186,7 +186,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
@@ -206,7 +206,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
