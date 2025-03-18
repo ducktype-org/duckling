@@ -440,7 +440,7 @@ namespace compiler::helios {
 
 			// here if the scope is the root scope
 			// we pass the lookup to
-			// builtin loopup.
+			// builtin lookup.
 			// Note that we still calculate symbol_list to assert
 			// that it is empty.
 			auto scope_data = getScopeRef(key.scope);
