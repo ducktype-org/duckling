@@ -116,7 +116,6 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all scopes defined in a given module.
-	 * Only scopes currently stored in the HELIOS scope_table are considered.
 	 */
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
