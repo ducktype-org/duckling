@@ -8,6 +8,7 @@
 
 #include <base/variant.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <base/anycast.hpp>
 
 #include <string>
 #include <map>
@@ -15,8 +16,8 @@
 namespace lsp {
 	SemanticToken::SemanticToken(base::c_borrow_ptr<lexer::Token> source):
 		  source_token(source),
-		  line(source->getPosition().getStartLineColumn().first),
-		  start_character(source->getPosition().getStartLineColumn().second),
+		  line(source->getPosition().getStartLineColumn().first - 1),
+		  start_character(source->getPosition().getStartLineColumn().second - 1),
 		  length(source->getPosition().getEnd() - source->getPosition().getStart() + 1),
 		  type(translateType(source->getType())) {}
 
@@ -53,7 +54,7 @@ namespace lsp {
 		result["line"]           = std::to_string(this->line);
 		result["startCharacter"] = std::to_string(this->start_character);
 		result["length"]         = std::to_string(this->length);
-		result["tokenType"]      = base::strConcat("\"", base::enumToStr(this->type).strView(), "\"");
+		result["tokenType"]      = std::to_string(base::anyCast<int8_t>(this->type));
 		result["tokenModifiers"] = "0";  // @TODO Duckling LSP 2.0
 
 		return jsonDict(result);
