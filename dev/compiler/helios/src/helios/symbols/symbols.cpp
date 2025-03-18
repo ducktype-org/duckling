@@ -228,11 +228,7 @@ namespace compiler::helios {
 					.name = namespace_stmt->getName(),
 					.kind = SymbolKind::Namespace,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Const: {
@@ -252,11 +248,7 @@ namespace compiler::helios {
 					.name = class_stmt->getName(),
 					.kind = SymbolKind::Class,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Alias: {
