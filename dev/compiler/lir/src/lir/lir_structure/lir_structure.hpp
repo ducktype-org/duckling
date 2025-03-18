@@ -7,7 +7,6 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 
 #include "function_forward.hpp"
-#include "helios/scope_symbol_id.hpp"
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
