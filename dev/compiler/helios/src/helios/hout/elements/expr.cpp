@@ -29,7 +29,11 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -41,7 +45,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -53,11 +61,19 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value_type(type) {}
+		  value_type(tsh::SymbolType{
+			  type,
+			  tsh::ReferenceKind::Direct,
+			  tsh::Mutability::Mutable,
+		  }) {}
 
 	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
@@ -84,7 +100,11 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
@@ -138,7 +158,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -170,7 +194,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -216,7 +244,7 @@ namespace compiler::helios::code {
 		 * @brief Infers a resulting type from a call operation.
 		 * @note This will be here until we have a proper overload resolution.
 		 */
-		tsh::AbstractType getCallResultType(tsh::AbstractType tp) {
+		tsh::SymbolType<> getCallResultType(tsh::AbstractType tp) {
 			if (tp.getKind() == tsh::Kind::Function) {
 				auto func = tsh::FunctionAbstractType(tp);
 				return func.getResultType();
@@ -226,14 +254,15 @@ namespace compiler::helios::code {
 	}
 
 	CallExpr::CallExpr(
-		query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
+		query::Context& ctx, ScopeID scope, SymID callee, std::vector<Box<Expr>> arguments
 	):
 		  Expr(
 			  scope,
 			  tsh::ExpressionType(
-				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)->expect(
-					  base::strConcat("Calling invalid symbol: ", name(callee))
-				  )),
+				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee))
+	                                    )
+	                                    .getType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
