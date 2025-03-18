@@ -8,7 +8,6 @@
 
 #include <base/variant.hpp>
 #include <base/stringifyable_enum.hpp>
-#include <base/anycast.hpp>
 
 #include <string>
 #include <map>
@@ -54,7 +53,7 @@ namespace lsp {
 		result["line"]           = std::to_string(this->line);
 		result["startCharacter"] = std::to_string(this->start_character);
 		result["length"]         = std::to_string(this->length);
-		result["tokenType"]      = std::to_string(base::anyCast<int8_t>(this->type));
+		result["tokenType"]      = std::to_string(static_cast<int8_t>(this->type));
 		result["tokenModifiers"] = "0";  // @TODO Duckling LSP 2.0
 
 		return jsonDict(result);
