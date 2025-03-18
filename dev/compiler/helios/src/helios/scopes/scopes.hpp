@@ -116,6 +116,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query all scopes defined in a given module.
+	 * Note: Not implemented yet.
 	 */
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 

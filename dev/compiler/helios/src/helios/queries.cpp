@@ -1,5 +1,3 @@
-#include "queries.hpp"
-
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -11,6 +9,7 @@
 #include "hout/elements.hpp"
 
 #include "symbols/symbols.hpp"
+#include "queries.hpp"
 
 namespace compiler::helios {
 
@@ -45,7 +44,7 @@ namespace compiler::helios {
 			for (auto submodule: *submodules) {
 				// @TODO optimize multiple concatenations
 				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
-				for (auto i: submodule_hout) out.push_back(i);
+				for (const auto i: submodule_hout) out.push_back(i);
 			}
 			return out;
 		}
