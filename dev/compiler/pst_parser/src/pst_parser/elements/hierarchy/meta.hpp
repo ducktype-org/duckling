@@ -167,8 +167,8 @@ namespace pst {
 	 *  - specifiers - current access and other specifiers
 	 */
 	struct ClassContext {
-		base::StrID                                 name;
-		std::vector<base::c_borrow_ptr<tpc::Token>> specifiers;
+		base::StrID                   name;
+		std::vector<CRef<tpc::Token>> specifiers;
 	};
 
 	/**

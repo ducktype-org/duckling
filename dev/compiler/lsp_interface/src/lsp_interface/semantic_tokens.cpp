@@ -13,7 +13,7 @@
 #include <map>
 
 namespace lsp {
-	SemanticToken::SemanticToken(base::c_borrow_ptr<lexer::Token> source):
+	SemanticToken::SemanticToken(CRef<lexer::Token> source):
 		  source_token(source),
 		  line(source->getPosition().getStartLineColumn().first),
 		  start_character(source->getPosition().getStartLineColumn().second),

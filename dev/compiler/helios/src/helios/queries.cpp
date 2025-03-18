@@ -175,12 +175,9 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>(stmt->getValue().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
-				output(code::VariableStmt(
-					scope(symbol),
-					std::move(initial_value),
-					tsh::ComponentType{ .type = symbol_type },
-					symbol
-				));
+				output(
+					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
+				);
 			}
 		};
 
@@ -236,10 +233,7 @@ namespace compiler::helios {
 
 					if (value.empty()) {
 						parameters.emplace_back(
-							param_name,
-							tsh::ComponentType{ .type = param_type->value() },
-							std::nullopt,
-							param_symbol
+							param_name, param_type->value(), std::nullopt, param_symbol
 						);
 					} else {
 						auto initial_value
@@ -253,7 +247,7 @@ namespace compiler::helios {
 
 						parameters.emplace_back(
 							param_name,
-							tsh::ComponentType{ .type = param_type->value() },
+							param_type->value(),
 							std::move(initial_value.value()),
 							param_symbol
 						);

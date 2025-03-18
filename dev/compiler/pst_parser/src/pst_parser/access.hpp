@@ -174,3 +174,7 @@ namespace pst {
 		MCRef<Element> internal() const { return box.ref(); }
 	};
 }
+#define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(Access<type>)
+
+#define MAKE_ACCESS_VISITOR(name, ...) \
+	MAKE_VISITOR_CUSTOM_INTERFACE(name, VISITOR_ACCESS_METHOD_INTERFACE, __VA_ARGS__)

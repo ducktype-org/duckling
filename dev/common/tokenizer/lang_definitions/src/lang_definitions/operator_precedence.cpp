@@ -18,8 +18,6 @@ namespace lang_def {
 	void operator_precedence::init() {
 		SIMPLE_INIT_GUARD_BEGIN;
 
-		key_spec_op::init();
-
 		// this is highly imperfect but is meant as a placeholder
 		precedence.put({ NamedOperator::Period, OperatorType::Binary }, 0);
 
@@ -36,7 +34,6 @@ namespace lang_def {
 		precedence.put({ NamedOperator::Minus, OperatorType::Binary }, 4);
 
 		precedence.put({ NamedOperator::Assign, OperatorType::Binary }, 5);
-
 
 		associativity.put(
 			{ NamedOperator::Period, OperatorType::Binary }, OperatorAssociativity::LeftToRight

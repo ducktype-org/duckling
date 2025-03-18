@@ -6,7 +6,6 @@
 #include <base64.hpp>
 
 #include <clap/clap.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
@@ -20,9 +19,9 @@ PUSH_DIAGNOSTIC
 POP_DIAGNOSTIC
 
 // vm includes:
-#include <server.hpp>
-#include <cli.hpp>
-#include <config.hpp>
+#include <vm/server.hpp>
+#include <vm/cli.hpp>
+#include <vm/config.hpp>
 
 #include "utils.hpp"
 #include "export_keywords.hpp"
@@ -71,7 +70,6 @@ void server(i32 port) {
 	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
-	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.

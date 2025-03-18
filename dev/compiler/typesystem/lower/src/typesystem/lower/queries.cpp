@@ -3,20 +3,20 @@
 #include <query_framework/query_impl.hpp>
 
 namespace tsl {
-	struct IMPLEMENT_QUERY(QueryTypeLayout, TypeLayout) {
+	struct IMPLEMENT_QUERY(QueryAbstractTypeLayout, TypeLayout) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using enum tsh::Kind;
 			switch (key.getKind()) {
 			case Unit:
 				return EmptyTypeLayout(key);
 			case Byte:
-				return IntegralTypeLayout(tsh::ByteInfo(key));
+				return IntegralTypeLayout(tsh::ByteAbstractType(key));
 			case Bool:
-				return IntegralTypeLayout(tsh::BoolInfo(key));
+				return IntegralTypeLayout(tsh::BoolAbstractType(key));
 			case Char:
-				return IntegralTypeLayout(tsh::CharInfo(key));
+				return IntegralTypeLayout(tsh::CharAbstractType(key));
 			case Integral:
-				return IntegralTypeLayout(tsh::IntegralInfo(key));
+				return IntegralTypeLayout(tsh::IntegralAbstractType(key));
 			case Float:
 				return FloatTypeLayout(key);
 			case RawPointer:
@@ -28,16 +28,28 @@ namespace tsl {
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:
-				return TupleTypeLayout(tsh::TupleInfo(key), ctx);
+				return TupleTypeLayout(tsh::TupleAbstractType(key), ctx);
 			case Class:
-				return ClassTypeLayout(tsh::ClassInfo(key), ctx);
+				return ClassTypeLayout(tsh::ClassAbstractType(key), ctx);
 			default:
-				CORE_PANIC("Unsupported source type in QueryTypeLayout.");
+				CORE_PANIC("Unsupported source type in QueryAbstractTypeLayout.");
 			}
 		}
 
 		QUERY_AUTO_CACHE_COPY
 	};
 
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeLayout)
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryAbstractTypeLayout)
+
+	struct IMPLEMENT_QUERY(QuerySymbolTypeLayout, TypeLayout) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			if (key.getRefKind() == tsh::ReferenceKind::Direct)
+				return ctx.query<QueryAbstractTypeLayout>(key.getType());
+			return PointerTypeLayout(key, ctx);
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolTypeLayout)
 }

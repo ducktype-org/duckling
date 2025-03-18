@@ -6,6 +6,7 @@
 #include <base/strongly_typed_id.hpp>
 #include <base/ref.hpp>
 #include <base/box.hpp>
+#include <ranges>
 
 #include <variant>
 
@@ -32,7 +33,7 @@ namespace pst {
 		using Child      = Ref<LangElement>;
 		using ConstChild = CRef<LangElement>;
 
-		using SubToken = base::c_borrow_ptr<tpc::Token>;
+		using SubToken = base::CRef<tpc::Token>;
 
 		using SubElement      = std::variant<SubToken, Child>;
 		using ConstSubElement = std::variant<SubToken, ConstChild>;
@@ -223,8 +224,8 @@ namespace pst {
 		ElementKind element_kind = ElementKind::KindNotSet;
 
 		void addToken(const tpc::Token& token);
-		void addToken(const base::unique_ptr<tpc::Token>& token);
-		void addToken(base::c_borrow_ptr<tpc::Token> token);
+		void addToken(const Box<tpc::Token>& token);
+		void addToken(CRef<tpc::Token> token);
 
 		template<std::derived_from<LangElement> El>
 		void addChild(MRef<El> el) {

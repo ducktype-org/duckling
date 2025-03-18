@@ -4,7 +4,7 @@
 #include <variant>
 #include <helios/scopes/scopes.hpp>
 #include <typesystem/higher/types.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 #include <base/stable_container.hpp>
 #include <base/strongly_typed_id.hpp>
 #include <base/stringifyable_enum.hpp>
@@ -87,6 +87,15 @@ namespace compiler::mir {
 		bool operator==(const MirBoolConst& other) const = default;
 	};
 
+	/**
+	 * Represent a direct reference to a function linked to a HELIOS SymID.
+	 */
+	struct MirFunctionLiteral final {
+		helios::SymID helios_id;
+
+		bool operator==(const MirFunctionLiteral& other) const = default;
+	};
+
 	STRONG_TYPEDEF_ID(LocalID);
 
 	/**
@@ -101,20 +110,20 @@ namespace compiler::mir {
 
 		// Locals without a helios_id are locals created for temporary values
 		base::Optional<helios::SymID> helios_id;
-		tsh::ComponentType            type;
+		tsh::SymbolType<>             type;
 		helios::ScopeID               lifetime_scope;
 
 	private:
 		// @note: Constructing MirLocal from helios_id
 		// might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id, tsh::ComponentType type, helios::ScopeID lifetime_scope):
+		MirLocal(helios::SymID helios_id, tsh::SymbolType<> type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
-		MirLocal(tsh::ComponentType type, helios::ScopeID lifetime_scope):
+		MirLocal(tsh::SymbolType<> type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id({}),
 			  type(type),
@@ -136,25 +145,28 @@ namespace compiler::mir {
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
-	struct MirLocation final {
+	struct MIRValue final {
 	private:
-		// @TODO: global, literal, func-literal, ...
+		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
+		using ValueType
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
 	public:
-		MirLocation(MirIntegerConst value): value(value) {}
+		MIRValue(MirIntegerConst value): value(value) {}
 
-		MirLocation(MirBoolConst value): value(value) {}
+		MIRValue(MirBoolConst value): value(value) {}
 
-		MirLocation(LocalRef value): value(value) {}
+		MIRValue(LocalRef value): value(value) {}
 
-		MirLocation(BlockID value): value(value) {}
+		MIRValue(BlockID value): value(value) {}
 
-		bool operator==(const MirLocation& other) const = default;
+		MIRValue(MirFunctionLiteral value): value(value) {}
+
+		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -165,7 +177,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in MirLocation.
+		 * stored in MIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -202,7 +214,7 @@ namespace compiler::mir {
 
 		base::Optional<LocalRef> output;
 
-		std::vector<MirLocation> arguments;
+		std::vector<MIRValue> arguments;
 
 		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
@@ -228,7 +240,7 @@ namespace compiler::mir {
 		Instruction(
 			Operation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirLocation>   arguments,
+			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			helios::ScopeID            scope
 		):
@@ -287,7 +299,7 @@ namespace compiler::mir {
 	 */
 	struct Function final {
 		base::StrID                  name;
-		tsh::TypeInfo                return_type;
+		tsh::SymbolType<>            return_type;
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -309,7 +321,7 @@ namespace compiler::mir {
 
 		Function(
 			base::StrID                  name,
-			tsh::TypeInfo                return_type,
+			tsh::SymbolType<>            return_type,
 			std::vector<Block>           blocks,
 			base::StableVector<MirLocal> local_list,
 			BlockID                      entry_block,

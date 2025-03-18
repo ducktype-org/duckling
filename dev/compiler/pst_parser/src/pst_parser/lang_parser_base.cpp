@@ -13,15 +13,14 @@ namespace pst {
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }
 
-	void LangElement::addToken(base::c_borrow_ptr<tpc::Token> t) {
-		CORE_ASSERT(t != nullptr, "All tokens that are part of an element should exist.");
+	void LangElement::addToken(CRef<tpc::Token> t) {
 		sub_elements.emplace_back(t);
 		setLastToken(t->getPosition());
 	}
 
-	void LangElement::addToken(const base::unique_ptr<tpc::Token>& t) { addToken(t.borrow()); }
+	void LangElement::addToken(const Box<tpc::Token>& t) { addToken(t.ref()); }
 
-	void LangElement::addToken(const tpc::Token& t) { addToken(base::borrow_ptr(&t)); }
+	void LangElement::addToken(const tpc::Token& t) { addToken(&t); }
 
 	void LangElement::addChild(MRef<LangElement> el) {
 		auto opt = el.toOpt();

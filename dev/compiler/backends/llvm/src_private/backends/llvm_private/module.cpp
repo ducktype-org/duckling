@@ -1,0 +1,49 @@
+#include <iostream>
+
+#include "llvm_includes/ir_verifier.hpp"
+#include "llvm_includes/filesystem.hpp"
+#include "llvm_lowering.hpp"
+#include "compile_llvm.hpp"
+#include "module_impl.hpp"
+#include <backends/llvm/llvm_backend.hpp>
+
+namespace base::extend {
+	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
+		compiler::backend_llvm::ModuleImpl* ptr
+	) {
+		delete ptr;
+	}
+}
+
+namespace compiler::backend_llvm {
+	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
+
+	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
+		addFunctionToModuleImpl(impl.refMut(), lir_function);
+	}
+
+	bool Module::verify() const {
+		std::cerr << "LLVMVerification: \n";
+		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
+		std::cerr << "\n";
+		return not error_found;
+	}
+
+	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
+
+	void Module::debugDumpToFile(base::StrID output_file) const {
+		std::error_code      error_code;
+		llvm::raw_fd_ostream ir_output_stream(
+			output_file.str(), error_code, llvm::sys::fs::OF_None
+		);
+		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
+
+		impl->module->print(ir_output_stream, nullptr);
+	}
+
+	void Module::compile(base::StrID output_file, CompilationOutputType output_type) {
+		compileModuleToObject(impl.refMut(), output_file, output_type);
+	}
+
+	Module::~Module() = default;
+}

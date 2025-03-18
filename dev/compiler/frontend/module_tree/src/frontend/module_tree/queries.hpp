@@ -6,7 +6,7 @@
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 
-// @TODO: this dependency can be relaxed by separating ModuleID and FileID
+// @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
 #include "module_tree.hpp"
 
 namespace compiler::frontend {

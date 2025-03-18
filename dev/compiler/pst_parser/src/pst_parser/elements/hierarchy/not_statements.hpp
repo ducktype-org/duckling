@@ -234,7 +234,7 @@ namespace pst {
 		}
 
 	public:
-		virtual void acceptExprVisitor(PstExprVisitor& visitor) const = 0;
+		virtual void acceptExprVisitor(expr::PstExprVisitor& visitor) const = 0;
 	};
 
 }
