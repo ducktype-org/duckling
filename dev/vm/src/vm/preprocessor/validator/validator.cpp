@@ -2,6 +2,7 @@
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
+#include <vector>
 #include <vm/code_data/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include "base/string_id.hpp"
@@ -121,27 +122,32 @@ namespace vm::validator {
 
 		void Validator::validateJumpStackStructure() {
 			for (const auto& func: program.functions) {
-				int instruction_counter = 0;
-				int current_depth = 0;
-				using JumpRange = struct {int depth; int l; int r;};
-				base::HashMap<base::StrID, JumpRange> jump_ranges;
+				int next_id = 0;
+				std::vector<int> stack_ids;
+				base::HashMap<base::StrID, int> stack_top_ids;
 				for (const auto& op: func->code->opcodes) {
 					if (op->opcode_name.strView() == "init_type") {
-						current_depth++;
+						stack_ids.push_back(next_id);
+						next_id++;
 					} else if (op->opcode_name.strView() == "deinit") {
-						current_depth--;
-					} else if (op->opcode_name.strView() == "label" || op->opcode_name.strView() == "jmpRel_label") { // TODO: change to all jumps
+						stack_ids.pop_back();
+					} else if (op->opcode_name.strView() == "label"
+							|| op->opcode_name.strView() == "jmpRel_label"
+							|| op->opcode_name.strView() == "jmpRelIf_label"
+							|| op->opcode_name.strView() == "jmpRelNotIf_label"
+						) {
 						variant_match(op->args[0].arg) {
 							variant_case(opargs::Label, label) {
 								base::StrID label_name = label.label_name;
-								if (jump_ranges.contains(label_name)) {
-									if (jump_ranges[label_name].depth != current_depth) {
-										// Stack structure invalid!!!
+								if (stack_top_ids.contains(label_name)) {
+									if (stack_top_ids[label_name] != stack_ids.back()) {
+										log.log(makeBox<vm::validator::JumpStackStructureMismatch>(
+											*op->position
+										));
 									}
-									jump_ranges[label_name].r = instruction_counter;
 								}
 								else {
-									jump_ranges[label_name] = {.depth=current_depth, .l=instruction_counter, .r=instruction_counter};
+									stack_top_ids[label_name] = stack_ids.back();
 								}
 							}
 							variant_default {
@@ -149,9 +155,7 @@ namespace vm::validator {
 							}
 						}
 					}
-					instruction_counter++;
 				}
-				// TODO: check if minimum in range is equal to stored depth
 			}
 		}
 	}

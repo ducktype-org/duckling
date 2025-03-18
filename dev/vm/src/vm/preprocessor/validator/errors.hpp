@@ -49,4 +49,7 @@ namespace vm::validator {
 	DEFINE_VALIDATOR_ERROR(
 		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
 	);
+	DEFINE_VALIDATOR_ERROR(
+		JumpStackStructureMismatch, "Invalid Jump! Matching jump and label should have the same stack structures"
+	);
 }
