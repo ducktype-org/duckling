@@ -16,7 +16,7 @@ namespace tsh::internal {
 			std::set<InterfaceElement> elements;
 
 			for (const compiler::helios::QueryTypeOfSymbol::QKey field_sym: field_syms) {
-				AbstractType field_type
+				const SymbolType<> field_type
 					= ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym)->expect(
 						"Handling ERRORS in TS is not supported yet..."
 					);

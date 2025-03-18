@@ -334,7 +334,7 @@ namespace tsh::internal {
 	};
 
 	class PointerAbstractTypeImpl final: public AbstractTypeImpl {
-		ComponentType component;
+		SymbolType<> pointee;
 
 	public:
 		[[nodiscard]]
@@ -348,108 +348,25 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Pointer;
 
 		[[nodiscard]]
-		ComponentType getComponent() const {
-			return component;
+		SymbolType<> getPointee() const {
+			return pointee;
 		}
 
 		[[nodiscard]]
 		AbstractType getUnderlyingType() const {
-			return component.type;
+			return pointee.getType();
+		}
+
+		explicit PointerAbstractTypeImpl(const SymbolType<> component): pointee(component) {
+			representation = base::strConcat("pointer(", component.toString(), ")");
 		}
 
 		[[nodiscard]]
-		bool isMutable() const {
-			return component.is_mutable;
-		}
-
-		explicit PointerAbstractTypeImpl(const ComponentType component): component(component) {
-			representation = base::strConcat(
-				"pointer(", component.is_mutable ? "" : "const ", component.type.toString(), ")"
-			);
-		}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context&) const override {
-			// Explicit override without change in implementation to add comment.
-			// Implicit coercions allow checking against null pointer.
-			// We do not allow casting to another (raw) pointer type,
-			// because we forbid implicit type (de)specification in this context.
-			// We only allow dropping mutability.
-			return target.getKind() == Kind::Bool
-			    || (target.getKind() == Kind::Pointer
-			        && (isMutable() || !PointerAbstractType(target).isMutable()));
-		}
-	};
-
-	class ReferenceAbstractTypeImpl final: public AbstractTypeImpl {
-		AbstractType  underlying_type;
-		ReferenceKind ref_kind;
-		bool          leaking, nullable, unique;
-
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return STATIC_KIND;
-		}
-
-		/**
-		 * @brief The Kind of types described by objects of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::Reference;
-
-		[[nodiscard]]
-		AbstractType getUnderlyingType() const {
-			return underlying_type;
-		}
-
-		[[nodiscard]]
-		ReferenceKind getReferenceKind() const {
-			return ref_kind;
-		}
-
-		[[nodiscard]]
-		bool isLeaking() const {
-			return leaking;
-		}
-
-		[[nodiscard]]
-		bool isNullable() const {
-			return nullable;
-		}
-
-		[[nodiscard]]
-		bool isUnique() const {
-			return unique;
-		}
-
-		explicit ReferenceAbstractTypeImpl(
-			const AbstractType  underlying_type,
-			const ReferenceKind ref_kind,
-			const bool          leaking,
-			const bool          nullable,
-			const bool          unique
-		):
-			  underlying_type(underlying_type),
-			  ref_kind(ref_kind),
-			  leaking(leaking),
-			  nullable(nullable),
-			  unique(unique) {}
-
-		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType, query::Context&) const override {
-			// Unlike with pointers, we do not allow checking whether the reference is non-null by
-			// coercion, because this may conflict with the underlying type being coercible to bool.
-			// Instead, we would want to just forward coercibility.
-			// But we also anticipate the need to coerce `T` to `ref T` or the other way around.
-			// Does this mean that we need to coerce `(ref S)` to `ref (ref S)`?
-			// Does `ref ref S` even make sense?
-			// @TODO: resolve the above.
-			return false;
-		}
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<ComponentType> components;
+		std::vector<SymbolType<>> components;
 
 	public:
 		[[nodiscard]]
@@ -463,37 +380,19 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Tuple;
 
 		[[nodiscard]]
-		const std::vector<ComponentType>& getComponents() const {
+		const std::vector<SymbolType<>>& getComponents() const {
 			return components;
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(const AbstractType target, query::Context& ctx) const override {
-			// Implicit coercions are allowed to other tuples of the same size,
-			// where each component can be coerced independently.
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 
-			if (target.getKind() != Kind::Tuple) return false;
-			TupleAbstractType target_tuple = target;
-
-			const std::vector<ComponentType>& target_components = target_tuple.getComponents();
-			if (target_components.size() != components.size()) return false;
-
-			for (usize i = 0; i < components.size(); i++) {
-				ComponentType component = components[i];
-				if (const ComponentType target_component = target_components[i];
-				    !component.isImplicitlyCoercible(target_component, ctx))
-					return false;
-			}
-
-			return true;
-		}
-
-		TupleAbstractTypeImpl(std::vector<ComponentType> components);
+		TupleAbstractTypeImpl(std::vector<SymbolType<>> components);
 	};
 
 	class FunctionAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<AbstractType> parameter_types;
-		AbstractType              result_type;
+		std::vector<SymbolType<>> parameter_types;
+		SymbolType<>              result_type;
 		bool                      pure, free;
 
 	public:
@@ -508,12 +407,12 @@ namespace tsh::internal {
 		static constexpr Kind STATIC_KIND = Kind::Function;
 
 		[[nodiscard]]
-		const std::vector<AbstractType>& getParameterTypes() const {
+		const std::vector<SymbolType<>>& getParameterTypes() const {
 			return parameter_types;
 		}
 
 		[[nodiscard]]
-		AbstractType getResult() const {
+		SymbolType<> getResult() const {
 			return result_type;
 		}
 
@@ -531,8 +430,8 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const override;
 
 		FunctionAbstractTypeImpl(
-			std::vector<AbstractType> parameter_types,
-			AbstractType              result_type,
+			std::vector<SymbolType<>> parameter_types,
+			SymbolType<>              result_type,
 			bool                      pure = false,
 			bool                      free = false
 		);
@@ -544,7 +443,7 @@ namespace tsh::internal {
 	 * Sort variant types, so that var(A, B) = var(B, A)?
 	 */
 	class VariantAbstractTypeImpl final: public AbstractTypeImpl {
-		std::vector<AbstractType> underlying_types;
+		std::vector<SymbolType<>> underlying_types;
 
 	public:
 		[[nodiscard]]
@@ -557,15 +456,15 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::Variant;
 
-		explicit VariantAbstractTypeImpl(const std::vector<AbstractType>& variant_types);
+		explicit VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types);
 
 		[[nodiscard]]
-		const std::vector<AbstractType>& getUnderlyingTypes() const {
+		const std::vector<SymbolType<>>& getUnderlyingTypes() const {
 			return underlying_types;
 		}
 
 		[[nodiscard]]
-		AbstractType getMember(const usize idx) const {
+		SymbolType<> getMember(const usize idx) const {
 			return underlying_types[idx];
 		}
 	};
@@ -613,7 +512,7 @@ namespace tsh::internal {
 		) const;
 
 		[[nodiscard]]
-		AbstractType getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
+		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const {
 			const auto& elements_with_same_name = getInterface(ctx).getElements().at(name(sym));
 			for (const auto& element: elements_with_same_name)
 				if (element.getSymbol() == sym) return element.getType(ctx);
