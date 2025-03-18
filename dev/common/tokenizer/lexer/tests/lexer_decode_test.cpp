@@ -20,7 +20,6 @@ class DecodeTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
 		TESTER_ADD_TEST(badContinuations);

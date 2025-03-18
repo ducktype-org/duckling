@@ -42,14 +42,14 @@ namespace compiler::lir {
 	 * @return LirLocal
 	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
 		return LirLocal{ mir_local->helios_id, type_layout };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<tsl::QueryTypeLayout>(bool_type);
+		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LirLocal{ bool_layout };
 	}
@@ -254,7 +254,7 @@ namespace compiler::lir {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {
-						const auto arg_type = local->type.type;
+						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness();
 					}
@@ -363,7 +363,7 @@ namespace compiler::lir {
 			Function get() && {
 				return Function{
 					key.function->name,
-					ctx.query<tsl::QueryTypeLayout>(key.function->return_type),
+					ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type),
 					std::move(blocks),
 					std::move(locals),
 					std::move(block_order),
