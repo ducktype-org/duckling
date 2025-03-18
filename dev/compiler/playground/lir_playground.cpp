@@ -1,5 +1,4 @@
 #include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
@@ -10,16 +9,10 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <init/init.hpp>
+#include <base/int_conv.hpp>
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-
-	// @TODO: add to helios init
-	lexer::init();
-	pst::init();
-
-
-	// @FUTURE: record all inits somewhere..
 
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
@@ -31,7 +24,7 @@ int main(int argc, const char* argv[]) {
 	clap::ParsingResult options;
 
 	try {
-		options = clap.parse(argc, argv);
+		options = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;
@@ -49,7 +42,7 @@ int main(int argc, const char* argv[]) {
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 
-	for (auto& fun: top_level.functions) {
+	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });

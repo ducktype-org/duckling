@@ -17,11 +17,15 @@ class SourceFile:
             self.content = file.read()
 
     def _relativeImportChecks(self):
-        imports = re.findall(_RELATIVE_IMPORT_REGEX, self.content)
-        for imp in imports:
-            import_path = self.dir / imp
-            if not import_path.exists():
-                self.errors.append(f"Relative import `{imp}` does not exist.")
+        lines = self.content.splitlines()
+        for i, line in enumerate(lines):
+            imports = re.findall(_RELATIVE_IMPORT_REGEX, line)
+            for imp in imports:
+                import_path = self.dir / imp
+                if not import_path.exists():
+                    self.errors.append(
+                        f"Relative import `{imp}` does not exist: {self.path}:{i + 1}"
+                    )
 
     def runAllChecks(self, verbose):
         """Returns True if all checks passed, False otherwise"""
@@ -49,7 +53,12 @@ def get_source_files(all, relative_to, no_merge_base) -> List[SourceFile]:
     return source_files
 
 
-def duck_linter_impl(all, branch, verbose, no_merge_base):
+def duck_linter_impl(
+    all: bool = False,
+    branch: str = "origin/main",
+    verbose: bool = False,
+    no_merge_base: bool = False,
+):
     passed_all = True
 
     file = get_source_files(all, branch, no_merge_base)
