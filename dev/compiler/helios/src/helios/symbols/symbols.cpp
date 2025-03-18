@@ -435,11 +435,11 @@ namespace compiler::helios {
 						= {
 							  {
 								  {
-									  base::StrID("btn_input_i64"),
+									  base::StrID("builtin_input_i64"),
 									  ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
 								  },
 								  {
-									  base::StrID("btn_output_i64"),
+									  base::StrID("builtin_output_i64"),
 									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, unit_type }
 						              ),
 								  },

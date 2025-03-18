@@ -799,14 +799,14 @@ private:
 			variable_stmt->initial_value->ref().get()
 		);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1->callee));
-		ASSERT_EQUAL(base::StrID("btn_input_i64"), compiler::helios::name(call_expr_1->callee));
+		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1->callee));
 
 		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
 			function.content.body->statements.at(1).ref().get()
 		);
 		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
-		ASSERT_EQUAL(base::StrID("btn_output_i64"), compiler::helios::name(call_expr_2->callee));
+		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee));
 	}
 
 	void testScopeParentsAndDepth() {
