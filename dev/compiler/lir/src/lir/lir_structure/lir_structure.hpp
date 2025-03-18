@@ -62,7 +62,7 @@ namespace compiler::lir {
 
 	/**
 	 * @brief Reference to a function in LIR.
-	 * @note This might be changed in the future to allow for name mangling.
+	 * @note In the future this might simple store mangled name (string), and possibly an optional SymID.
 	 */
 	struct FunctionLiteral {
 		helios::SymID helios_id;
