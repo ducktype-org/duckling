@@ -104,14 +104,17 @@ namespace vm {
 			                        .arg1   = 0 };
 #endif
 
-		pre_frame->instr       = &exit_instr;
-		pre_frame->local_stack = runtime_data.local_stack_top;
-		pre_frame->called_func_ret_size = 8; // Main always returns an 8 byte primitive.
+		pre_frame->instr                = &exit_instr;
+		pre_frame->local_stack          = runtime_data.local_stack_base;
+		pre_frame->called_func_ret_size = 8;  // Main always returns an 8 byte primitive.
 
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
-		std::byte* local_stack = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func->stack_size;
+		std::byte* local_stack = runtime_data.local_stack_base;
+
+		if (local_stack + main_func->stack_size > runtime_data.local_stack_end)
+			CORE_PANIC("VM stack overflow.");
+
 		frame->is_main    = true;
 		frame->local_size = main_func->stack_size;
 

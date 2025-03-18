@@ -221,8 +221,7 @@ namespace vm {
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 
 			// Assumes that local_size = ret_val + passed_args + new_local_args.
-			runtime_data.local_stack_top = local_stack + called_func.stack_size;
-			if (runtime_data.local_stack_top > runtime_data.local_stack_end)
+			if (local_stack + called_func.stack_size > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
@@ -326,8 +325,6 @@ namespace vm {
 			}
 			callees_frame->local_offset_to_block_idx.clear();
 			callees_frame->block_idx_to_local_offset.clear();
-
-			thread.runtime_data.local_stack_top = frame->local_stack + frame->local_size;
 
 			// Load previous frame
 			instr                       = frame->instr;  // This is already a pointer to next instr

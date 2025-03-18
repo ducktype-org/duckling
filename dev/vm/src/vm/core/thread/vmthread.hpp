@@ -67,7 +67,6 @@ namespace vm {
 		Frame* frame_stack_end;       /// Pointer to the first value not allocated.
 		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
 		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_top;   /// Pointer to the place, where new stack should start.
 		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
 
 		RuntimeData(Ref<ThreadStack> stack):
@@ -75,7 +74,6 @@ namespace vm {
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
-			  local_stack_top(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
 	};
 
