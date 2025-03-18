@@ -58,7 +58,11 @@ namespace pst {
 		 */
 		template<typename T>
 		base::Optional<Access<T>> dynamicCast() const {
-			return { { dynamic_cast<const T*>(&*ref) } };
+			if (auto ptr = dynamic_cast<const T*>(&*ref)) {
+				return { {ptr} };
+			} else {
+				return {};
+			}
 		}
 
 		EXPOSE_REF_INTERFACE(ref)
