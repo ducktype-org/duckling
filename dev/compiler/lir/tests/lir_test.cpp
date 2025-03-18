@@ -41,9 +41,8 @@ public:
 
 private:
 	struct LirModuleResult {
-		LIRConstructionTest& t;
-		frontend::ModuleID   module;
-		helios::ScopeID      scope;
+		frontend::ModuleID module;
+		helios::ScopeID    scope;
 		base::Map<
 			base::StrID,
 			std::tuple<CRef<helios::HOUTFunction>, CRef<mir::Function>, CRef<lir::Function>>>
@@ -62,16 +61,16 @@ private:
 		}
 	};
 
-	LirModuleResult getLirOfModule(LIRConstructionTest& t, std::string_view module_path) {
+	LirModuleResult getLirOfModule(std::string_view module_path) {
 		auto [module, scope] = getModule(fs::FilePath(module_path));
-		LirModuleResult result{ .t = t, .module = module, .scope = scope };
+		LirModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
-			for (auto&& hout_func: unit->functions) {
+			for (const auto& hout_func: unit->functions) {
 				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
-				t.assertTrue(
+				assertTrue(
 					lir_func->validateBlockOrder(),
 					base::strConcat("Could not validate LIR function ", lir_func->name)
 				);
@@ -84,7 +83,7 @@ private:
 	}
 
 	void noTest() {
-		auto module = getLirOfModule(*this, path("modules/simple"));
+		auto module = getLirOfModule(path("modules/simple"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
@@ -119,7 +118,7 @@ private:
 	}
 
 	void simpleBools() {
-		auto module = getLirOfModule(*this, path("modules/booleans"));
+		auto module = getLirOfModule(path("modules/booleans"));
 		ASSERT_EQUAL(1, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
@@ -134,7 +133,7 @@ private:
 	}
 
 	void functionCallTest() {
-		auto module  = getLirOfModule(*this, path("modules/function_calls"));
+		auto module  = getLirOfModule(path("modules/function_calls"));
 		auto foo_lir = module.lirFunc("foo");
 		auto foo_mir = module.mirFunc("foo");
 		withContextDo([&](query::Context& ctx) {
