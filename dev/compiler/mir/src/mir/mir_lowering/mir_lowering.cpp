@@ -299,6 +299,13 @@ namespace compiler::mir {
 			return local_list.getRef(key).value();
 		}
 
+		[[nodiscard]]
+		LocalRef addBoolTmp(const helios::ScopeID scope) {
+			auto type = tsh::SymbolType<>(ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable);
+			const auto key = local_list.emplaceBack(MirLocal{ type, scope , true});
+			return local_list.getRef(key).value();
+		}
+
 		/**
 		 * Finds the location of a local variable in the function. Does not check the global scope.
 		 * @param helios_id The HELIoS symbol ID of the local variable.
@@ -418,12 +425,24 @@ namespace compiler::mir {
 
 			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
+			
+			auto get_bool_hole = condition_block->addHole();
+			auto condition_result_tmp = function.addBoolTmp(stmt.lifetime_scope);
+
 			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function);
+
+			get_bool_hole.fill(Instruction{
+				Operation::Assign,
+				{ condition_result_tmp },
+				{ expr_result.value },
+				{ flagConstruct(condition_result_tmp) },
+				stmt.condition->lifetime_scope,
+			});
 
 			condition_block->setTerminator(
 				{ Operation::Branch,
 			      {},
-			      { expr_result.value, then_body.begin->getID(), else_block->getID() },
+			      {condition_result_tmp, then_body.begin->getID(), else_block->getID() },
 			      {},
 			      stmt.lifetime_scope }
 			);

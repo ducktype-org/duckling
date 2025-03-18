@@ -66,8 +66,10 @@ namespace compiler::mir {
 		std::vector<Block> new_blocks;
 
 		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
-		for (auto& local: function.local_list)
+		for (auto& local: function.local_list) {
+			if (local->ignore_lifetime) continue;
 			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
+		}
 
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.

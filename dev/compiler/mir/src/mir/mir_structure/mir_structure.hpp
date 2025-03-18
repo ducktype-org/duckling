@@ -113,6 +113,11 @@ namespace compiler::mir {
 		tsh::SymbolType<>             type;
 		helios::ScopeID               lifetime_scope;
 
+		/**
+		 * Set to true if this local should be ignored by lifetime analysis or destructors.
+		 */
+		bool ignore_lifetime = false;
+
 	private:
 		// @note: Constructing MirLocal from helios_id
 		// might work poorly for template/generic instantiations.
@@ -123,11 +128,12 @@ namespace compiler::mir {
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
-		MirLocal(tsh::SymbolType<> type, helios::ScopeID lifetime_scope):
+		MirLocal(tsh::SymbolType<> type, helios::ScopeID lifetime_scope, bool ignore_lifetime = false):
 			  id(LocalID::next()),
 			  helios_id({}),
 			  type(type),
-			  lifetime_scope(lifetime_scope) {}
+			  lifetime_scope(lifetime_scope),
+			  ignore_lifetime(ignore_lifetime) {}
 
 		friend struct Function;
 		friend struct FunctionBuilder;
