@@ -3,6 +3,9 @@
 # output = n
 
 type primitive: int64 8
+type fun: main {} int64
+type fun: check { int64 }
+
 
 function check {
 	arg_size: 8;
@@ -24,7 +27,7 @@ function main {
 	local_size: 16;
 
 	code: {
-		init_type 			int64; # [0, 8) main ret_val
+		# [0, 8) main ret_val
 		init_type 			int64; # [8, 16) check() arg0
         input_l64           8;
 		call_func          	check;

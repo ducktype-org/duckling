@@ -250,13 +250,11 @@ namespace vm {
 			// The return value block may have been uninitialized and initialized again.
 			prev_frame->local_stack_head -= called_func.arg_size + called_func.ret_size;
 			for (u64 i = 0; i < shared_block_count; i++) {
-				u64 block_idx    = prev_frame->block_stack.size() - 1;
-				u64 local_offset = prev_frame->block_idx_to_local_offset[block_idx];
 				prev_frame->block_stack.pop_back();
-
-				// @TODO: This is not needed, add a note.
-				prev_frame->block_idx_to_local_offset.erase(block_idx);
-				prev_frame->local_offset_to_block_idx.erase(local_offset);
+				// @note: This is not needed, since a new init to the same offset/block_idx will
+				// overwrite the old values.
+				// prev_frame->block_idx_to_local_offset.erase(block_idx);
+				// prev_frame->local_offset_to_block_idx.erase(local_offset);
 			}
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
@@ -343,11 +341,10 @@ namespace vm {
 			);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
-			// @TODO: Insert or assing
-			frame->local_offset_to_block_idx.put(
+			frame->local_offset_to_block_idx.insert_or_assign(
 				frame->local_stack_head, frame->block_stack.size()
 			);
-			frame->block_idx_to_local_offset.put(
+			frame->block_idx_to_local_offset.insert_or_assign(
 				frame->block_stack.size(), frame->local_stack_head
 			);
 			frame->block_stack.push_back(block);

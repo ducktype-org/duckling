@@ -45,6 +45,7 @@ private:
 	
 	void testDeinitializeReturnValue() {
 		runTestOnVm("deinit_ret_val.dbc", "", "42");
+		runTestOnVm("deinit_main_ret_val.dbc", "", "42");
 	}
 
 	void testRecurence() {

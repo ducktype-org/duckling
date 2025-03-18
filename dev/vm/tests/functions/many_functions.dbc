@@ -3,6 +3,10 @@
 # output = input + 1110
 
 type primitive: int64 8
+type fun: main {} int64
+type fun: add1110 { int64 } int64
+type fun: add1100 { int64 } int64
+type fun: add1000 { int64 } int64
 
 function add1000 {
 	arg_size: 8;
@@ -76,7 +80,7 @@ function main {
 	local_size: 24;
 
 	code: {
-		init_type			int64; # [0, 8) main ret_val
+		# [0, 8) main ret_val
         init_type 			int64; # [8, 16) add1110 ret_val
         init_type 			int64; # [16, 24) add1110 arg0
 		input_l64           16;

@@ -1,4 +1,5 @@
 type primitive: int64 8
+type fun: main {} int64
 
 function main {
 	arg_size: 0;
@@ -7,7 +8,7 @@ function main {
 	ret_size: 8;
 
 	code: {
-		init_type			int64; # [0, 8) main ret_val
+		# [0, 8) main ret_val
 		init_type			int64; # [8, 16) tmp
         mov_l64_imm         8, 0;
         label Loop;

@@ -3,6 +3,8 @@
 # output = a + b + c + d
 
 type primitive: int64 8
+type fun: main {} int64
+type fun: foo { int64, int64 } int64
 
 function foo {
     arg_size: 16;
@@ -31,7 +33,7 @@ function main {
     local_size: 40;
 
     code: {
-        init_type       int64; # [0, 8) main ret_val
+        # [0, 8) main ret_val
         init_type       int64; # [8, 16) accumulator
         init_type       int64; # [16, 24) foo ret_val
         init_type       int64; # [24, 32) foo arg0

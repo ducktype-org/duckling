@@ -1,4 +1,6 @@
 type primitive: int64 8
+type fun: main {} int64
+type fun: ackermann { int64, int64 } int64
 
 function ackermann {
     arg_size: 16;
@@ -83,7 +85,7 @@ function main {
 
     # m, n
     code: {
-        init_type           int64; # [0, 8) main ret_val
+        # [0, 8) main ret_val
         init_type           int64; # [8, 16) ackermann ret_val
         init_type           int64; # [16, 24) ackermann arg0
         init_type           int64; # [24, 32) ackermann arg1

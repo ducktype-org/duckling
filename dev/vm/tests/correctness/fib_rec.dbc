@@ -1,5 +1,8 @@
 type primitive: int64 8
 
+type fun: main {} int64
+type fun: fib { int64 } int64
+
 function fib {
     arg_size: 8;
     arg_count: 1;
@@ -55,7 +58,7 @@ function main {
 
     code: {
         # n := argument
-        init_type   int64; # [0, 8) main ret_val
+        # [0, 8) main ret_val
         init_type   int64; # [8, 16) fib() ret_val
         init_type   int64; # [16, 24) fib() arg0
         input_l64   16;

@@ -47,12 +47,12 @@ private:
 		auto position = vm::api::pause(pid).expect("Pause failed (1)");
 		std::cout << position.instr_number << '\n';
 		assertTrue(
-			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
+			2 <= position.instr_number && position.instr_number <= 3, "Line number is not correct"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 3) return 4;
-			if (x == 4) return 3;
+			if (x == 2) return 3;
+			if (x == 3) return 2;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};
