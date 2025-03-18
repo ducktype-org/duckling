@@ -186,8 +186,9 @@ namespace compiler::helios {
 
 	namespace builtin {
 		/**
-		 * Lookup a builtin symbol by name.
+		 * Lookup a global builtin symbol by name.
+		 * @note Non-global builtins will likely exist, for example: `i64.max`.
 		 */
-		LookupResult lookupBuiltins(query::Context&, base::StrID name);
+		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
 	}
 }

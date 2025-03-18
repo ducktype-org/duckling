@@ -45,19 +45,40 @@ namespace compiler::helios {
 	 * Symbol data shared by all symbols.
 	 */
 	struct CommonSymbolData {
+		/**
+		 * Symbol name.
+		 * 
+		 * @note In the future there might also be anonymous symbols (symbols with no name), like:
+		 * `let _ = 5;`, lambdas, `using a.*`, etc.
+		 * For now we workaround it, as all things that could be anonymous are also a wildcard.
+		 * Those symbols will also need to have mangled name.
+		 */
 		base::StrID name;
 
-		// for now there are no anonymous symbols
-		// in the future we might have ones for lambdas for example
-		bool       anonymous = false;
+		/**
+		 * Symbol kind, determines what kind of symbol it is.
+		 */
 		SymbolKind kind;
 
-		// wildcard symbols are symbols like `using a.*`
+		/**
+		 * Whether the symbol is a wildcard symbol.
+		 * When lookup encounter a wildcard symbol it
+		 * looks-up into that symbol instead of considering the symbol itself.
+		 * e.g.: `using a.*`
+		 */
 		bool is_wildcard = false;
+
+		/**
+		 * Whether the symbol is an alias.
+		 * Aliases are symbols that are not "real" symbols, but are just a reference to another symbol.
+		 * e.g.: `using a = b;`
+		 */
 		bool is_alias    = false;
 
-		// dependent symbols are symbols that can't be "calculated" without some context, e.g. class
-		// fields
+		/** Whether the symbol is a dependent symbol.
+		 * Dependent symbols are symbols that can't be used in actual execution without some context,
+		 * e.g. class fields.
+		 */
 		bool dependent = false;
 	};
 
@@ -65,7 +86,14 @@ namespace compiler::helios {
 	 * @brief Symbol data for all symbols that are created from PST elements.
 	 */
 	struct PstSymbolData {
+		/**
+		 * Scope in which the symbol was defined.
+		 */
 		ScopeID                scope;
+
+		/**
+		 * PST element that the symbol was created from.
+		 */
 		CRef<pst::LangElement> pst_element;
 	};
 
@@ -414,9 +442,9 @@ namespace compiler::helios {
 			/**
 			 * Query all builtin symbols.
 			 */
-			DECLARE_QUERY(QueryBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
 
-			struct IMPLEMENT_QUERY(QueryBuiltinSymbols, std::vector<SymID>) {
+			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
 				static auto provide(Context& ctx, QKey) -> PResult {
 					std::vector<SymID> output;
 
@@ -459,13 +487,13 @@ namespace compiler::helios {
 				QUERY_AUTO_CACHE_REF
 			};
 
-			QUERY_IMPLEMENTATION_BOILERPLATE(QueryBuiltinSymbols);
+			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
 		}
 
-		LookupResult lookupBuiltins(query::Context& ctx, base::StrID name) {
+		LookupResult lookupGlobalBuiltins(query::Context& ctx, base::StrID name) {
 			LookupResult output{};
 
-			auto builtins = ctx.query<QueryBuiltinSymbols>({});
+			auto builtins = ctx.query<QueryGlobalBuiltinSymbols>({});
 
 			for (auto sym: *builtins)
 				if (name == getSymRef(sym)->common.name) output.leaves.push_back(sym);

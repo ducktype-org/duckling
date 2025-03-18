@@ -446,7 +446,7 @@ namespace compiler::helios {
 			auto scope_data = getScopeRef(key.scope);
 			if (scope_data->is_root) {
 				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
-				return builtin::lookupBuiltins(ctx, key.name);
+				return builtin::lookupGlobalBuiltins(ctx, key.name);
 			}
 
 			LookupResult result{ .leaves = {}, .children = {} };
