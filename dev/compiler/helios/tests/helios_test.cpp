@@ -787,9 +787,9 @@ private:
 	void testBuiltinFunctions() {
 		auto [module, scope] = getModule(fs::FilePath(path("test_modules/builtins")));
 		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout.functions.size());
+		ASSERT_EQUAL(1, hout->functions.size());
 
-		auto function = hout.functions.at(0);
+		auto function = hout->functions.at(0);
 		ASSERT_EQUAL(function.original_name, "main");
 
 		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
