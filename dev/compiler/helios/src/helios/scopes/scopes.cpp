@@ -47,8 +47,9 @@ namespace compiler::helios {
 
 		u64 depth;
 
-		// @TODO: decide on it, it was commented out due to aggregate initialization
-		// This delete is important, to prevent any copy of scope data:
+		// We would like the function bellow to be deleted to prevent any copy of scope data.
+		// Unfortunately that would break the aggregate initialization which is super cool.
+		// ScopeData is local to this file only, so we just need to be careful.
 		// ScopeData(const ScopeData&)            = delete;
 		// ScopeData& operator=(const ScopeData&) = delete;
 	};
