@@ -205,6 +205,11 @@ namespace compiler::helios {
 	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, CRef<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
+		PstSymbolData pst_data {
+			.scope       = scope,
+			.pst_element = stmt,
+		};
+
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
 			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
@@ -213,10 +218,7 @@ namespace compiler::helios {
 					.name = function->getName(),
 					.kind = SymbolKind::Function,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Namespace: {
@@ -240,10 +242,7 @@ namespace compiler::helios {
 					.name = const_stmt->getName(),
 					.kind = SymbolKind::Const,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Class: {
@@ -268,10 +267,7 @@ namespace compiler::helios {
 					.kind     = SymbolKind::Alias,
 					.is_alias = true,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Using: {
@@ -285,10 +281,7 @@ namespace compiler::helios {
 					.is_wildcard = true,
 					.is_alias    = true,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Variable: {
@@ -300,10 +293,7 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Import: {
@@ -316,10 +306,7 @@ namespace compiler::helios {
 					.is_wildcard = false,
 					.is_alias    = false,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Method: {
@@ -329,10 +316,7 @@ namespace compiler::helios {
 					.name = method->getName(),
 					.kind = SymbolKind::Method,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Field: {
@@ -341,11 +325,9 @@ namespace compiler::helios {
 				{
 					.name = field->getName(),
 					.kind = SymbolKind::Field,
+					.dependent = true,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Constructor: {
@@ -355,10 +337,7 @@ namespace compiler::helios {
 					.name = constructor->getName(),
 					.kind = SymbolKind::Constructor,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		case pst::StmtKind::Destructor: {
@@ -367,10 +346,7 @@ namespace compiler::helios {
 					.name = base::StrID("destroy"),
 					.kind = SymbolKind::Destructor,
 				},
-				{
-					.scope       = scope,
-					.pst_element = stmt,
-				}
+				pst_data
 			));
 		}
 		default:
