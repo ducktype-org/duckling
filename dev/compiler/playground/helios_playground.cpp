@@ -47,7 +47,7 @@ int notMain(int argc, const char* const* argv) {
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level.debugPrint();
+	std::cerr << top_level->debugPrint();
 
 	return 0;
 }
