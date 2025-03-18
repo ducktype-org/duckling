@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+import os
 import pathlib
 import sys
 import tempfile
@@ -187,11 +188,11 @@ def simulate_cpp_linter(
     clang_tidy_path: str,
     clang_format_path: str,
     build: str,
-    threads: int,
-    branch: str,
-    all: bool,
-    no_merge_base: bool,
-):
+    threads: int = os.cpu_count() or 1,
+    branch: str = "origin/main",
+    all: bool = False,
+    no_merge_base: bool = False,
+) -> tuple[bool, bool]:
     build_folder = pathlib.Path(build)
     if not build_folder.exists():
         exit_with_error(f"Given build folder does not exist: {build_folder.absolute()}")
