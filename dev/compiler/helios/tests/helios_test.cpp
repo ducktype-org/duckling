@@ -198,11 +198,11 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 3);
-		ASSERT_EQUAL(hout.glob_data.size(), 2);
+		ASSERT_EQUAL(hout->functions.size(), 3);
+		ASSERT_EQUAL(hout->glob_data.size(), 2);
 
 		// just for cov and to see if it does not throw:
-		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
+		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
 	}
 
 	void testHoutVisitor() {
@@ -212,9 +212,9 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 1);
+		ASSERT_EQUAL(hout->functions.size(), 1);
 
-		auto the_function = hout.functions.at(0);
+		auto the_function = hout->functions.at(0);
 
 		auto& stmt_list = the_function.content.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 5);
@@ -298,7 +298,7 @@ private:
 
 		auto test_value = [&](auto str, i64 val) {
 			auto name = base::StrID(str);
-			for (auto& gb: hout.glob_data) {
+			for (auto& gb: hout->glob_data) {
 				if (gb.original_name == name) {
 					this->assertTrue(gb.value == val, "Bad constant value");
 					return;
@@ -499,9 +499,9 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 1);
+		ASSERT_EQUAL(hout->functions.size(), 1);
 
-		auto& function = hout.functions.at(0);
+		auto& function = hout->functions.at(0);
 
 		ASSERT_EQUAL(function.original_name, "foo");
 
@@ -560,7 +560,7 @@ private:
 		}
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
 	}
 
 	void testKeywordLiterals() {
@@ -592,12 +592,12 @@ private:
 		// a simple way to get function scope through hout:
 		// @todo maybe we want to put in in helios_test_utils.hpp?
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout.functions.size());
+		ASSERT_EQUAL(1, hout->functions.size());
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
 
-		auto foo            = hout.functions.at(0);
+		auto foo            = hout->functions.at(0);
 		auto foo_body_scope = foo.content.body->lifetime_scope;
 
 		// variable types:
@@ -649,9 +649,9 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			ASSERT_EQUAL(hout.functions.size(), 2);
+			ASSERT_EQUAL(hout->functions.size(), 2);
 			{
-				auto function = hout.functions.at(0);
+				auto function = hout->functions.at(0);
 				ASSERT_EQUAL(function.original_name, "foo");
 
 				auto& a_param = function.content.parameters->at(0);
@@ -685,7 +685,7 @@ private:
 			}
 
 			{
-				auto function = hout.functions.at(1);
+				auto function = hout->functions.at(1);
 				ASSERT_EQUAL(function.original_name, "bar");
 				auto& abc_param    = function.content.parameters->at(0);
 				auto& second_param = function.content.parameters->at(1);
@@ -768,9 +768,9 @@ private:
 		auto [module, scope] = getModule(fs::FilePath(path("test_modules/function_calls")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(2, hout.functions.size());
-		std::cerr << hout.debugPrint() << '\n';
-		auto function = hout.functions.at(1);
+		ASSERT_EQUAL(2, hout->functions.size());
+		std::cerr << hout->debugPrint() << '\n';
+		auto function = hout->functions.at(1);
 		ASSERT_EQUAL(function.original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
 			function.content.body->statements.at(0).ref().get()

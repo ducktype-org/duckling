@@ -253,7 +253,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		using namespace compiler;
 		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-		std::cout << top_level.debugPrint();
+		std::cout << top_level->debugPrint();
 
 		return exit_code;
 	});
@@ -291,7 +291,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			.dump_llvm_ir        = false,
 		} };
 
-		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		driver.compileHOUTUnit(top_level, base::StrID("main_module"));
 
 		return 0;
 	});

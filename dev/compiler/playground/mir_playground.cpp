@@ -48,7 +48,7 @@ int notMain(int argc, const char* const* argv) {
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 
-	for (auto& fun: top_level.functions) {
+	for (auto& fun: top_level->functions) {
 		auto mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
 
 		mir_fun->debugPrint(std::cerr);
