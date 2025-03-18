@@ -11,7 +11,6 @@ class SimpleLexerTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DucklingSource);
 
 		fs::FilePath file(path("token_code.duck"));

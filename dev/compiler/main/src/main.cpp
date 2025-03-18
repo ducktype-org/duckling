@@ -7,7 +7,6 @@
  */
 
 #include <filesystem/file.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <base/exceptions.hpp>
@@ -307,12 +306,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
  * @brief Wrapper for logic of main function
  */
 int mainProcedure(int argc, const char* const* argv) {
-	// @TODO:
-	// those inits should be registered automagically via
-	// RUN_BEFORE_MAIN
-	init::registerForInit(lexer::init);
-	init::registerForInit(pst::init);
-
 	init::InitObject _;
 
 	clap::CLIArgs full_args{

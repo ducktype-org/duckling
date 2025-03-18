@@ -2,16 +2,12 @@
 
 #include <vm/preprocessor/parser/elements.hpp>
 #include <token_file/file.hpp>
-#include <token_parser_core/tpc.hpp>
 #include <deque>
 #include "errors.hpp"
 
 namespace vm::parser {
-	using lexer::init;
 
 	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {
-		init();
-		tpc::init();
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		return lexer::tokenizeFile(path);
 	}
