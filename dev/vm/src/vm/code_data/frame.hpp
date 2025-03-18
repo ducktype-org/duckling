@@ -57,12 +57,13 @@ namespace vm {
 		 * @brief Size of arguments that were passed to a function called by this one.
 		 * Needed to restore the local_stack_head when returning from a function.
 		 */
-		u64 passed_args_size = 0;
+		u64 called_func_arg_size = 0;
 
 		/**
-		 * @brief Size of the stack space shared with the function called by this one.
+		 * @brief Size of arguments that were passed to a function called by this one.
+		 * Needed to restore the local_stack_head when returning from a function.
 		 */
-		u64 shared_stack_space_size = 0;
+		u64 called_func_ret_size = 0;
 
 		/**
 		 * @brief Is this function a main function.

@@ -106,6 +106,7 @@ namespace vm {
 
 		pre_frame->instr       = &exit_instr;
 		pre_frame->local_stack = runtime_data.local_stack_top;
+		pre_frame->called_func_ret_size = 8; // Main always returns an 8 byte primitive.
 
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;

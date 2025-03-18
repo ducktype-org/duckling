@@ -11,6 +11,7 @@ public:
 		TESTER_ADD_TEST(testReturnL32);
 		TESTER_ADD_TEST(testDifferentSizedParams);
 		TESTER_ADD_TEST(testDoubleCall);
+		TESTER_ADD_TEST(testDeinitializeReturnValue);
 		TESTER_ADD_TEST(testRecurence);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
@@ -40,6 +41,10 @@ private:
 	void testDoubleCall() {
 		runTestOnVm("double_call.dbc", "1 2 3 4", "10");
 		runTestOnVm("double_call.dbc", "123 456 789 100", "1468");
+	}
+	
+	void testDeinitializeReturnValue() {
+		runTestOnVm("deinit_ret_val.dbc", "", "42");
 	}
 
 	void testRecurence() {
