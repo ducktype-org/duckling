@@ -141,7 +141,6 @@ private:
 			foo_lir->debugPrint(ctx, std::cerr);
 			foo_mir->debugPrint(std::cerr);
 		});
-		// main.
 	}
 };
 
