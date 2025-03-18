@@ -4,8 +4,9 @@
 
 type primitive: int32 4
 type primitive: int64 8
+type primitive: void 0
 type fun: main {} int64
-type fun: check { int64, int32, int64 }
+type fun: check { int64, int32, int64 } void
 
 function check {
 	arg_size: 20;

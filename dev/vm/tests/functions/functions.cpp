@@ -42,7 +42,7 @@ private:
 		runTestOnVm("double_call.dbc", "1 2 3 4", "10");
 		runTestOnVm("double_call.dbc", "123 456 789 100", "1468");
 	}
-	
+
 	void testDeinitializeReturnValue() {
 		runTestOnVm("deinit_ret_val.dbc", "", "42");
 		runTestOnVm("deinit_main_ret_val.dbc", "", "42");

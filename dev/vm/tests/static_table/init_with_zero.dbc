@@ -1,5 +1,6 @@
 type primitive: int64 8
 type static_table: tableint64 int64 2
+type fun: main {} int64
 
 function main {
   arg_size: 0;
@@ -13,7 +14,7 @@ function main {
   local_size: 48;
 
   code: {
-    init_type           int64; # [0, 8) main ret_val
+    # [0, 8) main ret_val
     init_type           int64; # [8, 16) x
     init_type           int64; # [16, 24) i
     init_type           int64; # [24, 32) y

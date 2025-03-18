@@ -60,16 +60,10 @@ namespace vm {
 		u64 called_func_arg_size = 0;
 
 		/**
-		 * @brief Size of arguments that were passed to a function called by this one.
+		 * @brief Size of the return value of the function called by this one.
 		 * Needed to restore the local_stack_head when returning from a function.
 		 */
 		u64 called_func_ret_size = 0;
-
-		/**
-		 * @brief Is this function a main function.
-		 * Needed in the ret opcode.
-		 */
-		bool is_main = false;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type

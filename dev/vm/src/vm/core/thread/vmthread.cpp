@@ -18,7 +18,7 @@
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
-#include "vm/core/process/type_metadata/definitions.hpp"
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <iostream>
 
 namespace vm {
@@ -111,16 +111,17 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_base;
-		frame->is_main         = true;
 		frame->local_size      = main_func->stack_size;
 		if (local_stack + main_func->stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
-		auto main_func_type   = *executing_program->type_metadata->getTypeByName(main_func->name);
-		auto main_return_type = *main_func_type->getResultType();
-
+		auto main_func_type = executing_program->type_metadata->getTypeByName(main_func->name)
+		                          .expect("Expected main!");
+		auto main_return_type
+			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
+
 		frame->block_stack.push_back(block);
 		frame->block_idx_to_local_offset.put(0, frame->local_stack_head);
 		frame->local_offset_to_block_idx.put(frame->local_stack_head, 0);
@@ -131,14 +132,15 @@ namespace vm {
 			pre_frame->called_func_ret_size == 8, "Main is expected to return an 8 byte primitive."
 		);
 
-		auto* instr = main_func->bc.data();
+		u64   main_ret_val = 0;
+		auto* instr        = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
 
 		// Main return value is the only block in the pre_frame
-		u64 main_ret_val = derefStack<u64>(local_stack, 0);
-		block            = pre_frame->block_stack.back();
+		main_ret_val = derefStack<u64>(local_stack, 0);
+		block        = pre_frame->block_stack.back();
 		pre_frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
 
@@ -175,9 +177,12 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
+		main_ret_val = derefStack<u64>(local_stack, 0);
+		block        = pre_frame->block_stack.back();
+		pre_frame->block_stack.pop_back();
+		process_memory.freeBlock(block);
 
-
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		return main_ret_val;
 
 
 		POP_DIAGNOSTIC
@@ -203,7 +208,12 @@ namespace vm {
 			}
 		}
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+		main_ret_val = derefStack<u64>(local_stack, 0);
+		block        = pre_frame->block_stack.back();
+		pre_frame->block_stack.pop_back();
+		process_memory.freeBlock(block);
+
+		return main_ret_val;
 
 
 #endif

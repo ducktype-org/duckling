@@ -281,11 +281,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret)(FUNCTION_ARGS) {
 		{
 			// Frame of the function we're returning from.
-			auto* callees_frame = frame;
-
-			// If we're returning from main, we pass the ret_val by the register.
-			if (callees_frame->is_main)
-				callees_frame->regs.p64_reg_0 = derefStack<i64>(local_stack, 0);
+			auto* callee_frame = frame;
 
 			// We have to update values passed in arguments.
 			// Old `instr` and `local_stack` are stored on the previous frame.
@@ -300,12 +296,12 @@ namespace vm {
 			// the return value). We just pop it. If we're returning from main, the return value has
 			// been already put in the r0 register, thus we can deinitialize it.
 			bool non_void = frame->called_func_ret_size > 0;
-			while (!callees_frame->block_stack.empty()) {
-				auto block = callees_frame->block_stack.back();
+			while (!callee_frame->block_stack.empty()) {
+				auto block = callee_frame->block_stack.back();
 
 				// We're returning from a non-void, so the last block is the return value, which
 				// should be put in the callers block stack and left initialized.
-				if (non_void && callees_frame->block_stack.size() == 1) {
+				if (non_void && callee_frame->block_stack.size() == 1) {
 					u64 callers_block_idx = frame->block_stack.size();
 					frame->block_stack.push_back(block);
 					frame->block_idx_to_local_offset.put(
@@ -319,10 +315,10 @@ namespace vm {
 					thread.process.getMemory().freeBlock(block);
 				}
 
-				callees_frame->block_stack.pop_back();
+				callee_frame->block_stack.pop_back();
 			}
-			callees_frame->local_offset_to_block_idx.clear();
-			callees_frame->block_idx_to_local_offset.clear();
+			callee_frame->local_offset_to_block_idx.clear();
+			callee_frame->block_idx_to_local_offset.clear();
 
 			// Load previous frame
 			instr                       = frame->instr;  // This is already a pointer to next instr

@@ -4,8 +4,10 @@
 # output == 0 <- test failed
 
 type primitive: int64 8
+type primitive: void 0
+
 type fun: main {} int64
-type fun: check {}
+type fun: check {} void
 
 function check {
 	arg_size: 0;

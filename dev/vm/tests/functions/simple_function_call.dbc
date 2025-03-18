@@ -3,8 +3,9 @@
 # output = n
 
 type primitive: int64 8
+type primitive: void 0
 type fun: main {} int64
-type fun: check { int64 }
+type fun: check { int64 } void
 
 
 function check {
@@ -31,7 +32,8 @@ function main {
 		init_type 			int64; # [8, 16) check() arg0
         input_l64           8;
 		call_func          	check;
-
+		
+		mov_l64_imm			0, 42;
 		ret;
 	}
 
