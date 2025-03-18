@@ -11,7 +11,6 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
 #include "type_data.hpp"
-#include <token_parser_core/tpc.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
 #include <vector>

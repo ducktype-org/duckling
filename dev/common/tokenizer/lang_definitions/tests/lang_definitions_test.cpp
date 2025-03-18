@@ -8,9 +8,6 @@ class SimpleLangDefTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lang_def::key_spec_op::init();
-		lang_def::operator_precedence::init();
-
 		TESTER_ADD_TEST(simpleOperatorPrecedenceTest);
 		TESTER_ADD_TEST(simpleOperatorAssociativityTest);
 		TESTER_ADD_TEST(exportsForLSPTest);

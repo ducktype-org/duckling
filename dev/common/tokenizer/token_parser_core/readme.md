@@ -15,10 +15,6 @@ This module can be conceptually divided into two parts:
 1. Classes `tpc::TokenStream`, `tpc::ParserState` and functions in `automatic.hpp` offer higher level abstractions for interacting with a list of tokens that are useful for parsing.
 2. Class `tpc::Element` and everything from `parser_ref.hpp` and `base_element.hpp` define basic types and functions used as building blocks in abstract syntax tree.
 
-## init
-
-`tpc::init()` should be called before any other module usage.
-
 ## ParserState
 
 This class is the main object used for interaction from the outside, it manages a stack of `tpc::TokenStream` objects to keep track of recursions. Both `tpc::ParserState` and `tpc::TokenStream` are simple wrapper objects and don't keep the underlying data only a reference to it so it should be handled and held by something else.

@@ -100,7 +100,6 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./pst_graph duckling_file svg_out_file\n";
 		return 1;
 	}
-	pst::init();
 	fs::FilePath file(argv[1]);
 	pst::PST<>   pst(file);
 
