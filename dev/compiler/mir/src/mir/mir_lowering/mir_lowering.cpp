@@ -463,7 +463,7 @@ namespace compiler::mir {
 						{ local },
 						{ expr_result.value },
 						{ flagConstruct(local) },
-						stmt.lifetime_scope,
+						value->lifetime_scope,
 					});
 
 					output({ expr_result.begin });
