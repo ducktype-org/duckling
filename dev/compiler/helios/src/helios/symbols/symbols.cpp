@@ -47,7 +47,7 @@ namespace compiler::helios {
 	struct CommonSymbolData {
 		/**
 		 * Symbol name.
-		 * 
+		 *
 		 * @note In the future there might also be anonymous symbols (symbols with no name), like:
 		 * `let _ = 5;`, lambdas, `using a.*`, etc.
 		 * For now we workaround it, as all things that could be anonymous are also a wildcard.
@@ -70,14 +70,14 @@ namespace compiler::helios {
 
 		/**
 		 * Whether the symbol is an alias.
-		 * Aliases are symbols that are not "real" symbols, but are just a reference to another symbol.
-		 * e.g.: `using a = b;`
+		 * Aliases are symbols that are not "real" symbols, but are just a reference to another
+		 * symbol. e.g.: `using a = b;`
 		 */
-		bool is_alias    = false;
+		bool is_alias = false;
 
 		/** Whether the symbol is a dependent symbol.
-		 * Dependent symbols are symbols that can't be used in actual execution without some context,
-		 * e.g. class fields.
+		 * Dependent symbols are symbols that can't be used in actual execution without some
+		 * context, e.g. class fields.
 		 */
 		bool dependent = false;
 	};
@@ -89,7 +89,7 @@ namespace compiler::helios {
 		/**
 		 * Scope in which the symbol was defined.
 		 */
-		ScopeID                scope;
+		ScopeID scope;
 
 		/**
 		 * PST element that the symbol was created from.

@@ -806,7 +806,9 @@ private:
 		);
 		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
-		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee));
+		ASSERT_EQUAL(
+			base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee)
+		);
 	}
 
 	void testScopeParentsAndDepth() {
