@@ -7,6 +7,7 @@
 #include <mir/mir_structure/mir_local_ref.hpp>
 
 #include "function_forward.hpp"
+#include "helios/scope_symbol_id.hpp"
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -36,6 +37,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerULt,
 	IntegerSLt,
 	IntegerNeg,
+	Call,
 
 	ReturnVoid,
 	ReturnValue,
@@ -60,11 +62,18 @@ namespace compiler::lir {
 	using BlockRef = CRef<Block>;
 
 	/**
+	 * @brief Reference to a function in LIR.
+	 */
+	struct FunctionLiteral {
+		helios::SymID helios_id;
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
 	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
@@ -75,6 +84,8 @@ namespace compiler::lir {
 		LIRValue(LocalRef value): value(value) {}
 
 		LIRValue(BlockRef value): value(value) {}
+
+		LIRValue(FunctionLiteral value): value(value) {}
 
 		bool operator==(const LIRValue& other) const = default;
 
