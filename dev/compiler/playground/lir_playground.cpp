@@ -1,30 +1,18 @@
 #include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
 #include <iostream>
+#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
-#include <base/defer.hpp>
+#include <query_framework/query_impl.hpp>  //< needed for ctx.query, @TODO: move context to different file
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
 #include <init/init.hpp>
+#include <base/int_conv.hpp>
 
-void printContextErrors() {
-	if (query::Context::logger.messageCount() > 0) {
-		std::cerr << "Compilation errors logged in context: \n";
-		query::Context::logger.dumpLog(true, std::cerr);
-	}
-}
-
-int notMain(int argc, const char* const* argv) {
+int main(int argc, const char* argv[]) {
 	init::InitObject _;
-
-	// @TODO: add to helios init
-	lexer::init();
-	pst::init();
-
-
-	// @FUTURE: record all inits somewhere..
 
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
@@ -36,7 +24,7 @@ int notMain(int argc, const char* const* argv) {
 	clap::ParsingResult options;
 
 	try {
-		options = clap.parse(argc, argv);
+		options = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;
@@ -51,19 +39,15 @@ int notMain(int argc, const char* const* argv) {
 
 	auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-	defer(printContextErrors());
-
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level.debugPrint();
 
-	return 0;
-}
 
-int main(int argc, const char* argv[]) {
-	// note: we need to catch exception here,
-	// because otherwise stack unwinding might not happen,
-	// and defers might not be called.
-	try {
-		return notMain(argc, argv);
-	} catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
+	for (auto& fun: top_level->functions) {
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+			lir_fun->debugPrint(ctx, std::cerr);
+		});
+		std::cerr << "\n";
+	}
 }

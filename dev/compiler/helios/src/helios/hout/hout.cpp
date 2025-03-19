@@ -53,8 +53,11 @@ namespace compiler::helios {
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {}
+	               ->expect("Handling errors in HOUT is not supported yet")
+	               .getType()),
+		  top_lifetime_scope(parent(scope(symbol)).value()) {
+		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		return base::strConcat(

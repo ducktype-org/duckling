@@ -36,6 +36,7 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerULt,
 	IntegerSLt,
 	IntegerNeg,
+	Call,
 
 	ReturnVoid,
 	ReturnValue,
@@ -60,23 +61,34 @@ namespace compiler::lir {
 	using BlockRef = CRef<Block>;
 
 	/**
+	 * @brief Reference to a function in LIR.
+	 * @note In the future this might simple store mangled name (string), and possibly an optional
+	 * SymID.
+	 */
+	struct FunctionLiteral {
+		helios::SymID helios_id;
+	};
+
+	/**
 	 * @brief Any value in LIR representation
 	 */
-	struct LirLocation {
+	struct LIRValue {
 	private:
-		using ValueType = std::variant<i64, bool, LocalRef, BlockRef>;
+		using ValueType = std::variant<i64, bool, LocalRef, BlockRef, FunctionLiteral>;
 		ValueType value;
 
 	public:
-		LirLocation(i64 value): value(value) {}
+		LIRValue(i64 value): value(value) {}
 
-		LirLocation(bool value): value(value) {}
+		LIRValue(bool value): value(value) {}
 
-		LirLocation(LocalRef value): value(value) {}
+		LIRValue(LocalRef value): value(value) {}
 
-		LirLocation(BlockRef value): value(value) {}
+		LIRValue(BlockRef value): value(value) {}
 
-		bool operator==(const LirLocation& other) const = default;
+		LIRValue(FunctionLiteral value): value(value) {}
+
+		bool operator==(const LIRValue& other) const = default;
 
 		[[nodiscard]]
 		const ValueType& getVariant() const {
@@ -85,7 +97,7 @@ namespace compiler::lir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in LirLocation.
+		 * stored in LIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -142,7 +154,7 @@ namespace compiler::lir {
 	struct Instruction final {
 		Operation                operation = Operation::Uninitialized;
 		base::Optional<LocalRef> output;
-		std::vector<LirLocation> arguments;
+		std::vector<LIRValue>    arguments;
 
 		// @TODO: each Instruction should have source position reference
 
@@ -155,7 +167,7 @@ namespace compiler::lir {
 		Instruction(
 			const Operation                operation,
 			const base::Optional<LocalRef> output,
-			std::vector<LirLocation>       arguments
+			std::vector<LIRValue>          arguments
 		):
 			  operation(operation),
 			  output(output),

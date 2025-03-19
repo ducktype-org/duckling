@@ -2,6 +2,7 @@
 #include <diagnostic/diagnostic_converters.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <init/init.hpp>
 
 #include <map>
 #include <iostream>
@@ -136,6 +137,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(CyclicQuery);
 uint64_t SquareValue(query::Context&, uint64_t v) { return v * v; }
 
 int main() {
+	init::InitObject _;
 	// The instant logs may be printed in a different order than when they are dumped,
 	// because the instant logging is instant, while the dumping is ordered.
 

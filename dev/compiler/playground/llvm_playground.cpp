@@ -1,5 +1,4 @@
 #include <lexer/lexer.hpp>
-#include <pst_parser/parser.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <clap/clap.hpp>
@@ -13,11 +12,6 @@
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
-	// @TODO: add to helios init
-	lexer::init();
-	pst::init();
-
-	// @FUTURE: record all inits somewhere..
 
 	auto clap
 		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
@@ -29,7 +23,7 @@ int main(int argc, const char* argv[]) {
 	clap::ParsingResult options;
 
 	try {
-		options = clap.parse(argc, argv);
+		options = clap.parse(usize(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 		return 1;
@@ -47,7 +41,7 @@ int main(int argc, const char* argv[]) {
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 
-	for (auto& fun: top_level.functions) {
+	for (auto& fun: top_level->functions) {
 		auto mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
 
 		mir_fun->debugPrint(std::cerr);

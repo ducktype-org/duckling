@@ -189,6 +189,12 @@ private:
 		);
 	}
 
+	using enum Mutability;
+
+	static SymbolType<> st(const AbstractType abstract_type, const bool is_mutable = false) {
+		return SymbolType{ abstract_type, ReferenceKind::Direct, is_mutable ? Mutable : Immutable };
+	}
+
 	/**
 	 * Test that Raw Pointer and Pointer types correctly cast
 	 * between each other and retain AbstractTypermation as expected.
@@ -210,20 +216,19 @@ private:
 		const RawPointerAbstractType raw_5    = type_raw;
 		assertTrue(raw_5.getKind() == RawPointer, "Raw Pointer should survive casting.");
 
-		const auto ptr_1 = query::entryPoint<QueryPointerType>({ raw_1 });
+		const auto ptr_1 = query::entryPoint<QueryPointerType>({ st(raw_1) });
 		assertTrue(ptr_1.getKind() == Pointer, "Pointer should have kind Pointer.");
-		const auto ptr_2 = query::entryPoint<QueryPointerType>({ raw_1 });
+		const auto ptr_2 = query::entryPoint<QueryPointerType>(st(raw_1));
 		assertTrue(ptr_1 == ptr_2, "Pointers to the same type and mutability should be equal.");
-		const auto ptr_3 = query::entryPoint<QueryPointerType>({ raw_2 });
+		const auto ptr_3 = query::entryPoint<QueryPointerType>(st(raw_2));
 		assertTrue(ptr_1 != ptr_3, "Pointers to different types should be different.");
-		const auto ptr_4 = query::entryPoint<QueryPointerType>({ raw_1, true });
+		const auto ptr_4 = query::entryPoint<QueryPointerType>(st(raw_1, true));
 		assertTrue(ptr_1 != ptr_4, "Pointers of different mutability should be different.");
 
 		const AbstractType        type_ptr = ptr_4;
 		const PointerAbstractType ptr_5    = type_ptr;
 		assertTrue(
-			ptr_5.getKind() == Pointer && ptr_5.getUnderlyingType() == ptr_4.getUnderlyingType()
-				&& ptr_5.isMutable() == ptr_4.isMutable(),
+			ptr_5.getKind() == Pointer && ptr_5.getPointee() == ptr_4.getPointee(),
 			"Pointer should survive casting."
 		);
 	}
@@ -236,10 +241,10 @@ private:
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
-		const auto tup_1 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+		const auto tup_1 = query::entryPoint<QueryTupleType>({ { st(int_16), st(int_32) } });
 
 		assertTrue(
-			tup_1.getComponents() == std::vector<ComponentType>({ { int_16 }, { int_32 } }),
+			tup_1.getComponents() == std::vector({ st(int_16), st(int_32) }),
 			"Component types should be as constructed."
 		);
 		assertTrue(tup_1.getKind() == Tuple, "Tuple should have kind Tuple.");
@@ -248,13 +253,13 @@ private:
 		const TupleAbstractType tup_2    = type_tup;
 		assertTrue(tup_2.getKind() == Tuple, "Tuple should survive casting.");
 
-		const auto tup_3 = query::entryPoint<QueryTupleType>({ { { int_16 }, { int_32 } } });
+		const auto tup_3 = query::entryPoint<QueryTupleType>({ { st(int_16), st(int_32) } });
 		assertTrue(tup_1 == tup_3, "Tuples constructed the same way should be equal.");
 
-		const auto tup_4 = query::entryPoint<QueryTupleType>({ { { int_32 }, { int_32 } } });
+		const auto tup_4 = query::entryPoint<QueryTupleType>({ { st(int_32), st(int_32) } });
 		assertTrue(tup_1 != tup_4, "Tuples with different types should be different.");
 
-		const auto tup_5 = query::entryPoint<QueryTupleType>({ { { int_16, true }, { int_32 } } });
+		const auto tup_5 = query::entryPoint<QueryTupleType>({ { st(int_16, true), st(int_32) } });
 		assertTrue(tup_1 != tup_5, "Tuples with different mutability should be different.");
 	}
 
@@ -266,10 +271,10 @@ private:
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
-		const auto var_1 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+		const auto var_1 = query::entryPoint<QueryVariantType>({ { st(int_16), st(int_32) } });
 
 		assertTrue(
-			var_1.getUnderlyingTypes() == std::vector<AbstractType>({ int_16, int_32 }),
+			var_1.getUnderlyingTypes() == std::vector({ st(int_16), st(int_32) }),
 			"Underlying types should be as constructed."
 		);
 		assertTrue(var_1.getKind() == Variant, "Variant should have kind Variant.");
@@ -278,10 +283,10 @@ private:
 		const VariantAbstractType var_2    = type_var;
 		assertTrue(var_2.getKind() == Variant, "Tuple should survive casting.");
 
-		const auto var_3 = query::entryPoint<QueryVariantType>({ { int_16, int_32 } });
+		const auto var_3 = query::entryPoint<QueryVariantType>({ { st(int_16), st(int_32) } });
 		assertTrue(var_1 == var_3, "Variants constructed the same way should be equal.");
 
-		const auto var_4 = query::entryPoint<QueryVariantType>({ { int_32, int_32 } });
+		const auto var_4 = query::entryPoint<QueryVariantType>({ { st(int_32), st(int_32) } });
 		assertTrue(var_1 != var_4, "Variants with different underlying types should be different.");
 	}
 
@@ -293,13 +298,14 @@ private:
 		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
 		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
 
-		const auto fun_1 = query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
+		const auto fun_1
+			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_32) });
 
 		assertTrue(
-			fun_1.getParameterTypes() == std::vector<AbstractType>({ int_16, int_32 }),
+			fun_1.getParameterTypes() == std::vector({ st(int_16), st(int_32) }),
 			"Parameter types should be as constructed."
 		);
-		assertTrue(fun_1.getResultType() == int_32, "Result type should be as constructed.");
+		assertTrue(fun_1.getResultType() == st(int_32), "Result type should be as constructed.");
 		assertTrue(!fun_1.isPure(), "Purity should be as constructed.");
 		assertTrue(!fun_1.isFree(), "Freedom should be as constructed.");
 
@@ -308,23 +314,24 @@ private:
 		assertTrue(fun2.getKind() == Function, "Function should survive casting.");
 
 		const auto fun_identical
-			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32 });
+			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_32) });
 		assertTrue(
 			fun_1 == fun_identical, "Function types constructed the same way should be equal."
 		);
 		const auto fun_different_input
-			= query::entryPoint<QueryFunctionType>({ { int_32, int_32 }, int_32 });
+			= query::entryPoint<QueryFunctionType>({ { st(int_32), st(int_32) }, st(int_32) });
 		assertTrue(
 			fun_1 != fun_different_input, "Functions of different input types should be different."
 		);
 		const auto fun_different_output
-			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_16 });
+			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_16) });
 		assertTrue(
 			fun_1 != fun_different_output,
 			"Functions of different output types should be different."
 		);
-		const auto fun_different_flags
-			= query::entryPoint<QueryFunctionType>({ { int_16, int_32 }, int_32, true, true });
+		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
+			{ { st(int_16), st(int_32) }, st(int_32), true, true }
+		);
 		assertTrue(
 			fun_1 != fun_different_flags, "Functions with different flags should be different."
 		);
@@ -377,16 +384,19 @@ private:
 		const auto void_i = query::entryPoint<QueryVoidType>({});
 		const auto int_i  = query::entryPoint<QueryIntegralType>({ 8 });
 
-		const ExpressionType int_desc(int_i, ValueCategory(PrimaryCategory::Local));
+		const ExpressionType int_desc(st(int_i), ValueCategory(PrimaryCategory::Local));
 
 		try {
-			ExpressionType<IntegralAbstractType>{ void_i, ValueCategory(PrimaryCategory::Local) };
+			ExpressionType<IntegralAbstractType>{
+				st(void_i),
+				ValueCategory(PrimaryCategory::Local),
+			};
 			fail("Created IntegralDesc for Void type.");
 		} catch (const base::LogicError&) {
 			// expected
 		}
 
-		ExpressionType<>{ void_i, ValueCategory(PrimaryCategory::Local) };
+		ExpressionType{ st(void_i), ValueCategory(PrimaryCategory::Local) };
 
 		const ExpressionType really_int_desc = int_desc;
 
@@ -401,19 +411,11 @@ private:
 		using enum ValueSemanticsOptions;
 
 		const auto vc = ValueCategory(
-			PrimaryCategory::Local,
-			true,
-			false,
-			(MOVE | COPY | REINIT | USE | DESTROY),
-			ValueSemantics()
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, ValueSemantics()
 		);
 		assertTrue(
 			vc.getCategory() == PrimaryCategory::Local,
 			"ValueCategory constructor should initialize unchanged category value."
-		);
-		assertTrue(
-			vc.isMutable(),
-			"ValueCategory constructor should initialize unchanged is_mutable value."
 		);
 		assertTrue(
 			!vc.isPure(), "ValueCategory constructor should initialize unchanged is_pure value."
@@ -428,17 +430,12 @@ private:
 		);
 
 		const auto vc_1 = ValueCategory(
-			PrimaryCategory::Local,
-			true,
-			false,
-			(MOVE | COPY | REINIT | USE | DESTROY),
-			ValueSemantics()
+			PrimaryCategory::Local, false, MOVE | COPY | REINIT | USE | DESTROY, ValueSemantics()
 		);
 		assertTrue(vc == vc_1, "Value categories constructed the same way should be equal.");
 
-		const auto vc_2 = ValueCategory(
-			PrimaryCategory::Local, true, false, (COPY | REINIT | USE), ValueSemantics()
-		);
+		const auto vc_2
+			= ValueCategory(PrimaryCategory::Local, false, COPY | REINIT | USE, ValueSemantics());
 		assertTrue(
 			vc_1.contains(vc_2),
 			"Value category with full allows_semantic should contain same value category with "
@@ -466,11 +463,11 @@ private:
 		);
 
 		const auto i2_const
-			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType(st(int_2), ValueCategory(PrimaryCategory::Local, true, {}, {}));
 		const auto i2_mut
-			= ExpressionType<>(int_2, ValueCategory(PrimaryCategory::Local, true, true, {}, {}));
+			= ExpressionType(st(int_2, true), ValueCategory(PrimaryCategory::Local, true, {}, {}));
 		const auto i3_const
-			= ExpressionType<>(int_3, ValueCategory(PrimaryCategory::Local, false, true, {}, {}));
+			= ExpressionType(st(int_3), ValueCategory(PrimaryCategory::Local, true, {}, {}));
 
 		assertTrue(
 			query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i3_const }),

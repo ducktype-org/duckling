@@ -6,8 +6,6 @@ make_module(Hashing USES Base)
 
 add_example(hash_example examples/example.cpp USES Hashing Base)
 
-duck_add_test(common hashing_test_simple tests/test.cpp
-	USES Hashing Base Tester)
+duck_add_test(common hashing_coverage tests/hashing_coverage_test.cpp USES Hashing Base Tester)
 
-duck_add_test(common hashing_test_coverage tests/coverage.cpp
-    USES Hashing Base Tester)
+duck_add_test(common hashing tests/hashing_test.cpp USES Hashing Base Tester)

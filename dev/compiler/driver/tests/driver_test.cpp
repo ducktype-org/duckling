@@ -21,7 +21,7 @@ private:
 		using namespace compiler;
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
-		helios::HOUTUnit top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
 		                        .output_file         = base::StrID("test_module_exe"),
@@ -29,7 +29,7 @@ private:
 		                        .dump_llvm_ir        = false });
 
 		// This method can fail on module verification
-		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));
+		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
 
 		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
 		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");
@@ -39,7 +39,7 @@ private:
 		using namespace compiler;
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
-		helios::HOUTUnit top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
+		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
 		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
 		                        .output_file         = base::StrID("test_module_exe"),
@@ -47,7 +47,7 @@ private:
 		                        .dump_llvm_ir        = true });
 
 		// This method can fail on module verification
-		driver.compileHOUTUnit(&top_level, base::StrID("test_module"));
+		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
 
 		assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
 		assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");

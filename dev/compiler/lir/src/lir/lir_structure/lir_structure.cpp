@@ -67,12 +67,15 @@ namespace compiler::lir {
 			loc_output << "Local(" << local_id[local] << ")";
 		}
 
-		void printLocation(const LirLocation& location) {
+		void printLocation(const LIRValue& location) {
 			variant_match(location.getVariant()) {
 				variant_case(i64, value) { output << value; }
 				variant_case(bool, value) { output << (value ? "true" : "false"); }
 				variant_case(LocalRef, local) { printLocal(local, output); }
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
+				variant_case(FunctionLiteral, func) {
+					output << "Func(" << func.helios_id.customPerfectHash() << ")";
+				}
 				variant_default { CORE_PANIC("Unhandled variant in printLocation"); }
 			}
 		}
