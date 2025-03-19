@@ -1,0 +1,38 @@
+# Tests if values from functions are returned correctly.
+# input = n
+# output = n
+
+type primitive: int64 8
+type fun: main {} int64
+type fun: check {} int64
+
+
+function check {
+	arg_size: 0;
+	ret_size: 8;
+	local_size: 8;
+
+	code: {
+		# [0, 8) check() ret_val
+        input_l64       0;
+		ret;
+	}
+}
+
+
+function main {
+	arg_size: 0;
+	ret_size: 8;
+	local_size: 16;
+
+	code: {
+		# [0, 8) main ret_val
+		init_type       int64; # [8, 16) check() ret_val
+		call_func       check;
+        output_l64      8;
+
+		deinit;
+		ret;
+	}
+
+}
