@@ -1,20 +1,23 @@
-function run_every_opcode {
+type primitive: void 0
+type primitive: int64 8
+type fun: main {} int64
+type fun: run_every_opcode {} void
+
+function  {
 	arg_size: 0;
 	ret_size: 0;
-
-    // 0: int64_t tmp1;
-    // 8: int64_t tmp2;
-    // 16: Pointer tmp3;
-	local_size: 32;
+	local_size: 24;
 
 	code: {
+        init_type int64; # [0, 8) tmp1
+        init_type int64; # [8, 16) tmp2
+        init_type int64; # [16, 24) tmp3
+
 		mov_l64_imm            0, 0;
         mov_l64_l64            8, 0;
         cmov_l64_l64           8, 0;
         mov_l64_r0               0;
         mov_r0_l64               0;
-        mov_l64_pFuncArg         0;
-        mov_lptr_ptrFuncArg     16;
         add_l64_l64  0, 8;
         add_l64_imm  8, 10;
         sub_l64_l64  0, 8;
@@ -33,39 +36,39 @@ function run_every_opcode {
         label Here2;
         jmpRelNotIf_label Here3;
         label Here3;
-        setPtrArg_lptr  16;
-        setPArg_l64 0;
-        ret_l64  0;
+
+        deinit; # tmp3
+        deinit; # tmp2
+        deinit; # tmp1
+        
+        ret;
     }
 }
 
 
 function main {
 	arg_size: 0;
-	ret_size: 0;
-
-	// x - 0
-	// s - 8
-	// i - 16
-	// tmp - 24
-	local_size: 8;
+	ret_size: 8;
+	local_size: 16;
 
 	code: {
-		// x := input
-		input_l64       0;
-
+        # [0, 8) main ret_val
+        init_type       int64; # [8, 16) x
+		
+        input_l64       8;
         label Loop;
-            call_func run_every_opcode;
-            call_func run_every_opcode;
-            call_func run_every_opcode;
-            call_func run_every_opcode;
-            call_func run_every_opcode;
+            call_func           run_every_opcode;
+            call_func           run_every_opcode;
+            call_func           run_every_opcode;
+            call_func           run_every_opcode;
+            call_func           run_every_opcode;
 
-            sub_l64_imm 0, 1;
-            cmpEq_l64_imm   0, 0;
-            jmpRelNotIf_label  Loop;
+            sub_l64_imm         8, 1;
+            cmpEq_l64_imm       8, 0;
+            jmpRelNotIf_label   Loop;
 
-		ret_imm         0;
+        deinit; # x
+		ret;
 	}
 
 }
