@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
 	}
 	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess()));
+		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess().value()));
 		hdl.writeToSVG(argv[2]);
 	}
 }

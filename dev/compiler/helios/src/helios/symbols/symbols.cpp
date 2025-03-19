@@ -646,17 +646,12 @@ namespace compiler::helios {
 
 			base::Optional<tsh::SymbolType<>> definition_symbol_type;
 
-<<<<<<< HEAD
 			void visitClass(pst::Access<pst::Class>) final {
-				definition_type_info = ctx.query<tsh::QueryClassType>(key);
-=======
-			void visitClass(const pst::Class&) final {
 				definition_symbol_type = tsh::SymbolType<>{
 					ctx.query<tsh::QueryClassType>(key),
 					tsh::ReferenceKind::Direct,
 					tsh::Mutability::Mutable,
 				};
->>>>>>> main
 			}
 		};
 
@@ -664,13 +659,8 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-<<<<<<< HEAD
 			symbol_ref->pst_element.unlock(ctx)->acceptVisitor(visitor);
-			return visitor.definition_type_info.value();
-=======
-			symbol_ref->pst_element->acceptVisitor(visitor);
 			return visitor.definition_symbol_type.value();
->>>>>>> main
 		}
 
 		QUERY_AUTO_CACHE_REF;

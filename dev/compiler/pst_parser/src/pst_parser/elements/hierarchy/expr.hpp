@@ -314,7 +314,7 @@ namespace pst {
 
 			[[nodiscard]] lexer::Token::BracketType getType() const;
 
-			[[nodiscard]] MCRef<CallList> getArgs() const;
+			[[nodiscard]] AccessLocked<CallList> getArgs() const { return args.give(); }
 
 			[[nodiscard]]
 			std::string elementType() const override {

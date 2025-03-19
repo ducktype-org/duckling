@@ -56,7 +56,7 @@ int main(int argc, const char* argv[]) {
 	// note: we need to catch exception here,
 	// because otherwise stack unwinding might not happen,
 	// and defers might not be called.
-	// try {
-	return notMain(argc, argv);
-	// } catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
+	try {
+		return notMain(argc, argv);
+	} catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
 }

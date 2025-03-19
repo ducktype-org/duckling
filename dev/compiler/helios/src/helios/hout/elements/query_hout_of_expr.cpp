@@ -295,7 +295,7 @@ namespace compiler::helios::code {
 							new_symbols_single.value().begin(),
 							new_symbols_single.value().end()
 						);
-					} if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
+					} else if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
 						auto pst_call = pst_call_opt.value();
 						if (pst_call->getType() != lexer::Token::Round) {
 							throw base::NotYetImplemented(base::strConcat(
@@ -304,7 +304,7 @@ namespace compiler::helios::code {
 						}
 
 						call_arguments.emplace();
-						for (auto&& arg: *pst_call->getArgs()) {
+						for (auto&& arg: *pst_call->getArgs().unlock(ctx)) {
 							auto arg_expr = fromPST(ctx, arg.unlock(ctx)->getExpr());
 							if (!arg_expr) {
 								// Error
@@ -524,11 +524,7 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
-<<<<<<< HEAD
 			CORE_ASSERT(key.element.unlockOpt(ctx), "Nullptr provided to QueryHoutOfExpr");
-=======
-			CORE_ASSERT(key.element != nullptr, "Nullptr provided to QueryHoutOfExpr");
->>>>>>> main
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);
