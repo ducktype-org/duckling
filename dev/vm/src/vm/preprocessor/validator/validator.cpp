@@ -72,19 +72,11 @@ namespace vm::validator {
 			for (const auto& func: program.functions) {
 				for (const auto& op: func->code->opcodes) {
 					if (op->opcode_name.strView() == "ret_tailcall") {
-						if (func->arg_size != func->next_arg_size)
-							log.log(makeBox<vm::validator::CallerArgSizeMismatch>(*op->position));
-
 						variant_match(op->args[0].arg) {
 							variant_case(vm::opargs::FunctionName, function_name_arg) {
 								auto maybe_called_func
 									= program.name_to_func.atMaybe(function_name_arg.function_name);
 								if_opt_some(maybe_called_func, called_func) {
-									if (called_func->arg_size != called_func->next_arg_size) {
-										log.log(makeBox<vm::validator::CalledArgSizeMismatch>(
-											*op->position
-										));
-									}
 									if (func->arg_size != called_func->arg_size) {
 										log.log(makeBox<vm::validator::CallerCalledArgSizeMismatch>(
 											*op->position

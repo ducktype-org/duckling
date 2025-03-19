@@ -1,0 +1,63 @@
+# Tests if call_func effectively deinit's it's parameters
+# input = "a b c d"
+# output = a + b + c + d
+
+type primitive: int64 8
+type fun: main {} int64
+type fun: foo { int64, int64 } int64
+
+function foo {
+    arg_size: 16;
+    ret_size: 8;
+    local_size:   24;
+
+    code: {
+        # [0, 8) -> ret_val
+		# [8, 16) -> arg0
+		# [16, 24) -> arg1
+
+        mov_l64_l64     0, 8;
+        add_l64_l64     0, 16;
+        deinit; # arg1
+        deinit; # arg0
+        ret;
+    }
+}
+
+
+function main {
+    arg_size: 0;
+    ret_size: 8;
+    local_size: 40;
+
+    code: {
+        # [0, 8) main ret_val
+        init_type       int64; # [8, 16) accumulator
+        init_type       int64; # [16, 24) foo ret_val
+        init_type       int64; # [24, 32) foo arg0
+        init_type       int64; # [32, 40) foo arg1
+
+        input_l64       24;
+        input_l64       32;
+        call_func       foo;
+
+        # Here [24, 32) and [32, 40) are deinitialized
+        add_l64_l64     8, 16; # acc := a + b
+
+        init_type       int64; # [24, 32) foo arg0
+        init_type       int64; # [32, 40) foo arg1
+
+        input_l64       24;
+        input_l64       32;
+        call_func       foo;    
+        # Here [24, 32) and [32, 40) are deinitialized
+
+        add_l64_l64     8, 16; # acc += c + d
+
+        output_l64      8;
+
+        deinit; # foo ret_val
+        deinit; # accumulator
+        ret;
+    }
+}
