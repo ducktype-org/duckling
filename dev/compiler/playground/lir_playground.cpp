@@ -42,7 +42,7 @@ int main(int argc, const char* argv[]) {
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
 
 
-	for (auto& fun: top_level.functions) {
+	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
