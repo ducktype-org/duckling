@@ -8,5 +8,5 @@ add_library(DVMBackend
 
 make_module(DVMBackend USES Base QueryFramework LIR Init LibVM_tc)
 
-duck_add_test(compiler dvm_backend_unit_tests tests/dvm_backend_unit_tests.cpp
+duck_add_test(compiler dvm_backend_unit tests/dvm_backend_unit_test.cpp
 	USES Base DVMBackend)

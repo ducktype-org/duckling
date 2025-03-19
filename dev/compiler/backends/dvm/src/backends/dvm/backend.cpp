@@ -2,7 +2,7 @@
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 #include "builders.hpp"
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include "serializer.hpp"
 #include <base/variant.hpp>
 #include "instructions.hpp"
@@ -144,8 +144,8 @@ namespace compiler::backend_vm {
 		}
 
 		vm::opargs::OpCodeArg
-			lirArgToOpArg(AddLirFuncContext& ctx, const lir::LirLocation& lir_location) {
-			variant_match(lir_location.getVariant()) {
+			lirArgToOpArg(AddLirFuncContext& ctx, const lir::LIRValue& lir_value) {
+			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(lir::LocalRef, local_ref) return vm::opargs::StackLocalI64{

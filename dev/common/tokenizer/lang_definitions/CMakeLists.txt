@@ -3,7 +3,6 @@ add_library(LexerDefinitions
 	src/lang_definitions/operator_precedence.cpp
 )
 
-make_module(LexerDefinitions USES Base)
+make_module(LexerDefinitions USES Base Init)
 
-duck_add_test(common lang_def_test_simple tests/test.cpp
-	USES LexerDefinitions)
+duck_add_test(common lang_definitions tests/lang_definitions_test.cpp USES LexerDefinitions)

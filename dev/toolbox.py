@@ -28,6 +28,7 @@ from scripts.py.toolbox.internet_file import (
     callback_remove,
     callback_unTAR,
 )
+from scripts.py.toolbox.pr_validate import pr_validate_impl
 
 from scripts.py.toolbox.cpp_linter import simulate_cpp_linter
 from scripts.py.toolbox.duck_linter import duck_linter_impl
@@ -493,7 +494,7 @@ def linter(*args, **kwargs):
     clang_tidy_failed, clang_format_failed = simulate_cpp_linter(*args, **kwargs)
     if clang_tidy_failed or clang_format_failed:
         exit_with_error(
-            f"Linter has failed because: {clang_format_failed=}, {clang_tidy_failed=}"
+            f"Linter has failed because: {clang_tidy_failed=}, {clang_format_failed=}"
         )
 
 
@@ -614,6 +615,38 @@ def itest(*args, **kwargs):
 def todo_counter(*args, **kwargs):
     """Prints counts of todos and similar comments in the code"""
     todo_counter_impl(*args, **kwargs)
+
+
+@cli.command()
+@click.option(
+    "-t",
+    "--tidy",
+    "clang_tidy_path",
+    prompt="clang-tidy path",
+    help="Path to clang-tidy, ex. /usr/bin/clang-tidy-19 or clang-tidy",
+    default="clang-tidy-19",
+)
+@click.option(
+    "-f",
+    "--format",
+    "clang_format_path",
+    prompt="clang-format path",
+    help="Path to clang-format, ex. /usr/bin/clang-format-19 or clang-format",
+    default="clang-format-19",
+)
+@click.option(
+    "-b",
+    "--build",
+    prompt="build folder",
+    help="Path to build folder with compile_commands.json",
+    default="build",
+)
+def pr_validate(*args, **kwargs):
+    """Runs a set of actions to validate branch state before PR.
+    Actions include: building everything, running tests, linter, duck-linter.
+    In the future we might add integration tests.
+    """
+    pr_validate_impl(*args, **kwargs)
 
 
 if __name__ == "__main__":

@@ -100,7 +100,6 @@ namespace tokenizer {
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {
-			lexer::init();
 			decode<encoding>();
 			if (log.bad()) return false;
 			countLines();

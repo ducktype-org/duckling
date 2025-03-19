@@ -38,9 +38,10 @@ private:
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
-			ASSERT_TRUE(top_level.functions.size() == 1);
+			ASSERT_TRUE(top_level->functions.size() == 1);
 
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level.functions[0] });
+			auto mir_fun
+				= ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 			testWithLir(ctx, lir_fun);
 		});

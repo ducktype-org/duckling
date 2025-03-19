@@ -15,6 +15,7 @@
 #include <helios/scope_symbol_id.hpp>
 
 #include <base/string_id.hpp>
+#include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
 
@@ -31,6 +32,10 @@ namespace compiler::helios {
 		Variable,
 		Import,
 		Parameter,
+
+		// we distinguish between functions and builtin functions
+		// as for example there is no code-gen for builtin functions
+		BuiltinFunction,
 
 		// Class Symbols
 		Method,
@@ -118,12 +123,12 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>)
 
-	using QueryType_Result = errors::HResult<tsh::AbstractType, errors::Failed>;
+	using QuerySymbolType_Result = errors::HResult<tsh::SymbolType<>, errors::Failed>;
 
 	/**
 	 * @brief Query type of the symbol.
 	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QueryType_Result>);
+	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>);
 
 	/**
 	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
@@ -134,7 +139,7 @@ namespace compiler::helios {
 	 * }
 	 * - Then we can use this query QueryTypeFromDefinition(T).
 	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryType_Result>);
+	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QuerySymbolType_Result>);
 
 	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
@@ -178,4 +183,12 @@ namespace compiler::helios {
 	 * More information on `ClassSymbolData` in its definition.
 	 */
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
+
+	namespace builtin {
+		/**
+		 * Lookup a global builtin symbol by name.
+		 * @note Non-global builtins will likely exist, for example: `i64.max`.
+		 */
+		LookupResult lookupGlobalBuiltins(query::Context&, base::StrID name);
+	}
 }

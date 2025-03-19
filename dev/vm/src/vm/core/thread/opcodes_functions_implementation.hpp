@@ -27,7 +27,7 @@
  */
 
 #include <base/exceptions.hpp>
-#include <vm/code_data/instruction.hpp>
+#include "low_program/instruction.hpp"
 #include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
 #include "op_case.hpp"
@@ -472,7 +472,8 @@ namespace vm {
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
@@ -499,7 +500,8 @@ namespace vm {
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
