@@ -523,7 +523,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);

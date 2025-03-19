@@ -184,7 +184,7 @@ DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
-DEF_OPCODE(set_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // terminates execution
 DEF_OPCODE(exit)
