@@ -227,9 +227,9 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryPrimaryCodeScopeFor, ScopeID) {
 		inline static base::HashMap<pst::PstID, ScopeID> parent_map;
 
-		static auto provide(Context& ctx, QKey elementKey) -> PResult {
-			auto element            = elementKey.element.unlock(ctx);
-			auto element_scope_kind = getScopeKind(ctx, elementKey.element);
+		static auto provide(Context& ctx, QKey element_key) -> PResult {
+			auto element            = element_key.element.unlock(ctx);
+			auto element_scope_kind = getScopeKind(ctx, element_key.element);
 
 			if (element_scope_kind == ElementScopeKind::Invalid) {
 				auto element_ptr = &*element;

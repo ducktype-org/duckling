@@ -179,7 +179,7 @@ void server(i32 port) {
 			};
 
 			return crow::response(
-				200, lsp::getSemanticTokens({ &*pst.getRootElement().illegalAccess() })
+				200, lsp::getSemanticTokens({ &*pst.getRootElement().illegalAccess().value() })
 			);
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();

@@ -13,9 +13,9 @@ namespace compiler::helios {
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {
-			if (auto accessBlockOpt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
-				auto accessBlock = accessBlockOpt.value();
-				for (auto e: *accessBlock->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
+			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+				auto access_block = access_block_opt.value();
+				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
 			} else
 				out.push_back(stmt);
 		}
@@ -29,9 +29,9 @@ namespace compiler::helios {
 		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(
 			query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> elem
 		) {
-			if (auto classBlock = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
+			if (auto class_block = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
 				StmtList<pst::ClassStmt> out;
-				for (auto&& e: *classBlock.value()) detail::visitClassStmts(ctx, out, e);
+				for (auto&& e: *class_block.value()) detail::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
 				const auto& element = *elem.unlock(ctx);
@@ -47,19 +47,19 @@ namespace compiler::helios {
 	) {
 		auto elem = locked.unlock(ctx);
 		// @TODO: dont use dynamic_cast's here, but a visitor
-		if (auto codeBlock = elem.dynamicCast<pst::CodeBlock>()) {
+		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;
-			for (auto&& e: *codeBlock.value()) out.emplace_back(e);
+			for (auto&& e: *code_block.value()) out.emplace_back(e);
 			return out;
 		}
-		if (auto codeBlockOrStmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
+		if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			StmtList<> out;
-			for (auto&& e: *codeBlockOrStmt.value()) out.emplace_back(e);
+			for (auto&& e: *code_block_or_stmt.value()) out.emplace_back(e);
 			return out;
 		}
-		if (auto topLevel = elem.dynamicCast<pst::TopLevel>()) {
+		if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
 			StmtList<> out;
-			for (auto e: topLevel.value()->getStatements()) out.emplace_back(e);
+			for (auto e: top_level.value()->getStatements()) out.emplace_back(e);
 			return out;
 		}
 		if (elem.dynamicCast<pst::ClassBlock>()) {
