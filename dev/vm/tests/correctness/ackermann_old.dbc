@@ -5,7 +5,6 @@ type fun: ackermann { int64, int64 } int64
 
 function ackermann {
     arg_size: 16;
-    arg_count: 2;
     ret_size: 8;
 
     # m, nPtr
@@ -99,7 +98,6 @@ function ackermann {
 
 function main {
     arg_size: 0;
-    arg_count: 0;
     ret_size: 8;
     local_size: 40;
 

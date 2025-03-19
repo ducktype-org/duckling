@@ -19,7 +19,6 @@ namespace vm {
 		usize       stack_size;
 		usize       arg_size;
 		usize       ret_size;
-		usize       arg_count;
 	};
 
 	/**

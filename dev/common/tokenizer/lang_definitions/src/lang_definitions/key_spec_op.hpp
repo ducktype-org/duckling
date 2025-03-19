@@ -143,7 +143,6 @@ namespace lang_def {
 		BCLocalSize,
 		BCRetSize,
 		BCArgSize,
-		BCArgumentCount,
 		BCDefine,
 		BCArg,
 		BCLocal,

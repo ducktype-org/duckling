@@ -10,7 +10,6 @@ type fun: add1000 { int64 } int64
 
 function add1000 {
 	arg_size: 8;
-	arg_count: 1;
 	ret_size: 8;
 	local_size: 16;
 
@@ -26,7 +25,6 @@ function add1000 {
 
 function add1100 {
 	arg_size: 8;
-	arg_count: 1;
 	ret_size: 8;
 	local_size: 32;
 
@@ -48,7 +46,6 @@ function add1100 {
 
 function add1110 {
 	arg_size: 8;
-	arg_count: 1;
 	ret_size: 8;
 	local_size: 32;
 
@@ -75,7 +72,6 @@ function add1110 {
 
 function main {
 	arg_size: 0;
-	arg_count: 0;
 	ret_size: 8;
 	local_size: 24;
 

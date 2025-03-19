@@ -8,7 +8,6 @@ type fun: foo { int64, int64 } int64
 
 function foo {
     arg_size: 16;
-	arg_count: 2;
     ret_size: 8;
     local_size:   24;
 
@@ -28,7 +27,6 @@ function foo {
 
 function main {
     arg_size: 0;
-	arg_count: 0;
     ret_size: 8;
     local_size: 40;
 

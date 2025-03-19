@@ -10,7 +10,6 @@ type fun: check { int64, int32, int64 } void
 
 function check {
 	arg_size: 20;
-	arg_count: 3;
 	ret_size: 0;
 	local_size: 28;
 
@@ -37,7 +36,6 @@ function check {
 
 function main {
 	arg_size: 0;
-	arg_count: 0;
 	ret_size: 8;
 	local_size: 28;
 

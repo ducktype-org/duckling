@@ -48,12 +48,6 @@ namespace vm {
 		FlagData  flags{};
 
 		/**
-		 * @brief Local size of the function.
-		 * Needed to restore the local_stack_top when returning from a function.
-		 */
-		u64 local_size = 0;
-
-		/**
 		 * @brief Size of arguments that were passed to a function called by this one.
 		 * Needed to restore the local_stack_head when returning from a function.
 		 */

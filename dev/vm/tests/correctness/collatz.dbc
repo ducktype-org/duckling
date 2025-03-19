@@ -14,7 +14,6 @@ type fun: collatz { int64 } int64
 
 function collatz {
 	arg_size: 8;
-	arg_count: 1;
 	ret_size: 8;
 	local_size: 32;
 
@@ -87,7 +86,6 @@ function collatz {
 
 function main {
 	arg_size: 0;
-	arg_count: 0;
 	ret_size: 8;
 	local_size: 56;
 

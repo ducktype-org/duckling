@@ -6,7 +6,6 @@ type fun: dummy { int64 } int64
 
 function dummy {
   arg_size: 8;
-  arg_count: 1;
   ret_size: 8;
   local_size: 16;
 
@@ -33,7 +32,6 @@ function dummy {
 
 function main {
   arg_size: 0;
-  arg_count: 0;
   ret_size: 8;
   local_size: 24;
 

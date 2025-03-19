@@ -195,7 +195,7 @@ namespace vm {
 			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
 			// the frame of the caller.
 			auto& runtime_data = thread.runtime_data;
-			auto  function_id  = static_cast<u32>(instr->arg0);
+			auto  function_id  = static_cast<usize>(instr->arg0);
 			auto& called_func  = thread.executing_program->functions[function_id];
 
 			// Size of the shared stack space between called functions.
@@ -225,16 +225,17 @@ namespace vm {
 				CORE_PANIC("VM stack overflow.");
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
-			// This is the id of the first shared block in the callers block_stack. If the called
+			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			// @TODO: called_func.arg_count should be removed once it's possible to aquire arg_count
-			// from type_metadata
+			auto called_func_type
+				= thread.executing_program->type_metadata->getTypeByName(called_func.name)
+			          .expect("No function type declared for a called function");
+			u64 arg_count = called_func_type->getParameterCount().expect("Parameter count not set!");
 			u64 shared_block_count
-				= called_func.ret_size != 0 ? called_func.arg_count + 1 : called_func.arg_count;
+				= called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
 			frame->local_stack_head = shared_stack_space_size;
-			frame->local_size       = called_func.stack_size;
 			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
 				frame->block_stack.push_back(prev_frame->block_stack[i]);
 				auto callers_local_offset = prev_frame->block_idx_to_local_offset[i];
@@ -246,7 +247,7 @@ namespace vm {
 				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
 			}
 
-			// Remove the argument and return value blocks from callers block stack.
+			// Remove the argument and return value blocks from caller's block stack.
 			// The return value block may have been uninitialized and initialized again.
 			prev_frame->local_stack_head -= called_func.arg_size + called_func.ret_size;
 			for (u64 i = 0; i < shared_block_count; i++) {
@@ -289,7 +290,7 @@ namespace vm {
 			// substracting one from the pointer will give us the previous frame.
 			// The `instr`, `local_stack` and `frame` values should be restored from the previous
 			// call stack frame.
-			frame--;  // This is now the callers frame.
+			frame--;  // This is now the caller's frame.
 
 			// If the function we're returning from is non-void and not main, we don't deinitialize
 			// the first frame on the block_stack, since it's being used by the caller (it contains

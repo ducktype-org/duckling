@@ -10,7 +10,6 @@ type fun: check {} int32
 
 function check {
 	arg_size: 0;
-	arg_count: 0;
 	ret_size: 4;
 	local_size: 4;
 
@@ -23,7 +22,6 @@ function check {
 
 function main {
 	arg_size: 0;
-	arg_count: 0;
 	ret_size: 8;
 	local_size: 12;
 
