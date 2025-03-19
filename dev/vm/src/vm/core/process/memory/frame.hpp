@@ -48,21 +48,16 @@ namespace vm {
 		FlagData  flags{};
 
 		/**
-		 * @brief Return value of the function call.
+		 * @brief Size of arguments that were passed to a function called by this one.
+		 * Needed to restore the local_stack_head when returning from a function.
 		 */
-		u64 ret_val{};
+		u64 called_func_arg_size = 0;
 
 		/**
-		 * @brief Place where the arguments for the
-		 * future function call are stored (called "next arg stack").
+		 * @brief Size of the return value of the function called by this one.
+		 * Needed to restore the local_stack_head when returning from a function.
 		 */
-		std::byte* next_args = nullptr;
-
-		/**
-		 * @brief Place where the arguments for the
-		 * current function call are stored (called "arg stack").
-		 */
-		std::byte* args = nullptr;
+		u64 called_func_ret_size = 0;
 
 		/**
 		 * @brief Stack of block IDs used by the function created with init_type
@@ -77,6 +72,15 @@ namespace vm {
 		 * Used when creating pointers to local variables.
 		 */
 		base::HashMap<u64, u64> local_offset_to_block_idx;
+
+		/**
+		 * @brief Mapping from ID of block to the offset on the local stack.
+		 *
+		 * Used when calling and returning from the function to populate the
+		 * local_offset_to_block_idx of the called function (to make is possible
+		 * to create a pointer to a passed argument).
+		 */
+		base::HashMap<u64, u64> block_idx_to_local_offset;
 
 		/**
 		 * @brief First free byte in the local stack.

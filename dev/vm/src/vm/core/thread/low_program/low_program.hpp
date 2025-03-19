@@ -16,9 +16,8 @@ namespace vm::low {
 	struct FuncData {
 		base::StrID name;
 		ByteCode    bc;
-		usize       stack_size;
+		usize       local_stack_size;
 		usize       arg_size;
-		usize       next_arg_size;
 		usize       ret_size;
 	};
 
