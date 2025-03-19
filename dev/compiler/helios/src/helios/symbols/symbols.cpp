@@ -178,7 +178,9 @@ namespace compiler::helios {
 		return getSymRef(id)->stmtCast(ctx);
 	}
 
-	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) { return getSymRef(id)->getPSTData()->pst_element; }
+	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
+		return getSymRef(id)->getPSTData()->pst_element;
+	}
 
 	namespace {
 		/**
@@ -360,7 +362,8 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+	CRef<SymbolData>
+		makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
 		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
@@ -625,8 +628,11 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto alias_definition
-				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Alias>().value();
+			auto alias_definition = getSymRef(key)
+			                            ->getPSTData()
+			                            ->pst_element.unlock(ctx)
+			                            .dynamicCast<pst::Alias>()
+			                            .value();
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -685,8 +691,11 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol
-				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value();
+			const auto const_symbol = getSymRef(key)
+			                              ->getPSTData()
+			                              ->pst_element.unlock(ctx)
+			                              .dynamicCast<pst::Const>()
+			                              .value();
 
 			return ctx.query<EvalExprToI64>(const_symbol->getValue().unlock(ctx)->getExpr());
 		}
