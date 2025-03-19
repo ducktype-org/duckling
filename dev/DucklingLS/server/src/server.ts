@@ -20,6 +20,7 @@ import { preloadKeywords } from "./preloadKeywords";
 import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { handleFoldingRanges } from './foldingRanges';
+import { handleCompletion } from './completion';
 
 // Create a connection between the client and the server
 const connection = createConnection(ProposedFeatures.all);
@@ -167,9 +168,11 @@ connection.onDidChangeWatchedFiles(_change => {
 });
 
 // This handler provides the initial list of the completion items.
-connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-	return [];
-});
+connection.onCompletion(
+    async (_textDocumentPosition: TextDocumentPositionParams): Promise<CompletionItem[]> => {
+        return await handleCompletion(_textDocumentPosition, documents, compilerDaemonClient, connection);
+    }
+);
 
 // This handler resolves additional information for the item selected in the completion list.
 // connection.onCompletionResolve(onCompletionResolve);
