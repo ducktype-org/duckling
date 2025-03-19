@@ -23,10 +23,12 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
-		                        .output_file         = base::StrID("test_module_exe"),
-		                        .compile_to_assembly = false,
-		                        .dump_llvm_ir        = false });
+		driver::Driver driver({ .backend_type           = driver::BackendType::LLVM,
+		                        .output_file            = base::StrID("test_module_exe"),
+		                        .compile_to_assembly    = false,
+		                        .dump_llvm_ir           = false,
+		                        .external_objects_files = {},
+		                        .external_libs          = {} });
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
@@ -41,10 +43,12 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type        = driver::BackendType::LLVM,
-		                        .output_file         = base::StrID("test_module_exe"),
-		                        .compile_to_assembly = true,
-		                        .dump_llvm_ir        = true });
+		driver::Driver driver({ .backend_type           = driver::BackendType::LLVM,
+		                        .output_file            = base::StrID("test_module_exe"),
+		                        .compile_to_assembly    = true,
+		                        .dump_llvm_ir           = true,
+		                        .external_objects_files = {},
+		                        .external_libs          = {} });
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));

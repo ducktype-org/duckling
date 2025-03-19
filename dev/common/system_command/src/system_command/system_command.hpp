@@ -24,18 +24,18 @@ namespace system_command {
 	 */
 	class SystemCommand {
 	private:
-		base::StrID              program_name;
-		std::vector<base::StrID> arguments;
+		std::string              program_name;
+		std::vector<std::string> arguments;
 
 	public:
-		SystemCommand(base::StrID program_name): program_name(program_name) {}
+		SystemCommand(std::string program_name): program_name(std::move(program_name)) {}
 
 		/**
 		 * @brief Adds an argument to the command.
 		 *
 		 * @param arg
 		 */
-		SystemCommand& addArg(base::StrID arg);
+		SystemCommand& addArg(std::string arg);
 
 		/**
 		 * @brief Executes the command.
