@@ -1,0 +1,16 @@
+#pragma once
+
+#include "instructions.hpp"
+#include <vm/program/opcode_args.hpp>
+
+namespace vm::program::utils {
+	/**
+	 * @brief Tests whether two opcode arguments are equal.
+	 */
+	bool areArgsEqual(const vm::opargs::OpCodeArg& arg0, const vm::opargs::OpCodeArg& arg1);
+
+	/**
+	 * @brief Tests whether two opcode instructions are equal.
+	 */
+	bool areInstrEqual(const VmInstruction& instr0, const VmInstruction& instr1);
+}
