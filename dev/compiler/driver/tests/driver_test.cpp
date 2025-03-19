@@ -27,6 +27,7 @@ private:
 		                        .output_file            = base::StrID("test_module_exe"),
 		                        .compile_to_assembly    = false,
 		                        .dump_llvm_ir           = false,
+		                        .add_builtin_library    = false,
 		                        .external_objects_files = {},
 		                        .external_libs          = {} });
 
@@ -47,6 +48,7 @@ private:
 		                        .output_file            = base::StrID("test_module_exe"),
 		                        .compile_to_assembly    = true,
 		                        .dump_llvm_ir           = true,
+		                        .add_builtin_library    = false,
 		                        .external_objects_files = {},
 		                        .external_libs          = {} });
 

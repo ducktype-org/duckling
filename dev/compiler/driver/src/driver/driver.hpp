@@ -32,6 +32,7 @@ namespace compiler::driver {
 		base::StrID              output_file;
 		bool                     compile_to_assembly;
 		bool                     dump_llvm_ir;
+		bool                     add_builtin_library;
 		std::vector<base::StrID> external_objects_files;
 		std::vector<base::StrID> external_libs;
 	};

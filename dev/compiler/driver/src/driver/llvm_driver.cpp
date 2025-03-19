@@ -33,6 +33,17 @@ namespace compiler::driver {
 	}
 
 	void LLVMDriver::link() {
+		if (options->add_builtin_library) {
+			auto mod                 = backend_llvm::Module::fromIRCode(R"(
+define void @builtin_output_i64(i64 %0) {
+    ret void
+}
+)");
+			auto builtin_object_path = base::StrID("builtin.o");
+			mod.compile(builtin_object_path, backend_llvm::CompilationOutputType::Object);
+			object_file_paths.push_back(builtin_object_path);
+		}
+
 		// Link the object file.
 		// Use the default system linker - for Ubuntu it is advised to use gcc.
 		// Related research links:

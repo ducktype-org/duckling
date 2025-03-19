@@ -34,6 +34,14 @@ namespace compiler::backend_llvm {
 	public:
 		Module(base::StrID module_id);
 
+		/**
+		 * @brief Creates a llvm module from llvm IR code given as a text input.
+		 * Throws an exception if the code is invalid.
+		 *
+		 * @return Module created by parsing the given IR code.
+		 */
+		static Module fromIRCode(std::string_view llvm_ir_code);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void addFunctionToModule(CRef<lir::Function> lir_function);

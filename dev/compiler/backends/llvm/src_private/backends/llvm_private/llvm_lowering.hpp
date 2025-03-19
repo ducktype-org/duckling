@@ -7,5 +7,8 @@ namespace compiler::backend_llvm {
 
 	Box<ModuleImpl> initModuleImpl(base::StrID module_id);
 
+	Box<ModuleImpl> parseModuleImpl(std::string_view llvm_ir_code);
+
 	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function);
+
 }
