@@ -21,11 +21,11 @@ namespace vm {
 		std::vector<TypeID>              types_ids{};
 		base::Map<base::StrID, TypeID>   names_to_type{};
 
-		TypeMetadataState state;
-
-		TypeMetadata(): state(TypeMetadataState::AddingTypes) {}
+		TypeMetadataState state{TypeMetadata::TypeMetadataState::AddingTypes};
 
 	public:
+		TypeMetadata() = default;
+
 		TypeRef addType(Type&& type);
 
 		/**
@@ -43,7 +43,5 @@ namespace vm {
 		// should be deleted in the future
 		[[nodiscard]]
 		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
-
-		friend parser::ParsedProgram;
 	};
 }

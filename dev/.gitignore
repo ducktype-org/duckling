@@ -13,9 +13,9 @@ coverage/
 coverage.info
 
 # windows cmake
-out/build/
-build/
-build*/
+/out/build/
+/build*/
+/cmake-build*/
 
 # bin:
 bin/
