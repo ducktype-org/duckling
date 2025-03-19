@@ -112,7 +112,6 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocalI32)
 
-
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
@@ -138,7 +137,7 @@ DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 
 // return while performing a tail call
-DEF_OPCODE(ret_tailcall, vm::opargs::FunctionName)
+DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
 // return
 DEF_OPCODE(ret)
 

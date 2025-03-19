@@ -2,7 +2,7 @@
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include "errors.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>

@@ -28,7 +28,7 @@
  */
 
 #include <base/exceptions.hpp>
-#include <vm/code_data/instruction.hpp>
+#include "low_program/instruction.hpp"
 #include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
 #include "op_case.hpp"
@@ -266,7 +266,7 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
 			auto  function_id = static_cast<usize>(instr->arg0);
 			auto& function    = thread.executing_program->functions[function_id];
@@ -338,7 +338,7 @@ namespace vm {
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
-			// move the local_stack_head and new inits (which will happen afret we return from a
+			// move the local_stack_head and new inits (which will happen after we return from a
 			// called function) will overwrite the old mappings.
 			frame->local_offset_to_block_idx.insert_or_assign(
 				frame->local_stack_head, frame->block_stack.size()
@@ -435,7 +435,8 @@ namespace vm {
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
@@ -462,7 +463,8 @@ namespace vm {
 				next++;
 			}
 #else
-			if (static_cast<OpcodeFix8>(instr[1].opcode) == OpcodeFix8::ext_l64) [[likely]] {
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}

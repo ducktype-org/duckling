@@ -18,7 +18,7 @@ function dummy {
     jmpRelIf_label    End;
 
     sub_l64_imm       8, 1;
-    ret_tailcall      dummy;
+    ret_tailcall_func      dummy;
 
     label End;
 
