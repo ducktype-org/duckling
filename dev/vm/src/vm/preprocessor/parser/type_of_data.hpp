@@ -106,7 +106,7 @@ namespace vm::parser {
 		}
 	};
 
-	using TypeData = std::variant<
+	using TypeOfData = std::variant<
 		PrimitiveType,
 		PointerType,
 		StaticTableType,
@@ -115,4 +115,7 @@ namespace vm::parser {
 		VariantType,
 		FunctionType>;
 
+	inline base::StrID typeName(const TypeOfData& type) {
+		return std::visit([](const auto& t) { return t.name; }, type);
+	}
 }
