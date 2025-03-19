@@ -3,7 +3,7 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 #include <vector>
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include <base/string_id.hpp>
 #include "errors.hpp"
