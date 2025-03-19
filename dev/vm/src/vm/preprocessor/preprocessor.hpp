@@ -13,7 +13,7 @@ namespace vm {
 	 *    a ParsedProgram object, enriched in source positions
 	 *    of every opcode, type etc.
 	 * 2) Perform static verification of the code using the Validator module
-	 * 3) Convert ParsedProgram object intoLowVMProgram which will be used to
+	 * 3) Convert ParsedProgram object into LowVMProgram which will be used to
 	 *    execute the code.
 	 */
 	class Preprocessor {
