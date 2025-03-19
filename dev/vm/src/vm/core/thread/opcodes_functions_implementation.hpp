@@ -220,8 +220,8 @@ namespace vm {
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 
-			// Assumes that local_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.stack_size > runtime_data.local_stack_end)
+			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
+			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
@@ -272,7 +272,7 @@ namespace vm {
 			auto& function    = thread.executing_program->functions[function_id];
 			instr             = function.bc.data();
 
-			if (local_stack + function.stack_size > thread.runtime_data.local_stack_end)
+			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);

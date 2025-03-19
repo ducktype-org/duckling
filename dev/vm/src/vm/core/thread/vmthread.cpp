@@ -101,7 +101,7 @@ namespace vm {
 		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
 #else
 		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(OpcodeFix8::exit),
-			                         .arg0   = 0,
+			                        .arg0   = 0,
 			                        .arg1   = 0 };
 #endif
 
@@ -111,7 +111,7 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_base;
-		if (local_stack + main_func->stack_size > runtime_data.local_stack_end)
+		if (local_stack + main_func->local_stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
@@ -127,23 +127,12 @@ namespace vm {
 
 		pre_frame->called_func_ret_size = main_return_type->getSize();
 		frame->local_stack_head += main_return_type->getSize();
-		CORE_ASSERT(
-			pre_frame->called_func_ret_size == 8, "Main is expected to return an 8 byte primitive."
-		);
 
 		u64   main_ret_val = 0;
 		auto* instr        = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-
-		// Main return value is the only block in the pre_frame
-		main_ret_val = derefStack<u64>(local_stack, 0);
-		block        = pre_frame->block_stack.back();
-		pre_frame->block_stack.pop_back();
-		process_memory.freeBlock(block);
-
-		return main_ret_val;
 
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
@@ -176,13 +165,6 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 	End:
-		main_ret_val = derefStack<u64>(local_stack, 0);
-		block        = pre_frame->block_stack.back();
-		pre_frame->block_stack.pop_back();
-		process_memory.freeBlock(block);
-
-		return main_ret_val;
-
 
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
@@ -207,15 +189,14 @@ namespace vm {
 			}
 		}
 	End:
+#endif
+
 		main_ret_val = derefStack<u64>(local_stack, 0);
 		block        = pre_frame->block_stack.back();
 		pre_frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
 
 		return main_ret_val;
-
-
-#endif
 	}
 
 	// internalCallMain end
