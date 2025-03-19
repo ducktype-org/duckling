@@ -96,7 +96,9 @@ namespace base {
 
 		template<class... Args>
 		constexpr Key emplaceBack(Args&&... args) {
-			return pushBack(Data(std::forward<Args>(args)...));
+			auto new_ptr = makeBox<Data>(std::forward<Args>(args)...);
+			data.emplace_back(std::move(new_ptr));
+			return Key(data.size() - 1);
 		}
 
 		auto begin() const { return data.begin(); }

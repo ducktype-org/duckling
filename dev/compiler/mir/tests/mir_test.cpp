@@ -39,7 +39,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(base::StrID("foo1"), functions.at(0).original_name);
 			ASSERT_EQUAL(base::StrID("foo2"), functions.at(1).original_name);
@@ -76,7 +76,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -130,7 +130,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -170,7 +170,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
@@ -186,7 +186,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(1, functions.size());
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
@@ -206,7 +206,7 @@ private:
 
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
+			auto& functions = unit->functions;
 			ASSERT_EQUAL(3, functions.size());
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });

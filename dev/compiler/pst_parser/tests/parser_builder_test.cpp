@@ -62,9 +62,6 @@ class PSTBuilderTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
-		pst::init();
-
 		TESTER_ADD_TEST(equivalencyTest<pst::TopLevel>);
 		TESTER_ADD_TEST(equivalencyTest<pst::CodeBlockOrStmt>);
 		TESTER_ADD_TEST(exampleTests);

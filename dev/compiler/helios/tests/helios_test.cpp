@@ -12,7 +12,6 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
@@ -33,10 +32,6 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
-		pst::init();
-		tsh::init();
-
 		TESTER_ADD_TEST(testImport);
 		TESTER_ADD_TEST(testEdgeEvals);
 		TESTER_ADD_TEST(testError);
@@ -53,6 +48,7 @@ public:
 		TESTER_ADD_TEST(testFunctionParameters);
 		TESTER_ADD_TEST(testExprScopes);
 		TESTER_ADD_TEST(testFunctionCallExpr);
+		TESTER_ADD_TEST(testBuiltinFunctions);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
@@ -202,11 +198,11 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 3);
-		ASSERT_EQUAL(hout.glob_data.size(), 2);
+		ASSERT_EQUAL(hout->functions.size(), 3);
+		ASSERT_EQUAL(hout->glob_data.size(), 2);
 
 		// just for cov and to see if it does not throw:
-		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
+		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
 	}
 
 	void testHoutVisitor() {
@@ -216,9 +212,9 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 1);
+		ASSERT_EQUAL(hout->functions.size(), 1);
 
-		auto the_function = hout.functions.at(0);
+		auto the_function = hout->functions.at(0);
 
 		auto& stmt_list = the_function.content.body->statements;
 		ASSERT_EQUAL(stmt_list.size(), 5);
@@ -302,7 +298,7 @@ private:
 
 		auto test_value = [&](auto str, i64 val) {
 			auto name = base::StrID(str);
-			for (auto& gb: hout.glob_data) {
+			for (auto& gb: hout->glob_data) {
 				if (gb.original_name == name) {
 					this->assertTrue(gb.value == val, "Bad constant value");
 					return;
@@ -503,9 +499,9 @@ private:
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
 
-		ASSERT_EQUAL(hout.functions.size(), 1);
+		ASSERT_EQUAL(hout->functions.size(), 1);
 
-		auto& function = hout.functions.at(0);
+		auto& function = hout->functions.at(0);
 
 		ASSERT_EQUAL(function.original_name, "foo");
 
@@ -564,7 +560,7 @@ private:
 		}
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
 	}
 
 	void testKeywordLiterals() {
@@ -596,12 +592,12 @@ private:
 		// a simple way to get function scope through hout:
 		// @todo maybe we want to put in in helios_test_utils.hpp?
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout.functions.size());
+		ASSERT_EQUAL(1, hout->functions.size());
 
 		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout.debugPrint();
+		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
 
-		auto foo            = hout.functions.at(0);
+		auto foo            = hout->functions.at(0);
 		auto foo_body_scope = foo.content.body->lifetime_scope;
 
 		// variable types:
@@ -653,9 +649,9 @@ private:
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			ASSERT_EQUAL(hout.functions.size(), 2);
+			ASSERT_EQUAL(hout->functions.size(), 2);
 			{
-				auto function = hout.functions.at(0);
+				auto function = hout->functions.at(0);
 				ASSERT_EQUAL(function.original_name, "foo");
 
 				auto& a_param = function.content.parameters->at(0);
@@ -689,7 +685,7 @@ private:
 			}
 
 			{
-				auto function = hout.functions.at(1);
+				auto function = hout->functions.at(1);
 				ASSERT_EQUAL(function.original_name, "bar");
 				auto& abc_param    = function.content.parameters->at(0);
 				auto& second_param = function.content.parameters->at(1);
@@ -772,9 +768,9 @@ private:
 		auto [module, scope] = getModule(fs::FilePath(path("test_modules/function_calls")));
 
 		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(2, hout.functions.size());
-		std::cerr << hout.debugPrint() << '\n';
-		auto function = hout.functions.at(1);
+		ASSERT_EQUAL(2, hout->functions.size());
+		std::cerr << hout->debugPrint() << '\n';
+		auto function = hout->functions.at(1);
 		ASSERT_EQUAL(function.original_name, "foo");
 		auto variable = dynamic_cast<const compiler::helios::code::VariableStmt*>(
 			function.content.body->statements.at(0).ref().get()
@@ -786,6 +782,33 @@ private:
 		ASSERT_TRUE(call_expr != nullptr);
 		auto square_symbol = getChain("square", scope).back();
 		ASSERT_EQUAL(square_symbol, call_expr->callee);
+	}
+
+	void testBuiltinFunctions() {
+		auto [module, scope] = getModule(fs::FilePath(path("test_modules/builtins")));
+		auto hout            = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
+		ASSERT_EQUAL(1, hout->functions.size());
+
+		auto function = hout->functions.at(0);
+		ASSERT_EQUAL(function.original_name, "main");
+
+		Ref variable_stmt = dynamic_cast<const compiler::helios::code::VariableStmt*>(
+			function.content.body->statements.at(0).ref().get()
+		);
+		Ref call_expr_1 = dynamic_cast<const compiler::helios::code::CallExpr*>(
+			variable_stmt->initial_value->ref().get()
+		);
+		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_1->callee));
+		ASSERT_EQUAL(base::StrID("builtin_input_i64"), compiler::helios::name(call_expr_1->callee));
+
+		Ref expr_stmt = dynamic_cast<const compiler::helios::code::ExprStmt*>(
+			function.content.body->statements.at(1).ref().get()
+		);
+		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
+		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
+		ASSERT_EQUAL(
+			base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee)
+		);
 	}
 
 	void testScopeParentsAndDepth() {
