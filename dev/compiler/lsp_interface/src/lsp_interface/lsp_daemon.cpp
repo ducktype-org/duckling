@@ -6,7 +6,6 @@
 #include <base64.hpp>
 
 #include <clap/clap.hpp>
-#include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
 #include <base/variant.hpp>
@@ -17,6 +16,8 @@ PUSH_DIAGNOSTIC
 #include <crow/app.h>
 #include <crow/http_response.h>
 POP_DIAGNOSTIC
+
+#include <pst_parser/pst.hpp>
 
 // vm includes:
 #include <vm/server.hpp>
