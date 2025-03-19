@@ -1,44 +1,58 @@
+type primitive: int64 8
+type fun: main {} int64
+
 function main {
     arg_size: 0;
     ret_size: 8;
-    
-    # n - 0
-    # m - 8
-    # a - 16
-    # b - 24
-    # c - 32
-    
-    local_size: 40;
-    
+    local_size: 48;
+
+    # n - 8
+    # m - 16
+    # a - 24
+    # b - 32
+    # c - 40
     code: {
-        # n := argument
-        input_l64           0;
-        input_l64           8;
-        
-        # a = 0
-        mov_l64_imm         16, 0;
-        # b = 1
-        mov_l64_imm         24, 1;
+        # [0, 8) main ret_val
+        init_type       int64; # [8, 16)
+        init_type       int64; # [16, 24)
+
+        input_l64       8; # n := argument
+        input_l64       16; # m (modulo)
+
+        init_type       int64; # [24, 32) a
+        init_type       int64; # [32, 40) b
+
+        mov_l64_imm     24, 0; # a = 0
+        mov_l64_imm     32, 1; # b = 1
 
         # while(x > 0)
         label Loop;
             # c = (a + b) % m
-            mov_l64_l64     32, 16;
-            add_l64_l64     32, 24;
-            mod_l64_l64     32, 8;
-            # a = b
-            mov_l64_l64     16, 24;
-            # b = c
-            mov_l64_l64     24, 32;
+            init_type       int64; # [40, 48) c
 
-            # x--;
-            sub_l64_imm     0, 1;
+            mov_l64_l64     40, 24;
+            add_l64_l64     40, 32;
+            mod_l64_l64     40, 16;
+            # a = b
+            mov_l64_l64     24, 32;
+            # b = c
+            mov_l64_l64     32, 40;
+
+            # n--;
+            sub_l64_imm     8, 1;
             
-            # if x > 0 : end
-            cmpG_l64_imm    0, 0;
+            deinit; # c
+
+            # if n > 0 : end
+            cmpG_l64_imm    8, 0;
             jmpRelIf_label  Loop;
 
-        output_l64      16;
-        ret_l64         16;       
+        output_l64      24;
+
+        deinit; # b
+        deinit; # a
+        deinit; # m
+        deinit; # n
+        ret;       
     }
 }
