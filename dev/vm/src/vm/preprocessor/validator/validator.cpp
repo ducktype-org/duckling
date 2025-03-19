@@ -5,7 +5,7 @@
 #include <vector>
 #include <vm/code_data/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
-#include "base/string_id.hpp"
+#include <base/string_id.hpp>
 #include "errors.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
@@ -122,36 +122,34 @@ namespace vm::validator {
 
 		void Validator::validateJumpStackStructure() {
 			for (const auto& func: program.functions) {
-				int next_id = 0;
-				std::vector<int> stack_ids;
-				base::HashMap<base::StrID, int> stack_top_ids;
+				int                             next_id = 0;
+				std::vector<int>                id_stack;
+				base::HashMap<base::StrID, int> top_id_at_label;
 				for (const auto& op: func->code->opcodes) {
 					if (op->opcode_name.strView() == "init_type") {
-						stack_ids.push_back(next_id);
+						id_stack.push_back(next_id);
 						next_id++;
 					} else if (op->opcode_name.strView() == "deinit") {
-						stack_ids.pop_back();
+						id_stack.pop_back();
 					} else if (op->opcode_name.strView() == "label"
-							|| op->opcode_name.strView() == "jmpRel_label"
-							|| op->opcode_name.strView() == "jmpRelIf_label"
-							|| op->opcode_name.strView() == "jmpRelNotIf_label"
-						) {
+					           || op->opcode_name.strView() == "jmpRel_label"
+					           || op->opcode_name.strView() == "jmpRelIf_label"
+					           || op->opcode_name.strView() == "jmpRelNotIf_label") {
 						variant_match(op->args[0].arg) {
 							variant_case(opargs::Label, label) {
 								base::StrID label_name = label.label_name;
-								if (stack_top_ids.contains(label_name)) {
-									if (stack_top_ids[label_name] != stack_ids.back()) {
+								if (top_id_at_label.contains(label_name)) {
+									if (top_id_at_label[label_name] != id_stack.back()) {
 										log.log(makeBox<vm::validator::JumpStackStructureMismatch>(
 											*op->position
 										));
 									}
-								}
-								else {
-									stack_top_ids[label_name] = stack_ids.back();
+								} else {
+									top_id_at_label.put(label_name, id_stack.back());
 								}
 							}
 							variant_default {
-								CORE_ASSERT(false, "expected label name after jump opcode");
+								CORE_PANIC("expected label name after jump opcode");
 							}
 						}
 					}
