@@ -1,0 +1,25 @@
+type primitive: int64 8
+
+function main {
+  arg_size: 0;
+  next_arg_size: 0;
+  ret_size: 0;
+
+  # x - 0
+  # y - 8
+  local_size: 16;
+
+  code: {
+    init_type int64;
+    init_type int64;
+
+    mov_l64_imm         0, 1;
+    output_l64          4;
+
+    deinit;
+    deinit;
+
+    ret_imm             0;
+  }
+
+}
