@@ -19,7 +19,7 @@ namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
 	Module Module::fromIRCode(std::string_view llvm_ir_code) {
-		return { parseModuleImpl(llvm_ir_code) };
+		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
 	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {

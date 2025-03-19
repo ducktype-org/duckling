@@ -363,7 +363,7 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	Box<ModuleImpl> parseModuleImpl(std::string_view llvm_ir_code) {
+	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
 		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
 		llvm::SMDiagnostic error;
