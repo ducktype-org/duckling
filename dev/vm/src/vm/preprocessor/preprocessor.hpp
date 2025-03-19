@@ -25,8 +25,8 @@ namespace vm {
 		 * (with source positions) to a program format executable by the VM.
 		 *
 		 * @param parsed_program
-		 * @todo This should bo moved to the core/thread or be a method on vm::VMProgram
-		 * @return std::expected<vm::LowVMProgram, std::string>
+		 * @todo This should bo moved to the core/thread or be a method on vm::low::LowVMProgram
+		 * @return std::expected<vm::low::LowVMProgram, std::string>
 		 */
 		std::expected<low::LowVMProgram, std::string>
 			changeParsedProgramToLowVMProgram(const parser::ParsedProgram& parsed_program);
