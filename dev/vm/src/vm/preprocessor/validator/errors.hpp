@@ -53,4 +53,7 @@ namespace vm::validator {
 		JumpStackStructureMismatch,
 		"Invalid Jump! Matching jump and label should have the same stack structures"
 	);
+	DEFINE_VALIDATOR_ERROR(
+		InvalidDeinit, "Invalid Deinit! Deinit cannot be used on an empty stack"
+	);
 }

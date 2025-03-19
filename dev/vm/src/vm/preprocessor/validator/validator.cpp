@@ -49,6 +49,7 @@ namespace vm::validator {
 			validateMainExistance();
 			validateTailcallSignatures();
 			validateDuplicateFunctionDeclarations();
+			validateJumpStackStructure();
 
 			if (log.bad()) {
 				std::stringstream stream;
@@ -122,15 +123,19 @@ namespace vm::validator {
 
 		void Validator::validateJumpStackStructure() {
 			for (const auto& func: program.functions) {
-				int                             next_id = 0;
+				int                             next_id = 1;
 				std::vector<int>                id_stack;
 				base::HashMap<base::StrID, int> top_id_at_label;
+				id_stack.push_back(0);
 				for (const auto& op: func->code->opcodes) {
 					if (op->opcode_name.strView() == "init_type") {
 						id_stack.push_back(next_id);
 						next_id++;
 					} else if (op->opcode_name.strView() == "deinit") {
-						id_stack.pop_back();
+						if (id_stack.size() >= 2)
+							id_stack.pop_back();
+						else
+							log.log(makeBox<vm::validator::InvalidDeinit>(*op->position));
 					} else if (op->opcode_name.strView() == "label"
 					           || op->opcode_name.strView() == "jmpRel_label"
 					           || op->opcode_name.strView() == "jmpRelIf_label"
@@ -148,9 +153,7 @@ namespace vm::validator {
 									top_id_at_label.put(label_name, id_stack.back());
 								}
 							}
-							variant_default {
-								CORE_PANIC("expected label name after jump opcode");
-							}
+							variant_default { CORE_PANIC("expected label name after jump opcode"); }
 						}
 					}
 				}
