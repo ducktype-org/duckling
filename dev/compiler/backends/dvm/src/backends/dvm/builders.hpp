@@ -4,7 +4,7 @@
 #include <vm/preprocessor/parser/type_of_data.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <base/stringifyable_enum.hpp>
 #include "instructions.hpp"
 #include <cstdint>

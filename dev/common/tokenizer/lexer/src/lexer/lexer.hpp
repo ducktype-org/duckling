@@ -12,11 +12,6 @@
 
 namespace lexer {
 	/**
-	 * @brief Initializes the whole module
-	 */
-	void init();
-
-	/**
 	 * @brief Decodes and splits the input file into Tokens.
 	 *
 	 * If either of those fails the errors are printed to the standard error output and

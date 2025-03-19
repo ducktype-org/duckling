@@ -30,9 +30,9 @@ namespace compiler::helios {
 		auto operator<=>(const SymID& other) const { return ref.get() <=> other.ref.get(); }
 
 	private:
-		Ref<SymbolData> ref;
+		CRef<SymbolData> ref;
 
-		SymID(Ref<SymbolData> ref): ref(ref) {}
+		SymID(CRef<SymbolData> ref): ref(ref) {}
 		friend struct ImplementationOf_QuerySymbolOfSTMT;
 		friend struct ImplementationOf_QueryLookupInSymbol;
 		friend struct GetSymRef_Functor;

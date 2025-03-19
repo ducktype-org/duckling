@@ -4,7 +4,7 @@
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <base/ref.hpp>
 #include <vm/preprocessor/parser/type_of_data.hpp>
 #include <ranges>

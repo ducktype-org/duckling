@@ -1,6 +1,6 @@
 #include "utils.hpp"
 #include <base/exceptions.hpp>
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 
 #include <base/variant.hpp>
 
@@ -64,7 +64,7 @@ bool compiler::backend_vm::utils::areInstrEqual(
 	variant_case(Op_##opcode, op0) return cmp2Args(op0, std::get<Op_##opcode>(instr1));
 
 	variant_match(instr0) {
-#include <vm/code_data/opcodes_list.hpp>
+#include <vm/program/opcodes_list.hpp>
 	}
 
 #undef HANDLE_OPCODE_0ARGS

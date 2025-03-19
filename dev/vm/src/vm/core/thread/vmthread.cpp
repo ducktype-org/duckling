@@ -5,8 +5,6 @@
 #include <base/ints.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
-#include <vm/code_data/instruction.hpp>
-#include <vm/code_data/opcodes.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -15,6 +13,8 @@
 #include <vm/api/data/status.hpp>
 #include <base/variant.hpp>
 #include "op_case.hpp"
+#include "low_program/instruction.hpp"
+#include "low_program/opcodes.hpp"
 #include "vmthread.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
@@ -91,7 +91,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(CRef<FuncData> main_func) {
+	u64 VMThread::internalCallMain(CRef<low::FuncData> main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -99,7 +99,7 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
 #else
-		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(OpcodeFix8::exit),
+		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(low::OpcodeFix8::exit),
 			                        .arg0   = 0,
 			                        .arg1   = 0 };
 #endif
@@ -131,7 +131,7 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 			};
 
@@ -147,7 +147,7 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 	End:
@@ -157,9 +157,9 @@ namespace vm {
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
 		while (true) {
-			switch (static_cast<OpcodeFix8>(instr->opcode)) {
+			switch (static_cast<low::OpcodeFix8>(instr->opcode)) {
 	#define HANDLE_OPCODE(opcode_name)                                      \
-	case OpcodeFix8::opcode_name: {                                         \
+	case low::OpcodeFix8::opcode_name: {                                    \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
 		              opcode_str == "exit") {                               \
@@ -168,7 +168,7 @@ namespace vm {
 			break;                                                          \
 		}                                                                   \
 	}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {
@@ -263,7 +263,7 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(CRef<VMProgram> program) {
+	void VMThread::run(CRef<low::LowVMProgram> program) {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
@@ -363,7 +363,7 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(CRef<vm::VMProgram> program) {
+	bool VMThread::initThreadAndRun(CRef<vm::low::LowVMProgram> program) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 

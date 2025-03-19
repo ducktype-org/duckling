@@ -1,25 +1,19 @@
 #include <iomanip>
 
 #include <base/int_conv.hpp>
+#include <base/for_each.hpp>
 #include "instructions.hpp"
 #include "elements.hpp"
-#include <vm/code_data/opcode_args.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <vm/preprocessor/parser/type_of_data.hpp>
 
 namespace compiler::backend_vm {
 	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
 
-	std::string toString(vm::opargs::StackLocalI8 arg) { return std::to_string(arg.offset); }
+#define OFFSET_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
 
-	std::string toString(vm::opargs::StackLocalI16 arg) { return std::to_string(arg.offset); }
-
-	std::string toString(vm::opargs::StackLocalI32 arg) { return std::to_string(arg.offset); }
-
-	std::string toString(vm::opargs::StackLocalI64 arg) { return std::to_string(arg.offset); }
-
-	std::string toString(vm::opargs::StackLocalPtr arg) { return std::to_string(arg.offset); }
-
-	std::string toString(vm::opargs::ArgsOffset arg) { return std::to_string(arg.offset); }
+	FOR_EACH(OFFSET_TO_STRING, VM_OPCODE_OFFSET_TYPES);
 
 	std::string toString(vm::opargs::Type arg) { return arg.type_name.str(); }
 
@@ -65,7 +59,7 @@ namespace compiler::backend_vm {
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/code_data/opcodes_list.hpp>
+#include <vm/program/opcodes_list.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS

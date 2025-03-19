@@ -23,30 +23,30 @@ function(duck_add_vm_tests suffix)
 
   set(test_set "vm_${suffix}")
 
-  duck_add_test(vm ${test_set}_micro_test basic/working_vm.cpp
+  duck_add_test_custom(vm ${test_set}_micro_test basic/working_vm.cpp
           USES ${libvm} Tester)
-  duck_add_test(vm ${test_set}_static_table_test static_table/static_table.cpp
+  duck_add_test_custom(vm ${test_set}_static_table_test static_table/static_table.cpp
           USES ${libvm} Tester ${vmtester})
-  duck_add_test(vm ${test_set}_unit_tests basic/unit.cpp
+  duck_add_test_custom(vm ${test_set}_unit_tests basic/unit.cpp
           USES ${libvm} Tester ${vmtester})
-  duck_add_test(vm ${test_set}_functions_test functions/functions.cpp
+  duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
           USES ${libvm} Tester ${vmtester})
 
-  duck_add_test(vm ${test_set}_correctness_test correctness/correctness.cpp
+  duck_add_test_custom(vm ${test_set}_correctness_test correctness/correctness.cpp
           USES ${libvm} Tester ${vmtester})
   duck_disable_tc_in_debug(correctness_test ${test_set})
 
-  duck_add_test(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
+  duck_add_test_custom(vm ${test_set}_debugger_test debugger/debugger_tests.cpp
           USES ${libvm} Tester ${vmtester})
 
-  duck_add_test(vm ${test_set}_debugger_infinite_test debugger/debugger_infinite_tests.cpp
+  duck_add_test_custom(vm ${test_set}_debugger_infinite_test debugger/debugger_infinite_tests.cpp
           USES ${libvm} Tester ${vmtester})
   duck_disable_tc_in_debug("debugger_infinite_test" ${test_set})
 
-  duck_add_test(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
+  duck_add_test_custom(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
           USES ${libvm} Tester ${vmtester})
 
-  duck_add_test(vm ${test_set}_validation_test validation/bc_validation.cpp
+  duck_add_test_custom(vm ${test_set}_validation_test validation/bc_validation.cpp
           USES ${libvm} Tester ${vmtester})
 
 endfunction()

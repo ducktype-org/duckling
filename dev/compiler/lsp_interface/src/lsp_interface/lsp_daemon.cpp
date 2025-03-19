@@ -6,7 +6,6 @@
 #include <base64.hpp>
 
 #include <clap/clap.hpp>
-#include <pst_parser/parser.hpp>
 #include <pst_parser/pst.hpp>
 #include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
@@ -71,7 +70,6 @@ void server(i32 port) {
 	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
-	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.

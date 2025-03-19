@@ -76,13 +76,13 @@ namespace tsh {
 	/**
 	 * @brief Query to get a typed Pointer type.
 	 */
-	DECLARE_QUERY(QueryPointerType, ComponentType, PointerAbstractType)
+	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType)
 
 	/**
 	 * @brief Key for QueryTupleType.
 	 */
 	struct KeyFor_QueryTupleType final {
-		std::vector<ComponentType> components;
+		std::vector<SymbolType<>> components;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryTupleType&) const
@@ -106,7 +106,7 @@ namespace tsh {
 	 * @brief Key for QueryVariantType.
 	 */
 	struct KeyFor_QueryVariantType final {
-		std::vector<AbstractType> underlying_types;
+		std::vector<SymbolType<>> underlying_types;
 
 		[[nodiscard]]
 		auto operator<=>(const KeyFor_QueryVariantType&) const
@@ -133,12 +133,12 @@ namespace tsh {
 		/**
 		 * @brief The types of the parameters of the function.
 		 */
-		std::vector<AbstractType> parameter_types;
+		std::vector<SymbolType<>> parameter_types;
 
 		/**
 		 * @brief The result type of the function.
 		 */
-		AbstractType result_type;
+		SymbolType<> result_type;
 
 		/**
 		 * @brief Whether the function type is pure or not.
