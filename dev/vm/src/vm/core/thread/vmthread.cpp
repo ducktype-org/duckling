@@ -101,7 +101,7 @@ namespace vm {
 		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
 #else
 		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(OpcodeFix8::exit),
-			                        .arg0   = 0,
+			                         .arg0   = 0,
 			                        .arg1   = 0 };
 #endif
 
