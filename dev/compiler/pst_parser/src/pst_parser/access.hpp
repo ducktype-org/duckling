@@ -162,8 +162,8 @@ namespace pst {
 		}
 
 		template<typename E>
-		AccessInternal& operator=(MBox<E>&& box_) noexcept {
-			box = std::move(box_);
+		AccessInternal& operator=(MBox<E>&& mbox) noexcept {
+			box = std::move(mbox);
 			return *this;
 		}
 

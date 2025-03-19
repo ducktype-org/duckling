@@ -19,9 +19,9 @@ namespace pst {
 	}
 
 	void CodeBlockOrStmt::dprint(std::ostream& out) const {
-		auto printThrough = [&](const auto& el) { return nullAwareDprint(el, out); };
+		auto print_through = [&](const auto& el) { return nullAwareDprint(el, out); };
 
-		std::visit(printThrough, content);
+		std::visit(print_through, content);
 	}
 
 	CodeBlockOrStmt::const_iterator CodeBlockOrStmt::begin() const {
