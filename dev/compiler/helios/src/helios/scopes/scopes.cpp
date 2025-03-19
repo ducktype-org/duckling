@@ -47,7 +47,9 @@ namespace compiler::helios {
 
 		u64 depth;
 
-		// This delete is important, to prevent any copy of scope data:
+		// We would like the function bellow to be deleted to prevent any copy of scope data.
+		// Unfortunately that would break the aggregate initialization which is super cool.
+		// ScopeData is local to this file only, so we just need to be careful.
 		// ScopeData(const ScopeData&)            = delete;
 		// ScopeData& operator=(const ScopeData&) = delete;
 	};
@@ -416,6 +418,10 @@ namespace compiler::helios {
 					)
 				);
 			}
+
+			if (key.ref->is_root)
+				CORE_ASSERT(output.empty(), "Root scope should not have any symbols.");
+
 			return output;
 		}
 
@@ -437,7 +443,18 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_list = ctx.query<QuerySymbolsInScope>(key.scope);
 
-			LookupResult result{ {}, {} };
+			// here if the scope is the root scope
+			// we pass the lookup to
+			// builtin lookup.
+			// Note that we still calculate symbol_list to assert
+			// that it is empty.
+			auto scope_data = getScopeRef(key.scope);
+			if (scope_data->is_root) {
+				CORE_ASSERT(symbol_list->empty(), "Root scope should not have any symbols.");
+				return builtin::lookupGlobalBuiltins(ctx, key.name);
+			}
+
+			LookupResult result{ .leaves = {}, .children = {} };
 
 			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
@@ -456,7 +473,7 @@ namespace compiler::helios {
 			return result;
 		}
 
-		QUERY_AUTO_CACHE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
@@ -482,7 +499,7 @@ namespace compiler::helios {
 			}
 		}
 
-		QUERY_AUTO_CACHE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);

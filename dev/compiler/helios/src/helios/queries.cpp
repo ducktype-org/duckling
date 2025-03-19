@@ -39,7 +39,7 @@ namespace compiler::helios {
 			return out;
 		}
 
-		QUERY_AUTO_CACHE_COPY
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTopLevelEntities);
