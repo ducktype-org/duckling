@@ -112,7 +112,6 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocalI32)
 
-
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
@@ -135,28 +134,11 @@ DEF_OPCODE(jmpRel_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
 DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
 
-DEF_OPCODE(getFstArg_l64, vm::opargs::StackLocalI64)
-DEF_OPCODE(getFstArg_lptr, vm::opargs::StackLocalPtr)
-
-DEF_OPCODE(mov_l64_arg64, vm::opargs::StackLocalI64, vm::opargs::ArgsOffset)
-DEF_OPCODE(mov_lptr_argptr, vm::opargs::StackLocalPtr, vm::opargs::ArgsOffset)
-
-DEF_OPCODE(setFstArg_l64, vm::opargs::StackLocalI64)
-DEF_OPCODE(setFstArg_lptr, vm::opargs::StackLocalPtr)
-
-DEF_OPCODE(mov_arg64_l64, vm::opargs::ArgsOffset, vm::opargs::StackLocalI64)
-DEF_OPCODE(mov_argptr_lptr, vm::opargs::ArgsOffset, vm::opargs::StackLocalPtr)
-
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 
 // return while performing a tail call
-DEF_OPCODE(ret_tailcall, vm::opargs::FunctionName)
-// return value on the stack
-DEF_OPCODE(ret_l64, vm::opargs::StackLocalI64)
-DEF_OPCODE(ret_l32, vm::opargs::StackLocalI32)
-// return immediate value
-DEF_OPCODE(ret_imm, vm::opargs::Immediate)
-// void return
+DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
+// return
 DEF_OPCODE(ret)
 
 // initialize local variable on local stack with given type
@@ -166,6 +148,9 @@ DEF_OPCODE(deinit)
 
 DEF_OPCODE(input_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(output_l64, vm::opargs::StackLocalI64)
+
+DEF_OPCODE(input_l32, vm::opargs::StackLocalI32)
+DEF_OPCODE(output_l32, vm::opargs::StackLocalI32)
 
 DEF_OPCODE(nop)
 
@@ -183,7 +168,8 @@ DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocal
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
-
+// does a shallow pointer copy
+DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // terminates execution
 DEF_OPCODE(exit)

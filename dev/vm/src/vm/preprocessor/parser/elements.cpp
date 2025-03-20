@@ -1,7 +1,9 @@
 #include "elements.hpp"
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include <base/for_each.hpp>
 #include "errors.hpp"
+#include <vm/program/opcode_args.hpp>
 
 namespace vm::parser {
 	namespace opargs_parsers {
@@ -35,45 +37,15 @@ namespace vm::parser {
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			return { parseInt<i32, vm::opargs::Immediate>(state) };
-		}
+#define HANDLE_OFFSET(Type)                                   \
+	template<>                                                \
+	auto parseArg(F8ParserState& state) -> vm::opargs::Type { \
+		return { parseInt<i64, vm::opargs::Type>(state) };    \
+	}
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI8 {
-			return { parseInt<i64, vm::opargs::StackLocalI8>(state) };
-		}
+		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPCODE_OFFSET_TYPES);
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI16 {
-			return { parseInt<i64, vm::opargs::StackLocalI16>(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI32 {
-			return { parseInt<i64, vm::opargs::StackLocalI32>(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalI64 {
-			return { parseInt<i64, vm::opargs::StackLocalI64>(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalAny {
-			return { parseInt<i64, vm::opargs::StackLocalAny>(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::StackLocalPtr {
-			return { parseInt<i64, vm::opargs::StackLocalPtr>(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::ArgsOffset {
-			return { parseInt<i64, vm::opargs::ArgsOffset>(state) };
-		}
+#undef HANDLE_OFFSET
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
@@ -117,7 +89,7 @@ namespace vm::parser {
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/code_data/opcodes_list.hpp>
+#include <vm/program/opcodes_list.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -236,32 +208,6 @@ namespace vm::parser {
 				state.parse().one(lang_def::Special::Semicolon);
 				break;
 			}
-			case lang_def::Keyword::BCNextArgSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->next_arg_size != SIZE_T_MAX) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(), "next_arg_size duplicate"
-					);
-				}
-				auto value = state.tokens().next();
-
-				if (!value.isNumLiteral()) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"next_arg_size argument is not num-literal"
-					);
-				}
-				try {
-					out->next_arg_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.ctokens().peek().getPosition(),
-						"next_arg_size argument is not num-literal"
-					);
-				}
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
 
 			case lang_def::Keyword::BCLocalSize: {
 				state.parse().one(lang_def::NamedOperator::Colon);
@@ -336,7 +282,6 @@ namespace vm::parser {
 
 		if (out->local_size == SIZE_T_MAX) state.fail(0, "Local size not set");
 		if (out->arg_size == SIZE_T_MAX) state.fail(0, "Arg size not set");
-		if (out->next_arg_size == SIZE_T_MAX) state.fail(0, "Next arg size not set");
 		if (out->ret_size == SIZE_T_MAX) state.fail(0, "Ret size not set");
 
 		return out;

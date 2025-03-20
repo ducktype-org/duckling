@@ -4,13 +4,14 @@
 #include <base/box.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <vm/code_data/opcode_args.hpp>
+#include <base/for_each.hpp>
+#include <vm/program/opcode_args.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <token_file/file.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
-#include "type_data.hpp"
+#include "type_of_data.hpp"
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
 #include <vector>
@@ -42,7 +43,7 @@ namespace vm::parser {
 	struct Type: AsmElement {
 		using AsmElement::AsmElement;
 
-		TypeData          datatype;
+		TypeOfData        datatype;
 		static MBox<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
@@ -66,24 +67,14 @@ namespace vm::parser {
 			for (auto& arg: args) {
 				variant_match(arg.arg) {
 					variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
-					variant_case(vm::opargs::StackLocalI8, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::StackLocalI16, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::StackLocalI32, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::StackLocalI64, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::StackLocalPtr, stack_offset_arg) {
-						out << stack_offset_arg.offset << " ";
-					}
-					variant_case(vm::opargs::ArgsOffset, args_offset_arg) {
-						out << args_offset_arg.offset << " ";
-					}
+
+#define HANDLE_OFFSET(Type) \
+	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
+
+					FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
+
+#undef HANDLE_OFFSET
+
 					variant_case(vm::opargs::Type, type_arg) {
 						out << type_arg.type_name.strView() << " ";
 					}
@@ -124,10 +115,9 @@ namespace vm::parser {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier name;
-		usize           arg_size      = SIZE_T_MAX;
-		usize           next_arg_size = SIZE_T_MAX;
-		usize           local_size    = SIZE_T_MAX;
-		usize           ret_size      = SIZE_T_MAX;
+		usize           arg_size   = SIZE_T_MAX;
+		usize           local_size = SIZE_T_MAX;
+		usize           ret_size   = SIZE_T_MAX;
 		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);
