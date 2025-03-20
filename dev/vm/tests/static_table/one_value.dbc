@@ -1,46 +1,44 @@
 type primitive: int64 8
 type static_table: tableint64 int64 4
+type fun: main {} int64
 
 function main {
   arg_size: 0;
-	next_arg_size: 0;
   ret_size: 0;
 
   # x - 0
   # i - 8
-  # t - 16
-  local_size: 40;
+  # arrPtr - 16
+  local_size: 48;
 
   code: {
-    init_type int64; # [0,8)
-    init_type int64; # [8,16)
+    # [0, 8) main ret_val
+    init_type           int64;          # [8,16)  # x
+    init_type           int64;          # [16,24) # i
+    init_type           int64;          # [24,32) # arrPtr 
+    
+    alloc_lptr_type     24, tableint64; # arrPtr := alloc *int[]
+    mov_l64_imm         16, 0;          # i := 0
+    mov_l64_imm         8, 3;           # x := 3
 
-    alloc_lptr_type     16, tableint64;
+    # t[i] := x (by i)
+    store_lptr_l64_ofs  24, 8;          # t[i] := x
+    ext_l64             16;
 
-    # i := 0
-    mov_l64_imm         8, 0;
+    mov_l64_imm         8, 5;           # x := 5
 
-    # x := 3 -> r0
-    mov_l64_imm         0, 3;
+    load_l64_lptr_ofs   0, 24;
+    ext_l64             16;
 
-    # t[i] := x (by idx)
-    store_lptr_l64_ofs  16, 0;
-    ext_l64             8;
+    output_l64          16;
 
-    # x := 5 -> r0
-    mov_l64_imm         0, 5;
-
-    load_l64_lptr_ofs   0, 16;
-    ext_l64             8;
-
-    output_l64          8;
-
-    free_lptr           16;
+    free_lptr           24;
 
     deinit;
     deinit;
+    deinit;
 
-    ret_imm             0;
+    ret;
   }
 
 }
