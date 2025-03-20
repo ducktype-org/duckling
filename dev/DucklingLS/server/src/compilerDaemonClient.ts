@@ -99,10 +99,6 @@ export class CompilerDaemonClient {
 				console.log("Response not ok!!!!!!!");
 				throw new Error(`Error: ${response.status} ${response.statusText}`);
 			}
-
-			// Read and print the response body as text
-			const responseBody = await response.text();
-			console.log(`Response body: ${responseBody}`);
 	
 
 			const jsonResponse = await response.json();

@@ -31,7 +31,7 @@ namespace lsp {
 		for (lang_def::Keyword k: lang_def::getKeywords()) {
 			std::string keyword = lang_def::keywordToStr(k).str();
 			if (keyword.rfind("NotA", 0) == std::string::npos)
-				keywords.push_back(lang_def::keywordToStr(k).str());
+				keywords.push_back(base::strConcat("\"", lang_def::keywordToStr(k).str(), "\""));
 		}
 
 		return jsonList(keywords);
@@ -52,7 +52,7 @@ namespace lsp {
 		for (lang_def::Special s: lang_def::getSpecials()) {
 			std::string special = lang_def::specialToStr(s).str();
 			if (special.rfind("NotA", 0) == std::string::npos)
-				specials.push_back(lang_def::specialToStr(s).str());
+				specials.push_back(base::strConcat("\"", lang_def::specialToStr(s).str(), "\""));
 		}
 
 		return jsonList(specials);
@@ -73,7 +73,7 @@ namespace lsp {
 		for (lang_def::NamedOperator o: lang_def::getOperators()) {
 			std::string op = lang_def::operatorToStr(o).str();
 			if (op.rfind("NotA", 0) == std::string::npos)
-				operators.push_back(lang_def::operatorToStr(o).str());
+				operators.push_back(base::strConcat("\"", lang_def::operatorToStr(o).str(), "\""));
 		}
 
 		return jsonList(operators);
