@@ -1,12 +1,8 @@
 name: docs
 
 on:
-  push:
-    paths:
-      - '**.cpp'
-      - '**.hpp'
-      - '**.md'
-      - 'dev/docs/**'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
 
 env:
   DEV_DIR: ${{ github.workspace }}/dev
