@@ -60,11 +60,4 @@ namespace compiler::backend_llvm {
 
 		~Module();
 	};
-
-	/**
-	 * @brief Converts single lir function into a llvm module
-	 * containing only this function.
-	 * @note This function is a temporary entry point for the llvm backend.
-	 */
-	Module lirFunctionToModule(CRef<lir::Function>);
 }
