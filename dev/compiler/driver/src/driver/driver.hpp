@@ -12,7 +12,7 @@
 #include <helios/hout/hout.hpp>
 
 namespace compiler::driver {
-	enum class BackendType : std::uint8_t { LLVM, DuckBC };
+	enum class BackendType : std::uint8_t { LLVM, DVM };
 
 	/**
 	 * @brief The last intermediate representation of the module before the backends.

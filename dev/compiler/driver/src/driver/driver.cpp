@@ -15,7 +15,7 @@ namespace compiler::driver {
 		switch (options->backend_type) {
 		case BackendType::LLVM:
 			return base::makeBox<LLVMDriver>(options);
-		case BackendType::DuckBC:
+		case BackendType::DVM:
 			return base::makeBox<DVMDriver>(options);
 		default:
 			CORE_PANIC("Wrong enum value");
