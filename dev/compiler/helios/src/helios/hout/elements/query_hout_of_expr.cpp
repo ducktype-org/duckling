@@ -524,7 +524,9 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
-			CORE_ASSERT(key.element.unlockOpt(ctx), "Nullptr provided to QueryHoutOfExpr");
+			CORE_ASSERT(
+				key.element.unlockOpt(ctx).has_value(), "Nullptr provided to QueryHoutOfExpr"
+			);
 
 			// @TODO static assert this is top-expr
 			return code::fromPST(ctx, key.element);

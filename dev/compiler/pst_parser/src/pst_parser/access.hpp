@@ -10,19 +10,9 @@
 
 namespace pst {
 	/**
-	 * @brief Some kind of id in the future
+	 * @brief Wrapper for a reference to pst that allows access, it should never be passed between
+	 * different queries.
 	 */
-	class PSTAccessKey final {
-	private:
-		int key = 0;
-
-	public:
-		PSTAccessKey()                    = default;
-		PSTAccessKey(const PSTAccessKey&) = default;
-
-		bool operator==(PSTAccessKey other) { return key == other.key; }
-	};
-
 	template</*std::derived_from<LangElement>*/ typename Element>
 	class Access final {
 	private:
@@ -45,12 +35,12 @@ namespace pst {
 
 		template<typename E>
 		Access& operator=(Access<E>&& oth) noexcept {
-			ref = std::move(oth.ref);
+			ref = std::move(oth).ref;
 			return *this;
 		}
 
 		template<typename T>
-		Access(Access<T>&& other): ref(std::move(other.ref)) {}
+		Access(Access<T>&& other): ref(std::move(other).ref) {}
 
 		/**
 		 * @brief This should be fine for now, casting might end up as null which would be
@@ -68,13 +58,23 @@ namespace pst {
 	};
 
 	namespace detail {
-		void notifyContext(query::detail::ContextType& ctx);
 		/**
-		 * @brief Some smart throw based on context.
+		 * @brief Notification to context About the access to an element.
 		 */
-		void notifyBadAccess(query::detail::ContextType&);
+		void notifyContext(query::Context& ctx);
+		/**
+		 * @brief Some smart throw about bad access(unsafe access of non-null) based on context.
+		 */
+		void notifyBadAccess(query::Context&);
 	}
 
+	/**
+	 * @brief Wrapper for an optional reference to pst that doesn't allow for normal access without
+	 * passing context.
+	 *
+	 * @note The access is still allowed with illegalAccess but it should only be used outside of
+	 * the normal query framework unless for debuging access.
+	 */
 	template</*std::derived_from<LangElement>*/ typename Element>
 	class AccessLocked final {
 	private:
@@ -101,24 +101,36 @@ namespace pst {
 		template<typename T>
 		AccessLocked(const AccessLocked<T> other) noexcept: ref(other.ref) {}
 
+		/**
+		 * @brief Access that doesn't require passing context. It should only be used outside of
+		 * queries unless for debuging purposes
+		 */
 		auto illegalAccess() const {
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
 		/**
 		 * @brief This should be fine for now, casting might end up as null which would be
-		 * potentially bad for knowing about accesses
+		 * potentially bad for knowing about accesses.
 		 */
 		template<typename T>
 		AccessLocked<T> dynamicCast() const {
 			return { { dynamic_cast<const T*>(&*ref) } };
 		}
 
+		/**
+		 * @brief Unlock an access safely returning an optional. Notifies the query framework about
+		 * the access.
+		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
 			detail::notifyContext(ctx);
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
+		/**
+		 * @brief Unlock an access unsafely. Notifies the query framework about the access and
+		 * throws if the element was null.
+		 */
 		Access<Element> unlock(query::Context& ctx) const {
 			if (!ref.toOpt()) detail::notifyBadAccess(ctx);
 			detail::notifyContext(ctx);
@@ -133,11 +145,15 @@ namespace pst {
 
 		template<typename E>
 		AccessLocked& operator=(AccessLocked<E>&& oth) noexcept {
-			ref = std::move(oth.ref);
+			ref = std::move(oth).ref;
 			return *this;
 		}
 	};
 
+	/**
+	 * @brief Wrapper for an optional pst box. It should only be used inside of pst as a way to
+	 * store elements.
+	 */
 	template</*std::derived_from<LangElement>*/ typename Element>
 	class AccessInternal final {
 	private:
@@ -153,11 +169,15 @@ namespace pst {
 
 		AccessInternal(MBox<Element>&& box): box(std::move(box)) {}
 
+		/**
+		 * @brief Create a locked access from internal access, meant to be used in getters in pst to
+		 * return locked accesses.
+		 */
 		AccessLocked<Element> give() const { return { box.ref() }; }
 
 		template<typename E>
 		AccessInternal& operator=(AccessInternal<E>&& oth) noexcept {
-			box = std::move(oth.box);
+			box = std::move(oth).box;
 			return *this;
 		}
 
@@ -177,5 +197,8 @@ namespace pst {
 
 #define VISITOR_ACCESS_METHOD_INTERFACE(type) void visit##type(pst::Access<type>)
 
+/**
+ * @brief Macro to create a visitor that uses accesses as arguments passed to visitors.
+ */
 #define MAKE_ACCESS_VISITOR(name, ...) \
 	MAKE_VISITOR_CUSTOM_INTERFACE(name, VISITOR_ACCESS_METHOD_INTERFACE, __VA_ARGS__)

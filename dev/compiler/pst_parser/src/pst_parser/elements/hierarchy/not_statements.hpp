@@ -14,7 +14,6 @@
 #include <base/string_id.hpp>
 
 #include "meta.hpp"
-#include "lists.hpp"
 #include "expr_holders.hpp"
 
 namespace pst {

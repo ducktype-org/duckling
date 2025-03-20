@@ -32,6 +32,10 @@ namespace pst {
 	using lang_def::Special;
 	using lexer::Operator;
 
+	/**
+	 * @brief Special null aware dprint that simplifies pst dprint functions. Shouldn't be used
+	 * outside of them.
+	 */
 	template<typename T>
 	void nullAwareDprint(const AccessInternal<T>& acc, std::ostream& out) {
 		tpc::nullAwareDprint(acc.internal(), out);

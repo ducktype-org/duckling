@@ -9,7 +9,7 @@ namespace compiler::helios {
 
 	namespace detail {
 		void visitClassStmts(
-			query::detail::ContextType&       ctx,
+			query::Context&                   ctx,
 			StmtList<pst::ClassStmt>&         out,
 			pst::AccessLocked<pst::ClassStmt> stmt
 		) {

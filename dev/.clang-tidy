@@ -24,7 +24,6 @@ CheckOptions:
   modernize-loop-convert.NamingStyle: CamelCase
   llvm-else-after-return.WarnOnUnfixable: 'false'
   google-readability-function-size.StatementThreshold: '800'
-  cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove: 'true'
 
   # Names config:
 

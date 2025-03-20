@@ -221,7 +221,9 @@ namespace base {
 	using MCRef = MRef<const T>;
 
 
-// ...
+/**
+ * @brief Macro used to expose ref access in ref-like objects that manage a ref internally.
+ */
 #define EXPOSE_REF_INTERFACE(element_name)                         \
 	auto  operator->() const { return element_name.operator->(); } \
 	auto& operator*() const { return element_name.operator*(); }
