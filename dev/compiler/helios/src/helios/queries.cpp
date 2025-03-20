@@ -38,13 +38,13 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, std::vector<HOUTUnit>) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<HOUTUnit> out = {ctx.query<QueryModuleHOUT>(key)};
+			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key) };
 
 			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
 			for (auto submodule: *submodules) {
 				// @TODO optimize multiple concatenations
 				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
-				for (const auto i: submodule_hout) out.push_back(i);
+				for (const auto& i: submodule_hout) out.push_back(i);
 			}
 			return out;
 		}

@@ -300,7 +300,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
 		static auto provide(Context&, QKey) -> PResult {
 			std::vector<ScopeID> out;
-			// @TODO 
+			// @TODO
 			// write a proper visitor and traverse PST to get all scopes
 			return out;
 		}
