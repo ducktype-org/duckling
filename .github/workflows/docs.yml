@@ -47,6 +47,9 @@ jobs:
       - name: Cat doxyfile
         run: cat ${{ env.DOCS_DIR }}/Doxyfile
 
+      - name: Cat doxyfile
+        run: cat ${{ env.DEV_DIR }}/docs/Doxyfile.in
+
       - name: Build search engine databse
         working-directory: ${{ env.DOCS_DIR }}
         run: |
