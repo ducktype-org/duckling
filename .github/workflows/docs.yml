@@ -49,7 +49,7 @@ jobs:
         run: |
           doxyindexer doxygen/searchdata.xml
           mkdir search-engine
-          mv searchdata.db search-engine/
+          mv doxysearch.db search-engine/
 
       # Prepare ssh key for secure connection to server.
       # Save the key to a file, set permissions.
