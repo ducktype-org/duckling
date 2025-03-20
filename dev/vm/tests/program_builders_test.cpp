@@ -107,7 +107,7 @@ private:
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::program::Function func = func_builder.build();
 		ASSERT_EQUAL(base::StrID("test"), func.name);
-		ASSERT_EQUAL(20, func.stack_size);
+		ASSERT_EQUAL(20, func.local_stack_size);
 		ASSERT_EQUAL(0, func.ret_size);
 		ASSERT_EQUAL(0, func.arg_size);
 		ASSERT_EQUAL(0, func.next_arg_size);

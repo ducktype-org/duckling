@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/preprocessor/parser/elements.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <filesystem/file.hpp>
@@ -29,7 +30,9 @@ namespace vm {
 		 * @return std::expected<vm::low::LowVMProgram, std::string>
 		 */
 		std::expected<low::LowVMProgram, std::string>
-			changeParsedProgramToLowVMProgram(const parser::ParsedProgram& parsed_program);
+			getProgram(const std::vector<parser::ParsedFile>& parsed_files);
+
+		// std::expected<low::LowVMProgram, std::string>
 
 	public:
 		Preprocessor(bool validate_program);

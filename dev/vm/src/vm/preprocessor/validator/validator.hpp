@@ -1,5 +1,6 @@
 #pragma once
 
+#include "vm/program/program.hpp"
 #include <base/optional.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 
@@ -10,5 +11,5 @@ namespace vm::validator {
 	 *
 	 * @return base::Optional<std::string>
 	 */
-	base::Optional<std::string> verify(const parser::ParsedProgram& program);
+	base::Optional<std::string> verify(const program::Program& program);
 }

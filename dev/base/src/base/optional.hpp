@@ -75,6 +75,13 @@
 		for (auto&& _value_name = _internal_optional.value(); _perform_if; _perform_if = false) \
 	POP_DIAGNOSTIC
 
+#define opt_err(_err_name)                                                                      \
+	PUSH_DIAGNOSTIC                                                                             \
+	NO_SHADOW                                                                                   \
+	if (bool _perform_if = !_internal_optional.has_value())                                     \
+		for (auto&& _err_name = _internal_optional.error(); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
 #define opt_none    \
 	PUSH_DIAGNOSTIC \
 	NO_SHADOW       \

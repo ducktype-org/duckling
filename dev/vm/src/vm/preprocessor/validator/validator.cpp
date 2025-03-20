@@ -5,6 +5,7 @@
 #include <vm/program/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include "errors.hpp"
+#include "vm/program/instructions.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 #include <sstream>
@@ -22,7 +23,7 @@ namespace vm::validator {
 		 */
 		class Validator {
 		public:
-			Validator(const parser::ParsedProgram& prog): program(prog) { log = dia::Logger(); }
+			Validator(const program::Program& prog): program(prog) { log = dia::Logger(); }
 
 			/**
 			 * @brief Validates the program.
@@ -33,8 +34,8 @@ namespace vm::validator {
 			base::Optional<std::string> validateProgram();
 
 		private:
-			const parser::ParsedProgram& program;
-			dia::Logger                  log;
+			const program::Program& program;
+			dia::Logger             log;
 
 			void preprocessProgram();
 			void validateMainExistance();
@@ -58,48 +59,41 @@ namespace vm::validator {
 		void Validator::validateMainExistance() {
 			bool main_found = false;
 			for (auto& func: program.functions) {
-				if (func->name.value.strView() == "main") {
+				if (func.name.strView() == "main") {
 					main_found = true;
 					break;
 				}
 			}
 
-			if (!main_found)
-				log.log(makeBox<vm::validator::NoMainError>(*program.files_src_pos[0]));
+			if (!main_found) {
+				CORE_PANIC("No main");
+				// log.log(makeBox<vm::validator::NoMainError>(*program.files_src_pos[0]));
+			}
 		}
 
 		void Validator::validateTailcallSignatures() {
 			for (const auto& func: program.functions) {
-				for (const auto& op: func->code->opcodes) {
-					if (op->opcode_name.strView() == "ret_tailcall") {
-						variant_match(op->args[0].arg) {
-							variant_case(vm::opargs::FunctionName, function_name_arg) {
-								auto maybe_called_func
-									= program.name_to_func.atMaybe(function_name_arg.function_name);
-								if_opt_some(maybe_called_func, called_func) {
-									if (func->arg_size != called_func->arg_size) {
-										log.log(makeBox<vm::validator::CallerCalledArgSizeMismatch>(
-											*op->position
-										));
-									}
-									if (func->local_size != called_func->local_size) {
-										log.log(
-											makeBox<vm::validator::CallerCalledStackSizeMismatch>(
-												*op->position
-											)
-										);
-									}
-									if (func->ret_size != called_func->ret_size) {
-										log.log(makeBox<vm::validator::CallerCalledRetSizeMismatch>(
-											*op->position
-										));
-									}
+				for (const auto& op: func.body) {
+					variant_match(op) {
+						variant_case(program::instructions::Op_ret_tailcall_func, name) {
+							auto maybe_called_func
+								= program.name_to_func.atMaybe(function_name_arg.function_name);
+							if_opt_some(maybe_called_func, called_func) {
+								if (func->arg_size != called_func->arg_size) {
+									log.log(makeBox<vm::validator::CallerCalledArgSizeMismatch>(
+										*op->position
+									));
 								}
-							}
-							variant_default {
-								CORE_ASSERT(
-									false, "ret_tailcall should have a function name argument!"
-								);
+								if (func->local_size != called_func->local_size) {
+									log.log(makeBox<vm::validator::CallerCalledStackSizeMismatch>(
+										*op->position
+									));
+								}
+								if (func->ret_size != called_func->ret_size) {
+									log.log(makeBox<vm::validator::CallerCalledRetSizeMismatch>(
+										*op->position
+									));
+								}
 							}
 						}
 					}

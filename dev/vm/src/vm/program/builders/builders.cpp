@@ -1,4 +1,5 @@
 #include "builders.hpp"
+#include "vm/program/instructions.hpp"
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
@@ -14,17 +15,16 @@
 		);                                                                               \
 	}
 
-
 vm::program::Function vm::program::builders::FunctionBuilder::build() const {
 	Function function;
 	function.body = instructions;
 	function.name = name;
 
 	// @TODO: ret_size should be fixed somehow.
-	function.stack_size    = max_stack_size;
-	function.ret_size      = ret_size;
-	function.arg_size      = 0;
-	function.next_arg_size = 0;
+	function.local_stack_size = max_stack_size;
+	function.ret_size         = ret_size;
+	function.arg_size         = 0;
+	function.next_arg_size    = 0;
 
 	return function;
 }

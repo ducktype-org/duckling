@@ -4,8 +4,6 @@
 #include <ostream>
 
 namespace vm::parser {
-
-
 	struct PrimitiveType {
 		base::StrID name;
 		usize       size{};

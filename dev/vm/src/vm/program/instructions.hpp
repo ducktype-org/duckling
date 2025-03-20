@@ -6,7 +6,7 @@
 
 #include <variant>
 #include <vm/program/opcode_args.hpp>
-#include <base/exceptions.hpp>
+#include <base/box.hpp>
 
 namespace vm::program {
 	namespace instructions {

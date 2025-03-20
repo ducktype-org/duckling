@@ -111,7 +111,7 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_base;
-		if (local_stack + main_func->local_stack_size > runtime_data.local_stack_end)
+		if (local_stack + main_func->stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.

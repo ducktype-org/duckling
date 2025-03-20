@@ -97,7 +97,7 @@ namespace vm::program {
 		}
 
 		void writeOptions() {
-			writeOption("local_size", function.stack_size);
+			writeOption("local_size", function.local_stack_size);
 			writeOption("arg_size", function.arg_size);
 			writeOption("next_arg_size", function.next_arg_size);
 			writeOption("ret_size", function.ret_size);

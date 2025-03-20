@@ -5,12 +5,14 @@
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
 #include <base/for_each.hpp>
+#include <utility>
 #include <vm/program/opcode_args.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <token_file/file.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include "filesystem/file.hpp"
 #include "type_of_data.hpp"
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
@@ -23,7 +25,7 @@ namespace vm::parser {
 		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
 			  tpc::ParserState(std::move(stream), err) {}
 
-		tpc::GenericAutomatic<F8ParserState> parse() { return { *this }; }
+		tpc::GenericAutomatic<F8ParserState> parse();
 	};
 
 	struct OpCodeArgAndPosition {
@@ -32,12 +34,12 @@ namespace vm::parser {
 	};
 
 	struct AsmElement: tpc::Element {
-		base::Box<dia::SourcePosition> position;
+		Box<dia::SourcePosition> position;
 
 		AsmElement(const dia::SourcePosition& position):
 			  position(makeBox<dia::SourcePosition>(position)) {}
 
-		void debugPrint(std::ostream& out) const override { dprint(out); }
+		void debugPrint(std::ostream& out) const override;
 	};
 
 	struct Type: AsmElement {
@@ -46,11 +48,7 @@ namespace vm::parser {
 		TypeOfData        datatype;
 		static MBox<Type> parse(F8ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "type: ";
-			VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
-			out << "\n}";
-		}
+		void dprint(std::ostream& out) const override;
 	};
 
 	struct OpCode: AsmElement {
@@ -62,32 +60,7 @@ namespace vm::parser {
 
 		static MBox<OpCode> parse(F8ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "        " << opcode_name.view().stringView() << " ";
-			for (auto& arg: args) {
-				variant_match(arg.arg) {
-					variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
-
-#define HANDLE_OFFSET(Type) \
-	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
-
-					FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
-
-#undef HANDLE_OFFSET
-
-					variant_case(vm::opargs::Type, type_arg) {
-						out << type_arg.type_name.strView() << " ";
-					}
-					variant_case(vm::opargs::FunctionName, function_name_arg) {
-						out << function_name_arg.function_name.strView() << " ";
-					}
-					variant_case(vm::opargs::Label, label_arg) {
-						out << label_arg.label_name.strView() << " ";
-					}
-				}
-			}
-			out << '\n';
-		}
+		void dprint(std::ostream& out) const override;
 
 		~OpCode() override = default;
 	};
@@ -100,11 +73,7 @@ namespace vm::parser {
 
 		static Box<ByteCode> parse(F8ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "    code {\n";
-			for (auto& opcode: opcodes) opcode->dprint(out);
-			out << "    }\n";
-		}
+		void dprint(std::ostream& out) const override;
 
 		~ByteCode() override = default;
 	};
@@ -122,65 +91,36 @@ namespace vm::parser {
 
 		static MBox<Func> parse(F8ParserState& state);
 
-		void dprint(std::ostream& out) const override {
-			out << "function {\n";
-			out << "    name: " << name.value.strView() << "\n";
-			out << "    arg_size: " << arg_size << "\n";
-			out << "    local_size: " << local_size << "\n";
-			out << "    ret_size: " << ret_size << "\n";
-			code->dprint(out);
-			out << "\n}";
-		}
+		void dprint(std::ostream& out) const override;
 
 		~Func() override = default;
 	};
 
-	struct ParsedFile: AsmElement {
-		using AsmElement::AsmElement;
-
+	struct ParsedFile {
 		std::vector<Box<Func>> functions;
 		std::vector<Box<Type>> types;
+		fs::FilePath           source_file;
+
+		ParsedFile(fs::FilePath source_file);
 
 		static MBox<ParsedFile> parse(F8ParserState& state);
-
-		void dprint(std::ostream& out) const override {
-			for (auto& type: types) {
-				type->dprint(out);
-				out << "\n";
-			}
-
-			for (auto& func: functions) {
-				func->dprint(out);
-				out << "\n";
-			}
-		}
-
-		~ParsedFile() override = default;
+		void                    dprint(std::ostream& out) const;
 	};
 
 	/**
 	 * @brief Structure containing a parsed program combined
 	 * from all files with type metadata.
+	 * @TODO: Delete this
 	 */
-	struct ParsedProgram {
-		std::vector<base::Box<dia::SourcePosition>> files_src_pos;
-		base::HashMap<base::StrID, Ref<Func>>       name_to_func;
-		std::vector<Box<Func>>                      functions;
-		std::vector<Box<Type>>                      types;
-		std::vector<Box<tokenizer::TokenFile>>      token_files;
-		Box<vm::TypeMetadata>                       type_metadata
-			= Box<vm::TypeMetadata>::fromPointer(new vm::TypeMetadata);
+	// struct ParsedProgram {
+	// 	std::vector<base::Box<dia::SourcePosition>> files_src_pos;
+	// 	base::HashMap<base::StrID, Ref<Func>>       name_to_func;
+	// 	std::vector<Box<Func>>                      functions;
+	// 	std::vector<Box<Type>>                      types;
+	// 	std::vector<Box<tokenizer::TokenFile>>      token_files;
+	// 	Box<vm::TypeMetadata>                       type_metadata
+	// 		= Box<vm::TypeMetadata>::fromPointer(new vm::TypeMetadata);
 
-		void dprint(std::ostream& out) const {
-			for (auto& type: types) {
-				type->dprint(out);
-				out << "\n";
-			}
-
-			for (auto& func: functions) {
-				func->dprint(out);
-				out << "\n";
-			}
-		}
-	};
+	// 	void dprint(std::ostream& out) const;
+	// };
 }

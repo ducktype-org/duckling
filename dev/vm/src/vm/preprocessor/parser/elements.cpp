@@ -433,7 +433,7 @@ namespace vm::parser {
 	}
 
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
-		auto out = makeBox<ParsedFile>(state.getPosition());
+		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getPath());
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
@@ -450,4 +450,70 @@ namespace vm::parser {
 		return out;
 	}
 
+	tpc::GenericAutomatic<F8ParserState> F8ParserState::parse() { return { *this }; }
+
+	void AsmElement::debugPrint(std::ostream& out) const { dprint(out); }
+
+	void Type::dprint(std::ostream& out) const {
+		out << "type: ";
+		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
+		out << "\n}";
+	}
+
+	void OpCode::dprint(std::ostream& out) const {
+		out << "        " << opcode_name.view().stringView() << " ";
+		for (auto& arg: args) {
+			variant_match(arg.arg) {
+				variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
+
+#define HANDLE_OFFSET(Type) \
+	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
+
+				FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
+
+#undef HANDLE_OFFSET
+
+				variant_case(vm::opargs::Type, type_arg) {
+					out << type_arg.type_name.strView() << " ";
+				}
+				variant_case(vm::opargs::FunctionName, function_name_arg) {
+					out << function_name_arg.function_name.strView() << " ";
+				}
+				variant_case(vm::opargs::Label, label_arg) {
+					out << label_arg.label_name.strView() << " ";
+				}
+			}
+		}
+		out << '\n';
+	}
+
+	void ByteCode::dprint(std::ostream& out) const {
+		out << "    code {\n";
+		for (auto& opcode: opcodes) opcode->dprint(out);
+		out << "    }\n";
+	}
+
+	void Func::dprint(std::ostream& out) const {
+		out << "function {\n";
+		out << "    name: " << name.value.strView() << "\n";
+		out << "    arg_size: " << arg_size << "\n";
+		out << "    local_size: " << local_size << "\n";
+		out << "    ret_size: " << ret_size << "\n";
+		code->dprint(out);
+		out << "\n}";
+	}
+
+	void ParsedFile::dprint(std::ostream& out) const {
+		for (auto& type: types) {
+			type->dprint(out);
+			out << "\n";
+		}
+
+		for (auto& func: functions) {
+			func->dprint(out);
+			out << "\n";
+		}
+	}
+
+	ParsedFile::ParsedFile(fs::FilePath source_file): source_file(std::move(source_file)) {}
 }
