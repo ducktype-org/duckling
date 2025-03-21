@@ -13,7 +13,7 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
 #include "filesystem/file.hpp"
-#include "type_of_data.hpp"
+#include "vm/program/type_of_data.hpp"
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
 #include <vector>
@@ -45,7 +45,7 @@ namespace vm::parser {
 	struct Type: AsmElement {
 		using AsmElement::AsmElement;
 
-		TypeOfData        datatype;
+		program::TypeOfData        datatype;
 		static MBox<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override;

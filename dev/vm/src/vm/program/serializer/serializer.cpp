@@ -4,7 +4,7 @@
 
 #include <base/int_conv.hpp>
 #include <base/for_each.hpp>
-#include <vm/preprocessor/parser/type_of_data.hpp>
+#include <vm/program/type_of_data.hpp>
 
 namespace vm::program {
 	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
@@ -133,8 +133,8 @@ namespace vm::program {
 	};
 
 	class TypeSerializer {
-		std::ostream&                 out;
-		const vm::parser::TypeOfData& type;
+		std::ostream&                  out;
+		const vm::program::TypeOfData& type;
 
 	private:
 		struct TypeSerializerVisitor {
@@ -175,7 +175,7 @@ namespace vm::program {
 		};
 
 	public:
-		TypeSerializer(std::ostream& out, const vm::parser::TypeOfData& type):
+		TypeSerializer(std::ostream& out, const vm::program::TypeOfData& type):
 			  out(out),
 			  type(type) {}
 

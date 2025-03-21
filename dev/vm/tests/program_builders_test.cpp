@@ -5,7 +5,7 @@
 #include <vm/program/program.hpp>
 #include <vm/program/utils.hpp>
 #include <base/string_id.hpp>
-#include <vm/preprocessor/parser/type_of_data.hpp>
+#include <vm/program/type_of_data.hpp>
 #include <vm/program/instructions.hpp>
 #include <vm/program/opcode_args.hpp>
 #include <vm/program/builders/builders.hpp>
@@ -79,9 +79,9 @@ private:
 	}
 
 	void testFunctionBuilder() {
-		base::HashMap<base::StrID, vm::parser::TypeOfData> available_types;
-		auto                                               int32 = base::StrID("int32");
-		auto                                               int64 = base::StrID("int64");
+		base::HashMap<base::StrID, vm::program::TypeOfData> available_types;
+		auto                                                int32 = base::StrID("int32");
+		auto                                                int64 = base::StrID("int64");
 		available_types.put(int32, vm::parser::PrimitiveType{ .name = int32, .size = 4 });
 		available_types.put(int64, vm::parser::PrimitiveType{ .name = int64, .size = 8 });
 		FunctionBuilder func_builder(base::StrID("test"), available_types);

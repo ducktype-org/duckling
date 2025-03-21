@@ -3,7 +3,7 @@
 #include <base/string_id.hpp>
 #include <ostream>
 
-namespace vm::parser {
+namespace vm::program {
 	struct PrimitiveType {
 		base::StrID name;
 		usize       size{};

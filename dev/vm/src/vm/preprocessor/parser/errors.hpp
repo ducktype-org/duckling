@@ -181,7 +181,7 @@ namespace vm::parser {
 			  reason(base::StrID(reason.data())) {}
 	};
 
-	class DuplicateFunctionDeclarationError final: public dia::Error {
+	class DuplicateFunctionDefinitionError final: public dia::Error {
 	public:
 		constexpr static std::string_view ERR_MSG = "Function with this name already exists.";
 
@@ -197,10 +197,10 @@ namespace vm::parser {
 			return Domain::Parser;
 		}
 
-		DuplicateFunctionDeclarationError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicateFunctionDefinitionError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class DuplicatedFunctionDeclarationNote final: public dia::NoteWithPosition {
+	class DuplicatedFunctionDefinitionNote final: public dia::NoteWithPosition {
 	public:
 		constexpr static std::string_view ERR_MSG = "Previous function declaration here.";
 
@@ -211,6 +211,6 @@ namespace vm::parser {
 		}
 
 	public:
-		DuplicatedFunctionDeclarationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		DuplicatedFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 }

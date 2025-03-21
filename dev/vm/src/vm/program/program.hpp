@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vm/preprocessor/parser/type_of_data.hpp>
+#include <vm/program/type_of_data.hpp>
 #include "base/maps.hpp"
 #include "instructions.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
@@ -30,16 +30,16 @@ namespace vm::program {
 	 * functions and type definitions.
 	 */
 	struct CodeFile {
-		std::vector<vm::parser::TypeOfData> types;
-		std::vector<Function>               functions;
+		std::vector<TypeOfData> types;
+		std::vector<Function>   functions;
 	};
 
 	/**
 	 * @todo Hide this. This is temporarily exposed.
 	 */
 	struct Program {
-		base::HashMap<base::StrID, Function>               functions{};
-		base::HashMap<base::StrID, vm::parser::TypeOfData> types{};
-		Box<TypeMetadata>                                  type_metadata = makeBox<TypeMetadata>();
+		base::HashMap<base::StrID, Function>      functions{};
+		base::HashMap<base::StrID, Ref<vm::Type>> types{};
+		Box<TypeMetadata>                         type_metadata = makeBox<TypeMetadata>();
 	};
 }

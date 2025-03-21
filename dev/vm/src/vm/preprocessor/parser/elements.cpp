@@ -288,6 +288,8 @@ namespace vm::parser {
 	}
 
 	MBox<Type> Type::parse(F8ParserState& state) {
+		using namespace vm::program;
+
 		state.parse().one(lang_def::Keyword::BCType);
 
 

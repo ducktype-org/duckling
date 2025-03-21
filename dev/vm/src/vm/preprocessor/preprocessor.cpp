@@ -9,7 +9,6 @@
 #include "base/optional.hpp"
 #include "base/string_id.hpp"
 #include "base/variant.hpp"
-#include "diagnostic/source_position.hpp"
 #include "parser/parser.hpp"
 #include <vm/program/opcode_args.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
@@ -18,11 +17,13 @@
 #include "parser/elements.hpp"
 #include "parser/errors.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
+#include "vm/preprocessor/validator/validator.hpp"
 #include "vm/program/builders/builders.hpp"
 #include "vm/program/instructions.hpp"
 #include "vm/program/program.hpp"
+#include "vm/preprocessor/compiler/compiler.hpp"
 
-std::expected<vm::low::LowVMProgram, std::string>
+std::expected<vm::low::LowVMProgram, dia::Logger>
 	vm::Preprocessor::getProgram(const fs::FilePath& file) {
 	return getProgram(std::vector{ file });
 }
@@ -90,90 +91,127 @@ namespace {
 		return instr_to_factory.at(opcode->opcode_name)(opcode);
 	}
 
-	std::expected<vm::program::Program, void> makeProgram(const std::vector<vm::program::CodeFile>& program, dia::Logger& log) {
-		base::Map<base::StrID, vm::TypeRef> type_map;
+	std::expected<vm::program::Program, dia::Logger> makeProgram(
+		const std::vector<vm::program::CodeFile>& code_files,
+		base::Optional<const vm::PosMap&>         pos_map
+	) {
+		using namespace vm::parser;
+		vm::program::Program                      program;
+		dia::Logger                               log;
+		std::vector<Ref<vm::program::TypeOfData>> good_types;
+		for (const auto& code_file: code_files) {
+			for (const auto& type: code_file.types) {
+				base::StrID name = VISIT(type, value, return value.name);
 
-		std::vector<Ref<Type>> good_types;
+				if (program.types.contains(name)) {
+					match_optional(pos_map) {
+						opt_none return std::unexpected(dia::Logger());
+						opt_some(map) {
+							auto msg = makeBox<vm::parser::DuplicatedTypeError>(map.at(&type));
 
-		for (auto& type: program.types) {
-			base::StrID name = VISIT(type, value, return value.name);
+							for (auto& duplicated_type: good_types) {
+								base::StrID other_name
+									= VISIT(*duplicated_type, value, return value.name);
+								if (name == other_name) {
+									msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(
+										map.at(duplicated_type.get())
+									));
+								}
+							}
 
-			if (type_map.contains(name)) {
-				auto msg = makeBox<vm::parser::DuplicatedTypeError>(*type->position);
+							log.log(std::move(msg));
+						}
+					}
+				} else {
+					vm::Type new_type = vm::Type::declareType(name);
+					auto     type_ref = program.type_metadata->addType(std::move(new_type));
+					good_types.emplace_back(Ref(&type));
+					program.types.put(name, type_ref);
+				}
 
-				auto duplicated_types
-					= program->types | std::views::filter([&](auto&& duplicated_type) {
-						  base::StrID other_name
-							  = VISIT(duplicated_type->datatype, value, return value.name);
-						  return name == other_name && (&*duplicated_type != &*type);
-					  });
 
-				for (auto& duplicated_type: duplicated_types)
-					msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(*duplicated_type->position)
-					);
+				for (auto& func: code_file.functions) {
+					auto func_name = func.name;
+					if (program.functions.contains(func_name)) {
+						match_optional(pos_map) {
+							opt_none return std::unexpected(dia::Logger());
+							opt_some(map) {
+								auto msg = makeBox<vm::parser::DuplicateFunctionDefinitionError>(
+									map.at(&func)
+								);
+								const auto& dup_func = program.functions.at(func_name);
+								msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
+									map.at(&dup_func)
+								));
+								log.log(std::move(msg));
+							}
+						}
+					}
 
-				log.log(std::move(msg));
-			} else {
-				vm::Type typ      = vm::Type::declareType(name);
-				auto     type_ref = program->type_metadata->addType(std::move(typ));
-				type_map.put(name, type_ref);
-				good_types.push_back(type.refMut());
+					program.functions.put(func_name, func);
+				}
 			}
 		}
 
-		for (auto& type: good_types) {
-			variant_match(type->datatype) {
-				variant_case(PrimitiveType, data) {
-					type_map[data.name]->definePrimitive(data.size);
+		if (log.bad()) return std::unexpected(std::move(log));
+
+		for (const auto& type: good_types) {
+			variant_match(*type) {
+				variant_case(vm::program::PrimitiveType, data) {
+					program.types[data.name]->definePrimitive(data.size);
 				}
-				variant_case(PointerType, data) {
-					type_map[data.name]->definePointer(type_map[data.inner]);
+				variant_case(vm::program::PointerType, data) {
+					program.types[data.name]->definePointer(program.types[data.inner]);
 				}
-				variant_case(StaticTableType, data) {
-					type_map[data.name]->defineStaticTable(type_map[data.inner], data.table_size);
+				variant_case(vm::program::StaticTableType, data) {
+					program.types[data.name]->defineStaticTable(
+						program.types[data.inner], data.table_size
+					);
 				}
-				variant_case(DynamicTableType, data) {
-					type_map[data.name]->defineDynamicTable(type_map[data.inner]);
+				variant_case(vm::program::DynamicTableType, data) {
+					program.types[data.name]->defineDynamicTable(program.types[data.inner]);
 				}
-				variant_case(DataType, data) {
+				variant_case(vm::program::DataType, data) {
 					std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
-						fields.emplace_back(field.name, type_map[field.type]);
-					type_map[data.name]->defineData(fields);
+						fields.emplace_back(field.name, program.types[field.type]);
+					program.types[data.name]->defineData(fields);
 				}
-				variant_case(VariantType, data) {
+				variant_case(vm::program::VariantType, data) {
 					std::vector<vm::TypeRef> variants;
 					variants.reserve(data.variant_alternatives.size());
 					for (auto& variant: data.variant_alternatives)
-						variants.emplace_back(type_map[variant]);
-					type_map[data.name]->defineVariant(variants);
+						variants.emplace_back(program.types[variant]);
+					program.types[data.name]->defineVariant(variants);
 				}
-				variant_case(FunctionType, data) {
+				variant_case(vm::program::FunctionType, data) {
 					std::vector<vm::TypeCRef> parameters;
 					parameters.reserve(data.parameters.size());
-					for (auto& param: data.parameters) parameters.emplace_back(type_map[param]);
-					type_map[data.name]->defineFunction(parameters, type_map[data.result]);
+					for (auto& param: data.parameters)
+						parameters.emplace_back(program.types[param]);
+					program.types[data.name]->defineFunction(
+						parameters, program.types[data.result]
+					);
 				}
 				variant_default { CORE_PANIC("bad type"); }
 			}
 		}
 
-		program->type_metadata->finalize();
+		program.type_metadata->finalize();
+
+		return program;
 	}
 }
 
-std::expected<vm::low::LowVMProgram, std::string>
+std::expected<vm::low::LowVMProgram, dia::Logger>
 	vm::Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
 	match_optional(parser::parse(files)) {
-		opt_err(err) return std::unexpected(err);
-		opt_some(parsed_files) {
-			base::HashMap<
-				std::variant<program::Function*, program::VmInstruction*, opargs::OpCodeArg*>,
-				dia::SourcePosition>
-				pos_map;
+		opt_err(err) return std::unexpected(std::move(err));
+		opt_some_move(parsed_files) {
+			PosMap pos_map;
 
-			std::vector<program::CodeFile> program_files;
+			std::vector<program::CodeFile> code_files;
 			for (const auto& parsed_file: parsed_files) {
 				program::builders::CodeFileBuilder file_builder;
 				for (const auto& tp: parsed_file.types) file_builder.addType(tp->datatype);
@@ -188,35 +226,63 @@ std::expected<vm::low::LowVMProgram, std::string>
 					file_builder.addFunction(func_builder);
 				}
 
-				program_files.emplace_back(file_builder.build());
-				// Fill the source_position map
-				// for (const auto& tp: parsed_file.types) file_builder.addType(tp->datatype);
-				// pos_map.put(program_files.back().ref().get(), parsed_file.source_file);
-			}
-			program::Program program;
-			for (const auto& code_file: program_files) {
-				for (const auto& tp: code_file.types) {
-					base::StrID type_name = VISIT(tp, tp2, return tp2.name;);
-					auto [_, inserted]    = program.types.insert_or_assign(type_name, tp);
-					CORE_ASSERT(inserted, "");
+				code_files.emplace_back(file_builder.build());
+
+				// Generate source positions
+				for (const auto& [parsed_type, program_type]:
+				     std::views::zip(parsed_file.types, code_files.back().types)) {
+					pos_map.put(&program_type, parsed_type->position);
 				}
-				for (const auto& func: code_file.functions) {
-					program.functions.push_back(func);
-					// Ignoring duplicated functions
-					program.func_name_to_func_idx.put(func.name, program.functions.back());
+
+				for (const auto& [parsed_func, func]:
+				     std::views::zip(parsed_file.functions, code_files.back().functions)) {
+					pos_map.put(&func, parsed_func->position);
+
+					for (const auto& [parsed_instr, instr]:
+					     std::views::zip(parsed_func->code->opcodes, func.body)) {
+						pos_map.put(&instr, parsed_instr->position);
+
+						variant_match(instr) {
+#define HANDLE_OPCODE_0ARGS(opcode)
+
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                    \
+	variant_case(vm::program::instructions::Op_##opcode, op) {    \
+		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
+	}
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)         \
+	variant_case(vm::program::instructions::Op_##opcode, op) {    \
+		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
+		pos_map.put(&op.arg1, parsed_instr->args.at(1).position); \
+	}
+#include <vm/program/opcodes_list.hpp>
+
+#undef HANDLE_OPCODE_0ARGS
+#undef HANDLE_OPCODE_1ARGS
+#undef HANDLE_OPCODE_2ARGS
+						}
+					}
 				}
 			}
-
-			// auto is_valid = validator::verify(maybe_parsed_program.value());
-			// if (is_valid.has_value()) return std::unexpected(is_valid.value());
-
-			// auto program = vm::changeParsedProgramToLowVMProgram(&*maybe_parsed_program);
-			// if (!program) return std::unexpected(program.error());
-
-			// return program_files;
+			return getProgram(code_files, pos_map);
 		}
 	}
 	CORE_UNREACHABLE();
 }
 
 vm::Preprocessor::Preprocessor(bool validate_program): validate_program(validate_program) {}
+
+std::expected<vm::low::LowVMProgram, dia::Logger> vm::Preprocessor::getProgram(
+	const std::vector<program::CodeFile>& code_files, base::Optional<const PosMap&> pos_map
+) {
+	std::expected<program::Program, dia::Logger> opt_program = makeProgram(code_files, pos_map);
+	if (opt_program.has_value()) {
+		program::Program program = std::move(opt_program).value();
+
+		auto validation_result = validator::verify(program, pos_map);
+		if (!validation_result.has_value())
+			return std::unexpected(std::move(validation_result).error());
+
+		return vm::compiler::compile(std::move(program));
+	} else
+		return std::unexpected(std::move(opt_program).error());
+}

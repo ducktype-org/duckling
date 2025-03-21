@@ -3,6 +3,6 @@
 #include "elements.hpp"
 
 namespace vm::parser {
-	std::expected<std::vector<ParsedFile>, std::string> parse(const std::vector<fs::FilePath>& file
+	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::FilePath>& file
 	);
 }

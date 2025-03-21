@@ -3,6 +3,5 @@
 #include "vm/program/program.hpp"
 
 namespace vm::compiler {
-	std::expected<vm::low::LowVMProgram, dia::Logger>
-		compile(const std::vector<program::CodeFile>& files);
+	std::expected<vm::low::LowVMProgram, dia::Logger> compile(program::Program program);
 }

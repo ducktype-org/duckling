@@ -5,7 +5,7 @@
 #include <base/variant.hpp>
 #include <vm/program/opcode_args.hpp>
 #include <base/ref.hpp>
-#include <vm/preprocessor/parser/type_of_data.hpp>
+#include <vm/program/type_of_data.hpp>
 #include <ranges>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
@@ -33,7 +33,7 @@ void vm::program::builders::CodeFileBuilder::addFunction(const FunctionBuilder& 
 	functions.push_back(function);
 }
 
-void vm::program::builders::CodeFileBuilder::addType(const vm::parser::TypeOfData& type) {
+void vm::program::builders::CodeFileBuilder::addType(const vm::program::TypeOfData& type) {
 	if (type_map.atMaybe(typeName(type))) {
 		// Type already exists, check if it's the same and if true, skip
 	} else {
@@ -58,17 +58,17 @@ void vm::program::builders::FunctionBuilder::addInstruction(const VmInstruction&
 }
 
 vm::program::builders::FunctionBuilder::FunctionBuilder(
-	base::StrID name, const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types
+	base::StrID name, const base::HashMap<base::StrID, vm::program::TypeOfData>& available_types
 ):
 	  name(name),
 	  available_types(available_types) {}
 
-const base::HashMap<base::StrID, vm::parser::TypeOfData>&
+const base::HashMap<base::StrID, vm::program::TypeOfData>&
 	vm::program::builders::CodeFileBuilder::getAvailableTypes() const {
 	return type_map;
 }
 
-usize getTypeSize(const vm::parser::TypeOfData& tp) {
+usize getTypeSize(const vm::program::TypeOfData& tp) {
 	variant_match(tp) {
 		variant_case(vm::parser::PrimitiveType, primitive) return primitive.size;
 		NOIMPL_CASE(vm::parser::PointerType, "get size of")
@@ -84,9 +84,9 @@ usize getTypeSize(const vm::parser::TypeOfData& tp) {
 usize vm::program::builders::FunctionBuilder::initType(base::StrID tp) {
 	instructions.emplace_back(instructions::Op_init_type{ tp });
 
-	const vm::parser::TypeOfData& vm_type   = available_types[tp];
-	const usize                   type_size = getTypeSize(vm_type);
-	usize                         offset    = 0;
+	const vm::program::TypeOfData& vm_type   = available_types[tp];
+	const usize                    type_size = getTypeSize(vm_type);
+	usize                          offset    = 0;
 
 	if (!local_stack.empty()) {
 		const LocalStackEntry& prev_entry = local_stack.back();

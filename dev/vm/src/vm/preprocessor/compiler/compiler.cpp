@@ -1,17 +1,19 @@
 #include "compiler.hpp"
+#include "base/string_id.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/program/program.hpp"
+#include <expected>
 
 namespace vm {
 	namespace {
 		i64 getOpCodeArgValue(
-			const std::vector<Box<parser::Func>>& functions,
-			Ref<vm::TypeMetadata>                 types,
-			CRef<parser::Func>                    current_func,
-			usize                                 instruction_index,
-			const parser::OpCodeArgAndPosition&   opcode_arg,
-			dia::Logger&                          log
+			const base::HashMap<base::StrID, program::Function>& functions,
+			Ref<vm::TypeMetadata>                                types,
+			CRef<parser::Func>                                   current_func,
+			usize                                                instruction_index,
+			const parser::OpCodeArgAndPosition&                  opcode_arg,
+			dia::Logger&                                         log
 		) {
 			variant_match(opcode_arg.arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
@@ -66,19 +68,19 @@ namespace vm {
 		}
 
 		vm::low::FuncData changeFuncToFuncData(
-			const std::vector<program::Function>& functions,
-			const program::Function&              func,
-			vm::TypeMetadata&                     types,
-			dia::Logger&                          log
+			const base::HashMap<base::StrID, program::Function>& functions,
+			const program::Function&                             func,
+			vm::TypeMetadata&                                    types,
+			dia::Logger&                                         log
 		) {
 			vm::low::FuncData func_data;
-			func_data.name       = func.name;
-			func_data.arg_size   = func.arg_size;
-			func_data.stack_size = func.stack_size;
-			func_data.ret_size   = func.ret_size;
+			func_data.name             = func.name;
+			func_data.arg_size         = func.arg_size;
+			func_data.local_stack_size = func.local_stack_size;
+			func_data.ret_size         = func.ret_size;
 
-			for (usize op_idx = 0; op_idx < func.body->opcodes.size(); op_idx++) {
-				auto&& op    = func.code->opcodes[op_idx];
+			for (usize op_idx = 0; op_idx < func.body.size(); op_idx++) {
+				auto&& op    = func.body[op_idx];
 				i64    arg_0 = 0;
 				i64    arg_1 = 0;
 				switch (op->args.size()) {
@@ -114,46 +116,21 @@ namespace vm {
 			}
 			return func_data;
 		}
-
-		base::Optional<low::LowVMProgram>
-			lowerToLowProgram(program::Program& program, dia::Logger& log) {
-			std::vector<low::FuncData> converted_functions;
-			converted_functions.reserve(program.functions.size());
-
-			for (auto& func: program.functions) {
-				auto converted_func = changeFuncToFuncData(
-					program.functions, &func, program.type_metadata.refMut(), log
-				);
-				converted_functions.push_back(converted_func);
-			}
-
-			low::LowVMProgram low_program(converted_functions, std::move(program.type_metadata));
-
-			return low_program;
-		}
-
-		std::expected<low::LowVMProgram, std::string>
-			changeParsedProgramToLowVMProgram(program::Program& program) {
-			auto log = dia::Logger();
-
-			auto low_program = lowerToLowProgram(program, log);
-			if (!low_program || log.bad()) {
-				std::stringstream stream;
-				log.dumpLogAndClear(true, stream);
-				return std::unexpected(stream.str());
-			}
-
-			return std::move(*program);
-		}
-
 	}
 
-	std::expected<low::LowVMProgram, dia::Logger>
-		compiler::compile(const std::vector<program::CodeFile>& files) {
-		auto program = program::Program{
-			.functions     = {},
-			.types         = {},
-			.type_metadata = makeBox<TypeMetadata>(),
-		};
+	std::expected<low::LowVMProgram, dia::Logger> compiler::compile(program::Program program) {
+		std::vector<low::FuncData> converted_functions;
+		dia::Logger                log;
+		converted_functions.reserve(program.functions.size());
+
+		for (auto& func: program.functions | std::views::values) {
+			auto converted_func
+				= changeFuncToFuncData(program.functions, func, *program.type_metadata, log);
+			converted_functions.push_back(converted_func);
+		}
+
+		low::LowVMProgram low_program(converted_functions, std::move(program.type_metadata));
+
+		return low_program;
 	}
 }

@@ -1,5 +1,5 @@
 
-
+#include <expected>
 #include <vm/preprocessor/parser/elements.hpp>
 #include <token_file/file.hpp>
 #include <deque>
@@ -22,7 +22,7 @@ namespace vm::parser {
 		return ParsedFile::parse(state);
 	}
 
-	std::expected<std::vector<ParsedFile>, std::string> parse(const std::vector<fs::FilePath>& files
+	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::FilePath>& files
 	) {
 		// So that they dont't die?
 		static std::vector<Box<tokenizer::TokenFile>> tokenized_files;
@@ -33,33 +33,10 @@ namespace vm::parser {
 			tokenized_files.emplace_back(tokenizeFile(file));
 			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), log);
 
-			if (log.bad()) {
-				std::stringstream stream;
-				log.dumpLogAndClear(true, stream);
-				return std::unexpected(stream.str());
-			} else {
+			if (log.bad())
+				return std::unexpected(std::move(log));
+			else
 				parsed_files.push_back(std::move(*maybe_parsed));
-			}
-
-
-			// 	for (auto& func: parsed->functions) {
-			// 		auto func_name = func->name.value;
-			// 		if (parsed_program.name_to_func.contains(func_name)) {
-			// 			auto msg
-			// 				=
-			// makeBox<vm::parser::DuplicateFunctionDeclarationError>(*func->position);
-			// auto dup_func = parsed_program.name_to_func.atMaybe(func_name);
-			// 			msg->addNote(makeBox<vm::parser::DuplicatedFunctionDeclarationNote>(
-			// 				*dup_func.value()->position
-			// 			));
-			// 			log.log(std::move(msg));
-			// 		}
-
-			// 		parsed_program.functions.push_back(std::move(func));
-			// 		parsed_program.name_to_func.put(
-			// 			func_name, parsed_program.functions.back().refMut()
-			// 		);
-			// 	}
 		}
 
 		return parsed_files;
