@@ -53,4 +53,6 @@ namespace pst::expr {
 	}
 
 	void Call::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitCall(*this); }
+
+	lexer::Token::BracketType Call::getType() const { return type; }
 }
