@@ -42,9 +42,8 @@ namespace compiler::helios {
 		}
 	}
 
-	StmtList<> getStmtsFromStmtAggregate(
-		query::Context& ctx, pst::AccessLocked<pst::LangElement> locked
-	) {
+	StmtList<>
+		getStmtsFromStmtAggregate(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		auto elem = locked.unlock(ctx);
 		// @TODO: dont use dynamic_cast's here, but a visitor
 		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
