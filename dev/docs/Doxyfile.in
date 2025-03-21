@@ -30,6 +30,12 @@ INCLUDED_BY_GRAPH = NO
 UML_LOOK = YES
 DOT_UML_DETAILS = NONE
 
+# Search engine options
+SEARCHENGINE           = YES
+SERVER_BASED_SEARCH    = YES
+EXTERNAL_SEARCH        = YES
+SEARCHENGINE_URL       = https://internal.ducktype.org/docs/search-engine/
+
 # Macro preprocessing options
 ENABLE_PREPROCESSING = YES
 MACRO_EXPANSION = YES
