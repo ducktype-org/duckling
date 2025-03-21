@@ -117,7 +117,7 @@ namespace compiler::helios {
 	 * Determines scope kind for given PST element.
 	 */
 	ElementScopeKind
-		getScopeKind(query::detail::ContextType& ctx, pst::AccessLocked<pst::LangElement> locked) {
+		getScopeKind(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
 		// @TODO: move it to different file?
 		auto element = locked.unlock(ctx);
 
