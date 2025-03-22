@@ -1,0 +1,12 @@
+
+fun goo() -> i64 = {
+    return 2;
+}
+
+fun main() -> i64 = {
+    return 1 + goo() + hoo();
+}
+
+fun hoo() -> i64 = {
+    return 3;
+}
