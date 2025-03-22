@@ -55,9 +55,7 @@ int main(int argc, const char* argv[]) {
 		std::cerr << "\n\n\n";
 
 		auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
-		std::cerr << "\nllvm_module for " << lir_fun->name.strView() << " created\n";
 		llvm_module.addFunctionToModule(lir_fun);
-		std::cerr << "\nfunction added\n";
 		bool v = llvm_module.verify();
 
 		if (v)

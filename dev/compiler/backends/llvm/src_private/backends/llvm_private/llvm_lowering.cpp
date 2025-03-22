@@ -378,11 +378,7 @@ namespace compiler::backend_llvm {
 				*module
 			);
 
-			std::cerr << "1\n";
-
 			generateMainBlocksAndLocals(fun);
-
-			std::cerr << "2\n";
 
 			for (auto& block: lir_function->block_order) {
 				auto              llvm_block = block_mapping[block];
@@ -392,12 +388,8 @@ namespace compiler::backend_llvm {
 				lir2LLVMInstruction(block->terminator, builder);
 			}
 
-			std::cerr << "3\n";
-
 			EliminateUnreachableBlocks(*fun);
-
-			std::cerr << "4\n";
-
+			
 			return fun;
 		}
 	};
