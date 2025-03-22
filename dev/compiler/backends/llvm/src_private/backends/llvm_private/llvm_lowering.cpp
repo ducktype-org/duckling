@@ -195,7 +195,10 @@ namespace compiler::backend_llvm {
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function->local_list) {
-				CORE_ASSERT(var->layout.getSize() > Bits(0), "local variable with size 0 is not allowed in LLVM");
+				CORE_ASSERT(
+					var->layout.getSize() > Bits(0),
+					"local variable with size 0 is not allowed in LLVM"
+				);
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
@@ -330,29 +333,32 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Call: {
-				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
-				
+				CORE_ASSERT(
+					lir_instruction.arguments.size() > 0, "call instruction without callee"
+				);
+
 				const auto output = lir_instruction.output.value();
 
 				// @TODO Here we will have to handle mangled names instead #510
-				const auto callee_helios_id = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
+				const auto callee_helios_id
+					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
 				const auto mangled_name = compiler::helios::name(callee_helios_id);
 
-				// I'm not sure if this is the efficient way to do it, but for now it is 
+				// I'm not sure if this is the efficient way to do it, but for now it is
 				// simple enough and works without some additional mechanism in the pipeline:
-				// note: lir_instruction.output->layout here is sketchy, but it should work for now since it is LIR,
-				// where types are very explicit.
-				auto callee = addOrInsertFunctionPrototype(
-					module, mangled_name, output->layout
-				);
+				// note: lir_instruction.output->layout here is sketchy, but it should work for now
+				// since it is LIR, where types are very explicit.
+				auto callee = addOrInsertFunctionPrototype(module, mangled_name, output->layout);
 
-				const auto args   = lirValueList2LLVM(
-					std::vector(lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()),
+				const auto args = lirValueList2LLVM(
+					std::vector(
+						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
+					),
 					builder
 				);
 				const auto value = builder.CreateCall(callee, args);
 				builder.CreateStore(value, local_register_map.at(output).get());
-				break;				
+				break;
 			}
 			default:
 				std::cerr << "unknown lir operation (skip): "
@@ -370,9 +376,12 @@ namespace compiler::backend_llvm {
 		 */
 		llvm::Function* createFunction() {
 			// @TODO: work here on mangled name instead #510
-			llvm::Function* fun = llvm::dyn_cast<llvm::Function>(addOrInsertFunctionPrototype(
-				module, lir_function->name, lir_function->return_type_layout
-			).getCallee());
+			llvm::Function* fun = llvm::dyn_cast<llvm::Function>(
+				addOrInsertFunctionPrototype(
+					module, lir_function->name, lir_function->return_type_layout
+				)
+					.getCallee()
+			);
 
 			generateMainBlocksAndLocals(fun);
 
@@ -385,7 +394,7 @@ namespace compiler::backend_llvm {
 			}
 
 			EliminateUnreachableBlocks(*fun);
-			
+
 			return fun;
 		}
 	};
