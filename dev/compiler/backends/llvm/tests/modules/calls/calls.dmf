@@ -1,7 +1,9 @@
+import hmm as hmm;
+
 fun goo() -> i64 = {
     return 2;
 }
 
 fun main() -> i64 = {
-    return goo() + builtin_input_i64();
+    return goo() + builtin_input_i64() + hmm.foo();
 }
