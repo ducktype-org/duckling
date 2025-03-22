@@ -288,7 +288,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			.backend_type = driver::BackendType::LLVM,
 			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
 			.compile_to_assembly = false,
-			.dump_llvm_ir        = false,
+			.dump_llvm_ir        = true,
 		} };
 
 		driver.compileHOUTUnit(top_level, base::StrID("main_module"));
