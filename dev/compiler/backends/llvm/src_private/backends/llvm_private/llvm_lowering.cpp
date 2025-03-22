@@ -179,7 +179,6 @@ namespace compiler::backend_llvm {
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function->local_list) {
-				// @TODO: add llvm types:
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
@@ -313,6 +312,34 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
+			case Call: {
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
+				
+				const auto output = lir_instruction.output.value();
+
+				// @TODO Here we will have to handle mangled names instead #510
+				const auto callee_helios_id = lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
+				const auto mangled_name = compiler::helios::name(callee_helios_id);
+
+				// I'm not sure if this is the efficient way to do it, but for now it is 
+				// simple enough and works without some additional mechanism in the pipeline:
+				std::cerr << "mangled name: " << mangled_name.strView() << "\n";
+				const auto callee = module->getFunction(mangled_name.strView());
+				std::cerr << "callee: " << callee << "\n";
+				if (callee == nullptr) {
+					// @TODO This PR: add function prototype
+					// get or insert?
+					CORE_PANIC("function not found: ", mangled_name);
+				}
+
+				const auto args   = lirValueList2LLVM(
+					std::vector(lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()),
+					builder
+				);
+				const auto value = builder.CreateCall(callee, args);
+				builder.CreateStore(value, local_register_map.at(output).get());
+				break;				
+			}
 			default:
 				std::cerr << "unknown lir operation (skip): "
 						  << base::enumToStr(lir_instruction.operation).strView() << "\n";
@@ -328,6 +355,7 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
+			std::cerr << "inside createFunction\n";
 			// this also adds the function to the module:
 			llvm::Function* fun = llvm::Function::Create(
 				getFunType(context, lir_function->return_type_layout),
@@ -336,7 +364,11 @@ namespace compiler::backend_llvm {
 				*module
 			);
 
+			std::cerr << "1\n";
+
 			generateMainBlocksAndLocals(fun);
+
+			std::cerr << "2\n";
 
 			for (auto& block: lir_function->block_order) {
 				auto              llvm_block = block_mapping[block];
@@ -346,7 +378,11 @@ namespace compiler::backend_llvm {
 				lir2LLVMInstruction(block->terminator, builder);
 			}
 
+			std::cerr << "3\n";
+
 			EliminateUnreachableBlocks(*fun);
+
+			std::cerr << "4\n";
 
 			return fun;
 		}
