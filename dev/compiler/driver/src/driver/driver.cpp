@@ -31,7 +31,6 @@ namespace compiler::driver {
 		if (options->dump_llvm_ir) {
 			base::StrID llvm_ir_path
 				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".ll").c_str());
-
 			mod.debugDumpToFile(llvm_ir_path);
 		}
 

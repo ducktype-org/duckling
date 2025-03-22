@@ -5,5 +5,10 @@ fun goo() -> i64 = {
 }
 
 fun main() -> i64 = {
-    return goo() + builtin_input_i64() + hmm.foo();
+    return goo() + builtin_input_i64() + hmm.foo() + hoo();
+}
+
+# @TODO PR add test with this, making sure, there is just one function
+fun hoo() -> i64 = {
+    return 3;
 }

@@ -369,14 +369,10 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			std::cerr << "inside createFunction\n";
-			// this also adds the function to the module:
-			llvm::Function* fun = llvm::Function::Create(
-				getFunType(context, lir_function->return_type_layout),
-				llvm::Function::ExternalLinkage,
-				lir_function->name.strView(),
-				*module
-			);
+			// @TODO: work here on mangled name instead #510
+			llvm::Function* fun = llvm::dyn_cast<llvm::Function>(addOrInsertFunctionPrototype(
+				module, lir_function->name, lir_function->return_type_layout
+			).getCallee());
 
 			generateMainBlocksAndLocals(fun);
 

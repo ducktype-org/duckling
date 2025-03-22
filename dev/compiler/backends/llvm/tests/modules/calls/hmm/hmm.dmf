@@ -1,4 +1,4 @@
 
-fun foo() -> i64 {
+fun foo() -> i64 = {
     return 2;
 }
