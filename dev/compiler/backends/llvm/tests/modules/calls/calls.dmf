@@ -1,9 +1,7 @@
-fun goo() = {
-    return;
+fun goo() -> i64 = {
+    return 2;
 }
 
-
-fun foo() -> i64 = {
-    goo();
-    return 0;
+fun main() -> i64 = {
+    return goo();
 }

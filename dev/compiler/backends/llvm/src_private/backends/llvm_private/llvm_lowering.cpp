@@ -117,6 +117,22 @@ namespace compiler::backend_llvm {
 	}
 
 	/**
+	 * Adds a function prototype with external linkage to the module.
+	 * If the functoin already exists does notheing.
+	 * @note We use it to add all functions currently. This will have to change in the future,
+	 * but it will require some restructuring of how we are creating llvm modules
+	 * probably we will store more data in backend-module (like the linkage), and
+	 * we will lower it to llvm all at once.
+	 * @note It detects if function are "the same" based on mangled name only.
+	 */
+	auto addOrInsertFunctionPrototype(
+		Ref<llvm::Module> module, base::StrID name, const tsl::TypeLayout& return_type
+	) {
+		auto& context = module->getContext();
+		return module->getOrInsertFunction(name.strView(), getFunType(context, return_type));
+	}
+
+	/**
 	 * @brief This struct should be treated as a function,
 	 * that takes LLVMContext, LIRFunction and LLVM Module,
 	 * and generates LLVM function in given module based
@@ -179,6 +195,7 @@ namespace compiler::backend_llvm {
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function->local_list) {
+				CORE_ASSERT(var->layout.getSize() > Bits(0), "local variable with size 0 is not allowed in LLVM");
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
@@ -323,14 +340,11 @@ namespace compiler::backend_llvm {
 
 				// I'm not sure if this is the efficient way to do it, but for now it is 
 				// simple enough and works without some additional mechanism in the pipeline:
-				std::cerr << "mangled name: " << mangled_name.strView() << "\n";
-				const auto callee = module->getFunction(mangled_name.strView());
-				std::cerr << "callee: " << callee << "\n";
-				if (callee == nullptr) {
-					// @TODO This PR: add function prototype
-					// get or insert?
-					CORE_PANIC("function not found: ", mangled_name);
-				}
+				// note: lir_instruction.output->layout here is sketchy, but it should work for now since it is LIR,
+				// where types are very explicit.
+				auto callee = addOrInsertFunctionPrototype(
+					module, mangled_name, output->layout
+				);
 
 				const auto args   = lirValueList2LLVM(
 					std::vector(lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()),
