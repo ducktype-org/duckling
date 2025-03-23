@@ -44,7 +44,7 @@ namespace compiler::lir {
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
-		return LirLocal{ mir_local->helios_id, type_layout };
+		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {

@@ -123,10 +123,16 @@ namespace compiler::lir {
 		// a copy of type-layout here might be suboptimal
 		tsl::TypeLayout layout;
 
+		/**
+		 * @brief Index of the parameter in the function, if this is a function argument.
+		 */
+		base::Optional<u64> parameter_index;
+
 	private:
-		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout):
+		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout, base::Optional<u64> parameter_index):
 			  helios_id(helios_id),
-			  layout(std::move(layout)) {}
+			  layout(std::move(layout)),
+			  parameter_index(parameter_index) {}
 
 		explicit LirLocal(tsl::TypeLayout layout): helios_id({}), layout(std::move(layout)) {}
 

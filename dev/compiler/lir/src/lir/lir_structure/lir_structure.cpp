@@ -56,6 +56,8 @@ namespace compiler::lir {
 			output << "  Local(" << local_id[local] << ")";
 			if (local->helios_id.has_value())
 				output << ", helios_name: " << name(local->helios_id.value()).strView();
+			if (local->parameter_index.has_value())
+				output << ", parameter_index: " << local->parameter_index.value();
 			output << "\n";
 			output << "    LAYOUT:\n" << local->layout.toStringDefinition(ctx, true, 1) << "\n";
 		}
