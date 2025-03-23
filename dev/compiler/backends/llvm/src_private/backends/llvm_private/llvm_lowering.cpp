@@ -111,9 +111,15 @@ namespace compiler::backend_llvm {
 		CORE_UNREACHABLE();
 	}
 
-	auto getFunType(llvm::LLVMContext& context, const tsl::TypeLayout& return_type) {
-		// @TODO: #486 - process function argument types
-		return llvm::FunctionType::get(typeFromLayout(context, return_type), {}, false);
+	auto getFunType(
+		llvm::LLVMContext& context, const std::vector<CRef<tsl::TypeLayout>>& parameters, const tsl::TypeLayout& return_type) {
+		
+		std::vector<llvm::Type*> llvm_parameters;
+		llvm_parameters.reserve(parameters.size());
+		for (const auto& param: parameters)
+			llvm_parameters.push_back(typeFromLayout(context, *param));
+
+		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
 	/**
@@ -126,10 +132,11 @@ namespace compiler::backend_llvm {
 	 * @note It detects if function are "the same" based on mangled name only.
 	 */
 	auto addOrInsertFunctionPrototype(
-		Ref<llvm::Module> module, base::StrID name, const tsl::TypeLayout& return_type
+		Ref<llvm::Module> module, base::StrID name, const std::vector<CRef<tsl::TypeLayout>>& parameters,
+		 const tsl::TypeLayout& return_type
 	) {
 		auto& context = module->getContext();
-		return module->getOrInsertFunction(name.strView(), getFunType(context, return_type));
+		return module->getOrInsertFunction(name.strView(), getFunType(context,parameters, return_type));
 	}
 
 	/**
