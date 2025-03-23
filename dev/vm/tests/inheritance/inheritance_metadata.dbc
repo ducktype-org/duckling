@@ -8,6 +8,10 @@ type pointer: pointer_I2 I2
 type fun: method_parent_int_int {pointer_parent, int64} int64
 type fun: method_I1_int {pointer_I1} int64
 
+type data: POD {
+    abc: int64,
+}
+
 type data: I1 {
     vtable: VT,
 }
@@ -37,14 +41,14 @@ interface I1 {
 interface I2 {
 }
 
-class Bar {
+class Parent {
     virtual_methods: {
         lorem: method_parent_int_int,
     };
 }
 
-class Foo {
-    extends: Bar;
+class Child {
+    extends: Parent;
     implements: {I1, I2};
 }
 
@@ -52,13 +56,9 @@ function main {
     arg_size: 0;
     ret_size: 8;
     
-    local_size: 16;
+    local_size: 8;
     
     code: {
-        init_type int64;
-        mov_l64_imm 8, 42;
-        output_l64 8;
-        deinit;
         ret;
     }
 }

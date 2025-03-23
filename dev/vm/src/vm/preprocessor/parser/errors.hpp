@@ -213,4 +213,37 @@ namespace vm::parser {
 	public:
 		DuplicatedFunctionDeclarationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
+
+	class DuplicatedInheritableError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Duplicated inheritable.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		DuplicatedInheritableError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class DuplicatedInheritableNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static std::string_view ERR_MSG = "Previous inheritable declaration here.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		DuplicatedInheritableNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+	};
 }

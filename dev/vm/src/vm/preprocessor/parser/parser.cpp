@@ -22,8 +22,50 @@ namespace vm::parser {
 		return ParsedFile::parse(state);
 	}
 
+	static kind::inheritance::Role prepareRole(
+		const base::Map<base::StrID, vm::TypeRef>&                   type_map,
+		const base::Map<base::StrID, CRef<vm::parser::Inheritable>>& inheritable_map,
+		base::StrID                                                  data_name
+	) {
+		if (inheritable_map.contains(data_name)) {
+			auto inheritable           = inheritable_map[data_name];
+			auto identifier_to_typeref = [&type_map](const tpc::Identifier& identifier) {
+				return type_map[identifier.value];
+			};
+
+			auto implements = inheritable->implements | std::views::transform(identifier_to_typeref)
+			                | std::ranges::to<std::vector>();
+
+			base::HashMap<base::StrID, TypeRef> virtual_methods;
+			for (auto& [name, type]: inheritable->virtual_methods)
+				virtual_methods.put(name.value, identifier_to_typeref(type));
+
+
+			switch (inheritable->kind) {
+			case vm::parser::Inheritable::Kind::Class: {
+				return kind::inheritance::Class{
+					.extends         = inheritable->extends.map(identifier_to_typeref),
+					.implements      = implements,
+					.virtual_methods = virtual_methods,
+				};
+				break;
+			}
+			case vm::parser::Inheritable::Kind::Interface: {
+				return kind::inheritance::Interface{
+					.implements      = implements,
+					.virtual_methods = virtual_methods,
+				};
+			}
+			}
+		} else {
+			return kind::inheritance::Plain{};
+		}
+		std::unreachable();
+	}
+
 	void defineTypes(Ref<ParsedProgram> program, dia::Logger& log) {
-		base::Map<base::StrID, vm::TypeRef> type_map;
+		base::Map<base::StrID, vm::TypeRef>                   type_map;
+		base::Map<base::StrID, CRef<vm::parser::Inheritable>> inheritable_map;
 
 		std::deque<Ref<Type>> good_types;
 
@@ -53,6 +95,29 @@ namespace vm::parser {
 			}
 		}
 
+		for (auto& inheritable: program->inheritables) {
+			if (inheritable_map.contains(inheritable->name.value)) {
+				auto msg = makeBox<vm::parser::DuplicatedInheritableError>(*inheritable->position);
+
+				auto duplicated_inheritables
+					= program->inheritables
+				    | std::views::filter([&](auto&& duplicated_inheritable) {
+						  bool names_match
+							  = inheritable->name.value == duplicated_inheritable->name.value;
+						  return names_match && (&*duplicated_inheritable != &*inheritable);
+					  });
+
+				for (auto& duplicated_inheritable: duplicated_inheritables)
+					msg->addNote(makeBox<vm::parser::DuplicatedInheritableNote>(
+						*duplicated_inheritable->position
+					));
+
+				log.log(std::move(msg));
+			} else {
+				inheritable_map.put(inheritable->name.value, inheritable.ref());
+			}
+		}
+
 		for (auto& type: good_types) {
 			variant_match(type->datatype) {
 				variant_case(PrimitiveType, data) {
@@ -72,7 +137,8 @@ namespace vm::parser {
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
-					type_map[data.name]->defineData(fields);
+					auto role = prepareRole(type_map, inheritable_map, data.name);
+					type_map[data.name]->defineData(fields, role);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;
@@ -131,6 +197,8 @@ namespace vm::parser {
 			}
 
 			for (auto& type: parsed->types) parsed_program.types.push_back(std::move(type));
+			for (auto& inheritable: parsed->inheritables)
+				parsed_program.inheritables.push_back(std::move(inheritable));
 		}
 
 		defineTypes(&parsed_program, log);

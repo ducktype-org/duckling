@@ -50,7 +50,10 @@ namespace vm {
 		kind      = kind::DynamicTable{ std::move(inner) };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
+	void Type::defineData(
+		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+		const kind::inheritance::Role&                      inheritance_role
+	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -61,7 +64,8 @@ namespace vm {
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ 0, sub_type });
 		}
-		kind = data;
+		data.inheritance_role = inheritance_role;
+		kind                  = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -242,6 +246,13 @@ namespace vm {
 		// 		);
 		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
 		// });
+	}
+
+	// inheritance
+	base::Optional<const kind::inheritance::Role&> Type::getInheritanceRole() const {
+		return get<kind::Data>().map([](auto& data) -> const kind::inheritance::Role& {
+			return data.inheritance_role;
+		});
 	}
 
 	// variant
