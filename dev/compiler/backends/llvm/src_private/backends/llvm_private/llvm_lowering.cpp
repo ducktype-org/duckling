@@ -118,7 +118,7 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Adds a function prototype with external linkage to the module.
-	 * If the functoin already exists does notheing.
+	 * If the function already exists does nothing.
 	 * @note We use it to add all functions currently. This will have to change in the future,
 	 * but it will require some restructuring of how we are creating llvm modules
 	 * probably we will store more data in backend-module (like the linkage), and
