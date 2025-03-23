@@ -112,7 +112,7 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(
-		llvm::LLVMContext& context, const std::vector<CRef<tsl::TypeLayout>>& parameters, const tsl::TypeLayout& return_type) {
+		llvm::LLVMContext& context, const std::vector<tsl::TypeLayout>& parameters, const tsl::TypeLayout& return_type) {
 		
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
@@ -120,6 +120,15 @@ namespace compiler::backend_llvm {
 			llvm_parameters.push_back(typeFromLayout(context, *param));
 
 		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
+	}
+
+	/**
+	 * Helper function to get parameter types from symbol ID.
+	 * ... TODO this PR
+	 */
+	std::vector<tsl::TypeLayout> getParameterTypeFromSymID(query::Context& ctx, helios::SymID helios_symbol) {
+		auto type = ctx.query<helios::QueryTypeOfSymbol>(helios_symbol).;
+		auto function_type = tsh::Function
 	}
 
 	/**
@@ -132,7 +141,7 @@ namespace compiler::backend_llvm {
 	 * @note It detects if function are "the same" based on mangled name only.
 	 */
 	auto addOrInsertFunctionPrototype(
-		Ref<llvm::Module> module, base::StrID name, const std::vector<CRef<tsl::TypeLayout>>& parameters,
+		Ref<llvm::Module> module, base::StrID name, const std::vector<tsl::TypeLayout>& parameters,
 		 const tsl::TypeLayout& return_type
 	) {
 		auto& context = module->getContext();
