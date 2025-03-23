@@ -432,6 +432,115 @@ namespace vm::parser {
 		return out;
 	}
 
+	MBox<Inheratable> Inheratable::parse(F8ParserState& state) {
+		auto out = makeBox<Inheratable>(state.getPosition());
+
+		switch (state.tokens().next().asKeyword()) {
+		case lang_def::Keyword::BCClass: {
+			out->kind = Kind::Class;
+			break;
+		}
+		case lang_def::Keyword::BCInterface: {
+			out->kind = Kind::Interface;
+			break;
+		}
+		default: {
+			state.err.failAndLog(state.getPosition(), "bad keyword in inheritable");
+			return nullptr;
+		}
+		}
+
+		state.parse().one(&out->name);
+
+		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+			return nullptr;
+		}
+
+		state.goDown();
+
+		while (state[0].isKeyword()) {
+			auto next = state.tokens().next();
+			switch (next.asKeyword()) {
+			case lang_def::Keyword::BCExtends: {
+				out->extends.emplace();
+				state.parse().all(
+					lang_def::NamedOperator::Colon,
+					&out->extends.value(),
+					lang_def::Special::Semicolon
+				);
+				break;
+			}
+			case lang_def::Keyword::BCImplements: {
+				state.parse().one(lang_def::NamedOperator::Colon);
+				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+					state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+					return nullptr;
+				}
+
+				state.goDown();
+				while (state.notEmpty()) {
+					tpc::Identifier interface;
+					state.parse().one(&interface);
+					out->implements.push_back(interface);
+
+					if (state.empty()) break;
+					if (state[0].is(lang_def::Special::Comma)) {
+						state.parse().one(lang_def::Special::Comma);
+					} else {
+						state.err.failAndLog(state.getPosition(), "expected comma or }");
+						state.tokens().skip();
+					}
+				}
+				state.goUpAndSkip();
+				state.parse().one(lang_def::Special::Semicolon);
+				break;
+			}
+			case lang_def::Keyword::BCVirtualMethods: {
+				state.parse().one(lang_def::NamedOperator::Colon);
+				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+					state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+					return nullptr;
+				}
+
+				state.goDown();
+				while (state.notEmpty()) {
+					tpc::Identifier method_name;
+					tpc::Identifier method_type;
+					state.parse().all(&method_name, lang_def::NamedOperator::Colon, &method_type);
+					out->virtual_methods.emplace_back(method_name, method_type);
+
+					if (state.empty()) break;
+					if (state[0].is(lang_def::Special::Comma)) {
+						state.parse().one(lang_def::Special::Comma);
+					} else {
+						state.err.failAndLog(state.getPosition(), "expected comma or }");
+						state.tokens().skip();
+					}
+				}
+				state.goUpAndSkip();
+				state.parse().one(lang_def::Special::Semicolon);
+				break;
+			}
+			default: {
+				state.err.failAndLog(state.getPosition(), "bad keyword in inheritable");
+				return nullptr;
+			}
+			}
+		}
+
+		if (state.notEmpty()) {
+			state.err.failAndLog(state.getPosition(-1), "unexpected inheritable content");
+
+			state.goUpAndSkip();
+			return nullptr;
+		}
+
+		state.goUpAndSkip();
+
+		return out;
+	}
+
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
 		auto out = makeBox<ParsedFile>(state.getPosition());
 		while (state.notEmpty()) {
@@ -441,6 +550,10 @@ namespace vm::parser {
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
+			} else if (state[0].is(lang_def::Keyword::BCClass)
+			           || state[0].is(lang_def::Keyword::BCInterface)) {
+				auto inheritable = Inheratable::parse(state).toOptBox();
+				if (inheritable) out->inheritables.emplace_back(std::move(*inheritable));
 			} else {
 				state.fail(0, "Unexpected keyword");
 				break;
