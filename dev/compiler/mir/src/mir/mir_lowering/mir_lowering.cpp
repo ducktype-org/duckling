@@ -184,7 +184,7 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { id, std::move(instructions), terminator.value() };
+			return { .id = id, .instructions = std::move(instructions), .terminator = terminator.value() };
 		}
 
 		/**
@@ -293,6 +293,18 @@ namespace compiler::mir {
 			return local_list.getRef(key).value();
 		}
 
+		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
+			const auto key = local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id),
+				parameter_index,
+			});
+			return local_list.getRef(key).value();
+		}
+
 		[[nodiscard]]
 		LocalRef addTmp(const tsh::SymbolType<> type, const helios::ScopeID scope) {
 			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
@@ -325,6 +337,15 @@ namespace compiler::mir {
 			entry_block.emplace(block);
 		}
 
+		/**
+		 * This is needed only for some assertins.
+		 */
+		[[nodiscard]]
+		helios::SymID getHeliosSymbol() const {
+			return helios_symbol;
+		}
+
+		[[nodiscard]]
 		query::Context& getContext() { return ctx; }
 	};
 
@@ -337,12 +358,34 @@ namespace compiler::mir {
 
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
 
+		/**
+		 * Helper function that recursively goes over the code block and collects all local variables.
+		 */
+		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
+		}
+
+		/**
+		 * @brief Collects all local variables in the function and adds them directly to the
+		 * FunctionBuilder.
+		 */
+		void collect(const helios::HOUTFunction& hout_function) {
+			CORE_ASSERT(hout_function.original_symbol == function.getHeliosSymbol(), "Bad function passed to LocalVarCollectionVisitor");
+
+			u64 parameter_index = 0;
+			for (const auto& parameter:*hout_function.content.parameters) {
+				function.addParameter(parameter.helios_symbol, parameter_index);
+				parameter_index++;
+			}
+			goOverCodeBlock(*hout_function.content.body);
+		}
+
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			function.addLocal(stmt.helios_symbol);
 		}
 
 		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
+			goOverCodeBlock(stmt.body);
 		}
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
@@ -699,9 +742,8 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
-		// @TODO: add parameters to list of locals
 		LocalVarCollectionVisitor visitor{ function_builder };
-		for (const auto& stmt: function.content.body->statements) stmt->acceptVisitor(visitor);
+		visitor.collect(function);
 
 		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();

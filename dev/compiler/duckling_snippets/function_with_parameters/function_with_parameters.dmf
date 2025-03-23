@@ -1,0 +1,9 @@
+
+fun goo(x: i64) = {
+    var y: i64 = 2;
+    return x + y;
+}
+
+fun foo() = {
+
+}
