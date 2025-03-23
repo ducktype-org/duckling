@@ -432,8 +432,8 @@ namespace vm::parser {
 		return out;
 	}
 
-	MBox<Inheratable> Inheratable::parse(F8ParserState& state) {
-		auto out = makeBox<Inheratable>(state.getPosition());
+	MBox<Inheritable> Inheritable::parse(F8ParserState& state) {
+		auto out = makeBox<Inheritable>(state.getPosition());
 
 		switch (state.tokens().next().asKeyword()) {
 		case lang_def::Keyword::BCClass: {
@@ -552,7 +552,7 @@ namespace vm::parser {
 				if (func) out->functions.emplace_back(std::move(*func));
 			} else if (state[0].is(lang_def::Keyword::BCClass)
 			           || state[0].is(lang_def::Keyword::BCInterface)) {
-				auto inheritable = Inheratable::parse(state).toOptBox();
+				auto inheritable = Inheritable::parse(state).toOptBox();
 				if (inheritable) out->inheritables.emplace_back(std::move(*inheritable));
 			} else {
 				state.fail(0, "Unexpected keyword");

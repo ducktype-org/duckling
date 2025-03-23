@@ -135,7 +135,7 @@ namespace vm::parser {
 		~Func() override = default;
 	};
 
-	struct Inheratable: AsmElement {
+	struct Inheritable: AsmElement {
 		using AsmElement::AsmElement;
 
 		struct Method {
@@ -151,10 +151,10 @@ namespace vm::parser {
 		std::vector<tpc::Identifier>    implements;
 		std::vector<Method>             virtual_methods;
 
-		static MBox<Inheratable> parse(F8ParserState& state);
+		static MBox<Inheritable> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
-			out << "inheratable  {\n";
+			out << "inheritable  {\n";
 			out << "    kind: " << (kind == Kind::Class ? "class" : "interface");
 			out << "    name: " << name.value.strView() << "\n";
 			if_opt_some(extends, superclass) {
@@ -176,7 +176,7 @@ namespace vm::parser {
 
 		std::vector<Box<Func>>        functions;
 		std::vector<Box<Type>>        types;
-		std::vector<Box<Inheratable>> inheritables;
+		std::vector<Box<Inheritable>> inheritables;
 
 		static MBox<ParsedFile> parse(F8ParserState& state);
 
@@ -209,7 +209,7 @@ namespace vm::parser {
 		base::HashMap<base::StrID, Ref<Func>>       name_to_func;
 		std::vector<Box<Func>>                      functions;
 		std::vector<Box<Type>>                      types;
-		std::vector<Box<Inheratable>>               inheritables;
+		std::vector<Box<Inheritable>>               inheritables;
 		std::vector<Box<tokenizer::TokenFile>>      token_files;
 		Box<vm::TypeMetadata>                       type_metadata
 			= Box<vm::TypeMetadata>::fromPointer(new vm::TypeMetadata);
