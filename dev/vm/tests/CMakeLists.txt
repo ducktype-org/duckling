@@ -46,7 +46,7 @@ function(duck_add_vm_tests suffix)
   duck_add_test_custom(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
           USES ${libvm} Tester ${vmtester})
 
-  duck_add_test_custom(vm ${test_set}_validation_test validation/bc_validation.cpp
+  duck_add_test_custom(vm ${test_set}_validation_test verification/bc_validation.cpp
           USES ${libvm} Tester ${vmtester})
 
 endfunction()
