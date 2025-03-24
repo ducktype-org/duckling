@@ -1,21 +1,27 @@
 #include "compiler.hpp"
 #include "base/string_id.hpp"
+#include "base/variant.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
+#include "vm/core/thread/low_program/opcodes.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
+#include "vm/program/instructions.hpp"
+#include "vm/program/opcode_args.hpp"
 #include "vm/program/program.hpp"
 #include <expected>
+#include <type_traits>
+#include <variant>
 
 namespace vm {
 	namespace {
 		i64 getOpCodeArgValue(
 			const base::HashMap<base::StrID, program::Function>& functions,
-			Ref<vm::TypeMetadata>                                types,
-			CRef<parser::Func>                                   current_func,
+			vm::TypeMetadata&                                    types,
+			const program::Function&                             current_func,
 			usize                                                instruction_index,
-			const parser::OpCodeArgAndPosition&                  opcode_arg,
+			const vm::opargs::OpCodeArg&                         opcode_arg,
 			dia::Logger&                                         log
 		) {
-			variant_match(opcode_arg.arg) {
+			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 #define HANDLE_OFFSET(Type) variant_case(vm::opargs::Type, offset_type) return offset_type.offset;
@@ -23,7 +29,7 @@ namespace vm {
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
-					auto type_obj = types->getTypeByName(type_arg.type_name);
+					auto type_obj = types.getTypeByName(type_arg.type_name);
 					if (type_obj)
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
 					log.log(
@@ -58,15 +64,6 @@ namespace vm {
 			CORE_UNREACHABLE();
 		}
 
-		u16 nameToOpcodeValue(base::StrID str) {
-			try {
-				return static_cast<u16>(low::STR_TO_OPCODE_FIX8.at(str.str()));
-			} catch (std::out_of_range& err) {
-				// @TODO: better errors
-				CORE_PANIC(base::strConcat("Incorrect opcode: ", str));
-			}
-		}
-
 		vm::low::FuncData changeFuncToFuncData(
 			const base::HashMap<base::StrID, program::Function>& functions,
 			const program::Function&                             func,
@@ -80,39 +77,33 @@ namespace vm {
 			func_data.ret_size         = func.ret_size;
 
 			for (usize op_idx = 0; op_idx < func.body.size(); op_idx++) {
-				auto&& op    = func.body[op_idx];
-				i64    arg_0 = 0;
-				i64    arg_1 = 0;
-				switch (op->args.size()) {
-				case 0: {
-					break;
-				}
-				case 1: {
-					arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
-					break;
-				}
-				case 2: {
-					arg_0 = getOpCodeArgValue(functions, types, func, op_idx, op->args[0], log);
-					arg_1 = getOpCodeArgValue(functions, types, func, op_idx, op->args[1], log);
-					break;
-				}
+				const auto& op = func.body[op_idx];
+				if (std::holds_alternative<program::instructions::Comment>(op)) continue;
+				i64 arg_0 = 0;
+				i64 arg_1 = 0;
+				variant_match(op) {
+#define HANDLE_OPCODE_0ARGS(opcode) \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                      \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {                               \
+		arg_0 = getOpCodeArgValue(functions, types, func, op_idx, instr.arg0, log); \
+	}
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                           \
+	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {                               \
+		arg_0 = getOpCodeArgValue(functions, types, func, op_idx, instr.arg0, log); \
+		arg_1 = getOpCodeArgValue(functions, types, func, op_idx, instr.arg1, log); \
+	}
+#include <vm/program/opcodes_list.hpp>
 				}
 
-
+				func_data.bc.emplace_back(vm::Fix8Instruction{
 #ifdef USE_TAIL_CALLS
-				func_data.bc.emplace_back(vm::Fix8Instruction{
-					.opfun = vm::OpFuns::OPFUNS.at(nameToOpcodeValue(op->opcode_name)),
-					.arg0  = static_cast<i32>(arg_0),
-					.arg1  = static_cast<i32>(arg_1) });
+					.opfun = vm::OpFuns::OPFUNS.at(low::fix8FromInstr(op)),
+#else
+					.opcode = static_cast<u16>(low::fix8FromInstr(op)),
 #endif
-
-// #else breaks clang-format for some reason (?)
-#ifndef USE_TAIL_CALLS
-				func_data.bc.emplace_back(vm::Fix8Instruction{
-					.opcode = static_cast<u16>(nameToOpcodeValue(op->opcode_name)),
-					.arg0   = static_cast<i32>(arg_0),
-					.arg1   = static_cast<i32>(arg_1) });
-#endif
+					.arg0 = static_cast<i32>(arg_0),
+					.arg1 = static_cast<i32>(arg_1) });
 			}
 			return func_data;
 		}
@@ -122,6 +113,28 @@ namespace vm {
 		std::vector<low::FuncData> converted_functions;
 		dia::Logger                log;
 		converted_functions.reserve(program.functions.size());
+
+		// also add implementation for program.func_ids and program.type_ids
+				// if (opcode->opcode_name == base::StrID("label")) {
+				// 	auto arg = opcode->args[0];
+				// 	CORE_ASSERT(
+				// 		std::holds_alternative<vm::opargs::Label>(arg.arg),
+				// 		"Something went wrong during label parsing."
+				// 	);
+				// 	auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
+
+				// 	if (out->label_position.contains(label_name)) {
+				// 		auto msg
+				// 			= makeBox<vm::parser::InvalidLabel>(arg.position, "Repeated label.");
+				// 		for (auto&& lbl: labels)
+				// 			if (lbl.first == label_name)
+				// 				msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second));
+				// 		state.log(std::move(msg));
+				// 	} else {
+				// 		out->label_position.put(label_name, out->opcodes.size());
+				// 		labels.emplace_back(label_name, arg.position);
+				// 	}
+				// } else {
 
 		for (auto& func: program.functions | std::views::values) {
 			auto converted_func

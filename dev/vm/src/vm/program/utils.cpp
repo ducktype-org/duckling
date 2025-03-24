@@ -48,20 +48,20 @@ namespace {
 
 }
 
-bool vm::program::utils::areInstrEqual(const VmInstruction& instr0, const VmInstruction& instr1) {
+bool vm::program::utils::areInstrEqual(const Instruction& instr0, const Instruction& instr1) {
 	if (instr0.index() != instr1.index()) return false;
 
-#define HANDLE_OPCODE_0ARGS(opcode)                               \
-	variant_case(instructions::Op_##opcode, op0) return cmp0Args( \
-		op0, std::get<instructions::Op_##opcode>(instr1)          \
+#define HANDLE_OPCODE_0ARGS(opcode)                                \
+	variant_case(VM_INSTR_FROM_NAME(opcode), op0) return cmp0Args( \
+		op0, std::get<VM_INSTR_FROM_NAME(opcode)>(instr1)          \
 	);
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                    \
-	variant_case(instructions::Op_##opcode, op0) return cmp1Args( \
-		op0, std::get<instructions::Op_##opcode>(instr1)          \
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                     \
+	variant_case(VM_INSTR_FROM_NAME(opcode), op0) return cmp1Args( \
+		op0, std::get<VM_INSTR_FROM_NAME(opcode)>(instr1)          \
 	);
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)         \
-	variant_case(instructions::Op_##opcode, op0) return cmp2Args( \
-		op0, std::get<instructions::Op_##opcode>(instr1)          \
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)          \
+	variant_case(VM_INSTR_FROM_NAME(opcode), op0) return cmp2Args( \
+		op0, std::get<VM_INSTR_FROM_NAME(opcode)>(instr1)          \
 	);
 
 	variant_match(instr0) {

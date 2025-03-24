@@ -2,6 +2,7 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
 #include <base/for_each.hpp>
+#include "base/optional.hpp"
 #include "errors.hpp"
 #include <vm/program/opcode_args.hpp>
 
@@ -140,32 +141,8 @@ namespace vm::parser {
 		std::vector<std::pair<base::StrID, dia::SourcePosition>> labels;
 
 		while (state.notEmpty()) {
-			auto opt_opcode = OpCode::parse(state).toOptBox();
-
-			if (opt_opcode) {
-				auto opcode = std::move(opt_opcode.value());
-				if (opcode->opcode_name == base::StrID("label")) {
-					auto arg = opcode->args[0];
-					CORE_ASSERT(
-						std::holds_alternative<vm::opargs::Label>(arg.arg),
-						"Something went wrong during label parsing."
-					);
-					auto label_name = std::get<vm::opargs::Label>(arg.arg).label_name;
-
-					if (out->label_position.contains(label_name)) {
-						auto msg
-							= makeBox<vm::parser::InvalidLabel>(arg.position, "Repeated label.");
-						for (auto&& lbl: labels)
-							if (lbl.first == label_name)
-								msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(lbl.second));
-						state.log(std::move(msg));
-					} else {
-						out->label_position.put(label_name, out->opcodes.size());
-						labels.emplace_back(label_name, arg.position);
-					}
-				} else {
-					out->opcodes.emplace_back(std::move(opcode));
-				}
+			if_opt_some(OpCode::parse(state).toOptBox(), opcode) {
+				out->opcodes.emplace_back(std::move(opcode));
 			}
 		}
 
@@ -313,11 +290,11 @@ namespace vm::parser {
 			break;
 		}
 		case lang_def::Keyword::BCPointer: {
-			auto pointered_type = state.tokens().next();
-			if (!pointered_type.isIdentifier())
+			auto pointed_type = state.tokens().next();
+			if (!pointed_type.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else
-				out->datatype = PointerType{ .name = name, .inner = pointered_type.getValue() };
+				out->datatype = PointerType{ .name = name, .inner = pointed_type.getValue() };
 			break;
 		}
 		case lang_def::Keyword::BCStaticTable: {

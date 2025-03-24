@@ -12,5 +12,5 @@ namespace vm::program::utils {
 	/**
 	 * @brief Tests whether two opcode instructions are equal.
 	 */
-	bool areInstrEqual(const VmInstruction& instr0, const VmInstruction& instr1);
+	bool areInstrEqual(const Instruction& instr0, const Instruction& instr1);
 }

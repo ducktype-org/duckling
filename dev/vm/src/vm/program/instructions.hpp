@@ -8,6 +8,8 @@
 #include <vm/program/opcode_args.hpp>
 #include <base/box.hpp>
 
+#define VM_INSTR_FROM_NAME(opcode) vm::program::instructions::Op_##opcode
+
 namespace vm::program {
 	namespace instructions {
 #define HANDLE_OPCODE_0ARGS(opcode) \
@@ -38,9 +40,9 @@ namespace vm::program {
 		};
 	}
 
-	using VmInstruction = std::variant<
+	using Instruction = std::variant<
 
-#define HANDLE_OPCODE(opcode) instructions::Op_##opcode,
+#define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
 #include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		instructions::Comment>;

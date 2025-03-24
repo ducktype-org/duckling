@@ -14,7 +14,7 @@
 
 using namespace vm::program::builders;
 using namespace vm::program::instructions;
-using vm::program::VmInstruction;
+using vm::program::Instruction;
 
 class DVMBackendUnitTest final: public tester::TestSuite {
 #undef TESTER_CLASS

@@ -30,45 +30,43 @@ std::expected<vm::low::LowVMProgram, dia::Logger>
 
 namespace {
 	template<class Instruction>
-	vm::program::VmInstruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
+	vm::program::Instruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                                        \
-	template<>                                                                             \
-	vm::program::VmInstruction getInstructionImpl<vm::program::instructions::Op_##opcode>( \
-		CRef<vm::parser::OpCode> opcode                                                    \
-	) {                                                                                    \
-		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");                   \
-		return vm::program::instructions::Op_##opcode();                                   \
+#define HANDLE_OPCODE_0ARGS(opcode)                                          \
+	template<>                                                               \
+	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
+		CRef<vm::parser::OpCode> opcode                                      \
+	) {                                                                      \
+		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");     \
+		return VM_INSTR_FROM_NAME(opcode)();                                 \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                             \
-	template<>                                                                             \
-	vm::program::VmInstruction getInstructionImpl<vm::program::instructions::Op_##opcode>( \
-		CRef<vm::parser::OpCode> opcode                                                    \
-	) {                                                                                    \
-		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                   \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0).arg)) {                   \
-			return vm::program::instructions::Op_##opcode{                                 \
-				.arg0 = std::get<arg0_type>(opcode->args.at(0).arg)                        \
-			};                                                                             \
-		}                                                                                  \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                    \
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                  \
+	template<>                                                                                  \
+	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                    \
+		CRef<vm::parser::OpCode> opcode                                                         \
+	) {                                                                                         \
+		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                        \
+		if (std::holds_alternative<arg0_type>(opcode->args.at(0).arg)) {                        \
+			return VM_INSTR_FROM_NAME(opcode){ .arg0                                            \
+				                               = std::get<arg0_type>(opcode->args.at(0).arg) }; \
+		}                                                                                       \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                  \
-	template<>                                                                             \
-	vm::program::VmInstruction getInstructionImpl<vm::program::instructions::Op_##opcode>( \
-		CRef<vm::parser::OpCode> opcode                                                    \
-	) {                                                                                    \
-		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");                   \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0).arg)                      \
-		    && std::holds_alternative<arg1_type>(opcode->args.at(1).arg)) {                \
-			return vm::program::instructions::Op_##opcode{                                 \
-				.arg0 = std::get<arg0_type>(opcode->args.at(0).arg),                       \
-				.arg1 = std::get<arg1_type>(opcode->args.at(1).arg)                        \
-			};                                                                             \
-		}                                                                                  \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                    \
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                    \
+	template<>                                                               \
+	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
+		CRef<vm::parser::OpCode> opcode                                      \
+	) {                                                                      \
+		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");     \
+		if (std::holds_alternative<arg0_type>(opcode->args.at(0).arg)        \
+		    && std::holds_alternative<arg1_type>(opcode->args.at(1).arg)) {  \
+			return VM_INSTR_FROM_NAME(opcode                                 \
+			){ .arg0 = std::get<arg0_type>(opcode->args.at(0).arg),          \
+			   .arg1 = std::get<arg1_type>(opcode->args.at(1).arg) };        \
+		}                                                                    \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                      \
 	}
 
 #include <vm/program/opcodes_list.hpp>
@@ -78,8 +76,7 @@ namespace {
 #undef HANDLE_OPCODE_2ARGS
 
 #define HANDLE_OPCODE(opcode) \
-	std::                     \
-		make_pair(base::StrID(#opcode), getInstructionImpl<vm::program::instructions::Op_##opcode>),
+	std::make_pair(base::StrID(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
 #include <vm/program/opcodes_list.hpp>
@@ -87,7 +84,7 @@ namespace {
 
 #undef HANDLE_OPCODE
 
-	vm::program::VmInstruction getInstruction(CRef<vm::parser::OpCode> opcode) {
+	vm::program::Instruction getInstruction(CRef<vm::parser::OpCode> opcode) {
 		return instr_to_factory.at(opcode->opcode_name)(opcode);
 	}
 
@@ -246,11 +243,11 @@ std::expected<vm::low::LowVMProgram, dia::Logger>
 #define HANDLE_OPCODE_0ARGS(opcode)
 
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                    \
-	variant_case(vm::program::instructions::Op_##opcode, op) {    \
+	variant_case(VM_INSTR_FROM_NAME(opcode), op) {                \
 		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
 	}
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)         \
-	variant_case(vm::program::instructions::Op_##opcode, op) {    \
+	variant_case(VM_INSTR_FROM_NAME(opcode), op) {                \
 		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
 		pos_map.put(&op.arg1, parsed_instr->args.at(1).position); \
 	}

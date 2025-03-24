@@ -69,7 +69,6 @@ namespace vm::parser {
 		using AsmElement::AsmElement;
 
 		std::vector<Box<OpCode>>      opcodes;
-		base::Map<base::StrID, usize> label_position;
 
 		static Box<ByteCode> parse(F8ParserState& state);
 

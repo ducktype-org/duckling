@@ -10,7 +10,7 @@ namespace vm::program {
 	/**
 	 * @brief Represents a block of instructions.
 	 */
-	using CodeBlock = std::vector<VmInstruction>;
+	using CodeBlock = std::vector<Instruction>;
 
 	/**
 	 * @brief Represents bytecode a function.
@@ -39,7 +39,6 @@ namespace vm::program {
 	 */
 	struct Program {
 		base::HashMap<base::StrID, Function>      functions{};
-		base::HashMap<base::StrID, Ref<vm::Type>> types{};
 		Box<TypeMetadata>                         type_metadata = makeBox<TypeMetadata>();
 	};
 }

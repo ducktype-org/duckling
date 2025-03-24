@@ -4,7 +4,11 @@
  */
 #pragma once
 
+#include "base/exceptions.hpp"
+#include "base/variant.hpp"
+#include "vm/program/instructions.hpp"
 #include <base/ints.hpp>
+#include <type_traits>
 #include <unordered_map>
 
 /**
@@ -32,11 +36,31 @@ namespace vm::low {
 #define HANDLE_OPCODE(opcode) opcode,
 #include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
+		Comment
 	};
-	// @TODO: Add constructors to base::HashMap to allow usage of base::HashMap here.
-	const std::unordered_map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
-#define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
+
+	template<class Instr>
+	struct InstrToOpcodeFix8;
+
+#define HANDLE_OPCODE(opcode)                                         \
+	template<>                                                        \
+	struct InstrToOpcodeFix8<VM_INSTR_FROM_NAME(opcode)> {            \
+		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
+	};
+
+	template<>
+	struct InstrToOpcodeFix8<program::instructions::Comment> {
+		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::Comment;
+	};
+
 #include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
-	};
+
+	u16 fix8FromInstr(const program::Instruction& instruction) {
+		return u16(
+			VISIT(instruction,
+		          var,
+		          return low::InstrToOpcodeFix8<std::remove_cvref_t<decltype(var)>>::OPCODE_FIX8;)
+		);
+	}
 }

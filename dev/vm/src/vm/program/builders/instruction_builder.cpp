@@ -8,30 +8,30 @@
 namespace vm::program::builders {
 	namespace {
 		template<class T, class Arg0Tp, class Arg1Tp>
-		VmInstruction makeVmOpcode2Args(vm::opargs::OpCodeArg arg0, vm::opargs::OpCodeArg arg1) {
+		Instruction makeVmOpcode2Args(vm::opargs::OpCodeArg arg0, vm::opargs::OpCodeArg arg1) {
 			CORE_ASSERT(std::holds_alternative<Arg0Tp>(arg0), "Invalid arg0 for opcode");
 			CORE_ASSERT(std::holds_alternative<Arg1Tp>(arg1), "Invalid arg1 for opcode");
 			return T{ std::get<Arg0Tp>(arg0), std::get<Arg1Tp>(arg1) };
 		}
 
 		template<class T, class Arg0Tp>
-		VmInstruction makeVmOpcode1Args(vm::opargs::OpCodeArg arg0) {
+		Instruction makeVmOpcode1Args(vm::opargs::OpCodeArg arg0) {
 			CORE_ASSERT(std::holds_alternative<Arg0Tp>(arg0), "Invalid arg0 for opcode");
 			return T{ std::get<Arg0Tp>(arg0) };
 		}
 
 		template<class T>
-		VmInstruction makeVmOpcode0Args() {
+		Instruction makeVmOpcode0Args() {
 			return T{};
 		}
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
 
-#define HANDLE_OPCODE_0ARGS(opcode) MAKE_LINK(opcode, makeVmOpcode0Args<instructions::Op_##opcode>)
+#define HANDLE_OPCODE_0ARGS(opcode) MAKE_LINK(opcode, makeVmOpcode0Args<VM_INSTR_FROM_NAME(opcode)>)
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
-		const std::unordered_map<std::string, VmInstruction (*)()> OPCODE_TO_0_ARGS_FACTORY = {
+		const std::unordered_map<std::string, Instruction (*)()> OPCODE_TO_0_ARGS_FACTORY = {
 #include <vm/program/opcodes_list.hpp>
 		};
 
@@ -41,10 +41,10 @@ namespace vm::program::builders {
 
 #define HANDLE_OPCODE_0ARGS(opcode)
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type) \
-	MAKE_LINK(opcode, makeVmOpcode1Args<instructions::Op_##opcode COMMA arg0_type>)
+	MAKE_LINK(opcode, makeVmOpcode1Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type>)
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
-		const std::unordered_map<std::string, VmInstruction (*)(vm::opargs::OpCodeArg)>
+		const std::unordered_map<std::string, Instruction (*)(vm::opargs::OpCodeArg)>
 			OPCODE_TO_1_ARGS_FACTORY = {
 #include <vm/program/opcodes_list.hpp>
 			};
@@ -56,13 +56,12 @@ namespace vm::program::builders {
 #define HANDLE_OPCODE_0ARGS(opcode)
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type) \
-	MAKE_LINK(opcode, makeVmOpcode2Args<instructions::Op_##opcode COMMA arg0_type COMMA arg1_type>)
+	MAKE_LINK(opcode, makeVmOpcode2Args<VM_INSTR_FROM_NAME(opcode) COMMA arg0_type COMMA arg1_type>)
 
-		const std::
-			unordered_map<std::string, VmInstruction (*)(opargs::OpCodeArg, opargs::OpCodeArg)>
-				OPCODE_TO_2_ARGS_FACTORY = {
+		const std::unordered_map<std::string, Instruction (*)(opargs::OpCodeArg, opargs::OpCodeArg)>
+			OPCODE_TO_2_ARGS_FACTORY = {
 #include <vm/program/opcodes_list.hpp>
-				};
+			};
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -100,10 +99,10 @@ void vm::program::builders::InstructionBuilder::setKind(OpKind kind) {
 	kind_set   = true;
 }
 
-std::vector<vm::program::VmInstruction> vm::program::builders::InstructionBuilder::build() const {
+std::vector<vm::program::Instruction> vm::program::builders::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
 
-	std::deque<vm::program::VmInstruction> result;
+	std::deque<vm::program::Instruction> result;
 
 	std::deque new_args = args;
 

@@ -4,29 +4,31 @@ namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 
-
-		auto id      = types.emplaceBack(std::move(type));
-		types[id].id = id;
+		auto id = TypeID(types.size());
+		types.push_back(std::move(type));
+		types.back().id = id; // This is not in the new structure
 		types_ids.push_back(id);
 
-		names_to_type.put(types[id].getName(), id);
+		names_to_type.put(getType(id)->getName(), id);
 
-		return types.getRef(id).value();
+		return &types.back();
 	}
 
 	void TypeMetadata::finalize() {
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
-		for (auto id: types_ids) types[id].finalize();
+		for (auto& tp: types) tp.finalize();
 	}
 
 	TypeCRef TypeMetadata::getType(TypeID id) const {
-		return types.getCRef(id).expect("Bad TypeID in getType");
+		CORE_ASSERT(usize(id) <= types.size(), "Invalid type id");
+		return &types[usize(id)];
 	}
 
 	base::Optional<TypeCRef> TypeMetadata::getTypeSafe(TypeID id) const {
-		return types.getCRef(id);
+		if (usize(id) > types.size()) return {};
+		return &types[usize(id)];
 	}
 
 	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrID name) const {

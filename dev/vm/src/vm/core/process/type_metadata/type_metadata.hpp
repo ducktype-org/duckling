@@ -1,6 +1,7 @@
 #pragma once
 
 #include "type.hpp"
+#include <deque>
 
 namespace vm {
 	namespace parser {
@@ -17,16 +18,25 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type, TypeID> types{};
-		std::vector<TypeID>              types_ids{};
-		base::Map<base::StrID, TypeID>   names_to_type{};
+		/**
+		 * @note We are using std::deque here, because references its data are always valid. (Do not
+		 * become dangling).
+		 * We also assume that we **never pop** from this structure.
+		 */
+		std::deque<Type>               types{};
+		std::vector<TypeID>            types_ids{};
+		base::Map<base::StrID, TypeID> names_to_type{};
 
-		TypeMetadataState state{TypeMetadata::TypeMetadataState::AddingTypes};
+		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 
 	public:
 		TypeMetadata() = default;
 
-		TypeRef addType(Type&& type);
+		TypeMetadata(const TypeMetadata&)            = default;
+		TypeMetadata(TypeMetadata&&) noexcept        = default;
+		TypeMetadata& operator=(const TypeMetadata&) = default;
+		TypeMetadata& operator=(TypeMetadata&&)      = default;
+		TypeRef       addType(Type&& type);
 
 		/**
 		 * @brief Finalize adding types.

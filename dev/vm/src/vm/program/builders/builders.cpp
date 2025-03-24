@@ -53,7 +53,7 @@ vm::program::CodeFile vm::program::builders::CodeFileBuilder::build() const {
 	return file;
 }
 
-void vm::program::builders::FunctionBuilder::addInstruction(const VmInstruction& instruction) {
+void vm::program::builders::FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
@@ -70,13 +70,13 @@ const base::HashMap<base::StrID, vm::program::TypeOfData>&
 
 usize getTypeSize(const vm::program::TypeOfData& tp) {
 	variant_match(tp) {
-		variant_case(vm::parser::PrimitiveType, primitive) return primitive.size;
-		NOIMPL_CASE(vm::parser::PointerType, "get size of")
-		NOIMPL_CASE(vm::parser::StaticTableType, "get size of")
-		NOIMPL_CASE(vm::parser::DynamicTableType, "get size of")
-		NOIMPL_CASE(vm::parser::DataType, "get size of")
-		NOIMPL_CASE(vm::parser::VariantType, "get size of")
-		NOIMPL_CASE(vm::parser::FunctionType, "get size of")
+		variant_case(vm::program::PrimitiveType, primitive) return primitive.size;
+		NOIMPL_CASE(vm::program::PointerType, "get size of")
+		NOIMPL_CASE(vm::program::StaticTableType, "get size of")
+		NOIMPL_CASE(vm::program::DynamicTableType, "get size of")
+		NOIMPL_CASE(vm::program::DataType, "get size of")
+		NOIMPL_CASE(vm::program::VariantType, "get size of")
+		NOIMPL_CASE(vm::program::FunctionType, "get size of")
 	}
 	CORE_UNREACHABLE();
 }

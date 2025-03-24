@@ -13,7 +13,7 @@ namespace vm {
 		std::variant<
 			const vm::program::TypeOfData*,
 			const program::Function*,
-			const program::VmInstruction*,
+			const program::Instruction*,
 			const opargs::OpCodeArg*>,
 		dia::SourcePosition>;
 

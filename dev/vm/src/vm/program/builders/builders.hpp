@@ -81,15 +81,15 @@ namespace vm::program::builders {
 			(pushArg(std::forward<Args>(args)), ...);
 		}
 
-		[[nodiscard]] std::vector<VmInstruction> build() const;
+		[[nodiscard]] std::vector<Instruction> build() const;
 	};
 
 	/**
 	 * @brief Helper to compose bytecode functions.
 	 */
 	class FunctionBuilder {
-		std::vector<VmInstruction> instructions{};
-		base::StrID                name;
+		std::vector<Instruction> instructions{};
+		base::StrID              name;
 
 		/**
 		 * @brief Represents a local stack variable.
@@ -117,7 +117,7 @@ namespace vm::program::builders {
 		void                deinitType();
 		[[nodiscard]] usize getLocalSize() const;
 
-		void addInstruction(const VmInstruction& instruction);
+		void addInstruction(const Instruction& instruction);
 		void addInstruction(const InstructionBuilder& instruction);
 
 		[[nodiscard]] Function build() const;
