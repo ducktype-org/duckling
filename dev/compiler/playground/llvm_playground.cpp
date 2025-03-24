@@ -54,8 +54,9 @@ int main(int argc, const char* argv[]) {
 		});
 		std::cerr << "\n\n\n";
 
-		auto llvm_module = compiler::backend_llvm::lirFunctionToModule(lir_fun);
-		bool v           = llvm_module.verify();
+		auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
+		llvm_module.addFunctionToModule(lir_fun);
+		bool v = llvm_module.verify();
 
 		if (v)
 			std::cerr << "LLVM verification passed\n\n";

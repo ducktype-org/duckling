@@ -86,31 +86,5 @@ namespace pst::expr {
 		visitor.visitChainExpr(*this);
 	}
 
-	MCRef<ExprElement> BinaryOperator::getLeftOperand() const { return left.ref(); }
-
-	MCRef<ExprElement> BinaryOperator::getRightOperand() const { return right.ref(); }
-
-	lexer::Operator BinaryOperator::getOperator() const { return op; }
-
-	const std::vector<MBox<ExprElement>>& Comma::getExpressions() const { return expressions; }
-
-	MCRef<ExprElement> ChainExpr::getAtom() const { return atom.ref(); }
-
-	const std::vector<MBox<ExprElement>>& ChainExpr::getChain() const { return chain; }
-
-	base::StrID Access::getType() const { return type; }
-
-	const tpc::Identifier& Access::getName() const { return name; }
-
-	lexer::Operator SuffixOperator::getOperator() const { return op; }
-
-	MCRef<ExprElement> SuffixOperator::getExpr() const { return expr.ref(); }
-
-	lexer::Operator PrefixOperator::getOperator() const { return op; }
-
-	MCRef<ExprElement> PrefixOperator::getExpr() const { return expr.ref(); }
-
-	lexer::Token::BracketType Call::getType() const { return type; }
-
-	MCRef<CallList> Call::getArgs() const { return args.ref(); }
+	AccessLocked<ExprElement> ChainExpr::getAtom() const { return atom.give(); }
 }

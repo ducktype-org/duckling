@@ -15,4 +15,8 @@ namespace pst::expr {
 	void PrefixOperator::acceptExprVisitor(PstExprVisitor& visitor) const {
 		visitor.visitPrefixOperator(*this);
 	}
+
+	lexer::Operator PrefixOperator::getOperator() const { return op; }
+
+	AccessLocked<ExprElement> PrefixOperator::getExpr() const { return expr.give(); }
 }
