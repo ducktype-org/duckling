@@ -33,8 +33,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
-		MBox<ClassBlock>  block;
+		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
+		AccessInternal<ClassBlock> block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
@@ -54,8 +54,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ClassBlock> getBlock() const {
-			return block.ref();
+		AccessLocked<ClassBlock> getBlock() const {
+			return block.give();
 		}
 
 		[[nodiscard]]
@@ -103,9 +103,9 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		MBox<ParamList> params = nullptr;
-		MBox<InitList>  inits  = nullptr;
-		MBox<CodeBlock> body   = nullptr;
+		AccessInternal<ParamList> params;
+		AccessInternal<InitList>  inits;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -131,7 +131,7 @@ namespace pst {
 	 * @brief Class destructor element.
 	 */
 	class Destructor final: public ClassSpecial {
-		MBox<CodeBlock> body = nullptr;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
@@ -152,10 +152,10 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier                       name;
-		MBox<ParamList>                       params = nullptr;
-		base::Optional<MBox<CommaExprHolder>> ret;
-		MBox<CodeBlock>                       body = nullptr;
+		tpc::Identifier                                 name;
+		AccessInternal<ParamList>                       params;
+		base::Optional<AccessInternal<CommaExprHolder>> ret;
+		AccessInternal<CodeBlock>                       body;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
@@ -191,10 +191,10 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool                                  is_mutable = true;
-		tpc::Identifier                       name;
-		MBox<CommaExprHolder>                 type;
-		base::Optional<MBox<CommaExprHolder>> init;
+		bool                                            is_mutable = true;
+		tpc::Identifier                                 name;
+		AccessInternal<CommaExprHolder>                 type;
+		base::Optional<AccessInternal<CommaExprHolder>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
@@ -214,8 +214,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getType() const {
-			return type.ref();
+		AccessLocked<ExprHolder> getType() const {
+			return type.give();
 		}
 
 		[[nodiscard]]

@@ -205,6 +205,8 @@ namespace base {
 		// swap:
 		friend void swap(MRef& first, MRef& second) noexcept { std::swap(first.ptr, second.ptr); }
 
+		operator bool() const { return ptr; }
+
 		~MRef() = default;
 	};
 
@@ -217,6 +219,15 @@ namespace base {
 
 	template<class T>
 	using MCRef = MRef<const T>;
+
+
+/**
+ * @brief Macro used to expose ref access in ref-like objects that manage a ref internally.
+ */
+#define EXPOSE_REF_INTERFACE(element_name)                         \
+	auto  operator->() const { return element_name.operator->(); } \
+	auto& operator*() const { return element_name.operator*(); }
+
 }
 
 // global namespace export:

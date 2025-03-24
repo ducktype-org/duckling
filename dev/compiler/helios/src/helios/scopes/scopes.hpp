@@ -86,7 +86,7 @@ namespace compiler::helios {
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
-	ScopeID queryBodyCodeScopeFor(query::Context&, MCRef<pst::Stmt> stmt);
+	ScopeID queryBodyCodeScopeFor(query::Context&, pst::AccessLocked<pst::Stmt> stmt);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;

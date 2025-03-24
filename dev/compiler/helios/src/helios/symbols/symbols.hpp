@@ -76,7 +76,12 @@ namespace compiler::helios {
 	 * @todo should this be an external API? It might depend on incremental compilation
 	 * implementation
 	 */
-	CRef<pst::Stmt> stmt(SymID);
+	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context&, SymID);
+
+	/**
+	 * @return PST element symbol was created from.
+	 */
+	pst::AccessLocked<pst::LangElement> symbolPst(SymID);
 
 	/**
 	 * @brief Query symbols associated with given element in PST
