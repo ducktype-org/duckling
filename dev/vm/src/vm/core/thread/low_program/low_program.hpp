@@ -3,8 +3,10 @@
  */
 #pragma once
 
+#include "base/stable_type_id_name_map.hpp"
 #include "instruction.hpp"
 #include <base/stable_hashmap.hpp>
+#include <utility>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::low {
@@ -31,23 +33,24 @@ namespace vm::low {
 	 */
 	class LowVMProgram {
 	public:
-		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> type_metadata):
-			  type_metadata(std::move(type_metadata)) {
-			for (auto& func: functions) addFunction(func.name, func);
+		LowVMProgram(const std::vector<FuncData>& functions, TypeMetadata types):
+			  types(std::move(types)) {
+			for (const auto& func: functions) addFunction(func);
 		}
 
-		base::Optional<CRef<FuncData>> getFuncByName(base::StrID name) const;
-		base::Optional<CRef<FuncData>> getFuncByID(usize id) const;
+		base::Optional<CRef<FuncData>> funcAtMaybe(base::StrID name) const;
+		base::Optional<CRef<FuncData>> funcAtMaybe(usize id) const;
 
-		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;
-		CRef<Type>                 getTypeByID(TypeID id) const;
+		base::Optional<CRef<Type>> typeAtMaybe(base::StrID name) const;
+		base::Optional<CRef<Type>> typeAtMaybe(TypeID id) const;
+		CRef<Type>                 typeAt(TypeID id) const;
 
-		bool addFunction(const base::StrID& func_name, const FuncData& func);
+		bool addFunction(const FuncData& func);
 
 		usize getNumberOfFunctions() const;
 
-		base::StableHashMap<base::StrID, usize> func_name_to_id;
-		base::StableVector<FuncData>            functions;
-		Box<TypeMetadata>                       type_metadata;
+	private:
+		base::StableTypeIdNameMap<FuncData, usize> functions;
+		TypeMetadata                               types;
 	};
 }

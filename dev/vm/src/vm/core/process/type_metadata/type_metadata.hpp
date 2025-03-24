@@ -1,42 +1,28 @@
 #pragma once
 
+#include <base/stable_type_id_name_map.hpp>
 #include "type.hpp"
-#include <deque>
 
 namespace vm {
-	namespace parser {
-		struct ParsedProgram;
-	}
-
 	/**
-	 * @brief Holds metadata about all types in the VCPU.
-	 *
-	 * This class is used to store and access all types
-	 * that are used in the VCPU.
+	 * @brief Holds metadata about all types in the program.
 	 */
 	class TypeMetadata {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		/**
-		 * @note We are using std::deque here, because references its data are always valid. (Do not
-		 * become dangling).
-		 * We also assume that we **never pop** from this structure.
-		 */
-		std::deque<Type>               types{};
-		std::vector<TypeID>            types_ids{};
-		base::Map<base::StrID, TypeID> names_to_type{};
+		base::StableTypeIdNameMap<Type, TypeID> types;
 
 		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 
 	public:
-		TypeMetadata() = default;
-
+		TypeMetadata()                               = default;
 		TypeMetadata(const TypeMetadata&)            = default;
 		TypeMetadata(TypeMetadata&&) noexcept        = default;
 		TypeMetadata& operator=(const TypeMetadata&) = default;
 		TypeMetadata& operator=(TypeMetadata&&)      = default;
-		TypeRef       addType(Type&& type);
+
+		TypeRef addType(Type&& type);
 
 		/**
 		 * @brief Finalize adding types.
@@ -44,14 +30,27 @@ namespace vm {
 		void finalize();
 
 		[[nodiscard]]
-		TypeCRef getType(TypeID id) const;
+		TypeCRef at(TypeID id) const;
+		TypeRef  at(TypeID id);
 
 		[[nodiscard]]
-		base::Optional<TypeCRef> getTypeSafe(TypeID id) const;
+		TypeCRef at(base::StrID name) const;
+		TypeRef  at(base::StrID name);
 
-		// @TODO: This function is currently used by parser, but
-		// should be deleted in the future
 		[[nodiscard]]
-		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
+		base::Optional<TypeCRef> atMaybe(TypeID id) const;
+		base::Optional<TypeRef>  atMaybe(TypeID id);
+
+		[[nodiscard]]
+		base::Optional<TypeCRef> atMaybe(base::StrID name) const;
+		base::Optional<TypeRef>  atMaybe(base::StrID name);
+
+		auto begin() const { return types.begin(); }
+
+		auto begin() { return types.begin(); }
+
+		auto end() const { return types.end(); }
+
+		auto end() { return types.end(); }
 	};
 }

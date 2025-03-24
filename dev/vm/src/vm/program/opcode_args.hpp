@@ -42,7 +42,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-#define VM_OPCODE_OFFSET_TYPES                                                               \
+#define VM_OPARG_OFFSET_TYPES                                                                \
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
 		ArgsOffset
 
@@ -58,5 +58,7 @@ namespace vm::opargs {
 		base::StrID label_name = base::StrID("");
 	};
 
-	using OpCodeArg = std::variant<Immediate, VM_OPCODE_OFFSET_TYPES, Type, FunctionName, Label>;
+#define VM_OPARG_TYPES VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, Label
+
+	using OpCodeArg = std::variant<VM_OPARG_TYPES>;
 }

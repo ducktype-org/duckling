@@ -162,8 +162,7 @@ namespace vm {
 		cpp::result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
-				auto res
-					= loaded_program->getTypeByName(base::StrID(type_request.type_name.c_str()));
+				auto res = loaded_program->typeAtMaybe(base::StrID(type_request.type_name.c_str()));
 				match_optional(res) {
 					opt_some(value) { response = value; }
 					opt_none {

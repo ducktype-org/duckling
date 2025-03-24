@@ -228,7 +228,7 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			auto called_func_type
-				= thread.executing_program->type_metadata->getTypeByName(called_func.name)
+				= thread.executing_program->type_metadata->atMaybe(called_func.name)
 			          .expect("No function type declared for a called function");
 			u64 arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
@@ -331,7 +331,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_program->type_metadata->getType(
+			auto type = thread.executing_program->type_metadata->at(
 				vm::TypeID(static_cast<usize>(instr->arg0))
 			);
 			auto data_ptr = local_stack + frame->local_stack_head;
@@ -405,7 +405,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_program->type_metadata->getType(
+			auto type = thread.executing_program->type_metadata->at(
 				vm::TypeID(static_cast<u32>(instr->arg1))
 			);
 			auto block = thread.process_memory.allocateHeap(type);

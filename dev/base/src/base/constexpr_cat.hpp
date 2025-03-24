@@ -75,4 +75,4 @@ namespace base {
 /**
  * @brief Returns an std::array<char> concatenation with inferred length.
  */
-#define CONSTEXPR_CAT(...) base::cat<base::impl::sizeSum(__VA_ARGS__)>(__VA_ARGS__);
+#define CONSTEXPR_CAT(...) base::cat<base::impl::sizeSum(__VA_ARGS__)>(__VA_ARGS__)

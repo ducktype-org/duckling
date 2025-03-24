@@ -65,5 +65,5 @@
 #define ID_STD_HASH(TYPE)                                               \
 	template<>                                                          \
 	struct std::hash<TYPE> final {                                      \
-		usize operator()(const TYPE& key) const { return key.asInt(); } \
+		usize operator()(const TYPE& key) const noexcept { return key.asInt(); } \
 	};

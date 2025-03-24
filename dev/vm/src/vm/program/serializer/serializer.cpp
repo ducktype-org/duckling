@@ -12,7 +12,7 @@ namespace vm::program {
 #define OFFSET_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
 
-	FOR_EACH(OFFSET_TO_STRING, VM_OPCODE_OFFSET_TYPES);
+	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
 
 	std::string toString(vm::opargs::Type arg) { return arg.type_name.str(); }
 

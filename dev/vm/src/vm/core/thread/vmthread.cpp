@@ -115,8 +115,8 @@ namespace vm {
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
-		auto main_func_type = executing_program->type_metadata->getTypeByName(main_func->name)
-		                          .expect("Expected main!");
+		auto main_func_type
+			= executing_program->type_metadata->atMaybe(main_func->name).expect("Expected main!");
 		auto main_return_type
 			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
@@ -283,8 +283,7 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(
-				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
+			internalCallMain(executing_program->funcAt(base::StrID("main")).expect("Expected main!")
 			);
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {

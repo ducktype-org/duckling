@@ -44,7 +44,7 @@ namespace vm::parser {
 		return { parseInt<i64, vm::opargs::Type>(state) };    \
 	}
 
-		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPCODE_OFFSET_TYPES);
+		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPARG_OFFSET_TYPES);
 
 #undef HANDLE_OFFSET
 
@@ -448,7 +448,7 @@ namespace vm::parser {
 #define HANDLE_OFFSET(Type) \
 	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
 
-				FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
+				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
 
 #undef HANDLE_OFFSET
 

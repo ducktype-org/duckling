@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vm/program/type_of_data.hpp>
-#include "base/maps.hpp"
+#include "base/stable_type_id_name_map.hpp"
 #include "instructions.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include <base/string_id.hpp>
@@ -38,7 +38,7 @@ namespace vm::program {
 	 * @todo Hide this. This is temporarily exposed.
 	 */
 	struct Program {
-		base::HashMap<base::StrID, Function>      functions{};
-		Box<TypeMetadata>                         type_metadata = makeBox<TypeMetadata>();
+		base::StableTypeIdNameMap<Function, usize> functions{};
+		TypeMetadata                               types{};
 	};
 }

@@ -16,7 +16,7 @@ bool vm::program::utils::areArgsEqual(
 #define HANDLE_OFFSET(Type) \
 	variant_case(Type, offset) { return offset.offset == std::get<Type>(arg1).offset; }
 
-		FOR_EACH(HANDLE_OFFSET, VM_OPCODE_OFFSET_TYPES);
+		FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
 
 		variant_case(Type, tp) { return tp.type_name == std::get<Type>(arg1).type_name; }
 		variant_case(FunctionName, func) {
