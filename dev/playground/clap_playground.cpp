@@ -2,7 +2,6 @@
  * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
-#include "base/strongly_typed_id.hpp"
 #include <iostream>
 #include <clap/clap.hpp>
 #include <clap/param_builder.hpp>
@@ -11,8 +10,6 @@
 #include <printer/stream_printer.hpp>
 
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello " << name << "!\n"; }
-
-STRONG_TYPEDEF_ID(TestID);
 
 int main(int argc, const char** argv) {
 	auto clap
@@ -75,7 +72,6 @@ int main(int argc, const char** argv) {
 				for (i64 j = begin; j < end; j++) greet(j, name);
 		}
 	}
-	base::HashMap<TestID, bool> lol;
 
 	std::cout << '\n';
 }
