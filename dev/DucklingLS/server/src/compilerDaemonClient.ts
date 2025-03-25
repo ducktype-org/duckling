@@ -192,6 +192,17 @@ export class CompilerDaemonClient {
 		const offset: string = (_textDocumentPosition.position.character).toString();
 		const response = await fetch(`${DAEMON_ADRESS}/get_definition/${base64FilePath}/${line}/${offset}`);
 
+
+		//
+		//
+		// 
+		// What we want from the daemon is a json array of locations
+		// The locations are then converted to Location objects
+		// For the exact format, see jsonResponse.map below
+		//
+		//
+		//
+
 		// Print the response status and headers
 		console.log(`Response status: ${response.status}`);
 		const headers: { [key: string]: string } = {};
