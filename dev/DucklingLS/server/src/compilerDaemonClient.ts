@@ -1,6 +1,7 @@
 import { spawn, ChildProcess } from "child_process";
 import { DucklingParserError, toErrors } from "./errors";
 import { Connection, CompletionItem, TextDocumentPositionParams } from "vscode-languageserver";
+import { Location } from "vscode-languageserver/node";
 
 // For the compiler daemon client to work, daemon's binary should be in DucklingLS/bin/ directory
 const BINARY_PATH = __dirname + "/../../bin/";
@@ -182,6 +183,47 @@ export class CompilerDaemonClient {
 		const response = fetch(`${DAEMON_ADRESS}/get_completion_items/${base64FilePath}/${line}/${offset}`);
 
 		return [];
+	}
+
+	public async getDefinition(_textDocumentPosition: TextDocumentPositionParams, connection: Connection): Promise<Location | Location[] | null> {
+		await this.waitForReady(connection);
+		const base64FilePath: string = Buffer.from(uriToFilePath(_textDocumentPosition.textDocument.uri)).toString('base64');
+		const line: string = (_textDocumentPosition.position.line).toString();
+		const offset: string = (_textDocumentPosition.position.character).toString();
+		const response = await fetch(`${DAEMON_ADRESS}/get_definition/${base64FilePath}/${line}/${offset}`);
+
+		// Print the response status and headers
+		console.log(`Response status: ${response.status}`);
+		const headers: { [key: string]: string } = {};
+		response.headers.forEach((value, key) => {
+			headers[key] = value;
+		});
+		console.log(`Response headers: ${JSON.stringify(headers)}`);
+
+		if (!response.ok) {
+			console.log("Response not ok!!!!!!!");
+			throw new Error(`Error: ${response.status} ${response.statusText}`);
+		}
+
+		const jsonResponse = await response.json();
+		console.log(`get_definition response: ${JSON.stringify(jsonResponse)}\n`);
+
+		// Assuming the response is a JSON array of Token elements
+		const definitions: Location[] = jsonResponse.map((definition: any) => ({
+			uri: definition.uri,
+			range: {
+				start: {
+					line: definition.range.start.line,
+					character: definition.range.start.character
+				},
+				end: {
+					line: definition.range.end.line,
+					character: definition.range.end.character
+				}
+			}
+		}));
+
+		return definitions;
 	}
 }
 

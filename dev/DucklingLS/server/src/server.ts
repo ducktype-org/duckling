@@ -11,7 +11,10 @@ import {
 	FoldingRangeParams,
 	FoldingRange,
 	TextDocumentPositionParams,
-	CompletionItem
+	CompletionItem,
+	Location,
+	_,
+	_Connection
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -21,6 +24,7 @@ import { validateDuckling } from "./validation";
 import { CompilerDaemonClient } from "./compilerDaemonClient";
 import { handleFoldingRanges } from './foldingRanges';
 import { handleCompletion } from './completion';
+import { handleDefinition } from './goToDefinition';
 
 // Create a connection between the client and the server
 const connection = createConnection(ProposedFeatures.all);
@@ -69,6 +73,7 @@ connection.onInitialize((params: InitializeParams) => {
 				full: true,
 			},
 			foldingRangeProvider: true,
+			definitionProvider: true,
 		}
 	};
 
@@ -100,6 +105,12 @@ connection.onInitialized(() => {
 // Register the handler for semantic tokens
 connection.onRequest("textDocument/semanticTokens/full", (params) => 
 	handleSemanticTokensFull(params, documents, compilerDaemonClient, connection)
+);
+
+connection.onDefinition(
+	async (params: TextDocumentPositionParams): Promise<Location | Location[] | null> => {
+        return await handleDefinition(params, documents, compilerDaemonClient, connection);
+    }
 );
 
 // The example settings
