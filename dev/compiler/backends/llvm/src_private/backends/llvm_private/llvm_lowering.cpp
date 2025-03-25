@@ -16,6 +16,7 @@ LLVM_INCLUDE_END()
 
 #include <backends/llvm/llvm_backend.hpp>
 #include "module_impl.hpp"
+#include "get_parameter_types.hpp"
 
 #include <typesystem/lower/type_layout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -117,18 +118,9 @@ namespace compiler::backend_llvm {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
 		for (const auto& param: parameters)
-			llvm_parameters.push_back(typeFromLayout(context, *param));
+			llvm_parameters.push_back(typeFromLayout(context, param));
 
 		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
-	}
-
-	/**
-	 * Helper function to get parameter types from symbol ID.
-	 * ... TODO this PR
-	 */
-	std::vector<tsl::TypeLayout> getParameterTypeFromSymID(query::Context& ctx, helios::SymID helios_symbol) {
-		auto type = ctx.query<helios::QueryTypeOfSymbol>(helios_symbol).;
-		auto function_type = tsh::Function
 	}
 
 	/**
