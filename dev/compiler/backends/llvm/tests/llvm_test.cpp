@@ -34,7 +34,7 @@ private:
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));
-			llvm_module.addFunctionToModule(lir_fun);
+			llvm_module.addFunctionToModule(ctx, lir_fun);
 
 			// debug print for coverage only:
 			llvm_module.debugPrint();

@@ -55,7 +55,10 @@ int main(int argc, const char* argv[]) {
 		std::cerr << "\n\n\n";
 
 		auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
-		llvm_module.addFunctionToModule(lir_fun);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			llvm_module.addFunctionToModule(ctx, lir_fun);
+		});
 		bool v = llvm_module.verify();
 
 		if (v)

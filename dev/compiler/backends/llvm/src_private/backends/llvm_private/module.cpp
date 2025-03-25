@@ -18,8 +18,8 @@ namespace base::extend {
 namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
-	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
-		addFunctionToModuleImpl(impl.refMut(), lir_function);
+	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
+		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
 	bool Module::verify() const {

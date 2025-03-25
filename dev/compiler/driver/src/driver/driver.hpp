@@ -51,7 +51,7 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compile(const BackendModuleData& module_data) = 0;
+		virtual void compile(query::Context& ctx, const BackendModuleData& module_data) = 0;
 
 		virtual ~BackendDriver() = default;
 	};
@@ -60,14 +60,14 @@ namespace compiler::driver {
 	public:
 		LLVMBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(const BackendModuleData& module_data) override;
+		void compile(query::Context& ctx, const BackendModuleData& module_data) override;
 	};
 
 	class DuckBCBackendDriver final: public BackendDriver {
 	public:
 		DuckBCBackendDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compile(const BackendModuleData&) override {
+		void compile(query::Context&, const BackendModuleData&) override {
 			throw base::NotYetImplemented("compilation for BC driver");
 		}
 	};

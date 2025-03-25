@@ -132,19 +132,20 @@ namespace compiler::backend_llvm {
 	 * we will lower it to llvm all at once.
 	 * @note It detects if function are "the same" based on mangled name only.
 	 */
-	auto addOrInsertFunctionPrototype(
-		Ref<llvm::Module> module, base::StrID name, const std::vector<tsl::TypeLayout>& parameters,
-		 const tsl::TypeLayout& return_type
+	auto addOrInsertFunctionPrototypeFromLirFunction(
+		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		auto& context = module->getContext();
-		return module->getOrInsertFunction(name.strView(), getFunType(context,parameters, return_type));
+					// @TODO: work here on mangled name instead #510
+
+		return module->getOrInsertFunction(lir_function.name.strView(), getFunType(context,lir_function.parameter_layouts, lir_function.return_type_layout));
 	}
 
 	auto addOrInsertFunctionPrototypeFromSymID(
-		Ref<llvm::Module> module, helios::SymID sym_id
+		query::Context& ctx,  Ref<llvm::Module> module,  helios::SymID sym_id
 	) {
 		auto& context = module->getContext();
-		auto types = getParameterAndResultFromSymID(context, sym_id);
+		auto types = getParameterAndResultFromSymID(ctx, sym_id);
 		auto name = compiler::helios::name(sym_id);
 		return module->getOrInsertFunction(name.strView(), getFunType(context, types.parameters, types.result_type));
 	}
@@ -157,13 +158,15 @@ namespace compiler::backend_llvm {
 	 */
 	struct LIR2LLVMFunction {
 		llvm::LLVMContext&  context;
+		query::Context&     ctx;
 		CRef<lir::Function> lir_function;
 		Ref<llvm::Module>   module;
 
 		LIR2LLVMFunction(
-			llvm::LLVMContext& context, CRef<lir::Function> lir_function, Ref<llvm::Module> module
+			llvm::LLVMContext& context,  query::Context&     ctx, CRef<lir::Function> lir_function, Ref<llvm::Module> module
 		):
 			  context(context),
+			  ctx(ctx), 
 			  lir_function(lir_function),
 			  module(module) {}
 
@@ -356,16 +359,12 @@ namespace compiler::backend_llvm {
 
 				const auto output = lir_instruction.output.value();
 
-				// @TODO Here we will have to handle mangled names instead #510
 				const auto callee_helios_id
 					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-				const auto mangled_name = compiler::helios::name(callee_helios_id);
 
 				// I'm not sure if this is the efficient way to do it, but for now it is
 				// simple enough and works without some additional mechanism in the pipeline:
-				// note: lir_instruction.output->layout here is sketchy, but it should work for now
-				// since it is LIR, where types are very explicit.
-				auto callee = addOrInsertFunctionPrototypeFromSymID(module, mangled_name, output->layout);
+				auto callee = addOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
 
 				const auto args = lirValueList2LLVM(
 					std::vector(
@@ -392,11 +391,9 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			// @TODO: work here on mangled name instead #510
 			auto fun = llvm::dyn_cast<llvm::Function>(
-				addOrInsertFunctionPrototype(
-					module, lir_function->name, lir_function->return_type_layout
-				)
+				addOrInsertFunctionPrototypeFromLirFunction(
+					module, *lir_function				)
 					.getCallee()
 			);
 
@@ -410,7 +407,7 @@ namespace compiler::backend_llvm {
 				lir2LLVMInstruction(block->terminator, builder);
 			}
 
-			EliminateUnreachableBlocks(*fun);
+			llvm::EliminateUnreachableBlocks(*fun);
 
 			return fun;
 		}
@@ -424,8 +421,8 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
-		LIR2LLVMFunction lir2llvm{ getLLVMContext(), lir_function, module->module.refMut() };
+	void addFunctionToModuleImpl(query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
 	}
 }

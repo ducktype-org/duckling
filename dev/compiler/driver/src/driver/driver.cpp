@@ -5,6 +5,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <backends/llvm/llvm_backend.hpp>
 
 #include "driver.hpp"
@@ -22,9 +23,10 @@ namespace compiler::driver {
 		}
 	}
 
-	void LLVMBackendDriver::compile(const BackendModuleData& lir_module) {
+	void LLVMBackendDriver::compile(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
-		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
+
+		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(ctx, lir_function);
 
 		if (not mod.verify()) CORE_PANIC("LLVM module verification failed");
 
@@ -72,6 +74,8 @@ namespace compiler::driver {
 
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
-		backend_driver->compile(module_data);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			backend_driver->compile(ctx, module_data);
+		});
 	}
 }
