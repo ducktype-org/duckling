@@ -372,10 +372,16 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
+				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				std::vector<tsl::TypeLayout> parameter_types;
+				parameter_types.reserve(key.function->parameter_types.size());
+				for (const auto& param: key.function->parameter_types)
+				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
 				return Function{
 					.name = key.function->name,
-					.return_type_layout
-					= ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type),
+					.return_type_layout = return_type,
+					.parameter_layouts = std::move(parameter_types),
 					.blocks      = std::move(blocks),
 					.local_list  = std::move(locals),
 					.block_order = std::move(block_order),

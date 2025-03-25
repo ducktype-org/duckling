@@ -18,6 +18,7 @@ namespace compiler::mir {
 	Function::Function(
 		base::StrID                  name,
 		tsh::SymbolType<>            return_type,
+		std::vector<tsh::SymbolType<>> parameter_types,
 		std::vector<Block>           blocks,
 		base::StableVector<MirLocal> local_list,
 		BlockID                      entry_block,
@@ -26,6 +27,7 @@ namespace compiler::mir {
 	):
 		  name(name),
 		  return_type(return_type),
+		  parameter_types(std::move(parameter_types)),
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
 		  entry_block(entry_block),
@@ -254,19 +256,20 @@ namespace compiler::mir {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 
 			std::vector<Block> blocks;
+			blocks.reserve(this->blocks.size());
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			const auto function_return_type
+			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
 					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
 						  ->expect("Handling errors in HOUT is not supported yet")
 				)
-			          .getType()
-			          .getResultType();
+			          .getType();
 
 			return Function{
-				name.value(),          function_return_type,         std::move(blocks),
+				name.value(),          function_type.getResultType(), function_type.getParameterTypes(),
+				        std::move(blocks),
 				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
 				helios_symbol,
 			};
