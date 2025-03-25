@@ -222,6 +222,9 @@ namespace compiler::backend_llvm {
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
+				if_opt_some (var->parameter_index, parameter_index) {
+					locals_builder.CreateStore( fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg);
+				}
 				local_register_map.put(var.ref(), reg);
 			}
 
