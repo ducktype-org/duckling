@@ -185,13 +185,11 @@ export class CompilerDaemonClient {
 		return [];
 	}
 
-	public async getDefinition(_textDocumentPosition: TextDocumentPositionParams, connection: Connection): Promise<Location | Location[] | null> {
+	public async getDefinition(_textDocumentPosition: TextDocumentPositionParams, offset: number, connection: Connection): Promise<Location | Location[] | null> {
 		await this.waitForReady(connection);
 		const base64FilePath: string = Buffer.from(uriToFilePath(_textDocumentPosition.textDocument.uri)).toString('base64');
-		const line: string = (_textDocumentPosition.position.line).toString();
-		const offset: string = (_textDocumentPosition.position.character).toString();
-		const response = await fetch(`${DAEMON_ADRESS}/get_definition/${base64FilePath}/${line}/${offset}`);
-
+		const response = await fetch(`${DAEMON_ADRESS}/get_definitions/${base64FilePath}/${offset.toString()}`);
+		
 
 		//
 		//
@@ -218,8 +216,9 @@ export class CompilerDaemonClient {
 
 		const jsonResponse = await response.json();
 		console.log(`get_definition response: ${JSON.stringify(jsonResponse)}\n`);
+		
+		// Ther response MUST be a JSON object by now, otherwise the request will fail
 
-		// Assuming the response is a JSON array of Token elements
 		const definitions: Location[] = jsonResponse.map((definition: any) => ({
 			uri: definition.uri,
 			range: {

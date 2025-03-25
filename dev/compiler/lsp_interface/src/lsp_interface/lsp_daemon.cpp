@@ -187,6 +187,39 @@ void server(i32 port) {
 		}
 	});
 
+	/**
+	 * @brief Route to generate semantic tokens for a file under the given path in the virtual file
+	 * system.
+	 * * URL: /get_semantic_tokens/[base64 relative path]
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @return crow::response The HTTP response containing the semantic tokens in JSON format.
+	 */
+	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
+	([&files](const std::string& base64_path, const uint& offset) {
+		try {
+			const auto  path   		= base64::decode_into<std::string>(base64_path);
+			const auto& file   		= files.at(path);
+			auto        tokens 		= lexer::tokenizeFile(file);
+			pst::PST<>  pst(std::move(tokens));
+
+			if (pst.getLogger().bad()) {
+				std::stringstream ss;
+				pst.getLogger().dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
+			auto pst_element = pst.getRootElement();
+			//
+			//
+			// Here we need to figure out what to do
+			//
+			//
+			return crow::response(200, "");
+		} catch (std::exception& e) {
+			std::string error_msg = e.what();
+			return crow::response(400, error_msg);
+		}
+	});
+
 	app.port(base::safeIntConv<u16>(port)).run();
 }
 
