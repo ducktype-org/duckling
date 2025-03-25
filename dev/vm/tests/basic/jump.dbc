@@ -10,13 +10,13 @@ function main {
 		# [0, 8) main ret_val
 		init_type 	int64; # [8, 16)
 
-		mov_l32_imm 0, 5;
+		mov_l32_imm 8, 5;
 
         jmpRel_label end;
 
-		output_l32 	8;
-
         label end;
+
+		output_l32 	8;
 
 		deinit;
 		ret;

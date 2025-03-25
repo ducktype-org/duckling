@@ -15,7 +15,7 @@ public:
 	}
 
 private:
-	void jump() { runTestOnVm("jump.dbc", "", "0"); }
+	void jump() { runTestOnVm("jump.dbc", "", "5"); }
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0"); }
 

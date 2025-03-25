@@ -9,4 +9,9 @@ namespace vm::code {
 	 * text representation.
 	 */
 	void serialize(const CodeFile& file, std::ostream& out);
+
+	/**
+	 * @todo Remove
+	 */
+	void serialize(const Function& func, std::ostream& out);
 }

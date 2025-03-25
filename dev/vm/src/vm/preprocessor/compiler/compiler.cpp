@@ -4,6 +4,7 @@
 #include "base/string_id.hpp"
 #include "base/variant.hpp"
 #include "diagnostic/logger.hpp"
+#include "vm/code/serializer/serializer.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include "vm/core/thread/low_program/opcodes.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
@@ -22,7 +23,7 @@ namespace vm {
 		struct CompContext {
 			const Program&                                    program;
 			PreprocessorLogger&                               log;
-			base::Optional<const code::Function&>             func;
+			base::Optional<code::Function>                    func;
 			base::Optional<base::HashMap<base::StrID, usize>> label_positions;
 		};
 
@@ -95,7 +96,7 @@ namespace vm {
 					variant_default { new_func.body.push_back(instr); }
 				}
 			}
-			ctx.func            = new_func;
+			ctx.func            = std::move(new_func);
 			ctx.label_positions = std::move(label_positions);
 		}
 
@@ -147,6 +148,7 @@ namespace vm {
 		for (auto& func: program.funcMap()) {
 			ctx.func = func;
 			splitCodeAndLabels(ctx);
+			code::serialize(ctx.func.value(), std::cout);
 			auto converted_func = changeFuncToFuncData(ctx);
 			converted_functions.push_back(converted_func);
 		}

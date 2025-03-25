@@ -134,7 +134,7 @@ namespace vm::code {
 	};
 
 	class TypeSerializer {
-		std::ostream&                  out;
+		std::ostream&               out;
 		const vm::code::TypeOfData& type;
 
 	private:
@@ -176,12 +176,16 @@ namespace vm::code {
 		};
 
 	public:
-		TypeSerializer(std::ostream& out, const vm::code::TypeOfData& type):
-			  out(out),
-			  type(type) {}
+		TypeSerializer(std::ostream& out, const vm::code::TypeOfData& type): out(out), type(type) {}
 
 		void write() { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
+
+	void serialize(const Function& function, std::ostream& out) {
+		FunctionSerializer serializer(out, function);
+		serializer.write();
+		out << '\n';
+	}
 
 	void serialize(const CodeFile& file, std::ostream& out) {
 		for (const auto& type: file.types) {

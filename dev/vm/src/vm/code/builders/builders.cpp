@@ -54,7 +54,13 @@ vm::code::CodeFile vm::code::builders::CodeFileBuilder::build() const {
 }
 
 void vm::code::builders::FunctionBuilder::addInstruction(const Instruction& instruction) {
-	instructions.push_back(instruction);
+	variant_match(instruction) {
+		variant_case(vm::code::instructions::Op_init_type, instr) {
+			initType(instr.arg0.type_name);
+		}
+		variant_case(vm::code::instructions::Op_deinit, instr) { deinitType(); }
+		variant_default instructions.push_back(instruction);
+	}
 }
 
 vm::code::builders::FunctionBuilder::FunctionBuilder(
@@ -85,8 +91,8 @@ usize vm::code::builders::FunctionBuilder::initType(base::StrID tp) {
 	instructions.emplace_back(instructions::Op_init_type{ tp });
 
 	const vm::code::TypeOfData& vm_type   = available_types[tp];
-	const usize                    type_size = getTypeSize(vm_type);
-	usize                          offset    = 0;
+	const usize                 type_size = getTypeSize(vm_type);
+	usize                       offset    = 0;
 
 	if (!local_stack.empty()) {
 		const LocalStackEntry& prev_entry = local_stack.back();
@@ -114,7 +120,7 @@ void vm::code::builders::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg
 }
 
 void vm::code::builders::FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
-	for (auto&& instr: instruction.build()) this->instructions.push_back(instr);
+	for (auto&& instr: instruction.build()) this->addInstruction(instr);
 }
 
 vm::code::builders::InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }

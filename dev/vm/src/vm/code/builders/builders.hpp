@@ -107,9 +107,12 @@ namespace vm::code::builders {
 
 		const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types;
 
+		void handleJump(base::StrID label_name); // save stack size
+		void handleLabel(base::StrID label_name) // retrieve stack from jump
+
 	public:
 		FunctionBuilder(
-			base::StrID                                                name,
+			base::StrID                                             name,
 			const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types
 		);
 
