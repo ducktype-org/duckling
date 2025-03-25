@@ -42,21 +42,21 @@ namespace vm::low {
 	template<class Instr>
 	struct InstrToOpcodeFix8;
 
+	template<>
+	struct InstrToOpcodeFix8<program::instructions::Comment> {
+		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::Comment;
+	};
+
 #define HANDLE_OPCODE(opcode)                                         \
 	template<>                                                        \
 	struct InstrToOpcodeFix8<VM_INSTR_FROM_NAME(opcode)> {            \
 		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
 	};
 
-	template<>
-	struct InstrToOpcodeFix8<program::instructions::Comment> {
-		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::Comment;
-	};
-
 #include <vm/program/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 
-	u16 fix8FromInstr(const program::Instruction& instruction) {
+	constexpr u16 fix8FromInstr(const program::Instruction& instruction) {
 		return u16(
 			VISIT(instruction,
 		          var,

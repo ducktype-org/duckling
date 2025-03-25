@@ -9,7 +9,7 @@
 #include <type_traits>
 
 namespace base {
-	template<class T, class TID>
+	template<class T, class TID = usize>
 	requires std::is_constructible_v<usize, TID> && std::is_constructible_v<TID, usize>
 	class StableTypeIdNameMap {
 	public:
@@ -109,6 +109,10 @@ namespace base {
 		auto names() { return name_to_id | std::views::values; }
 
 		auto names() const { return name_to_id | std::views::values; }
+
+		T& operator[](TID id) { return values[static_cast<usize>(id)]; }
+
+		const T& operator[](TID id) const { return values[static_cast<usize>(id)]; }
 
 	private:
 		void createLink(TID id, base::StrID name) {

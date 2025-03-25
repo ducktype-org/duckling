@@ -63,23 +63,27 @@ namespace vm::parser {
 			return { parseStr(state) };
 		}
 
-		std::vector<OpCodeArgAndPosition> parseOpCode0Args(F8ParserState&) { return {}; }
+		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
 
 		template<IsOpCodeArg Arg0>
-		std::vector<OpCodeArgAndPosition> parseOpCode1Args(F8ParserState& state) {
-			auto pos0 = state.getPosition();
-			auto arg0 = parseArg<Arg0>(state);
-			return { { arg0, pos0 } };
+		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
+			auto pos0         = state.getPosition();
+			auto arg0         = parseArg<Arg0>(state);
+			arg0.bytecode_pos = pos0;
+
+			return { arg0 };
 		}
 
 		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
-		std::vector<OpCodeArgAndPosition> parseOpCode2Args(F8ParserState& state) {
-			auto pos0 = state.getPosition();
-			auto arg0 = parseArg<Arg0>(state);
+		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
+			auto pos0         = state.getPosition();
+			auto arg0         = parseArg<Arg0>(state);
+			arg0.bytecode_pos = pos0;
 			state.parse().one(lang_def::Special::Comma);
-			auto pos1 = state.getPosition();
-			auto arg1 = parseArg<Arg1>(state);
-			return { { arg0, pos0 }, { arg1, pos1 } };
+			auto pos1         = state.getPosition();
+			auto arg1         = parseArg<Arg1>(state);
+			arg1.bytecode_pos = pos1;
+			return { arg0, arg1 };
 		}
 
 #define MAKE_LINK(opcode, func) std::make_pair(std::string(#opcode), func),
@@ -442,7 +446,7 @@ namespace vm::parser {
 	void OpCode::dprint(std::ostream& out) const {
 		out << "        " << opcode_name.view().stringView() << " ";
 		for (auto& arg: args) {
-			variant_match(arg.arg) {
+			variant_match(arg) {
 				variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
 
 #define HANDLE_OFFSET(Type) \

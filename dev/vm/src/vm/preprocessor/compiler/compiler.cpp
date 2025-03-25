@@ -20,9 +20,8 @@
 namespace vm {
 	namespace {
 		struct CompContext {
-			const program::Program&                            program;
+			const Program&                                     program;
 			PreprocessorLogger&                                log;
-			OptPosMapCRef                                      pos_map;
 			base::Optional<const program::Function&>           func;
 			base::Optional<base::HashMap<base::StrID, usize>&> label_positions;
 		};
@@ -38,18 +37,18 @@ namespace vm {
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
-					auto type_obj = ctx.program.types.atMaybe(type_arg.type_name);
+					auto type_obj = ctx.program.getTypeMetadata().atMaybe(type_arg.type_name);
 					if (type_obj)
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-					ctx.log.log<vm::parser::UnknownType>(&opcode_arg, type_arg.type_name);
+					ctx.log.log<vm::parser::UnknownType>(type_arg, type_arg.type_name);
 					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					for (i64 i = 0; i < ctx.program.functions.size(); i++)
-						if (ctx.program.functions.at(base::safeIntConv<u64>(i))->name
+					for (i64 i = 0; i < ctx.program.funcMap().size(); i++)
+						if (ctx.program.funcMap().at(base::safeIntConv<u64>(i))->name
 						    == func.function_name)
 							return i;
-					ctx.log.log<vm::parser::UnknownFunction>(&opcode_arg, func.function_name);
+					ctx.log.log<vm::parser::UnknownFunction>(func, func.function_name);
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
@@ -61,7 +60,7 @@ namespace vm {
 						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
 						     - 1;
 					}
-					ctx.log.log<vm::parser::InvalidLabel>(&opcode_arg, "Label does not exist.");
+					ctx.log.log<vm::parser::InvalidLabel>(label, "Label does not exist.");
 					return 0;
 				}
 			}
@@ -108,17 +107,14 @@ namespace vm {
 		}
 	}
 
-	std::expected<low::LowVMProgram, PreprocessorLogger>
-		compiler::compile(const program::Program& program, OptPosMapCRef pos_map) {
+	std::expected<low::LowVMProgram, PreprocessorLogger> compiler::compile(const Program& program) {
 		std::vector<low::FuncData> converted_functions;
-		converted_functions.reserve(program.functions.size());
-		PreprocessorLogger log(pos_map);
+		converted_functions.reserve(program.funcMap().size());
+		PreprocessorLogger log;
 
-		auto ctx = CompContext{
-			.program = program, .log = log, .pos_map = pos_map, .func = {}, .label_positions = {}
-		};
+		auto ctx = CompContext{ .program = program, .log = log, .func = {}, .label_positions = {} };
 
-		for (auto& func: program.functions) {
+		for (auto& func: program.funcMap()) {
 			base::HashMap<base::StrID, usize> label_positions;
 			for (const auto& [idx, instr]: std::views::enumerate(func.body)) {
 				variant_match(instr) {
@@ -127,12 +123,12 @@ namespace vm {
 							= label_positions.insert_or_assign(label.arg0.label_name, idx);
 						if (!inserted) {
 							log.logMap<vm::parser::InvalidLabel>(
-								&label.arg0,
-								[&](auto& msg, auto& pos_map) {
+								label.arg0,
+								[&](auto& msg) {
 									for (auto&& lbl: label_positions)
 										if (lbl.first == label.arg0.label_name)
 											msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(
-												pos_map.at(&label)
+												VISIT(instr, in, return in.bytecode_pos.value())
 											));
 								},
 								"Repeated label."
@@ -148,7 +144,7 @@ namespace vm {
 			converted_functions.push_back(converted_func);
 		}
 
-		low::LowVMProgram low_program(converted_functions, program.types);
+		low::LowVMProgram low_program(converted_functions, program.getTypeMetadata());
 
 		return low_program;
 	}

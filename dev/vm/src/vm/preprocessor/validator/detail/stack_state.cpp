@@ -5,7 +5,7 @@
 
 bool vm::validator::StackState::consume(CRef<parser::OpCode> opcode) {
 	if (opcode->opcode_name == "init_type") {
-		variant_match(opcode->args.at(0).arg) {
+		variant_match(opcode->args.at(0)) {
 			variant_case(opargs::Type, tp) {
 				stack_state.push_back(type_metadata.atMaybe(tp.type_name).expect("Invalid type"));
 			}

@@ -7,6 +7,7 @@
 #include <diagnostic/logger.hpp>
 #include "base/optional.hpp"
 #include "errors.hpp"
+#include "vm/preprocessor/preprocessor.hpp"
 #include "vm/program/instructions.hpp"
 #include "vm/program/program.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
@@ -28,11 +29,7 @@ namespace vm::validator {
 		 */
 		class Validator {
 		public:
-			Validator(const program::Program& prog, base::Optional<const PosMap&> pos_map):
-				  program(prog),
-				  pos_map(pos_map) {
-				log = dia::Logger();
-			}
+			Validator(const Program& prog): program(prog) { log = dia::Logger(); }
 
 			/**
 			 * @brief Validates the program.
@@ -40,65 +37,48 @@ namespace vm::validator {
 			 *
 			 * @return base::Optional<std::string>
 			 */
-			std::expected<void, dia::Logger> validateProgram();
+			std::expected<void, PreprocessorLogger> validateProgram();
 
 		private:
-			const program::Program&       program;
-			base::Optional<const PosMap&> pos_map;
-			dia::Logger                   log;
-			bool                          good = false;
+			const Program&     program;
+			PreprocessorLogger log;
+			bool               good = false;
 
 			bool validateMainExistence();
 			bool validateTailcallSignatures();
 		};
 
-		std::expected<void, dia::Logger> Validator::validateProgram() {
+		std::expected<void, PreprocessorLogger> Validator::validateProgram() {
 			ADD_CHECK(validateMainExistence);
 			ADD_CHECK(validateTailcallSignatures);
 
-			if (!good || log.bad()) return std::unexpected(std::move(log));
+			if (!log.good()) return std::unexpected(std::move(log));
 
 			return {};
 		}
 
 		bool Validator::validateMainExistence() {
-			return program.functions.contains(base::StrID("main"));
+			return program.funcMap().contains(base::StrID("main"));
 		}
 
 		bool Validator::validateTailcallSignatures() {
-			for (const auto& func: program.functions | std::views::values) {
+			for (const auto& func: program.funcMap()) {
 				for (const auto& op: func.body) {
 					variant_match(op) {
 						variant_case(program::instructions::Op_ret_tailcall_func, op_tailcall) {
 							auto maybe_called_func
-								= program.functions.atMaybe(op_tailcall.arg0.function_name);
+								= program.funcMap().atMaybe(op_tailcall.arg0.function_name);
 							if_opt_some(maybe_called_func, called_func) {
-								match_optional(pos_map) {
-									opt_none return false;
-
-									opt_some(map) {
-										if (func.arg_size != called_func.arg_size) {
-											log.log(
-												makeBox<vm::validator::CallerCalledArgSizeMismatch>(
-													map.at(&op)
-												)
-											);
-										}
-										if (func.local_stack_size != called_func.local_stack_size) {
-											log.log(makeBox<
-													vm::validator::CallerCalledStackSizeMismatch>(
-												map.at(&op)
-											));
-										}
-										if (func.ret_size != called_func.ret_size) {
-											log.log(
-												makeBox<vm::validator::CallerCalledRetSizeMismatch>(
-													map.at(&op)
-												)
-											);
-										}
-									}
-								}
+								if (func.arg_size != called_func->arg_size)
+									log.log<vm::validator::CallerCalledArgSizeMismatch>(op_tailcall
+									);
+								if (func.local_stack_size != called_func->local_stack_size)
+									log.log<vm::validator::CallerCalledStackSizeMismatch>(
+										op_tailcall
+									);
+								if (func.ret_size != called_func->ret_size)
+									log.log<vm::validator::CallerCalledRetSizeMismatch>(op_tailcall
+									);
 							}
 						}
 					}
@@ -108,9 +88,8 @@ namespace vm::validator {
 		}
 	}
 
-	std::expected<void, dia::Logger>
-		verify(const program::Program& program, base::Optional<const PosMap&> pos_map) {
-		return Validator(program, pos_map).validateProgram();
+	std::expected<void, PreprocessorLogger> verify(const Program& program) {
+		return Validator(program).validateProgram();
 	}
 
 }

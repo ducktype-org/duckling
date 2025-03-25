@@ -13,6 +13,5 @@ namespace vm::validator {
 	 * @return base::Optional<std::string>
 	 */
 
-	std::expected<void, dia::Logger>
-		verify(const program::Program& program, base::Optional<const PosMap&> pos_map);
+	std::expected<void, PreprocessorLogger> verify(const Program& program);
 }

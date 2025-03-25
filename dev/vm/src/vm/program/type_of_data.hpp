@@ -1,10 +1,11 @@
 #pragma once
 
+#include "vm/program/element_base.hpp"
 #include <base/string_id.hpp>
 #include <ostream>
 
 namespace vm::program {
-	struct PrimitiveType {
+	struct PrimitiveType: ElementBase {
 		base::StrID name;
 		usize       size{};
 
@@ -16,7 +17,7 @@ namespace vm::program {
 		}
 	};
 
-	struct PointerType {
+	struct PointerType: ElementBase {
 		base::StrID name;
 		base::StrID inner;
 
@@ -28,7 +29,7 @@ namespace vm::program {
 		}
 	};
 
-	struct StaticTableType {
+	struct StaticTableType: ElementBase {
 		base::StrID name;
 		base::StrID inner;
 		usize       table_size;
@@ -42,7 +43,7 @@ namespace vm::program {
 		}
 	};
 
-	struct DynamicTableType {
+	struct DynamicTableType: ElementBase {
 		base::StrID name;
 		base::StrID inner;
 
@@ -54,12 +55,12 @@ namespace vm::program {
 		}
 	};
 
-	struct Field {
+	struct Field: ElementBase {
 		base::StrID name;
 		base::StrID type;
 	};
 
-	struct DataType {
+	struct DataType: ElementBase {
 		base::StrID        name;
 		std::vector<Field> fields;
 
@@ -74,7 +75,7 @@ namespace vm::program {
 		}
 	};
 
-	struct VariantType {
+	struct VariantType: ElementBase {
 		base::StrID              name;
 		std::vector<base::StrID> variant_alternatives;
 
@@ -88,7 +89,7 @@ namespace vm::program {
 		}
 	};
 
-	struct FunctionType {
+	struct FunctionType: ElementBase {
 		base::StrID              name;
 		std::vector<base::StrID> parameters;
 		base::StrID              result;

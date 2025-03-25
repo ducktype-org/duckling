@@ -4,6 +4,7 @@
 #include "base/stable_type_id_name_map.hpp"
 #include "instructions.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
+#include "vm/program/element_base.hpp"
 #include <base/string_id.hpp>
 
 namespace vm::program {
@@ -15,7 +16,7 @@ namespace vm::program {
 	/**
 	 * @brief Represents bytecode a function.
 	 */
-	struct Function {
+	struct Function: ElementBase {
 		base::StrID name;
 		usize       local_stack_size = 0;
 		usize       arg_size         = 0;
@@ -29,16 +30,8 @@ namespace vm::program {
 	 * @brief Represents a file. File may contain multiple
 	 * functions and type definitions.
 	 */
-	struct CodeFile {
+	struct CodeFile: ElementBase {
 		std::vector<TypeOfData> types;
 		std::vector<Function>   functions;
-	};
-
-	/**
-	 * @todo Hide this. This is temporarily exposed.
-	 */
-	struct Program {
-		base::StableTypeIdNameMap<Function, usize> functions{};
-		TypeMetadata                               types{};
 	};
 }

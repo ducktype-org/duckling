@@ -79,7 +79,7 @@ namespace vm::program::builders {
 				variant_case_novalue(StackLocalAny) out << "any";
 				variant_case_novalue(StackLocalPtr) out << "lptr";
 				variant_case_novalue(ArgsOffset) out << "arg64";
-				variant_case_novalue(Type) out << "type";
+				variant_case_novalue(opargs::Type) out << "type";
 				variant_case_novalue(FunctionName) out << "func";
 				variant_case_novalue(Label) out << "label";
 				variant_default CORE_PANIC("Unhandled arg type during opcode generation.");

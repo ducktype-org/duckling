@@ -30,10 +30,10 @@ namespace vm {
 		auto code_result = preprocessor.getProgram(path);
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(std::move(code_result.value()));
+			loaded_program.emplace(std::move(code_result).value());
 			return api::Response(api::response::Empty());
 		} else {
-			return cpp::failure(api::LoadProgramError{ code_result.error() });
+			return cpp::failure(api::LoadProgramError{ "Error in preprocessor" });
 		}
 	}
 
@@ -162,7 +162,8 @@ namespace vm {
 		cpp::result<api::Response, api::CoreOperationError> response;
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
-				auto res = loaded_program->typeAtMaybe(base::StrID(type_request.type_name.c_str()));
+				auto res
+					= loaded_program->types.atMaybe(base::StrID(type_request.type_name.c_str()));
 				match_optional(res) {
 					opt_some(value) { response = value; }
 					opt_none {

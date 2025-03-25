@@ -111,12 +111,12 @@ namespace vm {
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_base;
-		if (local_stack + main_func->stack_size > runtime_data.local_stack_end)
+		if (local_stack + main_func->local_stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
 		auto main_func_type
-			= executing_program->type_metadata->atMaybe(main_func->name).expect("Expected main!");
+			= executing_program->types.atMaybe(main_func->name).expect("Expected main!");
 		auto main_return_type
 			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
@@ -283,8 +283,7 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(executing_program->funcAt(base::StrID("main")).expect("Expected main!")
-			);
+			internalCallMain(executing_program->functions.at(base::StrID("main")));
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
@@ -344,7 +343,7 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->getNumberOfFunctions(); ++index) {
+				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{

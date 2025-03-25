@@ -1,6 +1,5 @@
 #include "type.hpp"
 #include <base/exceptions.hpp>
-#include "type_metadata.hpp"
 #include <vm/core/supervisor/supervisor.hpp>
 #include <base/variant.hpp>
 #include <base/defer.hpp>
@@ -30,7 +29,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ std::move(inner) };
+		kind      = kind::Pointer{ inner };
 	}
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
@@ -38,7 +37,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ std::move(inner), table_size };
+		kind      = kind::StaticTable{ .inner_type=inner, .size=table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -47,7 +46,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ std::move(inner) };
+		kind      = kind::DynamicTable{ inner };
 	}
 
 	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
@@ -59,7 +58,7 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ 0, sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset=0, .type=sub_type });
 		}
 		kind = data;
 	}
@@ -80,7 +79,7 @@ namespace vm {
 
 		size      = PointerSize;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ std::move(parameters), std::move(result) };
+		kind      = kind::Function{ .parameters=std::move(parameters), .result=result };
 	}
 
 	void Type::finalize() {
@@ -170,16 +169,16 @@ namespace vm {
 
 	// pointer, staticTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
-		auto getInnerType = [](const auto& t) { return t.inner_type; };
+		auto get_inner_type = [](const auto& t) { return t.inner_type; };
 
-		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) return (TypeCRef) pointerOption.value();
+		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
+		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
 
-		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value()) return (TypeCRef) staticTableOption.value();
+		auto static_table_option = get<kind::StaticTable>().map(get_inner_type);
+		if (static_table_option.has_value()) return (TypeCRef) static_table_option.value();
 
-		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value()) return (TypeCRef) dynamicTableOption.value();
+		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
+		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
 
 		return {};
 	}

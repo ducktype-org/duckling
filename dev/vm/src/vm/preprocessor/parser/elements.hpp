@@ -28,11 +28,6 @@ namespace vm::parser {
 		tpc::GenericAutomatic<F8ParserState> parse();
 	};
 
-	struct OpCodeArgAndPosition {
-		vm::opargs::OpCodeArg arg;
-		dia::SourcePosition   position;
-	};
-
 	struct AsmElement: tpc::Element {
 		Box<dia::SourcePosition> position;
 
@@ -56,7 +51,7 @@ namespace vm::parser {
 
 		base::StrID opcode_name;
 
-		std::vector<OpCodeArgAndPosition> args;
+		std::vector<opargs::OpCodeArg> args;
 
 		static MBox<OpCode> parse(F8ParserState& state);
 
