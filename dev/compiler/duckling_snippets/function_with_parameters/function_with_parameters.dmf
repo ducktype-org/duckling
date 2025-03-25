@@ -1,9 +1,15 @@
 
-fun goo(x: i64) -> i64 = {
-    var y: i64 = 2;
+fun inc(x: i64) -> i64 = {
+    return x + 1;
+}
+
+fun add(x: i64, y: i64) -> i64 = {
     return x + y;
 }
 
-fun foo() = {
-    goo(3);
+fun main() -> i64 = {
+    let seven: i64 = inc(inc(inc(4)));
+    return add(seven, 3);
 }
+
+
