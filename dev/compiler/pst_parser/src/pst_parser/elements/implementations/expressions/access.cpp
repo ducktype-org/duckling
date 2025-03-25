@@ -54,4 +54,8 @@ namespace pst::expr {
 	}
 
 	void Access::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }
+
+	base::StrID Access::getType() const { return type; }
+
+	const tpc::Identifier& Access::getName() const { return name; }
 }

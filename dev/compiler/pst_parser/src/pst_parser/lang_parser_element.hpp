@@ -22,6 +22,9 @@ namespace pst {
 
 	class PstVisitor;
 
+	template<typename Element>
+	class AccessLocked;
+
 	/**
 	 * @brief Base Element for all of the PST elements.
 	 */
@@ -174,9 +177,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto getParent() const {
-			return parent;
-		}
+		AccessLocked<LangElement> getParent() const;
 
 		/**
 		 * @brief Returns a string of element type.

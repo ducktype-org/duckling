@@ -24,12 +24,22 @@
 
 #include <token_parser_core/automatic.hpp>
 #include "lang_parser_element.hpp"
+#include "access.hpp"
 
 namespace pst {
 	using lang_def::Keyword;
 	using lang_def::NamedOperator;
 	using lang_def::Special;
 	using lexer::Operator;
+
+	/**
+	 * @brief Special null aware dprint that simplifies pst dprint functions. Shouldn't be used
+	 * outside of them.
+	 */
+	template<typename T>
+	void nullAwareDprint(const AccessInternal<T>& acc, std::ostream& out) {
+		tpc::nullAwareDprint(acc.internal(), out);
+	}
 
 	template<typename State>
 	class PSTAutomatic {
@@ -144,7 +154,27 @@ namespace pst {
 		 * @param result The place to store the parsed element.
 		 */
 		template<std::derived_from<LangElement> T>
+		void one(AccessInternal<T>* result, [[maybe_unused]] bool ignorable = false) {
+			with(result, T::parse);
+		}
+
+		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
+		template<std::derived_from<LangElement> T>
 		void one(base::Optional<MBox<T>>* result, [[maybe_unused]] bool ignorable = false) {
+			with(result, T::parse);
+		}
+
+		/**
+		 * @brief Parses an Element. Skips on success, logs error on failure.
+		 * @param result The place to store the parsed element.
+		 */
+		template<std::derived_from<LangElement> T>
+		void
+			one(base::Optional<AccessInternal<T>>* result,
+		        [[maybe_unused]] bool              ignorable = false) {
 			with(result, T::parse);
 		}
 
