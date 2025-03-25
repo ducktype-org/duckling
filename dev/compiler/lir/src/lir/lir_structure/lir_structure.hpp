@@ -3,6 +3,7 @@
 #include <typesystem/lower/type_layout.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <base/ok_bad.hpp>
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 
@@ -197,8 +198,8 @@ namespace compiler::lir {
 		// @TODO: is this name mangled somehow:?
 		base::StrID name;
 
-		// @TODO: Perhaps we want to store the whole type of the function here?
 		tsl::TypeLayout return_type_layout;
+		std::vector<tsl::TypeLayout> parameter_layouts;
 
 		base::StableVector<Block>    blocks;
 		base::StableVector<LirLocal> local_list;
@@ -213,8 +214,15 @@ namespace compiler::lir {
 		 * @return false
 		 */
 		[[nodiscard]]
-		bool validateBlockOrder() const;
+		base::OkBad validateBlockOrder() const;
 
+		/**
+		 * Checks if parameter types and parameter local variables are consistent,
+		 * And if parameters indexes are correct.
+		 */
+		[[nodiscard]]
+		base::OkBad validateParameters() const;
+		
 		void debugPrint(query::Context&, std::ostream& output) const;
 
 		/**

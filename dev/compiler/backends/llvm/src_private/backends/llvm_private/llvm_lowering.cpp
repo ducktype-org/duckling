@@ -140,6 +140,15 @@ namespace compiler::backend_llvm {
 		return module->getOrInsertFunction(name.strView(), getFunType(context,parameters, return_type));
 	}
 
+	auto addOrInsertFunctionPrototypeFromSymID(
+		Ref<llvm::Module> module, helios::SymID sym_id
+	) {
+		auto& context = module->getContext();
+		auto types = getParameterAndResultFromSymID(context, sym_id);
+		auto name = compiler::helios::name(sym_id);
+		return module->getOrInsertFunction(name.strView(), getFunType(context, types.parameters, types.result_type));
+	}
+
 	/**
 	 * @brief This struct should be treated as a function,
 	 * that takes LLVMContext, LIRFunction and LLVM Module,
@@ -356,7 +365,7 @@ namespace compiler::backend_llvm {
 				// simple enough and works without some additional mechanism in the pipeline:
 				// note: lir_instruction.output->layout here is sketchy, but it should work for now
 				// since it is LIR, where types are very explicit.
-				auto callee = addOrInsertFunctionPrototype(module, mangled_name, output->layout);
+				auto callee = addOrInsertFunctionPrototypeFromSymID(module, mangled_name, output->layout);
 
 				const auto args = lirValueList2LLVM(
 					std::vector(
@@ -384,7 +393,7 @@ namespace compiler::backend_llvm {
 		 */
 		llvm::Function* createFunction() {
 			// @TODO: work here on mangled name instead #510
-			llvm::Function* fun = llvm::dyn_cast<llvm::Function>(
+			auto fun = llvm::dyn_cast<llvm::Function>(
 				addOrInsertFunctionPrototype(
 					module, lir_function->name, lir_function->return_type_layout
 				)
