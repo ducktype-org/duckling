@@ -1,13 +1,13 @@
 #pragma once
 
-#include <vm/program/type_of_data.hpp>
+#include <vm/code/type_of_data.hpp>
 #include "base/stable_type_id_name_map.hpp"
 #include "instructions.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
-#include "vm/program/element_base.hpp"
+#include "vm/code/element_base.hpp"
 #include <base/string_id.hpp>
 
-namespace vm::program {
+namespace vm::code {
 	/**
 	 * @brief Represents a block of instructions.
 	 */

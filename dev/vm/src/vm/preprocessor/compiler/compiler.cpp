@@ -9,9 +9,9 @@
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/preprocessor/parser/errors.hpp"
 #include "vm/preprocessor/preprocessor.hpp"
-#include "vm/program/instructions.hpp"
-#include "vm/program/opcode_args.hpp"
-#include "vm/program/program.hpp"
+#include "vm/code/instructions.hpp"
+#include "vm/code/opcode_args.hpp"
+#include "vm/code/code.hpp"
 #include <expected>
 #include <ranges>
 #include <type_traits>
@@ -20,14 +20,14 @@
 namespace vm {
 	namespace {
 		struct CompContext {
-			const Program&                                     program;
-			PreprocessorLogger&                                log;
-			base::Optional<const program::Function&>           func;
-			base::Optional<base::HashMap<base::StrID, usize>&> label_positions;
+			const Program&                                    program;
+			PreprocessorLogger&                               log;
+			base::Optional<const code::Function&>             func;
+			base::Optional<base::HashMap<base::StrID, usize>> label_positions;
 		};
 
 		i64 getOpCodeArgValue(
-			CompContext& ctx, usize instruction_index, const vm::opargs::OpCodeArg& opcode_arg
+			const CompContext& ctx, usize instruction_index, const vm::opargs::OpCodeArg& opcode_arg
 		) {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
@@ -67,16 +67,46 @@ namespace vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::low::FuncData changeFuncToFuncData(CompContext& ctx) {
+		void splitCodeAndLabels(CompContext& ctx) {
+			code::Function new_func = ctx.func.value();
+			new_func.body.clear();
+			base::HashMap<base::StrID, usize> label_positions;
+			for (const auto& instr: ctx.func.value().body) {
+				variant_match(instr) {
+					variant_case(code::instructions::Comment, _);
+					variant_case(code::instructions::Op_label, label) {
+						auto [_, inserted] = label_positions.insert_or_assign(
+							label.arg0.label_name, new_func.body.size()
+						);
+						if (!inserted) {
+							ctx.log.logMap<vm::parser::InvalidLabel>(
+								label.arg0,
+								[&](auto& msg) {
+									for (auto&& lbl: label_positions)
+										if (lbl.first == label.arg0.label_name)
+											msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(
+												VISIT(instr, in, return in.bytecode_pos.value())
+											));
+								},
+								"Repeated label."
+							);
+						}
+					}
+					variant_default { new_func.body.push_back(instr); }
+				}
+			}
+			ctx.func            = new_func;
+			ctx.label_positions = std::move(label_positions);
+		}
+
+		vm::low::FuncData changeFuncToFuncData(const CompContext& ctx) {
 			vm::low::FuncData func_data;
 			func_data.name             = ctx.func->name;
 			func_data.arg_size         = ctx.func->arg_size;
 			func_data.local_stack_size = ctx.func->local_stack_size;
 			func_data.ret_size         = ctx.func->ret_size;
 
-			for (usize op_idx = 0; op_idx < ctx.func->body.size(); op_idx++) {
-				const auto& op = ctx.func->body[op_idx];
-				if (std::holds_alternative<program::instructions::Comment>(op)) continue;
+			for (const auto& [op_idx, op]: std::views::enumerate(ctx.func->body)) {
 				i64 arg_0 = 0;
 				i64 arg_1 = 0;
 				variant_match(op) {
@@ -91,7 +121,7 @@ namespace vm {
 		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
 		arg_1 = getOpCodeArgValue(ctx, op_idx, instr.arg1); \
 	}
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 				}
 
 				func_data.bc.emplace_back(vm::Fix8Instruction{
@@ -115,35 +145,13 @@ namespace vm {
 		auto ctx = CompContext{ .program = program, .log = log, .func = {}, .label_positions = {} };
 
 		for (auto& func: program.funcMap()) {
-			base::HashMap<base::StrID, usize> label_positions;
-			for (const auto& [idx, instr]: std::views::enumerate(func.body)) {
-				variant_match(instr) {
-					variant_case(program::instructions::Op_label, label) {
-						auto [_, inserted]
-							= label_positions.insert_or_assign(label.arg0.label_name, idx);
-						if (!inserted) {
-							log.logMap<vm::parser::InvalidLabel>(
-								label.arg0,
-								[&](auto& msg) {
-									for (auto&& lbl: label_positions)
-										if (lbl.first == label.arg0.label_name)
-											msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(
-												VISIT(instr, in, return in.bytecode_pos.value())
-											));
-								},
-								"Repeated label."
-							);
-						}
-					}
-				}
-			}
-
-			ctx.func            = func;
-			ctx.label_positions = label_positions;
+			ctx.func = func;
+			splitCodeAndLabels(ctx);
 			auto converted_func = changeFuncToFuncData(ctx);
 			converted_functions.push_back(converted_func);
 		}
 
+		if (log.bad()) return std::unexpected(std::move(log));
 		low::LowVMProgram low_program(converted_functions, program.getTypeMetadata());
 
 		return low_program;

@@ -1,11 +1,11 @@
 #include "builders.hpp"
-#include "vm/program/instructions.hpp"
+#include "vm/code/instructions.hpp"
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <base/ref.hpp>
-#include <vm/program/type_of_data.hpp>
+#include <vm/code/type_of_data.hpp>
 #include <ranges>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
@@ -15,7 +15,7 @@
 		);                                                                               \
 	}
 
-vm::program::Function vm::program::builders::FunctionBuilder::build() const {
+vm::code::Function vm::code::builders::FunctionBuilder::build() const {
 	Function function;
 	function.body = instructions;
 	function.name = name;
@@ -29,11 +29,11 @@ vm::program::Function vm::program::builders::FunctionBuilder::build() const {
 	return function;
 }
 
-void vm::program::builders::CodeFileBuilder::addFunction(const FunctionBuilder& function) {
+void vm::code::builders::CodeFileBuilder::addFunction(const FunctionBuilder& function) {
 	functions.push_back(function);
 }
 
-void vm::program::builders::CodeFileBuilder::addType(const vm::program::TypeOfData& type) {
+void vm::code::builders::CodeFileBuilder::addType(const vm::code::TypeOfData& type) {
 	if (type_map.atMaybe(typeName(type))) {
 		// Type already exists, check if it's the same and if true, skip
 	} else {
@@ -42,7 +42,7 @@ void vm::program::builders::CodeFileBuilder::addType(const vm::program::TypeOfDa
 	}
 }
 
-vm::program::CodeFile vm::program::builders::CodeFileBuilder::build() const {
+vm::code::CodeFile vm::code::builders::CodeFileBuilder::build() const {
 	auto file = CodeFile();
 	for (auto&& tp: types) file.types.push_back(*tp);
 	file.functions = std::ranges::to<std::vector<Function>>(
@@ -53,38 +53,38 @@ vm::program::CodeFile vm::program::builders::CodeFileBuilder::build() const {
 	return file;
 }
 
-void vm::program::builders::FunctionBuilder::addInstruction(const Instruction& instruction) {
+void vm::code::builders::FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-vm::program::builders::FunctionBuilder::FunctionBuilder(
-	base::StrID name, const base::HashMap<base::StrID, vm::program::TypeOfData>& available_types
+vm::code::builders::FunctionBuilder::FunctionBuilder(
+	base::StrID name, const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types
 ):
 	  name(name),
 	  available_types(available_types) {}
 
-const base::HashMap<base::StrID, vm::program::TypeOfData>&
-	vm::program::builders::CodeFileBuilder::getAvailableTypes() const {
+const base::HashMap<base::StrID, vm::code::TypeOfData>&
+	vm::code::builders::CodeFileBuilder::getAvailableTypes() const {
 	return type_map;
 }
 
-usize getTypeSize(const vm::program::TypeOfData& tp) {
+usize getTypeSize(const vm::code::TypeOfData& tp) {
 	variant_match(tp) {
-		variant_case(vm::program::PrimitiveType, primitive) return primitive.size;
-		NOIMPL_CASE(vm::program::PointerType, "get size of")
-		NOIMPL_CASE(vm::program::StaticTableType, "get size of")
-		NOIMPL_CASE(vm::program::DynamicTableType, "get size of")
-		NOIMPL_CASE(vm::program::DataType, "get size of")
-		NOIMPL_CASE(vm::program::VariantType, "get size of")
-		NOIMPL_CASE(vm::program::FunctionType, "get size of")
+		variant_case(vm::code::PrimitiveType, primitive) return primitive.size;
+		NOIMPL_CASE(vm::code::PointerType, "get size of")
+		NOIMPL_CASE(vm::code::StaticTableType, "get size of")
+		NOIMPL_CASE(vm::code::DynamicTableType, "get size of")
+		NOIMPL_CASE(vm::code::DataType, "get size of")
+		NOIMPL_CASE(vm::code::VariantType, "get size of")
+		NOIMPL_CASE(vm::code::FunctionType, "get size of")
 	}
 	CORE_UNREACHABLE();
 }
 
-usize vm::program::builders::FunctionBuilder::initType(base::StrID tp) {
+usize vm::code::builders::FunctionBuilder::initType(base::StrID tp) {
 	instructions.emplace_back(instructions::Op_init_type{ tp });
 
-	const vm::program::TypeOfData& vm_type   = available_types[tp];
+	const vm::code::TypeOfData& vm_type   = available_types[tp];
 	const usize                    type_size = getTypeSize(vm_type);
 	usize                          offset    = 0;
 
@@ -101,20 +101,20 @@ usize vm::program::builders::FunctionBuilder::initType(base::StrID tp) {
 	return offset;
 }
 
-void vm::program::builders::FunctionBuilder::deinitType() {
+void vm::code::builders::FunctionBuilder::deinitType() {
 	CORE_ASSERT(!local_stack.empty(), "Popping from empty variable stack");
 	instructions.emplace_back(instructions::Op_deinit{});
 	local_stack.pop_back();
 }
 
-usize vm::program::builders::FunctionBuilder::getLocalSize() const { return local_stack.size(); }
+usize vm::code::builders::FunctionBuilder::getLocalSize() const { return local_stack.size(); }
 
-void vm::program::builders::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) {
+void vm::code::builders::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) {
 	args.push_back(arg);
 }
 
-void vm::program::builders::FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
+void vm::code::builders::FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 	for (auto&& instr: instruction.build()) this->instructions.push_back(instr);
 }
 
-vm::program::builders::InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }
+vm::code::builders::InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }

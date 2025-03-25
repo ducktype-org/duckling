@@ -1,11 +1,11 @@
 #include "builders.hpp"
-#include "vm/program/utils.hpp"
+#include "vm/code/utils.hpp"
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <sstream>
 
-namespace vm::program::builders {
+namespace vm::code::builders {
 	namespace {
 		template<class T, class Arg0Tp, class Arg1Tp>
 		Instruction makeVmOpcode2Args(vm::opargs::OpCodeArg arg0, vm::opargs::OpCodeArg arg1) {
@@ -32,7 +32,8 @@ namespace vm::program::builders {
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map<std::string, Instruction (*)()> OPCODE_TO_0_ARGS_FACTORY = {
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
+
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -46,7 +47,8 @@ namespace vm::program::builders {
 
 		const std::unordered_map<std::string, Instruction (*)(vm::opargs::OpCodeArg)>
 			OPCODE_TO_1_ARGS_FACTORY = {
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
+
 			};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -60,7 +62,8 @@ namespace vm::program::builders {
 
 		const std::unordered_map<std::string, Instruction (*)(opargs::OpCodeArg, opargs::OpCodeArg)>
 			OPCODE_TO_2_ARGS_FACTORY = {
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
+
 			};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -94,15 +97,15 @@ namespace vm::program::builders {
 	}
 }
 
-void vm::program::builders::InstructionBuilder::setKind(OpKind kind) {
+void vm::code::builders::InstructionBuilder::setKind(OpKind kind) {
 	this->kind = kind;
 	kind_set   = true;
 }
 
-std::vector<vm::program::Instruction> vm::program::builders::InstructionBuilder::build() const {
+std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
 
-	std::deque<vm::program::Instruction> result;
+	std::deque<vm::code::Instruction> result;
 
 	std::deque new_args = args;
 
@@ -110,7 +113,7 @@ std::vector<vm::program::Instruction> vm::program::builders::InstructionBuilder:
 	if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul || kind == OpKind::div
 	    || kind == OpKind::mod) {
 		if (new_args.size() == 3) {
-			if (vm::program::utils::areArgsEqual(new_args[0], new_args[1])) {
+			if (vm::code::utils::areArgsEqual(new_args[0], new_args[1])) {
 				// This resolves e.g. `a = a + b;` by doing `a = b`
 				new_args.pop_front();
 			} else {

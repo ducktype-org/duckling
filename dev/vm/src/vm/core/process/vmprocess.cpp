@@ -1,4 +1,5 @@
 #include "vmprocess.hpp"
+#include <sstream>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/data/core_operation_error.hpp>
@@ -33,7 +34,10 @@ namespace vm {
 			loaded_program.emplace(std::move(code_result).value());
 			return api::Response(api::response::Empty());
 		} else {
-			return cpp::failure(api::LoadProgramError{ "Error in preprocessor" });
+			std::stringstream ss;
+			code_result.error().dump(ss);
+			std::cerr << ss.rdbuf() << "\n";
+			return cpp::failure(api::LoadProgramError{ "Error in preprocessor: " + ss.str() });
 		}
 	}
 

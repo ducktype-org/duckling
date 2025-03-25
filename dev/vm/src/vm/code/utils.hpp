@@ -1,9 +1,9 @@
 #pragma once
 
 #include "instructions.hpp"
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 
-namespace vm::program::utils {
+namespace vm::code::utils {
 	/**
 	 * @brief Tests whether two opcode arguments are equal.
 	 */

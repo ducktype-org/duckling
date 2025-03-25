@@ -1,9 +1,9 @@
 #pragma once
 
 #include <iostream>
-#include <vm/program/program.hpp>
+#include <vm/code/code.hpp>
 
-namespace vm::program {
+namespace vm::code {
 	/**
 	 * @brief Serializes bytecode CodeFile object into a parse-able by the DVM
 	 * text representation.

@@ -3,13 +3,13 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 #include <expected>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include "base/optional.hpp"
 #include "errors.hpp"
 #include "vm/preprocessor/preprocessor.hpp"
-#include "vm/program/instructions.hpp"
-#include "vm/program/program.hpp"
+#include "vm/code/instructions.hpp"
+#include "vm/code/code.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 
@@ -65,7 +65,7 @@ namespace vm::validator {
 			for (const auto& func: program.funcMap()) {
 				for (const auto& op: func.body) {
 					variant_match(op) {
-						variant_case(program::instructions::Op_ret_tailcall_func, op_tailcall) {
+						variant_case(code::instructions::Op_ret_tailcall_func, op_tailcall) {
 							auto maybe_called_func
 								= program.funcMap().atMaybe(op_tailcall.arg0.function_name);
 							if_opt_some(maybe_called_func, called_func) {

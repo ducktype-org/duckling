@@ -1,12 +1,12 @@
 #include "serializer.hpp"
-#include <vm/program/program.hpp>
+#include <vm/code/code.hpp>
 #include <iomanip>
 
 #include <base/int_conv.hpp>
 #include <base/for_each.hpp>
-#include <vm/program/type_of_data.hpp>
+#include <vm/code/type_of_data.hpp>
 
-namespace vm::program {
+namespace vm::code {
 	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
 
 #define OFFSET_TO_STRING(Tp) \
@@ -62,7 +62,8 @@ namespace vm::program {
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
+
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -134,7 +135,7 @@ namespace vm::program {
 
 	class TypeSerializer {
 		std::ostream&                  out;
-		const vm::program::TypeOfData& type;
+		const vm::code::TypeOfData& type;
 
 	private:
 		struct TypeSerializerVisitor {
@@ -175,7 +176,7 @@ namespace vm::program {
 		};
 
 	public:
-		TypeSerializer(std::ostream& out, const vm::program::TypeOfData& type):
+		TypeSerializer(std::ostream& out, const vm::code::TypeOfData& type):
 			  out(out),
 			  type(type) {}
 

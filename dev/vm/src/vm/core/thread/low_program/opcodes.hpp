@@ -6,7 +6,7 @@
 
 #include "base/exceptions.hpp"
 #include "base/variant.hpp"
-#include "vm/program/instructions.hpp"
+#include "vm/code/instructions.hpp"
 #include <base/ints.hpp>
 #include <type_traits>
 #include <unordered_map>
@@ -34,7 +34,8 @@
 namespace vm::low {
 	enum class OpcodeFix8 : u16 {
 #define HANDLE_OPCODE(opcode) opcode,
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
+
 #undef HANDLE_OPCODE
 		Comment
 	};
@@ -43,7 +44,7 @@ namespace vm::low {
 	struct InstrToOpcodeFix8;
 
 	template<>
-	struct InstrToOpcodeFix8<program::instructions::Comment> {
+	struct InstrToOpcodeFix8<code::instructions::Comment> {
 		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::Comment;
 	};
 
@@ -53,10 +54,10 @@ namespace vm::low {
 		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
 	};
 
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 
-	constexpr u16 fix8FromInstr(const program::Instruction& instruction) {
+	constexpr u16 fix8FromInstr(const code::Instruction& instruction) {
 		return u16(
 			VISIT(instruction,
 		          var,

@@ -1,11 +1,11 @@
 #include "utils.hpp"
 #include <base/for_each.hpp>
 #include <base/exceptions.hpp>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 
 #include <base/variant.hpp>
 
-bool vm::program::utils::areArgsEqual(
+bool vm::code::utils::areArgsEqual(
 	const vm::opargs::OpCodeArg& arg0, const vm::opargs::OpCodeArg& arg1
 ) {
 	using namespace vm::opargs;
@@ -37,18 +37,18 @@ namespace {
 
 	template<class T>
 	bool cmp1Args(const T& instr0, const T& instr1) {
-		return vm::program::utils::areArgsEqual(instr0.arg0, instr1.arg0);
+		return vm::code::utils::areArgsEqual(instr0.arg0, instr1.arg0);
 	}
 
 	template<class T>
 	bool cmp2Args(const T& instr0, const T& instr1) {
-		return vm::program::utils::areArgsEqual(instr0.arg0, instr1.arg0)
-		    && vm::program::utils::areArgsEqual(instr0.arg1, instr1.arg1);
+		return vm::code::utils::areArgsEqual(instr0.arg0, instr1.arg0)
+		    && vm::code::utils::areArgsEqual(instr0.arg1, instr1.arg1);
 	}
 
 }
 
-bool vm::program::utils::areInstrEqual(const Instruction& instr0, const Instruction& instr1) {
+bool vm::code::utils::areInstrEqual(const Instruction& instr0, const Instruction& instr1) {
 	if (instr0.index() != instr1.index()) return false;
 
 #define HANDLE_OPCODE_0ARGS(opcode)                                \
@@ -65,7 +65,7 @@ bool vm::program::utils::areInstrEqual(const Instruction& instr0, const Instruct
 	);
 
 	variant_match(instr0) {
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 	}
 
 #undef HANDLE_OPCODE_0ARGS

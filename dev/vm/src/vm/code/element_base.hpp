@@ -3,7 +3,7 @@
 #include <base/optional.hpp>
 #include <diagnostic/source_position.hpp>
 
-namespace vm::program {
+namespace vm::code {
 	struct ElementBase {
 		base::Optional<dia::SourcePosition> bytecode_pos = {};
 	};

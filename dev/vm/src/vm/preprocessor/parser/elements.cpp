@@ -4,7 +4,7 @@
 #include <base/for_each.hpp>
 #include "base/optional.hpp"
 #include "errors.hpp"
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 
 namespace vm::parser {
 	namespace opargs_parsers {
@@ -17,9 +17,9 @@ namespace vm::parser {
 				T      result = std::stoi(str, &pos);
 				// Check if the number was fully parsed
 				if (pos == str.length()) return result;
-			} catch (std::logic_error& e) {}
+			} catch (std::logic_error&) {}
 
-			state.log(makeBox<vm::parser::InvalidLiteral>(
+			state.log(makeBox<InvalidLiteral>(
 				token.getPosition(),
 				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
 			));
@@ -94,7 +94,7 @@ namespace vm::parser {
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -269,7 +269,7 @@ namespace vm::parser {
 	}
 
 	MBox<Type> Type::parse(F8ParserState& state) {
-		using namespace vm::program;
+		using namespace vm::code;
 
 		state.parse().one(lang_def::Keyword::BCType);
 
@@ -287,9 +287,9 @@ namespace vm::parser {
 			if (!value.isNumLiteral()) {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
-				out->datatype
-					= PrimitiveType{ .name = name,
-					                 .size = static_cast<usize>(strIDToNum(value.getValue())) };
+				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
 			}
 			break;
 		}
@@ -297,8 +297,11 @@ namespace vm::parser {
 			auto pointed_type = state.tokens().next();
 			if (!pointed_type.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
-			else
-				out->datatype = PointerType{ .name = name, .inner = pointed_type.getValue() };
+			else {
+				auto tp         = PointerType{ name, pointed_type.getValue() };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
+			}
 			break;
 		}
 		case lang_def::Keyword::BCStaticTable: {
@@ -310,11 +313,11 @@ namespace vm::parser {
 				if (!size.isNumLiteral()) {
 					state.err.failAndLog(state.getPosition(), "expected number");
 				} else {
-					out->datatype
-						= StaticTableType{ .name  = name,
-						                   .inner = type_name.getValue(),
-						                   .table_size
-						                   = static_cast<usize>(strIDToNum(size.getValue())) };
+					auto tp         = StaticTableType{ name,
+                                               type_name.getValue(),
+                                               static_cast<usize>(strIDToNum(size.getValue())) };
+					tp.bytecode_pos = *out->position;
+					out->datatype   = tp;
 				}
 			}
 			break;
@@ -323,8 +326,11 @@ namespace vm::parser {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
 				state.err.failAndLog(state.getPosition(), "expected identifier");
-			else
-				out->datatype = DynamicTableType{ .name = name, .inner = type_name.getValue() };
+			else {
+				auto tp         = DynamicTableType{ name, type_name.getValue() };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
+			}
 			break;
 		}
 		case lang_def::Keyword::BCData: {
@@ -339,7 +345,9 @@ namespace vm::parser {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;
 				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				fields.emplace_back(Field{ .name = field_name.value, .type = field_type.value });
+				fields.emplace_back(field_name.value, field_type.value);
+				fields.back().bytecode_pos = field_name.position;
+
 
 				if (state.empty()) break;
 
@@ -351,7 +359,9 @@ namespace vm::parser {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = DataType{ .name = name, .fields = fields };
+			auto tp         = DataType{ name, fields };
+			tp.bytecode_pos = *out->position;
+			out->datatype   = tp;
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
@@ -376,7 +386,9 @@ namespace vm::parser {
 				}
 			}
 			state.goUpAndSkip();
-			out->datatype = VariantType{ .name = name, .variant_alternatives = alternatives };
+			auto tp         = VariantType{ name, alternatives };
+			tp.bytecode_pos = *out->position;
+			out->datatype   = tp;
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
@@ -403,7 +415,9 @@ namespace vm::parser {
 			state.goUpAndSkip();
 			tpc::Identifier result;
 			state.parse().one(&result);
-			out->datatype = FunctionType{ .name = name, .parameters = arguments, .result = result };
+			auto tp         = FunctionType{ name, arguments, result };
+			tp.bytecode_pos = *out->position;
+			out->datatype   = tp;
 			break;
 		}
 		default: {

@@ -145,8 +145,9 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/program/opcodes_list.hpp>
-	#undef HANDLE_OPCODE
+	#include <vm/code/opcodes_list.hpp>
+
+#undef HANDLE_OPCODE
 			};
 
 		goto* opcode_label[static_cast<u64>(instr->opcode)];
@@ -161,8 +162,9 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/program/opcodes_list.hpp>
-	#undef HANDLE_OPCODE
+	#include <vm/code/opcodes_list.hpp>
+
+#undef HANDLE_OPCODE
 
 	End:
 
@@ -180,7 +182,7 @@ namespace vm {
 			break;                                                          \
 		}                                                                   \
 	}
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/code/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {

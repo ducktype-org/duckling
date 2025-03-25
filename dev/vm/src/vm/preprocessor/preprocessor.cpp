@@ -10,7 +10,7 @@
 #include "base/string_id.hpp"
 #include "base/variant.hpp"
 #include "parser/parser.hpp"
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <expected>
 #include <vector>
@@ -18,11 +18,11 @@
 #include "parser/errors.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include "vm/preprocessor/validator/validator.hpp"
-#include "vm/program/builders/builders.hpp"
-#include "vm/program/instructions.hpp"
-#include "vm/program/program.hpp"
+#include "vm/code/builders/builders.hpp"
+#include "vm/code/instructions.hpp"
+#include "vm/code/code.hpp"
 #include "vm/preprocessor/compiler/compiler.hpp"
-#include "vm/program/type_of_data.hpp"
+#include "vm/code/type_of_data.hpp"
 
 std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	vm::Preprocessor::getProgram(const fs::FilePath& file) {
@@ -30,20 +30,20 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 }
 
 template<class Instruction>
-vm::program::Instruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
+vm::code::Instruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                          \
-	template<>                                                               \
-	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
-		CRef<vm::parser::OpCode> opcode                                      \
-	) {                                                                      \
-		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");     \
-		return VM_INSTR_FROM_NAME(opcode)();                                 \
+#define HANDLE_OPCODE_0ARGS(opcode)                                       \
+	template<>                                                            \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
+		CRef<vm::parser::OpCode> opcode                                   \
+	) {                                                                   \
+		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");  \
+		return VM_INSTR_FROM_NAME(opcode)();                              \
 	}
 
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                            \
 	template<>                                                                            \
-	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(              \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                 \
 		CRef<vm::parser::OpCode> opcode                                                   \
 	) {                                                                                   \
 		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                  \
@@ -55,7 +55,7 @@ vm::program::Instruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
 
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                 \
 	template<>                                                                            \
-	vm::program::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(              \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                 \
 		CRef<vm::parser::OpCode> opcode                                                   \
 	) {                                                                                   \
 		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");                  \
@@ -67,37 +67,36 @@ vm::program::Instruction getInstructionImpl(CRef<vm::parser::OpCode> opcode);
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                   \
 	}
 
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_2ARGS
 
 #define HANDLE_OPCODE(opcode) \
-	std::make_pair(base::StrID(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
+	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 std::unordered_map instr_to_factory{
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 };
 
 #undef HANDLE_OPCODE
 
-vm::program::Instruction translateInstruction(CRef<vm::parser::OpCode> opcode) {
-	return instr_to_factory.at(opcode->opcode_name)(opcode);
+vm::code::Instruction translateInstruction(CRef<vm::parser::OpCode> opcode) {
+	return instr_to_factory.at(opcode->opcode_name.str())(opcode);
 }
 
 void vm::Program::insertTypesAndFunctions(
-	const std::vector<vm::program::CodeFile>& code_files, vm::PreprocessorLogger& logger
+	const std::vector<code::CodeFile>& code_files, PreprocessorLogger& logger
 ) {
-	std::vector<CRef<vm::program::TypeOfData>> good_types;
+	std::vector<CRef<code::TypeOfData>> good_types;
 	for (const auto& code_file: code_files) {
 		for (const auto& type: code_file.types) {
 			base::StrID name = VISIT(type, value, return value.name);
-			auto        base
-				= VISIT(type, value, return static_cast<const vm::program::ElementBase&>(value));
+			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
 			if (types.atMaybe(name).has_value()) {
-				logger.logMap<vm::parser::DuplicatedTypeError>(base, [&](auto& msg) {
-					for (CRef<vm::program::TypeOfData> duplicated_type: good_types) {
+				logger.logMap<parser::DuplicatedTypeError>(base, [&](auto& msg) {
+					for (CRef<vm::code::TypeOfData> duplicated_type: good_types) {
 						base::StrID other_name = VISIT(*duplicated_type, value, return value.name);
 						if (name == other_name) {
 							msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(
@@ -107,26 +106,23 @@ void vm::Program::insertTypesAndFunctions(
 					}
 				});
 			} else {
-				vm::Type new_type = vm::Type::declareType(name);
+				Type new_type = Type::declareType(name);
 				types.addType(std::move(new_type));
 				meta_types.insert(type, name);
 			}
+		}
 
-			for (auto& func: code_file.functions) {
-				auto func_name = func.name;
-				if (functions.contains(func_name)) {
-					logger.logMap<vm::parser::DuplicateFunctionDefinitionError>(
-						func,
-						[&](auto& msg) {
-							auto dup_func = functions.at(func_name);
-							msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
-								dup_func->bytecode_pos.value()
-							));
-						}
-					);
-				} else {
-					functions.insert(func, func_name);
-				}
+		for (auto& func: code_file.functions) {
+			auto func_name = func.name;
+			if (functions.contains(func_name)) {
+				logger.logMap<vm::parser::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
+					auto dup_func = functions.at(func_name);
+					msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
+						dup_func->bytecode_pos.value()
+					));
+				});
+			} else {
+				functions.insert(func, func_name);
 			}
 		}
 	}
@@ -135,33 +131,33 @@ void vm::Program::insertTypesAndFunctions(
 void vm::Program::defineTypes() {
 	for (const auto& type: meta_types) {
 		variant_match(type) {
-			variant_case(vm::program::PrimitiveType, data) {
+			variant_case(vm::code::PrimitiveType, data) {
 				types.at(data.name)->definePrimitive(data.size);
 			}
-			variant_case(vm::program::PointerType, data) {
+			variant_case(vm::code::PointerType, data) {
 				types.at(data.name)->definePointer(types.at(data.inner));
 			}
-			variant_case(vm::program::StaticTableType, data) {
+			variant_case(vm::code::StaticTableType, data) {
 				types.at(data.name)->defineStaticTable(types.at(data.inner), data.table_size);
 			}
-			variant_case(vm::program::DynamicTableType, data) {
+			variant_case(vm::code::DynamicTableType, data) {
 				types.at(data.name)->defineDynamicTable(types.at(data.inner));
 			}
-			variant_case(vm::program::DataType, data) {
+			variant_case(vm::code::DataType, data) {
 				std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
 					fields.emplace_back(field.name, types.at(field.type));
 				types.at(data.name)->defineData(fields);
 			}
-			variant_case(vm::program::VariantType, data) {
+			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(types.at(variant));
 				types.at(data.name)->defineVariant(variants);
 			}
-			variant_case(vm::program::FunctionType, data) {
+			variant_case(vm::code::FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
 				for (auto& param: data.parameters) parameters.emplace_back(types.at(param));
@@ -174,7 +170,7 @@ void vm::Program::defineTypes() {
 }
 
 std::expected<vm::Program, vm::PreprocessorLogger>
-	vm::Program::from(const std::vector<vm::program::CodeFile>& code_files) {
+	vm::Program::from(const std::vector<vm::code::CodeFile>& code_files) {
 	vm::Program            program;
 	vm::PreprocessorLogger log;
 
@@ -189,13 +185,13 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			std::vector<program::CodeFile> code_files;
+			std::vector<code::CodeFile> code_files;
 			for (const auto& parsed_file: parsed_files) {
-				program::builders::CodeFileBuilder file_builder;
+				code::builders::CodeFileBuilder file_builder;
 				for (const auto& tp: parsed_file.types) file_builder.addType(tp->datatype);
 
 				for (const auto& func: parsed_file.functions) {
-					program::builders::FunctionBuilder func_builder(
+					code::builders::FunctionBuilder func_builder(
 						func->name, file_builder.getAvailableTypes()
 					);
 					for (const auto& instr: func->code->opcodes)
@@ -205,43 +201,6 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 				}
 
 				code_files.emplace_back(file_builder.build());
-
-				// Generate source positions
-				// 				for (const auto& [parsed_type, program_type]:
-				// 				     std::views::zip(parsed_file.types, code_files.back().types)) {
-				// 					pos_map.put(&program_type, parsed_type->position);
-				// 				}
-
-				// 				for (const auto& [parsed_func, func]:
-				// 				     std::views::zip(parsed_file.functions,
-				// code_files.back().functions)) { 					pos_map.put(&func,
-				// parsed_func->position);
-
-				// 					for (const auto& [parsed_instr, instr]:
-				// 					     std::views::zip(parsed_func->code->opcodes, func.body)) {
-				// 						pos_map.put(&VISIT(instr, in, return &in),
-				// parsed_instr->position);
-
-				// 						variant_match(instr) {
-				// #define HANDLE_OPCODE_0ARGS(opcode)
-
-				// #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                    \
-// 	variant_case(VM_INSTR_FROM_NAME(opcode), op) {                \
-// 		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
-// 	}
-				// #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)         \
-// 	variant_case(VM_INSTR_FROM_NAME(opcode), op) {                \
-// 		pos_map.put(&op.arg0, parsed_instr->args.at(0).position); \
-// 		pos_map.put(&op.arg1, parsed_instr->args.at(1).position); \
-// 	}
-				// #include <vm/program/opcodes_list.hpp>
-
-				// #undef HANDLE_OPCODE_0ARGS
-				// #undef HANDLE_OPCODE_1ARGS
-				// #undef HANDLE_OPCODE_2ARGS
-				// 						}
-				// 					}
-				// 				}
 			}
 			return getProgram(code_files);
 		}
@@ -252,7 +211,7 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 vm::Preprocessor::Preprocessor(bool validate_program): validate_program(validate_program) {}
 
 std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
-	vm::Preprocessor::getProgram(const std::vector<program::CodeFile>& code_files) {
+	vm::Preprocessor::getProgram(const std::vector<code::CodeFile>& code_files) {
 	std::expected<Program, PreprocessorLogger> opt_program = Program::from(code_files);
 	if (opt_program.has_value()) {
 		Program program = std::move(opt_program).value();
@@ -267,7 +226,7 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	}
 }
 
-const base::StableTypeIdNameMap<vm::program::Function> vm::Program::funcMap() const {
+const base::StableTypeIdNameMap<vm::code::Function> vm::Program::funcMap() const {
 	return functions;
 }
 

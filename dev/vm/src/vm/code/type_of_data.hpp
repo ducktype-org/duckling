@@ -1,11 +1,14 @@
 #pragma once
 
-#include "vm/program/element_base.hpp"
+#include "vm/code/element_base.hpp"
 #include <base/string_id.hpp>
 #include <ostream>
 
-namespace vm::program {
+namespace vm::code {
 	struct PrimitiveType: ElementBase {
+		PrimitiveType() = default;
+		PrimitiveType(const base::StrID name, const usize size): name(name), size(size) {}
+
 		base::StrID name;
 		usize       size{};
 
@@ -18,6 +21,9 @@ namespace vm::program {
 	};
 
 	struct PointerType: ElementBase {
+		PointerType() = default;
+		PointerType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
+
 		base::StrID name;
 		base::StrID inner;
 
@@ -30,9 +36,15 @@ namespace vm::program {
 	};
 
 	struct StaticTableType: ElementBase {
+		StaticTableType() = default;
+		StaticTableType(base::StrID name, base::StrID inner, usize table_size):
+			  name(name),
+			  inner(inner),
+			  table_size(table_size) {}
+
 		base::StrID name;
 		base::StrID inner;
-		usize       table_size;
+		usize       table_size{};
 
 		void dprint(std::ostream& out) const {
 			out << "static_table {\n";
@@ -44,6 +56,9 @@ namespace vm::program {
 	};
 
 	struct DynamicTableType: ElementBase {
+		DynamicTableType() = default;
+		DynamicTableType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
+
 		base::StrID name;
 		base::StrID inner;
 
@@ -56,11 +71,19 @@ namespace vm::program {
 	};
 
 	struct Field: ElementBase {
+		Field() = default;
+		Field(base::StrID name, base::StrID type): name(name), type(type) {}
+
 		base::StrID name;
 		base::StrID type;
 	};
 
 	struct DataType: ElementBase {
+		DataType() = default;
+		DataType(base::StrID name, std::vector<Field> fields):
+			  name(name),
+			  fields(std::move(fields)) {}
+
 		base::StrID        name;
 		std::vector<Field> fields;
 
@@ -76,6 +99,11 @@ namespace vm::program {
 	};
 
 	struct VariantType: ElementBase {
+		VariantType() = default;
+		VariantType(base::StrID name, std::vector<base::StrID> variant_alternatives):
+			  name(name),
+			  variant_alternatives(std::move(variant_alternatives)) {}
+
 		base::StrID              name;
 		std::vector<base::StrID> variant_alternatives;
 
@@ -90,6 +118,11 @@ namespace vm::program {
 	};
 
 	struct FunctionType: ElementBase {
+		FunctionType(base::StrID name, std::vector<base::StrID> parameters, base::StrID result):
+			  name(name),
+			  parameters(std::move(parameters)),
+			  result(result) {}
+
 		base::StrID              name;
 		std::vector<base::StrID> parameters;
 		base::StrID              result;

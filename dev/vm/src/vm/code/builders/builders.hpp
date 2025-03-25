@@ -2,20 +2,20 @@
 
 #include <base/ref.hpp>
 #include <deque>
-#include <vm/program/type_of_data.hpp>
+#include <vm/code/type_of_data.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <base/stringifyable_enum.hpp>
 #include "../instructions.hpp"
 #include <cstdint>
-#include <vm/program/program.hpp>
+#include <vm/code/code.hpp>
 
 
 // Disable liting, because of invalid naming convention.
 // NOLINTBEGIN
 // clang-format off
-MAKE_STRINGIFYABLE_ENUM(vm::program::builders, std::uint8_t, OpKind,
+MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	init,
 	deinit,
 	mov,
@@ -51,7 +51,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::program::builders, std::uint8_t, OpKind,
 // clang-format on
 // NOLINTEND
 
-namespace vm::program::builders {
+namespace vm::code::builders {
 
 	/**
 	 * @brief Helper to compose bytecode instructions.
@@ -105,12 +105,12 @@ namespace vm::program::builders {
 		usize max_stack_size = 0;
 		usize ret_size       = 0;
 
-		const base::HashMap<base::StrID, vm::program::TypeOfData>& available_types;
+		const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types;
 
 	public:
 		FunctionBuilder(
 			base::StrID                                                name,
-			const base::HashMap<base::StrID, vm::program::TypeOfData>& available_types
+			const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types
 		);
 
 		usize               initType(base::StrID tp);
@@ -129,17 +129,17 @@ namespace vm::program::builders {
 	class CodeFileBuilder {
 		std::vector<FunctionBuilder> functions{};
 
-		std::vector<CRef<vm::program::TypeOfData>>          types{};
-		base::HashMap<base::StrID, vm::program::TypeOfData> type_map{};
+		std::vector<CRef<vm::code::TypeOfData>>          types{};
+		base::HashMap<base::StrID, vm::code::TypeOfData> type_map{};
 
 	public:
 		CodeFileBuilder() = default;
 
 		void addFunction(const FunctionBuilder& function);
 
-		void addType(const vm::program::TypeOfData& type);
+		void addType(const vm::code::TypeOfData& type);
 
-		const base::HashMap<base::StrID, vm::program::TypeOfData>& getAvailableTypes() const;
+		const base::HashMap<base::StrID, vm::code::TypeOfData>& getAvailableTypes() const;
 
 		[[nodiscard]] CodeFile build() const;
 	};

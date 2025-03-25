@@ -5,13 +5,13 @@
 #pragma once
 
 #include <variant>
-#include <vm/program/opcode_args.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <base/box.hpp>
 #include "element_base.hpp"
 
-#define VM_INSTR_FROM_NAME(opcode) vm::program::instructions::Op_##opcode
+#define VM_INSTR_FROM_NAME(opcode) vm::code::instructions::Op_##opcode
 
-namespace vm::program {
+namespace vm::code {
 	namespace instructions {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	struct Op_##opcode: ElementBase {};
@@ -27,7 +27,7 @@ namespace vm::program {
 		arg1_type arg1;                                                        \
 	};
 
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -49,7 +49,7 @@ namespace vm::program {
 
 	using Instruction = std::variant<
 #define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
-#include <vm/program/opcodes_list.hpp>
+#include <vm/code/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		instructions::Comment>;
 

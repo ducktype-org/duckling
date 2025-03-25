@@ -1,0 +1,24 @@
+type primitive: int64 8
+type fun: main {} int64
+
+function main {
+	arg_size: 0;
+	local_size: 4;
+	ret_size: 8;
+
+	code: {
+		# [0, 8) main ret_val
+		init_type 	int64; # [8, 16)
+
+		mov_l32_imm 0, 5;
+
+        jmpRel_label end;
+
+		output_l32 	8;
+
+        label end;
+
+		deinit;
+		ret;
+	}
+}

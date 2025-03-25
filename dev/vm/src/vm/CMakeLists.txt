@@ -1,5 +1,5 @@
 add_subdirectory(api)
-add_subdirectory(program)
+add_subdirectory(code)
 add_subdirectory(core)
 add_subdirectory(events)
 add_subdirectory(preprocessor)
