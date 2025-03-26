@@ -9,10 +9,10 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
 
 	void basicTest() {
-        static_assert(sizeof(base::OkBad) == sizeof(bool), "OkBad should be the same size as bool");
+		static_assert(sizeof(base::OkBad) == sizeof(bool), "OkBad should be the same size as bool");
 
-        ASSERT_TRUE(base::OK.isOk());
-        ASSERT_TRUE(base::BAD.isBad());
+		ASSERT_TRUE(base::OK.isOk());
+		ASSERT_TRUE(base::BAD.isBad());
 	}
 };
 

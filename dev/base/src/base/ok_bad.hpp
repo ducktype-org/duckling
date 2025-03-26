@@ -20,7 +20,7 @@ namespace base {
 			return not isOk();
 		}
 	};
-	
+
 	constexpr OkBad OK  = OkBad{ OkBad::OkBadEnum::Ok };
 	constexpr OkBad BAD = OkBad{ OkBad::OkBadEnum::Bad };
 }
