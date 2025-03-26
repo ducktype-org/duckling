@@ -22,7 +22,7 @@ public:
 
 private:
 	void multipleLabels() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"multiple_labels.dbc",
 			{
 				base::strConcat(vm::parser::InvalidLabel::ERR_MSG, "Repeated label"),
@@ -32,7 +32,7 @@ private:
 	}
 
 	void invalidOpcode() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"invalid_opcode.dbc",
 			{
 				base::strConcat(vm::parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
@@ -41,7 +41,7 @@ private:
 	}
 
 	void repeatedTypes() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"repeated_types.dbc",
 			{
 				vm::parser::DuplicatedTypeError::ERR_MSG,
@@ -51,7 +51,7 @@ private:
 	}
 
 	void noSemicolon() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"no_semicolon.dbc",
 			{
 				vm::parser::ExpectedSemicolonAfterError::ERR_MSG,
@@ -60,7 +60,7 @@ private:
 	}
 
 	void labelNotFound() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"label_not_found.dbc",
 			{
 				base::strConcat(vm::parser::InvalidLabel::ERR_MSG, "Label does not exist."),
@@ -69,7 +69,7 @@ private:
 	}
 
 	void unknownType() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"unknown_type.dbc",
 			{
 				base::strConcat(vm::parser::UnknownType::ERR_MSG, "in64"),
@@ -78,7 +78,7 @@ private:
 	}
 
 	void unknownFunction() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"unknown_function.dbc",
 			{
 				base::strConcat(vm::parser::UnknownFunction::ERR_MSG, "foo"),
@@ -87,7 +87,7 @@ private:
 	}
 
 	void invalidLiteral() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"invalid_literal.dbc",
 			{
 				base::strConcat(

@@ -19,7 +19,7 @@ public:
 
 private:
 	void noMain() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"wrong/functions/no_main.dbc",
 			{
 				vm::validator::NoMainError::ERR_MSG,
@@ -27,7 +27,7 @@ private:
 		);
 	}
 	void jumpBetween() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
 				vm::validator::JumpStackStructureMismatch::ERR_MSG,
@@ -35,7 +35,7 @@ private:
 		);
 	}
 	void jumpIntoBlock() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
 				vm::validator::JumpStackStructureMismatch::ERR_MSG,
@@ -43,7 +43,7 @@ private:
 		);
 	}
 	void jumpOutOfBlock() {
-		parseInvalidDbc(
+		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
 				vm::validator::JumpStackStructureMismatch::ERR_MSG,
