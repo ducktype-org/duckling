@@ -277,7 +277,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addLongName("dump-llvm-ir")
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 		             .build());
-		
+
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("compile-to-assembly")
 		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
