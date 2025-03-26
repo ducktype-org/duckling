@@ -21,6 +21,11 @@ namespace compiler::backend_llvm {
 	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
 		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
+	
+	Module Module::fromIRCode(std::string_view llvm_ir_code) {
+		return { parseIRCodeToModuleImpl(llvm_ir_code) };
+	}
+
 
 	bool Module::verify() const {
 		std::cerr << "LLVMVerification: \n";

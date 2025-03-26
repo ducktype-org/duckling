@@ -12,13 +12,13 @@
 #include <helios/hout/hout.hpp>
 
 namespace compiler::driver {
-	enum class BackendType : std::uint8_t { LLVM, DuckBC };
+	enum class BackendType : std::uint8_t { LLVM, DVM };
 
 	/**
 	 * @brief The last intermediate representation of the module before the backends.
 	 * It will be fed to the backends to generate the final output.
 	 */
-	struct BackendModuleData {
+	struct BackendModuleData final {
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
 	};
@@ -27,10 +27,13 @@ namespace compiler::driver {
 	 * @brief Compilation options.
 	 */
 	struct Options {
-		BackendType backend_type;
-		base::StrID output_file;
-		bool        compile_to_assembly;
-		bool        dump_llvm_ir;
+		BackendType              backend_type;
+		base::StrID              output_file;
+		bool                     compile_to_assembly;
+		bool                     dump_llvm_ir;
+		bool                     add_builtin_library;
+		std::vector<base::StrID> external_objects_files;
+		std::vector<base::StrID> external_libs;
 	};
 
 	/**
@@ -51,25 +54,11 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compile(query::Context& ctx, const BackendModuleData& module_data) = 0;
+		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
+
+		virtual void link() = 0;
 
 		virtual ~BackendDriver() = default;
-	};
-
-	class LLVMBackendDriver final: public BackendDriver {
-	public:
-		LLVMBackendDriver(CRef<Options> options): BackendDriver(options) {}
-
-		void compile(query::Context& ctx, const BackendModuleData& module_data) override;
-	};
-
-	class DuckBCBackendDriver final: public BackendDriver {
-	public:
-		DuckBCBackendDriver(CRef<Options> options): BackendDriver(options) {}
-
-		void compile(query::Context&, const BackendModuleData&) override {
-			throw base::NotYetImplemented("compilation for BC driver");
-		}
 	};
 
 	Box<BackendDriver> createBackendDriver(CRef<Options> options);
@@ -79,7 +68,9 @@ namespace compiler::driver {
 	 */
 	class Driver final {
 	public:
-		Driver(Options opts): options(opts), backend_driver(createBackendDriver(&options)) {}
+		Driver(Options opts):
+			  options(std::move(opts)),
+			  backend_driver(createBackendDriver(&options)) {}
 
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
 

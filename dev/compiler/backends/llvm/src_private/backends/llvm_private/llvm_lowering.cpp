@@ -11,6 +11,9 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/SourceMgr.h>
 
 LLVM_INCLUDE_END()
 
@@ -428,4 +431,21 @@ namespace compiler::backend_llvm {
 		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
 	}
+	
+	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
+		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
+		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
+		llvm::SMDiagnostic error;
+		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
+		if (!m) {
+			std::string              error_message;
+			llvm::raw_string_ostream error_stream(error_message);
+			error.print("LLVM IR parsing error", error_stream);
+			CORE_PANIC(error_message);
+		}
+
+		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
+		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
+
 }

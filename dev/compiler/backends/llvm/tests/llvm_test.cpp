@@ -1,3 +1,4 @@
+#include <base/exceptions.hpp>
 #include <tester/tester.hpp>
 
 #include <query_framework/utils/with_context_do.hpp>
@@ -18,6 +19,8 @@ public:
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(parseFromIRCodeTest);
+		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 	}
 
 private:
@@ -56,6 +59,32 @@ private:
 	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
 
 	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
+
+	void parseFromIRCodeTest() {
+		auto llvm_module = compiler::backend_llvm::Module::fromIRCode(
+			"define void @test() {\n"
+			"entry:\n"
+			"  ret void\n"
+			"}\n"
+		);
+		llvm_module.debugPrint();
+
+		assertTrue(llvm_module.verify(), "LLVM module verification failed");
+	}
+
+	void doesNotParseIncorrectIRCode() {
+		assertThrows<base::Panic>(
+			[&]() {
+				auto llvm_module = compiler::backend_llvm::Module::fromIRCode(
+					"define void @test() {\n"
+					"entry:\n"
+					"  re void\n"
+					"}\n"
+				);
+			},
+			"LLVM incorrect code didn't throw"
+		);
+	}
 };
 
 
