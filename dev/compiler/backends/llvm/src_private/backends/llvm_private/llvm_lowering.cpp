@@ -426,11 +426,6 @@ namespace compiler::backend_llvm {
 		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
-
-	void addFunctionToModuleImpl(query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
-		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
-		lir2llvm.createFunction();
-	}
 	
 	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
 		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
@@ -446,6 +441,11 @@ namespace compiler::backend_llvm {
 
 		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
 		return makeBox<ModuleImpl>(std::move(llvm_module));
+	}
+
+	void addFunctionToModuleImpl(query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		lir2llvm.createFunction();
 	}
 
 }
