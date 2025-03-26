@@ -209,9 +209,6 @@ namespace compiler::lir {
 		/**
 		 * @brief Checks if block order uniquely stores
 		 * all blocks.
-		 *
-		 * @return true
-		 * @return false
 		 */
 		[[nodiscard]]
 		base::OkBad validateBlockOrder() const;

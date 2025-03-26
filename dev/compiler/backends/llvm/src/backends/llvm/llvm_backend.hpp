@@ -4,6 +4,7 @@
 #include <base/box.hpp>
 #include <base/string_id.hpp>
 #include <query_framework/query_impl.hpp> // @TODO #404 relax it to just context
+#include <base/ok_bad.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
@@ -57,7 +58,7 @@ namespace compiler::backend_llvm {
 		void debugDumpToFile(base::StrID output_file) const;
 
 		[[nodiscard]]
-		bool verify() const;
+		base::OkBad verify() const;
 
 		/**
 		 * @brief Compile the module to binary object file or assembly file.
