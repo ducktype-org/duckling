@@ -285,7 +285,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("add-builtin-library")
-		             .addShortDesc("Links builtin library into final executable.")
+		             .addShortDesc("Links builtin library into the final executable.")
 		             .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
