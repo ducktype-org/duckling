@@ -273,6 +273,21 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("--dump-llvm-ir")
+		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
+		             .build());
+		
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("--compile-to-assembly")
+		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("--add-builtin-library")
+		             .addShortDesc("Links builtin library into final executable.")
+		             .build());
+
 		auto options = configureDuckMainWith(clap, command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
@@ -287,9 +302,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		driver::Driver driver{ driver::Options{
 			.backend_type = driver::BackendType::LLVM,
 			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly    = false,
-			.dump_llvm_ir           = false,
-			.add_builtin_library    = false,
+			.compile_to_assembly    = options.isFlag("--compile-to-assembly"),
+			.dump_llvm_ir           = options.isFlag("--dump-llvm-ir"),
+			.add_builtin_library    = options.isFlag("--add-builtin-library"),
 			.external_objects_files = {},
 			.external_libs          = {} } };
 
