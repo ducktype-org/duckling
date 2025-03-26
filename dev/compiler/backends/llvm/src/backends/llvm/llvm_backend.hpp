@@ -36,7 +36,7 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * @brief Creates a llvm module from llvm IR code given as a text input.
-		 * Throws an exception if the code is invalid.
+		 * Panics if the code is invalid.
 		 *
 		 * @return Module created by parsing the given IR code.
 		 */

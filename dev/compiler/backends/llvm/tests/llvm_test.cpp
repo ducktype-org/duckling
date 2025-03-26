@@ -20,7 +20,7 @@ public:
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
-		TESTER_ADD_TEST(doNotParsersIncorrectIRCode);
+		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 	}
 
 private:
@@ -72,7 +72,7 @@ private:
 		assertTrue(llvm_module.verify(), "LLVM module verification failed");
 	}
 
-	void doNotParsersIncorrectIRCode() {
+	void doesNotParseIncorrectIRCode() {
 		assertThrows<base::Panic>(
 			[&]() {
 				auto llvm_module = compiler::backend_llvm::Module::fromIRCode(
