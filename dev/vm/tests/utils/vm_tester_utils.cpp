@@ -27,7 +27,7 @@ void VmTestSuite::runTestOnVm(
 }
 
 /**
-	 * @brief Parses a syntactically incorrect file. Asserts that `error_keywords` are present in
+	 * @brief Parses a file containing a program which violates syntactic or static verification guidelines.
 	 * the error message.
 	 */
 void VmTestSuite::parseInvalidDbc(
