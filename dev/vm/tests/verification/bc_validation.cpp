@@ -15,6 +15,8 @@ public:
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
+		TESTER_ADD_TEST(jumpSkipBlock);
+		TESTER_ADD_TEST(manyJumps);
 	}
 
 private:
@@ -48,6 +50,16 @@ private:
 			{
 				vm::validator::JumpStackStructureMismatch::ERR_MSG,
 			}
+		);
+	}
+	void jumpSkipBlock() {
+		loadValidDbc(
+			"right/jump_skip_block.dbc"
+		);
+	}
+	void manyJumps() {
+		loadValidDbc(
+			"right/many_jumps.dbc"
 		);
 	}
 };
