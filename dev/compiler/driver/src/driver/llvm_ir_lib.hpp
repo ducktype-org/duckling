@@ -11,7 +11,7 @@ constexpr std::string_view LLVM_IR_LIB= R"-----(
 
 @.str = private unnamed_addr constant [4 x i8] c"%ld\00", align 1
 
-define dso_local noundef i64 @builtin_input_i64(i64 noundef %0) local_unnamed_addr #0  {
+define dso_local noundef i64 @builtin_output_i64(i64 noundef %0) local_unnamed_addr #0  {
   %2 = tail call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i64 noundef %0)
   %3 = sext i32 %2 to i64
   ret i64 %3
@@ -19,7 +19,7 @@ define dso_local noundef i64 @builtin_input_i64(i64 noundef %0) local_unnamed_ad
 
 declare  noundef i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr #1
 
-define dso_local i64 @builtin_output_i64() local_unnamed_addr #2  {
+define dso_local i64 @builtin_input_i64() local_unnamed_addr #2  {
   %1 = alloca i64, align 8
   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %1) #7
   store i64 0, ptr %1, align 8
