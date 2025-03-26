@@ -9,7 +9,7 @@ namespace compiler::driver {
 		backend_llvm::Module mod(lir_module.module_id);
 		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
 
-		if (not mod.verify()) CORE_PANIC("LLVM module verification failed");
+		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
 		if (options->dump_llvm_ir) {
 			base::StrID llvm_ir_path

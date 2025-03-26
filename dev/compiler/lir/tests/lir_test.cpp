@@ -71,7 +71,7 @@ private:
 				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 				assertTrue(
-					lir_func->validateBlockOrder(),
+					lir_func->validateBlockOrder().isOk(),
 					base::strConcat("Could not validate LIR function ", lir_func->name)
 				);
 				result.funcs.put(

@@ -26,11 +26,11 @@ namespace compiler::backend_llvm {
 		addFunctionToModuleImpl(impl.refMut(), lir_function);
 	}
 
-	bool Module::verify() const {
+	base::OkBad Module::verify() const {
 		std::cerr << "LLVMVerification: \n";
 		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
 		std::cerr << "\n";
-		return not error_found;
+		return error_found ? base::BAD : base::OK;
 	}
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
