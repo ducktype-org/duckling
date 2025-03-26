@@ -407,7 +407,7 @@ namespace compiler::lir {
 			auto fun = std::move(mir2lir).get();
 
 			// @opt: remove it in optimized, release builds
-			CORE_ASSERT(fun.validateBlockOrder(), "Invalid block order");
+			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
 
 			return fun;
 		}

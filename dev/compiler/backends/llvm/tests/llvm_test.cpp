@@ -43,7 +43,7 @@ private:
 			llvm_module.debugPrint();
 
 			// this is were the main part ot test is:
-			assertTrue(llvm_module.verify(), "LLVM module verification failed");
+			assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
 		});
 	}
 
@@ -69,7 +69,7 @@ private:
 		);
 		llvm_module.debugPrint();
 
-		assertTrue(llvm_module.verify(), "LLVM module verification failed");
+		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
 	}
 
 	void doesNotParseIncorrectIRCode() {
