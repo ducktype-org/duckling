@@ -1,4 +1,5 @@
 #include "validator.hpp"
+#include <algorithm>
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
@@ -6,6 +7,7 @@
 #include <vm/program/opcode_args.hpp>
 #include <diagnostic/logger.hpp>
 #include <base/string_id.hpp>
+#include "base/ints.hpp"
 #include "errors.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
@@ -119,7 +121,29 @@ namespace vm::validator {
 				std::vector<int>                id_stack;
 				base::HashMap<base::StrID, int> top_id_at_label;
 				id_stack.push_back(0);
-				for (const auto& op: func->code->opcodes) {
+				std::vector<std::pair<base::StrID, usize>> labels(func->code->label_position.begin(), func->code->label_position.end());
+				std::ranges::sort(labels, [](const auto &a, const auto &b) {
+				return a.second > b.second;
+				});
+				for (usize i = 0; i < func->code->opcodes.size();) {
+					auto& op = func->code->opcodes.at(i);
+					if (!labels.empty()) {	
+						if (labels.back().second == i) {
+							base::StrID label_name = labels.back().first;
+							if (top_id_at_label.contains(label_name)) {
+								if (top_id_at_label[label_name] != id_stack.back()) {
+									log.log(makeBox<vm::validator::JumpStackStructureMismatch>(
+										*op->position
+									));
+								}
+							} else {
+								top_id_at_label.put(label_name, id_stack.back());
+							}
+							labels.pop_back();
+							continue;
+						}
+					}
+
 					if (op->opcode_name.strView() == "init_type") {
 						id_stack.push_back(next_id);
 						next_id++;
@@ -128,8 +152,7 @@ namespace vm::validator {
 							id_stack.pop_back();
 						else
 							log.log(makeBox<vm::validator::InvalidDeinit>(*op->position));
-					} else if (op->opcode_name.strView() == "label"
-					           || op->opcode_name.strView() == "jmpRel_label"
+					} else if (op->opcode_name.strView() == "jmpRel_label"
 					           || op->opcode_name.strView() == "jmpRelIf_label"
 					           || op->opcode_name.strView() == "jmpRelNotIf_label") {
 						variant_match(op->args[0].arg) {
@@ -148,6 +171,7 @@ namespace vm::validator {
 							variant_default { CORE_PANIC("expected label name after jump opcode"); }
 						}
 					}
+					i++;
 				}
 			}
 		}
