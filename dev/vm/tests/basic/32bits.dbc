@@ -57,8 +57,6 @@ function foo {
 		add_l32_l32 		8, 4;
 		# b = 4
 		mov_l32_l32 		0, 8;
-		deinit; # b
-		deinit; # a
 		ret;
 		
 		label fail;

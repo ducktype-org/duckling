@@ -8,7 +8,9 @@
 #include <diagnostic/logger.hpp>
 #include <base/string_id.hpp>
 #include "base/ints.hpp"
+#include "base/maps.hpp"
 #include "errors.hpp"
+#include "vm/preprocessor/parser/type_of_data.hpp"
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 #include <sstream>
@@ -116,11 +118,26 @@ namespace vm::validator {
 		void Validator::validateDuplicateFunctionDeclarations() { return; }
 
 		void Validator::validateJumpStackStructure() {
+			base::HashMap<base::StrID, int> parameter_count_for_funcion;
+			for (const auto& type: program.types) {
+				variant_match(type->datatype) {
+					variant_case(parser::FunctionType, function_type) {
+						parameter_count_for_funcion.put(function_type.name, function_type.parameters.size());
+					}
+				}
+			}
 			for (const auto& func: program.functions) {
-				int                             next_id = 1;
+				int                             next_id = 0;
 				std::vector<int>                id_stack;
 				base::HashMap<base::StrID, int> top_id_at_label;
-				id_stack.push_back(0);
+				if (!parameter_count_for_funcion.contains(func->name.value)) {
+					// CORE_PANIC("No function type defined for a function");
+					continue;
+				}
+				for (usize i = 0; i < parameter_count_for_funcion.at(func->name.value) + 2; i++) {
+					id_stack.push_back(next_id);
+					next_id++;
+				}
 				std::vector<std::pair<base::StrID, usize>> labels(func->code->label_position.begin(), func->code->label_position.end());
 				std::ranges::sort(labels, [](const auto &a, const auto &b) {
 				return a.second > b.second;
@@ -152,6 +169,22 @@ namespace vm::validator {
 							id_stack.pop_back();
 						else
 							log.log(makeBox<vm::validator::InvalidDeinit>(*op->position));
+					} else if (op->opcode_name.strView() == "call_func") {
+						variant_match(op->args[0].arg) {
+							variant_case(opargs::FunctionName, function_name) {
+								if (!parameter_count_for_funcion.contains(function_name.function_name)) {
+									// CORE_PANIC("No function type defined for a function");
+									continue;
+								}
+								for (usize j = 0; j < parameter_count_for_funcion.at(function_name.function_name); j++) {
+									if (id_stack.size() >= 2)
+										id_stack.pop_back();
+									else
+										log.log(makeBox<vm::validator::InvalidDeinit>(*op->position));
+								}
+							}
+							variant_default { CORE_PANIC("expected function name after call_func opcode"); }
+						}
 					} else if (op->opcode_name.strView() == "jmpRel_label"
 					           || op->opcode_name.strView() == "jmpRelIf_label"
 					           || op->opcode_name.strView() == "jmpRelNotIf_label") {
