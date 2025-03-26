@@ -289,7 +289,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
 			.compile_to_assembly    = false,
 			.dump_llvm_ir           = true,
-			.add_builtin_library    = false,
+			.add_builtin_library    = true,
 			.external_objects_files = {},
 			.external_libs          = {} } };
 
