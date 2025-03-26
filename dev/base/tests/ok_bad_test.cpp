@@ -13,6 +13,9 @@ public:
 
 		ASSERT_TRUE(base::OK.isOk());
 		ASSERT_TRUE(base::BAD.isBad());
+
+		ASSERT_TRUE(not base::OK.isBad());
+		ASSERT_TRUE(not base::BAD.isOk());
 	}
 };
 
