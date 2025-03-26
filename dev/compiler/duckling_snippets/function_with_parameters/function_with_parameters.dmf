@@ -8,8 +8,10 @@ fun add(x: i64, y: i64) -> i64 = {
 }
 
 fun main() -> i64 = {
-    let seven: i64 = inc(inc(inc(4)));
-    return add(seven, 3);
+    # let seven: i64 = inc(inc(inc(4)));
+    # return add(seven, 3);
+    return builtin_input_i64();
 }
+
 
 
