@@ -56,9 +56,9 @@ int main(int argc, const char* argv[]) {
 
 		auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
 		llvm_module.addFunctionToModule(lir_fun);
-		bool v = llvm_module.verify();
+		auto v = llvm_module.verify();
 
-		if (v)
+		if (v.isOk())
 			std::cerr << "LLVM verification passed\n\n";
 		else
 			std::cerr << "LLVM verification failed\n\n";
