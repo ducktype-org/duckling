@@ -1,5 +1,7 @@
 #pragma once
 
+#include <base/variant.hpp>
+
 #include "declarations.hpp"
 #include "not_statements.hpp"
 
@@ -72,7 +74,7 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		tpc::Identifier kind;  ///< What is after the `.`
+		std::variant<tpc::Identifier, Keyword> kind;  ///< What is after the `.`
 
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
@@ -85,7 +87,14 @@ namespace pst {
 
 		[[nodiscard]]
 		base::StrID getName() const {
-			return kind.value;
+			using namespace tpc;
+			base::StrID res;
+			VARIANT_VISIT(
+				kind,
+				VISIT_CASE(Identifier, ident, res = base::StrID(ident))
+					VISIT_CASE(Keyword, key, res = keywordToStr(key))
+			);
+			return res;
 		}
 
 		[[nodiscard]]
@@ -117,6 +126,34 @@ namespace pst {
 		[[nodiscard]]
 		std::string elementType() const override {
 			return "Class Constructor";
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+
+	/**
+	 * @brief Class constructor element.
+	 */
+	class CopyConstructor final: public ClassSpecial {
+		AccessInternal<ParamList> params;
+		AccessInternal<InitList>  inits;
+		AccessInternal<CodeBlock> body;
+
+	public:
+		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
+		CLASS_STMT_PARSE(CopyConstructor);
+
+		~CopyConstructor() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Copy Constructor";
 		}
 
 		[[nodiscard]]

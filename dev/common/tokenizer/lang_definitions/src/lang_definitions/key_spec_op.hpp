@@ -127,6 +127,9 @@ namespace lang_def {
 
 		// General text prefix operators (Not doesn't count)
 		Ref,
+		Copy,
+		Move,
+		Refof,
 
 		// Class specific:
 		Public,
