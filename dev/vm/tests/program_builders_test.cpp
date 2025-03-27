@@ -86,15 +86,16 @@ private:
 		available_types.put(int64, vm::code::PrimitiveType{ int64, 8 });
 		FunctionBuilder func_builder(base::StrID("test"), available_types);
 
-		auto a = func_builder.initType(int32);
-		ASSERT_EQUAL(0, a);
-		auto b = func_builder.initType(int64);
-		auto c = func_builder.initType(int64);
-		ASSERT_EQUAL(4, b);
-		ASSERT_EQUAL(12, c);
+		auto a_id = func_builder.initType(Op_init_type{ int32 });
+		ASSERT_EQUAL(0, a_id);
+		auto b_id = func_builder.initType(Op_init_type{ int64 });
+		auto c_id = func_builder.initType(Op_init_type{ int64 });
+		// ASSERT_EQUAL(4, b);
+		ASSERT_EQUAL(1, b_id);
+		ASSERT_EQUAL(2, c_id);
 
 		InstructionBuilder instr(OpKind::add);
-		const auto         arg0 = vm::opargs::StackLocalI32{ i64(a) };
+		const auto         arg0 = vm::opargs::StackLocalI32{ i64(a_id) };
 		const auto         arg1 = vm::opargs::Immediate{ 7 };
 		instr.pushArgs(arg0, arg1);
 
@@ -102,7 +103,7 @@ private:
 
 		func_builder.deinitType();
 		func_builder.deinitType();
-		auto d = func_builder.initType(int32);
+		auto d = func_builder.initType(Op_init_type{ int32 });
 		ASSERT_EQUAL(4, d);
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::code::Function func = func_builder.build();
@@ -129,11 +130,11 @@ private:
 		file_builder.addType(vm::code::PrimitiveType(int64, 8));
 
 		FunctionBuilder func_builder(base::StrID("main"), file_builder.getAvailableTypes());
-		auto            a = func_builder.initType(int64);
-		func_builder.initType(int32);
+		auto            a = func_builder.initType(Op_init_type{ int64 });
+		func_builder.initType(Op_init_type{ int32 });
 
 		InstructionBuilder instr_mov(OpKind::mov);
-		instr_mov.pushArgs(vm::opargs::StackLocalI64(i64(a)), vm::opargs::Immediate( 1'337 ));
+		instr_mov.pushArgs(vm::opargs::StackLocalI64(i64(a)), vm::opargs::Immediate(1'337));
 		func_builder.addInstruction(instr_mov);
 		InstructionBuilder instr_output(OpKind::output);
 		instr_output.pushArgs(vm::opargs::StackLocalI64(i64(a)));

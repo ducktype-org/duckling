@@ -25,13 +25,4 @@ namespace vm::code {
 
 		CodeBlock body;
 	};
-
-	/**
-	 * @brief Represents a file. File may contain multiple
-	 * functions and type definitions.
-	 */
-	struct CodeFile: ElementBase {
-		std::vector<TypeOfData> types;
-		std::vector<Function>   functions;
-	};
 }

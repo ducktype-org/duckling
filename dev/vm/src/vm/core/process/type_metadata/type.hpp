@@ -17,7 +17,7 @@ namespace vm {
 
 	class Type {
 	public:
-		constexpr static TypeSize PointerSize = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
 
 		enum class Kind {
 			None,
@@ -38,7 +38,7 @@ namespace vm {
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
-		TypeID      id;
+		TypeID      id{};
 
 		std::variant<
 			std::monostate,

@@ -27,7 +27,7 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::Pointer;
 		kind      = kind::Pointer{ inner };
 	}
@@ -44,7 +44,7 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::DynamicTable;
 		kind      = kind::DynamicTable{ inner };
 	}
@@ -77,7 +77,7 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters=std::move(parameters), .result=result };
 	}

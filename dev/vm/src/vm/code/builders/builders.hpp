@@ -2,6 +2,7 @@
 
 #include <base/ref.hpp>
 #include <deque>
+#include <utility>
 #include <vm/code/type_of_data.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
@@ -10,6 +11,10 @@
 #include "../instructions.hpp"
 #include <cstdint>
 #include <vm/code/code.hpp>
+#include "base/stable_type_id_name_map.hpp"
+#include "base/strongly_typed_id.hpp"
+#include "errors.hpp"
+#include "vm/core/process/type_metadata/type_metadata.hpp"
 
 
 // Disable liting, because of invalid naming convention.
@@ -53,6 +58,32 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 
 namespace vm::code::builders {
 
+	namespace types_context_state {
+		struct AddingTypes {};
+
+		struct Finalized {};
+	}
+
+	template<class T = types_context_state::AddingTypes>
+	class TypesContext;
+
+	template<>
+	class TypesContext<> {
+		TypeMetadata                           types{};
+		base::HashMap<base::StrID, TypeOfData> types_of_data;
+
+	public:
+		void                                         addType(const vm::code::TypeOfData& type);
+		TypesContext<types_context_state::Finalized> finalized();
+	};
+
+	template<>
+	class TypesContext<types_context_state::Finalized> {
+	public:
+		TypeMetadata                           types{};
+		base::HashMap<base::StrID, TypeOfData> types_of_data;
+	};
+
 	/**
 	 * @brief Helper to compose bytecode instructions.
 	 * It supports creating all available opcodes.
@@ -91,13 +122,20 @@ namespace vm::code::builders {
 		std::vector<Instruction> instructions{};
 		base::StrID              name;
 
+		STRONG_TYPEDEF_ID(LocalStackEntryID)
+
 		/**
 		 * @brief Represents a local stack variable.
 		 */
 		struct LocalStackEntry {
-			base::StrID tp;
-			usize       local_stack_position;
-			usize       type_size;
+			// This is does not equal to variable index.
+			// It is used to check stack state between jumps.
+			LocalStackEntryID unique_id;
+			base::StrID       tp;
+			usize             local_stack_position;
+			usize             type_size;
+
+			bool operator==(const LocalStackEntry& other) const = default;
 		};
 
 		std::vector<LocalStackEntry> local_stack;
@@ -105,18 +143,22 @@ namespace vm::code::builders {
 		usize max_stack_size = 0;
 		usize ret_size       = 0;
 
-		const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types;
+		const TypeMetadata& types;
 
-		void handleJump(base::StrID label_name); // save stack size
-		void handleLabel(base::StrID label_name) // retrieve stack from jump
+		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
+
+		void saveStackState(base::StrID at_label_name);
+
+		void handleLabel(instructions::Op_label label);
 
 	public:
-		FunctionBuilder(
-			base::StrID                                             name,
-			const base::HashMap<base::StrID, vm::code::TypeOfData>& available_types
-		);
+		FunctionBuilder(base::StrID name, const TypesContext<>& types);
 
-		usize               initType(base::StrID tp);
+		/**
+		 * @brief Return variable's stack offset.
+		 */
+		usize initType(instructions::Op_init_type init);
+
 		void                deinitType();
 		[[nodiscard]] usize getLocalSize() const;
 
@@ -125,27 +167,5 @@ namespace vm::code::builders {
 
 		[[nodiscard]] Function build() const;
 	};
-
-	/**
-	 * @brief Helper to compose bytecode files.
-	 */
-	class CodeFileBuilder {
-		std::vector<FunctionBuilder> functions{};
-
-		std::vector<CRef<vm::code::TypeOfData>>          types{};
-		base::HashMap<base::StrID, vm::code::TypeOfData> type_map{};
-
-	public:
-		CodeFileBuilder() = default;
-
-		void addFunction(const FunctionBuilder& function);
-
-		void addType(const vm::code::TypeOfData& type);
-
-		const base::HashMap<base::StrID, vm::code::TypeOfData>& getAvailableTypes() const;
-
-		[[nodiscard]] CodeFile build() const;
-	};
-
 
 }

@@ -1,4 +1,6 @@
 #include "type_metadata.hpp"
+#include "base/exceptions.hpp"
+#include "base/variant.hpp"
 
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
@@ -36,4 +38,5 @@ namespace vm {
 	TypeRef TypeMetadata::at(base::StrID name) { return types.at(name); }
 
 	TypeCRef TypeMetadata::at(base::StrID name) const { return types.at(name); }
+
 }

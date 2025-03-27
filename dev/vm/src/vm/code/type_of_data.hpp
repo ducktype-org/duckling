@@ -18,6 +18,8 @@ namespace vm::code {
 			out << "    size: " << size << "\n";
 			out << "}";
 		}
+
+		bool operator==(const PrimitiveType& other) const = default;
 	};
 
 	struct PointerType: ElementBase {
@@ -33,6 +35,8 @@ namespace vm::code {
 			out << "    inner: " << inner.strView() << "\n";
 			out << "}";
 		}
+
+		bool operator==(const PointerType& other) const = default;
 	};
 
 	struct StaticTableType: ElementBase {
@@ -53,6 +57,8 @@ namespace vm::code {
 			out << "    table_size: " << table_size << "\n";
 			out << "}";
 		}
+
+		bool operator==(const StaticTableType& other) const = default;
 	};
 
 	struct DynamicTableType: ElementBase {
@@ -68,6 +74,8 @@ namespace vm::code {
 			out << "    inner: " << inner.strView() << "\n";
 			out << "}";
 		}
+
+		bool operator==(const DynamicTableType& other) const = default;
 	};
 
 	struct Field: ElementBase {
@@ -76,6 +84,8 @@ namespace vm::code {
 
 		base::StrID name;
 		base::StrID type;
+
+		bool operator==(const Field& other) const = default;
 	};
 
 	struct DataType: ElementBase {
@@ -96,6 +106,8 @@ namespace vm::code {
 			out << "]\n";
 			out << "}";
 		}
+
+		bool operator==(const DataType& other) const = default;
 	};
 
 	struct VariantType: ElementBase {
@@ -115,6 +127,8 @@ namespace vm::code {
 			out << "]\n";
 			out << "}";
 		}
+
+		bool operator==(const VariantType& other) const = default;
 	};
 
 	struct FunctionType: ElementBase {
@@ -136,6 +150,8 @@ namespace vm::code {
 			out << "    result: " << result.strView() << "\n";
 			out << "}";
 		}
+
+		bool operator==(const FunctionType& other) const = default;
 	};
 
 	using TypeOfData = std::variant<

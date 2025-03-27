@@ -49,6 +49,8 @@ namespace dia {
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
+		bool operator==(const SourcePosition& other) const = default;
+
 		/**
 		 * @brief Get lines surrounding with error colored.
 		 */

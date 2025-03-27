@@ -4,6 +4,7 @@
 #include "base/stable_type_id_name_map.hpp"
 #include "diagnostic/logger.hpp"
 #include "diagnostic/source_position.hpp"
+#include "vm/code/builders/builders.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/code/code.hpp"
 #include "vm/code/type_of_data.hpp"
@@ -99,9 +100,10 @@ namespace vm {
 	private:
 		bool validate_program;
 
-		// Without pos map
-		std::expected<low::LowVMProgram, PreprocessorLogger>
-			getProgram(const std::vector<code::CodeFile>& code_files);
+		std::expected<low::LowVMProgram, PreprocessorLogger> getProgram(
+			const std::vector<code::Function>&    functions,
+			const code::builders::TypesContext<>& types
+		);
 
 	public:
 		Preprocessor(bool validate_program);
