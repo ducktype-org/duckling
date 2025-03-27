@@ -45,6 +45,7 @@ public:
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
@@ -201,6 +202,27 @@ private:
 
 		// just for cov and to see if it does not throw:
 		[[maybe_unused]] auto hout_debug_print = hout.debugPrint();
+	}
+
+	void testModuleHOUT() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_module_test")));
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
+		unsigned long functions = 0;
+		unsigned long glob_data = 0;
+
+		for (auto hout: houts) {
+			functions += hout.functions.size();
+			glob_data += hout.glob_data.size();
+		}
+
+		ASSERT_EQUAL(functions, 0);
+		ASSERT_EQUAL(glob_data, 0);
+
+		// @TODO uncomment when QueryScopesInModule is implemented
+		// ASSERT_EQUAL(functions, 3);
+		// ASSERT_EQUAL(glob_data, 5);
 	}
 
 	void testHoutVisitor() {
