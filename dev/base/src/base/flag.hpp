@@ -70,7 +70,7 @@
 			[[nodiscard]]                                                                      \
 			std::string toString(bool in_brackets = false) const {                             \
 				std::stringstream ss;                                                          \
-				std::string       separator;                                                   \
+				std::string_view       separator = "";                                                   \
                                                                                                \
 				if (in_brackets) ss << "[";                                                    \
 				for (int i = 0; i < static_cast<u32>(enum_name::COUNT); i++) {                 \

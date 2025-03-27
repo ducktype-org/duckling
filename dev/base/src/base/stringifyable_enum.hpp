@@ -30,26 +30,17 @@
  */
 #pragma once
 
-#include "define_helper.hpp"
 #include "maps.hpp"
 #include "string_id.hpp"
 
 // @TODO: add tests
 
-namespace base {
-	namespace detail {
-		template<typename EnumType>
-		using StrToEnumType = base::Map<base::StrID, EnumType>;
+namespace base::detail {
+	template<typename EnumType>
+	using StrToEnumType = base::Map<base::StrID, EnumType>;
 
-		template<typename EnumType>
-		using EnumToStrType = base::Map<EnumType, base::StrID>;
-
-		template<typename EnumType>
-		struct TwoMaps final {
-			EnumToStrType<EnumType> to_str;
-			EnumToStrType<EnumType> to_enum;
-		};
-	}
+	template<typename EnumType>
+	using EnumToStrType = base::Map<EnumType, base::StrID>;
 }
 
 /**
@@ -68,6 +59,8 @@ namespace base {
 		namespace name##enum_helper {                                                              \
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {          \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                             \
+				CORE_ASSERT(string_vector.size() == static_cast<size_t>(namespace_name::name::COUNT),            \
+					"Enum has less values, then vaArgSplit provided");\
 				::base::detail::StrToEnumType<namespace_name::name> out;                           \
 				for (base_type i = 0; const auto& string: string_vector) {                         \
 					out.put(base::StrID(string.data()), static_cast<namespace_name::name>(i++));   \
