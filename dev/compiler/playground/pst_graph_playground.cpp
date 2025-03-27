@@ -100,7 +100,6 @@ int main(int argc, char** argv) {
 		std::cerr << "usage: ./pst_graph duckling_file svg_out_file\n";
 		return 1;
 	}
-	pst::init();
 	fs::FilePath file(argv[1]);
 	pst::PST<>   pst(file);
 
@@ -110,9 +109,9 @@ int main(int argc, char** argv) {
 		pst.dprint(std::cerr);
 		std::cerr << "\n";
 	}
-	if (pst.getRootElement() != nullptr) {
+	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, pst.getRootElement());
+		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess().value()));
 		hdl.writeToSVG(argv[2]);
 	}
 }

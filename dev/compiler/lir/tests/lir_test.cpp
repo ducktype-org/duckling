@@ -19,6 +19,7 @@
 using namespace tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
+using namespace compiler;
 
 class LIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -35,42 +36,74 @@ public:
 
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
+		TESTER_ADD_TEST(functionCallTest);
 	}
 
 private:
-	void noTest() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/simple")));
+	struct LirModuleResult {
+		frontend::ModuleID module;
+		helios::ScopeID    scope;
+		base::Map<
+			base::StrID,
+			std::tuple<CRef<helios::HOUTFunction>, CRef<mir::Function>, CRef<lir::Function>>>
+			funcs{};
+
+		[[nodiscard]] CRef<helios::HOUTFunction> houtFunc(std::string_view name) const {
+			return std::get<CRef<helios::HOUTFunction>>(funcs.at(base::StrID(name.data())));
+		}
+
+		[[nodiscard]] CRef<mir::Function> mirFunc(std::string_view name) const {
+			return std::get<CRef<mir::Function>>(funcs.at(base::StrID(name.data())));
+		}
+
+		[[nodiscard]] CRef<lir::Function> lirFunc(std::string_view name) const {
+			return std::get<CRef<lir::Function>>(funcs.at(base::StrID(name.data())));
+		}
+	};
+
+	LirModuleResult getLirOfModule(std::string_view module_path) {
+		auto [module, scope] = getModule(fs::FilePath(module_path));
+		LirModuleResult result{ .module = module, .scope = scope };
 
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
-			ASSERT_EQUAL(1, functions.size());
-			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
+			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
+			for (const auto& hout_func: unit->functions) {
+				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
+				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
+				assertTrue(
+					lir_func->validateBlockOrder().isOk(),
+					base::strConcat("Could not validate LIR function ", lir_func->name)
+				);
+				result.funcs.put(
+					hout_func.original_name, std::make_tuple(CRef(&hout_func), mir_func, lir_func)
+				);
+			}
+		});
+		return result;
+	}
 
-			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+	void noTest() {
+		auto module = getLirOfModule(path("modules/simple"));
+		ASSERT_EQUAL(1, module.funcs.size());
+		auto foo_lir = module.lirFunc("foo");
 
-			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
-			ASSERT_TRUE(foo_lir->validateBlockOrder());
-
-			// test locals types:
-
+		withContextDo([&](query::Context& ctx) {
 			// this might change in the future:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
 			for (auto& local: foo_lir->local_list) {
 				if (local->helios_id.has_value()
-				    and compiler::helios::name(local->helios_id.value()) == "a") {
+				    and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
-						ctx.query<::tsh::QueryIntegralType>({ 64, true })
+						ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 				}
 				if (local->helios_id.has_value()
-				    and compiler::helios::name(local->helios_id.value()) == "b") {
+				    and helios::name(local->helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
-						ctx.query<::tsh::QueryIntegralType>({ 32, true })
+						ctx.query<tsh::QueryIntegralType>({ 32, true })
 					);
 				}
 			}
@@ -85,26 +118,27 @@ private:
 	}
 
 	void simpleBools() {
-		auto [module, scope] = getModule(fs::FilePath(path("modules/booleans")));
+		auto module = getLirOfModule(path("modules/booleans"));
+		ASSERT_EQUAL(1, module.funcs.size());
+		auto foo_lir = module.lirFunc("foo");
 
+		// note: it might change where those branch operations are placed:
+		// if this happen just see mir-output of tested module for mir block numbers
+
+		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
+		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
+
+		ASSERT_EQUAL(true_lir_value.get<bool>(), true);
+		ASSERT_EQUAL(false_lir_value.get<bool>(), false);
+	}
+
+	void functionCallTest() {
+		auto module  = getLirOfModule(path("modules/function_calls"));
+		auto foo_lir = module.lirFunc("foo");
+		auto foo_mir = module.mirFunc("foo");
 		withContextDo([&](query::Context& ctx) {
-			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
-			auto& functions = unit.functions;
-			ASSERT_EQUAL(1, functions.size());
-
-			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			auto foo_lir = ctx.query<compiler::lir::LowerToLirFunction>({ foo_mir });
-
-			ASSERT_TRUE(foo_lir->validateBlockOrder());
-
-			// note: it might change where those branch operations are placed:
-			// if this happen just see mir-output of tested module for mir block numbers
-
-			auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
-			auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
-
-			ASSERT_EQUAL(true_lir_value.get<bool>(), true);
-			ASSERT_EQUAL(false_lir_value.get<bool>(), false);
+			foo_lir->debugPrint(ctx, std::cerr);
+			foo_mir->debugPrint(std::cerr);
 		});
 	}
 };

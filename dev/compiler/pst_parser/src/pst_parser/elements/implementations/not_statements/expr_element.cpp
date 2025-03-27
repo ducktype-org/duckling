@@ -39,7 +39,7 @@ namespace pst {
 		out << "{";
 
 		out << R"("expr":)";
-		tpc::nullAwareDprint(expr, out);
+		nullAwareDprint(expr, out);
 
 		out << "}";
 	}

@@ -38,8 +38,8 @@ namespace pst {
 	 * @brief Attribute element, can be before any statement.
 	 */
 	class Attribute final: public NotStmt {
-		MBox<DottedName> name;
-		MBox<AtrArgList> args = nullptr;
+		AccessInternal<DottedName> name;
+		AccessInternal<AtrArgList> args;
 
 	public:
 		explicit Attribute(dia::SourcePosition& pos): NotStmt(pos) {}

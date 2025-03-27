@@ -5,6 +5,7 @@ add_library(Base
         src/base/impl/string_id.cpp
         src/base/impl/convert.cpp
         src/base/impl/str_utils.cpp
+        src/base/impl/init_guards.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
@@ -48,6 +49,8 @@ duck_add_test(base bits_and_bytes tests/bits_and_bytes_test.cpp USES Base)
 duck_add_test(base is_complete tests/is_complete_test.cpp USES Base)
 
 duck_add_test(base type_name tests/type_name_test.cpp USES Base)
+
+duck_add_test(base ok_bad tests/ok_bad_test.cpp USES Base)
 
 add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)

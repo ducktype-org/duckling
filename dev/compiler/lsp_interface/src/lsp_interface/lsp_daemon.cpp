@@ -5,19 +5,22 @@
 #include <iostream>
 #include <base64.hpp>
 
-#include <clap/clap.hpp>
-#include <pst_parser/parser.hpp>
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <filesystem/file.hpp>
-#include <base/variant.hpp>
-#include <base/int_conv.hpp>
+// This is included to allow for pushing and popping of diagnostics
+#include <base/define_helper.hpp>
 
 PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
 POP_DIAGNOSTIC
+
+// Our code is included after crow because there were some weird errors if pst was included earlier.
+#include <pst_parser/pst.hpp>
+#include <clap/clap.hpp>
+#include <lexer/lexer.hpp>
+#include <filesystem/file.hpp>
+#include <base/variant.hpp>
+#include <base/int_conv.hpp>
 
 // vm includes:
 #include <vm/server.hpp>
@@ -71,7 +74,6 @@ void server(i32 port) {
 	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
-	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.
@@ -180,7 +182,9 @@ void server(i32 port) {
 				return crow::response(200, ss.str());
 			};
 
-			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
+			return crow::response(
+				200, lsp::getSemanticTokens({ &*pst.getRootElement().illegalAccess().value() })
+			);
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);

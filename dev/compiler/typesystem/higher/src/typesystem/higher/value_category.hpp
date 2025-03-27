@@ -56,10 +56,6 @@ namespace tsh {
 		 */
 		PrimaryCategory category;
 		/**
-		 * If a value is mutable it can be implicitly changed by the coder.
-		 */
-		bool is_mutable{ false };
-		/**
 		 * If a value is pure it is guaranteed to not be changed behind the scenes.
 		 */
 		bool is_pure{ false };
@@ -84,7 +80,6 @@ namespace tsh {
 
 		ValueCategory(
 			PrimaryCategory category,
-			bool            is_mutable,
 			bool            is_pure,
 			ValueSemantics  allows_semantic,
 			ValueSemantics  force_semantic
@@ -96,14 +91,6 @@ namespace tsh {
 		[[nodiscard]]
 		PrimaryCategory getCategory() const {
 			return category;
-		}
-
-		/**
-		 * A simple getter for is_mutable.
-		 */
-		[[nodiscard]]
-		bool isMutable() const {
-			return is_mutable;
 		}
 
 		/**
@@ -138,8 +125,7 @@ namespace tsh {
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
-			    && force_semantic <= other.force_semantic && (is_mutable || !other.is_mutable)
-			    && (!is_pure || other.is_pure);
+			    && force_semantic <= other.force_semantic && (!is_pure || other.is_pure);
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;

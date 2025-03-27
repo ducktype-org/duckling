@@ -18,7 +18,7 @@
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/preprocessor/preprocessor.hpp>
-#include <vm/code_data/program.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -50,7 +50,7 @@ namespace vm {
 		// See: https://en.cppreference.com/w/cpp/io/ios_base/Init
 		std::ios_base::Init cin_cout_init;
 
-		base::Optional<vm::VMProgram> loaded_program = {};
+		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
 		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
 

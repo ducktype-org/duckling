@@ -50,6 +50,13 @@ jobs:
         working-directory: ${{ env.DEV_DIR }}
         run: cmake --build ${{ env.BUILD_DIR }} -- docs
 
+      - name: Build search engine databse
+        working-directory: ${{ env.DOCS_DIR }}
+        run: |
+          doxyindexer doxygen/searchdata.xml
+          mkdir search-engine
+          mv doxysearch.db search-engine/
+
       # Prepare ssh key for secure connection to server.
       # Save the key to a file, set permissions.
       # Adding the server's host key to the known_hosts file
@@ -76,4 +83,5 @@ jobs:
           rsync -azhcv -e 'ssh -p 222  -i ~/.ssh/id_rsa' \
           sphinx \
           doxygen \
+          search-engine \
           ${{ secrets.WWW_LOGIN }}@${{ env.WWW_HOST }}:/home/

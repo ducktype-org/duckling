@@ -10,15 +10,15 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
 
-#define PSTVISITOR_METHOD(name)                        \
-	bool visited_##name = false;                       \
-	void visit##name(const pst::name& stmt) override { \
-		if (!visited_##name) {                         \
-			visited_##name = true;                     \
-			counter++;                                 \
-		}                                              \
-		std::cout << "Visited " << #name << '\n';      \
-		T::visit##name(stmt);                          \
+#define PSTVISITOR_METHOD(name)                              \
+	bool visited_##name = false;                             \
+	void visit##name(pst::Access<pst::name> stmt) override { \
+		if (!visited_##name) {                               \
+			visited_##name = true;                           \
+			counter++;                                       \
+		}                                                    \
+		std::cout << "Visited " << #name << '\n';            \
+		T::visit##name(stmt);                                \
 	}
 
 template<class T>
@@ -52,9 +52,6 @@ class SimpleParserTest: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
-		pst::init();
-
 		TESTER_ADD_TEST(testIf);
 		TESTER_ADD_TEST(testWhile);
 		TESTER_ADD_TEST(testFor);
@@ -86,7 +83,9 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (auto& stmt: pst.getRootElement()->getStatements()) {
+			for (const auto& stmt_locked:
+			     pst.getRootElement().illegalAccess().value()->getStatements()) {
+				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
 					[&] { stmt->acceptVisitor(panicky_vistor); }, "Stmt did not call it\'s visitor"
 				);
@@ -100,13 +99,14 @@ private:
 		{
 			auto panicky_vistor = PstVisitorTester<pst::PstVisitorPanicky>();
 			auto empty_vistor   = PstVisitorTester<pst::PstVisitorEmpty>();
-			for (auto& stmt: pst.getRootElement()->getStatements()) {
-				Ref<pst::LangElement> lang_stmt = &*stmt;
+			for (const auto& stmt_locked:
+			     pst.getRootElement().illegalAccess().value()->getStatements()) {
+				auto stmt = stmt_locked.illegalAccess().value();
 				assertThrows<base::Panic>(
-					[&] { lang_stmt->acceptVisitor(panicky_vistor); },
+					[&] { stmt->acceptVisitor(panicky_vistor); },
 					"LangElement did not call it\'s visitor"
 				);
-				lang_stmt->acceptVisitor(empty_vistor);
+				stmt->acceptVisitor(empty_vistor);
 			}
 			ASSERT_EQUAL(expected_counter, panicky_vistor.counter);
 			ASSERT_EQUAL(expected_counter, empty_vistor.counter);
@@ -201,10 +201,17 @@ private:
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
 		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
 
-		auto fun = dynamic_cast<const pst::Fun*>(&*pst.getRootElement()->getStatements().at(0));
-		ASSERT_TRUE(fun != nullptr);
+		auto fun_opt = pst.getRootElement()
+		                   .illegalAccess()
+		                   .value()
+		                   ->getStatements()[0]
+		                   .illegalAccess()
+		                   .value()
+		                   .dynamicCast<pst::Fun>();
+		ASSERT_TRUE(fun_opt.has_value());
+		auto fun = fun_opt.value();
 
-		auto params = fun->getParams();
+		auto params = fun->getParams().illegalAccess().value();
 		ASSERT_EQUAL(params->size(), 4);
 
 		struct PstParamVisitor: public pst::PstVisitorPanicky {
@@ -214,9 +221,9 @@ private:
 
 			PstParamVisitor(base::StrID expected_name): expected_name(expected_name) {}
 
-			void visitFunParam(const pst::FunParam& param) override {
+			void visitFunParam(pst::Access<pst::FunParam> param) override {
 				counter++;
-				good_name = param.getName() == expected_name;
+				good_name = param->getName() == expected_name;
 			}
 		};
 
@@ -225,7 +232,7 @@ private:
 		usize i = 0;
 		for (auto param: *params) {
 			PstParamVisitor visitor(base::StrID(names.at(i)));
-			param->acceptVisitor(visitor);
+			param.illegalAccess().value()->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.counter, 1);
 			i++;
 		}

@@ -40,10 +40,7 @@ class LexerPositionTest: public tester::TestSuite {
 	MBox<tokenizer::TokenFile> td;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
-		TESTER_ADD_TEST(simplePositionTest);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simplePositionTest); }
 
 private:
 	void simplePositionTest() {

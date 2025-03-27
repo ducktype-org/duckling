@@ -6,6 +6,7 @@
 #pragma once
 
 #include "abstract_type.hpp"
+#include "symbol_type.hpp"
 #include "value_category.hpp"
 
 #include <concepts>
@@ -15,14 +16,15 @@ namespace tsh {
 	 * @brief The ExpressionType class contains information about a type,
 	 * expanded with information about a value of that type.
 	 *
-	 * A ExpressionType<AbstractType> object will contain information about any type,
-	 * while a ExpressionType<IntegralInfo> object is guaranteed to contain information
-	 * about some Integral type described with an IntegralInfo object.
+	 * An ExpressionType<AbstractType> object will contain information about any type,
+	 * while a ExpressionType<IntegralAbstractTypr> object is guaranteed to contain information
+	 * about some Integral type described with an IntegralAbstractType object.
 	 *
-	 * A ExpressionType object describes a value. That value has a type, but it
-	 * may have additional properties, like immutability. Information about
-	 * the type is held in the AbstractType field, and everything else is
-	 * stored in the valueCategory field.
+	 * An ExpressionType object describes the value of an expression. That value has a type, as well
+	 * as mutability, referential access, uniqueness, and leakage specifiers. These are specified
+	 * in the symbol_type field. However, the value of an expression is also described by its
+	 * value category and associated semantics, like copy and move capability — these are specified
+	 * in the value_category field.
 	 *
 	 * @tparam ABSTRACT_TYPE The underlying class from the AbstractType hierarchy.
 	 */
@@ -32,26 +34,28 @@ namespace tsh {
 		/**
 		 * @brief Constructs the ExpressionType from another ExpressionType.
 		 *
-		 * The source ExpressionType must hold a type description which is dynamically convertible
-		 * to the type description expected by the target ExpressionType. Otherwise,
-		 * the dynamic cast, and then the constructor, will fail.
+		 * The source ExpressionType must hold a symbol type (and by extension an abstract type)
+		 * which is dynamically convertible to the one expected by the target ExpressionType.
+		 * Otherwise, the dynamic cast, and then the constructor, will fail.
 		 *
-		 * @tparam OTHER_ABSTRACT_TYPE The type of the source type description,
+		 * @tparam OTHER_ABSTRACT_TYPE The kind of the source abstract type,
 		 * from the AbstractType hierarchy.
 		 * @param other The source ExpressionType.
 		 */
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		ExpressionType(ExpressionType<OTHER_ABSTRACT_TYPE> other):
-			  abstract_type(other.getType()),
+			  symbol_type(other.getSymbolType()),
 			  value_category(other.getValueCategory()) {}
 
 		/**
 		 * @brief Constructs the ExpressionType directly from its contents.
-		 * @param abstract_type The source type description, from the AbstractType hierarchy.
+		 * @param symbol_type The source symbol type.
 		 * @param value_category The value category of the described value.
 		 */
-		ExpressionType(const ABSTRACT_TYPE abstract_type, const ValueCategory value_category):
-			  abstract_type(abstract_type),
+		ExpressionType(
+			const SymbolType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category
+		):
+			  symbol_type(symbol_type),
 			  value_category(value_category) {}
 
 		ExpressionType(const ExpressionType& other) = default;
@@ -62,7 +66,16 @@ namespace tsh {
 		 */
 		[[nodiscard]]
 		ABSTRACT_TYPE getType() const {
-			return abstract_type;
+			return symbol_type.getType();
+		}
+
+		/**
+		 * @brief Gets the underlying symbol type.
+		 * @return The underlying symbol type.
+		 */
+		[[nodiscard]]
+		const SymbolType<ABSTRACT_TYPE>& getSymbolType() const {
+			return symbol_type;
 		}
 
 		/**
@@ -89,7 +102,8 @@ namespace tsh {
 		template<std::derived_from<AbstractType> OTHER_ABSTRACT_TYPE>
 		[[nodiscard]]
 		auto operator<=>(const ExpressionType<OTHER_ABSTRACT_TYPE>& other) const {
-			if (auto type_cmp = abstract_type <=> other.getType(); type_cmp != 0) return type_cmp;
+			if (auto symbol_cmp = symbol_type <=> other.getSymbolType(); symbol_cmp != 0)
+				return symbol_cmp;
 			return value_category <=> other.getValueCategory();
 		}
 
@@ -108,7 +122,7 @@ namespace tsh {
 		}
 
 	private:
-		ABSTRACT_TYPE abstract_type;
-		ValueCategory value_category;
+		SymbolType<ABSTRACT_TYPE> symbol_type;
+		ValueCategory             value_category;
 	};
 }

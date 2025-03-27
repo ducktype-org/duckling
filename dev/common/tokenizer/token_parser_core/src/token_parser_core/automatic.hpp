@@ -64,6 +64,14 @@ namespace tpc {
 			ref->debugPrint(out);
 	}
 
+	template<typename T>
+	void nullAwareDprint(MCRef<T> ref, std::ostream& out) {
+		if (!ref)
+			out << "\"<nullptr>\"";
+		else
+			ref->debugPrint(out);
+	}
+
 	class BadKeywordError;
 	class BadSpecialError;
 	class BadOperatorError;

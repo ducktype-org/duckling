@@ -1,3 +1,4 @@
+#include <base/exceptions.hpp>
 #include <tester/tester.hpp>
 
 #include <query_framework/utils/with_context_do.hpp>
@@ -18,6 +19,8 @@ public:
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(parseFromIRCodeTest);
+		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 	}
 
 private:
@@ -27,18 +30,20 @@ private:
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
-			ASSERT_TRUE(top_level.functions.size() == 1);
+			ASSERT_TRUE(top_level->functions.size() == 1);
 
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level.functions[0] });
+			auto mir_fun
+				= ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
-			auto llvm_module = backend_llvm::lirFunctionToModule(lir_fun);
+			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));
+			llvm_module.addFunctionToModule(lir_fun);
 
 			// debug print for coverage only:
 			llvm_module.debugPrint();
 
 			// this is were the main part ot test is:
-			assertTrue(llvm_module.verify(), "LLVM module verification failed");
+			assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
 		});
 	}
 
@@ -54,6 +59,32 @@ private:
 	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
 
 	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
+
+	void parseFromIRCodeTest() {
+		auto llvm_module = compiler::backend_llvm::Module::fromIRCode(
+			"define void @test() {\n"
+			"entry:\n"
+			"  ret void\n"
+			"}\n"
+		);
+		llvm_module.debugPrint();
+
+		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
+	}
+
+	void doesNotParseIncorrectIRCode() {
+		assertThrows<base::Panic>(
+			[&]() {
+				auto llvm_module = compiler::backend_llvm::Module::fromIRCode(
+					"define void @test() {\n"
+					"entry:\n"
+					"  re void\n"
+					"}\n"
+				);
+			},
+			"LLVM incorrect code didn't throw"
+		);
+	}
 };
 
 

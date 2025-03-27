@@ -8,10 +8,15 @@ namespace compiler::helios {
 	// @TODO: in the future: make some base for all elements that can be used here
 
 	namespace detail {
-		void visitClassStmts(StmtList<pst::ClassStmt>& out, MCRef<pst::ClassStmt> stmt) {
-			if (auto* ptr = dynamic_cast<const pst::AccessBlock*>(&*stmt))
-				for (auto&& e: *ptr->getBlock()) visitClassStmts(out, e);
-			else
+		void visitClassStmts(
+			query::Context&                   ctx,
+			StmtList<pst::ClassStmt>&         out,
+			pst::AccessLocked<pst::ClassStmt> stmt
+		) {
+			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
+				auto access_block = access_block_opt.value();
+				for (auto e: *access_block->getBlock().unlock(ctx)) visitClassStmts(ctx, out, e);
+			} else
 				out.push_back(stmt);
 		}
 
@@ -21,13 +26,15 @@ namespace compiler::helios {
 		 *
 		 * @return StmtList
 		 */
-		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(MCRef<pst::LangElement> elem) {
-			if (auto* ptr = dynamic_cast<const pst::ClassBlock*>(&*elem)) {
+		StmtList<pst::ClassStmt> getChildStmtsOfClassBlock(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> elem
+		) {
+			if (auto class_block = elem.unlock(ctx).dynamicCast<pst::ClassBlock>()) {
 				StmtList<pst::ClassStmt> out;
-				for (auto&& e: *ptr) detail::visitClassStmts(out, e);
+				for (auto&& e: *class_block.value()) detail::visitClassStmts(ctx, out, e);
 				return out;
 			} else {
-				const auto& element = *elem;
+				const auto& element = *elem.unlock(ctx);
 				CORE_PANIC(base::strConcat(
 					"Bad Duckling Element in `getChildStmtsOfClassBlock`: ", typeid(element).name()
 				));
@@ -35,25 +42,27 @@ namespace compiler::helios {
 		}
 	}
 
-	StmtList<> getStmtsFromStmtAggregate(MCRef<pst::LangElement> elem) {
+	StmtList<>
+		getStmtsFromStmtAggregate(query::Context& ctx, pst::AccessLocked<pst::LangElement> locked) {
+		auto elem = locked.unlock(ctx);
 		// @TODO: dont use dynamic_cast's here, but a visitor
-		if (auto* ptr = dynamic_cast<const pst::CodeBlock*>(&*elem)) {
+		if (auto code_block = elem.dynamicCast<pst::CodeBlock>()) {
 			StmtList<> out;
-			for (auto&& e: *ptr) out.emplace_back(e);
+			for (auto&& e: *code_block.value()) out.emplace_back(e);
 			return out;
 		}
-		if (auto* ptr = dynamic_cast<const pst::CodeBlockOrStmt*>(&*elem)) {
+		if (auto code_block_or_stmt = elem.dynamicCast<pst::CodeBlockOrStmt>()) {
 			StmtList<> out;
-			for (auto&& e: *ptr) out.emplace_back(e);
+			for (auto&& e: *code_block_or_stmt.value()) out.emplace_back(e);
 			return out;
 		}
-		if (auto* ptr = dynamic_cast<const pst::TopLevel*>(&*elem)) {
+		if (auto top_level = elem.dynamicCast<pst::TopLevel>()) {
 			StmtList<> out;
-			for (auto& e: ptr->getStatements()) out.emplace_back(e.ref());
+			for (auto e: top_level.value()->getStatements()) out.emplace_back(e);
 			return out;
 		}
-		if (dynamic_cast<const pst::ClassBlock*>(&*elem)) {
-			auto       elements = detail::getChildStmtsOfClassBlock(elem);
+		if (elem.dynamicCast<pst::ClassBlock>()) {
+			auto       elements = detail::getChildStmtsOfClassBlock(ctx, elem);
 			StmtList<> out;
 			for (auto e: elements) out.emplace_back(e);
 			return out;
