@@ -212,7 +212,7 @@ private:
 		unsigned long functions = 0;
 		unsigned long glob_data = 0;
 
-		for (auto hout: houts) {
+		for (const auto& hout: houts) {
 			functions += hout.functions.size();
 			glob_data += hout.glob_data.size();
 		}
