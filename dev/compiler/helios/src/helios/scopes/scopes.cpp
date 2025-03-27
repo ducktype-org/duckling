@@ -1,3 +1,5 @@
+#include "scopes.hpp"
+
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -12,8 +14,6 @@
 
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
-
-#include "scopes.hpp"
 
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"

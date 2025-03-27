@@ -1,3 +1,5 @@
+#include "queries.hpp"
+
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -9,7 +11,6 @@
 #include "hout/elements.hpp"
 
 #include "symbols/symbols.hpp"
-#include "queries.hpp"
 
 namespace compiler::helios {
 
