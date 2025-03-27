@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-
 #include <base/string_id.hpp>
 #include <lang_definitions/key_spec_op.hpp>
 
@@ -23,59 +21,23 @@ namespace lexer {
 
 		operator base::StrID() { return value; }
 
-		bool isComparison() {
-			using namespace lang_def;
-			static std::set<NamedOperator> comparisons = {
-				NamedOperator::Lesser, NamedOperator::LEqual, NamedOperator::Greater,
-				NamedOperator::GEqual, NamedOperator::Equal,  NamedOperator::NotEqual,
-			};
-			return comparisons.contains(asNamed());
-		}
+		[[nodiscard]]
+		bool isComparison() const;
 
-		bool isAssignment() {
-			return !isComparison()
-			    && value.strView().back() == '=';
-		}
+		[[nodiscard]]
+		bool isAssignment() const; 
 
-		bool isSpecialOp() {
-			using namespace lang_def;
-			static std::set<NamedOperator> specials = {
-				NamedOperator::Period, NamedOperator::PeriodStar, NamedOperator::Colon,
-				NamedOperator::SingleArrow, NamedOperator::DoubleArrow,
-			};
-			return specials.contains(asNamed());
-		}
+		[[nodiscard]]
+		bool isSpecialOp() const; 
 
-		bool isNotReserved() {
-			return !isComparison() && !isAssignment() && !isSpecialOp();
-		}
+		[[nodiscard]]
+		bool isNotReserved() const;
 
-		base::Optional<Operator> filterNotReserved() {
-			if (isNotReserved()) return {*this};
-			return {};
-		}
+		[[nodiscard]]
+		base::Optional<Operator> filterNotReserved() const;
 
-		i64 getGenBinOpPrecedence() {
-			using namespace lang_def;
-			static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-				{ NamedOperator::RightShift, 510 },      
-				{ NamedOperator::LeftShift, 510 },      
-				{ NamedOperator::BitAnd, 520 },      
-				{ NamedOperator::BitXor, 530 },      
-				{ NamedOperator::Pipe, 540 },      
-				{ NamedOperator::Exponentiate, 550 },
-				{ NamedOperator::Multiply, 560 },  
-				{ NamedOperator::Divide, 560 },
-				{ NamedOperator::Remainder, 560 }, 
-				{ NamedOperator::Plus, 570 },
-				{ NamedOperator::Minus, 570 },
-			};
-			if (precedences.contains(asNamed())) {
-				return precedences.at(asNamed());
-			} else {
-				return 500;
-			}
-		}
+		[[nodiscard]]
+		i64 getGenBinOpPrecedence() const;
 
 		[[nodiscard]]
 		std::string str() const {
