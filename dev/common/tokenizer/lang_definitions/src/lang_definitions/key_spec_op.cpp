@@ -19,7 +19,7 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 72>
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 73>
 		LANG_KEYWORDS_ARRAY{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
@@ -32,7 +32,7 @@ namespace lang_def {
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 			{ Keyword::Var, "var", KeywordFlags() },
 			{ Keyword::Let, "let", KeywordFlags() },
-			{ Keyword::Const, "const", KeywordFlags() },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IS_GEN_PREFIX_OP },
 
 			{ Keyword::While, "while", KeywordFlags() },
 			{ Keyword::For, "for", KeywordFlags() },
@@ -94,6 +94,8 @@ namespace lang_def {
 			{ Keyword::And, "and", KeywordFlags() },
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
+			
+			{ Keyword::Ref, "ref", KeywordFlagsOptions::IS_GEN_PREFIX_OP },
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
@@ -137,16 +139,23 @@ namespace lang_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 23> OPERATOR_ARRAY{ {
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 27> OPERATOR_ARRAY{ {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
+
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
 		{ NamedOperator::Assign, "=" },
-		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::QuestionMark, "?" },
 		{ NamedOperator::SingleArrow, "->" },
 		{ NamedOperator::DoubleArrow, "=>" },
+
+		{ NamedOperator::Pipe, "|" },
+		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::BitXor, "^" },
+
+		{ NamedOperator::LeftShift, "<<" },
+		{ NamedOperator::RightShift, ">>" },
 
 		{ NamedOperator::Lesser, "<" },
 		{ NamedOperator::Greater, ">" },

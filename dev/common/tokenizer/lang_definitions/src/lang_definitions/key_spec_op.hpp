@@ -125,6 +125,9 @@ namespace lang_def {
 		Or,
 		Xor,
 
+		// General text prefix operators (Not doesn't count)
+		Ref,
+
 		// Class specific:
 		Public,
 		Private,
@@ -170,14 +173,21 @@ namespace lang_def {
 	// only operator significant during parsing
 	enum class NamedOperator {
 		NotAnOperator,
+
 		Period,
 		PeriodStar,
 		Colon,
 		Assign,
-		Pipe,  // | for variants and bitwise or.
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,
+
+		Pipe,  // | for variants and bitwise or.
+		BitAnd,
+		BitXor,
+
+		LeftShift,
+		RightShift,
 
 		Lesser,
 		Greater,
@@ -197,7 +207,10 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IS_ACTION)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, 
+	IS_ACTION,
+	IS_GEN_PREFIX_OP
+)
 
 namespace lang_def {
 	namespace key_spec_op {

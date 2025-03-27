@@ -133,10 +133,41 @@ namespace lexer {
 		[[nodiscard]]
 		Keyword asKeyword() const;
 
+		/**
+		 * @brief Checks if the token is a proper operator (non-text)
+		 */
 		[[nodiscard]]
-		bool isOperator() const;
+		bool isOperatorSymbol() const;
+		/**
+		 * @brief Checks if the token is a symbol or text operator
+		 */
 		[[nodiscard]]
-		Operator asOperator() const;
+		bool isOperatorSymbolOrText() const;
+		/**
+		 * @brief Checks if the token is a prefix operator(any symbol operator and a limited number of keyword text operators)
+		 */
+		[[nodiscard]]
+		bool isPrefixOperator() const;
+		/**
+		 * @brief Converts the internal value to the named operator enum
+		 */
+		[[nodiscard]]
+		NamedOperator asNamedOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a binary operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asBinaryOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a prefix operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asPrefixOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a suffix operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asSuffixOperator() const;
 
 		[[nodiscard]]
 		bool isIdentifier() const;
