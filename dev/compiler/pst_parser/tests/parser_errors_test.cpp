@@ -102,7 +102,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
-	Example<pst::Const, true> ref_const{ "const x: ref i32 = 5" };
+	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };

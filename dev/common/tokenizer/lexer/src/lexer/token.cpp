@@ -172,26 +172,32 @@ namespace lexer {
 	Keyword Token::asKeyword() const { return lang_def::strAsKeyword(str_id); }
 
 	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
+
 	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
-	bool Token::isPrefixOperator() const { 
-		return isOperatorSymbol() || (isKeyword() && lang_def::keywordFlags(asKeyword()).contains(lang_def::KeywordFlagsOptions::IS_GEN_PREFIX_OP)); 
+
+	bool Token::isPrefixOperator() const {
+		return isOperatorSymbol()
+		    || (isKeyword()
+		        && lang_def::keywordFlags(asKeyword())
+		               .contains(lang_def::KeywordFlagsOptions::IS_GEN_PREFIX_OP));
 	}
+
 	NamedOperator Token::asNamedOperator() const {
 		if (isOperatorSymbol()) return Operator(getValue()).asNamed();
 		return lang_def::NamedOperator::NotAnOperator;
 	}
 
 	base::Optional<Operator> Token::asBinaryOperator() const {
-		if (isOperatorSymbolOrText()) return {{getValue()}};
+		if (isOperatorSymbolOrText()) return { { getValue() } };
 		return {};
 	}
+
 	base::Optional<Operator> Token::asPrefixOperator() const {
-		if (isPrefixOperator()) return {{getValue()}};
+		if (isPrefixOperator()) return { { getValue() } };
 		return {};
 	}
-	base::Optional<Operator> Token::asSuffixOperator() const {
-		return asBinaryOperator();
-	}
+
+	base::Optional<Operator> Token::asSuffixOperator() const { return asBinaryOperator(); }
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 

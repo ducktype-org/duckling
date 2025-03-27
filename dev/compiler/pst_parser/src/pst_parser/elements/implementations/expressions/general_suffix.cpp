@@ -22,7 +22,8 @@ namespace pst::expr {
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
 		while (fwd < length && state[fwd].isPrefixOperator()) fwd++;
-		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol()) reduced_length--;
+		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
+			reduced_length--;
 		if (fwd == reduced_length) {}  // Error
 
 		if (fwd + 1 < reduced_length && state[reduced_length - 1].isIdentifier()

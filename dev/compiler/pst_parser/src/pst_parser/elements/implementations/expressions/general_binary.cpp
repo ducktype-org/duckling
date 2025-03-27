@@ -22,7 +22,11 @@ namespace pst::expr {
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
-		while (fwd < length && !(state[fwd].isOperatorSymbol() && state[fwd].asBinaryOperator().value().isNotReserved())
+		while (fwd < length
+		       && !(
+				   state[fwd].isOperatorSymbol()
+				   && state[fwd].asBinaryOperator().value().isNotReserved()
+			   )
 		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(NamedOperator::Period))) {
 			fwd++;
 		}
@@ -56,7 +60,8 @@ namespace pst::expr {
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
 		while (fwd < length && state[fwd].isPrefixOperator()) fwd++;
-		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol()) reduced_length--;
+		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
+			reduced_length--;
 		if (fwd == reduced_length) state.log(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
@@ -89,7 +94,9 @@ namespace pst::expr {
 				Partial partial = std::move(stack.top());
 				stack.pop();
 				lhs = makeBox<OperatorBuilder>(
-					std::move(partial.lhs), state[partial.op_place].asBinaryOperator().value(), std::move(lhs)
+					std::move(partial.lhs),
+					state[partial.op_place].asBinaryOperator().value(),
+					std::move(lhs)
 				);
 			}
 			stack.push({ std::move(lhs), fwd, curr_prec });
@@ -100,7 +107,9 @@ namespace pst::expr {
 			Partial partial = std::move(stack.top());
 			stack.pop();
 			rhs = makeBox<OperatorBuilder>(
-				std::move(partial.lhs), state[partial.op_place].asBinaryOperator().value(), std::move(rhs)
+				std::move(partial.lhs),
+				state[partial.op_place].asBinaryOperator().value(),
+				std::move(rhs)
 			);
 		}
 

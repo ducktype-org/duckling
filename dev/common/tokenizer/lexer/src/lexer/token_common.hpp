@@ -8,7 +8,6 @@ namespace lexer {
 	 * @brief Simple wrapper for an operator
 	 */
 	struct Operator final {
-
 		const base::StrID value;
 
 		Operator() = delete;
@@ -25,10 +24,10 @@ namespace lexer {
 		bool isComparison() const;
 
 		[[nodiscard]]
-		bool isAssignment() const; 
+		bool isAssignment() const;
 
 		[[nodiscard]]
-		bool isSpecialOp() const; 
+		bool isSpecialOp() const;
 
 		[[nodiscard]]
 		bool isNotReserved() const;

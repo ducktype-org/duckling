@@ -144,7 +144,8 @@ namespace lexer {
 		[[nodiscard]]
 		bool isOperatorSymbolOrText() const;
 		/**
-		 * @brief Checks if the token is a prefix operator(any symbol operator and a limited number of keyword text operators)
+		 * @brief Checks if the token is a prefix operator(any symbol operator and a limited number
+		 * of keyword text operators)
 		 */
 		[[nodiscard]]
 		bool isPrefixOperator() const;

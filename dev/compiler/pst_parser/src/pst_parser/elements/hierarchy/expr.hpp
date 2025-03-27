@@ -25,11 +25,13 @@ namespace pst {
 		ExprClassify() = delete;
 
 		CONDITION(isComparison) {
-			return state[fwd].asBinaryOperator().map([](auto op) {return op.isComparison();}).value_or(false);
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
+			).value_or(false);
 		}
 
 		CONDITION(isAssignment) {
-			return state[fwd].asBinaryOperator().map([](auto op) {return op.isAssignment();}).value_or(false);
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
+			).value_or(false);
 		}
 
 		CONDITION(exprStmtEnd) { return state[fwd].is(Special::Semicolon); }

@@ -94,7 +94,7 @@ namespace lang_def {
 			{ Keyword::And, "and", KeywordFlags() },
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
-			
+
 			{ Keyword::Ref, "ref", KeywordFlagsOptions::IS_GEN_PREFIX_OP },
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
