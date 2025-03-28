@@ -11,12 +11,12 @@ namespace base {
 		OkBadEnum value;
 
 		[[nodiscard]]
-		bool isOk() const {
+		constexpr bool isOk() const {
 			return value == OkBadEnum::Ok;
 		}
 
 		[[nodiscard]]
-		bool isBad() const {
+		constexpr bool isBad() const {
 			return not isOk();
 		}
 	};
