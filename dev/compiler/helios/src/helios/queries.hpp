@@ -22,13 +22,11 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query FULL HOUTUnit of single module
-	 * @note Not yet implemented
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, const HOUTUnit&)
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, HOUTUnit)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
-	 * @note Not yet implemented
 	 */
 	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleID, std::vector<HOUTUnit>)
 
