@@ -74,7 +74,7 @@ namespace base::detail {
 			constexpr auto ENUM_ELEMENT_COUNT                                          \
 				= std::to_underlying(namespace_name::name::COUNT);                          \
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {   \
-				base::detail::validateEnumVaArgs(#__VA_ARGS__);                      \
+				base::detail::validateStrEnumVaArgs(#__VA_ARGS__);                      \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                      \
 				::base::detail::StrToEnumType<namespace_name::name> out;                    \
 				CORE_ASSERT(                                                                \
@@ -90,7 +90,7 @@ namespace base::detail {
 				return out;                                                                 \
 			}                                                                               \
 			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {   \
-				base::detail::validateEnumVaArgs(#__VA_ARGS__);                      \
+				base::detail::validateStrEnumVaArgs(#__VA_ARGS__);                      \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                      \
 				::base::detail::EnumToStrType<namespace_name::name> out;                    \
 				CORE_ASSERT(                                                                \
