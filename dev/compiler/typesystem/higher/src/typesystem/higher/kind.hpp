@@ -8,7 +8,7 @@
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
-MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
+MAKE_STRINGIFYABLE_ENUM(tsh, u32, Kind
 	/**
 		@brief Enum which identifies the features of a type described in the Type System.
 	*//**
@@ -17,9 +17,6 @@ MAKE_STRINGIFYABLE_ENUM(tsh, i32, Kind
 		Furthermore, a Tuple type holds information about its component types.
 		Each class of types is described with a different Kind.
 	*/,
-
-	/** @brief The kind of the general AbstractType(Impl). */
-	Any = -1,
 
 	Unit,
 	Void,

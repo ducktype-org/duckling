@@ -30,25 +30,40 @@
  */
 #pragma once
 
-#include "define_helper.hpp"
 #include "maps.hpp"
 #include "string_id.hpp"
+#include "ok_bad.hpp"
+#include "simple_char_classifications.hpp"
+#include "int_conv.hpp"  // IWYU pragma: export
 
-// @TODO: add tests
+#include <utility>       // IWYU pragma: export
+#include <type_traits>   // IWYU pragma: export
 
-namespace base {
-	namespace detail {
-		template<typename EnumType>
-		using StrToEnumType = base::Map<base::StrID, EnumType>;
+namespace base::detail {
+	template<typename EnumType>
+	using StrToEnumType = base::Map<base::StrID, EnumType>;
 
-		template<typename EnumType>
-		using EnumToStrType = base::Map<EnumType, base::StrID>;
+	template<typename EnumType>
+	using EnumToStrType = base::Map<EnumType, base::StrID>;
 
-		template<typename EnumType>
-		struct TwoMaps final {
-			EnumToStrType<EnumType> to_str;
-			EnumToStrType<EnumType> to_enum;
-		};
+	/**
+	 * Validates that VA_ARGS passed to `MAKE_STRINGIFYABLE_ENUM` are valid, that is
+	 * that do not define any non-default values.
+	 */
+	constexpr OkBad validateStrEnumVaArgs(std::string_view va_args) {
+		char previous = ' ';
+		for (auto c: va_args) {
+			if (c == '-') return BAD;  // '-' is not allowed
+			if (c == '=') return BAD;  // '=' default values are not allowed
+			if (base::isDigit(c)) {
+				if (not base::isAlnum(previous)) {
+					// there is a digit that is not a part of identifier:
+					return BAD;
+				}
+			}
+			previous = c;
+		}
+		return OK;
 	}
 }
 
@@ -60,44 +75,71 @@ namespace base {
  * @note Writing source docs for these enums is very tricky.
  * See tsh::Kind or other usages for an example.
  */
-#define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                              \
-                                                                                                   \
-	namespace namespace_name {                                                                     \
-		enum class name : base_type { __VA_ARGS__, COUNT };                                        \
-                                                                                                   \
-		namespace name##enum_helper {                                                              \
-			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {          \
-				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                             \
-				::base::detail::StrToEnumType<namespace_name::name> out;                           \
-				for (base_type i = 0; const auto& string: string_vector) {                         \
-					out.put(base::StrID(string.data()), static_cast<namespace_name::name>(i++));   \
-				}                                                                                  \
-				return out;                                                                        \
-			}                                                                                      \
-			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {          \
-				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                             \
-				::base::detail::EnumToStrType<namespace_name::name> out;                           \
-				for (base_type i = 0; const auto& string: string_vector) {                         \
-					out.put(static_cast<namespace_name::name>(i++), ::base::StrID(string.data())); \
-				}                                                                                  \
-				return out;                                                                        \
-			}                                                                                      \
-		}                                                                                          \
-	}                                                                                              \
-                                                                                                   \
-	namespace base {                                                                               \
-		template<>                                                                                 \
-		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrID id) {        \
-			static ::base::detail::StrToEnumType<namespace_name::name> mapping                     \
-				= namespace_name::name##enum_helper::strToEnumMaker();                             \
-			return mapping[id];                                                                    \
-		}                                                                                          \
-		template<>                                                                                 \
-		inline ::base::StrID enumToStr<::namespace_name::name>(::namespace_name::name v) {         \
-			static ::base::detail::EnumToStrType<::namespace_name::name> mapping                   \
-				= namespace_name::name##enum_helper::enumToStrMaker();                             \
-			return mapping[v];                                                                     \
-		}                                                                                          \
+#define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                            \
+	static_assert(std::is_integral_v<base_type>, "base_type must be integral");                  \
+	static_assert(not std::is_same_v<base_type, bool>, "base_type must not be bool");            \
+	static_assert(                                                                               \
+		std::is_same_v<base_type, std::remove_cvref_t<base_type>>,                               \
+		"Base type must not be cv-ref qualified"                                                 \
+	);                                                                                           \
+	static_assert(                                                                               \
+		base::detail::validateStrEnumVaArgs(#__VA_ARGS__).isOk(),                                \
+		"Default values are not allowed in MAKE_STRINGIFYABLE_ENUM"                              \
+	);                                                                                           \
+                                                                                                 \
+	namespace namespace_name {                                                                   \
+		enum class name : base_type { __VA_ARGS__ __VA_OPT__(, ) COUNT };                        \
+                                                                                                 \
+		namespace name##enum_helper {                                                            \
+			constexpr auto ENUM_ELEMENT_COUNT = std::to_underlying(namespace_name::name::COUNT); \
+			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {        \
+				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
+				::base::detail::StrToEnumType<namespace_name::name> out;                         \
+				CORE_ASSERT(                                                                     \
+					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),        \
+					"Enum has different number of values then vaArgSplit provided"               \
+				);                                                                               \
+				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
+					out.put(                                                                     \
+						base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data()),       \
+						static_cast<namespace_name::name>(i)                                     \
+					);                                                                           \
+				}                                                                                \
+				return out;                                                                      \
+			}                                                                                    \
+			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {        \
+				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
+				::base::detail::EnumToStrType<namespace_name::name> out;                         \
+				CORE_ASSERT(                                                                     \
+					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),        \
+					"Enum has different number of values then vaArgSplit provided"               \
+				);                                                                               \
+				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
+					out.put(                                                                     \
+						static_cast<namespace_name::name>(i),                                    \
+						::base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data())      \
+					);                                                                           \
+				}                                                                                \
+				return out;                                                                      \
+			}                                                                                    \
+		}                                                                                        \
+	}                                                                                            \
+                                                                                                 \
+	namespace base {                                                                             \
+		template<>                                                                               \
+		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrID id) {      \
+			static ::base::detail::StrToEnumType<namespace_name::name> mapping                   \
+				= namespace_name::name##enum_helper::strToEnumMaker();                           \
+			CORE_ASSERT(mapping.contains(id), "Enum value not found");                           \
+			return mapping[id];                                                                  \
+		}                                                                                        \
+		template<>                                                                               \
+		inline ::base::StrID enumToStr<::namespace_name::name>(::namespace_name::name v) {       \
+			static ::base::detail::EnumToStrType<::namespace_name::name> mapping                 \
+				= namespace_name::name##enum_helper::enumToStrMaker();                           \
+			CORE_ASSERT(mapping.contains(v), "Enum value not found");                            \
+			return mapping[v];                                                                   \
+		}                                                                                        \
 	}
 
 namespace base {
