@@ -227,7 +227,7 @@ namespace vm {
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			auto called_func_type = thread.executing_program->types.at(called_func.name);
+			auto called_func_type = thread.executing_program->types->at(called_func.name);
 			u64  arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
@@ -330,7 +330,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types.at(vm::TypeID(static_cast<usize>(instr->arg0)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg0)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
@@ -403,7 +403,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types.at(vm::TypeID(static_cast<u32>(instr->arg1)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}

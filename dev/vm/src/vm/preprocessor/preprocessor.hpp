@@ -5,10 +5,13 @@
 #include "diagnostic/logger.hpp"
 #include "diagnostic/source_position.hpp"
 #include "vm/code/builders/builders.hpp"
+#include "vm/code/element_base.hpp"
+#include "vm/core/process/type_metadata/type.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/code/code.hpp"
 #include "vm/code/type_of_data.hpp"
 #include <expected>
+#include <type_traits>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <filesystem/file.hpp>
@@ -30,17 +33,6 @@ namespace vm {
 		PreprocessorLogger& operator=(const PreprocessorLogger&) = delete;
 		PreprocessorLogger& operator=(PreprocessorLogger&&)      = default;
 
-		template<class T, class... Args>
-		void log(const code::ElementBase& elem, Args&&... args) {
-			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(base::strConcat(T::ERR_MSG, " ", args...));
-				opt_some(pos) {
-					auto t = makeBox<T>(pos, std::forward<Args>(args)...);
-					logger.log(std::move(t));
-				}
-			}
-		}
-
 		template<class T, class Function, class... Args>
 		void logMap(const code::ElementBase& elem, const Function& function, Args&&... args) {
 			match_optional(elem.bytecode_pos) {
@@ -51,6 +43,16 @@ namespace vm {
 					logger.log(std::move(t));
 				}
 			}
+		}
+
+		template<class T, class... Args>
+		void log(const code::ElementBase& elem, Args&&... args) {
+			logMap<T>(elem, [](const Box<T>&) {}, std::forward<Args>(args)...);
+		}
+
+		template<class T, class... Args>
+		void logSimple(Args&&... args) {
+			errors.push_back(base::strConcat(T::ERR_MSG, " ", std::forward<Args>(args)...));
 		}
 
 		void dump(std::ostream& stream) const {
@@ -72,28 +74,35 @@ namespace vm {
 	 */
 	class Program {
 	public:
-		Program(const Program&)            = default;
+		Program(const Program&)            = delete;
 		Program(Program&&) noexcept        = default;
-		Program& operator=(const Program&) = default;
+		Program& operator=(const Program&) = delete;
 		Program& operator=(Program&&)      = default;
 
-		static std::expected<Program, PreprocessorLogger>
-			from(const std::vector<vm::code::CodeFile>& code_files);
+		static std::expected<Program, PreprocessorLogger> from(
+			const std::vector<vm::code::Function>& functions,
+			const std::vector<code::TypeOfData>&   types
+		);
 
-		const base::StableTypeIdNameMap<code::Function> funcMap() const;
-		const TypeMetadata&                             getTypeMetadata() const;
+		TypeID typeIdOf(base::StrID) const { throw base::NotYetImplemented("typeIdOf"); }
+
+		const base::StableTypeIdNameMap<code::Function>& funcMap() const;
+
+		Box<TypeMetadata> produceTypeMetadata() const;
 
 	private:
 		Program() = default;
 
-		void insertTypesAndFunctions(
-			const std::vector<vm::code::CodeFile>& code_files, vm::PreprocessorLogger& logger
+		void
+			insertTypes(const std::vector<code::TypeOfData>& types, vm::PreprocessorLogger& logger);
+		void insertFunctions(
+			const std::vector<code::Function>& functions, vm::PreprocessorLogger& logger
 		);
-		void defineTypes();
 
-		base::StableTypeIdNameMap<code::Function>   functions;
-		base::StableTypeIdNameMap<code::TypeOfData> meta_types;
-		TypeMetadata                                types;
+		base::StableTypeIdNameMap<code::Function> functions;
+		Box<TypeMetadata>                         type_metadata = makeBox<TypeMetadata>();
+		std::vector<code::TypeOfData>             types;  /// used for logging
+		code::builders::TypesContext<>            types_context_adding;
 	};
 
 	class Preprocessor {
@@ -101,8 +110,7 @@ namespace vm {
 		bool validate_program;
 
 		std::expected<low::LowVMProgram, PreprocessorLogger> getProgram(
-			const std::vector<code::Function>&    functions,
-			const code::builders::TypesContext<>& types
+			const std::vector<code::Function>& functions, const std::vector<code::TypeOfData>& types
 		);
 
 	public:

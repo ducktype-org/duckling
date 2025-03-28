@@ -9,6 +9,9 @@
 #include <type_traits>
 
 namespace base {
+	/**
+	 * @note Access with ID is O(1)
+	 */
 	template<class T, class TID = usize>
 	requires std::is_constructible_v<usize, TID> && std::is_constructible_v<TID, usize>
 	class StableTypeIdNameMap {

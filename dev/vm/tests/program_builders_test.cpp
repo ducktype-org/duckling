@@ -79,23 +79,28 @@ private:
 	}
 
 	void testFunctionBuilder() {
-		base::HashMap<base::StrID, vm::code::TypeOfData> available_types;
-		auto                                             int32 = base::StrID("int32");
-		auto                                             int64 = base::StrID("int64");
-		available_types.put(int32, vm::code::PrimitiveType{ int32, 4 });
-		available_types.put(int64, vm::code::PrimitiveType{ int64, 8 });
-		FunctionBuilder func_builder(base::StrID("test"), available_types);
+		TypesContext types_adding;
+		auto         void_t = base::StrID("void");
+		auto         int32  = base::StrID("int32");
+		auto         int64  = base::StrID("int64");
+		auto         test   = base::StrID("test");
+		types_adding.addType(vm::code::PrimitiveType{ void_t, 0 });
+		types_adding.addType(vm::code::PrimitiveType{ int32, 4 });
+		types_adding.addType(vm::code::PrimitiveType{ int64, 8 });
+		types_adding.addType(vm::code::FunctionType{ test, {}, { void_t } });
 
-		auto a_id = func_builder.initType(Op_init_type{ int32 });
-		ASSERT_EQUAL(0, a_id);
-		auto b_id = func_builder.initType(Op_init_type{ int64 });
-		auto c_id = func_builder.initType(Op_init_type{ int64 });
-		// ASSERT_EQUAL(4, b);
-		ASSERT_EQUAL(1, b_id);
-		ASSERT_EQUAL(2, c_id);
+		TypesContext    available_types = types_adding.finalized();
+		FunctionBuilder func_builder(test, available_types);
+
+		auto a = func_builder.initType(Op_init_type{ int32 });
+		ASSERT_EQUAL(0, a);
+		auto b = func_builder.initType(Op_init_type{ int64 });
+		auto c = func_builder.initType(Op_init_type{ int64 });
+		ASSERT_EQUAL(4, b);
+		ASSERT_EQUAL(12, c);
 
 		InstructionBuilder instr(OpKind::add);
-		const auto         arg0 = vm::opargs::StackLocalI32{ i64(a_id) };
+		const auto         arg0 = vm::opargs::StackLocalI32{ i64(a) };
 		const auto         arg1 = vm::opargs::Immediate{ 7 };
 		instr.pushArgs(arg0, arg1);
 
@@ -122,14 +127,19 @@ private:
 	}
 
 	void testFileBuilder() {
-		CodeFileBuilder file_builder;
+		TypesContext types_adding;
 
-		auto int32 = base::StrID("int32");
-		auto int64 = base::StrID("int64");
-		file_builder.addType(vm::code::PrimitiveType(int32, 4));
-		file_builder.addType(vm::code::PrimitiveType(int64, 8));
+		auto main   = base::StrID("main");
+		auto int32  = base::StrID("int32");
+		auto int64  = base::StrID("int64");
+		types_adding.addType(vm::code::PrimitiveType(int32, 4));
+		types_adding.addType(vm::code::PrimitiveType(int64, 8));
+		types_adding.addType(vm::code::FunctionType(main, {}, int64));
 
-		FunctionBuilder func_builder(base::StrID("main"), file_builder.getAvailableTypes());
+		TypesContext<vm::code::builders::TypesContextState::Finalized> finalized
+			= types_adding.finalized();
+
+		FunctionBuilder func_builder(main, finalized);
 		auto            a = func_builder.initType(Op_init_type{ int64 });
 		func_builder.initType(Op_init_type{ int32 });
 
@@ -139,19 +149,19 @@ private:
 		InstructionBuilder instr_output(OpKind::output);
 		instr_output.pushArgs(vm::opargs::StackLocalI64(i64(a)));
 		func_builder.addInstruction(instr_output);
-		func_builder.deinitType();
-		func_builder.deinitType();
+		func_builder.deinitType(); // a
+		func_builder.deinitType(); // b
+		func_builder.deinitType(); // ret val (int64)
 		assertThrows<base::Panic>(
 			[&] { func_builder.deinitType(); }, "Cannot pop from empty variable stack"
 		);
 
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 
-		file_builder.addFunction(func_builder);
-		vm::code::CodeFile code = file_builder.build();
-
 		std::stringstream ss;
-		vm::code::serialize(code, ss);
+		for (const auto& type: finalized.getTypes()) vm::code::serialize(type, ss);
+		auto func = func_builder.build();
+		vm::code::serialize(func, ss);
 		std::string serialized = ss.str();
 		std::cerr << serialized << '\n';
 

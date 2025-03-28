@@ -32,12 +32,12 @@ namespace vm::low {
 	 * @note It's guaranteed to contain main, if validator is enabled.
 	 */
 	struct LowVMProgram {
-		LowVMProgram(const std::vector<FuncData>& functions, TypeMetadata types):
+		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> types):
 			  types(std::move(types)) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 		}
 
 		base::StableTypeIdNameMap<FuncData, usize> functions;
-		TypeMetadata                               types;
+		Box<TypeMetadata>                          types;
 	};
 }

@@ -58,30 +58,40 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 
 namespace vm::code::builders {
 
-	namespace types_context_state {
-		struct AddingTypes {};
+	enum class TypesContextState : bool {
+		AddingTypes,
+		Finalized,
+	};
 
-		struct Finalized {};
-	}
 
-	template<class T = types_context_state::AddingTypes>
+	template<TypesContextState state = TypesContextState::AddingTypes>
 	class TypesContext;
 
 	template<>
-	class TypesContext<> {
-		TypeMetadata                           types{};
-		base::HashMap<base::StrID, TypeOfData> types_of_data;
+	class TypesContext<TypesContextState::AddingTypes> {
+		base::StableTypeIdNameMap<TypeOfData, usize> types;
 
 	public:
-		void                                         addType(const vm::code::TypeOfData& type);
-		TypesContext<types_context_state::Finalized> finalized();
+		void                                       addType(const vm::code::TypeOfData& type);
+		TypesContext<TypesContextState::Finalized> finalized() const;
 	};
 
 	template<>
-	class TypesContext<types_context_state::Finalized> {
+	class TypesContext<TypesContextState::Finalized> {
+		friend TypesContext<TypesContextState::AddingTypes>;
+		TypesContext() = default;
+
+		Box<TypeMetadata>       metadata = makeBox<TypeMetadata>();
+		std::vector<TypeOfData> types;
+
 	public:
-		TypeMetadata                           types{};
-		base::HashMap<base::StrID, TypeOfData> types_of_data;
+		[[nodiscard]] const std::vector<TypeOfData>& getTypes() const;
+
+		[[nodiscard]] const TypeMetadata& getMetadata() const;
+
+		Box<TypeMetadata> moveMetadata() &&;
+
+		[[nodiscard]] usize sizeOf(base::StrID name) const;
 	};
 
 	/**
@@ -143,7 +153,7 @@ namespace vm::code::builders {
 		usize max_stack_size = 0;
 		usize ret_size       = 0;
 
-		const TypeMetadata& types;
+		const TypesContext<TypesContextState::Finalized>& types_context;
 
 		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
 
@@ -152,7 +162,12 @@ namespace vm::code::builders {
 		void handleLabel(instructions::Op_label label);
 
 	public:
-		FunctionBuilder(base::StrID name, const TypesContext<>& types);
+		FunctionBuilder(base::StrID name, const TypesContext<TypesContextState::Finalized>& types);
+
+		/**
+		 * @note This is temporary, look at impl of build().
+		 */
+		void setRetSize(usize ret_size);
 
 		/**
 		 * @brief Return variable's stack offset.

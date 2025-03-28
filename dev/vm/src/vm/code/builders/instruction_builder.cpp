@@ -97,6 +97,12 @@ namespace vm::code::builders {
 	}
 }
 
+void vm::code::builders::InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) {
+	args.push_back(arg);
+}
+
+vm::code::builders::InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }
+
 void vm::code::builders::InstructionBuilder::setKind(OpKind kind) {
 	this->kind = kind;
 	kind_set   = true;

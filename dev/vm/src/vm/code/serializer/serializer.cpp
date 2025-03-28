@@ -30,7 +30,7 @@ namespace vm::code {
 	}
 
 	void write1ArgOpcodeTemplate(const std::string_view opcode_name, auto arg1, std::ostream& out) {
-		out << std::setw(17) << std::left << opcode_name << " ";
+		out << std::setw(22) << std::left << opcode_name << " ";
 		out << std::setw(8) << std::right << toString(arg1);
 		out << ";";
 	}
@@ -38,7 +38,7 @@ namespace vm::code {
 	void write2ArgsOpcodeTemplate(
 		const std::string_view opcode_name, auto arg1, auto arg2, std::ostream& out
 	) {
-		out << std::setw(17) << std::left << opcode_name << " ";
+		out << std::setw(22) << std::left << opcode_name << " ";
 		out << std::setw(8) << std::right << toString(arg1) << ",";
 		out << std::setw(8) << std::right << toString(arg2);
 		out << ";";
@@ -170,8 +170,20 @@ namespace vm::code {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const FunctionType&) {
-				throw base::NotYetImplemented("DynamicTableType serialization");
+			void operator()(const FunctionType& fun) {
+				// type fun: main {} int64
+				out << "type fun: ";
+				out << fun.name.strView() << " {";
+				bool first = true;
+				for (const auto& param: fun.parameters) {
+					if (first)
+						out << " ";
+					else
+						out << ",";
+					out << param.strView() << " ";
+					first = false;
+				}
+				out << "} " << fun.result.strView();
 			}
 		};
 
@@ -187,19 +199,10 @@ namespace vm::code {
 		out << '\n';
 	}
 
-	void serialize(const CodeFile& file, std::ostream& out) {
-		for (const auto& type: file.types) {
-			TypeSerializer serializer(out, type);
-			serializer.write();
-			out << '\n';
-		}
-
+	void serialize(const TypeOfData& type, std::ostream& out) {
+		TypeSerializer serializer(out, type);
+		serializer.write();
 		out << '\n';
-
-		for (const auto& function: file.functions) {
-			FunctionSerializer serializer(out, function);
-			serializer.write();
-			out << '\n';
-		}
 	}
+
 }

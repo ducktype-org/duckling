@@ -1,9 +1,7 @@
 #pragma once
 
 #include <vm/code/type_of_data.hpp>
-#include "base/stable_type_id_name_map.hpp"
 #include "instructions.hpp"
-#include "vm/core/process/type_metadata/type_metadata.hpp"
 #include "vm/code/element_base.hpp"
 #include <base/string_id.hpp>
 

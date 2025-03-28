@@ -18,10 +18,12 @@ namespace vm {
 
 	public:
 		TypeMetadata()                               = default;
-		TypeMetadata(const TypeMetadata&)            = default;
-		TypeMetadata(TypeMetadata&&) noexcept        = default;
-		TypeMetadata& operator=(const TypeMetadata&) = default;
-		TypeMetadata& operator=(TypeMetadata&&)      = default;
+
+		// Deleting copy and move constructors/operator= because pointers inside types 
+		TypeMetadata(const TypeMetadata&)            = delete;
+		TypeMetadata(TypeMetadata&&) noexcept        = delete;
+		TypeMetadata& operator=(const TypeMetadata&) = delete;
+		TypeMetadata& operator=(TypeMetadata&&)      = delete;
 
 		TypeRef addType(Type&& type);
 

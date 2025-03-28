@@ -6,6 +6,7 @@
 #include "diagnostic/logger.hpp"
 #include "vm/code/serializer/serializer.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
+#include "vm/core/thread/low_program/low_program.hpp"
 #include "vm/core/thread/low_program/opcodes.hpp"
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/preprocessor/parser/errors.hpp"
@@ -21,10 +22,11 @@
 namespace vm {
 	namespace {
 		struct CompContext {
-			const Program&                                    program;
-			PreprocessorLogger&                               log;
-			base::Optional<code::Function>                    func;
-			base::Optional<base::HashMap<base::StrID, usize>> label_positions;
+			const base::StableTypeIdNameMap<code::Function, usize>& func_map;
+			const TypeMetadata&                                     types;
+			PreprocessorLogger&                                     log;
+			base::Optional<code::Function>                          func;
+			base::Optional<base::HashMap<base::StrID, usize>>       label_positions;
 		};
 
 		i64 getOpCodeArgValue(
@@ -38,16 +40,15 @@ namespace vm {
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
-					auto type_obj = ctx.program.getTypeMetadata().atMaybe(type_arg.type_name);
+					auto type_obj = ctx.types.atMaybe(type_arg.type_name);
 					if (type_obj)
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
 					ctx.log.log<vm::parser::UnknownType>(type_arg, type_arg.type_name);
 					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					for (i64 i = 0; i < ctx.program.funcMap().size(); i++)
-						if (ctx.program.funcMap().at(base::safeIntConv<u64>(i))->name
-						    == func.function_name)
+					for (i64 i = 0; i < ctx.func_map.size(); i++)
+						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
 					ctx.log.log<vm::parser::UnknownFunction>(func, func.function_name);
 					return 0;
@@ -143,19 +144,23 @@ namespace vm {
 		converted_functions.reserve(program.funcMap().size());
 		PreprocessorLogger log;
 
-		auto ctx = CompContext{ .program = program, .log = log, .func = {}, .label_positions = {} };
+		Box<TypeMetadata> types = program.produceTypeMetadata();
+		auto              ctx   = CompContext{ .func_map        = program.funcMap(),
+			                                   .types           = *types,
+			                                   .log             = log,
+			                                   .func            = {},
+			                                   .label_positions = {} };
 
 		for (auto& func: program.funcMap()) {
+			code::serialize(func, std::cout);
+
 			ctx.func = func;
 			splitCodeAndLabels(ctx);
-			code::serialize(ctx.func.value(), std::cout);
 			auto converted_func = changeFuncToFuncData(ctx);
 			converted_functions.push_back(converted_func);
 		}
 
 		if (log.bad()) return std::unexpected(std::move(log));
-		low::LowVMProgram low_program(converted_functions, program.getTypeMetadata());
-
-		return low_program;
+		return low::LowVMProgram{ converted_functions, std::move(types) };
 	}
 }

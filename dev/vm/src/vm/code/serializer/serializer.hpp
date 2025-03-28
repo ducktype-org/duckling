@@ -1,17 +1,19 @@
 #pragma once
 
+#include "vm/code/type_of_data.hpp"
 #include <iostream>
 #include <vm/code/code.hpp>
 
 namespace vm::code {
 	/**
-	 * @brief Serializes bytecode CodeFile object into a parse-able by the DVM
+	 * @brief Serializes bytecode function into a parse-able by the DVM
 	 * text representation.
 	 */
-	void serialize(const CodeFile& file, std::ostream& out);
+	void serialize(const Function& function, std::ostream& out);
 
 	/**
-	 * @todo Remove
+	 * @brief Serializes bytecode type into a parse-able by the DVM
+	 * text representation.
 	 */
-	void serialize(const Function& func, std::ostream& out);
+	void serialize(const TypeOfData& type, std::ostream& out);
 }

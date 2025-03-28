@@ -42,26 +42,25 @@ namespace vm::validator {
 		private:
 			const Program&     program;
 			PreprocessorLogger log;
-			bool               good = false;
 
-			bool validateMainExistence();
-			bool validateTailcallSignatures();
+			void validateMainExistence();
+			void validateTailcallSignatures();
 		};
 
 		std::expected<void, PreprocessorLogger> Validator::validateProgram() {
-			ADD_CHECK(validateMainExistence);
-			ADD_CHECK(validateTailcallSignatures);
+			validateMainExistence();
+			validateTailcallSignatures();
 
 			if (!log.good()) return std::unexpected(std::move(log));
 
 			return {};
 		}
 
-		bool Validator::validateMainExistence() {
-			return program.funcMap().contains(base::StrID("main"));
+		void Validator::validateMainExistence() {
+			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple<NoMainError>();
 		}
 
-		bool Validator::validateTailcallSignatures() {
+		void Validator::validateTailcallSignatures() {
 			for (const auto& func: program.funcMap()) {
 				for (const auto& op: func.body) {
 					variant_match(op) {
@@ -84,7 +83,6 @@ namespace vm::validator {
 					}
 				}
 			}
-			return true;
 		}
 	}
 

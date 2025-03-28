@@ -86,57 +86,33 @@ vm::code::Instruction translateInstruction(CRef<vm::parser::OpCode> opcode) {
 	return instr_to_factory.at(opcode->opcode_name.str())(opcode);
 }
 
-void vm::Program::insertTypesAndFunctions(
-	const std::vector<code::CodeFile>& code_files, PreprocessorLogger& logger
+void vm::Program::insertFunctions(
+	const std::vector<code::Function>& new_functions, PreprocessorLogger& logger
 ) {
-	vm::code::builders::Builder for (const auto& code_file: code_files) {
-		for (const code::TypeOfData& type_of_data: code_file.types) {
-			base::StrID name = VISIT(type_of_data, value, return value.name);
-			if (types.atMaybe(name).has_value()) {
-				auto base = VISIT(
-					type_of_data, value, return static_cast<const vm::code::ElementBase&>(value)
-				);
-				logger.logMap<parser::DuplicatedTypeError>(base, [&](auto& msg) {
-					for (const vm::code::TypeOfData& duplicated_type: meta_types) {
-						base::StrID other_name = VISIT(duplicated_type, value, return value.name);
-						if (name == other_name) {
-							msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(
-								VISIT(duplicated_type, tp, return tp.bytecode_pos.value())
-							));
-						}
-					}
-				});
-			} else {
-				Type type = Type::from(type_of_data);
-				types.addType(std::move(type));
-				meta_types.insert(type_of_data, name);
-			}
-		}
-
-		for (auto& func: code_file.functions) {
-			auto func_name = func.name;
-			if (functions.contains(func_name)) {
-				logger.logMap<vm::parser::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
-					auto dup_func = functions.at(func_name);
-					msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
-						dup_func->bytecode_pos.value()
-					));
-				});
-			} else {
-				functions.insert(func, func_name);
-			}
+	for (const auto& func: new_functions) {
+		auto func_name = func.name;
+		if (functions.contains(func_name)) {
+			logger.logMap<vm::parser::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
+				auto dup_func = functions.at(func_name);
+				msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
+					dup_func->bytecode_pos.value()
+				));
+			});
+		} else {
+			functions.insert(func, func_name);
 		}
 	}
 }
 
-std::expected<vm::Program, vm::PreprocessorLogger>
-	vm::Program::from(const std::vector<vm::code::CodeFile>& code_files) {
+std::expected<vm::Program, vm::PreprocessorLogger> vm::Program::from(
+	const std::vector<vm::code::Function>& functions, const std::vector<code::TypeOfData>& types
+) {
 	vm::Program            program;
 	vm::PreprocessorLogger log;
 
-	program.insertTypesAndFunctions(code_files, log);
+	program.insertTypes(types, log);
+	program.insertFunctions(functions, log);
 	if (!log.good()) return std::unexpected(std::move(log));
-	program.types.finalize();
 	return program;
 }
 
@@ -145,26 +121,25 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			std::vector<code::CodeFile>     code_files;
-			code::builders::CodeFileBuilder file_builder_adding;
+			code::builders::TypesContext<> types_context_adding;
 			for (const auto& parsed_file: parsed_files)
-				for (const auto& tp: parsed_file.types) file_builder_adding.addType(tp->datatype);
-			code::builders::CodeFileBuilder file_builder = file_builder_adding.finalize();
+				for (const auto& tp: parsed_file.types) types_context_adding.addType(tp->datatype);
+			auto                        types_context = types_context_adding.finalized();
+			std::vector<code::Function> functions;
 
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& func: parsed_file.functions) {
-					code::builders::FunctionBuilder func_builder(
-						func->name, file_builder.getAvailableTypes()
-					);
-					for (const auto& instr: func->code->opcodes)
+					code::builders::FunctionBuilder func_builder(func->name, types_context);
+					for (const auto& instr: func->code->opcodes) {
+						// std::cout << instr->position->genStr("") << '\n';
 						func_builder.addInstruction(translateInstruction(instr.ref()));
+					}
+					func_builder.setRetSize(func->ret_size);
 
-					file_builder.addFunction(func_builder);
+					functions.emplace_back(func_builder.build());
 				}
-
-				code_files.emplace_back(file_builder.build());
 			}
-			return getProgram(code_files);
+			return getProgram(functions, types_context.getTypes());
 		}
 	}
 	CORE_UNREACHABLE();
@@ -172,9 +147,10 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 
 vm::Preprocessor::Preprocessor(bool validate_program): validate_program(validate_program) {}
 
-std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
-	vm::Preprocessor::getProgram(const std::vector<code::CodeFile>& code_files) {
-	std::expected<Program, PreprocessorLogger> opt_program = Program::from(code_files);
+std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger> vm::Preprocessor::getProgram(
+	const std::vector<code::Function>& functions, const std::vector<code::TypeOfData>& types
+) {
+	std::expected<Program, PreprocessorLogger> opt_program = Program::from(functions, types);
 	if (opt_program.has_value()) {
 		Program program = std::move(opt_program).value();
 
@@ -188,8 +164,36 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	}
 }
 
-const base::StableTypeIdNameMap<vm::code::Function> vm::Program::funcMap() const {
+const base::StableTypeIdNameMap<vm::code::Function>& vm::Program::funcMap() const {
 	return functions;
 }
 
-const vm::TypeMetadata& vm::Program::getTypeMetadata() const { return types; }
+void vm::Program::insertTypes(
+	const std::vector<code::TypeOfData>& new_types, vm::PreprocessorLogger& logger
+) {
+	for (const auto& type: new_types) {
+		try {
+			types_context_adding.addType(type);
+		} catch (code::builders::DuplicatedTypeError&) {
+			base::StrID name = VISIT(type, tp, return tp.name);
+			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
+			logger.logMap<parser::DuplicatedTypeError>(base, [&](auto& msg) {
+				for (const vm::code::TypeOfData& duplicated_type: types) {
+					base::StrID other_name = VISIT(duplicated_type, value, return value.name);
+					if (name == other_name) {
+						msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(
+							VISIT(duplicated_type, tp, return tp.bytecode_pos.value())
+						));
+					}
+				}
+			});
+		}
+	}
+	auto finalized = types_context_adding.finalized();
+	types          = finalized.getTypes();
+	type_metadata  = std::move(finalized).moveMetadata();
+}
+
+Box<vm::TypeMetadata> vm::Program::produceTypeMetadata() const {
+	return std::move(types_context_adding.finalized()).moveMetadata();
+}

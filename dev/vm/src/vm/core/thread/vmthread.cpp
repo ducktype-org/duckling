@@ -116,7 +116,7 @@ namespace vm {
 
 		// Preinitialize the main ret_val block.
 		auto main_func_type
-			= executing_program->types.atMaybe(main_func->name).expect("Expected main!");
+			= executing_program->types->atMaybe(main_func->name).expect("Expected main!");
 		auto main_return_type
 			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
@@ -147,7 +147,7 @@ namespace vm {
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
 	#include <vm/code/opcodes_list.hpp>
 
-#undef HANDLE_OPCODE
+	#undef HANDLE_OPCODE
 			};
 
 		goto* opcode_label[static_cast<u64>(instr->opcode)];
@@ -164,7 +164,7 @@ namespace vm {
 		}
 	#include <vm/code/opcodes_list.hpp>
 
-#undef HANDLE_OPCODE
+	#undef HANDLE_OPCODE
 
 	End:
 
@@ -384,9 +384,8 @@ namespace vm {
 			return false;
 
 		exec_thread = std::thread([this, program] {
+			run(program);
 			try {
-				run(program);
-
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";

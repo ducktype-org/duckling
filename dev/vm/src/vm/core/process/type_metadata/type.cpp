@@ -1,11 +1,16 @@
 #include "type.hpp"
+#include <algorithm>
 #include <base/exceptions.hpp>
+#include <bits/ranges_algo.h>
+#include <ranges>
 #include <vm/core/supervisor/supervisor.hpp>
 #include <base/variant.hpp>
 #include <base/defer.hpp>
 #include <utility>
 
 namespace vm {
+	using std::plus;
+
 	// Type declaration:
 	Type Type::declareType(base::StrID name) {
 		Type type{};
@@ -37,7 +42,7 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ .inner_type=inner, .size=table_size };
+		kind      = kind::StaticTable{ .inner_type = inner, .size = table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
@@ -58,7 +63,7 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ .offset=0, .type=sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
 		kind = data;
 	}
@@ -79,7 +84,7 @@ namespace vm {
 
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ .parameters=std::move(parameters), .result=result };
+		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
 	}
 
 	void Type::finalize() {
@@ -264,6 +269,14 @@ namespace vm {
 		});
 	}
 
+	base::Optional<u64> Type::getParametersSize() const {
+		return get<kind::Function>().map([](const kind::Function& function) {
+			usize size = 0;
+			for (const auto& param: function.parameters) return param->getSize();
+			return size;
+		});
+	}
+
 	base::Optional<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
 		return get<kind::Function>().flatMap([parameter_id](const kind::Function& function) {
 			if (parameter_id >= function.parameters.size()) return base::Optional<TypeCRef>();
@@ -275,5 +288,13 @@ namespace vm {
 		return get<kind::Function>().flatMap([](const kind::Function& function) {
 			return base::Optional<TypeCRef>(function.result);
 		});
+	}
+
+	base::Optional<const std::vector<TypeCRef>&> Type::getParameters() const {
+		return get<kind::Function>().map(
+			[](const kind::Function& func) -> const std::vector<TypeCRef>& {
+				return func.parameters;
+			}
+		);
 	}
 }

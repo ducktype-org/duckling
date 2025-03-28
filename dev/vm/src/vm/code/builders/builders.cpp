@@ -8,7 +8,6 @@
 #include <vm/code/opcode_args.hpp>
 #include <base/ref.hpp>
 #include <vm/code/type_of_data.hpp>
-#include <ranges>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \
@@ -24,37 +23,14 @@ vm::code::Function FunctionBuilder::build() const {
 	function.body = instructions;
 	function.name = name;
 
-	// @TODO: ret_size should be fixed somehow.
+	// @TODO: ret_size will be fixed in this issue:
+	// https://github.com/ducktype-org/duckling/issues/539
 	function.local_stack_size = max_stack_size;
 	function.ret_size         = ret_size;
 	function.arg_size         = 0;
 	function.next_arg_size    = 0;
 
 	return function;
-}
-
-void CodeFileBuilder<AddingTypes>::addType(const vm::code::TypeOfData& type) {
-	auto name = VISIT(type, tp, return tp.name);
-	match_optional(cfb.types_of_data.atMaybe(name)) {
-		opt_some(tp) { CORE_ASSERT(tp == type, "Duplicated type name: " + name.str()); }
-		opt_none {
-			cfb.types.addType(Type::declareType(name));
-			cfb.types_of_data.put(name, type);
-		}
-	}
-	CORE_UNREACHABLE();
-}
-
-vm::code::CodeFile CodeFileBuilder::build(bool dump_types) const {
-	auto file = CodeFile();
-	if (dump_types)
-		for (const auto& tod: types.TYPES_OF_DATA | std::views::values) file.types.push_back(tod);
-	file.functions = std::ranges::to<std::vector<Function>>(
-		functions | std::views::transform([&](const auto& function_builder) {
-			return function_builder.build();
-		})
-	);
-	return file;
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
@@ -80,14 +56,25 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-FunctionBuilder::FunctionBuilder(base::StrID name, const TypeMetadata& types):
+FunctionBuilder::FunctionBuilder(
+	base::StrID name, const TypesContext<TypesContextState::Finalized>& types
+):
 	  name(name),
-	  types(types) {}
+	  types_context(types) {
+	TypeCRef func_result_type = types_context.getMetadata().at(name)->getResultType().value();
+	initType(instructions::Op_init_type{ func_result_type->getName() });
+	instructions.pop_back();
+	auto params = types_context.getMetadata().at(name)->getParameters().value();
+	for (TypeCRef param: params) {
+		initType(instructions::Op_init_type{ param->getName() });
+		instructions.pop_back();
+	}
+}
 
 usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	instructions.emplace_back(init);
 
-	const usize type_size = types.at(init.arg0.type_name)->getSize();
+	const usize type_size = types_context.sizeOf(init.arg0.type_name);
 	usize       offset    = 0;
 
 	if (!local_stack.empty()) {
@@ -113,13 +100,9 @@ void FunctionBuilder::deinitType() {
 
 usize FunctionBuilder::getLocalSize() const { return local_stack.size(); }
 
-void InstructionBuilder::pushArg(const vm::opargs::OpCodeArg& arg) { args.push_back(arg); }
-
 void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 	for (auto&& instr: instruction.build()) this->addInstruction(instr);
 }
-
-InstructionBuilder::InstructionBuilder(OpKind kind) { setKind(kind); }
 
 void FunctionBuilder::handleLabel(instructions::Op_label label) {
 	if (!stack_state_at_label.contains(label.arg0.label_name))
@@ -131,58 +114,94 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 
 void FunctionBuilder::saveStackState(base::StrID at_label_name) {
 	if (stack_state_at_label.contains(at_label_name)) {
-		if (stack_state_at_label[at_label_name] == local_stack)
-			throw builders::BuilderError("Stack state differs");
+		if (stack_state_at_label[at_label_name] != local_stack)
+			throw builders::StackStateError("Stack state differs between jumps");
 	} else {
 		stack_state_at_label.put(at_label_name, local_stack);
 	}
 }
 
-CodeFileBuilder<FinalizedTypes> CodeFileBuilder<AddingTypes>::finalize() {
-	for (const auto& type: cfb.types_of_data) {
+void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
+
+TypesContext<TypesContextState::Finalized>
+	TypesContext<TypesContextState::AddingTypes>::finalized() const {
+	TypesContext<TypesContextState::Finalized> tctx;
+	for (const auto& type: types) {
+		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
+		tctx.types.push_back(type);
+	}
+	for (const auto& type: tctx.types) {
 		variant_match(type) {
 			variant_case(vm::code::PrimitiveType, data) {
-				cfb.types.at(data.name)->definePrimitive(data.size);
+				tctx.metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(vm::code::PointerType, data) {
-				cfb.types.at(data.name)->definePointer(cfb.types.at(data.inner));
+				tctx.metadata->at(data.name)->definePointer(tctx.metadata->at(data.inner));
 			}
 			variant_case(vm::code::StaticTableType, data) {
-				cfb.types.at(data.name)->defineStaticTable(
-					cfb.types.at(data.inner), data.table_size
+				tctx.metadata->at(data.name)->defineStaticTable(
+					tctx.metadata->at(data.inner), data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
-				cfb.types.at(data.name)->defineDynamicTable(cfb.types.at(data.inner));
+				tctx.metadata->at(data.name)->defineDynamicTable(tctx.metadata->at(data.inner));
 			}
 			variant_case(vm::code::DataType, data) {
 				std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
-					fields.emplace_back(field.name, cfb.types.at(field.type));
-				cfb.types.at(data.name)->defineData(fields);
+					fields.emplace_back(field.name, tctx.metadata->at(field.type));
+				tctx.metadata->at(data.name)->defineData(fields);
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(cfb.types.at(variant));
-				cfb.types.at(data.name)->defineVariant(variants);
+					variants.emplace_back(tctx.metadata->at(variant));
+				tctx.metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(vm::code::FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters) parameters.emplace_back(cfb.types.at(param));
-				cfb.types.at(data.name)->defineFunction(parameters, cfb.types.at(data.result));
+				for (auto& param: data.parameters)
+					parameters.emplace_back(tctx.metadata->at(param));
+				tctx.metadata->at(data.name)->defineFunction(
+					parameters, tctx.metadata->at(data.result)
+				);
 			}
 			variant_default { CORE_PANIC("bad type"); }
 		}
 	}
-	cfb.types.finalize();
-	return cfb;
+	tctx.metadata->finalize();
+	return tctx;
 }
 
-vm::code::builders::CodeFileBuilder::CodeFileBuilder(
-	TypesContext<types_context_state::Finalized> types
-):
-	  types(std::move(types)) {}
+const std::vector<vm::code::TypeOfData>&
+	vm::code::builders::TypesContext<TypesContextState::Finalized>::getTypes() const {
+	return types;
+}
+
+const vm::TypeMetadata&
+	vm::code::builders::TypesContext<TypesContextState::Finalized>::getMetadata() const {
+	return *metadata;
+}
+
+usize vm::code::builders::TypesContext<TypesContextState::Finalized>::sizeOf(base::StrID name
+) const {
+	return metadata->at(name)->getSize();
+}
+
+Box<vm::TypeMetadata>
+	vm::code::builders::TypesContext<TypesContextState::Finalized>::moveMetadata() && {
+	return std::move(metadata);
+}
+
+void TypesContext<>::addType(const vm::code::TypeOfData& type) {
+	auto name = VISIT(type, tp, return tp.name);
+	match_optional(types.atMaybe(name)) {
+		opt_some(tp) {
+			if (type == *tp) throw DuplicatedTypeError("Duplicated type name: " + name.str());
+		}
+		opt_none { types.insert(type, name); }
+	}
+}

@@ -6,4 +6,12 @@ namespace vm::code::builders {
 	public:
 		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
 	};
+
+	class DuplicatedTypeError: public BuilderError {
+		using BuilderError::BuilderError;
+	};
+
+	class StackStateError: public BuilderError {
+		using BuilderError::BuilderError;
+	};
 }

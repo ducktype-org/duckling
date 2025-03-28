@@ -139,6 +139,10 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
+		base::Optional<const std::vector<TypeCRef>&> getParameters() const;
+		[[nodiscard]]
+		base::Optional<u64> getParametersSize() const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getResultType() const;
