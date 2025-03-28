@@ -3,6 +3,7 @@
 #include <typesystem/lower/type_layout.hpp>
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <base/ok_bad.hpp>
 
 #include <mir/mir_structure/mir_local_ref.hpp>
 
@@ -202,12 +203,9 @@ namespace compiler::lir {
 		/**
 		 * @brief Checks if block order uniquely stores
 		 * all blocks.
-		 *
-		 * @return true
-		 * @return false
 		 */
 		[[nodiscard]]
-		bool validateBlockOrder() const;
+		base::OkBad validateBlockOrder() const;
 
 		void debugPrint(query::Context&, std::ostream& output) const;
 

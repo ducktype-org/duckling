@@ -3,6 +3,7 @@
 #include <lir/lir_structure/function_forward.hpp>
 #include <base/box.hpp>
 #include <base/string_id.hpp>
+#include <base/ok_bad.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
@@ -34,6 +35,14 @@ namespace compiler::backend_llvm {
 	public:
 		Module(base::StrID module_id);
 
+		/**
+		 * @brief Creates a llvm module from llvm IR code given as a text input.
+		 * Panics if the code is invalid.
+		 *
+		 * @return Module created by parsing the given IR code.
+		 */
+		static Module fromIRCode(std::string_view llvm_ir_code);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
 		void addFunctionToModule(CRef<lir::Function> lir_function);
@@ -48,7 +57,7 @@ namespace compiler::backend_llvm {
 		void debugDumpToFile(base::StrID output_file) const;
 
 		[[nodiscard]]
-		bool verify() const;
+		base::OkBad verify() const;
 
 		/**
 		 * @brief Compile the module to binary object file or assembly file.
