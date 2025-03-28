@@ -18,6 +18,18 @@ public:
 	}
 
 private:
+	template<class EnumType>
+	void checkThatCountDoesNotConvert() {
+		assertThrows<base::Panic>(
+			[]() { base::strToEnum<EnumType>(base::StrID("COUNT")); },
+			"Bad conversion from string to enum was valid"
+		);
+		assertThrows<base::Panic>(
+			[]() { base::enumToStr(EnumType::COUNT); },
+			"Bad conversion from enum to string was valid"
+		);
+	}
+
 	void badConversionTest() {
 		assertThrows<base::Panic>(
 			[]() { base::strToEnum<n::ZeroElements>(base::StrID("A")); },
@@ -38,6 +50,11 @@ private:
 			[]() { base::strToEnum<n::ThreeElements>(base::StrID("D")); },
 			"Bad conversion from string to enum was valid"
 		);
+
+		checkThatCountDoesNotConvert<n::ZeroElements>();
+		checkThatCountDoesNotConvert<n::OneElement>();
+		checkThatCountDoesNotConvert<n::TwoElements>();
+		checkThatCountDoesNotConvert<n::ThreeElements>();
 	}
 
 	void goodConversionTest() {
@@ -61,10 +78,10 @@ private:
 	}
 
 	void countTest() {
-		ASSERT_EQUAL(n::ZeroElements::COUNT, 0);
-		ASSERT_EQUAL(n::OneElement::COUNT, 1);
-		ASSERT_EQUAL(n::TwoElements::COUNT, 2);
-		ASSERT_EQUAL(n::ThreeElements::COUNT, 3);
+		ASSERT_EQUAL(std::to_underlying(n::ZeroElements::COUNT), 0);
+		ASSERT_EQUAL(std::to_underlying(n::OneElement::COUNT), 1);
+		ASSERT_EQUAL(std::to_underlying(n::TwoElements::COUNT), 2);
+		ASSERT_EQUAL(std::to_underlying(n::ThreeElements::COUNT), 3);
 	}
 };
 

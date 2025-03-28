@@ -104,12 +104,14 @@ namespace base::detail {
 		inline ::namespace_name::name strToEnum<::namespace_name::name>(::base::StrID id) { \
 			static ::base::detail::StrToEnumType<namespace_name::name> mapping              \
 				= namespace_name::name##enum_helper::strToEnumMaker();                      \
+			CORE_ASSERT(mapping.contains(id), "Enum value not found");                  \
 			return mapping[id];                                                             \
 		}                                                                                   \
 		template<>                                                                          \
 		inline ::base::StrID enumToStr<::namespace_name::name>(::namespace_name::name v) {  \
 			static ::base::detail::EnumToStrType<::namespace_name::name> mapping            \
 				= namespace_name::name##enum_helper::enumToStrMaker();                      \
+				CORE_ASSERT(mapping.contains(v), "Enum value not found");\
 			return mapping[v];                                                              \
 		}                                                                                   \
 	}
