@@ -52,7 +52,7 @@ namespace base::detail {
 #define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                       \
                                                                                             \
 	namespace namespace_name {                                                              \
-		enum class name : base_type { __VA_ARGS__ __VA_OPT__(,) COUNT };                                 \
+		enum class name : base_type { __VA_ARGS__ __VA_OPT__(, ) COUNT };                   \
                                                                                             \
 		namespace name##enum_helper {                                                       \
 			constexpr base_type ENUM_ELEMENT_COUNT                                          \
