@@ -33,6 +33,9 @@
 #include "maps.hpp"
 #include "string_id.hpp"
 
+#include <utility>      // IWYU pragma: export
+#include <type_traits>  // IWYU pragma: export
+
 namespace base::detail {
 	template<typename EnumType>
 	using StrToEnumType = base::Map<base::StrID, EnumType>;
@@ -50,13 +53,19 @@ namespace base::detail {
  * See tsh::Kind or other usages for an example.
  */
 #define MAKE_STRINGIFYABLE_ENUM(namespace_name, base_type, name, ...)                       \
+	static_assert(std::is_integral_v<base_type>, "base_type must be integral");             \
+	static_assert(not std::is_same_v<base_type, bool>, "base_type must not be bool");       \
+	static_assert(                                                                          \
+		std::is_same_v<base_type, std::remove_cvref_t<base_type>>,                          \
+		"Base type must not be cv-ref qualified"                                            \
+	);                                                                                      \
                                                                                             \
 	namespace namespace_name {                                                              \
 		enum class name : base_type { __VA_ARGS__ __VA_OPT__(, ) COUNT };                   \
                                                                                             \
 		namespace name##enum_helper {                                                       \
 			constexpr base_type ENUM_ELEMENT_COUNT                                          \
-				= static_cast<base_type>(namespace_name::name::COUNT);                      \
+				= std::to_underlying(namespace_name::name::COUNT);                          \
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {   \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                      \
 				::base::detail::StrToEnumType<namespace_name::name> out;                    \
