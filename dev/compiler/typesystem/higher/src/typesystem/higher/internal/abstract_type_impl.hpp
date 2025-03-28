@@ -34,7 +34,6 @@ namespace tsh::internal {
 	 */
 	class AbstractTypeImpl {
 	public:
-	
 		/**
 		 * @brief Gets the Kind of the type described by this object.
 		 * @return The Kind of the type described by this object.
