@@ -255,6 +255,11 @@ namespace vm {
 		});
 	}
 
+	bool Type::downcastableTo(TypeCRef target) const {
+		// TODO
+		return false;
+	}
+
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {
 		return get<kind::Variant>().map([](const kind::Variant& variant) {

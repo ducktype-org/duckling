@@ -403,6 +403,10 @@ namespace vm {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type = thread.executing_program->type_metadata->getType(
@@ -495,6 +499,26 @@ namespace vm {
 			thread.process.getMemory().setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			// We require and statically check that the next instruction is `ext_type`.
+			auto wanted_type = thread.executing_program->type_metadata->getType(
+				vm::TypeID(static_cast<u32>(instr[1].arg0))
+			);
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u32>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_ptr_type  = thread.process_memory.getBlockType(src_block);
+			auto src_type      = src_ptr_type->getInnerType().value();
+
+			thread.process_memory.setPointer(
+				dst, src_type->downcastableTo(wanted_type) ? src : Pointer::null()
+			);
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
