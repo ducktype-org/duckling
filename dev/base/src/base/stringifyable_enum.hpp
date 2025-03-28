@@ -82,7 +82,7 @@ namespace base::detail {
 				);                                                                               \
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
-						base::StrID(string_vector.at(i).data()),                                 \
+						base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data()),                                 \
 						static_cast<namespace_name::name>(i)                                     \
 					);                                                                           \
 				}                                                                                \
@@ -99,7 +99,7 @@ namespace base::detail {
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                             \
 					out.put(                                                                     \
 						static_cast<namespace_name::name>(i),                                    \
-						::base::StrID(string_vector.at(i).data())                                \
+						::base::StrID(string_vector.at(base::safeIntConv<usize>(i)).data())                                \
 					);                                                                           \
 				}                                                                                \
 				return out;                                                                      \
