@@ -186,9 +186,11 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { .id           = id,
-				     .instructions = std::move(instructions),
-				     .terminator   = terminator.value() };
+			return {
+				.id           = id,
+				.instructions = std::move(instructions),
+				.terminator   = terminator.value(),
+			};
 		}
 
 		/**
