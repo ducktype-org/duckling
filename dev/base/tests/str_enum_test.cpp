@@ -6,6 +6,8 @@ MAKE_STRINGIFYABLE_ENUM(n, u64, OneElement, A);
 MAKE_STRINGIFYABLE_ENUM(n, u64, TwoElements, A, B);
 MAKE_STRINGIFYABLE_ENUM(n, u64, ThreeElements, A, B, C);
 
+MAKE_STRINGIFYABLE_ENUM(n, i64, SingedInt, A, B);
+
 class StrEnumTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS StrEnumTest
@@ -55,6 +57,7 @@ private:
 		checkThatCountDoesNotConvert<n::OneElement>();
 		checkThatCountDoesNotConvert<n::TwoElements>();
 		checkThatCountDoesNotConvert<n::ThreeElements>();
+		checkThatCountDoesNotConvert<n::SingedInt>();
 	}
 
 	void goodConversionTest() {
@@ -67,6 +70,9 @@ private:
 		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>(base::StrID("B")), n::ThreeElements::B);
 		ASSERT_EQUAL(base::strToEnum<n::ThreeElements>(base::StrID("C")), n::ThreeElements::C);
 
+		ASSERT_EQUAL(base::strToEnum<n::SingedInt>(base::StrID("A")), n::SingedInt::A);
+		ASSERT_EQUAL(base::strToEnum<n::SingedInt>(base::StrID("B")), n::SingedInt::B);
+
 		ASSERT_EQUAL(base::enumToStr(n::OneElement::A), base::StrID("A"));
 
 		ASSERT_EQUAL(base::enumToStr(n::TwoElements::A), base::StrID("A"));
@@ -75,6 +81,9 @@ private:
 		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::A), base::StrID("A"));
 		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::B), base::StrID("B"));
 		ASSERT_EQUAL(base::enumToStr(n::ThreeElements::C), base::StrID("C"));
+
+		ASSERT_EQUAL(base::enumToStr(n::SingedInt::A), base::StrID("A"));
+		ASSERT_EQUAL(base::enumToStr(n::SingedInt::B), base::StrID("B"));
 	}
 
 	void countTest() {
@@ -82,6 +91,7 @@ private:
 		ASSERT_EQUAL(std::to_underlying(n::OneElement::COUNT), 1);
 		ASSERT_EQUAL(std::to_underlying(n::TwoElements::COUNT), 2);
 		ASSERT_EQUAL(std::to_underlying(n::ThreeElements::COUNT), 3);
+		ASSERT_EQUAL(std::to_underlying(n::SingedInt::COUNT), 2);
 	}
 };
 

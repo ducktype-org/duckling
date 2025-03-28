@@ -32,6 +32,7 @@
 
 #include "maps.hpp"
 #include "string_id.hpp"
+#include "int_conv.hpp" // IWYU pragma: export
 
 #include <utility>      // IWYU pragma: export
 #include <type_traits>  // IWYU pragma: export
@@ -42,6 +43,12 @@ namespace base::detail {
 
 	template<typename EnumType>
 	using EnumToStrType = base::Map<EnumType, base::StrID>;
+
+	/**
+	 * Validates that VA_ARGS passed to `MAKE_STRINGIFYABLE_ENUM` are valid, that is
+	 * that do not define any non-default values.
+	 */
+	void validateStrEnumVaArgs(std::string_view);
 }
 
 /**
@@ -64,13 +71,14 @@ namespace base::detail {
 		enum class name : base_type { __VA_ARGS__ __VA_OPT__(, ) COUNT };                   \
                                                                                             \
 		namespace name##enum_helper {                                                       \
-			constexpr base_type ENUM_ELEMENT_COUNT                                          \
+			constexpr auto ENUM_ELEMENT_COUNT                                          \
 				= std::to_underlying(namespace_name::name::COUNT);                          \
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {   \
+				base::detail::validateEnumVaArgs(#__VA_ARGS__);                      \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                      \
 				::base::detail::StrToEnumType<namespace_name::name> out;                    \
 				CORE_ASSERT(                                                                \
-					string_vector.size() == ENUM_ELEMENT_COUNT,                             \
+					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),                             \
 					"Enum has different number of values then vaArgSplit provided"          \
 				);                                                                          \
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                        \
@@ -82,10 +90,11 @@ namespace base::detail {
 				return out;                                                                 \
 			}                                                                               \
 			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {   \
+				base::detail::validateEnumVaArgs(#__VA_ARGS__);                      \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                      \
 				::base::detail::EnumToStrType<namespace_name::name> out;                    \
 				CORE_ASSERT(                                                                \
-					string_vector.size() == ENUM_ELEMENT_COUNT,                             \
+					string_vector.size() == base::safeIntConv<usize>(ENUM_ELEMENT_COUNT),                             \
 					"Enum has different number of values then vaArgSplit provided"          \
 				);                                                                          \
 				for (base_type i = 0; i < ENUM_ELEMENT_COUNT; i++) {                        \
