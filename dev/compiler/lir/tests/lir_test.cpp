@@ -148,7 +148,7 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		// this is albo called by LIR lowering,
-		// but we keep it here as a sanity check: 
+		// but we keep it here as a sanity check:
 		ASSERT_TRUE(foo_lir->validateParameters().isOk());
 
 		bool was_x = false;
@@ -156,8 +156,7 @@ private:
 		bool was_z = false;
 
 		for (auto& local: foo_lir->local_list) {
-			if (local->helios_id.has_value()
-			    and helios::name(local->helios_id.value()) == "x") {
+			if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "x") {
 				ASSERT_TRUE(not was_x);
 				ASSERT_EQUAL(local->parameter_index.value(), 0);
 				was_x = true;
@@ -171,8 +170,7 @@ private:
 				ASSERT_TRUE(not was_z);
 				ASSERT_EQUAL(local->parameter_index.value(), 2);
 				was_z = true;
-			}
-			else {
+			} else {
 				ASSERT_TRUE(local->parameter_index.empty());
 			}
 		}
@@ -183,8 +181,7 @@ private:
 		u64 return_value_count = 0;
 		for (auto& block: foo_lir->block_order) {
 			if (block->terminator.operation == compiler::lir::Operation::ReturnValue) {
-				auto z_local
-					= block->terminator.arguments.at(0).get<compiler::lir::LocalRef>();
+				auto z_local = block->terminator.arguments.at(0).get<compiler::lir::LocalRef>();
 				ASSERT_EQUAL(z_local->parameter_index.value(), 2);
 				return_value_count++;
 			}

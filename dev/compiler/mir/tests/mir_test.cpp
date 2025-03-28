@@ -273,8 +273,7 @@ private:
 					ASSERT_EQUAL(local->parameter_index.value(), 2);
 					ASSERT_EQUAL(local->type.getType(), i64_type);
 					was_z = true;
-				}
-				else {
+				} else {
 					ASSERT_TRUE(local->parameter_index.empty());
 				}
 			}
@@ -285,8 +284,7 @@ private:
 			u64 return_value_count = 0;
 			for (auto& block: foo_mir->blocks) {
 				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
-					auto z_local
-						= block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
+					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
 					ASSERT_EQUAL(z_local->parameter_index.value(), 2);
 					return_value_count++;
 				}
