@@ -384,8 +384,8 @@ namespace vm {
 			return false;
 
 		exec_thread = std::thread([this, program] {
-			run(program);
 			try {
+				run(program);
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";

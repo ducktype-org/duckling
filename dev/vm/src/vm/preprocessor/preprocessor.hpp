@@ -80,12 +80,8 @@ namespace vm {
 		Program& operator=(Program&&)      = default;
 
 		static std::expected<Program, PreprocessorLogger> from(
-			const std::vector<vm::code::Function>& functions,
-			const std::vector<code::TypeOfData>&   types
+			const std::vector<code::Function>& functions, const std::vector<code::TypeOfData>& types
 		);
-
-		TypeID typeIdOf(base::StrID) const { throw base::NotYetImplemented("typeIdOf"); }
-
 		const base::StableTypeIdNameMap<code::Function>& funcMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
@@ -93,10 +89,9 @@ namespace vm {
 	private:
 		Program() = default;
 
-		void
-			insertTypes(const std::vector<code::TypeOfData>& types, vm::PreprocessorLogger& logger);
+		void insertTypes(const std::vector<code::TypeOfData>& types, PreprocessorLogger& logger);
 		void insertFunctions(
-			const std::vector<code::Function>& functions, vm::PreprocessorLogger& logger
+			const std::vector<code::Function>& functions, PreprocessorLogger& logger
 		);
 
 		base::StableTypeIdNameMap<code::Function> functions;

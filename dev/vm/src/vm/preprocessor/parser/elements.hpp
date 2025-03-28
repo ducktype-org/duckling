@@ -100,21 +100,4 @@ namespace vm::parser {
 		static MBox<ParsedFile> parse(F8ParserState& state);
 		void                    dprint(std::ostream& out) const;
 	};
-
-	/**
-	 * @brief Structure containing a parsed program combined
-	 * from all files with type metadata.
-	 * @TODO: Delete this
-	 */
-	// struct ParsedProgram {
-	// 	std::vector<base::Box<dia::SourcePosition>> files_src_pos;
-	// 	base::HashMap<base::StrID, Ref<Func>>       name_to_func;
-	// 	std::vector<Box<Func>>                      functions;
-	// 	std::vector<Box<Type>>                      types;
-	// 	std::vector<Box<tokenizer::TokenFile>>      token_files;
-	// 	Box<vm::TypeMetadata>                       type_metadata
-	// 		= Box<vm::TypeMetadata>::fromPointer(new vm::TypeMetadata);
-
-	// 	void dprint(std::ostream& out) const;
-	// };
 }

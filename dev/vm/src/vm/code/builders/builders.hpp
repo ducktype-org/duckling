@@ -160,6 +160,7 @@ namespace vm::code::builders {
 		void saveStackState(base::StrID at_label_name);
 
 		void handleLabel(instructions::Op_label label);
+		void handleCallFunc(instructions::Op_call_func call);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypesContext<TypesContextState::Finalized>& types);

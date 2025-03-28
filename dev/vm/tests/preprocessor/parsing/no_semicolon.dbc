@@ -1,3 +1,5 @@
+type primitive: int64 8
+type fun: main {} int64
 
 function main {
     arg_size: 0;

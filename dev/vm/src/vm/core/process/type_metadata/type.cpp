@@ -272,7 +272,7 @@ namespace vm {
 	base::Optional<u64> Type::getParametersSize() const {
 		return get<kind::Function>().map([](const kind::Function& function) {
 			usize size = 0;
-			for (const auto& param: function.parameters) return param->getSize();
+			for (const auto& param: function.parameters) size += param->getSize();
 			return size;
 		});
 	}

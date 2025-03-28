@@ -1,8 +1,9 @@
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <variant>
 #include <vm_tester_utils.hpp>
 #include <vm/preprocessor/parser/errors.hpp>
+#include <vm/preprocessor/parser/parser.hpp>
+#include <vm/preprocessor/errors.hpp>
 
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -28,6 +29,30 @@ private:
 	void parseInvalidDbc(
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 	) {
+		fs::FilePath file(path(dbc_filename));
+		auto         parsing_result = vm::parser::parse({ file });
+		match_optional(parsing_result) {
+			opt_err(logger) {
+				std::stringstream ss;
+				logger.dumpLog(true, ss);
+				for (auto err_key: error_keywords) {
+					assertTrue(
+						ss.str().find(err_key) != std::string::npos,
+						base::strConcat("Not found: ", err_key)
+					);
+				}
+			}
+			opt_some_move(_) { CORE_PANIC("Expected error, but correctly parsed."); }
+		}
+	}
+
+	/**
+	 * @brief Preprocesses a syntactically incorrect file. Asserts that `error_keywords` are present
+	 * in the error message.
+	 */
+	void preprocessInvalidDbc(
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	) {
 		auto process_pid_response = vm::api::spawn();
 		ASSERT_TRUE(process_pid_response.has_value());
 		auto pid = process_pid_response.expect("Spawn failed").pid;
@@ -40,7 +65,6 @@ private:
 		auto core_op = std::get<vm::api::CoreOperationError>(err);
 		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
 		auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-		// std::cerr << err_str << '\n';
 		for (auto err_key: error_keywords) {
 			assertTrue(
 				err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
@@ -53,7 +77,7 @@ private:
 			"multiple_labels.dbc",
 			{
 				base::strConcat(vm::parser::InvalidLabel::ERR_MSG, "Repeated label"),
-				vm::parser::RepeatedLabelNote::ERR_MSG,
+				vm::preprocessor::RepeatedLabelNote::ERR_MSG,
 			}
 		);
 	}

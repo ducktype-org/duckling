@@ -22,6 +22,7 @@
 #include "vm/code/instructions.hpp"
 #include "vm/code/code.hpp"
 #include "vm/preprocessor/compiler/compiler.hpp"
+#include "vm/preprocessor/errors.hpp"
 #include "vm/code/type_of_data.hpp"
 
 std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
@@ -92,9 +93,9 @@ void vm::Program::insertFunctions(
 	for (const auto& func: new_functions) {
 		auto func_name = func.name;
 		if (functions.contains(func_name)) {
-			logger.logMap<vm::parser::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
+			logger.logMap<vm::preprocessor::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
 				auto dup_func = functions.at(func_name);
-				msg->addNote(makeBox<vm::parser::DuplicatedFunctionDefinitionNote>(
+				msg->addNote(makeBox<vm::preprocessor::DuplicatedFunctionDefinitionNote>(
 					dup_func->bytecode_pos.value()
 				));
 			});
@@ -130,10 +131,8 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& func: parsed_file.functions) {
 					code::builders::FunctionBuilder func_builder(func->name, types_context);
-					for (const auto& instr: func->code->opcodes) {
-						// std::cout << instr->position->genStr("") << '\n';
+					for (const auto& instr: func->code->opcodes)
 						func_builder.addInstruction(translateInstruction(instr.ref()));
-					}
 					func_builder.setRetSize(func->ret_size);
 
 					functions.emplace_back(func_builder.build());
@@ -177,11 +176,11 @@ void vm::Program::insertTypes(
 		} catch (code::builders::DuplicatedTypeError&) {
 			base::StrID name = VISIT(type, tp, return tp.name);
 			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
-			logger.logMap<parser::DuplicatedTypeError>(base, [&](auto& msg) {
+			logger.logMap<preprocessor::DuplicatedTypeError>(base, [&](auto& msg) {
 				for (const vm::code::TypeOfData& duplicated_type: types) {
 					base::StrID other_name = VISIT(duplicated_type, value, return value.name);
 					if (name == other_name) {
-						msg->addNote(makeBox<vm::parser::DuplicatedTypeNote>(
+						msg->addNote(makeBox<preprocessor::DuplicatedTypeNote>(
 							VISIT(duplicated_type, tp, return tp.bytecode_pos.value())
 						));
 					}

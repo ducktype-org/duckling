@@ -27,7 +27,7 @@ vm::code::Function FunctionBuilder::build() const {
 	// https://github.com/ducktype-org/duckling/issues/539
 	function.local_stack_size = max_stack_size;
 	function.ret_size         = ret_size;
-	function.arg_size         = 0;
+	function.arg_size         = types_context.getMetadata().at(name)->getParametersSize().value();
 	function.next_arg_size    = 0;
 
 	return function;
@@ -45,6 +45,10 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 		}
 		variant_case(instructions::Op_label, label) {
 			handleLabel(label);
+			return;
+		}
+		variant_case(instructions::Op_call_func, func) {
+			handleCallFunc(func);
 			return;
 		}
 		variant_case(instructions::Op_jmpRel_label, jmp) { saveStackState(jmp.arg0.label_name); }
@@ -110,6 +114,13 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 	else
 		local_stack = stack_state_at_label[label.arg0.label_name];
 	instructions.emplace_back(label);
+}
+
+void FunctionBuilder::handleCallFunc(instructions::Op_call_func func) {
+	auto params
+		= types_context.getMetadata().at(func.arg0.function_name)->getParameterCount().value();
+	for (usize i = 0; i < params; i++) local_stack.pop_back();
+	instructions.emplace_back(func);
 }
 
 void FunctionBuilder::saveStackState(base::StrID at_label_name) {
