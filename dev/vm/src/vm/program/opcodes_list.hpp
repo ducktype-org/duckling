@@ -172,10 +172,7 @@ DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // tries to cast a pointer to its subclass
-// requires `ext_ltype` to be the next instruction
 DEF_OPCODE(downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
-// passes additional type argument to preceding opcode
-DEF_OPCODE(ext_type, vm::opargs::Type)
 
 
 // terminates execution
