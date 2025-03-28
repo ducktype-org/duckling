@@ -52,6 +52,8 @@ duck_add_test(base type_name tests/type_name_test.cpp USES Base)
 
 duck_add_test(base ok_bad tests/ok_bad_test.cpp USES Base)
 
+duck_add_test(base str_enum tests/str_enum.cpp USES Base)
+
 add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)
 
