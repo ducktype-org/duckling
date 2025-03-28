@@ -32,6 +32,8 @@
 
 #include "maps.hpp"
 #include "string_id.hpp"
+#include "ok_bad.hpp"
+#include "simple_char_classifications.hpp"
 #include "int_conv.hpp"  // IWYU pragma: export
 
 #include <utility>       // IWYU pragma: export
@@ -48,7 +50,21 @@ namespace base::detail {
 	 * Validates that VA_ARGS passed to `MAKE_STRINGIFYABLE_ENUM` are valid, that is
 	 * that do not define any non-default values.
 	 */
-	void validateStrEnumVaArgs(std::string_view);
+	 constexpr OkBad validateStrEnumVaArgs(std::string_view va_args) {
+		char previous = ' ';
+		for (auto c: va_args) {
+			if (c == '-') return BAD; // '-' is not allowed
+			if (c == '=') return BAD; // '=' default values are not allowed
+			if (base::isDigit(c)) {
+				if (not base::isAlnum(previous)) {
+					// there is a digit that is not a part of identifier:
+					return BAD;
+				}
+			}
+			previous = c;
+		}
+		return OK;
+	}
 }
 
 /**
@@ -66,6 +82,7 @@ namespace base::detail {
 		std::is_same_v<base_type, std::remove_cvref_t<base_type>>,                               \
 		"Base type must not be cv-ref qualified"                                                 \
 	);                                                                                           \
+	static_assert(base::detail::validateStrEnumVaArgs(#__VA_ARGS__).isOk(), "Default values are not allowed in MAKE_STRINGIFYABLE_ENUM");\
                                                                                                  \
 	namespace namespace_name {                                                                   \
 		enum class name : base_type { __VA_ARGS__ __VA_OPT__(, ) COUNT };                        \
@@ -73,7 +90,6 @@ namespace base::detail {
 		namespace name##enum_helper {                                                            \
 			constexpr auto ENUM_ELEMENT_COUNT = std::to_underlying(namespace_name::name::COUNT); \
 			inline ::base::detail::StrToEnumType<namespace_name::name> strToEnumMaker() {        \
-				base::detail::validateStrEnumVaArgs(#__VA_ARGS__);                               \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
 				::base::detail::StrToEnumType<namespace_name::name> out;                         \
 				CORE_ASSERT(                                                                     \
@@ -89,7 +105,6 @@ namespace base::detail {
 				return out;                                                                      \
 			}                                                                                    \
 			inline ::base::detail::EnumToStrType<namespace_name::name> enumToStrMaker() {        \
-				base::detail::validateStrEnumVaArgs(#__VA_ARGS__);                               \
 				auto string_vector = ::base::vaArgSplit(#__VA_ARGS__);                           \
 				::base::detail::EnumToStrType<namespace_name::name> out;                         \
 				CORE_ASSERT(                                                                     \

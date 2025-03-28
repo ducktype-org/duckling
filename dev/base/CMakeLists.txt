@@ -6,7 +6,6 @@ add_library(Base
         src/base/impl/convert.cpp
         src/base/impl/str_utils.cpp
         src/base/impl/init_guards.cpp
-        src/base/impl/stringifyable_enum.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
