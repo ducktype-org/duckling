@@ -16,14 +16,14 @@
 namespace compiler::mir {
 
 	Function::Function(
-		base::StrID                  name,
-		tsh::SymbolType<>            return_type,
+		base::StrID                    name,
+		tsh::SymbolType<>              return_type,
 		std::vector<tsh::SymbolType<>> parameter_types,
-		std::vector<Block>           blocks,
-		base::StableVector<MirLocal> local_list,
-		BlockID                      entry_block,
-		helios::ScopeID              top_lifetime_scope,
-		helios::SymID                helios_id
+		std::vector<Block>             blocks,
+		base::StableVector<MirLocal>   local_list,
+		BlockID                        entry_block,
+		helios::ScopeID                top_lifetime_scope,
+		helios::SymID                  helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -186,7 +186,9 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { .id = id, .instructions = std::move(instructions), .terminator = terminator.value() };
+			return { .id           = id,
+				     .instructions = std::move(instructions),
+				     .terminator   = terminator.value() };
 		}
 
 		/**
@@ -268,8 +270,13 @@ namespace compiler::mir {
 			          .getType();
 
 			return Function{
-				name.value(),          function_type.getResultType(), function_type.getParameterTypes(),        std::move(blocks),
-				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				name.value(),
+				function_type.getResultType(),
+				function_type.getParameterTypes(),
+				std::move(blocks),
+				std::move(local_list),
+				entry_block.value()->getID(),
+				top_lifetime_scope.value(),
 				helios_symbol,
 			};
 		}
@@ -352,10 +359,10 @@ namespace compiler::mir {
 		/**
 		 * This is needed only for some assertins.
 		 */
-		 [[nodiscard]]
-		 helios::SymID getHeliosSymbol() const {
-			 return helios_symbol;
-		 }
+		[[nodiscard]]
+		helios::SymID getHeliosSymbol() const {
+			return helios_symbol;
+		}
 	};
 
 	/**
@@ -368,7 +375,8 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
 
 		/**
-		 * Helper function that recursively goes over the code block and collects all local variables.
+		 * Helper function that recursively goes over the code block and collects all local
+		 * variables.
 		 */
 		void goOverCodeBlock(const hc::CodeBlock& code_block) {
 			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
@@ -378,25 +386,25 @@ namespace compiler::mir {
 		 * @brief Collects all local variables in the function and adds them directly to the
 		 * FunctionBuilder.
 		 */
-		 void collect(const helios::HOUTFunction& hout_function) {
-			CORE_ASSERT(hout_function.original_symbol == function.getHeliosSymbol(), "Bad function passed to LocalVarCollectionVisitor");
+		void collect(const helios::HOUTFunction& hout_function) {
+			CORE_ASSERT(
+				hout_function.original_symbol == function.getHeliosSymbol(),
+				"Bad function passed to LocalVarCollectionVisitor"
+			);
 
 			u64 parameter_index = 0;
-			for (const auto& parameter:*hout_function.content.parameters) {
+			for (const auto& parameter: *hout_function.content.parameters) {
 				function.addParameter(parameter.helios_symbol, parameter_index);
 				parameter_index++;
 			}
 			goOverCodeBlock(*hout_function.content.body);
 		}
 
-
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			goOverCodeBlock(stmt.body);
-		}
+		void visitIfStmt(const helios::code::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 

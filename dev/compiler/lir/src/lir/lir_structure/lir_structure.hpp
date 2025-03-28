@@ -127,10 +127,14 @@ namespace compiler::lir {
 		/**
 		 * @brief Index of the parameter in the function, if this is a function parameter.
 		 */
-		 base::Optional<u64> parameter_index;
+		base::Optional<u64> parameter_index;
 
 	private:
-		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout, base::Optional<u64> parameter_index):
+		LirLocal(
+			const base::Optional<helios::SymID> helios_id,
+			tsl::TypeLayout                     layout,
+			base::Optional<u64>                 parameter_index
+		):
 			  helios_id(helios_id),
 			  layout(std::move(layout)),
 			  parameter_index(parameter_index) {}
@@ -198,7 +202,7 @@ namespace compiler::lir {
 		// @TODO: is this name mangled somehow:?
 		base::StrID name;
 
-		tsl::TypeLayout return_type_layout;
+		tsl::TypeLayout              return_type_layout;
 		std::vector<tsl::TypeLayout> parameter_layouts;
 
 		base::StableVector<Block>    blocks;

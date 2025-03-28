@@ -42,7 +42,7 @@ namespace compiler::lir {
 			if (local->parameter_index.has_value()) {
 				auto index = local->parameter_index.value();
 				if (parameter_indexes.contains(index)) return base::BAD;
-				
+
 				parameter_indexes.insert(index);
 				if (index >= parameter_layouts.size()) return base::BAD;
 				if (local->layout != parameter_layouts.at(index)) return base::BAD;

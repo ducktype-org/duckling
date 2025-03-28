@@ -128,7 +128,12 @@ namespace compiler::mir {
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
-		MirLocal(helios::SymID helios_id, tsh::SymbolType<> type, helios::ScopeID lifetime_scope, u64 parameter_index):
+		MirLocal(
+			helios::SymID     helios_id,
+			tsh::SymbolType<> type,
+			helios::ScopeID   lifetime_scope,
+			u64               parameter_index
+		):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
@@ -310,11 +315,11 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrID                  name;
+		base::StrID name;
 
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
-		
+
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -335,14 +340,14 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                  name,
-			tsh::SymbolType<>            return_type,
+			base::StrID                    name,
+			tsh::SymbolType<>              return_type,
 			std::vector<tsh::SymbolType<>> parameter_types,
-			std::vector<Block>           blocks,
-			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block,
-			helios::ScopeID              top_lifetime_scope,
-			helios::SymID                helios_id
+			std::vector<Block>             blocks,
+			base::StableVector<MirLocal>   local_list,
+			BlockID                        entry_block,
+			helios::ScopeID                top_lifetime_scope,
+			helios::SymID                  helios_id
 		);
 
 		[[nodiscard]]
