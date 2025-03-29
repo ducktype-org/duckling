@@ -134,7 +134,7 @@ namespace vm {
 
 		// inheritance
 		[[nodiscard]]
-		base::Optional<const VTable &> getVTable() const;
+		base::Optional<const VTable&> getVTable() const;
 
 		// variant
 		[[nodiscard]]
