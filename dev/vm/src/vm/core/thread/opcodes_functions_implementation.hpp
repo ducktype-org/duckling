@@ -520,7 +520,9 @@ namespace vm {
             //     this can be done without passing the local stack or anything like that, just Pointer
 
 			thread.process_memory.setPointer(
-				dst, src_type->downcastableTo(dst_type) ? src : Pointer::null()
+                    // TODO
+				// dst, src_type->downcastableTo(dst_type) ? src : Pointer::null()
+                dst, Pointer::null()
 			);
 		}
 		FUNCTION_CONT(1);

@@ -3,6 +3,7 @@
 #include <vm/preprocessor/parser/elements.hpp>
 #include <token_file/file.hpp>
 #include <deque>
+#include <base/optional.hpp>
 #include "errors.hpp"
 
 namespace vm::parser {
@@ -22,7 +23,7 @@ namespace vm::parser {
 		return ParsedFile::parse(state);
 	}
 
-	static kind::inheritance::Role prepareRole(
+	static base::Optional<VTable> createVTable(
 		const base::Map<base::StrID, vm::TypeRef>&                   type_map,
 		const base::Map<base::StrID, CRef<vm::parser::Inheritable>>& inheritable_map,
 		base::StrID                                                  data_name
@@ -41,26 +42,21 @@ namespace vm::parser {
 				virtual_methods.put(name.value, identifier_to_typeref(type));
 
 
-			switch (inheritable->kind) {
-			case vm::parser::Inheritable::Kind::Class: {
-				return kind::inheritance::Class{
-					.extends         = inheritable->extends.map(identifier_to_typeref),
-					.implements      = implements,
-					.virtual_methods = virtual_methods,
-				};
-				break;
-			}
-			case vm::parser::Inheritable::Kind::Interface: {
-				return kind::inheritance::Interface{
-					.implements      = implements,
-					.virtual_methods = virtual_methods,
+			VTable::Kind kind = VTable::Interface{};
+			if (inheritable->kind == Inheritable::Kind::Class) {
+				kind = VTable::Class{
+					.extends = inheritable->extends.map(identifier_to_typeref),
 				};
 			}
-			}
+
+			return VTable{
+				.kind            = kind,
+				.implements      = implements,
+				.virtual_methods = virtual_methods,
+			};
 		} else {
-			return kind::inheritance::Plain{};
+			return {};
 		}
-		std::unreachable();
 	}
 
 	void defineTypes(Ref<ParsedProgram> program, dia::Logger& log) {
@@ -137,8 +133,8 @@ namespace vm::parser {
 					fields.reserve(data.fields.size());
 					for (auto& field: data.fields)
 						fields.emplace_back(field.name, type_map[field.type]);
-					auto role = prepareRole(type_map, inheritable_map, data.name);
-					type_map[data.name]->defineData(fields, role);
+					auto vtable = createVTable(type_map, inheritable_map, data.name);
+					type_map[data.name]->defineData(fields, vtable);
 				}
 				variant_case(VariantType, data) {
 					std::vector<vm::TypeRef> variants;

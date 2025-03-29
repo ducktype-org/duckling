@@ -59,7 +59,8 @@ namespace vm {
 	}
 
     auto downcastableTo(Pointer object, TypeCRef type) -> bool {
-        
+        // TODO
+        return false;
     }
 
 	auto Memory::requestBlockIDs() -> std::vector<BlockID> {

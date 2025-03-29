@@ -1,4 +1,6 @@
+#include <base/optional.hpp>
 #include <base/variant.hpp>
+#include <variant>
 #include <vm/api/api.hpp>
 #include <tester/tester.hpp>
 
@@ -18,105 +20,94 @@ private:
 	}
 
 	void checkPod(vm::TypeCRef type) {
-		if_opt_some(type->getInheritanceRole(), role) {
-			variant_match(role) {
-				variant_case_novalue(vm::kind::inheritance::Plain) { return; }
-			}
-		}
-
-		fail("Plain Data type should be plain");
+		assertFalse(type->getVTable().has_value(), "Plain data should be plain");
 	}
 
 	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type) {
-		if_opt_some(type->getInheritanceRole(), role) {
-			variant_match(role) {
-				variant_case(vm::kind::inheritance::Interface, iface) {
-					assertTrue(iface.implements.empty(), "I1 should not implement anything");
-					assertTrue(
-						iface.virtual_methods.size() == 2, "I1 should have two virtual methods"
-					);
+		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.implements.empty(), "I1 should not implement anything");
+			assertTrue(vtable.virtual_methods.size() == 2, "I1 should have two virtual methods");
+			auto foo_type = vtable.virtual_methods[base::StrID("foo")];
+			auto bar_type = vtable.virtual_methods[base::StrID("bar")];
 
-					auto foo_type = iface.virtual_methods[base::StrID("foo")];
-					auto bar_type = iface.virtual_methods[base::StrID("bar")];
+			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
+			assertTrue(foo_type == method_type, "I1's method have the wrong type");
 
-					assertTrue(foo_type == bar_type, "I2's methods should have the same type");
-					assertTrue(foo_type == method_type, "I1's method have the wrong type");
+			assertTrue(
+				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
+				"I2 should be an interface"
+			);
 
-					return;
-				}
-			}
+			return;
 		}
 
-		fail("I1 should be an interface");
+		fail("I1 should not be plain");
 	}
 
 	void checkI2(vm::TypeCRef type) {
-		if_opt_some(type->getInheritanceRole(), role) {
-			variant_match(role) {
-				variant_case(vm::kind::inheritance::Interface, iface) {
-					assertTrue(iface.implements.empty(), "I2 should not implement anything");
-					assertTrue(
-						iface.virtual_methods.empty(), "I2 should not have any virtual methods"
-					);
+		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(
+				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
+				"I2 should be an interface"
+			);
+			assertTrue(vtable.implements.empty(), "I2 should not implement anything");
+			assertTrue(vtable.virtual_methods.empty(), "I2 should not have any virtual methods");
 
-					return;
-				}
-			}
+			return;
 		}
 
-		fail("I1 should be an interface");
+		fail("I1 should not be plain");
 	}
 
 	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type) {
-		if_opt_some(type->getInheritanceRole(), role) {
-			variant_match(role) {
-				variant_case(vm::kind::inheritance::Class, clazz) {
+		if_opt_some(type->getVTable(), vtable) {
+			variant_match(vtable.kind) {
+				variant_case(vm::VTable::Class, clazz) {
 					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
-					assertTrue(clazz.implements.empty(), "Parent should not implement anything");
-					assertTrue(
-						clazz.virtual_methods.size() == 1,
-						"Parent should implement one virtual method"
-					);
-
-					auto lorem = clazz.virtual_methods[base::StrID("lorem")];
-					assertTrue(lorem == method_type, "Invalid Parent method type");
-
-					return;
 				}
+				variant_default { fail("Parent should be a class"); }
 			}
+			assertTrue(vtable.implements.empty(), "Parent should not implement anything");
+			assertTrue(
+				vtable.virtual_methods.size() == 1, "Parent should implement one virtual method"
+			);
+
+			auto lorem = vtable.virtual_methods[base::StrID("lorem")];
+			assertTrue(lorem == method_type, "Invalid Parent method type");
+
+			return;
 		}
 
-		fail("Parent should be a class");
+		fail("Parent should not be plain");
 	}
 
 	void checkChild(
 		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces
 	) {
-		if_opt_some(type->getInheritanceRole(), role) {
-			variant_match(role) {
-				variant_case(vm::kind::inheritance::Class, clazz) {
+		if_opt_some(type->getVTable(), vtable) {
+			variant_match(vtable.kind) {
+				variant_case(vm::VTable::Class, clazz) {
 					assertTrue(clazz.extends.has_value(), "Child has no superclass");
 					assertTrue(*clazz.extends == super_type, "Child is not Parent's child");
-					assertTrue(
-						std::ranges::equal(
-							clazz.implements,
-							interfaces,
-							// Custom comparison needed since one is nonconst.
-							[](vm::TypeCRef a, vm::TypeCRef b) { return a == b; }
-						),
-						"Child implements wrong interfaces"
-					);
-
-					assertTrue(
-						clazz.virtual_methods.empty(), "Child should have no virtual methods"
-					);
-
-					return;
 				}
+				variant_default { fail("Parent should be a class"); }
 			}
+			assertTrue(
+				std::ranges::equal(
+					vtable.implements,
+					interfaces,
+					// Custom comparison needed since one is nonconst.
+					[](vm::TypeCRef a, vm::TypeCRef b) { return a == b; }
+				),
+				"Child implements wrong interfaces"
+			);
+
+			assertTrue(vtable.virtual_methods.empty(), "Child should have no virtual methods");
+
+			return;
 		}
 
-		fail("Child should be a class");
+		fail("Child should not be plain");
 	}
 
 	void metadataLoading() {
