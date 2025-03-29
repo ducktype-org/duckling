@@ -1,3 +1,7 @@
+fun foo() -> i64 = { return 0; }
+
+fun goo() -> i64 = { foo(); }
+
 fun main() -> i64 = {
     var a: i64 = 123;
     return a + 3;

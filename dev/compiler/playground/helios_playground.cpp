@@ -47,7 +47,15 @@ int notMain(int argc, const char* const* argv) {
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level->debugPrint();
+	std::cerr << top_level->debugPrint() << "\n\n"; 
+
+	std::cerr << "Inputs of entire hout:\n";
+	query::debugPrintQueryDeps<helios::QueryTopLevelEntities>(std::cerr, root);
+
+	for (auto& i: top_level->functions) {
+		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
+		query::debugPrintQueryDeps<helios::QueryCodeOFFun>(std::cerr, i.original_symbol);
+	}
 
 	return 0;
 }

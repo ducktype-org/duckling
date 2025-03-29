@@ -42,6 +42,8 @@ namespace query::detail {
 
 		void debugPrint(std::ostream& out);
 		void debugPrintForDrawing(std::ostream& out);
+
+		void debugPrintNodeDeps(std::ostream& out, detail::NodeID node_id);
 	}
 }
 
@@ -50,5 +52,11 @@ namespace query {
 
 	inline void debugPrintDependencyGraphForDrawing(std::ostream& out) {
 		detail::dep_graph::debugPrintForDrawing(out);
+	}
+
+	template<class Query>
+	void debugPrintQueryDeps(std::ostream& out, typename Query::QKey key) {
+		detail::NodeID node_id = makeNodeID(Query::getID(), key);
+		detail::dep_graph::debugPrintNodeDeps(out, node_id);
 	}
 }

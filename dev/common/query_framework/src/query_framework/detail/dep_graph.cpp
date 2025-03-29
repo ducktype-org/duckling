@@ -1,6 +1,8 @@
 #include "dep_graph.hpp"
 
 #include <base/maps.hpp>
+#include <set>
+#include <queue>
 #include <iomanip>
 #include <ostream>
 #include <vector>
@@ -82,6 +84,43 @@ namespace query::detail {
 			query_stack_size--;
 
 			node_data.at(node).color = Color::Done;
+		}
+
+		void debugPrintNodeDeps(std::ostream& out, detail::NodeID node_id) {
+			// some simple bfs for now:
+			std::set<NodeID> visited;
+			std::queue<NodeID> queue;
+			queue.push(node_id);
+
+			while (!queue.empty()) {
+				auto visited_node_id = queue.front();
+				queue.pop();
+				
+				if (visited.contains(visited_node_id)) continue;
+				visited.insert(visited_node_id);
+
+				const auto& node = node_data.at(visited_node_id);
+				for (auto& dep: node.dependencies) {
+					if (!visited.contains(dep)) queue.push(dep);
+				}
+			}
+
+			// it would be cool to print only input ones, but for now we print all of them:
+
+			out << "Dependencies: \n";
+			for (auto& node: visited) {
+				// a temporary hack:
+				if (node.q_id.getName() != "PSTAccessSideInput") continue;
+
+				out << "    ";
+				out << "> Query - " << std::setw(5) << std::left;
+				out << node.q_id.asInt() << std::setw(15) << std::left << "\"" << node.q_id.getName()
+					<< "\"";
+				out << " Key " << node.hash.val << "\n";
+			}
+
+
+			
 		}
 
 		void debugPrint(std::ostream& out) {
