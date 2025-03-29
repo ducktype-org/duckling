@@ -12,6 +12,7 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 #include "detail/node_id.hpp"
 #include "detail/dep_graph.hpp"
+#include "detail/node_making.hpp" // IWYU pragma: export
 
 namespace query {
 

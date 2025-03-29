@@ -1,5 +1,5 @@
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 
@@ -11,12 +11,12 @@ class HigherTypeSystemErrorTest final: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(integral_size_error_test);
-		TESTER_ADD_TEST(float_size_error_test);
+		TESTER_ADD_TEST(integralSizeErrorTest);
+		TESTER_ADD_TEST(floatSizeErrorTest);
 	}
 
 private:
-	void integral_size_error_test() {
+	void integralSizeErrorTest() {
 		query::Context::logger.clear();
 		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
 		query::entryPoint<QueryIntegralType>({ 42 });
@@ -34,7 +34,7 @@ private:
 		);
 	}
 
-	void float_size_error_test() {
+	void floatSizeErrorTest() {
 		query::Context::logger.clear();
 		assertTrue(query::Context::logger.good(), "Test should begin without errors.");
 		query::entryPoint<QueryFloatType>(42);

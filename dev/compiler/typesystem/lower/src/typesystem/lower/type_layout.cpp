@@ -1,7 +1,7 @@
 #include "type_layout.hpp"
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
 using base::bytes2bits;

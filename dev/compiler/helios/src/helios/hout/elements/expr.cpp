@@ -5,7 +5,7 @@
 
 #include "expr.hpp"
 #include "../visitors.hpp"
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
 

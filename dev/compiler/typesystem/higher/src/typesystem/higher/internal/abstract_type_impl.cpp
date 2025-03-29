@@ -1,5 +1,5 @@
 #include "abstract_type_impl.hpp"
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <utility>
 
 namespace tsh::internal {
