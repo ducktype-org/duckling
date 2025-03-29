@@ -7,5 +7,4 @@ namespace query {
 		assertActive();
 		logger.log(std::move(message));
 	}
-
 }

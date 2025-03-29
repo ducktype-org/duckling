@@ -1,3 +1,7 @@
+/**
+ * Definition of query Context type.
+ */
+
 #pragma once
 
 #include <base/defer.hpp>
