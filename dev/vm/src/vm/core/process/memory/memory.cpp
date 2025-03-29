@@ -1,6 +1,7 @@
 #include <base/exceptions.hpp>
 #include <mutex>
 #include "memory.hpp"
+#include <base/optional.hpp>
 
 namespace vm {
 
@@ -58,8 +59,14 @@ namespace vm {
 		if (block->refcount == 0) deleteBlock(block);
 	}
 
-    auto downcastableTo(Pointer object, TypeCRef type) -> bool {
-        // TODO
+    auto Memory::downcastableTo(Pointer object, TypeCRef type) -> bool {
+        if_opt_some(object.block.toOpt(), block) {
+			std::shared_lock lock(*block->shared_mutex);
+            // This is guaranted to exist by static verification.
+            TypeCRef real_object_type = reinterpret_cast<Type *>(block->data.view.getBegin());
+            
+            return real_object_type->inheritsFrom(type);
+        }
         return false;
     }
 

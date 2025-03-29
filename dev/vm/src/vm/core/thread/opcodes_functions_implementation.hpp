@@ -502,27 +502,13 @@ namespace vm {
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 
-            auto get_pointee_type = [&](u32 offset) -> TypeCRef  {
-                auto block_idx = frame->local_offset_to_block_idx[offset];
-                auto block     = frame->block_stack[block_idx];
-                auto pointer_type  = thread.process_memory.getBlockType(block);
-                return pointer_type->getInnerType().value();
-            };
-
-            auto dst_type = get_pointee_type(static_cast<u32>(instr->arg0));
-            auto src_type = get_pointee_type(static_cast<u32>(instr->arg0));
-
-            // we need:
-            // - desired type
-            //   - get_local_type_at_offset -> .inner()
-            // - actual type of source
-            //   - take Pointer, look up its Pointee, get the vtable, check the type
-            //     this can be done without passing the local stack or anything like that, just Pointer
+			auto dst_block_idx    = frame->local_offset_to_block_idx[static_cast<u32>(instr->arg0)];
+			auto dst_block        = frame->block_stack[dst_block_idx];
+			auto dst_pointer_type = thread.process_memory.getBlockType(dst_block);
+			auto dst_type         = dst_pointer_type->getInnerType().value();
 
 			thread.process_memory.setPointer(
-                    // TODO
-				// dst, src_type->downcastableTo(dst_type) ? src : Pointer::null()
-                dst, Pointer::null()
+				dst, thread.process_memory.downcastableTo(src, dst_type) ? src : Pointer::null()
 			);
 		}
 		FUNCTION_CONT(1);
