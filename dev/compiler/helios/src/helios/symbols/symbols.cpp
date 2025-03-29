@@ -150,7 +150,7 @@ namespace compiler::helios {
 		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
-		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::detail::ContextType& ctx) const {
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
 			return getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};

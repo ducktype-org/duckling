@@ -12,7 +12,6 @@
 
 namespace query::detail {
 
-	struct ContextType;
 	struct EntryPointHelper;
 
 	/**
@@ -42,7 +41,7 @@ namespace query::detail {
 		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
 		static ::std::string_view       name;                                                     \
 		static ::query::detail::QueryID id;                                                       \
-		friend struct ::query::detail::ContextType;                                               \
+		friend struct ::query::Context;                                               \
 		friend struct ::query::detail::EntryPointHelper;                                          \
                                                                                                   \
 	public:                                                                                       \

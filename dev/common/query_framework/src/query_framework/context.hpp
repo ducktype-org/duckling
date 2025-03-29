@@ -61,10 +61,7 @@ namespace query {
          * Log message to be shown to the user.
          * @param message The dia::Message to be logged.
          */
-        void log(Box<dia::Message> message) {
-            assertActive();
-            logger.log(std::move(message));
-        }
+        void log(Box<dia::Message> message);
 
         void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
     };

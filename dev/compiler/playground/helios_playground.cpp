@@ -4,7 +4,7 @@
 #include <clap/clap.hpp>
 #include <iostream>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
+#include <query_framework/context.hpp>
 #include <base/defer.hpp>
 #include <init/init.hpp>
 

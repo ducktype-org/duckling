@@ -13,8 +13,6 @@
 #include <base/stable_hashmap.hpp>
 #include <base/ref.hpp>
 #include <base/exceptions.hpp>
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
 
 #include "query_int.hpp"
 
@@ -27,10 +25,6 @@
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 
 #include "context.hpp"
-
-namespace query {
-	inline dia::Logger Context::logger{};
-}
 
 namespace query::detail {
 	/**
@@ -117,7 +111,7 @@ namespace query::detail {
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
-		using Context = ::query::detail::ContextType;
+		using Context = ::query::Context;
 
 		/**
 		 * Standard query function signatures:

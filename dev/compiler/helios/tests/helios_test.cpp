@@ -10,7 +10,7 @@
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
+#include <query_framework/context.hpp>
 #include <tester/tester.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <filesystem/file.hpp>
