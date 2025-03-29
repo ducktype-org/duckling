@@ -8,6 +8,7 @@
 #include "detail/query_id.hpp"  // IWYU pragma: export
 #include "detail/node_id.hpp"   // IWYU pragma: export
 #include "empty_key.hpp"        // IWYU pragma: export
+#include "context_fd.hpp"        // IWYU pragma: export
 
 namespace query::detail {
 
@@ -27,10 +28,6 @@ namespace query::detail {
 		using QKey      = QKey_tp;
 		using QResult   = QResult_tp;
 	};
-}
-
-namespace query {
-	using Context = detail::ContextType;
 }
 
 /**

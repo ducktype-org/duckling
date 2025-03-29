@@ -26,68 +26,18 @@
 
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 
+#include "context.hpp"
+
+namespace query {
+	inline dia::Logger Context::logger{};
+}
+
 namespace query::detail {
-	/**
-	 * @brief ContextType is type of a special object
-	 * that query implementation use to perform three key operations:
-	 * 	* call other query
-	 *  * log
-	 *  * report compiler error
-	 *
-	 * @FUTURE: there exist a concept of "custom context" types as
-	 * a way to hack-in the query model. This however will most likely be
-	 * discarded.
-	 */
-	struct ContextType final {
-	private:
-		NodeID my_node;
-		bool   active = true;
-
-		ContextType(NodeID my_node): my_node(my_node) {}
-		friend struct ContextMaker;
-
-	public:
-		// @TODO: Make the context (and thus the logger) be propagated through query calls,
-		// so that all queries run on the same file / in the same compilation thread / whatever
-		// use a single, *non-static* logger object.
-		static dia::Logger logger;
-
-		ContextType(const ContextType&) = delete;
-		ContextType(ContextType&&)      = delete;
-
-		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
-
-		template<typename OthQuery>
-		auto query(typename OthQuery::QKey key) -> decltype(auto) {
-			assertActive();
-			NodeID dep_id = makeNodeID(OthQuery::id, key);
-			dep_graph::addDependency(my_node, dep_id);
-
-			this->active = false;
-			defer(this->active = true);
-
-			return OthQuery::internal_query(key, my_node);
-		}
-
-		/**
-		 * Log message to be shown to the user.
-		 * @param message The dia::Message to be logged.
-		 */
-		void log(Box<dia::Message> message) {
-			assertActive();
-			logger.log(std::move(message));
-		}
-
-		void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
-	};
-
-	inline dia::Logger ContextType::logger{};
-
 	/**
 	 * @brief Internal helper struct used to create context
 	 */
 	struct ContextMaker final {
-		static auto make(NodeID my_node) { return ContextType(my_node); }
+		static auto make(NodeID my_node) { return Context(my_node); }
 	};
 
 	/**
