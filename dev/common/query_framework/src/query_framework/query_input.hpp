@@ -22,16 +22,18 @@ namespace query::detail {
  * even tho PST creation is not query based.
  */
 #define DECLARE_QUERY_SIDE_INPUT(query_type, key) \
-    DECLARE_QUERY_AUX(query_type, key, value, true)
+    DECLARE_QUERY_AUX(query_type, key, query::detail::SideInputMockValue, true)
 
-#define IMPLEMENT_QUERY_SIDE_INPUT_AUX(query_type) \
-        auto query_type::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-        -> type::QResult {                                                                          \
+#define IMPLEMENT_QUERY_SIDE_INPUT(query_type) \
+        auto query_type::internal_query(query_type::QKey key, ::query::detail::NodeID from)              \
+        -> query_type::QResult {                                                                          \
             auto node_id = query::detail::makeNodeID(query_type::id, key); \
-            dep_graph::addDependency(my_node, node_id);
-            dep_graph::setEntry(node_id, from);
-        }                                                                                               \
-        decltype(query_type::id)   query_type::id = ::query::detail::newQueryID(pretty_name); \
+            query::detail::dep_graph::addDependency(from, node_id); \
+            query::detail::dep_graph::setEntry(node_id, from); \
+            query::detail::dep_graph::setExit(node_id); \
+            return query::detail::SideInputMockValue{};\
+        }                                                                                   \
+        decltype(query_type::id)   query_type::id = ::query::detail::newQueryID(#query_type); \
         decltype(query_type::name) query_type::name = #query_type;
 
 // Some side notes:

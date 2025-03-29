@@ -11,7 +11,7 @@ namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {
 		struct EvaluateHoutExprVisitor final: public code::HoutExprVisitor {
 			Context&                                  ctx;
-			errors::HResult<i64 COMMA errors::Failed> result;
+			errors::HResult<i64, errors::Failed> result;
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 

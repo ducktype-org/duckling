@@ -77,8 +77,6 @@ namespace query::detail {
 			assertActive();
 			logger.log(std::move(message));
 		}
-
-		void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
 	};
 
 	inline dia::Logger ContextType::logger{};

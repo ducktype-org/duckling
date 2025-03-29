@@ -58,5 +58,5 @@ namespace query {
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
-#define DECLARE_QUERY(query_type, key, value)                                                     \
+#define DECLARE_QUERY(query_type, key, value) \
 	DECLARE_QUERY_AUX(query_type, key, value, false)
