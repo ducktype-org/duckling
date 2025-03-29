@@ -28,6 +28,7 @@ private:
 			}
 		);
 	}
+
 	void jumpBetween() {
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
@@ -36,6 +37,7 @@ private:
 			}
 		);
 	}
+
 	void jumpIntoBlock() {
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
@@ -44,6 +46,7 @@ private:
 			}
 		);
 	}
+
 	void jumpOutOfBlock() {
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
@@ -52,16 +55,10 @@ private:
 			}
 		);
 	}
-	void jumpSkipBlock() {
-		loadValidDbc(
-			"right/jump_skip_block.dbc"
-		);
-	}
-	void manyJumps() {
-		loadValidDbc(
-			"right/many_jumps.dbc"
-		);
-	}
+
+	void jumpSkipBlock() { loadValidDbc("right/jump_skip_block.dbc"); }
+
+	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/verification/");

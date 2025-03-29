@@ -20,7 +20,5 @@ protected:
 	void loadInvalidDbc(
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 	);
-	void loadValidDbc(
-		const std::string& dbc_filename
-	);
+	void loadValidDbc(const std::string& dbc_filename);
 };

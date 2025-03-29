@@ -122,7 +122,9 @@ namespace vm::validator {
 			for (const auto& type: program.types) {
 				variant_match(type->datatype) {
 					variant_case(parser::FunctionType, function_type) {
-						parameter_count_for_funcion.put(function_type.name, function_type.parameters.size());
+						parameter_count_for_funcion.put(
+							function_type.name, function_type.parameters.size()
+						);
 					}
 				}
 			}
@@ -138,13 +140,15 @@ namespace vm::validator {
 					id_stack.push_back(next_id);
 					next_id++;
 				}
-				std::vector<std::pair<base::StrID, usize>> labels(func->code->label_position.begin(), func->code->label_position.end());
-				std::ranges::sort(labels, [](const auto &a, const auto &b) {
-				return a.second > b.second;
+				std::vector<std::pair<base::StrID, usize>> labels(
+					func->code->label_position.begin(), func->code->label_position.end()
+				);
+				std::ranges::sort(labels, [](const auto& a, const auto& b) {
+					return a.second > b.second;
 				});
 				for (usize i = 0; i < func->code->opcodes.size();) {
 					auto& op = func->code->opcodes.at(i);
-					if (!labels.empty()) {	
+					if (!labels.empty()) {
 						if (labels.back().second == i) {
 							base::StrID label_name = labels.back().first;
 							if (top_id_at_label.contains(label_name)) {
@@ -172,18 +176,26 @@ namespace vm::validator {
 					} else if (op->opcode_name.strView() == "call_func") {
 						variant_match(op->args[0].arg) {
 							variant_case(opargs::FunctionName, function_name) {
-								if (!parameter_count_for_funcion.contains(function_name.function_name)) {
+								if (!parameter_count_for_funcion.contains(
+										function_name.function_name
+									)) {
 									// CORE_PANIC("No function type defined for a function");
 									continue;
 								}
-								for (usize j = 0; j < parameter_count_for_funcion.at(function_name.function_name); j++) {
+								for (usize j = 0;
+								     j
+								     < parameter_count_for_funcion.at(function_name.function_name);
+								     j++) {
 									if (id_stack.size() >= 2)
 										id_stack.pop_back();
 									else
-										log.log(makeBox<vm::validator::InvalidDeinit>(*op->position));
+										log.log(makeBox<vm::validator::InvalidDeinit>(*op->position)
+										);
 								}
 							}
-							variant_default { CORE_PANIC("expected function name after call_func opcode"); }
+							variant_default {
+								CORE_PANIC("expected function name after call_func opcode");
+							}
 						}
 					} else if (op->opcode_name.strView() == "jmpRel_label"
 					           || op->opcode_name.strView() == "jmpRelIf_label"

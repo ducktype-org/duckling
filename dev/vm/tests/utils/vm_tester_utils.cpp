@@ -27,9 +27,9 @@ void VmTestSuite::runTestOnVm(
 }
 
 /**
-	 * @brief Parses a file containing a program which violates syntactic or static verification guidelines.
-	 * the error message.
-	 */
+ * @brief Parses a file containing a program which violates syntactic or static verification
+ * guidelines. the error message.
+ */
 void VmTestSuite::loadInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
@@ -54,16 +54,15 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 /**
-	 * @brief Parses a file containing a program which does not violate syntactic and static verification guidelines.
-	 */
-	 void VmTestSuite::loadValidDbc(
-		const std::string& dbc_filename
-	) {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response.expect("Spawn failed").pid;
-	
-		fs::FilePath file(path(dbc_filename));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
-		ASSERT_TRUE(!loaded_file_response.has_error());
-	}
+ * @brief Parses a file containing a program which does not violate syntactic and static
+ * verification guidelines.
+ */
+void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
+	auto process_pid_response = vm::api::spawn();
+	ASSERT_TRUE(process_pid_response.has_value());
+	auto pid = process_pid_response.expect("Spawn failed").pid;
+
+	fs::FilePath file(path(dbc_filename));
+	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	ASSERT_TRUE(!loaded_file_response.has_error());
+}
