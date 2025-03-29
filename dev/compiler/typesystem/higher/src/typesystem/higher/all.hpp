@@ -6,8 +6,9 @@
 #pragma once
 
 #include "kind.hpp"
-#include "type_desc.hpp"
-#include "type_info.hpp"
+#include "abstract_type.hpp"
+#include "symbol_type.hpp"
+#include "expression_type.hpp"
 #include "types.hpp"
 #include "type_interface.hpp"
 
@@ -18,7 +19,5 @@
  * Short for "Type System: High(er)".
  */
 namespace tsh {
-	void init();  // if needed
-
 	void reset();
 }

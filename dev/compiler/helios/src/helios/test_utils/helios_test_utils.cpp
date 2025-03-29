@@ -43,11 +43,15 @@ namespace compiler::helios::test_utils {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
-	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
-	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
+	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
+		return getSymbolTypeOf(chain, scope).getType();
+	}
+
+	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
 		    ->valueOrThrow();
 	}
@@ -56,17 +60,17 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitConst(const pst::Const& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitConst(pst::Access<pst::Const> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -77,17 +81,17 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitVariable(const pst::Variable& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitVariable(pst::Access<pst::Variable> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 

@@ -6,5 +6,4 @@ add_library(MIR
 
 make_module(MIR USES Base QueryFramework HELIOS)
 
-duck_add_test(compiler mir_test tests/mir_tests.cpp
-	USES Base TypeSystemHigher PstParser HELIOS MIR)
+duck_add_test(compiler mir tests/mir_test.cpp USES Base TypeSystemHigher PstParser HELIOS MIR)

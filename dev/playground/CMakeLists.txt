@@ -1,18 +1,13 @@
 # Playground
-add_executable(panic_playground make_panic.cpp)
-add_executable(clap_playground clap_playground.cpp)
-add_executable(count_tokens_cpp count_tokens_cpp.cpp)
-add_executable(count_tokens_duckling count_tokens_duckling.cpp)
-add_executable(fs_parser_playground fs_parser_playground.cpp)
+duck_add_playground(panic panic_playground.cpp USES Base)
+duck_add_playground(clap clap_playground.cpp USES Clap Printer)
+duck_add_playground(count_tokens_cpp count_tokens_cpp_playground.cpp USES Filesystem TreeSitter Clap Printer)
+duck_add_playground(count_tokens_duckling count_tokens_duckling_playground.cpp USES Filesystem TokenFile Clap Printer)
+duck_add_playground(fs_parser fs_parser_playground.cpp USES Base ModuleTree Clap)
 
-target_link_libraries(panic_playground Base)
-target_link_libraries(clap_playground Base Clap Printer)
 target_link_libraries(clap_example_cat Base Clap)
-target_link_libraries(fs_parser_playground Base ModuleTree Clap)
-target_link_libraries(count_tokens_cpp Filesystem TreeSitter Clap Printer)
-target_link_libraries(count_tokens_duckling Filesystem TokenFile Clap Printer)
 
-add_executable(llvm_example llvm_example.cpp)
+duck_add_playground(llvm_example llvm_example_playground.cpp USES)
 llvm_map_components_to_libnames(llvm_libs
     Core
     ExecutionEngine
@@ -21,5 +16,5 @@ llvm_map_components_to_libnames(llvm_libs
     MCJIT
     Support
     nativecodegen)
-target_include_directories(llvm_example PRIVATE ${LLVM_INCLUDE_DIRS})
-target_link_libraries(llvm_example ${llvm_libs} llvm_helpers)
+target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
+target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)

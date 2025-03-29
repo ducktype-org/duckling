@@ -1,0 +1,85 @@
+type primitive: int64 8
+type static_table: tableint64 int64 42
+type fun: main {} int64
+
+function main {
+  arg_size: 0;
+  ret_size: 8;
+
+  # x - 8
+  # i - 16
+  # y - 24
+  # t - 32
+  local_size: 48;
+
+  code: {
+    # [0, 8) main ret_val
+    init_type int64; # [8, 16) x
+    init_type int64; # [16, 24) i
+    init_type int64; # [24, 32) y
+    init_type int64; # [32, 40) t
+
+    # alloc t[42]
+    alloc_lptr_type 32, tableint64;
+
+    # i := 41
+    mov_l64_imm         16, 42;
+
+    # x := 1
+    mov_l64_imm         8, 1;
+
+    # populate table t with 1..42 sequence
+    # while(x > 0)
+    label Loop1;
+      # i--
+      sub_l64_imm         16, 1;
+
+      # t[i] := x (by idx)
+      store_lptr_l64_ofs  32, 8;
+      ext_l64             16;
+
+      # x++
+      add_l64_imm         8, 1;
+
+      # if i > 0 : end
+      cmpG_l64_imm        16, 0;
+      jmpRelIf_label      Loop1;
+
+    # sum the sequence
+
+    # i := 41
+    mov_l64_imm         16, 42;
+
+    # y := 0
+    mov_l64_imm         24, 0;
+
+    label Loop2;
+      # i--
+      sub_l64_imm         16, 1;
+
+      load_l64_lptr_ofs   8, 32;
+      ext_l64             16;
+
+      # y += x
+      add_l64_l64         24, 8;
+
+      # if i > 0 : end
+      cmpG_l64_imm        16, 0;
+      jmpRelIf_label      Loop2;
+
+
+    # should return 42*(42+1)/2=903
+    output_l64          24;
+
+    # free t
+    free_lptr           32;
+
+    deinit; # t
+    deinit; # y
+    deinit; # i
+    deinit; # x
+
+    ret;
+  }
+
+}

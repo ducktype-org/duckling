@@ -10,6 +10,8 @@
 #include <base/string_id.hpp>
 #include <typesystem/higher/types.hpp>
 #include <query_framework/query_int.hpp>
+
+#include <memory>
 #include <vector>
 
 namespace compiler::helios {
@@ -63,7 +65,7 @@ namespace compiler::helios {
 
 		HOUTFunctionContent content;
 
-		tsh::FunctionInfo type;
+		tsh::FunctionAbstractType type;
 
 		/**
 		 * @brief Lifetime scope, thats higher
@@ -107,7 +109,7 @@ namespace compiler::helios {
 		// @TODO: CTV from TS:
 		i64 value;
 
-		tsh::TypeInfo type;
+		tsh::SymbolType<> type;
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx);
 

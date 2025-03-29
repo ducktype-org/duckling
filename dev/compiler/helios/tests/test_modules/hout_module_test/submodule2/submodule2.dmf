@@ -1,0 +1,5 @@
+const y: i32 = 321;
+
+fun moo(b: i32) = {
+    return b;
+}

@@ -7,10 +7,10 @@ cmake_policy(SET CMP0054 NEW)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
 # This is ifed-out, because it is
-# avaiable only from CMAKE 3.24.
+# available only from CMAKE 3.24.
 # @FUTURE: un-if it.
 # Note: It is not that important for us (as of 11.2023).
-# It is realated to dependecies.
+# It is related to dependencies.
 if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24.0")
 	cmake_policy(SET CMP0135 NEW)
 endif()
@@ -23,6 +23,8 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+set(TEST_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/tests)
+set(PLAYGROUND_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/playgrounds)
 
 set(SRC_PATH ${CMAKE_CURRENT_LIST_DIR})
 
@@ -33,6 +35,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureCompileOptions.cmake
 set(CMAKE_CXX_CREATE_ASSEMBLY_SOURCE "<CMAKE_CXX_COMPILER> $(CXX_DEFINES) $(CXX_INCLUDES) ${CMAKE_CXX_FLAGS} -S -masm=intel -fverbose-asm <SOURCE> -o <ASSEMBLY_SOURCE> -std=c++23")
 
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureTests.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigurePlaygrounds.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureGlobalCleanTargets.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/main_cmake_files/ConfigureModules.cmake)
 
@@ -49,7 +52,7 @@ insertLLVM()
 add_subdirectory(base)
 add_subdirectory(common)
 add_subdirectory(compiler)
-add_subdirectory(VM)
+add_subdirectory(vm)
 add_subdirectory(playground)
 
 # Scripts:

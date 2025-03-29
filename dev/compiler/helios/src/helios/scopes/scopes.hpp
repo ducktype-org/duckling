@@ -86,7 +86,7 @@ namespace compiler::helios {
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
-	ScopeID queryBodyCodeScopeFor(query::Context&, MCRef<pst::Stmt> stmt);
+	ScopeID queryBodyCodeScopeFor(query::Context&, pst::AccessLocked<pst::Stmt> stmt);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
@@ -113,6 +113,12 @@ namespace compiler::helios {
 	 * Also: dictates what symbols are contained in what scopes.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
+
+	/**
+	 * @brief Query all scopes defined in a given module.
+	 * Note: Not implemented yet.
+	 */
+	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
 	/**
 	 * @brief Root scope of main module file.

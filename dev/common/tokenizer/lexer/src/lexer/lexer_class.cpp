@@ -1,4 +1,3 @@
-#include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 

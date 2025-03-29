@@ -4,6 +4,7 @@
 
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
+#include <base/optional.hpp>
 
 namespace tsh {
 	namespace {
@@ -22,23 +23,26 @@ namespace tsh {
 	TypeInterface::TypeInterface(const std::set<InterfaceElement>& elements):
 		  elements(groupElementsByName(elements)) {}
 
-	TypeInfo InterfaceElement::getType(query::Context& ctx) const {
+	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		if (isField())
 			return getResultType();
 		else {
 			// @TODO: Add .is_mutable and .pure when additional method specifiers are supported.
-			std::vector<TypeInfo> all_parameter_types{};
-			all_parameter_types.push_back(ctx.query<QueryPointerType>({
-				.type       = source,
-				.is_mutable = false,
-			}));
+			std::vector<SymbolType<>> all_parameter_types{};
+			// @note: The first parameter is the implicit self parameter. It might change to
+			// being specified in the method declaration.
+			all_parameter_types.emplace_back(source, ReferenceKind::Ref, Mutability::Mutable);
 			for (const auto& par: parameters.value()) all_parameter_types.push_back(par.type);
-			return ctx.query<QueryFunctionType>({
-				.parameter_types = all_parameter_types,
-				.result_type     = result_type,
-				.pure            = false,
-				.free            = false,
-			});
+			return SymbolType{
+				ctx.query<QueryFunctionType>({
+					.parameter_types = all_parameter_types,
+					.result_type     = result_type,
+					.pure            = false,
+					.free            = false,
+				}),
+				ReferenceKind::Direct,
+				Mutability::Immutable,
+			};
 		}
 	}
 
@@ -68,13 +72,13 @@ namespace tsh {
 	 * @return The reference to the proper category, out of the three given.
 	 */
 	std::set<InterfaceElement>& selectMatchCategoryForMethod(
-		const std::vector<TypeInfo>&   positional_arg_types,
-		const std::set<NamedArgument>& named_args,
-		query::Context&                ctx,
-		const InterfaceElement&        method,
-		std::set<InterfaceElement>&    exact_matches,
-		std::set<InterfaceElement>&    coercion_matches,
-		std::set<InterfaceElement>&    non_matches
+		const std::vector<AbstractType>& positional_arg_types,
+		const std::set<NamedArgument>&   named_args,
+		query::Context&                  ctx,
+		const InterfaceElement&          method,
+		std::set<InterfaceElement>&      exact_matches,
+		std::set<InterfaceElement>&      coercion_matches,
+		std::set<InterfaceElement>&      non_matches
 	) {
 		// Since this resolution step really only considers methods, we discard fields.
 		if (method.isField()) return non_matches;
@@ -87,12 +91,13 @@ namespace tsh {
 		if (positional_arg_types.size() + named_args.size() > parameters.size()) return non_matches;
 
 		// Go over positional arguments.
-		for (int i = 0; i < positional_arg_types.size(); i++) {
-			TypeInfo provided_type = positional_arg_types[i];
-			TypeInfo expected_type = parameters[i].type;
+		for (usize i = 0; i < positional_arg_types.size(); i++) {
+			AbstractType provided_type = positional_arg_types[i];
+			AbstractType expected_type = parameters[i].type.getType();
 			if (provided_type != expected_type) {
 				// Type mismatch case.
-				if (!ctx.query<QueryImplicitCoercibilityOnInfo>({ provided_type, expected_type }))
+				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,
+				                                                          expected_type }))
 					return non_matches;
 				coercion_present = true;
 			}
@@ -102,8 +107,8 @@ namespace tsh {
 
 		// Go over named arguments.
 		for (auto named_arg: named_args) {
-			int param_with_matching_name_idx = -1;
-			for (int i = 0; i < parameters.size(); i++) {
+			base::Optional<u32> param_with_matching_name_idx{};
+			for (u32 i = 0; i < parameters.size(); i++) {
 				auto param = parameters[i];
 				if (!param_was_provided[i] && param.name == named_arg.name) {
 					param_with_matching_name_idx = i;
@@ -112,30 +117,32 @@ namespace tsh {
 			}
 
 			// Name mismatch case.
-			if (param_with_matching_name_idx == -1) return non_matches;
-			TypeInfo provided_type = named_arg.type;
-			TypeInfo expected_type = parameters[param_with_matching_name_idx].type;
+			if (param_with_matching_name_idx.empty()) return non_matches;
+			AbstractType provided_type = named_arg.type;
+			AbstractType expected_type
+				= parameters[param_with_matching_name_idx.value()].type.getType();
 			if (provided_type != expected_type) {
 				// Type mismatch case.
-				if (!ctx.query<QueryImplicitCoercibilityOnInfo>({ provided_type, expected_type }))
+				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,
+				                                                          expected_type }))
 					return non_matches;
 				coercion_present = true;
 			}
-			param_was_provided[param_with_matching_name_idx] = true;
+			param_was_provided[param_with_matching_name_idx.value()] = true;
 		}
 
 		// Check that all unprovided parameters have default values.
-		for (int i = 0; i < parameters.size(); i++)
+		for (u32 i = 0; i < parameters.size(); i++)
 			if (!param_was_provided[i] && !parameters[i].has_default_value) return non_matches;
 
 		return coercion_present ? coercion_matches : exact_matches;
 	}
 
 	ResolutionResult TypeInterface::resolve(
-		base::StrID                    name,
-		const std::vector<TypeInfo>&   positional_arg_types,
-		const std::set<NamedArgument>& named_args,
-		query::Context&                ctx
+		base::StrID                      name,
+		const std::vector<AbstractType>& positional_arg_types,
+		const std::set<NamedArgument>&   named_args,
+		query::Context&                  ctx
 	) {
 		// Preamble
 		const std::set<InterfaceElement>& elements_matching_name = getElements(name);
@@ -172,23 +179,23 @@ namespace tsh {
 		return AmbiguousMatch{ exact_matches, coercion_matches, non_matches };
 	}
 
-	ResolutionResult
-		TypeInterface::resolve(base::StrID name, TypeInfo single_arg_type, query::Context& ctx) {
+	ResolutionResult TypeInterface::resolve(
+		base::StrID name, AbstractType single_arg_type, query::Context& ctx
+	) {
 		return resolve(name, { single_arg_type }, {}, ctx);
 	}
 
 	std::string TypeInterface::stringifyRequestSignature(
 		base::StrID name,
-		const base::Optional<
-			std::pair<std::vector<TypeInfo>, std::vector<TypeInterface::NamedArgument>>>&
+		const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
 			argument_info
 	) {
 		std::stringstream result;
 		result << name.str();
 
 		if (argument_info.has_value()) {
-			const std::vector<TypeInfo>& positional                = argument_info.value().first;
-			const std::vector<TypeInterface::NamedArgument>& named = argument_info.value().second;
+			const std::vector<AbstractType>&  positional = argument_info.value().first;
+			const std::vector<NamedArgument>& named      = argument_info.value().second;
 
 			std::vector<std::string> args;
 			args.reserve(positional.size() + named.size());
@@ -197,7 +204,7 @@ namespace tsh {
 				args.push_back(named_arg.name.str() + " : " + named_arg.type.toString());
 
 			result << "(";
-			for (int i = 0; i < args.size() - 1; i++) result << args[i] << ", ";
+			for (u32 i = 0; i < args.size() - 1; i++) result << args[i] << ", ";
 			if (!args.empty()) result << args[args.size() - 1];
 			result << ")";
 		}

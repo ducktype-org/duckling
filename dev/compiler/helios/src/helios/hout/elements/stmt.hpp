@@ -7,7 +7,7 @@
 
 #include <base/ints.hpp>
 #include <base/box.hpp>
-#include <typesystem/higher/type_desc.hpp>
+#include <typesystem/higher/expression_type.hpp>
 
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
@@ -40,7 +40,7 @@ namespace compiler::helios::code {
 	 */
 	struct Parameter final {
 		base::StrID               name;
-		tsh::ComponentType        type;
+		tsh::SymbolType<>         type;
 		base::Optional<Box<Expr>> initial_value;
 		SymID                     helios_symbol;
 	};
@@ -56,7 +56,7 @@ namespace compiler::helios::code {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
 		base::Optional<Box<Expr>> initial_value;
-		tsh::ComponentType        type;
+		tsh::SymbolType<>         type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
@@ -64,7 +64,7 @@ namespace compiler::helios::code {
 		VariableStmt(
 			const ScopeID             scope,
 			base::Optional<Box<Expr>> initial_value,
-			tsh::ComponentType        type,
+			tsh::SymbolType<>         type,
 			const SymID               helios_symbol
 		):
 			  Stmt(scope),

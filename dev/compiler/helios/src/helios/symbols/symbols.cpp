@@ -7,19 +7,15 @@
 #include <base/stable_hashmap.hpp>
 #include <base/stable_container.hpp>
 #include <base/variant.hpp>
-#include <base/unique_pointer.hpp>
 #include <base/optional.hpp>
 
 #include <query_framework/query_impl.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/pst_visitor.hpp>
-#include <typesystem/higher/type_info.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <typesystem/higher/queries/types.hpp>
-
-#include <helios/hout/elements.hpp>
-#include <helios/hout/visitors.hpp>
 
 #include <helios/comp_time/type_eval.hpp>
 #include <helios/comp_time/int_eval.hpp>
@@ -46,27 +42,116 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
 
 	/**
-	 * @brief Stores generic symbol data
+	 * Symbol data shared by all symbols.
+	 */
+	struct CommonSymbolData {
+		/**
+		 * Symbol name.
+		 *
+		 * @note In the future there might also be anonymous symbols (symbols with no name), like:
+		 * `let _ = 5;`, lambdas, `using a.*`, etc.
+		 * For now we workaround it, as all things that could be anonymous are also a wildcard.
+		 * Those symbols will also need to have mangled name.
+		 */
+		base::StrID name;
+
+		/**
+		 * Symbol kind, determines what kind of symbol it is.
+		 */
+		SymbolKind kind;
+
+		/**
+		 * Whether the symbol is a wildcard symbol.
+		 * When lookup encounter a wildcard symbol it
+		 * looks-up into that symbol instead of considering the symbol itself.
+		 * e.g.: `using a.*`
+		 */
+		bool is_wildcard = false;
+
+		/**
+		 * Whether the symbol is an alias.
+		 * Aliases are symbols that are not "real" symbols, but are just a reference to another
+		 * symbol. e.g.: `using a = b;`
+		 */
+		bool is_alias = false;
+
+		/** Whether the symbol is a dependent symbol.
+		 * Dependent symbols are symbols that can't be used in actual execution without some
+		 * context, e.g. class fields.
+		 */
+		bool dependent = false;
+	};
+
+	/**
+	 * @brief Symbol data for all symbols that are created from PST elements.
+	 */
+	struct PstSymbolData {
+		/**
+		 * Scope in which the symbol was defined.
+		 */
+		ScopeID scope;
+
+		/**
+		 * PST element that the symbol was created from.
+		 */
+		pst::AccessLocked<pst::LangElement> pst_element;
+	};
+
+	namespace builtin {
+		struct BuiltinFunctionData final {
+			tsh::FunctionAbstractType type;
+
+			BuiltinFunctionData(tsh::FunctionAbstractType type): type(type) {}
+		};
+	}
+
+	/**
+	 * @brief Stores generic symbol data.
+	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
+	 * SymbolData is by design a "read-only" structure.
 	 */
 	struct SymbolData final {
-		// created when creating SymbolData:
-		ScopeID     scope;
-		base::StrID name;
-		bool        anonymous   = false;
-		bool        is_wildcard = false;
-		bool        is_alias    = false;
-		bool        dependent   = false;
-		SymbolKind  kind;
+		using OtherData = std::variant<PstSymbolData, builtin::BuiltinFunctionData>;
 
-		CRef<pst::LangElement> pst_element;
+		CommonSymbolData common;
+		OtherData        other;
+
+		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
+			return SymbolData{
+				.common = common_data,
+				.other  = pst_data,
+			};
+		}
+
+		static auto
+			makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+			return SymbolData{
+				.common = {
+					.name = name,
+					.kind = SymbolKind::BuiltinFunction,
+				},
+				.other  = builtin_data,
+			};
+		}
+
+		template<class T>
+		[[nodiscard]]
+		CRef<T> getData() const {
+			return &std::get<T>(other);
+		}
+
+		[[nodiscard]]
+		CRef<PstSymbolData> getPSTData() const {
+			return getData<PstSymbolData>();
+		}
 
 		/**
 		 * Return associated pst_element cast to Stmt.
-		 * Panics if element is not a statement.
+		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
-		CRef<pst::Stmt> stmtCast() const {
-			return dynamic_cast<const pst::Stmt*>(&*pst_element);
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::detail::ContextType& ctx) const {
+			return getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};
 
@@ -75,19 +160,27 @@ namespace compiler::helios {
 	 */
 	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
+
+		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
 	};
 
 	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
-	bool isWildcard(SymID id) { return getSymRef(id)->is_wildcard; }
+	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 
-	base::StrID name(SymID id) { return getSymRef(id)->name; }
+	base::StrID name(SymID id) { return getSymRef(id)->common.name; }
 
-	SymbolKind kind(SymID id) { return getSymRef(id)->kind; }
+	SymbolKind kind(SymID id) { return getSymRef(id)->common.kind; }
 
-	ScopeID scope(SymID id) { return getSymRef(id)->scope; }
+	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
 
-	CRef<pst::Stmt> stmt(SymID id) { return getSymRef(id)->stmtCast(); }
+	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context& ctx, SymID id) {
+		return getSymRef(id)->stmtCast(ctx);
+	}
+
+	pst::AccessLocked<pst::LangElement> symbolPst(SymID id) {
+		return getSymRef(id)->getPSTData()->pst_element;
+	}
 
 	namespace {
 		/**
@@ -95,12 +188,12 @@ namespace compiler::helios {
 		 * @note: in the future it might not be needed once
 		 * we will move toward more pure Query Model
 		 */
-		base::StableVector<SymbolData> symbol_table;
+		base::StableVector<const SymbolData> symbol_table;
 
 		template<class... T>
 		auto putInSymtable(T&&... args) {
 			auto key = symbol_table.emplaceBack(std::forward<T>(args)...);
-			return symbol_table.getRef(key).value();
+			return symbol_table.getCRef(key).value();
 		}
 	}
 
@@ -115,126 +208,144 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	Ref<SymbolData> makeSymbolFromStatement(ScopeID scope, CRef<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
+
+		PstSymbolData pst_data{
+			.scope       = scope,
+			.pst_element = stmt,
+		};
 
 		switch (stmt->getStmtKind()) {
 		case pst::StmtKind::Fun: {
-			auto function = dynamic_cast<const pst::Fun*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = function->getName(),
-				.kind        = SymbolKind::Function,
-				.pst_element = stmt,
-			});
+			auto function = stmt.dynamicCast<pst::Fun>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = function->getName(),
+					.kind = SymbolKind::Function,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Namespace: {
-			auto namespace_stmt = dynamic_cast<const pst::Namespace*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = namespace_stmt->getName(),
-				.kind        = SymbolKind::Namespace,
-				.pst_element = stmt,
-			});
+			auto namespace_stmt = stmt.dynamicCast<pst::Namespace>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = namespace_stmt->getName(),
+					.kind = SymbolKind::Namespace,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Const: {
-			auto const_stmt = dynamic_cast<const pst::Const*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = const_stmt->getName(),
-				.kind        = SymbolKind::Const,
-				.pst_element = stmt,
-			});
+			auto const_stmt = stmt.dynamicCast<pst::Const>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = const_stmt->getName(),
+					.kind = SymbolKind::Const,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Class: {
-			auto class_stmt = dynamic_cast<const pst::Class*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = class_stmt->getName(),
-				.kind        = SymbolKind::Class,
-				.pst_element = stmt,
-			});
+			auto class_stmt = stmt.dynamicCast<pst::Class>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = class_stmt->getName(),
+					.kind = SymbolKind::Class,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Alias: {
-			auto alias = dynamic_cast<const pst::Alias*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = alias->getName(),
-				.is_alias    = true,
-				.kind        = SymbolKind::Alias,
-				.pst_element = stmt,
-			});
+			auto alias = stmt.dynamicCast<pst::Alias>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name     = alias->getName(),
+					.kind     = SymbolKind::Alias,
+					.is_alias = true,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Using: {
-			auto using_stmt = dynamic_cast<const pst::Using*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope = scope,
-				.name
-				= base::StrID(base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()
-			    ),
-				.is_wildcard = true,
-				.is_alias    = true,
-				.kind        = SymbolKind::Using,
-				.pst_element = stmt,
-			});
+			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = base::StrID(
+						base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()
+					),
+					.kind        = SymbolKind::Using,
+					.is_wildcard = true,
+					.is_alias    = true,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Variable: {
-			auto variable = dynamic_cast<const pst::Variable*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = variable->getName(),
-				.is_wildcard = false,
-				.is_alias    = false,
-				.kind        = SymbolKind::Variable,
-				.pst_element = stmt,
-			});
+			auto variable = stmt.dynamicCast<pst::Variable>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name        = variable->getName(),
+					.kind        = SymbolKind::Variable,
+					.is_wildcard = false,
+					.is_alias    = false,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Import: {
 			// For now only non-wildcard import exist
-			auto import = dynamic_cast<const pst::Import*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = import->getAlias(),
-				.is_wildcard = false,
-				.is_alias    = false,
-				.kind        = SymbolKind::Import,
-				.pst_element = stmt,
-			});
+			auto import = stmt.dynamicCast<pst::Import>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name        = import->getAlias(),
+					.kind        = SymbolKind::Import,
+					.is_wildcard = false,
+					.is_alias    = false,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Method: {
-			auto method = dynamic_cast<const pst::Method*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = method->getName(),
-				.kind        = SymbolKind::Method,
-				.pst_element = stmt,
-			});
+			auto method = stmt.dynamicCast<pst::Method>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = method->getName(),
+					.kind = SymbolKind::Method,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Field: {
-			auto field = dynamic_cast<const pst::Field*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = field->getName(),
-				.kind        = SymbolKind::Field,
-				.pst_element = stmt,
-			});
+			auto field = stmt.dynamicCast<pst::Field>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name      = field->getName(),
+					.kind      = SymbolKind::Field,
+					.dependent = true,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Constructor: {
-			auto constructor = dynamic_cast<const pst::Constructor*>(&*stmt);
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = constructor->getName(),
-				.kind        = SymbolKind::Constructor,
-				.pst_element = stmt,
-			});
+			auto constructor = stmt.dynamicCast<pst::Constructor>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = constructor->getName(),
+					.kind = SymbolKind::Constructor,
+				},
+				pst_data
+			));
 		}
 		case pst::StmtKind::Destructor: {
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = base::StrID("destroy"),
-				.kind        = SymbolKind::Destructor,
-				.pst_element = stmt,
-			});
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = base::StrID("destroy"),
+					.kind = SymbolKind::Destructor,
+				},
+				pst_data
+			));
 		}
 		default:
 			break;
@@ -251,14 +362,20 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	Ref<SymbolData> makeSymbolFromPSTElement(ScopeID scope, CRef<pst::LangElement> element) {
-		if (auto parameter = dynamic_cast<const pst::FunParam*>(&*element)) {
-			return putInSymtable(SymbolData{
-				.scope       = scope,
-				.name        = parameter->getName(),
-				.kind        = SymbolKind::Parameter,
-				.pst_element = element,
-			});
+	CRef<SymbolData>
+		makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
+			auto parameter = parameter_opt.value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = parameter->getName(),
+					.kind = SymbolKind::Parameter,
+				},
+				{
+					.scope       = scope,
+					.pst_element = element,
+				}
+			));
 		}
 		CORE_PANIC("Not handled PST element in makeSymbolFromPSTElement");
 	}
@@ -269,25 +386,26 @@ namespace compiler::helios {
 		 * Should be in.
 		 * @note This has to be consistant with QuerySymbolsInScope
 		 */
-		static ScopeID
-			getPSTElementParentScope(query::Context& ctx, MCRef<pst::LangElement> element) {
+		static ScopeID getPSTElementParentScope(
+			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
+		) {
 			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>({ element->getParent().value() });
+			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// Note: we might actually accept nulls in such queries, and just return failed
 			// Something to think about as part of #412
 			CORE_ASSERT(
-				key.element.toOpt().has_value(),
+				key.element.unlockOpt(ctx),
 				"Nullptr element given to QuerySymbolOfSTMT! (add some null handling before "
 				"calling it)"
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
-			if (auto stmt = dynamic_cast<const pst::Stmt*>(&*key.element))
-				return PResult{ makeSymbolFromStatement(scope, stmt) };
+			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
+				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
 			else
-				return PResult{ makeSymbolFromPSTElement(scope, key.element.toOpt().value()) };
+				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
 
 		// @OPT: opt it?
@@ -296,9 +414,74 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolOfSTMT);
 
+	namespace builtin {
+		namespace {
+			/**
+			 * Query all builtin symbols.
+			 */
+			DECLARE_QUERY(QueryGlobalBuiltinSymbols, query::EmptyKey, CRef<std::vector<SymID>>);
+
+			struct IMPLEMENT_QUERY(QueryGlobalBuiltinSymbols, std::vector<SymID>) {
+				static auto provide(Context& ctx, QKey) -> PResult {
+					std::vector<SymID> output;
+
+					auto i64_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryIntegralType>({ 64, true }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+					auto unit_type = tsh::SymbolType<>(
+						ctx.query<tsh::QueryUnitType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Mutable
+					);
+
+					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
+						= {
+							  {
+								  {
+									  base::StrID("builtin_input_i64"),
+									  ctx.query<tsh::QueryFunctionType>({ {}, i64_type }),
+								  },
+								  {
+									  base::StrID("builtin_output_i64"),
+									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, unit_type }
+						              ),
+								  },
+							  },
+						  };
+
+					for (auto& [name, type]: function_data) {
+						auto sym_data_ref = putInSymtable(
+							SymbolData::makeBuiltinFunction(name, BuiltinFunctionData{ type })
+						);
+						output.push_back(GetSymRef_Functor::make(sym_data_ref));
+					}
+
+					return output;
+				}
+
+				QUERY_AUTO_CACHE_REF
+			};
+
+			QUERY_IMPLEMENTATION_BOILERPLATE(QueryGlobalBuiltinSymbols);
+		}
+
+		LookupResult lookupGlobalBuiltins(query::Context& ctx, base::StrID name) {
+			LookupResult output{};
+
+			auto builtins = ctx.query<QueryGlobalBuiltinSymbols>({});
+
+			for (auto sym: *builtins)
+				if (name == getSymRef(sym)->common.name) output.leaves.push_back(sym);
+
+			return output;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(QueryLookupInSymbol, LookupResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.symbol.ref->kind) {
+			switch (key.symbol.ref->common.kind) {
 			case SymbolKind::Using:
 			case SymbolKind::Namespace:
 			case SymbolKind::Import: {
@@ -377,9 +560,13 @@ namespace compiler::helios {
 				result_scope.emplace(out);
 			}
 
-			void visitUsing(const pst::Using& using_stmt) final {
-				auto names      = using_stmt.getPointed();
-				auto lookup_res = lookupChain(ctx, LookupChainKey{ names, scope(key), false });
+			void visitUsing(pst::Access<pst::Using> using_stmt) final {
+				auto names      = using_stmt->getPointed();
+				auto lookup_res = lookupChain(
+					ctx,
+					LookupChainKey{
+						.names = names, .begin_scope = scope(key), .follow_wildcards = false }
+				);
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
 					"Using points to something that does not exists or is empty"
@@ -388,10 +575,10 @@ namespace compiler::helios {
 				output(ret);
 			}
 
-			void visitImport(const pst::Import& import_stmt) final {
+			void visitImport(pst::Access<pst::Import> import_stmt) final {
 				// @TODO: proper error handling
 				auto imported_module = frontend::getRelativeModule(
-										   ctx, module(scope(key)), import_stmt.getModulePath()
+										   ctx, module(scope(key)), import_stmt->getModulePath()
 				)
 				                           .value();
 
@@ -403,16 +590,16 @@ namespace compiler::helios {
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			switch (key.ref->kind) {
+			switch (key.ref->common.kind) {
 			case SymbolKind::Namespace:
-				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast());
+				return queryBodyCodeScopeFor(ctx, key.ref->stmtCast(ctx).value());
 
 
 			// Special cases for "wildcards":
 			case SymbolKind::Using:
 			case SymbolKind::Import: {
 				QueryLinkedScopeVisitor visitor(ctx, key);
-				key.ref->pst_element->acceptVisitor(visitor);
+				key.ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
 				return visitor.result_scope.value();
 			}
 			default:
@@ -441,7 +628,11 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto alias_definition = dynamic_cast<const pst::Alias*>(&*getSymRef(key)->pst_element);
+			auto alias_definition = getSymRef(key)
+			                            ->getPSTData()
+			                            ->pst_element.unlock(ctx)
+			                            .dynamicCast<pst::Alias>()
+			                            .value();
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -500,10 +691,13 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol
-				= dynamic_cast<const pst::Const*>(&*getSymRef(key)->pst_element);
+			const auto const_symbol = getSymRef(key)
+			                              ->getPSTData()
+			                              ->pst_element.unlock(ctx)
+			                              .dynamicCast<pst::Const>()
+			                              .value();
 
-			return ctx.query<EvalExprToI64>({ const_symbol->getValue()->getExpr() });
+			return ctx.query<EvalExprToI64>(const_symbol->getValue().unlock(ctx)->getExpr());
 		}
 
 		QUERY_AUTO_CACHE_COPY
@@ -511,45 +705,56 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
-	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QueryType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeOfSymbol, QuerySymbolType_Result) {
 		class PstVisitor_GetTypeOf final: public pst::PstVisitorPanicky {
 			Context& ctx;
 
 			// @TODO: make failure more explicit
 
-			void setTypeOfSymbol(const tsh::TypeInfo& type) {
-				if (symbol_type_info.has_value())
+			void setTypeOfSymbol(const tsh::SymbolType<>& type) {
+				if (symbol_type.has_value())
 					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
-				symbol_type_info = type;
+				symbol_type = type;
 			}
 
-			void setTypeOfSymbol(MCRef<pst::ExprElement> expr) {
-				auto tp = ctx.query<EvalExprToType>({ expr });
+			void setTypeOfSymbolByAbstractType(const tsh::AbstractType& type) {
+				if (symbol_type.has_value())
+					CORE_PANIC("Attempted to set type of symbol in visitor a second time.");
+				symbol_type = tsh::SymbolType{
+					type,
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+			}
+
+			void setTypeOfSymbol(pst::Access<pst::ExprElement> expr) {
+				auto tp = ctx.query<EvalExprToType>(pst::AccessLocked<pst::ExprElement>(expr));
 				if (tp.hasValue()) setTypeOfSymbol(tp.value());
 			}
 
 		public:
 			PstVisitor_GetTypeOf(Context& ctx): ctx(ctx) {}
 
-			base::Optional<tsh::TypeInfo> symbol_type_info;
+			base::Optional<tsh::SymbolType<>> symbol_type;
 
-			void visitConst(const pst::Const& stmt) final {
-				setTypeOfSymbol(stmt.getType()->getExpr());
+			void visitConst(pst::Access<pst::Const> stmt) final {
+				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitVariable(const pst::Variable& stmt) final {
-				setTypeOfSymbol(stmt.getType()->getExpr());
+			void visitVariable(pst::Access<pst::Variable> stmt) final {
+				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitField(const pst::Field& field) final {
-				setTypeOfSymbol(field.getType()->getExpr());
+			void visitField(pst::Access<pst::Field> field) final {
+				setTypeOfSymbol(field->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
-			void visitFun(const pst::Fun& fun) final {
-				auto params = fun.getParams();
-				auto ret    = fun.getRet();
+			void visitFun(pst::Access<pst::Fun> fun) final {
+				auto locked_params = fun->getParams();
+				auto params        = locked_params.unlock(ctx);
+				auto ret           = fun->getRet();
 
-				std::vector<tsh::TypeInfo> param_types{};
+				std::vector<tsh::SymbolType<>> param_types{};
 				param_types.reserve(params->size());
 
 				for (auto param: *params) {
@@ -563,9 +768,16 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				tsh::TypeInfo ret_type = ctx.query<tsh::QueryUnitType>({});
+
+				// Default return type is a direct unit.
+				tsh::SymbolType<> ret_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryUnitType>({}),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
+
 				if (ret.has_value()) {
-					auto parsed = ctx.query<EvalExprToType>({ ret.value()->getExpr() });
+					auto parsed = ctx.query<EvalExprToType>(ret.value().unlock(ctx)->getExpr());
 					if (parsed.hasValue()) {
 						ret_type = parsed.value();
 					} else {
@@ -573,59 +785,74 @@ namespace compiler::helios {
 						return;
 					}
 				}
-				setTypeOfSymbol(ctx.query<tsh::QueryFunctionType>({ param_types, ret_type }));
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryFunctionType>({ param_types,
+				                                                                  ret_type }));
 			}
 
-			void visitClass(const pst::Class&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryMetaType>({}));
+			void visitClass(pst::Access<pst::Class>) final {
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryMetaType>({}));
 			}
 
-			void visitNamespace(const pst::Namespace&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryNamespaceType>({}));
+			void visitNamespace(pst::Access<pst::Namespace>) final {
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryNamespaceType>({}));
 			}
 
-			void visitImport(const pst::Import&) final {
-				setTypeOfSymbol(ctx.query<tsh::QueryImportType>({}));
+			void visitImport(pst::Access<pst::Import>) final {
+				setTypeOfSymbolByAbstractType(ctx.query<tsh::QueryImportType>({}));
 			}
 
-			void visitFunParam(const pst::FunParam& param) final {
-				setTypeOfSymbol(param.getType()->getExpr());
+			void visitFunParam(pst::Access<pst::FunParam> param) final {
+				setTypeOfSymbol(param->getType().unlock(ctx)->getExpr().unlock(ctx));
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			auto symbol_ref = getSymRef(key);
 
-			PstVisitor_GetTypeOf visitor(ctx);
-			symbol_ref->pst_element->acceptVisitor(visitor);
-
-			if_opt_some(visitor.symbol_type_info, type) return type;
-			return errors::HError(errors::Failed());
+			variant_match(symbol_ref->other) {
+				variant_case(PstSymbolData, pst_data) {
+					PstVisitor_GetTypeOf visitor(ctx);
+					pst_data.pst_element.unlock(ctx)->acceptVisitor(visitor);
+					if_opt_some(visitor.symbol_type, type) { return type; }
+					return errors::HError(errors::Failed());
+				}
+				variant_case(builtin::BuiltinFunctionData, builtin_data) {
+					return tsh::SymbolType<>(
+						builtin_data.type, tsh::ReferenceKind::Direct, tsh::Mutability::Mutable
+					);
+				}
+				variant_default { CORE_PANIC("Unknown symbol data type"); }
+			}
+			CORE_UNREACHABLE();
 		}
 
-		QUERY_AUTO_CACHE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QuerySymbolType_Result) {
 		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
 
-			void setTypeOfDefinition(const tsh::TypeInfo& type) {
-				if (definition_type_info.has_value())
+			void setTypeOfDefinition(const tsh::SymbolType<>& type) {
+				if (definition_symbol_type.has_value())
 					CORE_PANIC("Attempted to set type of definition in visitor a second time.");
-				definition_type_info = type;
+				definition_symbol_type = type;
 			}
 
 		public:
 			PstVisitor_GetTypeFromDefinition(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<tsh::TypeInfo> definition_type_info;
+			base::Optional<tsh::SymbolType<>> definition_symbol_type;
 
-			void visitClass(const pst::Class&) final {
-				definition_type_info = ctx.query<tsh::QueryClassType>(key);
+			void visitClass(pst::Access<pst::Class>) final {
+				definition_symbol_type = tsh::SymbolType<>{
+					ctx.query<tsh::QueryClassType>(key),
+					tsh::ReferenceKind::Direct,
+					tsh::Mutability::Mutable,
+				};
 			}
 		};
 
@@ -633,32 +860,36 @@ namespace compiler::helios {
 			auto symbol_ref = getSymRef(key);
 
 			PstVisitor_GetTypeFromDefinition visitor(ctx, key);
-			symbol_ref->pst_element->acceptVisitor(visitor);
-			return visitor.definition_type_info.value();
+			symbol_ref->getPSTData()->pst_element.unlock(ctx)->acceptVisitor(visitor);
+			return visitor.definition_symbol_type.value();
 		}
 
-		QUERY_AUTO_CACHE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeFromDefinition)
 
 	struct IMPLEMENT_QUERY(QueryClassSymbolData, QueryClassSymbolData_Result) {
 		struct ClassDataParser final: pst::PstVisitorPanicky {
-			base::Optional<base::StrID>                name;
-			base::Optional<MCRef<pst::ExprElement>>    base_class;
-			base::Optional<MCRef<pst::ImplementsList>> implements;
+			query::Context& ctx;
 
-			void visitClass(const pst::Class& stmt) final {
-				name = stmt.getName();
-				if (auto base = stmt.getBase(); base != nullptr) base_class = base;
-				if (auto implements = stmt.getImplements(); implements != nullptr)
-					this->implements = implements;
+			ClassDataParser(query::Context& ctx): ctx(ctx) {}
+
+			base::Optional<base::StrID>                            name;
+			base::Optional<pst::AccessLocked<pst::ExprElement>>    base_class;
+			base::Optional<pst::AccessLocked<pst::ImplementsList>> implements;
+
+			void visitClass(pst::Access<pst::Class> stmt) final {
+				name = stmt->getName();
+				if (auto base = stmt->getBase().unlockOpt(ctx)) base_class = base.value();
+				if (auto implements = stmt->getImplements().unlockOpt(ctx))
+					this->implements = implements.value();
 			}
 		};
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Class, "Symbol is not a class");
 
-			auto class_stmt = getSymRef(key)->stmtCast();
+			auto class_stmt = getSymRef(key)->stmtCast(ctx).value();
 
 			auto class_body_scope = queryBodyCodeScopeFor(ctx, class_stmt);
 			auto class_symbols    = ctx.query<QuerySymbolsInScope>(class_body_scope);
@@ -688,14 +919,16 @@ namespace compiler::helios {
 				}
 			}
 			// Find the name
-			auto class_data_parser = ClassDataParser();
+			auto class_data_parser = ClassDataParser(ctx);
 			class_stmt->acceptVisitor(class_data_parser);
 			class_info.name = class_data_parser.name.value();
 
 			if_opt_some(class_data_parser.base_class, base) {
 				auto tp = ctx.query<EvalExprToType>({ base });
 				if (tp.hasValue()) {
-					class_info.base = tp.value();
+					// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
+					// the base class is given with any specifiers apart from the abstract type.
+					class_info.base = tp.value().getType();
 				} else {
 					// We just fail here, error should be reported by EvalExprToType
 					return errors::HError(errors::Failed());
@@ -703,10 +936,12 @@ namespace compiler::helios {
 			}
 
 			if_opt_some(class_data_parser.implements, implements) {
-				for (auto&& interface: *implements) {
-					auto tp = ctx.query<EvalExprToType>({ interface->getExpr() });
+				for (auto&& interface: *implements.unlock(ctx)) {
+					auto tp = ctx.query<EvalExprToType>(interface.unlock(ctx)->getExpr());
 					if (tp.hasValue()) {
-						class_info.implements.push_back(tp.value());
+						// @TODO: Raise errors, here, or preferably earlier, if the symbol type of
+						// the interface is given with any specifiers apart from the abstract type.
+						class_info.implements.push_back(tp.value().getType());
 					} else {
 						// We just fail here, error should be reported by EvalExprToType
 						return errors::HError(errors::Failed());
@@ -717,7 +952,7 @@ namespace compiler::helios {
 			return class_info;
 		}
 
-		QUERY_AUTO_CACHE_REF;
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);

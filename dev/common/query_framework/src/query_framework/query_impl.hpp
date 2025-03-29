@@ -13,7 +13,6 @@
 #include <base/stable_hashmap.hpp>
 #include <base/ref.hpp>
 #include <base/exceptions.hpp>
-#include <base/unique_pointer.hpp>
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 
@@ -78,6 +77,8 @@ namespace query::detail {
 			assertActive();
 			logger.log(std::move(message));
 		}
+
+		void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
 	};
 
 	inline dia::Logger ContextType::logger{};
