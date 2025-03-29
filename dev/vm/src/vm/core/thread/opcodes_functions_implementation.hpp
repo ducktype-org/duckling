@@ -512,6 +512,13 @@ namespace vm {
             auto dst_type = get_pointee_type(static_cast<u32>(instr->arg0));
             auto src_type = get_pointee_type(static_cast<u32>(instr->arg0));
 
+            // we need:
+            // - desired type
+            //   - get_local_type_at_offset -> .inner()
+            // - actual type of source
+            //   - take Pointer, look up its Pointee, get the vtable, check the type
+            //     this can be done without passing the local stack or anything like that, just Pointer
+
 			thread.process_memory.setPointer(
 				dst, src_type->downcastableTo(dst_type) ? src : Pointer::null()
 			);

@@ -1,5 +1,6 @@
 #include "type.hpp"
 #include <base/exceptions.hpp>
+#include "base/optional.hpp"
 #include "type_metadata.hpp"
 #include <vm/core/supervisor/supervisor.hpp>
 #include <base/variant.hpp>
@@ -255,8 +256,25 @@ namespace vm {
 		});
 	}
 
-	bool Type::downcastableTo(TypeCRef target) const {
-		// TODO
+	bool Type::inheritsFrom(TypeCRef other) const {
+		std::vector<TypeCRef> stack{ this };
+		while (!stack.empty()) {
+			auto t = stack.back();
+			stack.pop_back();
+			if (t == other) return true;
+
+			if_opt_some(t->getInheritanceRole(), role) {
+				variant_match(role) {
+					variant_case(kind::inheritance::Interface, iface) {
+						for (auto i: iface.implements) stack.emplace_back(i);
+					}
+					variant_case(kind::inheritance::Class, clazz) {
+						for (auto i: clazz.implements) stack.emplace_back(i);
+						if_opt_some(clazz.extends, super) stack.emplace_back(super);
+					}
+				}
+			}
+		}
 		return false;
 	}
 

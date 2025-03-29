@@ -136,7 +136,7 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<const kind::inheritance::Role&> getInheritanceRole() const;
 		[[nodiscard]]
-		bool downcastableTo(TypeCRef target) const;
+		bool inheritsFrom(TypeCRef other) const;
 
 		// variant
 		[[nodiscard]]

@@ -58,6 +58,10 @@ namespace vm {
 		if (block->refcount == 0) deleteBlock(block);
 	}
 
+    auto downcastableTo(Pointer object, TypeCRef type) -> bool {
+        
+    }
+
 	auto Memory::requestBlockIDs() -> std::vector<BlockID> {
 		std::vector<BlockID> ids;
 		for (auto& block: blocks)
