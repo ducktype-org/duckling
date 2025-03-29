@@ -1,5 +1,6 @@
 #include "type.hpp"
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include "type_metadata.hpp"
 #include <vm/core/supervisor/supervisor.hpp>
 #include <base/variant.hpp>
@@ -52,7 +53,7 @@ namespace vm {
 
 	void Type::defineData(
 		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		const kind::inheritance::Role&                      inheritance_role
+		const base::Optional<VTable>&                       vtable
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
@@ -62,10 +63,10 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ 0, sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		data.inheritance_role = inheritance_role;
-		kind                  = data;
+		data.vtable = vtable;
+		kind        = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -249,10 +250,13 @@ namespace vm {
 	}
 
 	// inheritance
-	base::Optional<const kind::inheritance::Role&> Type::getInheritanceRole() const {
-		return get<kind::Data>().map([](auto& data) -> const kind::inheritance::Role& {
-			return data.inheritance_role;
-		});
+	base::Optional<const VTable&> Type::getVTable() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if (data.vtable.has_value()) return data.vtable.value();
+			}
+		}
+		return {};
 	}
 
 	// variant
