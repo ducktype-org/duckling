@@ -64,7 +64,9 @@ namespace compiler::helios {
 		);
 	}
 
-	NestedResult LookupResult::toNode(SymID node) const { return { node, { .leaves = leaves, .children = children } }; }
+	NestedResult LookupResult::toNode(SymID node) const {
+		return { node, { .leaves = leaves, .children = children } };
+	}
 
 	errors::HResult<SymbolList, errors::Failed>
 		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list) {
