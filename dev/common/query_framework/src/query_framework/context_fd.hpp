@@ -5,5 +5,5 @@
 #pragma once
 
 namespace query {
-    struct Context;
+	struct Context;
 }

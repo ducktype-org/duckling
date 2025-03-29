@@ -8,7 +8,7 @@
 #include "detail/query_id.hpp"  // IWYU pragma: export
 #include "detail/node_id.hpp"   // IWYU pragma: export
 #include "empty_key.hpp"        // IWYU pragma: export
-#include "context_fd.hpp"        // IWYU pragma: export
+#include "context_fd.hpp"       // IWYU pragma: export
 
 namespace query::detail {
 
@@ -41,7 +41,7 @@ namespace query::detail {
 		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
 		static ::std::string_view       name;                                                     \
 		static ::query::detail::QueryID id;                                                       \
-		friend struct ::query::Context;                                               \
+		friend struct ::query::Context;                                                           \
 		friend struct ::query::detail::EntryPointHelper;                                          \
                                                                                                   \
 	public:                                                                                       \

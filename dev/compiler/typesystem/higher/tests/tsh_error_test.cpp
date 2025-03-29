@@ -23,8 +23,7 @@ private:
 
 		std::stringstream dumped_logs;
 		assertTrue(
-			query::Context::logger.bad(),
-			"Requesting bad integral size should result in an error."
+			query::Context::logger.bad(), "Requesting bad integral size should result in an error."
 		);
 		query::Context::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
@@ -42,8 +41,7 @@ private:
 
 		std::stringstream dumped_logs;
 		assertTrue(
-			query::Context::logger.bad(),
-			"Requesting bad float size should result in an error."
+			query::Context::logger.bad(), "Requesting bad float size should result in an error."
 		);
 		query::Context::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();

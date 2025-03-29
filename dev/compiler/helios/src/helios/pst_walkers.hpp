@@ -26,6 +26,5 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<>
-		getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
 }
