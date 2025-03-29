@@ -67,7 +67,7 @@ namespace query::detail {
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
-			node_data.insert_or_assign(node, NodeData{ Color::Visiting, {}, from });
+			node_data.insert_or_assign(node, NodeData{ .color = Color::Visiting, .dependencies = {}, .parent = from });
 		}
 
 		DependencyStatus addDependency(NodeID from, NodeID to) {

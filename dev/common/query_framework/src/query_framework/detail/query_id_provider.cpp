@@ -2,11 +2,13 @@
 
 namespace query::detail {
 	namespace {
-		QueryID           next                = { 1 };
-		constexpr QueryID outside_world_query = { 0 };
+		constexpr QueryID OUTSIDE_WORLD_QUERY = { 0 };
 	}
 
 	QueryID newQueryID(const std::string_view pretty_name) {
+		// note: this is static, to allow pre-main use
+		static QueryID next = { 1 };
+
 		const QueryID ret = next;
 		QueryID::setName(ret, pretty_name);
 
@@ -15,5 +17,5 @@ namespace query::detail {
 		return ret;
 	}
 
-	QueryID outsideWorldQueryID() { return outside_world_query; }
+	QueryID outsideWorldQueryID() { return OUTSIDE_WORLD_QUERY; }
 }

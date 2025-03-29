@@ -21,17 +21,36 @@ namespace query::detail {
 	 * @tparam QKey_tp a type of a query key
 	 * @tparam QResult_tp a type of a query result
 	 */
-	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp>
+	template<typename QueryType_tp, typename QKey_tp, typename QResult_tp, bool is_input_tp>
 	struct QueryInterface {
 		using QueryType = QueryType_tp;
 		using QKey      = QKey_tp;
 		using QResult   = QResult_tp;
+		constexpr static bool IS_INPUT = is_input_tp;
 	};
 }
 
 namespace query {
 	using Context = detail::ContextType;
 }
+
+
+/**
+ * @brief Internal macro used do delcare queries.
+ */
+ #define DECLARE_QUERY_AUX(query_type, key, value, is_input)                                                     \
+ struct query_type final: ::query::detail::QueryInterface<query_type, key, value, is_input> {                  \
+ private:                                                                                      \
+	 static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
+	 static ::std::string_view       name;                                                     \
+	 static ::query::detail::QueryID id;                                                       \
+	 friend struct ::query::detail::ContextType;                                               \
+	 friend struct ::query::detail::EntryPointHelper;                                          \
+																							   \
+ public:                                                                                       \
+	 static auto getName() { return name; }                                                    \
+	 static auto getID() { return id; }                                                        \
+ };
 
 /**
  * @brief Macro used do delcare queries.
@@ -40,15 +59,4 @@ namespace query {
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
 #define DECLARE_QUERY(query_type, key, value)                                                     \
-	struct query_type: ::query::detail::QueryInterface<query_type, key, value> {                  \
-	private:                                                                                      \
-		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-		static ::std::string_view       name;                                                     \
-		static ::query::detail::QueryID id;                                                       \
-		friend struct ::query::detail::ContextType;                                               \
-		friend struct ::query::detail::EntryPointHelper;                                          \
-                                                                                                  \
-	public:                                                                                       \
-		static auto getName() { return name; }                                                    \
-		static auto getID() { return id; }                                                        \
-	};
+	DECLARE_QUERY_AUX(query_type, key, value, false)
