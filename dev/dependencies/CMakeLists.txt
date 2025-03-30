@@ -8,6 +8,7 @@ set(NLOHMANN_JSON_TAG "v3.11.3")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
+set(gRPC_TAG "v1.71.0")
 
 # Tree sitter for parsing cpp
 set(TREE_SITTER_COMMIT "12fb31826b8469cc7b9788e72bceee5af1cf0977")
@@ -37,6 +38,15 @@ FetchContent_Declare(
 	URL "https://github.com/tobiaslocker/base64/archive/${BASE64_COMMIT}.zip"
 )
 
+
+# Fixes issues with absl dependencies: https://github.com/protocolbuffers/protobuf/issues/12185
+set(ABSL_ENABLE_INSTALL ON)
+FetchContent_Declare(
+  gRPC
+  GIT_REPOSITORY https://github.com/grpc/grpc
+  GIT_TAG        ${gRPC_TAG}
+)
+
 # @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
 function(setAsSystemLibrary libname)
 	get_target_property(TEMP ${libname} INTERFACE_INCLUDE_DIRECTORIES)
@@ -51,6 +61,11 @@ setAsSystemLibrary(Crow)
 
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
+
+FetchContent_MakeAvailable(result)
+setAsSystemLibrary(Result)
+
+FetchContent_MakeAvailable(gRPC)
 
 find_library(gvc gvc)
 
