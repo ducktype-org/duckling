@@ -147,7 +147,7 @@ private:
 		auto module  = getLirOfModule(path("modules/function_with_parameters"));
 		auto foo_lir = module.lirFunc("foo");
 
-		// this is albo called by LIR lowering,
+		// this is also called by LIR lowering,
 		// but we keep it here as a sanity check:
 		ASSERT_TRUE(foo_lir->validateParameters().isOk());
 
