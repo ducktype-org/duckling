@@ -1,10 +1,9 @@
 #pragma once
 
-#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 #include "access.hpp"
-
-#include <token_file/file.hpp>
+#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 #include "lang_parser_state.hpp"
+#include <token_file/file.hpp>
 
 namespace pst {
 	/**

@@ -1,6 +1,7 @@
 #pragma once
-#include "elements.hpp"
 #include <base/visitor.hpp>
+
+#include "elements.hpp"
 
 namespace compiler::helios::code {
 	MAKE_VISITOR(

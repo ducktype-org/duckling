@@ -5,12 +5,13 @@
 
 #pragma once
 
+#include <string>
+
+#include <base/ints.hpp>
+#include <base/ref.hpp>
+
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/ref.hpp>
-#include <base/ints.hpp>
-
-#include <string>
 
 // clang-format off
 MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,

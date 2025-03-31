@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+
 #include <base/ints.hpp>
 
 namespace testing_utils {

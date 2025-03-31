@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vm/api/api.hpp>
 #include <tester/tester.hpp>
+#include <vm/api/api.hpp>
 
 
 #define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                            \

@@ -1,10 +1,12 @@
 #pragma once
 
-#include <utility>
 #include <shared_mutex>
-#include <base/raw_view.hpp>
+#include <utility>
+
 #include <base/ints.hpp>
+#include <base/raw_view.hpp>
 #include <base/strongly_typed_int.hpp>
+
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
 namespace vm {

@@ -1,6 +1,8 @@
-#include <tester/tester.hpp>
-#include <base/strongly_typed_id.hpp>
 #include <string>
+
+#include <base/strongly_typed_id.hpp>
+
+#include <tester/tester.hpp>
 
 STRONG_TYPEDEF_ID(A);
 STRONG_TYPEDEF_ID(B);

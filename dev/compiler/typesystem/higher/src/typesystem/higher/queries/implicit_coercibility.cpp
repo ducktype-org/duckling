@@ -1,8 +1,8 @@
-#include <query_framework/query_impl.hpp>
-
 #include "implicit_coercibility.hpp"
 
 #include <set>
+
+#include <query_framework/query_impl.hpp>
 
 namespace tsh {
 	struct IMPLEMENT_QUERY(QueryImplicitCoercibilityOnAbstractType, bool) {

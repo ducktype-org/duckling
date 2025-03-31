@@ -4,15 +4,15 @@
 #include <span>
 
 #include <base/raw_view.hpp>
-#include <lexer/char.hpp>
-#include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
-#include <filesystem/encoding.hpp>
-#include <lexer/token.hpp>
-#include <lexer/decode.hpp>
-#include <lexer/lexer.hpp>
 
 #include "forward.hpp"
+#include <diagnostic/logger.hpp>
+#include <filesystem/encoding.hpp>
+#include <filesystem/file.hpp>
+#include <lexer/char.hpp>
+#include <lexer/decode.hpp>
+#include <lexer/lexer.hpp>
+#include <lexer/token.hpp>
 
 namespace tokenizer {
 	/**

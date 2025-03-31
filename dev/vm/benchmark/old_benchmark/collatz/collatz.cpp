@@ -1,5 +1,5 @@
-#include <iostream>
 #include <algorithm>
+#include <iostream>
 
 long long collatz(long long n) {
 	long long j = 0;

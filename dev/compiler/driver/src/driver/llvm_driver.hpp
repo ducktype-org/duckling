@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
+
 #include "driver.hpp"
 
 namespace compiler::driver {

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <type_traits>
-#include <utility>
 #include <ranges>
 #include <tuple>
+#include <type_traits>
+#include <utility>
 
 #include "hash_algorithm_utils.hpp"
 

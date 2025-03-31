@@ -6,12 +6,12 @@
 
 #pragma once
 
-#include "value_parser.hpp"
-
-#include <base/raw_view.hpp>
-#include <base/optional.hpp>
-
 #include <variant>
+
+#include <base/optional.hpp>
+#include <base/raw_view.hpp>
+
+#include "value_parser.hpp"
 
 namespace clap {
 

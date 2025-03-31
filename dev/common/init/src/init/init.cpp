@@ -1,7 +1,9 @@
 #include "init.hpp"
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
+
 #include <iostream>
+
+#include <base/exceptions.hpp>
+#include <base/ref.hpp>
 
 namespace init {
 	namespace {

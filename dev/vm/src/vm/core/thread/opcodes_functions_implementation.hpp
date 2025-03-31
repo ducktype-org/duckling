@@ -28,12 +28,13 @@
  */
 
 #include <base/exceptions.hpp>
-#include "low_program/instruction.hpp"
-#include <vm/core/process/vmprocess.hpp>
 #include <base/ints.hpp>
+
+#include "low_program/instruction.hpp"
 #include "op_case.hpp"
-#include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
+#include "vmthread.hpp"
+#include <vm/core/process/vmprocess.hpp>
 
 
 #ifdef DEBUG_OPCODES

@@ -1,17 +1,16 @@
 #include <sstream>
 
-#include <tester/tester.hpp>
-
-#include <base/exceptions.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/ints.hpp>
 #include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
 
-#include <query_framework/query_int.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/detail/dep_graph.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_int.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 
 struct Key1 {
 	u64            v;

@@ -1,11 +1,11 @@
 #pragma once
 
 #include <variant>
-#include <filesystem/file.hpp>
 
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/core/process/memory/block.hpp>
 #include "process_info.hpp"
+#include <filesystem/file.hpp>
+#include <vm/core/process/memory/block.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 
 namespace vm::api {
 	namespace request {

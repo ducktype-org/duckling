@@ -8,8 +8,8 @@
 
 #include <utility>
 
-#include "value_parser.hpp"
 #include "parameter.hpp"
+#include "value_parser.hpp"
 
 namespace clap {
 

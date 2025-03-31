@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/exceptions.hpp>
+
 #include <nlohmann/json.hpp>
 
 template<>

@@ -4,17 +4,16 @@
  */
 #pragma once
 
-#include <query_framework/query_int.hpp>
-#include <pst_parser/elements/elements.hpp>
+#include <base/string_id.hpp>
 
-#include <helios/lookup_result.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <helios/scopes/scopes.hpp>
+#include <helios/lookup_result.hpp>
 #include <helios/scope_symbol_id.hpp>
-
-#include <base/string_id.hpp>
+#include <helios/scopes/scopes.hpp>
+#include <pst_parser/elements/elements.hpp>
+#include <query_framework/query_int.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {

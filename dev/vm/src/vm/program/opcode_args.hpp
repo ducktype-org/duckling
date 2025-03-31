@@ -1,8 +1,9 @@
 #pragma once
 
-#include <base/string_id.hpp>
-#include <base/ints.hpp>
 #include <variant>
+
+#include <base/ints.hpp>
+#include <base/string_id.hpp>
 
 /**
  * @brief This namespace encapsulates types of opcode arguments.

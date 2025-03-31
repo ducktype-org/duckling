@@ -1,11 +1,12 @@
-#include <filesystem/file.hpp>
-#include <token_file/file.hpp>
-#include <lexer/lexer.hpp>
-#include <tester/tester.hpp>
-#include <tester/testing_utils.hpp>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+
+#include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
+#include <tester/tester.hpp>
+#include <tester/testing_utils.hpp>
+#include <token_file/file.hpp>
 
 void print(const lexer::Tokens& tokens, std::ostream& out, const std::string& indent = "") {
 	out << "[";

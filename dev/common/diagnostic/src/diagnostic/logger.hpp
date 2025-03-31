@@ -41,12 +41,12 @@
 
 #pragma once
 
+#include <base/box.hpp>
+
+#include "diagnostic_converters.hpp"
+#include "message.hpp"
 #include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
-
-#include <base/box.hpp>
-#include "message.hpp"
-#include "diagnostic_converters.hpp"
 
 namespace dia {
 	/**

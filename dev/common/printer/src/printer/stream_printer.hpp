@@ -31,9 +31,9 @@
 
 #pragma once
 
-#include "printer_content.hpp"
-
 #include <iostream>
+
+#include "printer_content.hpp"
 
 namespace printer {
 	class StreamPrinter final {

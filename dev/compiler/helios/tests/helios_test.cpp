@@ -1,28 +1,29 @@
+#include <type_traits>
+
+#include <base/box.hpp>
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <filesystem/file.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
+#include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <base/optional.hpp>
-#include <helios/helios_errors.hpp>
+#include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
-#include <helios/queries.hpp>
-#include <helios/hout/elements.hpp>
-#include <helios/hout/visitors.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
-#include <tester/tester.hpp>
-#include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <filesystem/file.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
 #include <lexer/lexer.hpp>
-#include <type_traits>
+#include <pst_parser/test_utils/pst_test_utils.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
-
-#include <helios/test_utils/helios_test_utils.hpp>
-#include <base/variant.hpp>
-#include <base/box.hpp>
-#include <helios/helios_result.hpp>
 
 using namespace compiler::helios::test_utils;
 

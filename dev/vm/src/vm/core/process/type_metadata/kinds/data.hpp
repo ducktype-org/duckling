@@ -2,7 +2,9 @@
 
 #include <unordered_map>
 #include <vector>
+
 #include <base/string_id.hpp>
+
 #include "../definitions.hpp"
 
 namespace vm::kind {

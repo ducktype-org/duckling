@@ -4,6 +4,7 @@
  */
 
 #include "char.hpp"
+
 #include <base/exceptions.hpp>
 
 namespace lexer {

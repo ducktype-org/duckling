@@ -1,5 +1,6 @@
-#include <base/anycast.hpp>
 #include <iostream>
+
+#include <base/anycast.hpp>
 
 int main() {
 	std::any x = std::string{ "123" };

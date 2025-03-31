@@ -4,9 +4,10 @@
  */
 #pragma once
 
-#include "query_id.hpp"
-#include "node_id.hpp"
 #include <base/perfect_hash.hpp>
+
+#include "node_id.hpp"
+#include "query_id.hpp"
 
 namespace query::detail {
 

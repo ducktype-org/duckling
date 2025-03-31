@@ -1,8 +1,9 @@
-#include <tester/tester.hpp>
+#include <array>
+
 #include <clap/clap.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/param_builder.hpp>
-#include <array>
+#include <tester/tester.hpp>
 
 class ClapTester: public tester::TestSuite {
 #undef TESTER_CLASS

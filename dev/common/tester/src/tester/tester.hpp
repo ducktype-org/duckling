@@ -7,15 +7,16 @@
 
 #pragma once
 
-#include "tester_config.hpp"
-
 #include <exception>
 #include <string>
-#include <printer/stream_printer.hpp>
+
 #include <base/define_helper.hpp>
-#include <base/ints.hpp>
 #include <base/exceptions.hpp>
+#include <base/ints.hpp>
+
+#include "tester_config.hpp"
 #include <init/init.hpp>  // IWYU pragma: export
+#include <printer/stream_printer.hpp>
 
 
 #define ASSERT_EQUAL(expected, actual)                                                    \

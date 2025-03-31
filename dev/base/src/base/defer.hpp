@@ -12,8 +12,9 @@
 
 #pragma once
 
-#include "define_helper.hpp"
 #include <utility>
+
+#include "define_helper.hpp"
 
 namespace detail {
 	template<typename ActionT>

@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <thread>
+
+#include <tester/tester.hpp>
 
 // Class representing suite of tets
 class MyTest: public tester::TestSuite {

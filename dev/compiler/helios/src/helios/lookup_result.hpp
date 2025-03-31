@@ -7,13 +7,14 @@
 
 #pragma once
 
-#include "scope_symbol_id.hpp"
+#include <vector>
+
+#include <base/variant.hpp>
+
 #include "helios_errors.hpp"
 #include "helios_result.hpp"
-
-#include <vector>
+#include "scope_symbol_id.hpp"
 #include <query_framework/query_int.hpp>
-#include <base/variant.hpp>
 
 namespace compiler::helios {
 

@@ -3,9 +3,11 @@
  * we are not using Tester framework here.
  */
 
-#include <init/init.hpp>
-#include <base/exceptions.hpp>
 #include <iostream>
+
+#include <base/exceptions.hpp>
+
+#include <init/init.hpp>
 
 namespace {
 	int counter = 0;

@@ -5,16 +5,19 @@
 
 #pragma once
 
+#include <span>
+
 #include <base/ints.hpp>
 #include <base/unique_pointer.hpp>
-#include <span>
 // @FIXME: Not including all of typesystem because templates in typesystem depend on CTVs.
-#include <typesystem/type_desc.hpp>
-#include <typesystem/types.hpp>
-#include <base/exceptions.hpp>
 #include <vector>
+
+#include <base/exceptions.hpp>
+
 #include <query_framework/query_entry_point.hpp>
 #include <typesystem/queries.hpp>
+#include <typesystem/type_desc.hpp>
+#include <typesystem/types.hpp>
 
 namespace exec {
 

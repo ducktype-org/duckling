@@ -1,12 +1,13 @@
 #pragma once
 
 #include <variant>
-#include <base/string_id.hpp>
-#include <base/optional.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include "kinds.hpp"
 
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
+#include "kinds.hpp"
 #include <json/json.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 
 namespace vm {
 	class TypeMetadata;

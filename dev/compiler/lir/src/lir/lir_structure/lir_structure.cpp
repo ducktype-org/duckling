@@ -1,4 +1,5 @@
 #include "lir_structure.hpp"
+
 #include <base/maps.hpp>
 
 namespace compiler::lir {

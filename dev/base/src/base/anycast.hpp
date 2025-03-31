@@ -11,6 +11,7 @@
 #pragma once
 
 #include <any>
+
 #include "exceptions.hpp"
 
 namespace base {

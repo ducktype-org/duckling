@@ -1,10 +1,12 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <set>
-#include <queue>
 #include <concepts>
+#include <queue>
+#include <set>
+
+#include <base/ints.hpp>
 #include <base/ref.hpp>
+
 #include "listener.hpp"
 
 /**

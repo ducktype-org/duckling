@@ -5,17 +5,17 @@
  */
 
 #pragma once
-#include <string>
-#include <vector>
 #include <any>
+#include <string>
 #include <unordered_set>
+#include <vector>
+
+#include <base/anycast.hpp>
+#include <base/ints.hpp>
+#include <base/maps.hpp>
+#include <base/optional.hpp>
 
 #include "parameter.hpp"
-
-#include <base/ints.hpp>
-#include <base/optional.hpp>
-#include <base/maps.hpp>
-#include <base/anycast.hpp>
 
 namespace clap {
 	class Clap;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "llvm_includes/module.hpp"
 #include <base/box.hpp>
+
+#include "llvm_includes/module.hpp"
 
 namespace compiler::backend_llvm {
 

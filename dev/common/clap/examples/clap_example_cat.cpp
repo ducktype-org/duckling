@@ -2,9 +2,10 @@
 // Usage:   cat <file> [file...]
 // Example: cat foo.txt -n 5
 
+#include <iostream>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
-#include <iostream>
 
 void printFile(const fs::FilePath& file) {
 	std::cout << file.getContent().view().stdString() << '\n';

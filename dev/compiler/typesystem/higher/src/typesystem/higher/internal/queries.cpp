@@ -1,8 +1,7 @@
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
-
 #include "abstract_type_impl.hpp"
+#include <query_framework/query_impl.hpp>
 
 namespace tsh::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {

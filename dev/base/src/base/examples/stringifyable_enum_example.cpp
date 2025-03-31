@@ -1,8 +1,8 @@
+#include <iostream>
+
 #include <base/ints.hpp>
 #include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
-
-#include <iostream>
 
 MAKE_STRINGIFYABLE_ENUM(N, u16, MyEnum, A, B, C)
 

@@ -1,5 +1,6 @@
-#include <tester/tester.hpp>
 #include <base/str_utils.hpp>
+
+#include <tester/tester.hpp>
 
 class ConcatTest: public tester::TestSuite {
 #undef TESTER_CLASS

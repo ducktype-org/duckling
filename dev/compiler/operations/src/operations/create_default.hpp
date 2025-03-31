@@ -5,6 +5,7 @@
 #pragma once
 
 #include <functional>
+
 #include <operations/operation.hpp>
 #include <typesystem/typesystem.hpp>
 

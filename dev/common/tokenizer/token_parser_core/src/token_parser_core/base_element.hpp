@@ -1,8 +1,9 @@
 #pragma once
 
+#include <ostream>
+
 #include <base/box.hpp>
 #include <base/ints.hpp>
-#include <ostream>
 
 namespace tpc {
 	/**

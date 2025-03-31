@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 

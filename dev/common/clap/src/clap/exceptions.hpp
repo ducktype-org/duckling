@@ -8,6 +8,7 @@
 #include <filesystem>
 
 #include <base/exceptions.hpp>
+
 #include "parsing_result.hpp"
 
 namespace clap::exceptions {

@@ -1,10 +1,11 @@
+#include "file.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
+
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
-
-#include "file.hpp"
 
 namespace tokenizer {
 	/**

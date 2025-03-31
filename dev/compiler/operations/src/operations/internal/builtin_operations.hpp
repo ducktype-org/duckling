@@ -6,6 +6,7 @@
 #pragma once
 
 #include <functional>
+
 #include <operations/operation.hpp>
 #include <typesystem/type_info.hpp>
 

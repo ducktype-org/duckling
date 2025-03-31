@@ -1,5 +1,6 @@
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+
 #include <diagnostic/message.hpp>
 
 namespace vm::parser {

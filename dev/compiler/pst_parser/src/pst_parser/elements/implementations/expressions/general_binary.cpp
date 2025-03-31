@@ -1,6 +1,6 @@
-#include "preamble.hpp"
-
 #include <stack>
+
+#include "preamble.hpp"
 
 namespace pst::expr {
 	class OnlyPrefixError final: public dia::Error {

@@ -3,12 +3,10 @@
 #include <utility>
 #include <vector>
 
-#include <query_framework/query_int.hpp>
-
 #include "../all.hpp"
 #include "queries.hpp"
-
 #include <helios/symbols/symbols.hpp>
+#include <query_framework/query_int.hpp>
 
 namespace tsh::internal {
 	/**

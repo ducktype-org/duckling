@@ -1,5 +1,6 @@
-#include <frontend/module_tree/module_tree.hpp>
 #include <iostream>
+
+#include <frontend/module_tree/module_tree.hpp>
 #include <init/init.hpp>
 
 int main() {

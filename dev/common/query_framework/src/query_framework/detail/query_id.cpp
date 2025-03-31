@@ -6,8 +6,9 @@
 
 #include "query_id.hpp"
 
-#include <base/maps.hpp>
 #include <string_view>
+
+#include <base/maps.hpp>
 
 namespace query::detail {
 	namespace {

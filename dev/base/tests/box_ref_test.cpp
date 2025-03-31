@@ -1,7 +1,8 @@
-#include <tester/tester.hpp>
 #include <base/box.hpp>
-#include <base/ref.hpp>
 #include <base/ints.hpp>
+#include <base/ref.hpp>
+
+#include <tester/tester.hpp>
 
 
 // Ref, MRef asserts:

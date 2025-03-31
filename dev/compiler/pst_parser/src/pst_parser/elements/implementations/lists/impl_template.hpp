@@ -1,7 +1,6 @@
 #pragma once
 
 #include "preamble.hpp"
-
 #include <unicode/unistr.h>
 
 namespace pst {

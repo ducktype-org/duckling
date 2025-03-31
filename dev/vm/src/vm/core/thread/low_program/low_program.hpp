@@ -3,8 +3,9 @@
  */
 #pragma once
 
-#include "instruction.hpp"
 #include <base/stable_hashmap.hpp>
+
+#include "instruction.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::low {

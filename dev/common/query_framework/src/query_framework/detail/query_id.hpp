@@ -4,8 +4,9 @@
  */
 #pragma once
 
-#include <base/ints.hpp>
 #include <string_view>
+
+#include <base/ints.hpp>
 
 namespace query::detail {
 	struct QueryID final {

@@ -1,9 +1,8 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
-#include <helios/hout/hout.hpp>
-
 #include "../mir_structure/mir_structure.hpp"
+#include <helios/hout/hout.hpp>
+#include <query_framework/query_int.hpp>
 
 namespace compiler::mir {
 

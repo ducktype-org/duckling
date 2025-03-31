@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/optional.hpp>
+
 #include <vm/preprocessor/parser/elements.hpp>
 
 namespace vm::validator {

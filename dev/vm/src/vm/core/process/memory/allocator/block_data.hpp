@@ -1,11 +1,12 @@
 #pragma once
 
 #include <functional>
+
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
 
-#include <vm/core/process/type_metadata/definitions.hpp>
 #include "allocator.hpp"
+#include <vm/core/process/type_metadata/definitions.hpp>
 
 namespace vm {
 	class BlockData {

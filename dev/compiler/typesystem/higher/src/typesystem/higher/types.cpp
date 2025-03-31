@@ -6,16 +6,16 @@
  * underlying implementation hierarchy.
  */
 
-#include "abstract_type.hpp"
-
-#include <sstream>
-#include <concepts>
-
-#include "internal/abstract_type_impl.hpp"
-#include "expression_type.hpp"
 #include "types.hpp"
 
+#include <concepts>
+#include <sstream>
+
 #include <base/exceptions.hpp>
+
+#include "abstract_type.hpp"
+#include "expression_type.hpp"
+#include "internal/abstract_type_impl.hpp"
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**

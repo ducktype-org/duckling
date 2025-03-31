@@ -13,8 +13,9 @@
 
 #include <exception>
 #include <string>
-#include "str_utils.hpp"
+
 #include "define_helper.hpp"
+#include "str_utils.hpp"
 
 namespace base {
 	/**

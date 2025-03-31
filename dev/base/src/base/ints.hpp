@@ -8,8 +8,9 @@
  */
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
+
 #include "strongly_typed_int.hpp"
 
 STRONG_TYPEDEF_INT(u8, uint8_t);

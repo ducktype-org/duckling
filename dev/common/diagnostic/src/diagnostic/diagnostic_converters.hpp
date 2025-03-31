@@ -1,7 +1,8 @@
 #pragma once
 
-#include "message.hpp"
 #include <ranges>
+
+#include "message.hpp"
 
 namespace dia {
 	class DiagnosticToUserConverter {

@@ -9,11 +9,11 @@
 #pragma once
 
 #include <string>
+
 #include <base/ints.hpp>
 
-#include <query_framework/query_int.hpp>
-
 #include "kind.hpp"
+#include <query_framework/query_int.hpp>
 
 /**
  * @brief Several type definitions for quick reference,

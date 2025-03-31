@@ -21,6 +21,7 @@
 #pragma once
 
 #include <type_traits>
+
 #include "define_helper.hpp"
 
 /**

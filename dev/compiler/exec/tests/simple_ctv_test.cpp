@@ -1,8 +1,10 @@
-#include <exec/ctv.hpp>
 #include <iostream>
+
+#include <base/string_id.hpp>
+
+#include <exec/ctv.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
-#include <base/string_id.hpp>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS

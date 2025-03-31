@@ -1,8 +1,9 @@
+#include <variant>
+
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <variant>
-#include <vm_tester_utils.hpp>
 #include <vm/preprocessor/parser/errors.hpp>
+#include <vm_tester_utils.hpp>
 
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS

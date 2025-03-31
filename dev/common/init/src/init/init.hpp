@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+
 #include <base/define_helper.hpp>
 
 namespace init {

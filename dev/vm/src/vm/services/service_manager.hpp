@@ -1,10 +1,12 @@
 #pragma once
 
 #include <tuple>
+
 #include <base/optional.hpp>
-#include "services.hpp"
-#include "reference_counter/reference_counter.hpp"
+
 #include "profiler/profiler.hpp"
+#include "reference_counter/reference_counter.hpp"
+#include "services.hpp"
 
 namespace vm {
 	class VMProcess;

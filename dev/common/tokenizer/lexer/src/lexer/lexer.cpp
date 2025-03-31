@@ -3,11 +3,12 @@
  * @author Kacper Chętkowski (kacper.chetkowski@gmail.com)
  */
 
-#include <diagnostic/logger.hpp>
-#include <token_file/file.hpp>
+#include "lexer.hpp"
+
 #include <base/exceptions.hpp>
 
-#include "lexer.hpp"
+#include <diagnostic/logger.hpp>
+#include <token_file/file.hpp>
 
 namespace lexer {
 	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {

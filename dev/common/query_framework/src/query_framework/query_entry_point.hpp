@@ -5,12 +5,12 @@
  */
 #pragma once
 
-#include "detail/query_id_provider.hpp"
-#include "detail/node_making.hpp"
-#include "empty_key.hpp"
-#include "detail/dep_graph.hpp"
-
 #include <base/exceptions.hpp>
+
+#include "detail/dep_graph.hpp"
+#include "detail/node_making.hpp"
+#include "detail/query_id_provider.hpp"
+#include "empty_key.hpp"
 
 namespace query {
 

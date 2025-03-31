@@ -1,23 +1,20 @@
 #include "scopes.hpp"
 
+#include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
-#include <base/exceptions.hpp>
-
-#include <query_framework/query_impl.hpp>
-
-#include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
-
-#include <pst_parser/lang_parser_state.hpp>
-#include <pst_parser/pst_visitor.hpp>
 
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <pst_parser/lang_parser_state.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 

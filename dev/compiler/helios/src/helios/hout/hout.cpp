@@ -1,7 +1,9 @@
 #include "hout.hpp"
+
+#include <sstream>
+
 #include "elements.hpp"
 #include <query_framework/query_impl.hpp>
-#include <sstream>
 
 namespace compiler::helios {
 	std::string HOUTUnit::debugPrint() const {

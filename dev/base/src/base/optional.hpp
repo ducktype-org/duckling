@@ -31,8 +31,8 @@
  */
 #pragma once
 
-#include <optional>
 #include <functional>
+#include <optional>
 
 #include "exceptions.hpp"
 

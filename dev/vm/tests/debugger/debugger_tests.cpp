@@ -1,10 +1,12 @@
-#include <vm/api/data/status.hpp>
-#include <vm/api/vm.hpp>
-#include <vm/api/api.hpp>
-#include <tester/tester.hpp>
 #include <chrono>
 #include <thread>
+
 #include <base/int_conv.hpp>
+
+#include <tester/tester.hpp>
+#include <vm/api/api.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS

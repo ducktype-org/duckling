@@ -1,6 +1,7 @@
 #pragma once
 
 #include <base/ints.hpp>
+
 #include <json/json.hpp>
 
 namespace vm {

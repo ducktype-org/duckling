@@ -1,8 +1,9 @@
 #pragma once
 
+#include <vector>
+
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
-#include <vector>
 #include <vm/preprocessor/parser/type_of_data.hpp>
 
 namespace vm::validator {

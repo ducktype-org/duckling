@@ -1,5 +1,6 @@
-#include <base/optional.hpp>
 #include <cassert>
+
+#include <base/optional.hpp>
 
 int main() {
 	// Create an empty optional

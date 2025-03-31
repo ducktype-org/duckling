@@ -12,15 +12,14 @@
 #include <map>
 #include <set>
 #include <string>
+#include <variant>
 
 #include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
-
 #include <helios/scope_symbol_id.hpp>
-#include <base/string_id.hpp>
-#include <variant>
 
 namespace tsh {
 	enum class Visibility { Public, Protected, Private };

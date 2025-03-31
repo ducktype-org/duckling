@@ -7,6 +7,7 @@
  */
 
 #include <iostream>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>

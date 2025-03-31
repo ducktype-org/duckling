@@ -1,5 +1,6 @@
-#include <base/variant.hpp>
 #include <iostream>
+
+#include <base/variant.hpp>
 
 int main() {
 	std::variant<int, bool, char> variant;

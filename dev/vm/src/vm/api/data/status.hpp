@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+
 #include <json/json.hpp>
 
 namespace vm::api {

@@ -5,11 +5,11 @@
 
 #pragma once
 
+#include <concepts>
+
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 #include "value_category.hpp"
-
-#include <concepts>
 
 namespace tsh {
 	/**

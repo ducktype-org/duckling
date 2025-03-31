@@ -12,14 +12,16 @@
  */
 
 #include <iostream>
-#include <tree_sitter/api.h>
-#include <tree-sitter-cpp.h>
 #include <regex>
+
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
+#include <tree-sitter-cpp.h>
+#include <tree_sitter/api.h>
 
 const std::regex is_string_literal{ R"--(^.*string_literal$)--" };
 const std::regex is_preproc{ R"--(^preproc_.*$)--" };

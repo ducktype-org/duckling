@@ -1,11 +1,12 @@
 #include "example.hpp"
-#include <diagnostic/diagnostic_converters.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <init/init.hpp>
 
-#include <map>
 #include <iostream>
+#include <map>
+
+#include <diagnostic/diagnostic_converters.hpp>
+#include <init/init.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
 
 /************
  * QUERY 1: *
