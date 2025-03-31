@@ -35,11 +35,6 @@ namespace tsh::internal {
 	class AbstractTypeImpl {
 	public:
 		/**
-		 * @brief The Kind of the type described by an object of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::Any;
-
-		/**
 		 * @brief Gets the Kind of the type described by this object.
 		 * @return The Kind of the type described by this object.
 		 */
