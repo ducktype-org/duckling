@@ -1,9 +1,9 @@
-#include <iostream>
-
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
+
+#include <iostream>
 
 int main(int argc, char** argv) {
 	init::InitObject _;

@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include <base/strongly_typed_int.hpp>
+
+#include <iostream>
 
 STRONG_TYPEDEF_INT(MyInt, int);
 STRONG_TYPEDEF_INT_DIMENSIONAL(Kg, int);

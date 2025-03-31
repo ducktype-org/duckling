@@ -4,8 +4,6 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
-
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
 #include <helios/lookup_result.hpp>
@@ -15,6 +13,8 @@
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+
+#include <base/string_id.hpp>
 
 namespace compiler::helios {
 

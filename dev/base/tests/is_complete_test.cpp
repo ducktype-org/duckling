@@ -1,6 +1,6 @@
-#include <base/is_complete.hpp>
-
 #include <tester/tester.hpp>
+
+#include <base/is_complete.hpp>
 
 namespace {
 	struct IncompleteType;

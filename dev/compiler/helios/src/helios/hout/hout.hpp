@@ -6,14 +6,15 @@
 
 #pragma once
 
-#include <memory>
-#include <vector>
+#include "../scope_symbol_id.hpp"
+
+#include <query_framework/query_int.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/string_id.hpp>
 
-#include "../scope_symbol_id.hpp"
-#include <query_framework/query_int.hpp>
-#include <typesystem/higher/types.hpp>
+#include <memory>
+#include <vector>
 
 namespace compiler::helios {
 

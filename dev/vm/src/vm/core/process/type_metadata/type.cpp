@@ -1,6 +1,6 @@
 #include "type.hpp"
 
-#include <utility>
+#include "type_metadata.hpp"
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
@@ -8,7 +8,7 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 
-#include "type_metadata.hpp"
+#include <utility>
 
 namespace vm {
 	// Type declaration:

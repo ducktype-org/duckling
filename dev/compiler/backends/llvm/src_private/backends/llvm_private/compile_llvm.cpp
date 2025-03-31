@@ -14,11 +14,11 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/TargetParser/Host.h>
 LLVM_INCLUDE_END()
 
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-
 #include "compile_llvm.hpp"
 #include "module_impl.hpp"
+
+#include <base/box.hpp>
+#include <base/exceptions.hpp>
 
 namespace compiler::backend_llvm {
 

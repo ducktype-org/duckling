@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include <ostream>
-
 #include "node_id.hpp"
+
+#include <ostream>
 
 namespace query::detail {
 

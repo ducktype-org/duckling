@@ -1,14 +1,5 @@
 #include "symbols.hpp"
 
-#include <vector>
-
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/stable_container.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/string_id.hpp>
-#include <base/variant.hpp>
-
 #include <helios/comp_time/int_eval.hpp>
 #include <helios/comp_time/type_eval.hpp>
 #include <pst_parser/elements/elements.hpp>
@@ -17,6 +8,15 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/string_id.hpp>
+#include <base/variant.hpp>
+
+#include <vector>
 
 namespace compiler::helios {
 	/**

@@ -1,9 +1,6 @@
 #pragma once
 
-#include <condition_variable>
-#include <deque>
-#include <mutex>
-#include <shared_mutex>
+#include <listener/listener.hpp>
 
 #include <base/optional.hpp>
 
@@ -21,7 +18,10 @@
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
 
-#include <listener/listener.hpp>
+#include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <shared_mutex>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;

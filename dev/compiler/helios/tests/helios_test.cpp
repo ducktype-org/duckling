@@ -1,10 +1,3 @@
-#include <type_traits>
-
-#include <base/box.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <base/variant.hpp>
-
 #include <filesystem/file.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
@@ -24,6 +17,13 @@
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
+
+#include <base/box.hpp>
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <type_traits>
 
 using namespace compiler::helios::test_utils;
 

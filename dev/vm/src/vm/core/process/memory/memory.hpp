@@ -1,9 +1,12 @@
 #pragma once
 
-#include <cstring>
-#include <deque>
-#include <mutex>
-#include <shared_mutex>
+#include "allocator/block_data.hpp"
+#include "allocator/heap_allocator.hpp"
+#include "allocator/stack_allocator.hpp"
+#include "block.hpp"
+#include "frame.hpp"
+#include "pointer.hpp"
+#include "thread_stack.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
@@ -14,13 +17,10 @@
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 
-#include "allocator/block_data.hpp"
-#include "allocator/heap_allocator.hpp"
-#include "allocator/stack_allocator.hpp"
-#include "block.hpp"
-#include "frame.hpp"
-#include "pointer.hpp"
-#include "thread_stack.hpp"
+#include <cstring>
+#include <deque>
+#include <mutex>
+#include <shared_mutex>
 
 namespace vm {
 	class Memory {

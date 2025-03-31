@@ -1,9 +1,9 @@
 #include "diagnostic_converters.hpp"
 
+#include <token_file/file.hpp>
+
 #include <iomanip>
 #include <sstream>
-
-#include <token_file/file.hpp>
 
 namespace dia {
 	/**

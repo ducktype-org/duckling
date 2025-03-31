@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>  // std::string
+#include <query_framework/query_int.hpp>
 
 #include <base/perfect_hash.hpp>
 
-#include <query_framework/query_int.hpp>
+#include <string>  // std::string
 
 /**
  * Query Key.

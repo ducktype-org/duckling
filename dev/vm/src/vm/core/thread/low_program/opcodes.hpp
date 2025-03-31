@@ -4,9 +4,9 @@
  */
 #pragma once
 
-#include <unordered_map>
-
 #include <base/ints.hpp>
+
+#include <unordered_map>
 
 /**
  * Opcodes names conventions:

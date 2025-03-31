@@ -20,9 +20,9 @@
  */
 #pragma once
 
-#include <array>
-
 #include "ints.hpp"
+
+#include <array>
 
 namespace base {
 	namespace impl {

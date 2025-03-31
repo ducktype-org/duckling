@@ -4,11 +4,11 @@
  */
 #pragma once
 
-#include <string_view>          // IWYU pragma: export
-
 #include "detail/node_id.hpp"   // IWYU pragma: export
 #include "detail/query_id.hpp"  // IWYU pragma: export
 #include "empty_key.hpp"        // IWYU pragma: export
+
+#include <string_view>          // IWYU pragma: export
 
 namespace query::detail {
 

@@ -1,11 +1,11 @@
 #pragma once
 
+#include <filesystem/file.hpp>
+
 #include <base/optional.hpp>
 
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
-
-#include <filesystem/file.hpp>
 
 namespace vm {
 	/**

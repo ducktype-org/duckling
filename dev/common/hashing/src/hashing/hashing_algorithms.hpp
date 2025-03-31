@@ -1,5 +1,11 @@
 #pragma once
 
+#include "hash_algorithm_utils.hpp"
+#include "type_code.hpp"
+
+#include <base/ints.hpp>
+#include <base/type_traits.hpp>
+
 #include <array>
 #include <bit>
 #include <concepts>
@@ -10,12 +16,6 @@
 #include <tuple>
 #include <type_traits>
 #include <vector>
-
-#include <base/ints.hpp>
-#include <base/type_traits.hpp>
-
-#include "hash_algorithm_utils.hpp"
-#include "type_code.hpp"
 
 namespace hashing {
 

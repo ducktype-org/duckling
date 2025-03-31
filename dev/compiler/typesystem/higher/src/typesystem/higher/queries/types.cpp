@@ -1,6 +1,7 @@
 #include "types.hpp"
 
 #include "../internal/abstract_type_impl.hpp"
+
 #include <query_framework/query_impl.hpp>
 
 namespace tsh {

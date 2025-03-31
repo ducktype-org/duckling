@@ -16,13 +16,14 @@
  */
 #pragma once
 
+#include "raw_view.hpp"
+#include "type_traits.hpp"
+
+#include <unicode/unistr.h>
+
 #include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "raw_view.hpp"
-#include "type_traits.hpp"
-#include <unicode/unistr.h>
 
 namespace base {
 	class StrID;

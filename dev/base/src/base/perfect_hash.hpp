@@ -18,9 +18,9 @@
  */
 #pragma once
 
-#include <type_traits>
-
 #include "ints.hpp"
+
+#include <type_traits>
 
 namespace base {
 

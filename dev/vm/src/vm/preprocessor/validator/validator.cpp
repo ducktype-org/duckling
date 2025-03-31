@@ -1,6 +1,8 @@
 #include "validator.hpp"
 
-#include <sstream>
+#include "errors.hpp"
+
+#include <diagnostic/logger.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -10,8 +12,7 @@
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/program/opcode_args.hpp>
 
-#include "errors.hpp"
-#include <diagnostic/logger.hpp>
+#include <sstream>
 
 namespace vm::validator {
 	namespace {

@@ -1,9 +1,5 @@
 #include "vmprocess.hpp"
 
-#include <mutex>
-#include <shared_mutex>
-#include <variant>
-
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
@@ -14,6 +10,10 @@
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/preprocessor/preprocessor.hpp>
+
+#include <mutex>
+#include <shared_mutex>
+#include <variant>
 
 namespace vm {
 	Memory& VMProcess::getMemory() { return memory; }

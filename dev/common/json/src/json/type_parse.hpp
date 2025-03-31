@@ -1,11 +1,11 @@
 #pragma once
 
+#include <base/constexpr_cat.hpp>
+#include <base/ints.hpp>
+
 #include <memory>
 #include <variant>
 #include <vector>
-
-#include <base/constexpr_cat.hpp>
-#include <base/ints.hpp>
 
 template<typename T>
 struct TypeParseTraits;

@@ -6,11 +6,6 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <iostream>
-
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-
 #include <clap/clap.hpp>
 #include <config/config.hpp>
 #include <driver/driver.hpp>
@@ -21,6 +16,11 @@
 #include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
 #include <query_framework/query_entry_point.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+
+#include <iostream>
 
 constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
 constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";

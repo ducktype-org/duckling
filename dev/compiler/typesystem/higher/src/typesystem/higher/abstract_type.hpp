@@ -8,12 +8,13 @@
 
 #pragma once
 
-#include <string>
+#include "kind.hpp"
+
+#include <query_framework/query_int.hpp>
 
 #include <base/ints.hpp>
 
-#include "kind.hpp"
-#include <query_framework/query_int.hpp>
+#include <string>
 
 /**
  * @brief Several type definitions for quick reference,

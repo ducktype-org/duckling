@@ -1,8 +1,8 @@
+#include <tester/tester.hpp>
+
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
-
-#include <tester/tester.hpp>
 
 class SimpleIDMapsTest;
 

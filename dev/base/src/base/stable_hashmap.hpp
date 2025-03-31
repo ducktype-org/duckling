@@ -5,10 +5,10 @@
 
 #pragma once
 
-#include <type_traits>
-
 #include "box.hpp"
 #include "maps.hpp"
+
+#include <type_traits>
 
 namespace base {
 	/**

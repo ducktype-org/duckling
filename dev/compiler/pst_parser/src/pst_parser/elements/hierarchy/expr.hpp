@@ -1,14 +1,15 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
-
 #include "lists.hpp"           // IWYU pragma: keep
 #include "meta.hpp"
 #include "not_statements.hpp"  // IWYU pragma: keep
+
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
 #include <token_parser_core/common_elements.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 

@@ -1,10 +1,10 @@
+#include <tester/tester.hpp>
+
 #include <base/int_conv.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-
-#include <tester/tester.hpp>
 
 /**
  * @brief This test set is responsible for testing the debugger when the VM is running endlessly.

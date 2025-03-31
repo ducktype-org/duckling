@@ -1,7 +1,7 @@
-#include <iostream>
-
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+
+#include <iostream>
 
 int main() {
 	base::StrID str("def");

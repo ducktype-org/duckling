@@ -3,16 +3,16 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <cctype>
+#include "clap.hpp"
+#include "exceptions.hpp"
+#include "param_builder.hpp"
+#include "value_parser.hpp"
 
 #include <base/box.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
-#include "clap.hpp"
-#include "exceptions.hpp"
-#include "param_builder.hpp"
-#include "value_parser.hpp"
+#include <cctype>
 
 /**
  * Basic helper functions.

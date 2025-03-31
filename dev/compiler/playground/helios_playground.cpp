@@ -1,7 +1,3 @@
-#include <iostream>
-
-#include <base/defer.hpp>
-
 #include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -9,6 +5,10 @@
 #include <lexer/lexer.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
+
+#include <base/defer.hpp>
+
+#include <iostream>
 
 void printContextErrors() {
 	if (query::Context::logger.messageCount() > 0) {

@@ -1,8 +1,8 @@
 #include "abstract_type_impl.hpp"
 
-#include <utility>
-
 #include <query_framework/query_impl.hpp>
+
+#include <utility>
 
 namespace tsh::internal {
 	/**

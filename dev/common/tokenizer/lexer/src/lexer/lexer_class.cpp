@@ -1,6 +1,7 @@
 #include "lexer_class.hpp"
 
 #include "classifications.hpp"
+
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 

@@ -1,6 +1,6 @@
-#include <base/flag.hpp>
-
 #include <tester/tester.hpp>
+
+#include <base/flag.hpp>
 
 // clang-format off
 MAKE_FLAG_TYPE(test_flag_namespace, TestFlagOpts, TestFlag,

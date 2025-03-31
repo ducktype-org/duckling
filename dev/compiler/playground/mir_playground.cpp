@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -8,6 +6,8 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>  // @TODO #404: relax it to just context
+
+#include <iostream>
 
 void printContextErrors() {
 	if (query::Context::logger.messageCount() > 0) {

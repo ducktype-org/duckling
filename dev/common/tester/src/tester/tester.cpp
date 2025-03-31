@@ -1,9 +1,9 @@
 #include "tester.hpp"
 
+#include <base/exceptions.hpp>
+
 #include <cctype>
 #include <chrono>
-
-#include <base/exceptions.hpp>
 
 namespace tester {
 

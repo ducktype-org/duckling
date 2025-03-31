@@ -11,10 +11,10 @@
  */
 #pragma once
 
+#include <init/init.hpp>
+
 #include <base/flag.hpp>
 #include <base/string_id.hpp>
-
-#include <init/init.hpp>
 
 namespace lang_def {
 

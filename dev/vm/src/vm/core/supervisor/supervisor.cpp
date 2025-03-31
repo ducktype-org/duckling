@@ -1,8 +1,8 @@
 #include "supervisor.hpp"
 
-#include <mutex>
-
 #include <vm/core/process/vmprocess.hpp>
+
+#include <mutex>
 
 namespace vm {
 	Supervisor& Supervisor::get() {

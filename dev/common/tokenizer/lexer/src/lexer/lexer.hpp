@@ -5,11 +5,12 @@
 
 #pragma once
 
-#include <base/box.hpp>
-
 #include "token.hpp"
+
 #include <filesystem/file.hpp>
 #include <token_file/forward.hpp>
+
+#include <base/box.hpp>
 
 namespace lexer {
 	/**

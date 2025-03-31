@@ -5,11 +5,11 @@
  */
 #pragma once
 
-#include <array>
-
 #include <base/ints.hpp>
 
 #include <vm/config.hpp>
+
+#include <array>
 
 // #define USE_COMPACT_INSTRUCTION
 #include <vm/core/process/memory/frame.hpp>

@@ -7,12 +7,13 @@
  */
 
 #pragma once
-#include <base/bits_and_bytes.hpp>
-#include <base/optional.hpp>
-
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
+
 #include <helios/scope_symbol_id.hpp>
+
+#include <base/bits_and_bytes.hpp>
+#include <base/optional.hpp>
 
 namespace tsh {
 	namespace internal {

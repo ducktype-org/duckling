@@ -3,9 +3,9 @@
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
 
-#include <base/optional.hpp>
-
 #include <tester/tester.hpp>
+
+#include <base/optional.hpp>
 
 using base::Optional;
 

@@ -1,11 +1,11 @@
-#include <iostream>
-
 #include <exec/ctv.hpp>
 #include <operations/constructors.hpp>
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include <iostream>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS

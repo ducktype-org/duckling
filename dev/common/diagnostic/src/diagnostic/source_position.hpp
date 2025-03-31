@@ -17,13 +17,13 @@ int main() {
 
 #pragma once
 
-#include <string>
-
-#include <base/ref.hpp>
-
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 #include <token_file/forward.hpp>
+
+#include <base/ref.hpp>
+
+#include <string>
 
 namespace dia {
 	/**

@@ -1,8 +1,9 @@
 #pragma once
 
-#include <atomic>
-#include <condition_variable>
-#include <mutex>
+#include "blocking_queue.hpp"
+#include "low_program/instruction.hpp"
+
+#include <result.hpp>
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
@@ -17,9 +18,9 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 
-#include "blocking_queue.hpp"
-#include "low_program/instruction.hpp"
-#include <result.hpp>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 /**
  * For now only single threaded execution is suported

@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include <filesystem/file.hpp>
+
+#include <iostream>
 
 int main() {
 	// Create a temporary file with content: "Content"

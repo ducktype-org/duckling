@@ -1,5 +1,4 @@
-#include <chrono>
-#include <thread>
+#include <tester/tester.hpp>
 
 #include <base/int_conv.hpp>
 
@@ -7,7 +6,8 @@
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 
-#include <tester/tester.hpp>
+#include <chrono>
+#include <thread>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS

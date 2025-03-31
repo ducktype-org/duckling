@@ -5,11 +5,11 @@
 
 #include "token.hpp"
 
-#include <algorithm>
-#include <utility>
-
 #include <lang_definitions/key_spec_op.hpp>
 #include <unicode/uchar.h>
+
+#include <algorithm>
+#include <utility>
 
 namespace lexer {
 	Token::Token(Token::Type type, const base::RawView value, const dia::SourcePosition& position):

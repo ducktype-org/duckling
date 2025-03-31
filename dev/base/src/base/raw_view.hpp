@@ -4,10 +4,10 @@
  */
 #pragma once
 
+#include "ints.hpp"
+
 #include <string>
 #include <string_view>
-
-#include "ints.hpp"
 
 namespace base {
 	using RawArray = const byte*;

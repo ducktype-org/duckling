@@ -1,11 +1,11 @@
 #pragma once
 
+#include "hash_algorithm_utils.hpp"
+
 #include <ranges>
 #include <tuple>
 #include <type_traits>
 #include <utility>
-
-#include "hash_algorithm_utils.hpp"
 
 namespace hashing {
 

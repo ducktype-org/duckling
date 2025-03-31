@@ -6,12 +6,12 @@
 
 #include "source_position.hpp"
 
-#include <string>
+#include <printer/printer_content.hpp>
+#include <token_file/file.hpp>
 
 #include <base/exceptions.hpp>
 
-#include <printer/printer_content.hpp>
-#include <token_file/file.hpp>
+#include <string>
 
 namespace dia {
 	std::vector<printer::PrinterContent> SourcePosition::getPrettySourceLines() const {

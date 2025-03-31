@@ -1,5 +1,3 @@
-#include <iostream>
-
 #include <backends/llvm/llvm_backend.hpp>
 #include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -10,6 +8,8 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+
+#include <iostream>
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;

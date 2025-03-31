@@ -5,12 +5,12 @@
 
 #include "file.hpp"
 
-#include <fstream>
-#include <random>
-
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/perfect_hash.hpp>
+
+#include <fstream>
+#include <random>
 
 namespace {
 	std::filesystem::path

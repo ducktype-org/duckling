@@ -1,8 +1,8 @@
 #include "../define_helper.hpp"
 
-#include <sstream>
-
 #include "../ints.hpp"
+
+#include <sstream>
 
 namespace base {
 	// @TODO: this solution is somewhat over engineered

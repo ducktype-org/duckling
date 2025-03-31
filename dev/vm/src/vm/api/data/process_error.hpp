@@ -1,9 +1,10 @@
 #pragma once
 
-#include <variant>
-
 #include "load_program_error.hpp"
+
 #include <json/json.hpp>
+
+#include <variant>
 
 namespace vm::api {
 	struct ProcessNotFound {};

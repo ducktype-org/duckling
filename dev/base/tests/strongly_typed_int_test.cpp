@@ -1,7 +1,7 @@
-#include <base/strongly_typed_int.hpp>
-
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <base/strongly_typed_int.hpp>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Meters, i64);
 

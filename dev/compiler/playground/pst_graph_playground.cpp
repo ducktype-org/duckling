@@ -1,12 +1,12 @@
-#include <iostream>
-
-#include <base/variant.hpp>
-
 #include <filesystem/file.hpp>
 #include <graphviz/gvc.h>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
+
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN(-avoid-c-arrays)

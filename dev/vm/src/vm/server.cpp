@@ -1,13 +1,13 @@
 #include "server.hpp"
 
+#include <json/json.hpp>
+#include <result.hpp>
+
 #include <base/define_helper.hpp>
 #include <base/int_conv.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
-
-#include <json/json.hpp>
-#include <result.hpp>
 
 PUSH_DIAGNOSTIC
 #pragma GCC diagnostic ignored "-Wuninitialized"

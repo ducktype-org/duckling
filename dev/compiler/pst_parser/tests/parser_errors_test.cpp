@@ -1,12 +1,12 @@
-#include <sstream>
-#include <utility>
-
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <sstream>
+#include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
 #undef TESTER_CLASS

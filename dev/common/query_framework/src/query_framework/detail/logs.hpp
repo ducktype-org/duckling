@@ -5,9 +5,9 @@
 
 #pragma once
 
-#include <string_view>
-
 #include <base/str_utils.hpp>  // IWYU pragma: export
+
+#include <string_view>
 
 namespace query::detail {
 	constexpr bool LOG_QUERY_EVENTS = false;

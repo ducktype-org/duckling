@@ -20,9 +20,9 @@
  */
 #pragma once
 
-#include <type_traits>
-
 #include "define_helper.hpp"
+
+#include <type_traits>
 
 /**
  * @brief This is helper macro, do not use directly

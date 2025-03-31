@@ -1,11 +1,11 @@
 #pragma once
 
+#include <vm/api/data/status.hpp>
+
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 #include <thread>
-
-#include <vm/api/data/status.hpp>
 
 template<typename T>
 class BlockingQueue {

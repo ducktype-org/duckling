@@ -15,10 +15,11 @@
 
 #pragma once
 
-#include <base/string_id.hpp>
-
 #include "key_spec_op.hpp"
+
 #include <init/init.hpp>
+
+#include <base/string_id.hpp>
 
 namespace lang_def {
 

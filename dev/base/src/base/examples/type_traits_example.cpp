@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include <base/type_traits.hpp>
+
+#include <iostream>
 
 template<class T>
 struct Q {

@@ -5,11 +5,12 @@
 
 #pragma once
 
+#include "ctv.hpp"
+
+#include <typesystem/class_types.hpp>
+
 #include <iostream>
 #include <map>
-
-#include "ctv.hpp"
-#include <typesystem/class_types.hpp>
 
 namespace exec {
 

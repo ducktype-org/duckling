@@ -5,6 +5,11 @@
 
 #pragma once
 
+#include <base/maps.hpp>
+#include <base/optional.hpp>
+#include <base/perfect_hash.hpp>
+#include <base/raw_view.hpp>
+
 #include <expected>
 #include <filesystem>
 #include <fstream>
@@ -13,11 +18,6 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
-
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/perfect_hash.hpp>
-#include <base/raw_view.hpp>
 
 // Seems fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))

@@ -5,13 +5,13 @@
  */
 #include "semantic_tokens.hpp"
 
-#include <map>
-#include <string>
+#include "utils.hpp"
 
 #include <base/stringifyable_enum.hpp>
 #include <base/variant.hpp>
 
-#include "utils.hpp"
+#include <map>
+#include <string>
 
 namespace lsp {
 	SemanticToken::SemanticToken(CRef<lexer::Token> source):

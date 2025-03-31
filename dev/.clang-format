@@ -192,37 +192,43 @@ IncludeCategories:
   # llvm and Clang:
   - Regex:           '^("|<)(llvm|llvm-c|clang|clang-c)/'
     Priority:        1
-    SortPriority:    2
+    SortPriority:    6
     CaseSensitive:   false
-  # gtest/gmock/isl/json:
-  - Regex:           '^("|<)(icu|craw|asio|json)/)'
-    Priority:        2
-    SortPriority:    3
-    CaseSensitive:   false
+  # External libs such as icu(unicode/uniset.h)/crow/asio/json:
+  # - Regex:           '^("|<)(unicode/uniset.h|crow/|asio/|json/)'
+  #   Priority:        2
+  #   SortPriority:    7
+  #   CaseSensitive:   false
   # std, headers without extension:
   - Regex:           '^("|<)([A-Za-z0-9\Q/-_\E])+("|>)$'
     Priority:        3
-    SortPriority:    1
+    SortPriority:    8
     CaseSensitive:   false
   # our base:
   - Regex:           '^("|<)(base/.*)("|>)$'
     Priority:        4
-    SortPriority:    4
+    SortPriority:    3
     CaseSensitive:   false
-  # our common:
-  - Regex:           '^("|<)(common/.*)("|>)$'
-    Priority:        5
-    SortPriority:    5
-    CaseSensitive:   false
+  # our common, add here new libraries:
+  # - Regex:           [tu będzie regexp na common]
+  # '^("|<)(clap|diagnostic|filesystem|hashing|init|json|listener|llvm|printer|query_framework|system_command|tester|tokenizer)("|>)$'
+    # Priority:        5
+    # SortPriority:    4
+    # CaseSensitive:   false
   # VM:
   - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6
-    SortPriority:    6
+    SortPriority:    5
     CaseSensitive:   false
-  # all other files:  
-  - Regex:           '.*'
+  # all other files with <>:  
+  - Regex:           '^".*"$'
     Priority:        7
-    SortPriority:    7
+    SortPriority:    1
+    CaseSensitive:   false
+  # all other files with "":  
+  - Regex:           '^<.*>$'
+    Priority:        8
+    SortPriority:    2
     CaseSensitive:   false
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''

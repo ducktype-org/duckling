@@ -5,13 +5,13 @@
 
 #pragma once
 
-#include <functional>
+#include <exec/ctv.hpp>
+#include <typesystem/typesystem.hpp>
 
 #include <base/maps.hpp>
 #include <base/strongly_typed_id.hpp>
 
-#include <exec/ctv.hpp>
-#include <typesystem/typesystem.hpp>
+#include <functional>
 
 namespace operation {
 	using Operation = std::function<exec::CTV(const std::vector<exec::CTV>&)>;

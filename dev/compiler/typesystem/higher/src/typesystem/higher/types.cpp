@@ -8,14 +8,14 @@
 
 #include "types.hpp"
 
-#include <concepts>
-#include <sstream>
-
-#include <base/exceptions.hpp>
-
 #include "abstract_type.hpp"
 #include "expression_type.hpp"
 #include "internal/abstract_type_impl.hpp"
+
+#include <base/exceptions.hpp>
+
+#include <concepts>
+#include <sstream>
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**

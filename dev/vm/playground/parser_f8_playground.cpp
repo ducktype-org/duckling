@@ -1,8 +1,8 @@
-#include <iostream>
-
 #include <base/variant.hpp>
 
 #include <vm/api/vm.hpp>
+
+#include <iostream>
 
 int main(int argc, char** argv) {
 	if (argc != 2) {

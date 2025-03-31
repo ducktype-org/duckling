@@ -1,8 +1,8 @@
 
-#include <base/string_id.hpp>
-
 #include <system_command/system_command.hpp>
 #include <tester/tester.hpp>
+
+#include <base/string_id.hpp>
 
 class SystemCommandTests final: public tester::TestSuite {
 #undef TESTER_CLASS

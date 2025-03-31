@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <base/ints.hpp>
-
 #include "parameter.hpp"
 #include "parsing_result.hpp"
 #include "value_parser.hpp"
+
+#include <base/ints.hpp>
 
 namespace clap {
 	struct CLIArgs final {

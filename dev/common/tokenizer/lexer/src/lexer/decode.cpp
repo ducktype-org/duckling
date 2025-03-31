@@ -1,12 +1,13 @@
 #include "decode.hpp"
 
-#include <base/convert.hpp>
-#include <base/int_conv.hpp>
-
 #include "classifications.hpp"
+
 #include <diagnostic/source_position.hpp>
 #include <token_file/file.hpp>
 #include <token_file/forward.hpp>
+
+#include <base/convert.hpp>
+#include <base/int_conv.hpp>
 
 namespace lexer {
 

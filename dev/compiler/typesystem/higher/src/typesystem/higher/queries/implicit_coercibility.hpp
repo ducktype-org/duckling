@@ -28,10 +28,10 @@
 
 #pragma once
 
-#include <base/maps.hpp>
-
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
+
+#include <base/maps.hpp>
 
 // In the future, coercibility could work significantly differently.
 // For example, these functions could also return the OperationID of the coercion operation.

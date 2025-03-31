@@ -1,6 +1,6 @@
-#include <iostream>
-
 #include "../init_guard.hpp"
+
+#include <iostream>
 
 namespace base::detail {
 	void logInitFunction(const char* function_name) {

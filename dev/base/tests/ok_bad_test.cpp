@@ -1,6 +1,6 @@
-#include <base/ok_bad.hpp>
-
 #include <tester/tester.hpp>
+
+#include <base/ok_bad.hpp>
 
 class OkBadTest: public tester::TestSuite {
 #undef TESTER_CLASS

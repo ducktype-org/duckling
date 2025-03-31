@@ -1,5 +1,3 @@
-#include <base/exceptions.hpp>
-
 #include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -8,6 +6,8 @@
 #include <query_framework/query_impl.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+
+#include <base/exceptions.hpp>
 
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS

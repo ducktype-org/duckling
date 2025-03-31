@@ -1,7 +1,7 @@
-#include <iostream>
-
 #include <clap/clap.hpp>
 #include <frontend/module_tree/module_tree.hpp>
+
+#include <iostream>
 
 int file_counter = 0;
 int dir_counter  = 0;

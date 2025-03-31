@@ -1,13 +1,13 @@
-﻿#include <fstream>
-#include <iostream>
-#include <sstream>
-
-#include <filesystem/file.hpp>
+﻿#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <fstream>
+#include <iostream>
+#include <sstream>
 
 #define PSTVISITOR_METHOD(name)                              \
 	bool visited_##name = false;                             \

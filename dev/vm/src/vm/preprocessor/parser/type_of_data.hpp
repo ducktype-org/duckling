@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ostream>
-
 #include <base/string_id.hpp>
+
+#include <ostream>
 
 namespace vm::parser {
 

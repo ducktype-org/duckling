@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../type_interface.hpp"
+
 #include <query_framework/query_int.hpp>
 
 namespace tsh::internal {

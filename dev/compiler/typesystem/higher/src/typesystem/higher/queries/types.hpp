@@ -1,8 +1,8 @@
 #pragma once
 
-#include <base/maps.hpp>
-
 #include "../types.hpp"
+
+#include <base/maps.hpp>
 
 namespace tsh {
 	/**

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "../services.hpp"
+
+#include <listener/listener.hpp>
+
 #include <vm/events/function_call_event.hpp>
 #include <vm/events/memory_event.hpp>
-
-#include "../services.hpp"
-#include <listener/listener.hpp>
 
 namespace vm {
 	/**

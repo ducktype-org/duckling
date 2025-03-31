@@ -1,10 +1,10 @@
 #include "int_eval.hpp"
 
-#include <cmath>
-
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_impl.hpp>
+
+#include <cmath>
 
 namespace compiler::helios {
 	struct IMPLEMENT_QUERY(EvalExprToI64, IntEval_Result) {

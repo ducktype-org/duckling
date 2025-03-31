@@ -1,11 +1,11 @@
 #include "dep_graph.hpp"
 
+#include <base/maps.hpp>
+
 #include <iomanip>
 #include <iostream>
 #include <ostream>
 #include <vector>
-
-#include <base/maps.hpp>
 
 using query::detail::NodeID;
 

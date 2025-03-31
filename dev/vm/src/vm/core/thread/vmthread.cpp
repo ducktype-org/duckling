@@ -1,10 +1,11 @@
 
 #include "vmthread.hpp"
 
-#include <cstring>
-#include <iostream>
-#include <mutex>
-#include <utility>
+#include "low_program/instruction.hpp"
+#include "low_program/opcodes.hpp"
+#include "op_case.hpp"
+#include "opcodes_functions.hpp"
+#include "opcodes_functions_debug.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
@@ -19,11 +20,10 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
-#include "low_program/instruction.hpp"
-#include "low_program/opcodes.hpp"
-#include "op_case.hpp"
-#include "opcodes_functions.hpp"
-#include "opcodes_functions_debug.hpp"
+#include <cstring>
+#include <iostream>
+#include <mutex>
+#include <utility>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):

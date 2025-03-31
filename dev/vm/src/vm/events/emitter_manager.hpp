@@ -5,6 +5,7 @@
 
 #include "function_call_event.hpp"
 #include "memory_event.hpp"
+
 #include <listener/emitter.hpp>
 
 namespace vm {

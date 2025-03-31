@@ -31,10 +31,10 @@
  */
 #pragma once
 
+#include "exceptions.hpp"
+
 #include <functional>
 #include <optional>
-
-#include "exceptions.hpp"
 
 /* Some cool macros.
  *

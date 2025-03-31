@@ -4,9 +4,9 @@
  */
 
 #pragma once
-#include <regex>
-
 #include "file.hpp"
+
+#include <regex>
 
 namespace fs {
 	/**

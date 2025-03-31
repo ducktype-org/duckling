@@ -1,17 +1,18 @@
 #pragma once
 
-#include <base/string_id.hpp>
-
 #include "../../lang_parser_state.hpp"
 #include "../elements_common.hpp"
 #include "expr_holders.hpp"
 #include "meta.hpp"
+
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/token_stream.hpp>
+
+#include <base/string_id.hpp>
 
 namespace pst {
 

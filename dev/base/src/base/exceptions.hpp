@@ -11,11 +11,11 @@
 
 #pragma once
 
-#include <exception>
-#include <string>
-
 #include "define_helper.hpp"
 #include "str_utils.hpp"
+
+#include <exception>
+#include <string>
 
 namespace base {
 	/**

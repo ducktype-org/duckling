@@ -1,7 +1,3 @@
-#include <iostream>
-
-#include <base/int_conv.hpp>
-
 #include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -12,6 +8,10 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>  //< needed for ctx.query, @TODO: move context to different file
 #include <query_framework/utils/with_context_do.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <iostream>
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
