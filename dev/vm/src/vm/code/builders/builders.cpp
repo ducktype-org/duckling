@@ -84,7 +84,7 @@ usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	instructions.emplace_back(init);
 
 	const usize type_size
-		= types_context.getMetadata().atMaybe(name).expect<UnknownTypeError>(init.arg0)->getSize();
+		= types_context.getMetadata().atMaybe(init.arg0.type_name).expect<UnknownTypeError>(init.arg0)->getSize();
 
 	usize offset = 0;
 
