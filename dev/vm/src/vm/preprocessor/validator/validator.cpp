@@ -6,11 +6,12 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
-#include "errors.hpp"
-#include <diagnostic/logger.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/program/opcode_args.hpp>
+
+#include "errors.hpp"
+#include <diagnostic/logger.hpp>
 
 namespace vm::validator {
 	namespace {

@@ -6,8 +6,9 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
-#include "type_metadata.hpp"
 #include <vm/core/supervisor/supervisor.hpp>
+
+#include "type_metadata.hpp"
 
 namespace vm {
 	// Type declaration:

@@ -3,14 +3,13 @@
 #include <set>
 
 #include <base/string_id.hpp>
-#include <token_parser_core/base_element.hpp>
-
-#include "../elements_common.hpp"
-#include <token_parser_core/common_elements.hpp>
 
 #include "../../lang_parser_state.hpp"
+#include "../elements_common.hpp"
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
 
 namespace pst {
 	class Attribute;

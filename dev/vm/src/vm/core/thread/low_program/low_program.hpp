@@ -5,8 +5,9 @@
 
 #include <base/stable_hashmap.hpp>
 
-#include "instruction.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+
+#include "instruction.hpp"
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;

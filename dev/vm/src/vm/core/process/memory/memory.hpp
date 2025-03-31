@@ -12,6 +12,8 @@
 #include <base/ref.hpp>
 #include <base/stable_container.hpp>
 
+#include <vm/core/process/type_metadata/definitions.hpp>
+
 #include "allocator/block_data.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "allocator/stack_allocator.hpp"
@@ -19,7 +21,6 @@
 #include "frame.hpp"
 #include "pointer.hpp"
 #include "thread_stack.hpp"
-#include <vm/core/process/type_metadata/definitions.hpp>
 
 namespace vm {
 	class Memory {

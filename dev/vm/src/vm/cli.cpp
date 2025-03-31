@@ -5,11 +5,12 @@
 
 #include <base/variant.hpp>
 
-#include "api/data/api_error.hpp"
-#include <json/json.hpp>
 #include <vm/api/api.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
+
+#include "api/data/api_error.hpp"
+#include <json/json.hpp>
 
 std::string convertError(const vm::api::ApiError& api_error) {
 	variant_match(api_error) {

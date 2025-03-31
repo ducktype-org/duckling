@@ -195,7 +195,7 @@ IncludeCategories:
     SortPriority:    2
     CaseSensitive:   false
   # gtest/gmock/isl/json:
-  - Regex:           '^("|<)(gtest|gmock|isl|json)/)'
+  - Regex:           '^("|<)(icu|craw|asio|json)/)'
     Priority:        2
     SortPriority:    3
     CaseSensitive:   false
@@ -205,19 +205,24 @@ IncludeCategories:
     SortPriority:    1
     CaseSensitive:   false
   # our base:
-  - Regex:           '^("|<)(.*base.*)("|>)$'
+  - Regex:           '^("|<)(base/.*)("|>)$'
     Priority:        4
     SortPriority:    4
     CaseSensitive:   false
   # our common:
-  - Regex:           '^("|<)(.*common.*)("|>)$'
+  - Regex:           '^("|<)(common/.*)("|>)$'
     Priority:        5
     SortPriority:    5
     CaseSensitive:   false
-  # all other files:  
-  - Regex:           '.*'
+  # VM:
+  - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6
     SortPriority:    6
+    CaseSensitive:   false
+  # all other files:  
+  - Regex:           '.*'
+    Priority:        7
+    SortPriority:    7
     CaseSensitive:   false
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''

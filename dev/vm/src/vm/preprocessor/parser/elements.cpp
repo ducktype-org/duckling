@@ -2,10 +2,11 @@
 
 #include <base/for_each.hpp>
 
+#include <vm/program/opcode_args.hpp>
+
 #include "errors.hpp"
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
-#include <vm/program/opcode_args.hpp>
 
 namespace vm::parser {
 	namespace opargs_parsers {

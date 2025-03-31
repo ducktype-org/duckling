@@ -2,10 +2,11 @@
 
 #include <variant>
 
-#include "process_info.hpp"
-#include <filesystem/file.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
+
+#include "process_info.hpp"
+#include <filesystem/file.hpp>
 
 namespace vm::api {
 	namespace request {

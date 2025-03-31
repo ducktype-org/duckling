@@ -2,9 +2,10 @@
 
 #include <deque>
 
+#include <vm/preprocessor/parser/elements.hpp>
+
 #include "errors.hpp"
 #include <token_file/file.hpp>
-#include <vm/preprocessor/parser/elements.hpp>
 
 namespace vm::parser {
 

@@ -7,7 +7,6 @@
 
 #include <base/optional.hpp>
 
-#include <listener/listener.hpp>
 #include <vm/api/api.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -21,6 +20,8 @@
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
+
+#include <listener/listener.hpp>
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;

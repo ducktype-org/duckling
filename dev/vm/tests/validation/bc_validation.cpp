@@ -3,6 +3,7 @@
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
 #include <vm/preprocessor/validator/errors.hpp>
+
 #include <vm_tester_utils.hpp>
 
 class BCValidationTests: public VmTestSuite {

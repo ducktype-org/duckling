@@ -1,7 +1,6 @@
 #include "lsp_elements.hpp"
 
 #include "../../../../../base/src/base/ints.hpp"
-
 #include <token_parser_core/parser_ref.hpp>
 
 namespace lsp {

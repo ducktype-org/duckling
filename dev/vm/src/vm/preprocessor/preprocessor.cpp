@@ -3,15 +3,16 @@
 #include <expected>
 #include <vector>
 
+#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/program/opcode_args.hpp>
+
 #include "parser/elements.hpp"
 #include "parser/errors.hpp"
 #include "parser/parser.hpp"
 #include "validator/validator.hpp"
 #include <diagnostic/logger.hpp>
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/program/opcode_args.hpp>
 
 namespace vm {
 	namespace {

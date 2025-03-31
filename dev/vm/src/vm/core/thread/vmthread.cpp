@@ -11,11 +11,6 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "low_program/instruction.hpp"
-#include "low_program/opcodes.hpp"
-#include "op_case.hpp"
-#include "opcodes_functions.hpp"
-#include "opcodes_functions_debug.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -23,6 +18,12 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+
+#include "low_program/instruction.hpp"
+#include "low_program/opcodes.hpp"
+#include "op_case.hpp"
+#include "opcodes_functions.hpp"
+#include "opcodes_functions_debug.hpp"
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):

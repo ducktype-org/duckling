@@ -3,11 +3,11 @@
 #include <utility>
 
 #include <base/strongly_typed_id.hpp>
-#include <token_parser_core/base_element.hpp>
 
 #include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
 #include <token_parser_core/parser_state.hpp>
 
 namespace pst {

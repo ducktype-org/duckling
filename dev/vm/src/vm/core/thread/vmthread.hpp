@@ -8,9 +8,6 @@
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 
-#include "blocking_queue.hpp"
-#include "low_program/instruction.hpp"
-#include <result.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -19,6 +16,10 @@
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+
+#include "blocking_queue.hpp"
+#include "low_program/instruction.hpp"
+#include <result.hpp>
 
 /**
  * For now only single threaded execution is suported

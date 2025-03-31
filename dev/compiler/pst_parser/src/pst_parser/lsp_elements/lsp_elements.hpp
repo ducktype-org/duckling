@@ -6,12 +6,11 @@
 
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
-#include <token_parser_core/base_element.hpp>
-
-#include <token_parser_core/common_elements.hpp>
 
 #include "../lang_parser_element.hpp"
 #include "../lang_parser_state.hpp"
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/parser_ref.hpp>
 #include <token_parser_core/parser_state.hpp>
 #include <token_parser_core/token_stream.hpp>

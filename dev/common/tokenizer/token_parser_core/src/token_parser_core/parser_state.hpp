@@ -1,9 +1,7 @@
 #pragma once
 
 #include "base_element.hpp"
-
 #include "common_elements.hpp"
-
 #include "token_stream.hpp"
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>

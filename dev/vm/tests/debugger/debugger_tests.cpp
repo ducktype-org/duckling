@@ -3,10 +3,11 @@
 
 #include <base/int_conv.hpp>
 
-#include <tester/tester.hpp>
 #include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+
+#include <tester/tester.hpp>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS

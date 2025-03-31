@@ -1,10 +1,11 @@
+#include <vm/core/supervisor/supervisor.hpp>
+
 #include "cli.hpp"
 #include "config.hpp"
 #include "server.hpp"
 #include <clap/clap.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
 
 void showVersion() {
 	std::cout << std::boolalpha;
