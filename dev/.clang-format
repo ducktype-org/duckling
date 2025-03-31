@@ -193,43 +193,35 @@ IncludeCategories:
   - Regex:           '^("|<)(llvm|llvm-c|clang|clang-c)/'
     Priority:        1
     SortPriority:    6
-    CaseSensitive:   false
   # External libs such as icu(unicode/uniset.h)/crow/asio/json:
   # - Regex:           '^("|<)(unicode/uniset.h|crow/|asio/|json/)'
   #   Priority:        2
   #   SortPriority:    7
-  #   CaseSensitive:   false
   # std, headers without extension:
   - Regex:           '^("|<)([A-Za-z0-9\Q/-_\E])+("|>)$'
     Priority:        3
     SortPriority:    8
-    CaseSensitive:   false
   # our base:
   - Regex:           '^("|<)(base/.*)("|>)$'
     Priority:        4
     SortPriority:    3
-    CaseSensitive:   false
   # our common, add here new libraries:
   # - Regex:           [tu będzie regexp na common]
   # '^("|<)(clap|diagnostic|filesystem|hashing|init|json|listener|llvm|printer|query_framework|system_command|tester|tokenizer)("|>)$'
     # Priority:        5
     # SortPriority:    4
-    # CaseSensitive:   false
   # VM:
   - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6
     SortPriority:    5
-    CaseSensitive:   false
   # all other files with <>:  
   - Regex:           '^".*"$'
     Priority:        7
     SortPriority:    1
-    CaseSensitive:   false
   # all other files with "":  
   - Regex:           '^<.*>$'
     Priority:        8
     SortPriority:    2
-    CaseSensitive:   false
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentPPDirectives: BeforeHash
@@ -239,7 +231,7 @@ MacroBlockEnd:   ''
 
 # Sorting
 SortUsingDeclarations: LexicographicNumeric
-SortIncludes:    CaseSensitive
+SortIncludes:    CaseInsensitive
 
 
 # Penalties
