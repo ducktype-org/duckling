@@ -18,16 +18,18 @@
 namespace compiler::mir {
 
 	Function::Function(
-		base::StrID                  name,
-		tsh::SymbolType<>            return_type,
-		std::vector<Block>           blocks,
-		base::StableVector<MirLocal> local_list,
-		BlockID                      entry_block,
-		helios::ScopeID              top_lifetime_scope,
-		helios::SymID                helios_id
+		base::StrID                    name,
+		tsh::SymbolType<>              return_type,
+		std::vector<tsh::SymbolType<>> parameter_types,
+		std::vector<Block>             blocks,
+		base::StableVector<MirLocal>   local_list,
+		BlockID                        entry_block,
+		helios::ScopeID                top_lifetime_scope,
+		helios::SymID                  helios_id
 	):
 		  name(name),
 		  return_type(return_type),
+		  parameter_types(std::move(parameter_types)),
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
 		  entry_block(entry_block),
@@ -109,7 +111,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagConstruct(LocalRef local) {
-		return { OperationFlag::Flag::Construct, local };
+		return { .flag = OperationFlag::Flag::Construct, .local = local };
 	}
 
 	/**
@@ -119,7 +121,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagDestruct(LocalRef local) {
-		return { OperationFlag::Flag::Destruct, local };
+		return { .flag = OperationFlag::Flag::Destruct, .local = local };
 	}
 
 	/**
@@ -129,7 +131,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagMove(LocalRef local) {
-		return { OperationFlag::Flag::Move, local };
+		return { .flag = OperationFlag::Flag::Move, .local = local };
 	}
 
 	/**
@@ -186,7 +188,11 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { id, std::move(instructions), terminator.value() };
+			return {
+				.id           = id,
+				.instructions = std::move(instructions),
+				.terminator   = terminator.value(),
+			};
 		}
 
 		/**
@@ -256,20 +262,25 @@ namespace compiler::mir {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 
 			std::vector<Block> blocks;
+			blocks.reserve(this->blocks.size());
 			for (usize i = 0; i < this->blocks.size(); i++)
 				blocks.emplace_back(this->blocks.getRef(i).value()->build());
 
-			const auto function_return_type
+			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
 					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
 						  ->expect("Handling errors in HOUT is not supported yet")
 				)
-			          .getType()
-			          .getResultType();
+			          .getType();
 
 			return Function{
-				name.value(),          function_return_type,         std::move(blocks),
-				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				name.value(),
+				function_type.getResultType(),
+				function_type.getParameterTypes(),
+				std::move(blocks),
+				std::move(local_list),
+				entry_block.value()->getID(),
+				top_lifetime_scope.value(),
 				helios_symbol,
 			};
 		}
@@ -284,6 +295,9 @@ namespace compiler::mir {
 			top_lifetime_scope.emplace(scope);
 		}
 
+		/**
+		 * Adds a local variable to MIR function, from helios_id representing it.
+		 */
 		LocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
@@ -291,6 +305,22 @@ namespace compiler::mir {
 					"Handling ERRORS in MIR is not supported yet..."
 				),
 				scope(helios_id),
+			});
+			return local_list.getRef(key).value();
+		}
+
+		/**
+		 * Adds a local parameter variable to MIR function from helios_id representing it.
+		 */
+		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
+			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
+			const auto key = local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id),
+				parameter_index,
 			});
 			return local_list.getRef(key).value();
 		}
@@ -328,6 +358,14 @@ namespace compiler::mir {
 		}
 
 		query::Context& getContext() { return ctx; }
+
+		/**
+		 * This is needed only for some assertins.
+		 */
+		[[nodiscard]]
+		helios::SymID getHeliosSymbol() const {
+			return helios_symbol;
+		}
 	};
 
 	/**
@@ -339,13 +377,37 @@ namespace compiler::mir {
 
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
 
+		/**
+		 * Helper function that recursively goes over the code block and collects all local
+		 * variables.
+		 */
+		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
+		}
+
+		/**
+		 * @brief Collects all local variables in the function and adds them directly to the
+		 * FunctionBuilder.
+		 */
+		void collect(const helios::HOUTFunction& hout_function) {
+			CORE_ASSERT(
+				hout_function.original_symbol == function.getHeliosSymbol(),
+				"Bad function passed to LocalVarCollectionVisitor"
+			);
+
+			u64 parameter_index = 0;
+			for (const auto& parameter: *hout_function.content.parameters) {
+				function.addParameter(parameter.helios_symbol, parameter_index);
+				parameter_index++;
+			}
+			goOverCodeBlock(*hout_function.content.body);
+		}
+
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
-		}
+		void visitIfStmt(const helios::code::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
@@ -701,9 +763,8 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
-		// @TODO: add parameters to list of locals
 		LocalVarCollectionVisitor visitor{ function_builder };
-		for (const auto& stmt: function.content.body->statements) stmt->acceptVisitor(visitor);
+		visitor.collect(function);
 
 		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
