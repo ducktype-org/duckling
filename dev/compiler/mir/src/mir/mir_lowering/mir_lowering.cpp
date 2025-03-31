@@ -308,8 +308,7 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * Adds a local variable to MIR function from helios_id representing it.
-		 * That is also a parameter.
+		 * Adds a local parameter variable to MIR function from helios_id representing it.
 		 */
 		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
 			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
