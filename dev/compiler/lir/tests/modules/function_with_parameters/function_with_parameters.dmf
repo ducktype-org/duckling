@@ -1,0 +1,5 @@
+
+fun foo(x: i16, y: i32, z: i64) -> i64 = {
+    return z;
+}
+
