@@ -1,5 +1,6 @@
 #include "builders.hpp"
 #include "base/optional.hpp"
+#include "vm/code/builders/errors.hpp"
 #include "vm/code/instructions.hpp"
 #include "vm/core/process/type_metadata/type_metadata.hpp"
 #include <base/exceptions.hpp>
@@ -65,7 +66,11 @@ FunctionBuilder::FunctionBuilder(
 ):
 	  name(name),
 	  types_context(types) {
-	TypeCRef func_result_type = types_context.getMetadata().at(name)->getResultType().value();
+	TypeCRef func_result_type = types_context.getMetadata()
+	                                .atMaybe(name)
+	                                .expect<MissingFunctionalTypeError>(name)
+	                                ->getResultType()
+	                                .expect<TypeIsNotFunctionalError>(name);
 	initType(instructions::Op_init_type{ func_result_type->getName() });
 	instructions.pop_back();
 	auto params = types_context.getMetadata().at(name)->getParameters().value();
@@ -78,8 +83,10 @@ FunctionBuilder::FunctionBuilder(
 usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	instructions.emplace_back(init);
 
-	const usize type_size = types_context.sizeOf(init.arg0.type_name);
-	usize       offset    = 0;
+	const usize type_size
+		= types_context.getMetadata().atMaybe(name).expect<UnknownTypeError>(init.arg0)->getSize();
+
+	usize offset = 0;
 
 	if (!local_stack.empty()) {
 		const LocalStackEntry& prev_entry = local_stack.back();
@@ -117,22 +124,30 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 }
 
 void FunctionBuilder::handleCallFunc(instructions::Op_call_func func) {
-	auto params
-		= types_context.getMetadata().at(func.arg0.function_name)->getParameterCount().value();
+	auto func_name = func.arg0.function_name;
+	auto params    = types_context.getMetadata()
+	                  .atMaybe(func_name)
+	                  .expect<MissingFunctionalTypeError>(func_name)
+	                  ->getParameterCount()
+	                  .expect<TypeIsNotFunctionalError>(func_name);
 	for (usize i = 0; i < params; i++) local_stack.pop_back();
 	instructions.emplace_back(func);
 }
 
 void FunctionBuilder::saveStackState(base::StrID at_label_name) {
 	if (stack_state_at_label.contains(at_label_name)) {
-		if (stack_state_at_label[at_label_name] != local_stack)
-			throw builders::StackStateError("Stack state differs between jumps");
+		if (stack_state_at_label[at_label_name] != local_stack) throw builders::StackStateError();
 	} else {
 		stack_state_at_label.put(at_label_name, local_stack);
 	}
 }
 
 void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
+
+const base::StableTypeIdNameMap<vm::code::TypeOfData, usize>&
+	vm::code::builders::TypesContext<TypesContextState::AddingTypes>::getTypes() const {
+	return types;
+}
 
 TypesContext<TypesContextState::Finalized>
 	TypesContext<TypesContextState::AddingTypes>::finalized() const {
@@ -147,28 +162,40 @@ TypesContext<TypesContextState::Finalized>
 				tctx.metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(vm::code::PointerType, data) {
-				tctx.metadata->at(data.name)->definePointer(tctx.metadata->at(data.inner));
+				tctx.metadata->at(data.name)->definePointer(
+					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+				);
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->at(data.inner), data.table_size
+					tctx.metadata->atMaybe(data.inner)
+						.expect<MissingSubtypeError>(data, data.inner),
+					data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
-				tctx.metadata->at(data.name)->defineDynamicTable(tctx.metadata->at(data.inner));
+				tctx.metadata->at(data.name)->defineDynamicTable(
+					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+				);
 			}
 			variant_case(vm::code::DataType, data) {
 				std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
-					fields.emplace_back(field.name, tctx.metadata->at(field.type));
+					fields.emplace_back(
+						field.name,
+						tctx.metadata->atMaybe(field.type)
+							.expect<MissingSubtypeError>(data, field.name)
+					);
 				tctx.metadata->at(data.name)->defineData(fields);
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
-					variants.emplace_back(tctx.metadata->at(variant));
+					variants.emplace_back(
+						tctx.metadata->atMaybe(variant).expect<MissingSubtypeError>(data, variant)
+					);
 				tctx.metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(vm::code::FunctionType, data) {
@@ -177,7 +204,9 @@ TypesContext<TypesContextState::Finalized>
 				for (auto& param: data.parameters)
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
-					parameters, tctx.metadata->at(data.result)
+					parameters,
+					tctx.metadata->atMaybe(data.result)
+						.expect<MissingSubtypeError>(data, data.result)
 				);
 			}
 			variant_default { CORE_PANIC("bad type"); }
@@ -197,11 +226,6 @@ const vm::TypeMetadata&
 	return *metadata;
 }
 
-usize vm::code::builders::TypesContext<TypesContextState::Finalized>::sizeOf(base::StrID name
-) const {
-	return metadata->at(name)->getSize();
-}
-
 Box<vm::TypeMetadata>
 	vm::code::builders::TypesContext<TypesContextState::Finalized>::moveMetadata() && {
 	return std::move(metadata);
@@ -211,7 +235,7 @@ void TypesContext<>::addType(const vm::code::TypeOfData& type) {
 	auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
-			if (type == *tp) throw DuplicatedTypeError("Duplicated type name: " + name.str());
+			if (type != *tp) throw DuplicatedTypeError(name);
 		}
 		opt_none { types.insert(type, name); }
 	}

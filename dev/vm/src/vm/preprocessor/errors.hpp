@@ -2,6 +2,44 @@
 #include <diagnostic/message.hpp>
 
 namespace vm::preprocessor {
+	class UnknownLabel final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Label does not exist.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		UnknownLabel(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class RepeatedLabel final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Repeated label.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		RepeatedLabel(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	class RepeatedLabelNote final: public dia::NoteWithPosition {
 	public:
 		constexpr static std::string_view ERR_MSG = "Previous declaration here.";
@@ -29,7 +67,7 @@ namespace vm::preprocessor {
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
-			return Domain::Parser;
+			return Domain::StaticVerification;
 		}
 
 		DuplicatedTypeError(dia::SourcePosition pos): dia::Error(pos) {}
@@ -64,7 +102,7 @@ namespace vm::preprocessor {
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
-			return Domain::Parser;
+			return Domain::StaticVerification;
 		}
 
 		UnknownType(dia::SourcePosition pos, base::StrID type_name):
@@ -87,7 +125,7 @@ namespace vm::preprocessor {
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
-			return Domain::Parser;
+			return Domain::StaticVerification;
 		}
 
 		UnknownFunction(dia::SourcePosition pos, base::StrID func_name):
@@ -108,7 +146,7 @@ namespace vm::preprocessor {
 	public:
 		[[nodiscard]]
 		Domain getDomain() const override {
-			return Domain::Parser;
+			return Domain::StaticVerification;
 		}
 
 		DuplicateFunctionDefinitionError(dia::SourcePosition pos): dia::Error(pos) {}
@@ -126,5 +164,47 @@ namespace vm::preprocessor {
 
 	public:
 		DuplicatedFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+	};
+
+	class StackStateError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "This instruction invalidates stack state.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		StackStateError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class MissingSubtypeError final: public dia::Error {
+		base::StrID subtype_name;
+
+	public:
+		constexpr static std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, subtype_name);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		MissingSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
+			  dia::Error(pos),
+			  subtype_name(subtype_name) {}
 	};
 }

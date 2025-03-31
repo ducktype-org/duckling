@@ -34,6 +34,7 @@ namespace vm {
 		PreprocessorLogger& operator=(PreprocessorLogger&&)      = default;
 
 		template<class T, class Function, class... Args>
+		requires std::is_base_of_v<dia::Error, T>
 		void logMap(const code::ElementBase& elem, const Function& function, Args&&... args) {
 			match_optional(elem.bytecode_pos) {
 				opt_none errors.push_back(base::strConcat(T::ERR_MSG, " ", args...));
@@ -46,6 +47,7 @@ namespace vm {
 		}
 
 		template<class T, class... Args>
+		requires std::is_base_of_v<dia::Error, T>
 		void log(const code::ElementBase& elem, Args&&... args) {
 			logMap<T>(elem, [](const Box<T>&) {}, std::forward<Args>(args)...);
 		}

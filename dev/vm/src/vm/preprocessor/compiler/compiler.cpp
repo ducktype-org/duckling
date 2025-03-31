@@ -11,6 +11,7 @@
 #include "vm/preprocessor/parser/elements.hpp"
 #include "vm/preprocessor/parser/errors.hpp"
 #include "vm/preprocessor/preprocessor.hpp"
+#include "vm/preprocessor/errors.hpp"
 #include "vm/code/instructions.hpp"
 #include "vm/code/opcode_args.hpp"
 #include "vm/code/code.hpp"
@@ -43,14 +44,14 @@ namespace vm {
 					auto type_obj = ctx.types.atMaybe(type_arg.type_name);
 					if (type_obj)
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-					ctx.log.log<vm::parser::UnknownType>(type_arg, type_arg.type_name);
+					ctx.log.log<vm::preprocessor::UnknownType>(type_arg, type_arg.type_name);
 					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
-					ctx.log.log<vm::parser::UnknownFunction>(func, func.function_name);
+					ctx.log.log<vm::preprocessor::UnknownFunction>(func, func.function_name);
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
@@ -62,7 +63,7 @@ namespace vm {
 						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
 						     - 1;
 					}
-					ctx.log.log<vm::parser::InvalidLabel>(label, "Label does not exist.");
+					ctx.log.log<vm::preprocessor::UnknownLabel>(label);
 					return 0;
 				}
 			}
@@ -72,7 +73,8 @@ namespace vm {
 		void splitCodeAndLabels(CompContext& ctx) {
 			code::Function new_func = ctx.func.value();
 			new_func.body.clear();
-			base::HashMap<base::StrID, usize> label_positions;
+			base::HashMap<base::StrID, usize>                        label_positions;
+			base::HashMap<base::StrID, code::instructions::Op_label> labels;
 			for (const auto& instr: ctx.func.value().body) {
 				variant_match(instr) {
 					variant_case(code::instructions::Comment, _);
@@ -81,17 +83,15 @@ namespace vm {
 							label.arg0.label_name, new_func.body.size()
 						);
 						if (!inserted) {
-							ctx.log.logMap<vm::parser::InvalidLabel>(
-								label.arg0,
-								[&](auto& msg) {
-									for (auto&& lbl: label_positions)
-										if (lbl.first == label.arg0.label_name)
-											msg->addNote(makeBox<vm::parser::RepeatedLabelNote>(
-												VISIT(instr, in, return in.bytecode_pos.value())
-											));
-								},
-								"Repeated label."
-							);
+							ctx.log.logMap<vm::preprocessor::RepeatedLabel>(label, [&](auto& msg) {
+								for (auto&& lbl: label_positions)
+									if (lbl.first == label.arg0.label_name)
+										msg->addNote(makeBox<vm::preprocessor::RepeatedLabelNote>(
+											labels[label.arg0.label_name].bytecode_pos.value()
+										));
+							});
+						} else {
+							labels.put(label.arg0.label_name, label);
 						}
 					}
 					variant_default { new_func.body.push_back(instr); }

@@ -3,6 +3,7 @@
 #include <token_parser_core/token_stream.hpp>
 #include <base/for_each.hpp>
 #include "base/optional.hpp"
+#include "diagnostic/source_position.hpp"
 #include "errors.hpp"
 #include <vm/code/opcode_args.hpp>
 
@@ -121,6 +122,15 @@ namespace vm::parser {
 						logged = true;
 						continue;
 					}
+
+					// Update end to contains args
+					if (!out->args.empty()) {
+						auto end = VISIT(out->args.back(), arg, return *arg.bytecode_pos).getEnd();
+						const auto& pos = *out->position;
+						out->position
+							= makeBox<dia::SourcePosition>(pos.getSource(), pos.getStart(), end);
+					}
+
 					return out;
 				} else if (!logged) {
 					state.log(makeBox<vm::parser::UnknownOpCodeError>(

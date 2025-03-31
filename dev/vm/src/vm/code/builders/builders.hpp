@@ -72,6 +72,7 @@ namespace vm::code::builders {
 		base::StableTypeIdNameMap<TypeOfData, usize> types;
 
 	public:
+		const base::StableTypeIdNameMap<TypeOfData, usize>& getTypes() const;
 		void                                       addType(const vm::code::TypeOfData& type);
 		TypesContext<TypesContextState::Finalized> finalized() const;
 	};
@@ -90,8 +91,6 @@ namespace vm::code::builders {
 		[[nodiscard]] const TypeMetadata& getMetadata() const;
 
 		Box<TypeMetadata> moveMetadata() &&;
-
-		[[nodiscard]] usize sizeOf(base::StrID name) const;
 	};
 
 	/**

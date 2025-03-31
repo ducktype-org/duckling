@@ -42,29 +42,6 @@ namespace vm::parser {
 			  opcode(opcode) {}
 	};
 
-	class InvalidLabel final: public dia::Error {
-		base::StrID reason;
-
-	public:
-		constexpr static std::string_view ERR_MSG = "Invalid label: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, reason);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		InvalidLabel(dia::SourcePosition pos, std::string_view reason):
-			  dia::Error(pos),
-			  reason(base::StrID(reason.data())) {}
-	};
-
 	class InvalidLiteral final: public dia::Error {
 		base::StrID reason;
 

@@ -310,6 +310,34 @@ namespace base {
 			return std::move(value());
 		}
 
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
 		/**
 		 * An operator that allows a direct data access.
 		 * @return Object T to perform an operation on.
@@ -532,6 +560,34 @@ namespace base {
 		[[nodiscard]]
 		constexpr T&& expect(std::string_view message) && {
 			if (!has_value()) CORE_PANIC(message);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
 			return std::move(value());
 		}
 
