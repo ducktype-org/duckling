@@ -38,6 +38,7 @@ namespace compiler::lir {
 
 	base::OkBad Function::validateParameters() const {
 		std::set<u64> parameter_indexes;
+
 		for (const auto& local: local_list) {
 			if (local->parameter_index.has_value()) {
 				auto index = local->parameter_index.value();
@@ -48,6 +49,9 @@ namespace compiler::lir {
 				if (local->layout != parameter_layouts.at(index)) return base::BAD;
 			}
 		}
+
+		if (parameter_layouts.size() != parameter_indexes.size()) return base::BAD;
+
 		return base::OK;
 	}
 
