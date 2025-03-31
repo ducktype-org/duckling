@@ -1,8 +1,8 @@
 #include "builders.hpp"
-#include "base/optional.hpp"
-#include "vm/code/builders/errors.hpp"
-#include "vm/code/instructions.hpp"
-#include "vm/core/process/type_metadata/type_metadata.hpp"
+#include <base/optional.hpp>
+#include <vm/code/builders/errors.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
@@ -83,8 +83,10 @@ FunctionBuilder::FunctionBuilder(
 usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	instructions.emplace_back(init);
 
-	const usize type_size
-		= types_context.getMetadata().atMaybe(init.arg0.type_name).expect<UnknownTypeError>(init.arg0)->getSize();
+	const usize type_size = types_context.getMetadata()
+	                            .atMaybe(init.arg0.type_name)
+	                            .expect<UnknownTypeError>(init.arg0)
+	                            ->getSize();
 
 	usize offset = 0;
 

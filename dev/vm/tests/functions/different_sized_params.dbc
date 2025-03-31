@@ -1,4 +1,4 @@
-# Tests a function call with multiple parameters of diffrent sizes.
+# Tests a function call with multiple parameters of different sizes.
 # input = "a b c"
 # output = a * c
 

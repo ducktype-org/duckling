@@ -2,7 +2,7 @@
 
 #include <base/stable_type_id_name_map.hpp>
 #include "type.hpp"
-#include "vm/code/type_of_data.hpp"
+#include <vm/code/type_of_data.hpp>
 
 namespace vm {
 	/**
@@ -17,9 +17,9 @@ namespace vm {
 		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 
 	public:
-		TypeMetadata()                               = default;
+		TypeMetadata() = default;
 
-		// Deleting copy and move constructors/operator= because pointers inside types 
+		// Deleting copy and move constructors/operator= because pointers inside types
 		TypeMetadata(const TypeMetadata&)            = delete;
 		TypeMetadata(TypeMetadata&&) noexcept        = delete;
 		TypeMetadata& operator=(const TypeMetadata&) = delete;

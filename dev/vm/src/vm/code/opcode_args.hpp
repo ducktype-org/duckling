@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vm/code/element_base.hpp"
+#include <vm/code/element_base.hpp>
 #include <base/string_id.hpp>
 #include <base/ints.hpp>
 #include <variant>

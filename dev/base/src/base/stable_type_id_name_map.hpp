@@ -1,19 +1,18 @@
 #pragma once
 
-#include "base/maps.hpp"
-#include "base/ref.hpp"
-#include "base/string_id.hpp"
+#include <base/maps.hpp>
+#include <base/ref.hpp>
+#include <base/string_id.hpp>
 #include <base/ints.hpp>
 #include <deque>
 #include <ranges>
-#include <type_traits>
 
 namespace base {
 	/**
 	 * @note Access with ID is O(1)
 	 */
-	template<class T, class TID = usize>
-	requires std::is_constructible_v<usize, TID> && std::is_constructible_v<TID, usize>
+	template<class T, class TID = u64>
+	requires(std::constructible_from<TID, usize> && std::constructible_from<usize, TID>)
 	class StableTypeIdNameMap {
 	public:
 		StableTypeIdNameMap()                                      = default;
@@ -134,6 +133,4 @@ namespace base {
 		base::HashMap<TID, base::StrID> id_to_name{};
 		base::HashMap<base::StrID, TID> name_to_id{};
 	};
-
-
 }

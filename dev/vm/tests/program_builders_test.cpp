@@ -129,9 +129,9 @@ private:
 	void testFileBuilder() {
 		TypesContext types_adding;
 
-		auto main   = base::StrID("main");
-		auto int32  = base::StrID("int32");
-		auto int64  = base::StrID("int64");
+		auto main  = base::StrID("main");
+		auto int32 = base::StrID("int32");
+		auto int64 = base::StrID("int64");
 		types_adding.addType(vm::code::PrimitiveType(int32, 4));
 		types_adding.addType(vm::code::PrimitiveType(int64, 8));
 		types_adding.addType(vm::code::FunctionType(main, {}, int64));
@@ -149,9 +149,9 @@ private:
 		InstructionBuilder instr_output(OpKind::output);
 		instr_output.pushArgs(vm::opargs::StackLocalI64(i64(a)));
 		func_builder.addInstruction(instr_output);
-		func_builder.deinitType(); // a
-		func_builder.deinitType(); // b
-		func_builder.deinitType(); // ret val (int64)
+		func_builder.deinitType();  // a
+		func_builder.deinitType();  // b
+		func_builder.deinitType();  // ret val (int64)
 		assertThrows<base::Panic>(
 			[&] { func_builder.deinitType(); }, "Cannot pop from empty variable stack"
 		);

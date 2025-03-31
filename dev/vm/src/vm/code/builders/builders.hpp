@@ -11,10 +11,9 @@
 #include "../instructions.hpp"
 #include <cstdint>
 #include <vm/code/code.hpp>
-#include "base/stable_type_id_name_map.hpp"
-#include "base/strongly_typed_id.hpp"
-#include "errors.hpp"
-#include "vm/core/process/type_metadata/type_metadata.hpp"
+#include <base/stable_type_id_name_map.hpp>
+#include <base/strongly_typed_id.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 
 // Disable liting, because of invalid naming convention.

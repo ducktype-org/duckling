@@ -12,8 +12,8 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
-#include "filesystem/file.hpp"
-#include "vm/code/type_of_data.hpp"
+#include <filesystem/file.hpp>
+#include <vm/code/type_of_data.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
 #include <vector>
@@ -40,7 +40,7 @@ namespace vm::parser {
 	struct Type: AsmElement {
 		using AsmElement::AsmElement;
 
-		code::TypeOfData        datatype;
+		code::TypeOfData  datatype;
 		static MBox<Type> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override;
@@ -63,7 +63,7 @@ namespace vm::parser {
 	struct ByteCode: AsmElement {
 		using AsmElement::AsmElement;
 
-		std::vector<Box<OpCode>>      opcodes;
+		std::vector<Box<OpCode>> opcodes;
 
 		static Box<ByteCode> parse(F8ParserState& state);
 

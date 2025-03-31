@@ -1,24 +1,22 @@
 #include "compiler.hpp"
-#include "base/optional.hpp"
-#include "base/stable_type_id_name_map.hpp"
-#include "base/string_id.hpp"
-#include "base/variant.hpp"
-#include "diagnostic/logger.hpp"
-#include "vm/code/serializer/serializer.hpp"
-#include "vm/core/process/type_metadata/type_metadata.hpp"
-#include "vm/core/thread/low_program/low_program.hpp"
-#include "vm/core/thread/low_program/opcodes.hpp"
-#include "vm/preprocessor/parser/elements.hpp"
-#include "vm/preprocessor/parser/errors.hpp"
-#include "vm/preprocessor/preprocessor.hpp"
-#include "vm/preprocessor/errors.hpp"
-#include "vm/code/instructions.hpp"
-#include "vm/code/opcode_args.hpp"
-#include "vm/code/code.hpp"
+#include <base/optional.hpp>
+#include <base/stable_type_id_name_map.hpp>
+#include <base/string_id.hpp>
+#include <base/variant.hpp>
+#include <diagnostic/logger.hpp>
+#include <vm/code/serializer/serializer.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/preprocessor/parser/elements.hpp>
+#include <vm/preprocessor/parser/errors.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/preprocessor/errors.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/code/opcode_args.hpp>
+#include <vm/code/code.hpp>
 #include <expected>
 #include <ranges>
-#include <type_traits>
-#include <variant>
 
 namespace vm {
 	namespace {
@@ -108,9 +106,10 @@ namespace vm {
 			func_data.local_stack_size = ctx.func->local_stack_size;
 			func_data.ret_size         = ctx.func->ret_size;
 
-			for (const auto& [op_idx, op]: std::views::enumerate(ctx.func->body)) {
-				i64 arg_0 = 0;
-				i64 arg_1 = 0;
+			for (usize op_idx = 0; op_idx < ctx.func->body.size(); op_idx++) {
+				const auto& op    = ctx.func->body[op_idx];
+				i64         arg_0 = 0;
+				i64         arg_1 = 0;
 				variant_match(op) {
 #define HANDLE_OPCODE_0ARGS(opcode) \
 	variant_case(VM_INSTR_FROM_NAME(opcode), instr) {}

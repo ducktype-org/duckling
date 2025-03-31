@@ -4,12 +4,12 @@
 #include <base/variant.hpp>
 #include <expected>
 #include <vm/code/opcode_args.hpp>
-#include <diagnostic/logger.hpp>
-#include "base/optional.hpp"
 #include "errors.hpp"
-#include "vm/preprocessor/preprocessor.hpp"
-#include "vm/code/instructions.hpp"
-#include "vm/code/code.hpp"
+#include <diagnostic/logger.hpp>
+#include <base/optional.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/code/code.hpp>
 #include <vm/preprocessor/validator/detail/stack_state.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 

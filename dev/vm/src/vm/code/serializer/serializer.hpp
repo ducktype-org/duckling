@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vm/code/type_of_data.hpp"
+#include <vm/code/type_of_data.hpp>
 #include <iostream>
 #include <vm/code/code.hpp>
 

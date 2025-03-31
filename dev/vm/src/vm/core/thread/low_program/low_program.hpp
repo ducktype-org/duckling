@@ -3,7 +3,7 @@
  */
 #pragma once
 
-#include "base/stable_type_id_name_map.hpp"
+#include <base/stable_type_id_name_map.hpp>
 #include "instruction.hpp"
 #include <base/stable_hashmap.hpp>
 #include <utility>
