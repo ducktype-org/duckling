@@ -4,10 +4,13 @@
 
 #pragma once
 
-#include <variant>
-#include <vm/code/opcode_args.hpp>
-#include <base/box.hpp>
 #include "element_base.hpp"
+
+#include <base/box.hpp>
+
+#include <vm/code/opcode_args.hpp>
+
+#include <variant>
 
 #define VM_INSTR_FROM_NAME(opcode) vm::code::instructions::Op_##opcode
 

@@ -2,8 +2,9 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#include <iostream>
 #include <base64.hpp>
+
+#include <iostream>
 
 // This is included to allow for pushing and popping of diagnostics
 #include <base/define_helper.hpp>
@@ -15,21 +16,22 @@ PUSH_DIAGNOSTIC
 POP_DIAGNOSTIC
 
 // Our code is included after crow because there were some weird errors if pst was included earlier.
-#include <pst_parser/pst.hpp>
 #include <clap/clap.hpp>
-#include <lexer/lexer.hpp>
 #include <filesystem/file.hpp>
-#include <base/variant.hpp>
+#include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
+
 #include <base/int_conv.hpp>
+#include <base/variant.hpp>
 
 // vm includes:
-#include <vm/server.hpp>
-#include <vm/cli.hpp>
-#include <vm/config.hpp>
-
-#include "utils.hpp"
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
+#include "utils.hpp"
+
+#include <vm/cli.hpp>
+#include <vm/config.hpp>
+#include <vm/server.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.

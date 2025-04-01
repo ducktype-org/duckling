@@ -6,9 +6,10 @@
 #pragma once
 
 #include "ints.hpp"                // IWYU pragma: export
+#include "stringifyable_enum.hpp"  // IWYU pragma: export
+
 #include <compare>                 // IWYU pragma: export
 #include <sstream>                 // IWYU pragma: export
-#include "stringifyable_enum.hpp"  // IWYU pragma: export
 
 #define MAKE_FLAG_TYPE(namespace_name, enum_name, flag_name, ...)                              \
 	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                       \

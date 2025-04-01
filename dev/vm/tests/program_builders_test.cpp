@@ -2,14 +2,17 @@
  * @file dvm_backend_unit_tests.cpp
  */
 #include <tester/tester.hpp>
-#include <vm/code/code.hpp>
-#include <vm/code/utils.hpp>
+
 #include <base/string_id.hpp>
-#include <vm/code/type_of_data.hpp>
+
+#include <vm/code/builders/builders.hpp>
+#include <vm/code/code.hpp>
 #include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
-#include <vm/code/builders/builders.hpp>
 #include <vm/code/serializer/serializer.hpp>
+#include <vm/code/type_of_data.hpp>
+#include <vm/code/utils.hpp>
+
 #include <sstream>
 
 using namespace vm::code::builders;

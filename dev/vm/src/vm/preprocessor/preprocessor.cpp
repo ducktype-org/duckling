@@ -1,31 +1,36 @@
 #include "preprocessor.hpp"
-#include <unordered_map>
-#include <variant>
-#include <vm/core/process/vmprocess.hpp>
-#include <vm/core/thread/low_program/low_program.hpp>
+
+#include "parser/elements.hpp"
+#include "parser/errors.hpp"
+#include "parser/parser.hpp"
+
 #include <diagnostic/logger.hpp>
+
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
-#include "parser/parser.hpp"
-#include <vm/code/opcode_args.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
-#include <expected>
-#include <vector>
-#include "parser/elements.hpp"
-#include "parser/errors.hpp"
-#include <vm/code/builders/errors.hpp>
-#include <vm/code/element_base.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/preprocessor/validator/validator.hpp>
+
 #include <vm/code/builders/builders.hpp>
-#include <vm/code/instructions.hpp>
+#include <vm/code/builders/errors.hpp>
 #include <vm/code/code.hpp>
+#include <vm/code/element_base.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/code/opcode_args.hpp>
+#include <vm/code/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/preprocessor/compiler/compiler.hpp>
 #include <vm/preprocessor/errors.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/preprocessor/validator/validator.hpp>
+
+#include <expected>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
 std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	vm::Preprocessor::getProgram(const fs::FilePath& file) {

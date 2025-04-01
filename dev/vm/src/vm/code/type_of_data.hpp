@@ -1,9 +1,11 @@
 #pragma once
 
-#include <variant>
-#include <vm/code/element_base.hpp>
 #include <base/string_id.hpp>
+
+#include <vm/code/element_base.hpp>
+
 #include <ostream>
+#include <variant>
 
 namespace vm::code {
 	struct PrimitiveType: ElementBase {

@@ -1,9 +1,10 @@
 #include "utils.hpp"
-#include <base/for_each.hpp>
-#include <base/exceptions.hpp>
-#include <vm/code/opcode_args.hpp>
 
+#include <base/exceptions.hpp>
+#include <base/for_each.hpp>
 #include <base/variant.hpp>
+
+#include <vm/code/opcode_args.hpp>
 
 bool vm::code::utils::areArgsEqual(
 	const vm::opargs::OpCodeArg& arg0, const vm::opargs::OpCodeArg& arg1

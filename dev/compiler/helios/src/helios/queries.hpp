@@ -5,16 +5,16 @@
  */
 #pragma once
 
-#include <vector>
-
 #include <query_framework/query_int.hpp>
 
-// @TODO: relax this dependency (#404)
-#include <frontend/module_tree/queries.hpp>
+#include <vector>
 
-#include "scope_symbol_id.hpp"
-#include "hout/hout.hpp"
+// @TODO: relax this dependency (#404)
 #include "hout/elements/expr.hpp"
+#include "hout/hout.hpp"
+#include "scope_symbol_id.hpp"
+
+#include <frontend/module_tree/queries.hpp>
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient

@@ -2,8 +2,8 @@
 
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
-#include <base/ref.hpp>
 #include <base/raw_view.hpp>
+#include <base/ref.hpp>
 
 namespace vm {
 

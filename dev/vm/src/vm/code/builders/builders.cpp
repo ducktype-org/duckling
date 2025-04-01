@@ -1,14 +1,16 @@
 #include "builders.hpp"
-#include <base/optional.hpp>
-#include <vm/code/builders/errors.hpp>
-#include <vm/code/instructions.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
+
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
+
+#include <vm/code/builders/errors.hpp>
+#include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
-#include <base/ref.hpp>
 #include <vm/code/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <base/stable_type_id_name_map.hpp>
 #include "type.hpp"
+
+#include <base/stable_type_id_name_map.hpp>
+
 #include <vm/code/type_of_data.hpp>
 
 namespace vm {

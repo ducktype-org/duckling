@@ -1,6 +1,5 @@
-#include "impl_template.hpp"
-
 #include "../../hierarchy/not_statements.hpp"
+#include "impl_template.hpp"
 
 namespace pst {
 	MBox<TemplateList> TemplateList::parse(LangParserState& state) {

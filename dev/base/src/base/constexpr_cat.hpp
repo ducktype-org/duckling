@@ -21,6 +21,7 @@
 #pragma once
 
 #include "ints.hpp"
+
 #include <array>
 
 namespace base {

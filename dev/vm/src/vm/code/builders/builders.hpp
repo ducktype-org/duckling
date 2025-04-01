@@ -1,19 +1,22 @@
 #pragma once
 
+#include "../instructions.hpp"
+
+#include <base/maps.hpp>
 #include <base/ref.hpp>
+#include <base/stable_type_id_name_map.hpp>
+#include <base/string_id.hpp>
+#include <base/stringifyable_enum.hpp>
+#include <base/strongly_typed_id.hpp>
+
+#include <vm/code/code.hpp>
+#include <vm/code/opcode_args.hpp>
+#include <vm/code/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
+
+#include <cstdint>
 #include <deque>
 #include <utility>
-#include <vm/code/type_of_data.hpp>
-#include <base/maps.hpp>
-#include <base/string_id.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <base/stringifyable_enum.hpp>
-#include "../instructions.hpp"
-#include <cstdint>
-#include <vm/code/code.hpp>
-#include <base/stable_type_id_name_map.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 
 // Disable liting, because of invalid naming convention.

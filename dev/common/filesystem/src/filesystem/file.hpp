@@ -5,15 +5,16 @@
 
 #pragma once
 
-#include <string>
-#include <utility>
-#include <filesystem>
-#include <memory>
-#include <base/raw_view.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/perfect_hash.hpp>
+#include <base/raw_view.hpp>
+
 #include <expected>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <utility>
 
 // Seems fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))

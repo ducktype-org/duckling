@@ -1,25 +1,29 @@
 
-#include <mutex>
-#include <utility>
-#include <cstring>
-#include <base/ints.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/kill_process_exception.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/api/data/response.hpp>
-#include <vm/api/data/status.hpp>
-#include <base/variant.hpp>
-#include "op_case.hpp"
+#include "vmthread.hpp"
+
 #include "low_program/instruction.hpp"
 #include "low_program/opcodes.hpp"
-#include "vmthread.hpp"
+#include "op_case.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/core/kill_process_exception.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/supervisor/supervisor.hpp>
+
+#include <cstring>
 #include <iostream>
+#include <mutex>
+#include <utility>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):

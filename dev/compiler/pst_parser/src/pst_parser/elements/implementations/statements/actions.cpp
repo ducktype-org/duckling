@@ -1,5 +1,6 @@
-#include "preamble.hpp"
 #include "../../hierarchy/actions.hpp"
+
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<Action> Action::parse(LangParserState& state) {

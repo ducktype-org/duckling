@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vm/preprocessor/preprocessor.hpp>
-#include <vm/code/code.hpp>
 #include <base/optional.hpp>
+
+#include <vm/code/code.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
 
 namespace vm::validator {
 	/**

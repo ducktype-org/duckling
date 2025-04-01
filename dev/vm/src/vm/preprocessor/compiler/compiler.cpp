@@ -1,20 +1,24 @@
 #include "compiler.hpp"
+
+#include <diagnostic/logger.hpp>
+
 #include <base/optional.hpp>
 #include <base/stable_type_id_name_map.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
-#include <diagnostic/logger.hpp>
+
+#include <vm/code/code.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <vm/code/serializer/serializer.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/preprocessor/errors.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
 #include <vm/preprocessor/parser/errors.hpp>
 #include <vm/preprocessor/preprocessor.hpp>
-#include <vm/preprocessor/errors.hpp>
-#include <vm/code/instructions.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/code.hpp>
+
 #include <expected>
 #include <ranges>
 

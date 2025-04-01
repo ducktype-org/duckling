@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/strongly_typed_id.hpp>
 #include <base/stable_container.hpp>
+#include <base/strongly_typed_id.hpp>
 
 namespace vm {
 	STRONG_TYPEDEF_INT(TypeID, usize);

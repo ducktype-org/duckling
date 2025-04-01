@@ -12,12 +12,13 @@
  */
 
 #include "lir_lowering.hpp"
+
 #include "../lir_structure/lir_structure.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <typesystem/lower/queries.hpp>
 
 // @opt: make switch-cases in this file "sorted"
 

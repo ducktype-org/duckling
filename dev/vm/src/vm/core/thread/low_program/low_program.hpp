@@ -3,11 +3,14 @@
  */
 #pragma once
 
-#include <base/stable_type_id_name_map.hpp>
 #include "instruction.hpp"
+
 #include <base/stable_hashmap.hpp>
-#include <utility>
+#include <base/stable_type_id_name_map.hpp>
+
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+
+#include <utility>
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;

@@ -1,17 +1,22 @@
 #include "validator.hpp"
+
+#include "errors.hpp"
+
+#include <diagnostic/logger.hpp>
+
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
-#include <base/variant.hpp>
-#include <expected>
-#include <vm/code/opcode_args.hpp>
-#include "errors.hpp"
-#include <diagnostic/logger.hpp>
 #include <base/optional.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
-#include <vm/code/instructions.hpp>
+#include <base/variant.hpp>
+
 #include <vm/code/code.hpp>
-#include <vm/preprocessor/validator/detail/stack_state.hpp>
+#include <vm/code/instructions.hpp>
+#include <vm/code/opcode_args.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/preprocessor/validator/detail/stack_state.hpp>
+
+#include <expected>
 
 #define ADD_CHECK(name) \
 	if (!name()) good = false;

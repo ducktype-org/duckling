@@ -1,6 +1,7 @@
 #pragma once
 
 #include "instructions.hpp"
+
 #include <vm/code/opcode_args.hpp>
 
 namespace vm::code::utils {

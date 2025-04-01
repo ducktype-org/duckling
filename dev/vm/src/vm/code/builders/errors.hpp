@@ -1,8 +1,10 @@
 #pragma once
+#include <base/exceptions.hpp>
 #include <base/string_id.hpp>
+
 #include <vm/code/opcode_args.hpp>
 #include <vm/code/type_of_data.hpp>
-#include <base/exceptions.hpp>
+
 #include <string_view>
 #include <utility>
 

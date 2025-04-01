@@ -1,9 +1,11 @@
 #pragma once
 
-#include <vm/code/type_of_data.hpp>
 #include "instructions.hpp"
-#include <vm/code/element_base.hpp>
+
 #include <base/string_id.hpp>
+
+#include <vm/code/element_base.hpp>
+#include <vm/code/type_of_data.hpp>
 
 namespace vm::code {
 	/**

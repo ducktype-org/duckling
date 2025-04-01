@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/ref.hpp>
 #include <base/ints.hpp>
+#include <base/ref.hpp>
 
 namespace vm {
 	class BlockData;
