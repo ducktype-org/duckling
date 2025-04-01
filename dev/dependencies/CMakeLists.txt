@@ -5,7 +5,7 @@ include(BuildTreeSitter.cmake)
 # It's nice to get stripped-down release zips instead of cloning
 # a repo and checking out a tag
 set(NLOHMANN_JSON_TAG "v3.11.3")
-set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
+set(RESULT_COMMIT "b0c0dd23695c057ee1118e84da2daa907c07b9cb")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
@@ -25,7 +25,7 @@ FetchContent_Declare(
 
 FetchContent_Declare(
 	result
-	URL "https://github.com/bitwizeshift/result/archive/${RESULT_COMMIT}.zip"
+	URL "https://github.com/eratchia/result/archive/${RESULT_COMMIT}.zip"
 )
 
 FetchContent_Declare(
