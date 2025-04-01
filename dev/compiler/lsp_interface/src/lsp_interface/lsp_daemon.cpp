@@ -9,11 +9,11 @@
 
 #include <iostream>
 
-PUSH_DIAGNOSTIC  // Our code is included after crow because of errors if pst was included earlier.
+PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
-	POP_DIAGNOSTIC
+POP_DIAGNOSTIC;
 
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
@@ -31,24 +31,23 @@ PUSH_DIAGNOSTIC  // Our code is included after crow because of errors if pst was
 #include <vm/config.hpp>
 #include <vm/server.hpp>
 
-		/**
-         * @brief Wrapper for converting API error to HTTP response.
-         *
-         * @param apiError The API error to convert.
-         * @return crow::response The HTTP response corresponding to the API error.
-         */
-		crow::response
-		convertError(const vm::api::ApiError& apiError) {
-    if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
-    return {
-        400,
-        std::visit(
-            []([[maybe_unused]] const auto& v) {
-                return "JSON is broken\n";  // JS::serializeStruct(v);
-            },
-            apiError
-        ),
-    };
+/**
+ * @brief Wrapper for converting API error to HTTP response.
+ *
+ * @param apiError The API error to convert.
+ * @return crow::response The HTTP response corresponding to the API error.
+ */
+crow::response convertError(const vm::api::ApiError& apiError) {
+	if (std::holds_alternative<vm::api::WrongResponse>(apiError)) return { 500, "Wrong response" };
+	return {
+		400,
+		std::visit(
+			[]([[maybe_unused]] const auto& v) {
+				return "JSON is broken\n";  // JS::serializeStruct(v);
+			},
+			apiError
+		),
+	};
 }
 
 /**

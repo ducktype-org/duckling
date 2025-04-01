@@ -41,8 +41,8 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Type.h>
 #include <llvm/IR/Verifier.h>
 #include <llvm/Support/Casting.h>
-#include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
+#include <llvm/Support/TargetSelect.h>
 
 LLVM_INCLUDE_END()
 
