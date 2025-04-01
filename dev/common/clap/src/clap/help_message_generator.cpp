@@ -4,6 +4,7 @@
  */
 
 #include "help_message_generator.hpp"
+
 #include <base/variant.hpp>
 
 namespace {

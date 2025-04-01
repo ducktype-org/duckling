@@ -1,7 +1,7 @@
 #include "with_context_do.hpp"
 
-#include "../query_impl.hpp"
 #include "../query_entry_point.hpp"
+#include "../query_impl.hpp"
 
 namespace query::utils {
 	namespace {

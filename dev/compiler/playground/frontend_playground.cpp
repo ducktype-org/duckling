@@ -1,5 +1,6 @@
-#include <frontend/module_tree/module_tree.hpp>
 #include <clap/clap.hpp>
+#include <frontend/module_tree/module_tree.hpp>
+
 #include <iostream>
 
 int main(int argc, const char* argv[]) {

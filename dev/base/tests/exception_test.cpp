@@ -1,5 +1,7 @@
 #include <tester/tester.hpp>
+
 #include <base/str_utils.hpp>
+
 #include <cstring>
 
 bool compareCstr(const char* const c1, const char* const c2) {

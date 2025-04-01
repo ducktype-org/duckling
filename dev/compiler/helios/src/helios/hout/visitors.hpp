@@ -1,5 +1,7 @@
 #pragma once
+
 #include "elements.hpp"
+
 #include <base/visitor.hpp>
 
 namespace compiler::helios::code {

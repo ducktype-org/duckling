@@ -5,8 +5,9 @@
 
 #include "exceptions.hpp"
 
-#include <utility>
 #include "parsing_result.hpp"
+
+#include <utility>
 
 namespace {
 	/**

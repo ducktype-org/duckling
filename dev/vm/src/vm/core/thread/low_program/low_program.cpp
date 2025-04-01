@@ -1,4 +1,5 @@
 #include "low_program.hpp"
+
 #include <base/ref.hpp>
 
 base::Optional<CRef<vm::low::FuncData>> vm::low::LowVMProgram::getFuncByName(base::StrID name

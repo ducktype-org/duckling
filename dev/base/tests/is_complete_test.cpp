@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+
 #include <base/is_complete.hpp>
 
 namespace {

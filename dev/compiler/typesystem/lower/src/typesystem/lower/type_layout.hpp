@@ -2,16 +2,15 @@
 
 #include "size_constants.hpp"
 
-#include <base/box.hpp>
-#include <base/ref.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-
 #include <query_framework/query_int.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/types.hpp>
 
-#include <base/maps.hpp>
 #include <base/bits_and_bytes.hpp>
+#include <base/box.hpp>
+#include <base/maps.hpp>
+#include <base/ref.hpp>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
