@@ -10,7 +10,8 @@ namespace compiler::driver {
 
 	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
-		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(ctx, lir_function);
+		for (const auto& lir_function: lir_module.functions)
+			mod.addFunctionToModule(ctx, lir_function);
 
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 

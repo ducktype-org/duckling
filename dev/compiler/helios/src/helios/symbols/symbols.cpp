@@ -443,8 +443,7 @@ namespace compiler::helios {
 								  },
 								  {
 									  base::StrID("builtin_output_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }
-						              ),
+									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
 								  },
 							  },
 						  };

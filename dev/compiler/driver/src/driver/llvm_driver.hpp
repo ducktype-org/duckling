@@ -1,9 +1,10 @@
 #pragma once
 
-#include <base/string_id.hpp>
-#include <query_framework/context_fd.hpp>
- 
 #include "driver.hpp"
+
+#include <query_framework/context_fd.hpp>
+
+#include <base/string_id.hpp>
 
 namespace compiler::driver {
 	class LLVMDriver final: public BackendDriver {

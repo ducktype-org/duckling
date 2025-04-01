@@ -4,10 +4,10 @@
 
 namespace compiler::driver {
 
-/**
- * LLVM IR built-in library IR. Used by LLVM driver.
- */
-constexpr std::string_view LLVM_IR_LIB= R"-----(
+	/**
+	 * LLVM IR built-in library IR. Used by LLVM driver.
+	 */
+	constexpr std::string_view LLVM_IR_LIB = R"-----(
 
 @.str = private unnamed_addr constant [6 x i8] c"%ld \0A\00", align 1
 @.str.1 = private unnamed_addr constant [4 x i8] c"%ld\00", align 1

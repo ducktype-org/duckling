@@ -17,8 +17,8 @@ LLVM_INCLUDE_BEGIN()
 
 LLVM_INCLUDE_END()
 
-#include "module_impl.hpp"
 #include "get_parameter_types.hpp"
+#include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
 #include <init/init.hpp>
@@ -117,14 +117,18 @@ namespace compiler::backend_llvm {
 	}
 
 	auto getFunType(
-		llvm::LLVMContext& context, const std::vector<tsl::TypeLayout>& parameters, const tsl::TypeLayout& return_type) {
-		
+		llvm::LLVMContext&                  context,
+		const std::vector<tsl::TypeLayout>& parameters,
+		const tsl::TypeLayout&              return_type
+	) {
 		std::vector<llvm::Type*> llvm_parameters;
 		llvm_parameters.reserve(parameters.size());
 		for (const auto& param: parameters)
 			llvm_parameters.push_back(typeFromLayout(context, param));
 
-		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
+		return llvm::FunctionType::get(
+			typeFromLayout(context, return_type), llvm_parameters, false
+		);
 	}
 
 	/**
@@ -132,25 +136,31 @@ namespace compiler::backend_llvm {
 	 * If the function already exists in the module does nothing.
 	 * @note We use it to add all functions to the module currently.
 	 * This will have to change in the future, but it will require some restructuring
-	 * of how we are creating llvm modules, as we need to know what function in local to which module.
+	 * of how we are creating llvm modules, as we need to know what function in local to which
+	 * module.
 	 * @note It detects if function are "the same" based on mangled name only.
 	 */
 	auto addOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		auto& context = module->getContext();
-					// @TODO: work here on mangled name instead #510
+		// @TODO: work here on mangled name instead #510
 
-		return module->getOrInsertFunction(lir_function.name.strView(), getFunType(context,lir_function.parameter_layouts, lir_function.return_type_layout));
+		return module->getOrInsertFunction(
+			lir_function.name.strView(),
+			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
+		);
 	}
 
 	auto addOrInsertFunctionPrototypeFromSymID(
-		query::Context& ctx,  Ref<llvm::Module> module,  helios::SymID sym_id
+		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
 	) {
 		auto& context = module->getContext();
-		auto types = getParameterAndResultFromSymID(ctx, sym_id);
-		auto name = compiler::helios::name(sym_id);
-		return module->getOrInsertFunction(name.strView(), getFunType(context, types.parameters, types.result_type));
+		auto  types   = getParameterAndResultFromSymID(ctx, sym_id);
+		auto  name    = compiler::helios::name(sym_id);
+		return module->getOrInsertFunction(
+			name.strView(), getFunType(context, types.parameters, types.result_type)
+		);
 	}
 
 	/**
@@ -166,10 +176,13 @@ namespace compiler::backend_llvm {
 		Ref<llvm::Module>   module;
 
 		LIR2LLVMFunction(
-			llvm::LLVMContext& context,  query::Context&     ctx, CRef<lir::Function> lir_function, Ref<llvm::Module> module
+			llvm::LLVMContext&  context,
+			query::Context&     ctx,
+			CRef<lir::Function> lir_function,
+			Ref<llvm::Module>   module
 		):
 			  context(context),
-			  ctx(ctx), 
+			  ctx(ctx),
 			  lir_function(lir_function),
 			  module(module) {}
 
@@ -225,8 +238,10 @@ namespace compiler::backend_llvm {
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
-				if_opt_some (var->parameter_index, parameter_index) {
-					locals_builder.CreateStore( fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg);
+				if_opt_some(var->parameter_index, parameter_index) {
+					locals_builder.CreateStore(
+						fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg
+					);
 				}
 				local_register_map.put(var.ref(), reg);
 			}
@@ -398,9 +413,7 @@ namespace compiler::backend_llvm {
 		 */
 		llvm::Function* createFunction() {
 			auto fun = llvm::dyn_cast<llvm::Function>(
-				addOrInsertFunctionPrototypeFromLirFunction(
-					module, *lir_function				)
-					.getCallee()
+				addOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
 
 			generateMainBlocksAndLocals(fun);
@@ -426,7 +439,7 @@ namespace compiler::backend_llvm {
 		Box<llvm::Module> llvm_module = makeBox<llvm::Module>(module_id.str(), context);
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
-	
+
 	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
 		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
 		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
@@ -443,7 +456,9 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	void addFunctionToModuleImpl(query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
+	void addFunctionToModuleImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
 		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
 	}
