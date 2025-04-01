@@ -129,11 +129,10 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Adds a function prototype with external linkage to the module.
-	 * If the function already exists does nothing.
-	 * @note We use it to add all functions currently. This will have to change in the future,
-	 * but it will require some restructuring of how we are creating llvm modules
-	 * probably we will store more data in backend-module (like the linkage), and
-	 * we will lower it to llvm all at once.
+	 * If the function already exists in the module does nothing.
+	 * @note We use it to add all functions to the module currently.
+	 * This will have to change in the future, but it will require some restructuring
+	 * of how we are creating llvm modules, as we need to know what function in local to which module.
 	 * @note It detects if function are "the same" based on mangled name only.
 	 */
 	auto addOrInsertFunctionPrototypeFromLirFunction(
