@@ -1,8 +1,0 @@
-const InvalidExpr: i32 = +1+;
-const InvalidSym: i32 = A + 1;
-
-# Ambiguity
-const B: i32 = 1;
-const B: i32 = 2;
-
-const C: i32 = B * 2;

@@ -1,7 +1,0 @@
-# This file used to cause looping in HIR phase.
- 
-namespace A {}
-using A.*;
-
-
-

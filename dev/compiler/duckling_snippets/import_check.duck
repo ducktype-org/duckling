@@ -1,8 +1,0 @@
-block {
-	import imports.A.a as X;
-	#import imports.A.a.*;
-	import import_check as some;
-	import imports.std as std;
-	# import # "fun"."import".*; # sth
-	# import "import.a.a.*";
-}

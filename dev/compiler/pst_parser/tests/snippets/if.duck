@@ -1,5 +1,0 @@
-if MyName(a + b > 0) {
-	c = 4.25;
-} else if (a + b == 0) {
-	c = 4.30;
-} else c = -1;

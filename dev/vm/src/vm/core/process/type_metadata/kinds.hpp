@@ -1,8 +1,0 @@
-#include "definitions.hpp"
-#include "kinds/primitive.hpp"
-#include "kinds/pointer.hpp"
-#include "kinds/static_table.hpp"
-#include "kinds/dynamic_table.hpp"
-#include "kinds/data.hpp"
-#include "kinds/variant.hpp"
-#include "kinds/function.hpp"

@@ -1,5 +1,0 @@
-import helios_testing as ht;
-
-const a: i32 = 2;
-const b: i32 = 123 + ht.z;
-

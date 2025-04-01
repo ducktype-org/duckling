@@ -1,5 +1,0 @@
-
-
-struct aaa: bbb(x) {
-	a + b;
-}

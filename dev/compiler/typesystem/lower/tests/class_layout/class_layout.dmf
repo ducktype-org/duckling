@@ -1,5 +1,0 @@
-class MyClass {
-    a: i8;
-    b: f16;
-    c: f64;
-}

@@ -1,3 +1,0 @@
-for(a: T, U in x.b(c + d, w)){
-    print(a);
-}
