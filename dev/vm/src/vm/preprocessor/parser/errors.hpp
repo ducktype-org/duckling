@@ -1,3 +1,4 @@
+#pragma once
 #include <diagnostic/message.hpp>
 
 #include <base/str_utils.hpp>

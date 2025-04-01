@@ -2,20 +2,23 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
+
 #include <base64.hpp>
+
+#include <base/define_helper.hpp>  // This is included to allow for pushing and popping of diagnostics
 
 #include <iostream>
 
-// This is included to allow for pushing and popping of diagnostics
-#include <base/define_helper.hpp>
-
-PUSH_DIAGNOSTIC
+PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
-POP_DIAGNOSTIC
+POP_DIAGNOSTIC;
 
-// Our code is included after crow because there were some weird errors if pst was included earlier.
+#include "export_keywords.hpp"
+#include "semantic_tokens.hpp"
+#include "utils.hpp"
+
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
@@ -23,11 +26,6 @@ POP_DIAGNOSTIC
 
 #include <base/int_conv.hpp>
 #include <base/variant.hpp>
-
-// vm includes:
-#include "export_keywords.hpp"
-#include "semantic_tokens.hpp"
-#include "utils.hpp"
 
 #include <vm/cli.hpp>
 #include <vm/config.hpp>

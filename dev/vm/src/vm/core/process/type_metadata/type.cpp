@@ -9,7 +9,6 @@
 #include <vm/core/supervisor/supervisor.hpp>
 
 #include <algorithm>
-#include <ranges>
 #include <utility>
 
 namespace vm {

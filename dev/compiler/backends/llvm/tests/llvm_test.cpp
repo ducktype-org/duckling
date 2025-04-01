@@ -3,7 +3,7 @@
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 

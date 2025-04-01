@@ -175,7 +175,7 @@ namespace tsh {
 		 * @return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::detail::ContextType& context) const;
+		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
 
 		/**
 		 * @brief Get the text representation of this type.

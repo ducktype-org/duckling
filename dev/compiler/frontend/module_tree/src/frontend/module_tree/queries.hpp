@@ -1,14 +1,13 @@
 #pragma once
 
+#include "module_tree.hpp"  // @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
+
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
 #include <query_framework/query_int.hpp>
 
 #include <base/maps.hpp>
 #include <base/ref.hpp>
-
-// @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
-#include "module_tree.hpp"
 
 namespace compiler::frontend {
 

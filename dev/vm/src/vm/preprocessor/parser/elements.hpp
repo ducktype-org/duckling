@@ -18,9 +18,6 @@
 #include <vm/code/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-#include <utility>
-#include <vector>
-
 namespace vm::parser {
 
 	class F8ParserState final: public tpc::ParserState {

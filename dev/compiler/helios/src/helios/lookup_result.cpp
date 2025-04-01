@@ -3,7 +3,7 @@
 #include "helios_errors.hpp"
 
 #include <helios/symbols/symbols.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 
 #include <base/exceptions.hpp>
 
@@ -65,7 +65,9 @@ namespace compiler::helios {
 		);
 	}
 
-	NestedResult LookupResult::toNode(SymID node) const { return { node, { leaves, children } }; }
+	NestedResult LookupResult::toNode(SymID node) const {
+		return { node, { .leaves = leaves, .children = children } };
+	}
 
 	errors::HResult<SymbolList, errors::Failed>
 		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list) {

@@ -11,7 +11,6 @@
 #include <vm/code/instructions.hpp>
 
 #include <type_traits>
-#include <unordered_map>
 
 /**
  * Opcodes names conventions:

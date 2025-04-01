@@ -124,6 +124,8 @@ namespace compiler::mir {
 			output << ", Type: ";
 			output << this->type.toString();
 			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
+			if (parameter_index.has_value())
+				output << ", Parameter Index: " << parameter_index.value();
 		}
 	}
 
