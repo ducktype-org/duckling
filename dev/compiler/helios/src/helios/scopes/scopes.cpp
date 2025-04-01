@@ -301,11 +301,59 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
-		static auto provide(Context&, QKey) -> PResult {
-			std::vector<ScopeID> out;
+		/**
+		 * @brief Gets scopes for a module.
+		 */
+		struct ScopeGrabVisitor final: pst::PstVisitorPanicky {
+			ScopeGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+
+			base::Optional<std::vector<ScopeID>> out;
+			Context&                             ctx;
+			const QKey&                          key;
+
+			template<class T>
+			ScopeID scopeOf(pst::Access<T> element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(element);
+			}
+
+			template<class... Args>
+			void output(Args&&... args) {
+				this->out.emplace(std::forward<Args>(args)...);
+			}
+
 			// @TODO
-			// write a proper visitor and traverse PST to get all scopes
-			return out;
+			// Which elements define new scpoes?
+			void visitNamespace(pst::Access<pst::Namespace> element) override {
+				output(scopeOf(element));
+			}
+
+			void visitFun(pst::Access<pst::Fun> element) override { output(scopeOf(element)); }
+		};
+
+		static auto getScopes(Context& ctx, QKey key, frontend::FileID file) -> PResult {
+			ScopeGrabVisitor scope_grab(ctx, key);
+
+			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
+			root->acceptVisitor(scope_grab);
+
+			return std::move(scope_grab.out.value());
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<ScopeID> output;
+
+			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
+
+			for (auto file: source_files) {
+				auto scopes = getScopes(ctx, key, file);
+				output.insert(output.end(), scopes.begin(), scopes.end());
+			}
+
+			// validate output:
+			for (auto scope: output)
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
+
+			return output;
 		}
 
 		QUERY_AUTO_CACHE_REF
