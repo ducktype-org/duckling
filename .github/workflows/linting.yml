@@ -45,8 +45,8 @@ jobs:
           # according to the cpp-linter action docs.
 
           # Enable to let linter post requested format changes in PR thread:
-          format-review: true
-          thread-comments: true
+          # format-review: true
+          # thread-comments: true
 
           # The following value will only update a single comment
           # in a pull request's thread. Set it to false to disable the comment.
