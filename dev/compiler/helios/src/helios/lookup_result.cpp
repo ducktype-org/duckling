@@ -1,4 +1,5 @@
 #include "lookup_result.hpp"
+
 #include "helios_errors.hpp"
 
 #include <helios/symbols/symbols.hpp>

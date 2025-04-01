@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include "context.hpp"
 #include "detail/acd.hpp"
 #include "detail/dep_graph.hpp"
 #include "detail/logs.hpp"
@@ -11,8 +12,6 @@
 #include "detail/query_id_provider.hpp"  // IWYU pragma: export
 #include "query_cache_macros.hpp"        // IWYU pragma: export
 #include "query_int.hpp"
-
-#include "context.hpp"
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
