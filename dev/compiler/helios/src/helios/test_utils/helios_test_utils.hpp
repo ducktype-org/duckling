@@ -5,8 +5,7 @@
 
 #include <vector>
 
-// @todo relax this dependency, just expr is needed (#404)
-#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/expr.hpp> // @todo relax this dependency, just expr is needed (#404)
 
 namespace compiler::helios::test_utils {
 	/**
