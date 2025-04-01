@@ -148,7 +148,7 @@ namespace pst {
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
-		CLASS_STMT_PARSE(CopyConstructor);
+		CLASS_STMT_PARSE(CopyConstructor)
 
 		~CopyConstructor() override = default;
 		void dprint(std::ostream& out) const final;

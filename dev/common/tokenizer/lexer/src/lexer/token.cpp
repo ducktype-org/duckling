@@ -179,7 +179,7 @@ namespace lexer {
 		return isOperatorSymbol()
 		    || (isKeyword()
 		        && lang_def::keywordFlags(asKeyword())
-		               .contains(lang_def::KeywordFlagsOptions::IS_GEN_PREFIX_OP));
+		               .contains(lang_def::KeywordFlagsOptions::IsGenPrefixOp));
 	}
 
 	NamedOperator Token::asNamedOperator() const {

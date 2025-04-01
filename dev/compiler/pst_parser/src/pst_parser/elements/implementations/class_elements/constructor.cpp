@@ -11,7 +11,7 @@ namespace pst {
 		state.parse(out).eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
-			out->kind = tpc::Identifier{ base::StrID("create") };
+			out->kind = tpc::Identifier{ .value = base::StrID("create") };
 		else {
 			tpc::Identifier ident;
 			state.parse(out).all(NamedOperator::Period, &ident);
