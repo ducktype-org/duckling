@@ -3,6 +3,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/variant.hpp>
 

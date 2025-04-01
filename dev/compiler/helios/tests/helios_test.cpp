@@ -8,6 +8,7 @@
 #include <helios/queries.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <query_framework/context.hpp>

@@ -1,3 +1,4 @@
+#include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
