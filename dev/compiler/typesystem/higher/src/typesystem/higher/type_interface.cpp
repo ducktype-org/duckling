@@ -1,8 +1,10 @@
 #include "type_interface.hpp"
+
 #include "queries.hpp"
 
 #include <helios/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
+
 #include <base/optional.hpp>
 
 namespace tsh {

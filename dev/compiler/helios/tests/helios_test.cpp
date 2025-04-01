@@ -8,17 +8,9 @@
 #include <helios/queries.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
-#include <helios/queries.hpp>
-#include <helios/hout/elements.hpp>
-#include <helios/hout/visitors.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/context.hpp>
-#include <tester/tester.hpp>
-#include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <query_framework/utils/with_context_do.hpp>

@@ -6,6 +6,7 @@
 #include "expr.hpp"
 
 #include "../visitors.hpp"
+
 #include <query_framework/context.hpp>
 
 namespace compiler::helios::code {

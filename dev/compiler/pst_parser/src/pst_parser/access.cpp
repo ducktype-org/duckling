@@ -1,4 +1,5 @@
 #include "access.hpp"
+
 #include <query_framework/context.hpp>
 
 namespace pst::detail {

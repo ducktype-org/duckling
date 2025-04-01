@@ -4,28 +4,18 @@
  */
 #pragma once
 
-#include <utility>
-#include <type_traits>  // IWYU pragma: export
-#include <base/optional.hpp>
-#include <base/str_utils.hpp>
-#include <base/defer.hpp>
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
-
-#include <base/defer.hpp>
-#include <base/exceptions.hpp>
-#include <base/maps.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/str_utils.hpp>
-
-#include <type_traits>  // IWYU pragma: export
-#include <utility>
-
 #include "context.hpp"
+
+#include <base/defer.hpp>
+#include <base/exceptions.hpp>
+#include <base/maps.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/str_utils.hpp>
+
+#include <type_traits>  // IWYU pragma: export
+#include <utility>
 
 namespace query::detail {
 	/**

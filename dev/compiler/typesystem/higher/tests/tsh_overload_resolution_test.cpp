@@ -1,6 +1,6 @@
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <query_framework/query_entry_point.hpp>
 #include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 
