@@ -3,8 +3,8 @@
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  // For logger only, @TODO relax it #404
 
 #include <base/defer.hpp>
 

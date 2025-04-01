@@ -11,8 +11,8 @@
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
