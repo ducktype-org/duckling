@@ -1,4 +1,6 @@
 
+@TODO this PR: add tests based on this
+
 fun goo() -> i64 = {
     return 2;
 }
