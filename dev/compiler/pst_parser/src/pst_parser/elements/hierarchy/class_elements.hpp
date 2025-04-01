@@ -74,7 +74,7 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		std::variant<tpc::Identifier, Keyword> kind;  ///< What is after the `.`
+		std::variant<tpc::Identifier, Keyword> kind;  ///< What is after the `.`, It may be a keyword in some cases(for now it's only the move constructor)
 
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);

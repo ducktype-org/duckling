@@ -7,7 +7,6 @@
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <utility>
-#include <set>
 #include <algorithm>
 #include <unicode/uchar.h>
 
