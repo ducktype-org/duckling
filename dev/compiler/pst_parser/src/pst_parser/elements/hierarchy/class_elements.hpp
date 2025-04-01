@@ -1,9 +1,9 @@
 #pragma once
 
-#include <base/variant.hpp>
-
 #include "declarations.hpp"
 #include "not_statements.hpp"
+
+#include <base/variant.hpp>
 
 namespace pst {
 #define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                        \
