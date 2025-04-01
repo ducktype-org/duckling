@@ -462,5 +462,4 @@ namespace compiler::backend_llvm {
 		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
 	}
-
 }
