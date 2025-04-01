@@ -18,15 +18,14 @@ namespace base::extend {
 
 namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
-
-	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
-		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
-	}
 	
 	Module Module::fromIRCode(std::string_view llvm_ir_code) {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
+	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
+		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
+	}
 
 	base::OkBad Module::verify() const {
 		std::cerr << "LLVMVerification: \n";
