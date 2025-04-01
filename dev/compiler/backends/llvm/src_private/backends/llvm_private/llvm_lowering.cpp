@@ -132,19 +132,26 @@ namespace compiler::backend_llvm {
 	}
 
 	/**
-	 * Adds a function prototype with external linkage to the module.
-	 * If the function already exists in the module does nothing.
+	 * Gets a function from a module by mangled name.
+	 * 
+	 * If the function doesn't exits it adds a function prototype with
+	 * external linkage to the module based on provided lir_functions.
+	 *
 	 * @note We use it to add all functions to the module currently.
 	 * This will have to change in the future, but it will require some restructuring
 	 * of how we are creating llvm modules, as we need to know what function in local to which
 	 * module.
-	 * @note It detects if function are "the same" based on mangled name only.
 	 */
-	auto addOrInsertFunctionPrototypeFromLirFunction(
+	 llvm::FunctionCallee addOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
-		auto& context = module->getContext();
 		// @TODO: work here on mangled name instead #510
+		
+		// We check if function exist first, to avoid unnecessary construction of types:
+		if (auto func = module->getFunction(lir_function.name.strView()))
+			return func;
+
+		auto& context = module->getContext();
 
 		return module->getOrInsertFunction(
 			lir_function.name.strView(),
@@ -152,12 +159,22 @@ namespace compiler::backend_llvm {
 		);
 	}
 
-	auto addOrInsertFunctionPrototypeFromSymID(
+	/**
+	 * Same as addOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
+	 */
+	llvm::FunctionCallee addOrInsertFunctionPrototypeFromSymID(
 		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
 	) {
+		// @TODO: work here on mangled name instead #510
+		
 		auto& context = module->getContext();
-		auto  types   = getParameterAndResultFromSymID(ctx, sym_id);
 		auto  name    = compiler::helios::name(sym_id);
+
+		// We check if function exist first, to avoid unnecessary construction of types:
+		if (auto func = module->getFunction(name.strView()))
+			return func;
+
+		auto  types   = getParameterAndResultFromSymID(ctx, sym_id);
 		return module->getOrInsertFunction(
 			name.strView(), getFunType(context, types.parameters, types.result_type)
 		);
@@ -238,6 +255,9 @@ namespace compiler::backend_llvm {
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
+
+				// If local is a parameter we initialize it from
+				// llvm parameter:
 				if_opt_some(var->parameter_index, parameter_index) {
 					locals_builder.CreateStore(
 						fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg
