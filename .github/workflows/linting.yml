@@ -44,7 +44,7 @@ jobs:
           # Note that tidy-checks: '', means it uses .clang-tidy file
           # according to the cpp-linter action docs.
 
-          Enable to let linter post requested format changes in PR thread:
+          # Enable to let linter post requested format changes in PR thread:
           format-review: true
           thread-comments: true
 
