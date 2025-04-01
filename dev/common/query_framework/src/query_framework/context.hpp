@@ -7,13 +7,12 @@
 #include "context_fd.hpp"  // IWYU pragma: keep
 #include "detail/dep_graph.hpp"
 #include "detail/node_id.hpp"
-#include "detail/node_making.hpp"  // IWYU pragma: export
+#include "detail/node_making.hpp" // IWYU pragma: export
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 
 #include <base/defer.hpp>
-#include <base/ref.hpp>
 
 namespace query {
 
