@@ -1,7 +1,8 @@
 #pragma once
 
-#include <array>
 #include <unicode/uniset.h>
+
+#include <array>
 
 namespace lexer {
 

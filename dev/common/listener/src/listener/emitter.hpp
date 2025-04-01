@@ -1,11 +1,13 @@
 #pragma once
 
-#include <base/ints.hpp>
-#include <set>
-#include <queue>
-#include <concepts>
-#include <base/ref.hpp>
 #include "listener.hpp"
+
+#include <base/ints.hpp>
+#include <base/ref.hpp>
+
+#include <concepts>
+#include <queue>
+#include <set>
 
 /**
  * @brief Class for emitting a target `Event`.

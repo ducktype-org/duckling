@@ -4,17 +4,14 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
+#include <helios/queries.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-
 #include <tester/tester.hpp>
-
-#include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/queries.cpp>
-
-#include <mir/mir_lowering/mir_lowering.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;

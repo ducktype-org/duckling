@@ -1,5 +1,6 @@
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
 #include <base/defer.hpp>
 
 class DeferTest: public tester::TestSuite {

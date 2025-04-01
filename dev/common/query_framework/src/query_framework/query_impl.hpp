@@ -4,27 +4,27 @@
  */
 #pragma once
 
-#include <utility>
-#include <type_traits>  // IWYU pragma: export
-#include <base/optional.hpp>
-#include <base/str_utils.hpp>
-#include <base/defer.hpp>
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
+#include "detail/acd.hpp"
+#include "detail/dep_graph.hpp"
+#include "detail/logs.hpp"
+#include "detail/node_making.hpp"
+#include "detail/query_id_provider.hpp"  // IWYU pragma: export
+#include "query_cache_macros.hpp"        // IWYU pragma: export
+#include "query_int.hpp"
+
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
 
-#include "query_int.hpp"
+#include <base/defer.hpp>
+#include <base/exceptions.hpp>
+#include <base/maps.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/str_utils.hpp>
 
-#include "detail/acd.hpp"
-#include "detail/dep_graph.hpp"
-#include "detail/query_id_provider.hpp"  // IWYU pragma: export
-#include "detail/logs.hpp"
-#include "detail/node_making.hpp"
-
-#include "query_cache_macros.hpp"  // IWYU pragma: export
+#include <type_traits>  // IWYU pragma: export
+#include <utility>
 
 namespace query::detail {
 	/**

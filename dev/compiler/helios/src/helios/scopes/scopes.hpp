@@ -18,18 +18,17 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
-#include <query_framework/query_int.hpp>
-#include <base/perfect_hash.hpp>
-#include <pst_parser/elements/elements.hpp>
-#include <pst_parser/lang_parser_state.hpp>
-#include <pst_parser/generic_query_key.hpp>
-
-#include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
+#include "../scope_symbol_id.hpp"
 
-// @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/queries.hpp>  // @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
+#include <pst_parser/elements/elements.hpp>
+#include <pst_parser/generic_query_key.hpp>
+#include <pst_parser/lang_parser_state.hpp>
+#include <query_framework/query_int.hpp>
+
+#include <base/perfect_hash.hpp>
+#include <base/string_id.hpp>
 
 namespace compiler::helios {
 	/**

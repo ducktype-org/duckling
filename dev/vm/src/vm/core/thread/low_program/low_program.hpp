@@ -4,7 +4,9 @@
 #pragma once
 
 #include "instruction.hpp"
+
 #include <base/stable_hashmap.hpp>
+
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::low {
