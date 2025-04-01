@@ -1,6 +1,6 @@
-#include "preamble.hpp"
-#include "../../hierarchy/statements.hpp"
 #include "../../hierarchy/declarations.hpp"
+#include "../../hierarchy/statements.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 

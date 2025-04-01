@@ -6,8 +6,8 @@
  */
 #pragma once
 
-#include "strongly_typed_int.hpp"
 #include "ints.hpp"
+#include "strongly_typed_int.hpp"
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bits, usize);
 

@@ -5,11 +5,14 @@
  */
 
 #include "mir_lowering.hpp"
-#include <helios/hout/elements/expr.hpp>
+
 #include "mir_lifetimes.hpp"
-#include <query_framework/query_impl.hpp>
+
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <query_framework/query_impl.hpp>
+
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 

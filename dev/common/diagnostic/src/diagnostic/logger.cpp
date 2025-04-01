@@ -1,8 +1,9 @@
 #include "logger.hpp"
+
 #include "diagnostic_converters.hpp"
 
-#include <ranges>
 #include <algorithm>
+#include <ranges>
 
 namespace dia {
 

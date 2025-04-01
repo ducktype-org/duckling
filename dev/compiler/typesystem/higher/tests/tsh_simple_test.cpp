@@ -1,4 +1,5 @@
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 

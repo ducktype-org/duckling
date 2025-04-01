@@ -4,7 +4,9 @@
 #include <base/exceptions.hpp>
 
 #include <helios/symbols/symbols.hpp>
-#include "helios_errors.hpp"
+#include <query_framework/query_impl.hpp>
+
+#include <base/exceptions.hpp>
 
 namespace compiler::helios {
 

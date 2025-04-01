@@ -1,3 +1,9 @@
+#include <helios/test_utils/helios_test_utils.hpp>
+#include <query_framework/query_impl.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
+#include <typesystem/higher/queries.hpp>
+#include <typesystem/higher/type_interface.hpp>
 #include <typesystem/lower/all.hpp>
 
 #include <base/variant.hpp>

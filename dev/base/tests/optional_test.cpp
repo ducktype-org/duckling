@@ -4,6 +4,7 @@
  */
 
 #include <tester/tester.hpp>
+
 #include <base/optional.hpp>
 
 using base::Optional;

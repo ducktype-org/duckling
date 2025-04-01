@@ -1,9 +1,13 @@
 #include "type.hpp"
-#include <base/exceptions.hpp>
+
 #include "type_metadata.hpp"
-#include <vm/core/supervisor/supervisor.hpp>
-#include <base/variant.hpp>
+
 #include <base/defer.hpp>
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+
+#include <vm/core/supervisor/supervisor.hpp>
+
 #include <utility>
 
 namespace vm {

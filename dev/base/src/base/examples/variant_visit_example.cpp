@@ -1,4 +1,5 @@
 #include <base/variant.hpp>
+
 #include <iostream>
 
 int main() {

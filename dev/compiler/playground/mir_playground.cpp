@@ -1,8 +1,9 @@
-#include <lexer/lexer.hpp>
+#include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <clap/clap.hpp>
-#include <iostream>
+#include <init/init.hpp>
+#include <lexer/lexer.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/context.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>

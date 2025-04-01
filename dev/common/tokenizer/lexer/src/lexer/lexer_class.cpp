@@ -1,8 +1,9 @@
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
+#include "lexer_class.hpp"
 
 #include "classifications.hpp"
-#include "lexer_class.hpp"
+
+#include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 
 namespace lexer {
 	bool Lexer::token_messages = false;

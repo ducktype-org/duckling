@@ -1,11 +1,16 @@
-#include <vm/api/api.hpp>
 #include "cli.hpp"
+
 #include "api/data/api_error.hpp"
+
+#include <json/json.hpp>
+
+#include <base/variant.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <base/variant.hpp>
+
 #include <iostream>
-#include <json/json.hpp>
 #include <variant>
 
 std::string convertError(const vm::api::ApiError& api_error) {

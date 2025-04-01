@@ -2,8 +2,8 @@
 
 #include <token_file/file.hpp>
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace dia {
 	/**

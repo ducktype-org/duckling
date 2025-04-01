@@ -1,9 +1,10 @@
 #include "helios_test_utils.hpp"
 
+#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements/query_hout_of_expr.hpp>
+
 #include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {

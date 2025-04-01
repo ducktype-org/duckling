@@ -7,6 +7,7 @@
 
 #include "box.hpp"
 #include "maps.hpp"
+
 #include <type_traits>
 
 namespace base {

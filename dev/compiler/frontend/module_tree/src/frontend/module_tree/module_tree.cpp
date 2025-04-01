@@ -5,11 +5,12 @@
 
 #include "module_tree.hpp"
 
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
+#include "queries.hpp"
+
 #include <query_framework/query_impl.hpp>
 
-#include "queries.hpp"
+#include <base/maps.hpp>
+#include <base/stable_hashmap.hpp>
 
 using fs::FsTree;
 using std::regex;
