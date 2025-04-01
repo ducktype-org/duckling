@@ -1,0 +1,75 @@
+{
+    "metadata": {
+        "type": "error",
+        "family": "type_check",
+        "name": "no_match_2op",
+        "code": "1001",
+        "active_from": "0.0.1",
+        "active_until": "now"
+    },
+    "header_message": [
+        "no matching `",
+        { "param": "operator" },
+        "` operator for types `",
+        { "param": "left_type" },
+        "`",
+        { "macro": "opt_expanded_left_type" },
+        " and `",
+        { "param": "right_type" },
+        "`",
+        { "macro": "opt_expanded_right_type" }
+    ],
+    "pointer_messages": {
+        "cause": ["used here"]
+    },
+    "params": {
+        "operator": {
+            "description": "The operator which does not match."
+        },
+        "left_type": {
+            "description": "Type of the left operand."
+        },
+        "right_type": {
+            "description": "Type of the right operand."
+        },
+        "is_static": {
+            "description": "Whether the error is displayed in a static message."
+        },
+        "expanded_left_type": {
+            "description": "Expanded type of the left operand.",
+            "optional": true
+        },
+        "expanded_right_type": {
+            "description": "Expanded type of the right operand.",
+            "optional": true
+        }
+    },
+    "macros": {
+        "opt_expanded_left_type": [
+            {
+                "case": { "param": "is_static" },
+                "of": {
+                    "true": [
+                        " (`",
+                        { "param": "expanded_left_type" },
+                        "`)"
+                    ],
+                    "[other]": []
+                }
+            }
+        ],
+        "opt_expanded_right_type": [
+            {
+                "case": { "param": "is_static" },
+                "of": {
+                    "true": [
+                        " (`",
+                        { "param": "expanded_right_type" },
+                        "`)"
+                    ],
+                    "[other]": []
+                }
+            }
+        ]
+    }
+}

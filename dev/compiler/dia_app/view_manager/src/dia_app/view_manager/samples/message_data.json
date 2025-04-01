@@ -1,0 +1,13 @@
+{
+    "metadata": {
+        "type": "error",
+        "family": "type_check",
+        "name": "no_match_2op"
+    },
+    "params": {
+        "operator": "+",
+        "left_type": { "symbol": "28" },
+        "right_type": { "symbol": "26" },
+        "is_static": "false"
+    }
+}
