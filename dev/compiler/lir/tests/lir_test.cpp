@@ -4,7 +4,7 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include <helios/queries.cpp>
+#include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
