@@ -5,10 +5,11 @@
  */
 #pragma once
 
-#include "ints.hpp"
-#include <compare>
-#include <sstream>
-#include "stringifyable_enum.hpp"
+#include "ints.hpp"                // IWYU pragma: export
+#include "stringifyable_enum.hpp"  // IWYU pragma: export
+
+#include <compare>                 // IWYU pragma: export
+#include <sstream>                 // IWYU pragma: export
 
 #define MAKE_FLAG_TYPE(namespace_name, enum_name, flag_name, ...)                              \
 	MAKE_STRINGIFYABLE_ENUM(namespace_name, u32, enum_name, __VA_ARGS__)                       \
@@ -70,7 +71,7 @@
 			[[nodiscard]]                                                                      \
 			std::string toString(bool in_brackets = false) const {                             \
 				std::stringstream ss;                                                          \
-				std::string       separator;                                                   \
+				std::string_view  separator = "";                                              \
                                                                                                \
 				if (in_brackets) ss << "[";                                                    \
 				for (int i = 0; i < static_cast<u32>(enum_name::COUNT); i++) {                 \

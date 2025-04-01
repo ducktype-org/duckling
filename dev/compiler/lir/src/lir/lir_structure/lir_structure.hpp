@@ -1,13 +1,13 @@
 #pragma once
 
-#include <typesystem/lower/type_layout.hpp>
-#include <base/stable_container.hpp>
-#include <base/stringifyable_enum.hpp>
-#include <base/ok_bad.hpp>
+#include "function_forward.hpp"
 
 #include <mir/mir_structure/mir_local_ref.hpp>
+#include <typesystem/lower/type_layout.hpp>
 
-#include "function_forward.hpp"
+#include <base/ok_bad.hpp>
+#include <base/stable_container.hpp>
+#include <base/stringifyable_enum.hpp>
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -125,12 +125,16 @@ namespace compiler::lir {
 		tsl::TypeLayout layout;
 
 		/**
-		 * @brief Index of the parameter in the function, if this is a function argument.
+		 * @brief Index of the parameter in the function, if this is a function parameter.
 		 */
 		base::Optional<u64> parameter_index;
 
 	private:
-		LirLocal(const base::Optional<helios::SymID> helios_id, tsl::TypeLayout layout, base::Optional<u64> parameter_index):
+		LirLocal(
+			const base::Optional<helios::SymID> helios_id,
+			tsl::TypeLayout                     layout,
+			base::Optional<u64>                 parameter_index
+		):
 			  helios_id(helios_id),
 			  layout(std::move(layout)),
 			  parameter_index(parameter_index) {}
@@ -198,7 +202,7 @@ namespace compiler::lir {
 		// @TODO: is this name mangled somehow:?
 		base::StrID name;
 
-		tsl::TypeLayout return_type_layout;
+		tsl::TypeLayout              return_type_layout;
 		std::vector<tsl::TypeLayout> parameter_layouts;
 
 		base::StableVector<Block>    blocks;
@@ -219,7 +223,7 @@ namespace compiler::lir {
 		 */
 		[[nodiscard]]
 		base::OkBad validateParameters() const;
-		
+
 		void debugPrint(query::Context&, std::ostream& output) const;
 
 		/**

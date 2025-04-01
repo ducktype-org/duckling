@@ -5,8 +5,10 @@
  */
 #pragma once
 
-#include <vm/config.hpp>
 #include <base/ints.hpp>
+
+#include <vm/config.hpp>
+
 #include <array>
 
 // #define USE_COMPACT_INSTRUCTION

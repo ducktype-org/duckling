@@ -1,16 +1,16 @@
 #pragma once
 
-#include <type_traits>
-#include <concepts>
-#include <utility>
-#include <ranges>
-#include <array>
-#include <tuple>
-#include <span>
-#include <bit>
-
-#include <base/type_traits.hpp>
 #include <base/ints.hpp>
+#include <base/type_traits.hpp>
+
+#include <array>
+#include <bit>
+#include <concepts>
+#include <ranges>
+#include <span>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 
 namespace hashing {
 

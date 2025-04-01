@@ -1,13 +1,13 @@
-#include <base/exceptions.hpp>
-#include <tester/tester.hpp>
-
-#include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>
+#include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
+
+#include <base/exceptions.hpp>
 
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS

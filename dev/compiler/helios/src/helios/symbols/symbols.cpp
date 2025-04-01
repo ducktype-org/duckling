@@ -1,24 +1,22 @@
 #include "symbols.hpp"
 
-#include <vector>
-
-#include <base/exceptions.hpp>
-#include <base/string_id.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/stable_container.hpp>
-#include <base/variant.hpp>
-#include <base/optional.hpp>
-
-#include <query_framework/query_impl.hpp>
+#include <helios/comp_time/int_eval.hpp>
+#include <helios/comp_time/type_eval.hpp>
 #include <pst_parser/elements/elements.hpp>
-#include <pst_parser/pst_visitor.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <helios/comp_time/type_eval.hpp>
-#include <helios/comp_time/int_eval.hpp>
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/string_id.hpp>
+#include <base/variant.hpp>
+
+#include <vector>
 
 namespace compiler::helios {
 	/**
@@ -150,7 +148,7 @@ namespace compiler::helios {
 		 * Panics if element is not a statement or if symbol is not associated with PST element.
 		 */
 		[[nodiscard]]
-		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::detail::ContextType& ctx) const {
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
 			return getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
 		}
 	};

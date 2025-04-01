@@ -7,9 +7,11 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include <base/string_id.hpp>
-#include <typesystem/higher/types.hpp>
+
 #include <query_framework/query_int.hpp>
+#include <typesystem/higher/types.hpp>
+
+#include <base/string_id.hpp>
 
 #include <memory>
 #include <vector>

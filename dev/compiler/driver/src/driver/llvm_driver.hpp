@@ -1,7 +1,7 @@
 #pragma once
 
 #include <base/string_id.hpp>
-#include <query_framework/query_impl.hpp> // @TODO #404 relax it to just context
+#include <query_framework/context_fd.hpp>
  
 #include "driver.hpp"
 

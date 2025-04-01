@@ -1,10 +1,11 @@
 #pragma once
 
 #include <lir/lir_structure/function_forward.hpp>
+
 #include <base/box.hpp>
-#include <base/string_id.hpp>
-#include <query_framework/query_impl.hpp> // @TODO #404 relax it to just context
 #include <base/ok_bad.hpp>
+#include <base/string_id.hpp>
+#include <query_framework/context_fd.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;

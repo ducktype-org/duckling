@@ -1,4 +1,5 @@
 #include <base/strongly_typed_int.hpp>
+
 #include <iostream>
 
 STRONG_TYPEDEF_INT(MyInt, int);

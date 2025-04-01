@@ -2,12 +2,13 @@
  * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
-#include <iostream>
 #include <clap/clap.hpp>
-#include <clap/param_builder.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/help_message_generator.hpp>
+#include <clap/param_builder.hpp>
 #include <printer/stream_printer.hpp>
+
+#include <iostream>
 
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello " << name << "!\n"; }
 

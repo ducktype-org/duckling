@@ -1,22 +1,62 @@
 #include "queries.hpp"
 
+#include "hout/elements.hpp"
+#include "scopes/scopes.hpp"
+#include "symbols/symbols.hpp"
+
+#include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <base/stable_hashmap.hpp>
-#include <pst_parser/pst_visitor.hpp>
-
 #include <base/exceptions.hpp>
-#include "scopes/scopes.hpp"
-#include "hout/elements.hpp"
-
-#include "symbols/symbols.hpp"
+#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 
+	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto scopes = ctx.query<QueryScopesInModule>(key);
+
+			HOUTUnit out;
+			for (auto scope: *scopes) {
+				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				for (auto sym: *symbols_in_scope) {
+					// grab constants:
+					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					// grab functions:
+					if (kind(sym) == SymbolKind::Function)
+						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+				}
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
+
+	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, std::vector<HOUTUnit>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key) };
+
+			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
+			for (auto submodule: *submodules) {
+				// @TODO optimize multiple concatenations
+				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
+				for (const auto& i: submodule_hout) out.push_back(i);
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUTRecursively);
+
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// go over all to level symbols and get theirs hout
+			// go over all top level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
 
@@ -26,15 +66,13 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
-			// grab constants:
-			for (auto sym: *symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root) {
+				// grab constants:
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
-
-
-			// grab functions:
-			for (auto sym: *symbols_in_module_root)
+				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+			}
 
 			return out;
 		}

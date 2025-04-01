@@ -1,6 +1,9 @@
 #include "mir_structure.hpp"
-#include <base/variant.hpp>
+
 #include <helios/symbols/symbols.hpp>
+
+#include <base/variant.hpp>
+
 #include <sstream>
 
 namespace compiler::mir {
@@ -121,9 +124,8 @@ namespace compiler::mir {
 			output << ", Type: ";
 			output << this->type.toString();
 			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
-			if (parameter_index.has_value()) {
+			if (parameter_index.has_value())
 				output << ", Parameter Index: " << parameter_index.value();
-			}
 		}
 	}
 

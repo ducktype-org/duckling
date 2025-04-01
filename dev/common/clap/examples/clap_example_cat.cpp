@@ -4,6 +4,7 @@
 
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
+
 #include <iostream>
 
 void printFile(const fs::FilePath& file) {

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "driver.hpp"
+
 #include <base/box.hpp>
 #include <base/ref.hpp>
-
-#include "driver.hpp"
 
 namespace compiler::driver {
 

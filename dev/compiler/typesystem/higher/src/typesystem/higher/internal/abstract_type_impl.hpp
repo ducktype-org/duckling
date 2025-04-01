@@ -1,14 +1,13 @@
 #pragma once
 
-#include <utility>
-#include <vector>
-
-#include <query_framework/query_int.hpp>
-
 #include "../all.hpp"
 #include "queries.hpp"
 
 #include <helios/symbols/symbols.hpp>
+#include <query_framework/query_int.hpp>
+
+#include <utility>
+#include <vector>
 
 namespace tsh::internal {
 	/**
@@ -34,11 +33,6 @@ namespace tsh::internal {
 	 */
 	class AbstractTypeImpl {
 	public:
-		/**
-		 * @brief The Kind of the type described by an object of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::Any;
-
 		/**
 		 * @brief Gets the Kind of the type described by this object.
 		 * @return The Kind of the type described by this object.

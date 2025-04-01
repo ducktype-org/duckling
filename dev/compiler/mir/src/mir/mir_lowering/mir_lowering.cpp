@@ -5,25 +5,28 @@
  */
 
 #include "mir_lowering.hpp"
-#include <helios/hout/elements/expr.hpp>
+
 #include "mir_lifetimes.hpp"
-#include <query_framework/query_impl.hpp>
+
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <query_framework/query_impl.hpp>
+
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 
 namespace compiler::mir {
 
 	Function::Function(
-		base::StrID                  name,
-		tsh::SymbolType<>            return_type,
+		base::StrID                    name,
+		tsh::SymbolType<>              return_type,
 		std::vector<tsh::SymbolType<>> parameter_types,
-		std::vector<Block>           blocks,
-		base::StableVector<MirLocal> local_list,
-		BlockID                      entry_block,
-		helios::ScopeID              top_lifetime_scope,
-		helios::SymID                helios_id
+		std::vector<Block>             blocks,
+		base::StableVector<MirLocal>   local_list,
+		BlockID                        entry_block,
+		helios::ScopeID                top_lifetime_scope,
+		helios::SymID                  helios_id
 	):
 		  name(name),
 		  return_type(return_type),
@@ -109,7 +112,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagConstruct(LocalRef local) {
-		return { OperationFlag::Flag::Construct, local };
+		return { .flag = OperationFlag::Flag::Construct, .local = local };
 	}
 
 	/**
@@ -119,7 +122,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagDestruct(LocalRef local) {
-		return { OperationFlag::Flag::Destruct, local };
+		return { .flag = OperationFlag::Flag::Destruct, .local = local };
 	}
 
 	/**
@@ -129,7 +132,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagMove(LocalRef local) {
-		return { OperationFlag::Flag::Move, local };
+		return { .flag = OperationFlag::Flag::Move, .local = local };
 	}
 
 	/**
@@ -186,7 +189,11 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { .id = id, .instructions = std::move(instructions), .terminator = terminator.value() };
+			return {
+				.id           = id,
+				.instructions = std::move(instructions),
+				.terminator   = terminator.value(),
+			};
 		}
 
 		/**
@@ -268,9 +275,13 @@ namespace compiler::mir {
 			          .getType();
 
 			return Function{
-				name.value(),          function_type.getResultType(), function_type.getParameterTypes(),
-				        std::move(blocks),
-				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				name.value(),
+				function_type.getResultType(),
+				function_type.getParameterTypes(),
+				std::move(blocks),
+				std::move(local_list),
+				entry_block.value()->getID(),
+				top_lifetime_scope.value(),
 				helios_symbol,
 			};
 		}
@@ -285,6 +296,9 @@ namespace compiler::mir {
 			top_lifetime_scope.emplace(scope);
 		}
 
+		/**
+		 * Adds a local variable to MIR function, from helios_id representing it.
+		 */
 		LocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
@@ -296,7 +310,11 @@ namespace compiler::mir {
 			return local_list.getRef(key).value();
 		}
 
+		/**
+		 * Adds a local parameter variable to MIR function from helios_id representing it.
+		 */
 		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
+			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
@@ -340,6 +358,8 @@ namespace compiler::mir {
 			entry_block.emplace(block);
 		}
 
+		query::Context& getContext() { return ctx; }
+
 		/**
 		 * This is needed only for some assertins.
 		 */
@@ -347,9 +367,6 @@ namespace compiler::mir {
 		helios::SymID getHeliosSymbol() const {
 			return helios_symbol;
 		}
-
-		[[nodiscard]]
-		query::Context& getContext() { return ctx; }
 	};
 
 	/**
@@ -362,7 +379,8 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
 
 		/**
-		 * Helper function that recursively goes over the code block and collects all local variables.
+		 * Helper function that recursively goes over the code block and collects all local
+		 * variables.
 		 */
 		void goOverCodeBlock(const hc::CodeBlock& code_block) {
 			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
@@ -373,10 +391,13 @@ namespace compiler::mir {
 		 * FunctionBuilder.
 		 */
 		void collect(const helios::HOUTFunction& hout_function) {
-			CORE_ASSERT(hout_function.original_symbol == function.getHeliosSymbol(), "Bad function passed to LocalVarCollectionVisitor");
+			CORE_ASSERT(
+				hout_function.original_symbol == function.getHeliosSymbol(),
+				"Bad function passed to LocalVarCollectionVisitor"
+			);
 
 			u64 parameter_index = 0;
-			for (const auto& parameter:*hout_function.content.parameters) {
+			for (const auto& parameter: *hout_function.content.parameters) {
 				function.addParameter(parameter.helios_symbol, parameter_index);
 				parameter_index++;
 			}
@@ -387,9 +408,7 @@ namespace compiler::mir {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			goOverCodeBlock(stmt.body);
-		}
+		void visitIfStmt(const helios::code::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 

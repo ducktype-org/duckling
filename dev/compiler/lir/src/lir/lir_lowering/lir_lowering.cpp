@@ -12,12 +12,13 @@
  */
 
 #include "lir_lowering.hpp"
+
 #include "../lir_structure/lir_structure.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <typesystem/lower/queries.hpp>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -376,15 +377,15 @@ namespace compiler::lir {
 				std::vector<tsl::TypeLayout> parameter_types;
 				parameter_types.reserve(key.function->parameter_types.size());
 				for (const auto& param: key.function->parameter_types)
-				parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
 
 				return Function{
-					.name = key.function->name,
+					.name               = key.function->name,
 					.return_type_layout = return_type,
-					.parameter_layouts = std::move(parameter_types),
-					.blocks      = std::move(blocks),
-					.local_list  = std::move(locals),
-					.block_order = std::move(block_order),
+					.parameter_layouts  = std::move(parameter_types),
+					.blocks             = std::move(blocks),
+					.local_list         = std::move(locals),
+					.block_order        = std::move(block_order),
 				};
 			}
 		};

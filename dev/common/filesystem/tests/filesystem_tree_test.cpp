@@ -1,5 +1,5 @@
-#include <tester/tester.hpp>
 #include <filesystem/fs_tree.hpp>
+#include <tester/tester.hpp>
 
 class FileSystemFsTreeTest: public tester::TestSuite {
 #undef TESTER_CLASS

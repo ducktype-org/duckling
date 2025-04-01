@@ -1,4 +1,5 @@
 #include "lir_structure.hpp"
+
 #include <base/maps.hpp>
 
 namespace compiler::lir {
@@ -38,16 +39,20 @@ namespace compiler::lir {
 
 	base::OkBad Function::validateParameters() const {
 		std::set<u64> parameter_indexes;
+
 		for (const auto& local: local_list) {
 			if (local->parameter_index.has_value()) {
 				auto index = local->parameter_index.value();
 				if (parameter_indexes.contains(index)) return base::BAD;
-				
+
 				parameter_indexes.insert(index);
 				if (index >= parameter_layouts.size()) return base::BAD;
 				if (local->layout != parameter_layouts.at(index)) return base::BAD;
 			}
 		}
+
+		if (parameter_layouts.size() != parameter_indexes.size()) return base::BAD;
+
 		return base::OK;
 	}
 

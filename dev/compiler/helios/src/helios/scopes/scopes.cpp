@@ -1,23 +1,21 @@
 #include "scopes.hpp"
 
+#include "../lookup_result.hpp"
+#include "../pst_walkers.hpp"
+#include "../symbols/symbols.hpp"
+
+#include <frontend/module_tree/module_tree.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <pst_parser/lang_parser_state.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
+
+#include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
-#include <base/exceptions.hpp>
-
-#include <query_framework/query_impl.hpp>
-
-#include <frontend/module_tree/module_tree.hpp>
-#include <frontend/module_tree/queries.hpp>
-
-#include <pst_parser/lang_parser_state.hpp>
-#include <pst_parser/pst_visitor.hpp>
-
-#include "../lookup_result.hpp"
-#include "../pst_walkers.hpp"
-#include "../symbols/symbols.hpp"
 
 namespace compiler::helios {
 
@@ -299,6 +297,19 @@ namespace compiler::helios {
 		stmt.unlock(ctx)->acceptVisitor(visitor);
 		return visitor.out.value();
 	}
+
+	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
+		static auto provide(Context&, QKey) -> PResult {
+			std::vector<ScopeID> out;
+			// @TODO
+			// write a proper visitor and traverse PST to get all scopes
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_REF
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
 		/**

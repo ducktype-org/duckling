@@ -5,16 +5,14 @@
  */
 #pragma once
 
-#include <vector>
+#include "hout/elements/expr.hpp"
+#include "hout/hout.hpp"
+#include "scope_symbol_id.hpp"
 
+#include <frontend/module_tree/queries.hpp>  // @TODO: relax this dependency (#404)
 #include <query_framework/query_int.hpp>
 
-// @TODO: relax this dependency (#404)
-#include <frontend/module_tree/queries.hpp>
-
-#include "scope_symbol_id.hpp"
-#include "hout/hout.hpp"
-#include "hout/elements/expr.hpp"
+#include <vector>
 
 namespace compiler::helios {
 	// @FUTURE: perhaps we will need to add more granularity to HOUT generation for efficient
@@ -22,13 +20,11 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Query FULL HOUTUnit of single module
-	 * @note Not yet implemented
 	 */
-	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, const HOUTUnit&)
+	DECLARE_QUERY(QueryModuleHOUT, frontend::ModuleID, HOUTUnit)
 
 	/**
 	 * @brief Query HOUTUnit of module and all its submodules recursively
-	 * @note Not yet implemented
 	 */
 	DECLARE_QUERY(QueryModuleHOUTRecursively, frontend::ModuleID, std::vector<HOUTUnit>)
 

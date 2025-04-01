@@ -1,11 +1,12 @@
-#include <iostream>
-
-#include "llvm_includes/ir_verifier.hpp"
-#include "llvm_includes/filesystem.hpp"
-#include "llvm_lowering.hpp"
 #include "compile_llvm.hpp"
+#include "llvm_includes/filesystem.hpp"
+#include "llvm_includes/ir_verifier.hpp"
+#include "llvm_lowering.hpp"
 #include "module_impl.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
+
+#include <iostream>
 
 namespace base::extend {
 	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
