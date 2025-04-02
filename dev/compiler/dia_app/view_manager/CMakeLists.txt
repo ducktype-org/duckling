@@ -5,5 +5,5 @@ add_library(VIEW_MANAGER
 
 make_module(VIEW_MANAGER USES Common JSON)
 
-duck_add_test(compiler view_manager_test tests/tests.cpp
+duck_add_test(compiler view_manager tests/view_manager_test.cpp
 	USES Common JSON VIEW_MANAGER)
