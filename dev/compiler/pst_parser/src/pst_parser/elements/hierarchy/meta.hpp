@@ -72,6 +72,7 @@ namespace pst {
 		Method,
 		Field,
 		Constructor,
+		CopyConstructor,
 		Destructor,
 		AccessBlock,
 	};

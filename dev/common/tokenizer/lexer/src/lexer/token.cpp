@@ -171,12 +171,33 @@ namespace lexer {
 
 	Keyword Token::asKeyword() const { return lang_def::strAsKeyword(str_id); }
 
-	bool Token::isOperator() const { return type == Type::Operator; }
+	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
 
-	Operator Token::asOperator() const {
-		if (isOperator()) return { getValue() };
-		return { lang_def::NamedOperator::NotAnOperator };
+	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
+
+	bool Token::isPrefixOperator() const {
+		return isOperatorSymbol()
+		    || (isKeyword()
+		        && lang_def::keywordFlags(asKeyword())
+		               .contains(lang_def::KeywordFlagsOptions::IsGenPrefixOp));
 	}
+
+	NamedOperator Token::asNamedOperator() const {
+		if (isOperatorSymbol()) return Operator(getValue()).asNamed();
+		return lang_def::NamedOperator::NotAnOperator;
+	}
+
+	base::Optional<Operator> Token::asBinaryOperator() const {
+		if (isOperatorSymbolOrText()) return { { getValue() } };
+		return {};
+	}
+
+	base::Optional<Operator> Token::asPrefixOperator() const {
+		if (isPrefixOperator()) return { { getValue() } };
+		return {};
+	}
+
+	base::Optional<Operator> Token::asSuffixOperator() const { return asBinaryOperator(); }
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 

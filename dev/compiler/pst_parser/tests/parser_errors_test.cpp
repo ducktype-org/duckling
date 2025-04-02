@@ -101,6 +101,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
+	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
@@ -199,6 +200,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  new_operators{ "<> 3 <> 5 <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x + {return 2;}" };

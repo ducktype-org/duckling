@@ -17,6 +17,10 @@ class xxx extends aaa implements bbb, cccc {
 			x = c;
 		} 
 
+		xxx.copy() = {
+			x = 81;
+		}
+
 		xxx.abc() = {
 			x = 81;
 		}
