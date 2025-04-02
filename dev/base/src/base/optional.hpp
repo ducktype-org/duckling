@@ -75,6 +75,29 @@
 		for (auto&& _value_name = _internal_optional.value(); _perform_if; _perform_if = false) \
 	POP_DIAGNOSTIC
 
+#define opt_some_move(_value_name)                                                    \
+	PUSH_DIAGNOSTIC                                                                   \
+	NO_SHADOW                                                                         \
+	if (bool _perform_if = _internal_optional.has_value())                            \
+		for (auto&& _value_name = std::move(_internal_optional).value(); _perform_if; \
+		     _perform_if        = false)                                              \
+	POP_DIAGNOSTIC
+
+#define opt_err(_err_name)                                                                    \
+	PUSH_DIAGNOSTIC                                                                           \
+	NO_SHADOW                                                                                 \
+	if (bool _perform_if = !_internal_optional.has_value())                                   \
+		for (auto&& _err_name = _internal_optional.error(); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
+#define opt_err_move(_err_name)                                                     \
+	PUSH_DIAGNOSTIC                                                                 \
+	NO_SHADOW                                                                       \
+	if (bool _perform_if = !_internal_optional.has_value())                         \
+		for (auto&& _err_name = std::move(_internal_optional).error(); _perform_if; \
+		     _perform_if      = false)                                              \
+	POP_DIAGNOSTIC
+
 #define opt_none    \
 	PUSH_DIAGNOSTIC \
 	NO_SHADOW       \
@@ -284,6 +307,34 @@ namespace base {
 		[[nodiscard]]
 		constexpr T&& expect(std::string_view message) && {
 			if (!has_value()) CORE_PANIC(message);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
 			return std::move(value());
 		}
 
@@ -509,6 +560,34 @@ namespace base {
 		[[nodiscard]]
 		constexpr T&& expect(std::string_view message) && {
 			if (!has_value()) CORE_PANIC(message);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
 			return std::move(value());
 		}
 
