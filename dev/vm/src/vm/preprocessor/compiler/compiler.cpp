@@ -20,7 +20,6 @@
 #include <vm/preprocessor/preprocessor.hpp>
 
 #include <expected>
-#include <ranges>
 
 namespace vm {
 	namespace {
