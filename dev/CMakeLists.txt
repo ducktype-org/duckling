@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(Duckling)
+
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
 
 cmake_policy(SET CMP0079 NEW)
 cmake_policy(SET CMP0054 NEW)
