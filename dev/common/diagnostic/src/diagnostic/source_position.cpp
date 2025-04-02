@@ -148,4 +148,16 @@ namespace dia {
 		out << R"("sourceEnd": )" << getEnd();
 		out << "}";
 	}
+
+	void to_json(json& j, const SourcePosition& pos) {
+		auto [line, column] = pos.getStartLineColumn();
+		j = json{ // { "file", pos.source_file->getPath().strView().data() }, // TODO: Should we
+			      // check if this is not null?
+			      { "file", "test.duck" },
+			      { "line", std::to_string(line) },
+			      { "column", std::to_string(column) },
+			      { "last_modified", "??" }
+		};  // TODO: Set last modified to real value.
+	}
+
 }

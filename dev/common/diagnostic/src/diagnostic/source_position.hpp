@@ -22,8 +22,11 @@ int main() {
 #include <printer/printer_content.hpp>
 #include <string>
 #include <base/ref.hpp>
+#include <json/json.hpp>
 
 namespace dia {
+	using nlohmann::json;
+
 	/**
 	 * @brief  Type used for storing token position in a source file
 	 *
@@ -95,6 +98,8 @@ namespace dia {
 		bool isFileEnd() const;
 
 		void printToJson(std::ostream&) const;
+
+		friend void to_json(json& j, const SourcePosition& pos);
 
 	private:
 		usize                      source_start;  ///< Start of the range of characters in the file.

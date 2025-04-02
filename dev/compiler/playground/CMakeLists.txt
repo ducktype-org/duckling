@@ -10,3 +10,4 @@ duck_add_playground(mir mir_playground.cpp USES Base ModuleTree Clap HELIOS Quer
 duck_add_playground(lir lir_playground.cpp USES Base ModuleTree Clap HELIOS QueryFramework MIR PstParser LIR Init)
 duck_add_playground(json json_playground.cpp USES Lexer PstParser Init)
 duck_add_playground(llvm llvm_playground.cpp USES Base ModuleTree Clap HELIOS QueryFramework MIR PstParser LIR LLVMBackend Init)
+duck_add_playground(dia dia_playground.cpp USES Diagnostic HELIOS)
