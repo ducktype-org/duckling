@@ -147,10 +147,10 @@ int main() {
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";
-	query::detail::ContextType::logger.dumpLog(true);
+	query::Context::logger.dumpLog(true);
 
 	std::cerr << "And here are the logs in JSON:\n";
-	query::detail::ContextType::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
+	query::Context::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
 
 	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
 

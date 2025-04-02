@@ -5,8 +5,8 @@
 #include <lexer/lexer.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>  //< needed for ctx.query, @TODO: move context to different file
 #include <query_framework/utils/with_context_do.hpp>
 
 #include <base/int_conv.hpp>

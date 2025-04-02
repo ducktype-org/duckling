@@ -1,5 +1,5 @@
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/queries.hpp>
