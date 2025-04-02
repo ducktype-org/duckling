@@ -1,5 +1,7 @@
 #include "scopes.hpp"
 
+#include <set>
+
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -18,6 +20,7 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include "pst_parser/lang_parser_element.hpp"
 
 namespace compiler::helios {
 
@@ -307,9 +310,9 @@ namespace compiler::helios {
 		struct ScopeGrabVisitor final: pst::PstVisitorPanicky {
 			ScopeGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
 
-			base::Optional<std::vector<ScopeID>> out;
-			Context&                             ctx;
-			const QKey&                          key;
+			std::set<ScopeID> out;
+			Context&          ctx;
+			const QKey&       key;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
@@ -318,42 +321,47 @@ namespace compiler::helios {
 
 			template<class... Args>
 			void output(Args&&... args) {
-				this->out.emplace(std::forward<Args>(args)...);
+				this->out.insert(std::forward<Args>(args)...);
 			}
 
-			// @TODO
-			// Which elements define new scpoes?
-			void visitNamespace(pst::Access<pst::Namespace> element) override {
-				output(scopeOf(element));
+			void visit (pst::Access<pst::LangElement> element) { 
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard) { 
+					output(scopeOf(element)); 
+				}
+				for (auto sub: element->viewSubElements()) { 
+					variant_match(sub) { 
+						variant_case(pst::LangElement::ConstChild, child) { 
+							child->acceptVisitor(*this); 
+						} 
+					} 
+				}
 			}
-
-			void visitFun(pst::Access<pst::Fun> element) override { output(scopeOf(element)); }
 		};
 
-		static auto getScopes(Context& ctx, QKey key, frontend::FileID file) -> PResult {
+		static auto getScopes(Context& ctx, QKey key, frontend::FileID file) -> std::set<ScopeID> {
 			ScopeGrabVisitor scope_grab(ctx, key);
 
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 			root->acceptVisitor(scope_grab);
 
-			return std::move(scope_grab.out.value());
+			return std::move(scope_grab.out);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::vector<ScopeID> output;
+			std::set<ScopeID> output;
 
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
 
-			for (auto file: source_files) {
+			for (auto file: *source_files) {
 				auto scopes = getScopes(ctx, key, file);
-				output.insert(output.end(), scopes.begin(), scopes.end());
+				output.insert(scopes.begin(), scopes.end());
 			}
 
 			// validate output:
 			for (auto scope: output)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return output;
+			return {output.begin(), output.end()};
 		}
 
 		QUERY_AUTO_CACHE_REF
