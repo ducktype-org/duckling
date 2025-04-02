@@ -20,7 +20,23 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include "base/for_each.hpp"
 #include "pst_parser/lang_parser_element.hpp"
+
+
+// @todo
+// remove this macro when there is a visitor with default method
+#define MAKE_VISIT(type)                                                                           \
+	void visit##type(pst::Access<pst::##type> element) override {                                  \
+		if (getScopeKind(ctx, element) == ElementScopeKind::Standard) {                            \
+			output(scopeOf(element));                                                              \
+		}                                                                                          \
+		for (auto sub: element->viewSubElements()) {                                               \
+			variant_match(sub) {                                                                   \
+				variant_case(pst::LangElement::ConstChild, child) { child->acceptVisitor(*this); } \
+			}                                                                                      \
+		}                                                                                          \
+	}
 
 namespace compiler::helios {
 
@@ -324,18 +340,37 @@ namespace compiler::helios {
 				this->out.insert(std::forward<Args>(args)...);
 			}
 
-			void visit (pst::Access<pst::LangElement> element) { 
-				if (getScopeKind(ctx, element) == ElementScopeKind::Standard) { 
-					output(scopeOf(element)); 
-				}
-				for (auto sub: element->viewSubElements()) { 
-					variant_match(sub) { 
-						variant_case(pst::LangElement::ConstChild, child) { 
-							child->acceptVisitor(*this); 
-						} 
-					} 
-				}
-			}
+			// @todo
+			// remove this macro when there is a visitor with default method
+			FOR_EACH(
+				MAKE_VISIT,
+				Import,
+				Using,
+				Alias,
+				ExprStmt,
+				Return,
+				Defer,
+				Restart,
+				Break,
+				Redo,
+				Continue,
+				Throw,
+				Const,
+				Block,
+				Namespace,
+				Class,
+				Fun,
+				For,
+				Variable,
+				If,
+				While,
+				Method,
+				Field,
+				Constructor,
+				Destructor,
+				AccessBlock,
+				FunParam
+			)
 		};
 
 		static auto getScopes(Context& ctx, QKey key, frontend::FileID file) -> std::set<ScopeID> {
@@ -361,7 +396,7 @@ namespace compiler::helios {
 			for (auto scope: output)
 				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
 
-			return {output.begin(), output.end()};
+			return { output.begin(), output.end() };
 		}
 
 		QUERY_AUTO_CACHE_REF
