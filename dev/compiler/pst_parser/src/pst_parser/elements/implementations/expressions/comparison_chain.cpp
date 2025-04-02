@@ -19,7 +19,7 @@ namespace pst::expr {
 			out->sub_expr.emplace_back(nullptr);
 			state.parse(out).with(&out->sub_expr.back(), Lower::parse, +fwd);
 
-			out->operators.push_back(state[0].asOperator());
+			out->operators.push_back(state[0].asBinaryOperator().value());
 			state.parse(out).eatOne();
 
 			length -= fwd + 1;
