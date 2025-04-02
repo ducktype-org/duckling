@@ -31,6 +31,7 @@ public:
 		TESTER_ADD_TEST(arrowOperatorTest);
 		TESTER_ADD_TEST(ifOptSomeTest);
 		TESTER_ADD_TEST(testMatchErr);
+		TESTER_ADD_TEST(testExpect);
 	}
 
 	template<class T, class U>
@@ -284,17 +285,57 @@ public:
 	}
 
 	void testMatchErr() {
-		std::expected<int, float> opt;
-		opt = 1;
-		match_optional(opt) {
-			opt_some(v) ASSERT_EQUAL(1, v);
-			opt_err(er [[maybe_unused]]) CORE_PANIC("Invalid path");
+		{
+			std::expected<int, float> opt;
+			opt = 1;
+			match_optional(opt) {
+				opt_some(v) ASSERT_EQUAL(1, v);
+				opt_err(er [[maybe_unused]]) CORE_PANIC("Invalid path");
+			}
+			opt = std::unexpected(0.1f);
+			match_optional(opt) {
+				opt_some(v [[maybe_unused]]) CORE_PANIC("Invalid path");
+				opt_err(er) ASSERT_EQUAL(0.1f, er);
+			}
 		}
-		opt = std::unexpected(0.1f);
-		match_optional(opt) {
-			opt_some(v [[maybe_unused]]) CORE_PANIC("Invalid path");
-			opt_err(er) ASSERT_EQUAL(0.1f, er);
+
+		{
+			struct A {
+				int val;
+
+				A(int val): val(val) {}
+
+				A(A&&)            = default;
+				A& operator=(A&&) = default;
+
+				A(const A&)            = delete;
+				A& operator=(const A&) = delete;
+			};
+
+			std::expected<float, A> opt = 5.5f;
+			match_optional(opt) {
+				opt_some_move(v) ASSERT_EQUAL(5.5f, v);
+				opt_err(a [[maybe_unused]]) fail("Invalid branch");
+			}
+			opt = std::unexpected<A>(1);
+			match_optional(opt) {
+				opt_some_move(v [[maybe_unused]]) fail("Invalid branch");
+				opt_err(a) ASSERT_EQUAL(1, a.val);
+			}
 		}
+	}
+
+	void testExpect() {
+		try {
+			(void) Optional<float&>().expect<int>(21);
+			fail("No throw");
+		} catch (int er) { ASSERT_EQUAL(er, 21); }
+
+		base::Optional<float> empty;
+		try {
+			(void) empty.expect<int>(42);
+			fail("No throw");
+		} catch (int er) { ASSERT_EQUAL(er, 42); }
 	}
 };
 
