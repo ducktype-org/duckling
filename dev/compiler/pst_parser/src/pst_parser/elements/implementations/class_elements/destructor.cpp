@@ -24,7 +24,10 @@ namespace pst {
 		out->parseSpecifiers(state);
 
 		state.parse(out).eatOne();
-		state.parse(out).all(NamedOperator::Period, &out->kind);
+
+		tpc::Identifier ident;
+		state.parse(out).all(NamedOperator::Period, &ident);
+		out->kind = ident;
 
 		state.parse(out).goDown();
 		if (state.notEmpty()) state.log(makeBox<NonEmptyError>(state.getPosition()));

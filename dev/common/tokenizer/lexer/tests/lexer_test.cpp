@@ -106,7 +106,7 @@ private:
 	}
 
 	void testGroup3() {
-		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperator>();
+		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperatorSymbol>();
 	}
 
 	void testGroup4() {
