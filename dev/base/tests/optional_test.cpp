@@ -7,6 +7,8 @@
 
 #include <base/optional.hpp>
 
+#include <expected>
+
 using base::Optional;
 
 class OptionalTest: public tester::TestSuite {
@@ -24,11 +26,11 @@ public:
 		TESTER_ADD_TEST(testFromDocs);
 		TESTER_ADD_TEST(assignTest);
 		TESTER_ADD_TEST(swapTest);
-		TESTER_ADD_TEST(danglingPointerTest);
 		TESTER_ADD_TEST(comparatorTest);
 		TESTER_ADD_TEST(boolAndResetTest);
 		TESTER_ADD_TEST(arrowOperatorTest);
 		TESTER_ADD_TEST(ifOptSomeTest);
+		TESTER_ADD_TEST(testMatchErr);
 	}
 
 	template<class T, class U>
@@ -77,8 +79,8 @@ public:
 
 		Optional<int> opt2;
 		match_optional(opt2) {
-			opt_some(_val) {
-				(void) _val;  // So that the compiler doesn't yell at us for not using the value.
+			opt_some(val) {
+				(void) val;  // So that the compiler doesn't yell at us for not using the value.
 				assertTrue(false, "No value, in opt2, shouldn't enter this case");
 			}
 			opt_none assertTrue(opt2.empty(), "Entered opt_none with a value!");
@@ -126,12 +128,12 @@ public:
 
 	void testReference() {
 		std::vector<int>            vec = { 1, 2, 3 };
-		Optional<std::vector<int>&> optVec(vec);
-		optVec.value()[0]++;
+		Optional<std::vector<int>&> opt_vec(vec);
+		opt_vec.value()[0]++;
 		vec[1] = 30;
 		for (usize i = 0; i < vec.size(); i++) {
 			assertTrue(
-				vec[i] == optVec.value()[i],
+				vec[i] == opt_vec.value()[i],
 				base::strConcat("Values at index ", i, " are not equal, but it's a reference.")
 			);
 		}
@@ -174,11 +176,6 @@ public:
 		std::swap(c, d);
 		ASSERT_EQUAL(str2, *c);
 		ASSERT_EQUAL(str1, *d);
-	}
-
-	void danglingPointerTest() {
-		// This would not compile if -Werror flag is on, and it would create a dangling pointer...
-		if_opt_some(Optional(1), val) { ASSERT_EQUAL(val, 1); }
 	}
 
 	void testFromDocs() {
@@ -283,6 +280,20 @@ public:
 			};
 			if_opt_some(get_opt(), val) { ASSERT_EQUAL(1, val); }
 			ASSERT_EQUAL(1, count);
+		}
+	}
+
+	void testMatchErr() {
+		std::expected<int, float> opt;
+		opt = 1;
+		match_optional(opt) {
+			opt_some(v) ASSERT_EQUAL(1, v);
+			opt_err(er [[maybe_unused]]) CORE_PANIC("Invalid path");
+		}
+		opt = std::unexpected(0.1f);
+		match_optional(opt) {
+			opt_some(v [[maybe_unused]]) CORE_PANIC("Invalid path");
+			opt_err(er) ASSERT_EQUAL(0.1f, er);
 		}
 	}
 };
