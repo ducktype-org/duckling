@@ -167,9 +167,9 @@ namespace vm::preprocessor {
 		DuplicatedFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class StackStateError final: public dia::Error {
+	class StackStructureMismatchError final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "This instruction invalidates stack state.";
+		constexpr static std::string_view ERR_MSG = "This instruction invalidates stack structure.";
 
 	protected:
 		[[nodiscard]]
@@ -183,7 +183,21 @@ namespace vm::preprocessor {
 			return Domain::StaticVerification;
 		}
 
-		StackStateError(dia::SourcePosition pos): dia::Error(pos) {}
+		StackStructureMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class StackStructureMismatchNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static std::string_view ERR_MSG = "Some stack structure here.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class MissingSubtypeError final: public dia::Error {

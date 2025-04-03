@@ -11,7 +11,6 @@
 #include <vm/api/data/load_program_error.hpp>
 
 #include <iostream>
-#include <variant>
 
 std::string convertError(const vm::api::ApiError& api_error) {
 	variant_match(api_error) {

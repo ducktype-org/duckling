@@ -2,6 +2,7 @@
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 
+#include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
 #include <vm/code/type_of_data.hpp>
 
@@ -24,7 +25,16 @@ namespace vm::code::builders {
 
 	DEF_BUILDER_ERR(DuplicatedTypeError, "Duplicated type: ", base::StrID name, COMMA name);
 
-	DEF_BUILDER_ERR(StackStateError, "Stack state differs between jumps.", EMPTY, EMPTY);
+	class StackStructureMismatchError: public BuilderError {
+	public:
+		constexpr static std ::string_view ERR_MSG
+			= "Stack structure differs between jumps and label.";
+		std::vector<Instruction> linked_instructions;  /// all jumps to the label and the label
+
+		StackStructureMismatchError(std::vector<Instruction> linked_instructions):
+			  BuilderError(base ::strConcat(ERR_MSG)),
+			  linked_instructions(std::move(linked_instructions)) {}
+	};
 
 	DEF_BUILDER_ERR(
 		MissingFunctionalTypeError,

@@ -157,6 +157,7 @@ namespace vm::code::builders {
 		const TypesContext<TypesContextState::Finalized>& types_context;
 
 		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
+		base::HashMap<base::StrID, std::vector<Instruction>>     label_users;
 
 		void saveStackState(base::StrID at_label_name);
 

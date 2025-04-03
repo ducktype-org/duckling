@@ -110,9 +110,15 @@ namespace {
 		auto instr = translateInstruction(opcode);
 		try {
 			func_builder.addInstruction(instr);
-		} catch (vm::code::builders::StackStateError&) {
-			logger.log<vm::preprocessor::StackStateError>(
-				VISIT(instr, in, return static_cast<const vm::code::ElementBase&>(in))
+		} catch (vm::code::builders::StackStructureMismatchError& e) {
+			logger.logMap<vm::preprocessor::StackStructureMismatchError>(
+				VISIT(instr, in, return static_cast<const vm::code::ElementBase&>(in)),
+				[&](Box<vm::preprocessor::StackStructureMismatchError>& err) {
+					for (const auto& instruction: e.linked_instructions)
+						err->addNote(makeBox<vm::preprocessor::StackStructureMismatchNote>(VISIT(
+							instruction, in, return in.bytecode_pos.expect("No bytecode position")
+						)));
+				}
 			);
 		} catch (vm::code::builders::UnknownTypeError& e) {
 			logger.log<vm::preprocessor::UnknownType>(e.TYPE, e.TYPE.type_name);

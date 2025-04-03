@@ -74,8 +74,7 @@ namespace vm {
 	};
 
 	/**
-	 * @brief Preprocessor-only program representation
-	 * @todo Improve interface - add access to functions and types not by returning the structures.
+	 * @brief Preprocessor-only program representation.
 	 */
 	class Program {
 	public:

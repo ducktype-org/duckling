@@ -54,10 +54,17 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			handleCallFunc(func);
 			return;
 		}
-		variant_case(instructions::Op_jmpRel_label, jmp) { saveStackState(jmp.arg0.label_name); }
-		variant_case(instructions::Op_jmpRelIf_label, jmp) { saveStackState(jmp.arg0.label_name); }
+		variant_case(instructions::Op_jmpRel_label, jmp) {
+			saveStackState(jmp.arg0.label_name);
+			label_users[jmp.arg0.label_name].emplace_back(jmp);
+		}
+		variant_case(instructions::Op_jmpRelIf_label, jmp) {
+			saveStackState(jmp.arg0.label_name);
+			label_users[jmp.arg0.label_name].emplace_back(jmp);
+		}
 		variant_case(instructions::Op_jmpRelNotIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
+			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
 	}
 	instructions.push_back(instruction);
@@ -120,11 +127,9 @@ void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 }
 
 void FunctionBuilder::handleLabel(instructions::Op_label label) {
-	if (!stack_state_at_label.contains(label.arg0.label_name))
-		stack_state_at_label.put(label.arg0.label_name, local_stack);
-	else
-		local_stack = stack_state_at_label[label.arg0.label_name];
+	saveStackState(label.arg0.label_name);
 	instructions.emplace_back(label);
+	label_users[label.arg0.label_name].emplace_back(label);
 }
 
 void FunctionBuilder::handleCallFunc(instructions::Op_call_func func) {
@@ -140,9 +145,11 @@ void FunctionBuilder::handleCallFunc(instructions::Op_call_func func) {
 
 void FunctionBuilder::saveStackState(base::StrID at_label_name) {
 	if (stack_state_at_label.contains(at_label_name)) {
-		if (stack_state_at_label[at_label_name] != local_stack) throw builders::StackStateError();
+		if (stack_state_at_label[at_label_name] != local_stack)
+			throw builders::StackStructureMismatchError(label_users.at(at_label_name));
 	} else {
 		stack_state_at_label.put(at_label_name, local_stack);
+		label_users.put(at_label_name, {});
 	}
 }
 
