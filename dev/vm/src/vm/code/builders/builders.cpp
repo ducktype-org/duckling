@@ -228,22 +228,22 @@ TypesContext<TypesContextState::Finalized>
 }
 
 const std::vector<vm::code::TypeOfData>&
-	vm::code::builders::TypesContext<TypesContextState::Finalized>::getTypes() const {
+	TypesContext<TypesContextState::Finalized>::getTypes() const {
 	return types;
 }
 
 const vm::TypeMetadata&
-	vm::code::builders::TypesContext<TypesContextState::Finalized>::getMetadata() const {
+	TypesContext<TypesContextState::Finalized>::getMetadata() const {
 	return *metadata;
 }
 
 Box<vm::TypeMetadata>
-	vm::code::builders::TypesContext<TypesContextState::Finalized>::moveMetadata() && {
+	TypesContext<TypesContextState::Finalized>::moveMetadata() && {
 	return std::move(metadata);
 }
 
-void TypesContext<>::addType(const vm::code::TypeOfData& type) {
-	auto name = VISIT(type, tp, return tp.name);
+void TypesContext<>::addType(const TypeOfData& type) {
+	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
 			if (type != *tp) throw DuplicatedTypeError(name);

@@ -71,11 +71,11 @@ namespace vm::code::builders {
 
 	template<>
 	class TypesContext<TypesContextState::AddingTypes> {
-		base::StableTypeIdNameMap<TypeOfData, usize> types;
+		base::StableTypeIdNameMap<TypeOfData> types;
 
 	public:
-		const base::StableTypeIdNameMap<TypeOfData, usize>& getTypes() const;
-		void                                       addType(const vm::code::TypeOfData& type);
+		const base::StableTypeIdNameMap<TypeOfData>& getTypes() const;
+		void                                       addType(const TypeOfData& type);
 		TypesContext<TypesContextState::Finalized> finalized() const;
 	};
 

@@ -2,9 +2,9 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/preprocessor/errors.hpp>
-#include <vm/preprocessor/parser/errors.hpp>
-#include <vm/preprocessor/parser/parser.hpp>
+#include <vm/loader/errors.hpp>
+#include <vm/loader/parser/errors.hpp>
+#include <vm/loader/parser/parser.hpp>
 
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -73,4 +73,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/preprocessor/assembly/");
+TESTER_COMMON_MAIN("/vm/tests/loader/assembly/");

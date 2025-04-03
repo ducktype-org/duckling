@@ -13,7 +13,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/loader/loader.hpp>
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>

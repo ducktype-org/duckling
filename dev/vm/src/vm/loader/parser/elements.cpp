@@ -100,6 +100,7 @@ namespace vm::parser {
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
 #include <vm/code/opcodes_list.hpp>
+
 		};
 
 #undef HANDLE_OPCODE_0ARGS

@@ -1,4 +1,4 @@
-#include "preprocessor.hpp"
+#include "loader.hpp"
 
 #include "parser/elements.hpp"
 #include "parser/errors.hpp"
@@ -23,9 +23,9 @@
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/preprocessor/compiler/compiler.hpp>
-#include <vm/preprocessor/errors.hpp>
-#include <vm/preprocessor/validator/validator.hpp>
+#include <vm/loader/compiler/compiler.hpp>
+#include <vm/loader/errors.hpp>
+#include <vm/loader/validator/validator.hpp>
 
 #include <expected>
 #include <unordered_map>

@@ -2,7 +2,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/preprocessor/validator/errors.hpp>
+#include <vm/loader/validator/errors.hpp>
 
 #include <variant>
 
@@ -51,4 +51,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/preprocessor/validation/");
+TESTER_COMMON_MAIN("/vm/tests/loader/validation/");

@@ -15,7 +15,7 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
-#include <vm/preprocessor/parser/elements.hpp>
+#include <vm/loader/parser/elements.hpp>
 
 #include <expected>
 #include <type_traits>

@@ -3,8 +3,8 @@
 #include <base/optional.hpp>
 
 #include <vm/code/code.hpp>
-#include <vm/preprocessor/parser/elements.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/loader/parser/elements.hpp>
+#include <vm/loader/loader.hpp>
 
 namespace vm::validator {
 	/**

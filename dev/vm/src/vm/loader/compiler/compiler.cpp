@@ -14,10 +14,10 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/preprocessor/errors.hpp>
-#include <vm/preprocessor/parser/elements.hpp>
-#include <vm/preprocessor/parser/errors.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/loader/errors.hpp>
+#include <vm/loader/parser/elements.hpp>
+#include <vm/loader/parser/errors.hpp>
+#include <vm/loader/loader.hpp>
 
 #include <expected>
 

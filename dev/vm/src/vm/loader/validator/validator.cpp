@@ -12,9 +12,9 @@
 #include <vm/code/code.hpp>
 #include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
-#include <vm/preprocessor/parser/elements.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
-#include <vm/preprocessor/validator/detail/stack_state.hpp>
+#include <vm/loader/parser/elements.hpp>
+#include <vm/loader/loader.hpp>
+#include <vm/loader/validator/detail/stack_state.hpp>
 
 #include <expected>
 
