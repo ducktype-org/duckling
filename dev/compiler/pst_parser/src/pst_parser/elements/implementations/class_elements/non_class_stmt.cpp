@@ -7,6 +7,12 @@ namespace pst {
 
 		out->parseSpecifiers(state);
 
+		Keyword as_keyword = state[0].asKeyword();
+		CORE_ASSERT(
+			as_keyword == Keyword::Alias || as_keyword == Keyword::Using,
+			"Bad starting keyword in NonClassStmt."
+		);
+
 		state.parse(out).one(&out->inner_stmt);
 
 		return out;
