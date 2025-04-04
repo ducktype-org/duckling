@@ -11,7 +11,7 @@
 namespace vm {
 	/**
 	 * @brief A Stable container, that maps an element of type T with a name, and
-	 * assigns an ID to it. It is used by preprocessor to map functions and type to ids.
+	 * assigns an ID to it. It is used by loader to map functions and type to ids.
 	 * If T is copyable, then this structure is as well.
 	 * After copy, new elements inserted to it will be given new, consecutive IDs, so
 	 * previously stored IDs will map to equal, but copied objects. (old references will not break).
