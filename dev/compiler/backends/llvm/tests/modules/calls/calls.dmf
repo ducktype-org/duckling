@@ -1,5 +1,3 @@
-@TODO this PR: add tests based on this
-
 import submodule as sm;
 
 fun goo() -> i64 = {
@@ -10,7 +8,6 @@ fun main() -> i64 = {
     return goo() + builtin_input_i64() + sm.foo() + hoo();
 }
 
-# @TODO this PR add test with this, making sure, there is just one function in llvm module
 fun hoo() -> i64 = {
     return 3;
 }
