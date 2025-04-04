@@ -1,6 +1,6 @@
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace lsp {
 	/**

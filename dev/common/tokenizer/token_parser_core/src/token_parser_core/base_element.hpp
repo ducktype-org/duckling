@@ -2,6 +2,7 @@
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
+
 #include <ostream>
 
 namespace tpc {

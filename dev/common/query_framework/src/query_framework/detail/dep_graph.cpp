@@ -4,9 +4,9 @@
 #include <set>
 #include <queue>
 #include <iomanip>
+#include <iostream>
 #include <ostream>
 #include <vector>
-#include <iostream>
 
 using query::detail::NodeID;
 

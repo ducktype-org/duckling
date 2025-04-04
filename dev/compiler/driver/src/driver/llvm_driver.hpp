@@ -1,7 +1,8 @@
 #pragma once
 
-#include <base/string_id.hpp>
 #include "driver.hpp"
+
+#include <base/string_id.hpp>
 
 namespace compiler::driver {
 	class LLVMDriver final: public BackendDriver {

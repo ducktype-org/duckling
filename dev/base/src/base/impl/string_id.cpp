@@ -1,6 +1,7 @@
 #include "../string_id.hpp"
-#include <iostream>
+
 #include <cstring>
+#include <iostream>
 
 namespace base {
 

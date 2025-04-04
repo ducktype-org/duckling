@@ -1,5 +1,5 @@
-#include "preamble.hpp"
 #include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<Constructor> Constructor::parse(LangParserState& state, const ClassContext& ctx) {
@@ -11,9 +11,12 @@ namespace pst {
 		state.parse(out).eatOne();
 
 		if (state[0].isBracketGroup(Token::Round))
-			out->kind = { base::StrID("create") };
-		else
-			state.parse(out).all(NamedOperator::Period, &out->kind);
+			out->kind = tpc::Identifier{ .value = base::StrID("create") };
+		else {
+			tpc::Identifier ident;
+			state.parse(out).all(NamedOperator::Period, &ident);
+			out->kind = ident;
+		}
 
 		state.parse(out).one(&out->params);
 		if (state.parse(out).tryEat(NamedOperator::Colon)) state.parse(out).one(&out->inits);
@@ -25,7 +28,7 @@ namespace pst {
 	void Constructor::dprint(std::ostream& out) const {
 		out << "{";
 		out << "\"name\":";
-		nullAwareDprint(kind, out);
+		out << "\"" << getName().strView() << "\"";
 		out << ",\"params\":";
 		nullAwareDprint(params, out);
 		out << ",\"inits\":";

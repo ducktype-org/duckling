@@ -1,6 +1,8 @@
 #include "stack_state.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
+
 #include <vm/program/opcode_args.hpp>
 
 bool vm::validator::StackState::consume(CRef<parser::OpCode> opcode) {

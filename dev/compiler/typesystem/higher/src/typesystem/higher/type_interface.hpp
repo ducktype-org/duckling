@@ -9,17 +9,17 @@
  */
 #pragma once
 
-#include <map>
-#include <set>
-#include <string>
-
-#include <base/optional.hpp>
-
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
+
+#include <base/optional.hpp>
 #include <base/string_id.hpp>
+
+#include <map>
+#include <set>
+#include <string>
 #include <variant>
 
 namespace tsh {

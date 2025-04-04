@@ -10,8 +10,9 @@
 
 #pragma once
 
-#include <any>
 #include "exceptions.hpp"
+
+#include <any>
 
 namespace base {
 	/**

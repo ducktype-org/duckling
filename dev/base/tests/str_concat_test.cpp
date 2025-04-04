@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+
 #include <base/str_utils.hpp>
 
 class ConcatTest: public tester::TestSuite {

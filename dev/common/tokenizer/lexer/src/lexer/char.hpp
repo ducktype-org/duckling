@@ -1,9 +1,11 @@
 #pragma once
 
 #include "classifications.hpp"
+
 #include <base/raw_view.hpp>
-#include <vector>
+
 #include <string>
+#include <vector>
 
 namespace lexer {
 	/**
