@@ -237,7 +237,7 @@ namespace compiler::backend_llvm {
 
 		/**
 		 * Fills local_register_map and block_mapping.
-		 * @note It creates a IR Block that initialized all of local-values registers, 
+		 * @note It creates a IR Block that initialized all of local-values registers,
 		 * and fill the ones representing function parameters with appropriate values.
 		 */
 		void generateMainBlocksAndLocals(llvm::Function* fun) {
