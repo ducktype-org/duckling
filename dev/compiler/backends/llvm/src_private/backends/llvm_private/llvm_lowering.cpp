@@ -235,6 +235,11 @@ namespace compiler::backend_llvm {
 		 */
 		base::Map<lir::LocalRef, Ref<llvm::Instruction>> local_register_map;
 
+		/**
+		 * Fills local_register_map and block_mapping.
+		 * @note It creates a IR Block that initialized all of local-values registers, 
+		 * and fill the ones representing function parameters with appropriate values.
+		 */
 		void generateMainBlocksAndLocals(llvm::Function* fun) {
 			// allocate all local variables:
 
@@ -433,6 +438,8 @@ namespace compiler::backend_llvm {
 			auto fun = llvm::dyn_cast<llvm::Function>(
 				addOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
+
+			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
 			generateMainBlocksAndLocals(fun);
 
