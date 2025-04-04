@@ -23,11 +23,13 @@
 #include "base/for_each.hpp"
 #include "pst_parser/lang_parser_element.hpp"
 
-
 // @todo
 // remove this macro when there is a visitor with default method
+// @todo
+// is viewSubElements illegal?
+#define SQ ::
 #define MAKE_VISIT(type)                                                                           \
-	void visit##type(pst::Access<pst::##type> element) override {                                  \
+	void visit##type(pst::Access<pst SQ type> element) override {                                  \
 		if (getScopeKind(ctx, element) == ElementScopeKind::Standard) {                            \
 			output(scopeOf(element));                                                              \
 		}                                                                                          \
