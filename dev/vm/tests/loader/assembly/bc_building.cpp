@@ -51,8 +51,8 @@ private:
 		buildInvalidDbc(
 			"multiple_labels.dbc",
 			{
-				vm::preprocessor::RepeatedLabel::ERR_MSG,
-				vm::preprocessor::RepeatedLabelNote::ERR_MSG,
+				vm::loader::RepeatedLabel::ERR_MSG,
+				vm::loader::RepeatedLabelNote::ERR_MSG,
 			}
 		);
 	}
@@ -61,8 +61,8 @@ private:
 		buildInvalidDbc(
 			"repeated_types.dbc",
 			{
-				vm::preprocessor::DuplicatedTypeError::ERR_MSG,
-				vm::preprocessor::DuplicatedTypeNote::ERR_MSG,
+				vm::loader::DuplicatedTypeError::ERR_MSG,
+				vm::loader::DuplicatedTypeNote::ERR_MSG,
 			}
 		);
 	}
@@ -71,7 +71,7 @@ private:
 		buildInvalidDbc(
 			"label_not_found.dbc",
 			{
-				vm::preprocessor::UnknownLabel::ERR_MSG,
+				vm::loader::UnknownLabel::ERR_MSG,
 				"LB",
 			}
 		);
@@ -81,7 +81,7 @@ private:
 		buildInvalidDbc(
 			"unknown_type.dbc",
 			{
-				base::strConcat(vm::preprocessor::UnknownType::ERR_MSG, "in64"),
+				base::strConcat(vm::loader::UnknownType::ERR_MSG, "in64"),
 			}
 		);
 	}

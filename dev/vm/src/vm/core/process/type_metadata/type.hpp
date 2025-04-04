@@ -18,7 +18,7 @@ namespace vm {
 	// @TODO: change to strongly typed int
 	using TypeSize = u64;
 
-	class Type {
+	class Type final {
 	public:
 		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
 

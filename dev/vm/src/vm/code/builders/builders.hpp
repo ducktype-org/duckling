@@ -75,8 +75,8 @@ namespace vm::code::builders {
 
 	public:
 		const base::StableTypeIdNameMap<TypeOfData>& getTypes() const;
-		void                                       addType(const TypeOfData& type);
-		TypesContext<TypesContextState::Finalized> finalized() const;
+		void                                         addType(const TypeOfData& type);
+		TypesContext<TypesContextState::Finalized>   finalized() const;
 	};
 
 	template<>

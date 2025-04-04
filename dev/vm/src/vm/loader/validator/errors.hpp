@@ -32,7 +32,6 @@ namespace vm::validator {
 		}                                                                  \
 	};
 
-	DEFINE_VALIDATOR_ERROR(NoMainError, "Provided program does not have `main` function.");
 	DEFINE_VALIDATOR_ERROR(
 		CallerCalledArgSizeMismatch, "Invalid Tailcall! Caller and called arg size unmatched"
 	);
@@ -42,4 +41,5 @@ namespace vm::validator {
 	DEFINE_VALIDATOR_ERROR(
 		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
 	);
+	constexpr const std::string_view NO_MAIN_ERR = "Provided program does not have `main` function.";
 }

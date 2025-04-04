@@ -60,7 +60,7 @@ namespace vm {
 		Memory memory;
 
 		// @TODO: Read Processors' docs and do the TODO there...
-		Preprocessor preprocessor;
+		Loader loader;
 
 		//@TODO: For now assume that bytecode validation is always turned on.
 		static const bool VALIDATE_CODE = true;

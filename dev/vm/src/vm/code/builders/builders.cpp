@@ -232,13 +232,11 @@ const std::vector<vm::code::TypeOfData>&
 	return types;
 }
 
-const vm::TypeMetadata&
-	TypesContext<TypesContextState::Finalized>::getMetadata() const {
+const vm::TypeMetadata& TypesContext<TypesContextState::Finalized>::getMetadata() const {
 	return *metadata;
 }
 
-Box<vm::TypeMetadata>
-	TypesContext<TypesContextState::Finalized>::moveMetadata() && {
+Box<vm::TypeMetadata> TypesContext<TypesContextState::Finalized>::moveMetadata() && {
 	return std::move(metadata);
 }
 

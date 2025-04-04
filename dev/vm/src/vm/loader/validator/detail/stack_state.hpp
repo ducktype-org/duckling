@@ -17,7 +17,7 @@ namespace vm::validator {
 	 *
 	 * @todo Add tests.
 	 */
-	class StackState {
+	class StackState final {
 		std::vector<CRef<Type>> stack_state;
 		const TypeMetadata&     type_metadata;
 

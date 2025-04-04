@@ -90,7 +90,7 @@ namespace vm {
 	 * Executor service calls these functions to execute the instructions.
 	 * For convenience they are implemented in the `executor.cpp` file.
 	 */
-	class OpFuns {
+	class OpFuns final {
 	public:
 #define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
 #include <vm/code/opcodes_list.hpp>

@@ -76,7 +76,7 @@ namespace vm::code {
 		std::visit(InstructionSerializerVisitor{ out }, instruction);
 	}
 
-	class FunctionSerializer {
+	class FunctionSerializer final {
 		std::ostream&   out;
 		const Function& function;
 		i64             current_indentation = 0;
@@ -135,7 +135,7 @@ namespace vm::code {
 		}
 	};
 
-	class TypeSerializer {
+	class TypeSerializer final {
 		std::ostream&               out;
 		const vm::code::TypeOfData& type;
 

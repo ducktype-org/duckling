@@ -12,8 +12,8 @@
 #include <vm/code/code.hpp>
 #include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
-#include <vm/loader/parser/elements.hpp>
 #include <vm/loader/loader.hpp>
+#include <vm/loader/parser/elements.hpp>
 #include <vm/loader/validator/detail/stack_state.hpp>
 
 #include <expected>
@@ -32,7 +32,7 @@ namespace vm::validator {
 		 * - No duplicate function declarations
 		 * @todo Update that list when next checks are added
 		 */
-		class Validator {
+		class Validator final {
 		public:
 			Validator(const Program& prog): program(prog) { log = dia::Logger(); }
 
@@ -42,17 +42,17 @@ namespace vm::validator {
 			 *
 			 * @return base::Optional<std::string>
 			 */
-			std::expected<void, PreprocessorLogger> validateProgram();
+			std::expected<void, LoaderLogger> validateProgram();
 
 		private:
-			const Program&     program;
-			PreprocessorLogger log;
+			const Program& program;
+			LoaderLogger   log;
 
 			void validateMainExistence();
 			void validateTailcallSignatures();
 		};
 
-		std::expected<void, PreprocessorLogger> Validator::validateProgram() {
+		std::expected<void, LoaderLogger> Validator::validateProgram() {
 			validateMainExistence();
 			validateTailcallSignatures();
 
@@ -62,7 +62,7 @@ namespace vm::validator {
 		}
 
 		void Validator::validateMainExistence() {
-			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple<NoMainError>();
+			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple(NO_MAIN_ERR.data());
 		}
 
 		void Validator::validateTailcallSignatures() {
@@ -91,7 +91,7 @@ namespace vm::validator {
 		}
 	}
 
-	std::expected<void, PreprocessorLogger> verify(const Program& program) {
+	std::expected<void, LoaderLogger> verify(const Program& program) {
 		return Validator(program).validateProgram();
 	}
 

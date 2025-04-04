@@ -45,7 +45,7 @@ private:
 		parseInvalidDbc(
 			"no_main.dbc",
 			{
-				vm::validator::NoMainError::ERR_MSG,
+				vm::validator::NO_MAIN_ERR
 			}
 		);
 	}

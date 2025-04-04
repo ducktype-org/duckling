@@ -2,7 +2,7 @@
 
 #include <base/string_id.hpp>
 
-namespace vm::preprocessor {
+namespace vm::loader {
 	class UnknownLabel final: public dia::Error {
 	public:
 		constexpr static std::string_view ERR_MSG = "Label does not exist.";
@@ -56,13 +56,15 @@ namespace vm::preprocessor {
 	};
 
 	class DuplicatedTypeError final: public dia::Error {
+		base::StrID type_name;
+
 	public:
-		constexpr static std::string_view ERR_MSG = "Duplicated type.";
+		constexpr static std::string_view ERR_MSG = "Duplicated type: ";
 
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return ERR_MSG.data();
+			return base::strConcat(ERR_MSG.data(), type_name);
 		}
 
 	public:
@@ -71,10 +73,14 @@ namespace vm::preprocessor {
 			return Domain::StaticVerification;
 		}
 
-		DuplicatedTypeError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicatedTypeError(dia::SourcePosition pos, base::StrID type_name):
+			  dia::Error(pos),
+			  type_name(type_name) {}
 	};
 
 	class DuplicatedTypeNote final: public dia::NoteWithPosition {
+		base::StrID type_name;
+
 	public:
 		constexpr static std::string_view ERR_MSG = "Previous type declaration here.";
 
@@ -85,7 +91,9 @@ namespace vm::preprocessor {
 		}
 
 	public:
-		DuplicatedTypeNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		DuplicatedTypeNote(dia::SourcePosition pos, base::StrID type_name):
+			  dia::NoteWithPosition(pos),
+			  type_name(type_name) {}
 	};
 
 	class UnknownType final: public dia::Error {
@@ -221,5 +229,28 @@ namespace vm::preprocessor {
 		MissingSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
 			  dia::Error(pos),
 			  subtype_name(subtype_name) {}
+	};
+
+	class SomeBuilderError final: public dia::Error {
+		std::string_view error_message;
+
+	public:
+		constexpr static std::string_view ERR_MSG = "An error occurred during building: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, error_message);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		SomeBuilderError(dia::SourcePosition pos, std::string_view error_message):
+			  dia::Error(pos),
+			  error_message(error_message) {}
 	};
 }

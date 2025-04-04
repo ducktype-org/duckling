@@ -32,11 +32,6 @@
 #include <variant>
 #include <vector>
 
-std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
-	vm::Preprocessor::getProgram(const fs::FilePath& file) {
-	return getProgram(std::vector{ file });
-}
-
 namespace {
 
 	template<class Instruction>
@@ -105,30 +100,38 @@ namespace {
 	void insertInstruction(
 		CRef<vm::parser::OpCode>             opcode,
 		vm::code::builders::FunctionBuilder& func_builder,
-		vm::PreprocessorLogger&              logger
+		vm::LoaderLogger&                    logger
 	) {
 		auto instr = translateInstruction(opcode);
 		try {
 			func_builder.addInstruction(instr);
 		} catch (vm::code::builders::StackStructureMismatchError& e) {
-			logger.logMap<vm::preprocessor::StackStructureMismatchError>(
+			logger.logMap<vm::loader::StackStructureMismatchError>(
 				VISIT(instr, in, return static_cast<const vm::code::ElementBase&>(in)),
-				[&](Box<vm::preprocessor::StackStructureMismatchError>& err) {
-					for (const auto& instruction: e.linked_instructions)
-						err->addNote(makeBox<vm::preprocessor::StackStructureMismatchNote>(VISIT(
-							instruction, in, return in.bytecode_pos.expect("No bytecode position")
-						)));
+				[&](Box<vm::loader::StackStructureMismatchError>& err) {
+					for (const auto& instruction: e.linked_instructions) {
+						logger.addNote<vm::loader::StackStructureMismatchNote>(
+							err,
+							VISIT(
+								instruction,
+								in,
+								return static_cast<const vm::code::ElementBase&>(in)
+							)
+						);
+					}
 				}
 			);
 		} catch (vm::code::builders::UnknownTypeError& e) {
-			logger.log<vm::preprocessor::UnknownType>(e.TYPE, e.TYPE.type_name);
+			logger.log<vm::loader::UnknownType>(e.TYPE, e.TYPE.type_name);
+		} catch (vm::code::builders::BuilderError& e) {
+			logger.log<vm::loader::SomeBuilderError>(instr, e.what());
 		}
 	}
 
 	void insertType(
 		const vm::code::TypeOfData&         type,
 		vm::code::builders::TypesContext<>& types,
-		vm::PreprocessorLogger&             log
+		vm::LoaderLogger&                   log
 	) {
 		using namespace vm;
 		try {
@@ -136,31 +139,39 @@ namespace {
 		} catch (code::builders::DuplicatedTypeError&) {
 			base::StrID name = VISIT(type, tp, return tp.name);
 			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
-			log.logMap<preprocessor::DuplicatedTypeError>(base, [&](auto& msg) {
-				for (const code::TypeOfData& duplicated_type: types.getTypes()) {
-					base::StrID other_name = VISIT(duplicated_type, value, return value.name);
-					if (name == other_name) {
-						msg->addNote(makeBox<preprocessor::DuplicatedTypeNote>(
-							VISIT(duplicated_type, tp, return tp.bytecode_pos.value())
-						));
+			log.logMap<loader::DuplicatedTypeError>(
+				base,
+				[&](auto& err) {
+					for (const code::TypeOfData& duplicated_type: types.getTypes()) {
+						base::StrID other_name = VISIT(duplicated_type, value, return value.name);
+						if (name == other_name) {
+							log.addNote<loader::DuplicatedTypeNote>(
+								err,
+								VISIT(
+									duplicated_type,
+									tp,
+									return static_cast<const vm::code::ElementBase&>(tp)
+								),
+								name
+							);
+						}
 					}
-				}
-			});
+				},
+				name
+			);
 		}
 	}
 }
 
 void vm::Program::insertFunctions(
-	const std::vector<code::Function>& new_functions, PreprocessorLogger& logger
+	const std::vector<code::Function>& new_functions, LoaderLogger& logger
 ) {
 	for (const auto& func: new_functions) {
 		auto func_name = func.name;
 		if (functions.contains(func_name)) {
-			logger.logMap<vm::preprocessor::DuplicateFunctionDefinitionError>(func, [&](auto& msg) {
+			logger.logMap<vm::loader::DuplicateFunctionDefinitionError>(func, [&](auto& err) {
 				auto dup_func = functions.at(func_name);
-				msg->addNote(makeBox<vm::preprocessor::DuplicatedFunctionDefinitionNote>(
-					dup_func->bytecode_pos.value()
-				));
+				logger.addNote<loader::DuplicatedFunctionDefinitionNote>(err, *dup_func);
 			});
 		} else {
 			functions.insert(func, func_name);
@@ -168,11 +179,11 @@ void vm::Program::insertFunctions(
 	}
 }
 
-std::expected<vm::Program, vm::PreprocessorLogger> vm::Program::from(
+std::expected<vm::Program, vm::LoaderLogger> vm::Program::from(
 	const std::vector<vm::code::Function>& functions, const std::vector<code::TypeOfData>& types
 ) {
-	vm::Program            program;
-	vm::PreprocessorLogger log;
+	Program      program;
+	LoaderLogger log;
 
 	program.insertTypes(types, log);
 	program.insertFunctions(functions, log);
@@ -180,13 +191,13 @@ std::expected<vm::Program, vm::PreprocessorLogger> vm::Program::from(
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
-	vm::Preprocessor::getProgram(const std::vector<fs::FilePath>& files) {
+std::expected<vm::low::LowVMProgram, vm::LoaderLogger>
+	vm::Loader::getProgram(const std::vector<fs::FilePath>& files) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
 			code::builders::TypesContext<> types_context_adding;
-			vm::PreprocessorLogger         log;
+			vm::LoaderLogger               log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, types_context_adding, log);
@@ -211,7 +222,7 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 				}
 				if (log.good()) return getProgram(functions, types_context.getTypes());
 			} catch (code::builders::MissingSubtypeError& e) {
-				log.log<preprocessor::MissingSubtypeError>(
+				log.log<loader::MissingSubtypeError>(
 					VISIT(e.BASE_TYPE, data, return static_cast<const code::ElementBase&>(data)),
 					e.MISSING_NAME
 				);
@@ -222,12 +233,17 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger>
 	CORE_UNREACHABLE();
 }
 
-vm::Preprocessor::Preprocessor(bool validate_program): validate_program(validate_program) {}
+vm::Loader::Loader(bool validate_program): validate_program(validate_program) {}
 
-std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger> vm::Preprocessor::getProgram(
+std::expected<vm::low::LowVMProgram, vm::LoaderLogger>
+	vm::Loader::getProgram(const fs::FilePath& file) {
+	return getProgram(std::vector{ file });
+}
+
+std::expected<vm::low::LowVMProgram, vm::LoaderLogger> vm::Loader::getProgram(
 	const std::vector<code::Function>& functions, const std::vector<code::TypeOfData>& types
 ) {
-	std::expected<Program, PreprocessorLogger> opt_program = Program::from(functions, types);
+	std::expected<Program, LoaderLogger> opt_program = Program::from(functions, types);
 	if (opt_program.has_value()) {
 		Program program = std::move(opt_program).value();
 
@@ -236,9 +252,8 @@ std::expected<vm::low::LowVMProgram, vm::PreprocessorLogger> vm::Preprocessor::g
 			return std::unexpected(std::move(validation_result).error());
 
 		return vm::compiler::compile(program);
-	} else {
-		return std::unexpected(std::move(opt_program).error());
 	}
+	return std::unexpected(std::move(opt_program).error());
 }
 
 const base::StableTypeIdNameMap<vm::code::Function>& vm::Program::funcMap() const {
@@ -246,7 +261,7 @@ const base::StableTypeIdNameMap<vm::code::Function>& vm::Program::funcMap() cons
 }
 
 void vm::Program::insertTypes(
-	const std::vector<code::TypeOfData>& new_types, vm::PreprocessorLogger& logger
+	const std::vector<code::TypeOfData>& new_types, vm::LoaderLogger& logger
 ) {
 	for (const auto& type: new_types) insertType(type, types_context_adding, logger);
 	auto finalized = types_context_adding.finalized();

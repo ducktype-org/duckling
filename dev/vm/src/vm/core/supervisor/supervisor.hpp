@@ -9,7 +9,7 @@
 #include <vm/core/process/vmprocess.hpp>
 
 namespace vm {
-	class Supervisor {
+	class Supervisor final {
 	private:
 		Supervisor() = default;
 

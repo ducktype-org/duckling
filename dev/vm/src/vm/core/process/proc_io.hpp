@@ -13,7 +13,7 @@ namespace vm {
 
 	class ProcIORedirecter;
 
-	class ProcIO {
+	class ProcIO final {
 		friend class ProcIORedirecter;
 
 	public:
@@ -74,7 +74,7 @@ namespace vm {
 	/**
 	 * @brief This class forwards streams to ProcIO objects.
 	 */
-	class ProcIORedirecter {
+	class ProcIORedirecter final {
 		friend class ProcIO;
 
 		ProcIORedirecter(ProcIO& proc_io, std::istream& input_stream, std::ostream& output_stream):

@@ -10,7 +10,7 @@ namespace vm {
 	/**
 	 * @brief Holds metadata about all types in the program.
 	 */
-	class TypeMetadata {
+	class TypeMetadata final {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
