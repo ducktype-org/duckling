@@ -435,13 +435,13 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			auto fun = llvm::dyn_cast<llvm::Function>(
+			Ref fun = llvm::dyn_cast<llvm::Function>(
 				addOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
 
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
 
-			generateMainBlocksAndLocals(fun);
+			generateMainBlocksAndLocals(fun.get());
 
 			for (auto& block: lir_function->block_order) {
 				auto              llvm_block = block_mapping[block];
@@ -453,7 +453,7 @@ namespace compiler::backend_llvm {
 
 			llvm::EliminateUnreachableBlocks(*fun);
 
-			return fun;
+			return fun.get();
 		}
 	};
 

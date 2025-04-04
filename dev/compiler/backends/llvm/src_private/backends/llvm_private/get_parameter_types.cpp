@@ -1,5 +1,3 @@
-#pragma once
-
 #include "get_parameter_types.hpp"
 
 #include <query_framework/context.hpp>
