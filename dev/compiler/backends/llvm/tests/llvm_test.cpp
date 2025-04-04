@@ -33,19 +33,18 @@ private:
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
-			
-			for (auto& fun : top_level->functions) {
+
+			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
 				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 				llvm_module.addFunctionToModule(ctx, lir_fun);
 			}
 		});
-		
+
 		ASSERT_TRUE(llvm_module.verify().isOk());
 		return llvm_module;
 	}
-
 
 	void runTestForModuleWithSingleFunction(std::string module_path) {
 		using namespace compiler;

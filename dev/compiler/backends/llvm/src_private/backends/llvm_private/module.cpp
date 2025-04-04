@@ -52,8 +52,8 @@ namespace compiler::backend_llvm {
 
 	u64 Module::getFunctionCount(bool including_prototypes) const {
 		const auto& func_list = impl->module->getFunctionList();
-		u64  count      = 0;
-		for (auto& func : func_list) {
+		u64         count     = 0;
+		for (auto& func: func_list) {
 			if (func.isDeclaration() and (not including_prototypes)) continue;
 			count++;
 		}

@@ -6,9 +6,9 @@ namespace compiler::driver {
 
 	/**
 	 * LLVM IR built-in library IR. Used by LLVM driver.
-   * It is based on simplified clang output of C file.
-   * In the future we will probably autogenerate this from C implementation.
-   * In particular this might change between systems.
+	 * It is based on simplified clang output of C file.
+	 * In the future we will probably autogenerate this from C implementation.
+	 * In particular this might change between systems.
 	 */
 	constexpr std::string_view LLVM_IR_LIB = R"-----(
 

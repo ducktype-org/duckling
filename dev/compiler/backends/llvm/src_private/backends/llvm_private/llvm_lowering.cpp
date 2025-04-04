@@ -133,7 +133,7 @@ namespace compiler::backend_llvm {
 
 	/**
 	 * Gets a function from a module by mangled name.
-	 * 
+	 *
 	 * If the function doesn't exits it adds a function prototype with
 	 * external linkage to the module based on provided lir_functions.
 	 *
@@ -142,14 +142,13 @@ namespace compiler::backend_llvm {
 	 * of how we are creating llvm modules, as we need to know what function in local to which
 	 * module.
 	 */
-	 llvm::FunctionCallee addOrInsertFunctionPrototypeFromLirFunction(
+	llvm::FunctionCallee addOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		// @TODO: work here on mangled name instead #510
-		
+
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(lir_function.name.strView()))
-			return func;
+		if (auto func = module->getFunction(lir_function.name.strView())) return func;
 
 		auto& context = module->getContext();
 
@@ -166,15 +165,14 @@ namespace compiler::backend_llvm {
 		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
 	) {
 		// @TODO: work here on mangled name instead #510
-		
+
 		auto& context = module->getContext();
 		auto  name    = compiler::helios::name(sym_id);
 
 		// We check if function exist first, to avoid unnecessary construction of types:
-		if (auto func = module->getFunction(name.strView()))
-			return func;
+		if (auto func = module->getFunction(name.strView())) return func;
 
-		auto  types   = getParameterAndResultFromSymID(ctx, sym_id);
+		auto types = getParameterAndResultFromSymID(ctx, sym_id);
 		return module->getOrInsertFunction(
 			name.strView(), getFunType(context, types.parameters, types.result_type)
 		);

@@ -37,7 +37,7 @@ namespace compiler::backend_llvm {
 	public:
 		Module(base::StrID module_id);
 
-		Module(Module&&) = default;
+		Module(Module&&)      = default;
 		Module(const Module&) = delete;
 
 
@@ -76,7 +76,8 @@ namespace compiler::backend_llvm {
 		/**
 		 * Returns the number of functions in the module.
 		 * It is used for testing purposes.
-		 * @param including_prototypes If false, doesn't count prototypes (function without definitions) in the result.
+		 * @param including_prototypes If false, doesn't count prototypes (function without
+		 * definitions) in the result.
 		 */
 		[[nodiscard]]
 		u64 getFunctionCount(bool including_prototypes = true) const;
