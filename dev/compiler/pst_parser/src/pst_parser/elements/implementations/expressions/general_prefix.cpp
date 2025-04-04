@@ -4,7 +4,7 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralPrefix::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		if (!state[0].isOperator()) return Lower::parse(state, length);
+		if (!state[0].isPrefixOperator()) return Lower::parse(state, length);
 
 		auto out = makeBox<GeneralPrefix>(state.getPosition(), state[0].getValue());
 

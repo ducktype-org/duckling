@@ -336,6 +336,16 @@ namespace compiler::helios {
 				pst_data
 			));
 		}
+		case pst::StmtKind::CopyConstructor: {
+			auto constructor = stmt.dynamicCast<pst::CopyConstructor>().value();
+			return putInSymtable(SymbolData::makePSTSymbolData(
+				{
+					.name = constructor->getName(),
+					.kind = SymbolKind::Constructor,
+				},
+				pst_data
+			));
+		}
 		case pst::StmtKind::Destructor: {
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
