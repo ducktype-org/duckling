@@ -171,7 +171,11 @@ DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
-// tries to cast a pointer to its subclass
+// initialises vtable pointer in pointed object
+DEF_OPCODE(set_vtable_lptr, vm::opargs::StackLocalPtr)
+// casts pointed object to its superclass
+DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// tries to cast pointed object to its subclass
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 

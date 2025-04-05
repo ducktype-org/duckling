@@ -61,16 +61,6 @@ namespace vm {
 		if (block->refcount == 0) deleteBlock(block);
 	}
 
-	auto Memory::downcastableTo(Pointer object, TypeCRef type) -> bool {
-		MRef<Type> real_object_type;
-		if_opt_some(object.block.toOpt(), block) {
-			std::shared_lock lock(*block->shared_mutex);
-			// The vtable pointer is guaranted to exist by static verification.
-			real_object_type = reinterpret_cast<Type*>(block->data.view.getBegin() + object.offset);
-		}
-		return real_object_type && real_object_type->inheritsFrom(type);
-	}
-
 	auto Memory::requestBlockIDs() -> std::vector<BlockID> {
 		std::vector<BlockID> ids;
 		for (auto& block: blocks)

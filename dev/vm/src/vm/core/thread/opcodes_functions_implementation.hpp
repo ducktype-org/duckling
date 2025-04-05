@@ -499,16 +499,48 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_vtable_lptr)(FUNCTION_ARGS) {
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto pointer_type
+				= getLocalType(static_cast<u32>(instr->arg0), frame, thread.process_memory);
+			auto object_type = pointer_type->getInnerType().value();
+
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			auto vt_pointer = reinterpret_cast<const Type*>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
+			vt_pointer = &*object_type;
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			// Same as move_lptr_lptr, treated differently by static analysis.
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process.getMemory().setPointer(dst, src);
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_block_idx    = frame->local_offset_to_block_idx[static_cast<u32>(instr->arg0)];
-			auto dst_block        = frame->block_stack[dst_block_idx];
-			auto dst_pointer_type = thread.process_memory.getBlockType(dst_block);
-			auto dst_type         = dst_pointer_type->getInnerType().value();
-			auto cast_allowed     = thread.process_memory.downcastableTo(src, dst_type);
+			auto dst_pointer_type
+				= getLocalType(static_cast<u32>(instr->arg0), frame, thread.process_memory);
+			auto dst_type = dst_pointer_type->getInnerType().value();
+
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			TypeCRef real_src_type = reinterpret_cast<const Type*>(
+				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
+			);
+			auto cast_allowed = real_src_type->inheritsFrom(dst_type);
 
 			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}

@@ -111,9 +111,6 @@ namespace vm {
 			}
 		}
 
-		// ====================== Inheritance =======================
-        auto downcastableTo(Pointer object, TypeCRef type) -> bool;
-
 		// ======================== Requests ========================
 
 		[[nodiscard]]
