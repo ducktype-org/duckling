@@ -21,7 +21,7 @@ namespace pst {
 		  ClassSpecial(StmtKind::class_name, position, ctx) {}
 
 #define CLASS_STMT_PARSE(class_name) \
-	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx);
+	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx)
 
 	/**
 	 * @brief Access specifier block inside of a class.
@@ -148,7 +148,7 @@ namespace pst {
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
-		CLASS_STMT_PARSE(CopyConstructor)
+		CLASS_STMT_PARSE(CopyConstructor);
 
 		~CopyConstructor() override = default;
 		void dprint(std::ostream& out) const final;
@@ -265,6 +265,34 @@ namespace pst {
 		[[nodiscard]]
 		bool trailingSemicolon() override {
 			return true;
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+
+	/**
+	 * @brief Allows for limited non-class statements to be in a class.
+	 *
+	 * Currently allows: using, alias
+	 */
+	class NonClassStmt: public ClassStmt {
+		AccessInternal<Stmt> inner_stmt;
+
+	public:
+		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
+		CLASS_STMT_PARSE(NonClassStmt);
+
+		~NonClassStmt() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Non Class Statement";
+		}
+
+		[[nodiscard]]
+		bool trailingSemicolon() override {
+			return false;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;
