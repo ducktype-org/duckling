@@ -115,7 +115,7 @@ usize FunctionBuilder::initType(instructions::Op_init_type init) {
 }
 
 void FunctionBuilder::deinitType() {
-	CORE_ASSERT(!local_stack.empty(), "Popping from empty variable stack");
+	if (local_stack.empty()) throw EmptyStackDeinitError();
 	instructions.emplace_back(instructions::Op_deinit{});
 	local_stack.pop_back();
 }

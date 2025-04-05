@@ -41,14 +41,7 @@ private:
 		}
 	}
 
-	void noMain() {
-		parseInvalidDbc(
-			"no_main.dbc",
-			{
-				vm::validator::NO_MAIN_ERR
-			}
-		);
-	}
+	void noMain() { parseInvalidDbc("no_main.dbc", { vm::validator::NO_MAIN_ERR }); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/validation/");

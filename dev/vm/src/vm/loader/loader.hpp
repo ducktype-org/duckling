@@ -51,7 +51,7 @@ namespace vm {
 		code::builders::TypesContext<>            types_context_adding;
 	};
 
-	class Loader final{
+	class Loader final {
 	private:
 		bool validate_program;
 

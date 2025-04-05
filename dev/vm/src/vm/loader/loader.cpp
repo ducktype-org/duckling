@@ -107,22 +107,16 @@ namespace {
 			func_builder.addInstruction(instr);
 		} catch (vm::code::builders::StackStructureMismatchError& e) {
 			logger.logMap<vm::loader::StackStructureMismatchError>(
-				VISIT(instr, in, return static_cast<const vm::code::ElementBase&>(in)),
+				instr,
 				[&](Box<vm::loader::StackStructureMismatchError>& err) {
-					for (const auto& instruction: e.linked_instructions) {
-						logger.addNote<vm::loader::StackStructureMismatchNote>(
-							err,
-							VISIT(
-								instruction,
-								in,
-								return static_cast<const vm::code::ElementBase&>(in)
-							)
-						);
-					}
+					for (const auto& instruction: e.linked_instructions)
+						logger.addNote<vm::loader::StackStructureMismatchNote>(err, instruction);
 				}
 			);
 		} catch (vm::code::builders::UnknownTypeError& e) {
 			logger.log<vm::loader::UnknownType>(e.TYPE, e.TYPE.type_name);
+		} catch (vm::code::builders::MissingFunctionalTypeError& e) {
+			logger.log<vm::loader::UnknownFunction>(instr, e.FUNC_NAME);
 		} catch (vm::code::builders::BuilderError& e) {
 			logger.log<vm::loader::SomeBuilderError>(instr, e.what());
 		}
@@ -144,17 +138,8 @@ namespace {
 				[&](auto& err) {
 					for (const code::TypeOfData& duplicated_type: types.getTypes()) {
 						base::StrID other_name = VISIT(duplicated_type, value, return value.name);
-						if (name == other_name) {
-							log.addNote<loader::DuplicatedTypeNote>(
-								err,
-								VISIT(
-									duplicated_type,
-									tp,
-									return static_cast<const vm::code::ElementBase&>(tp)
-								),
-								name
-							);
-						}
+						if (name == other_name)
+							log.addNote<loader::DuplicatedTypeNote>(err, duplicated_type, name);
 					}
 				},
 				name
@@ -222,10 +207,7 @@ std::expected<vm::low::LowVMProgram, vm::LoaderLogger>
 				}
 				if (log.good()) return getProgram(functions, types_context.getTypes());
 			} catch (code::builders::MissingSubtypeError& e) {
-				log.log<loader::MissingSubtypeError>(
-					VISIT(e.BASE_TYPE, data, return static_cast<const code::ElementBase&>(data)),
-					e.MISSING_NAME
-				);
+				log.log<loader::MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			}
 			return std::unexpected(std::move(log));
 		}

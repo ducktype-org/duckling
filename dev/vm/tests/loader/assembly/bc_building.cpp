@@ -87,15 +87,11 @@ private:
 	}
 
 	void unknownFunction() {
-		// @note: This is temporarily commented out until we fix function types
-		// buildInvalidDbc(
-		// 	"unknown_function.dbc",
-		// 	{
-		// 		base::strConcat(vm::preprocessor::UnknownFunction::ERR_MSG, "foo"),
-		// 	}
-		// );
-		assertThrows<vm::code::builders::MissingFunctionalTypeError>(
-			[&] { buildInvalidDbc("unknown_function.dbc", {}); }, "Missing func type not thrown"
+		buildInvalidDbc(
+			"unknown_function.dbc",
+			{
+				base::strConcat(vm::loader::UnknownFunction::ERR_MSG, "foo"),
+			}
 		);
 	}
 };

@@ -13,7 +13,7 @@
 #define DEF_BUILDER_ERR(name, err_msg, cons_args, super_args)                 \
 	class name: public BuilderError {                                         \
 	public:                                                                   \
-		constexpr static std::string_view ERR_MSG = err_msg;                  \
+		constexpr const static std::string_view ERR_MSG = err_msg;            \
 		name(cons_args): BuilderError(base::strConcat(ERR_MSG super_args)) {} \
 	}
 
@@ -27,7 +27,7 @@ namespace vm::code::builders {
 
 	class StackStructureMismatchError: public BuilderError {
 	public:
-		constexpr static std ::string_view ERR_MSG
+		constexpr static const std::string_view ERR_MSG
 			= "Stack structure differs between jumps and label.";
 		std::vector<Instruction> linked_instructions;  /// all jumps to the label and the label
 
@@ -36,12 +36,15 @@ namespace vm::code::builders {
 			  linked_instructions(std::move(linked_instructions)) {}
 	};
 
-	DEF_BUILDER_ERR(
-		MissingFunctionalTypeError,
-		"Functional type is not declared for: ",
-		base::StrID name,
-		COMMA       name
-	);
+	class MissingFunctionalTypeError: public BuilderError {
+	public:
+		constexpr const static std ::string_view ERR_MSG = "Functional type is not declared for: ";
+		const base::StrID                        FUNC_NAME;
+
+		MissingFunctionalTypeError(base::StrID func_name):
+			  BuilderError(base ::strConcat(ERR_MSG, func_name)),
+			  FUNC_NAME(func_name) {}
+	};
 
 	DEF_BUILDER_ERR(
 		TypeIsNotFunctionalError, "Type is not functional: ", base::StrID name, COMMA name
@@ -49,9 +52,9 @@ namespace vm::code::builders {
 
 	class MissingSubtypeError: public BuilderError {
 	public:
-		constexpr static std ::string_view ERR_MSG = "This subtype is not defined anywhere: ";
-		const TypeOfData                   BASE_TYPE;
-		const base::StrID                  MISSING_NAME;
+		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+		const TypeOfData                        BASE_TYPE;
+		const base::StrID                       MISSING_NAME;
 
 		MissingSubtypeError(TypeOfData base_type, base::StrID missing_name):
 			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
@@ -61,13 +64,15 @@ namespace vm::code::builders {
 
 	class UnknownTypeError: public BuilderError {
 	public:
-		constexpr static std ::string_view ERR_MSG = "Unknown type: ";
-		const vm::opargs::Type             TYPE;
+		constexpr static const std::string_view ERR_MSG = "Unknown type: ";
+		const vm::opargs::Type                  TYPE;
 
 		UnknownTypeError(vm::opargs::Type type):
 			  BuilderError(base::strConcat(ERR_MSG, type.type_name)),
 			  TYPE(type) {}
 	};
+
+	DEF_BUILDER_ERR(EmptyStackDeinitError, "Popping from empty variable stack.", EMPTY, EMPTY);
 }
 
 #undef DEF_BUILDER_ERR

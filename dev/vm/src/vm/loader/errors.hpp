@@ -5,7 +5,7 @@
 namespace vm::loader {
 	class UnknownLabel final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "Label does not exist.";
+		constexpr static const std::string_view ERR_MSG = "Label does not exist.";
 
 	protected:
 		[[nodiscard]]
@@ -24,7 +24,7 @@ namespace vm::loader {
 
 	class RepeatedLabel final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "Repeated label.";
+		constexpr static const std::string_view ERR_MSG = "Repeated label.";
 
 	protected:
 		[[nodiscard]]
@@ -43,7 +43,7 @@ namespace vm::loader {
 
 	class RepeatedLabelNote final: public dia::NoteWithPosition {
 	public:
-		constexpr static std::string_view ERR_MSG = "Previous declaration here.";
+		constexpr static const std::string_view ERR_MSG = "Previous declaration here.";
 
 	protected:
 		[[nodiscard]]
@@ -59,7 +59,7 @@ namespace vm::loader {
 		base::StrID type_name;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "Duplicated type: ";
+		constexpr static const std::string_view ERR_MSG = "Duplicated type: ";
 
 	protected:
 		[[nodiscard]]
@@ -82,7 +82,7 @@ namespace vm::loader {
 		base::StrID type_name;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "Previous type declaration here.";
+		constexpr static const std::string_view ERR_MSG = "Previous type declaration here.";
 
 	protected:
 		[[nodiscard]]
@@ -100,7 +100,7 @@ namespace vm::loader {
 		base::StrID type_name;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "Unknown type: ";
+		constexpr static const std::string_view ERR_MSG = "Unknown type: ";
 
 	protected:
 		[[nodiscard]]
@@ -123,7 +123,7 @@ namespace vm::loader {
 		base::StrID func_name;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "Function does not exist: ";
+		constexpr static const std::string_view ERR_MSG = "Function does not exist: ";
 
 	protected:
 		[[nodiscard]]
@@ -144,7 +144,7 @@ namespace vm::loader {
 
 	class DuplicateFunctionDefinitionError final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "Function with this name already exists.";
+		constexpr static const std::string_view ERR_MSG = "Function with this name already exists.";
 
 	protected:
 		[[nodiscard]]
@@ -163,7 +163,7 @@ namespace vm::loader {
 
 	class DuplicatedFunctionDefinitionNote final: public dia::NoteWithPosition {
 	public:
-		constexpr static std::string_view ERR_MSG = "Previous function declaration here.";
+		constexpr static const std::string_view ERR_MSG = "Previous function declaration here.";
 
 	protected:
 		[[nodiscard]]
@@ -177,7 +177,8 @@ namespace vm::loader {
 
 	class StackStructureMismatchError final: public dia::Error {
 	public:
-		constexpr static std::string_view ERR_MSG = "This instruction invalidates stack structure.";
+		constexpr static const std::string_view ERR_MSG
+			= "This instruction invalidates stack structure.";
 
 	protected:
 		[[nodiscard]]
@@ -196,7 +197,7 @@ namespace vm::loader {
 
 	class StackStructureMismatchNote final: public dia::NoteWithPosition {
 	public:
-		constexpr static std::string_view ERR_MSG = "Some stack structure here.";
+		constexpr static const std::string_view ERR_MSG = "Some stack structure here.";
 
 	protected:
 		[[nodiscard]]
@@ -212,7 +213,7 @@ namespace vm::loader {
 		base::StrID subtype_name;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
 
 	protected:
 		[[nodiscard]]
@@ -232,10 +233,10 @@ namespace vm::loader {
 	};
 
 	class SomeBuilderError final: public dia::Error {
-		std::string_view error_message;
+		std::string error_message;
 
 	public:
-		constexpr static std::string_view ERR_MSG = "An error occurred during building: ";
+		constexpr static const std::string_view ERR_MSG = "An error occurred during building: ";
 
 	protected:
 		[[nodiscard]]

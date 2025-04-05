@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 
 #include <vm/code/builders/builders.hpp>
+#include <vm/code/builders/errors.hpp>
 #include <vm/code/code.hpp>
 #include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
@@ -143,8 +144,8 @@ private:
 			= types_adding.finalized();
 
 		FunctionBuilder func_builder(main, finalized);
-		auto            a = func_builder.initType(Op_init_type{ int64 });
-		func_builder.initType(Op_init_type{ int32 });
+		auto            a = func_builder.initType(Op_init_type{ int64 });  // a
+		func_builder.initType(Op_init_type{ int32 });                      // b
 
 		InstructionBuilder instr_mov(OpKind::mov);
 		instr_mov.pushArgs(vm::opargs::StackLocalI64(i64(a)), vm::opargs::Immediate(1'337));
@@ -155,7 +156,7 @@ private:
 		func_builder.deinitType();  // a
 		func_builder.deinitType();  // b
 		func_builder.deinitType();  // ret val (int64)
-		assertThrows<base::Panic>(
+		assertThrows<EmptyStackDeinitError>(
 			[&] { func_builder.deinitType(); }, "Cannot pop from empty variable stack"
 		);
 

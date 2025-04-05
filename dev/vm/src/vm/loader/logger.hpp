@@ -34,7 +34,7 @@ namespace vm {
 
 		template<class ErrT, class Function, class... Args>
 		void logMap(const IsElementVariant auto& elem, const Function& callback, Args&&... args) {
-			logMap(
+			logMap<ErrT>(
 				VISIT(elem, e, return static_cast<const code::ElementBase&>(e)),
 				callback,
 				std::forward<Args>(args)...
@@ -70,7 +70,11 @@ namespace vm {
 		template<class NoteT, class ErrT, class... Args>
 		requires std::is_base_of_v<dia::Note, NoteT>
 		void addNote(Box<ErrT>& error, const IsElementVariant auto& elem, Args&&... args) {
-			addNote<NoteT>(error, VISIT(elem, e, return static_cast<const code::ElementBase&>(e)), std::forward<Args>(args)...);
+			addNote<NoteT>(
+				error,
+				VISIT(elem, e, return static_cast<const code::ElementBase&>(e)),
+				std::forward<Args>(args)...
+			);
 		}
 
 		/**

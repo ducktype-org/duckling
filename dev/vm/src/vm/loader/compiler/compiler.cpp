@@ -7,17 +7,17 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/core/process/type_metadata/type.hpp>
-#include <vm/loader/logger.hpp>
 #include <vm/code/code.hpp>
 #include <vm/code/instructions.hpp>
 #include <vm/code/opcode_args.hpp>
 #include <vm/code/serializer/serializer.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/loader.hpp>
+#include <vm/loader/logger.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
 
