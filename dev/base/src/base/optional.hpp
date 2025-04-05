@@ -60,6 +60,19 @@
  * 	std::cout << "Test2 has no value.\n";
  * }
  *
+ *
+ * // Furthermore, it can be used with `std::expected<T, K>`!
+ *	std::expected<int, float> t = 1;
+ *	match_optional(t) {
+ *		opt_some(val) { assert(val == 1); }
+ *		opt_err(err) { CORE_PANIC("No error!") }
+ *	}
+ *  t = std::unexpected(1.5f);
+ *	match_optional(t) {
+ *		opt_some(val) { CORE_PANIC("No value!") }
+ *		opt_err(err) { assert(err == 1.5f); }
+ *	}
+ *
  */
 #define match_optional(optional)                                                             \
 	PUSH_DIAGNOSTIC                                                                          \
