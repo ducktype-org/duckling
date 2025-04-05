@@ -1,19 +1,23 @@
 #pragma once
 
+#include "type_of_data.hpp"
+
 #include <diagnostic/source_position.hpp>
+#include <token_file/file.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/token_stream.hpp>
+
 #include <base/box.hpp>
+#include <base/for_each.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <base/for_each.hpp>
-#include <vm/program/opcode_args.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <token_file/file.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/token_stream.hpp>
-#include "type_of_data.hpp"
-#include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
+
+#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/program/opcode_args.hpp>
+
 #include <vector>
 
 namespace vm::parser {

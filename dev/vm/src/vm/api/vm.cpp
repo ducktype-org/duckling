@@ -1,6 +1,7 @@
 #include "vm.hpp"
-#include <vm/api/data/response.hpp>
+
 #include <vm/api/data/request.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 namespace vm::api {

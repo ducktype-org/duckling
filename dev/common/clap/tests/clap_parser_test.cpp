@@ -1,7 +1,7 @@
-#include <tester/tester.hpp>
-#include <clap/parsing_result.hpp>
 #include <clap/exceptions.hpp>
+#include <clap/parsing_result.hpp>
 #include <filesystem/file.hpp>
+#include <tester/tester.hpp>
 
 class ClapParserTester: public tester::TestSuite {
 #undef TESTER_CLASS

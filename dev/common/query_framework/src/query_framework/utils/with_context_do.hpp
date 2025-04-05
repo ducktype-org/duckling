@@ -1,8 +1,9 @@
 #pragma once
 
 #include "../query_int.hpp"
-#include <functional>
+
 #include <any>
+#include <functional>
 
 namespace query::utils {
 	/**

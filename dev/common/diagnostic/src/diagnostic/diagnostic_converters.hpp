@@ -1,6 +1,7 @@
 #pragma once
 
 #include "message.hpp"
+
 #include <ranges>
 
 namespace dia {

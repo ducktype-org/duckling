@@ -1,11 +1,12 @@
 #include "example.hpp"
-#include <diagnostic/diagnostic_converters.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <init/init.hpp>
 
-#include <map>
+#include <diagnostic/diagnostic_converters.hpp>
+#include <init/init.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
+
 #include <iostream>
+#include <map>
 
 /************
  * QUERY 1: *
@@ -146,10 +147,10 @@ int main() {
 	std::cerr << "\n";
 
 	std::cerr << "Here are the logs in user readable form:\n";
-	query::detail::ContextType::logger.dumpLog(true);
+	query::Context::logger.dumpLog(true);
 
 	std::cerr << "And here are the logs in JSON:\n";
-	query::detail::ContextType::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
+	query::Context::logger.dumpLog<dia::DiagnosticToJSONConverter>(true);
 
 	std::cerr << query::entryPoint<CyclicQuery>(0) << "\n";
 

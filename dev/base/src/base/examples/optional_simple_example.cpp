@@ -1,4 +1,5 @@
 #include <base/optional.hpp>
+
 #include <cassert>
 
 int main() {

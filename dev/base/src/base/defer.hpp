@@ -13,6 +13,7 @@
 #pragma once
 
 #include "define_helper.hpp"
+
 #include <utility>
 
 namespace detail {

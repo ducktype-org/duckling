@@ -1,4 +1,5 @@
 #include "../init_guard.hpp"
+
 #include <iostream>
 
 namespace base::detail {

@@ -3,9 +3,10 @@
  */
 #pragma once
 
-#include <listener/emitter.hpp>
-#include "memory_event.hpp"
 #include "function_call_event.hpp"
+#include "memory_event.hpp"
+
+#include <listener/emitter.hpp>
 
 namespace vm {
 	using EmitterManager = std::tuple<FunctionCallEvent, MemoryEvent>;

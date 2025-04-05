@@ -1,10 +1,15 @@
 
 
-#include <vm/preprocessor/parser/elements.hpp>
-#include <token_file/file.hpp>
-#include <deque>
-#include <base/optional.hpp>
 #include "errors.hpp"
+
+#include <token_file/file.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
+#include <vm/preprocessor/parser/elements.hpp>
+
+#include <deque>
 
 namespace vm::parser {
 

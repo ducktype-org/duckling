@@ -2,16 +2,13 @@
  * @file mir_tests.cpp
  */
 
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-
-#include <tester/tester.hpp>
-
+#include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/queries.cpp>
-
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -24,12 +21,12 @@ class MIRConstructionTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
-		// @TODO: add parameters test, once they are handled well
 		TESTER_ADD_TEST(simpleVarTest);
 		TESTER_ADD_TEST(testTerminatorSuccessors);
 		TESTER_ADD_TEST(mockLifetimeAnalysisTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(simpleFunctionCalls);
+		TESTER_ADD_TEST(functionParametersTest);
 	}
 
 private:
@@ -233,6 +230,63 @@ private:
 			}
 
 			ASSERT_EQUAL(count_of_calls, 6);
+		});
+	}
+
+	void functionParametersTest() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/function_with_parameters")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit->functions;
+			ASSERT_EQUAL(1, functions.size());
+
+			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+
+			auto i16_type = ctx.query<QueryIntegralType>(16);
+			auto i32_type = ctx.query<QueryIntegralType>(32);
+			auto i64_type = ctx.query<QueryIntegralType>(64);
+
+			const auto& locals = foo_mir->local_list;
+
+			bool was_x = false;
+			bool was_y = false;
+			bool was_z = false;
+
+			for (auto& local: locals) {
+				if (local->getName() == "x") {
+					ASSERT_TRUE(not was_x);
+					ASSERT_EQUAL(local->parameter_index.value(), 0);
+					ASSERT_EQUAL(local->type.getType(), i16_type);
+					was_x = true;
+				} else if (local->getName() == "y") {
+					ASSERT_TRUE(not was_y);
+					ASSERT_EQUAL(local->parameter_index.value(), 1);
+					ASSERT_EQUAL(local->type.getType(), i32_type);
+					was_y = true;
+				} else if (local->getName() == "z") {
+					ASSERT_TRUE(not was_z);
+					ASSERT_EQUAL(local->parameter_index.value(), 2);
+					ASSERT_EQUAL(local->type.getType(), i64_type);
+					was_z = true;
+				} else {
+					ASSERT_TRUE(local->parameter_index.empty());
+				}
+			}
+
+			ASSERT_TRUE(was_x and was_y and was_z);
+
+			// check if value in return instruction is indeed the parameter we expect:
+			u64 return_value_count = 0;
+			for (auto& block: foo_mir->blocks) {
+				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
+					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
+					ASSERT_EQUAL(z_local->parameter_index.value(), 2);
+					return_value_count++;
+				}
+			}
+			ASSERT_EQUAL(return_value_count, 1);
 		});
 	}
 };

@@ -1,8 +1,10 @@
 #include "key_spec_op.hpp"
-#include <base/maps.hpp>
+
 #include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
 #include <base/init_guard.hpp>
+#include <base/maps.hpp>
+#include <base/raw_view.hpp>
+
 #include <array>
 
 namespace lang_def {
@@ -19,7 +21,7 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 72>
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 76>
 		LANG_KEYWORDS_ARRAY{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
@@ -32,7 +34,7 @@ namespace lang_def {
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 			{ Keyword::Var, "var", KeywordFlags() },
 			{ Keyword::Let, "let", KeywordFlags() },
-			{ Keyword::Const, "const", KeywordFlags() },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
 
 			{ Keyword::While, "while", KeywordFlags() },
 			{ Keyword::For, "for", KeywordFlags() },
@@ -50,13 +52,13 @@ namespace lang_def {
 			{ Keyword::Switch, "switch", KeywordFlags() },
 			{ Keyword::Case, "case", KeywordFlags() },
 
-			{ Keyword::Return, "return", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Break, "break", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Continue, "continue", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Redo, "redo", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Restart, "restart", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Defer, "defer", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Throw, "throw", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Return, "return", KeywordFlagsOptions::IsAction },
+			{ Keyword::Break, "break", KeywordFlagsOptions::IsAction },
+			{ Keyword::Continue, "continue", KeywordFlagsOptions::IsAction },
+			{ Keyword::Redo, "redo", KeywordFlagsOptions::IsAction },
+			{ Keyword::Restart, "restart", KeywordFlagsOptions::IsAction },
+			{ Keyword::Defer, "defer", KeywordFlagsOptions::IsAction },
+			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsAction },
 			{ Keyword::Assert, "assert", KeywordFlags() },
 			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
 
@@ -94,6 +96,11 @@ namespace lang_def {
 			{ Keyword::And, "and", KeywordFlags() },
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
+
+			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
 
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
@@ -142,16 +149,23 @@ namespace lang_def {
 		{ Special::DolarSign, "$" },
 	} };
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 23> OPERATOR_ARRAY{ {
+	constexpr std::array<std::pair<NamedOperator, std::string_view>, 27> OPERATOR_ARRAY{ {
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
+
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
 		{ NamedOperator::Assign, "=" },
-		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::QuestionMark, "?" },
 		{ NamedOperator::SingleArrow, "->" },
 		{ NamedOperator::DoubleArrow, "=>" },
+
+		{ NamedOperator::Pipe, "|" },
+		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::BitXor, "^" },
+
+		{ NamedOperator::LeftShift, "<<" },
+		{ NamedOperator::RightShift, ">>" },
 
 		{ NamedOperator::Lesser, "<" },
 		{ NamedOperator::Greater, ">" },

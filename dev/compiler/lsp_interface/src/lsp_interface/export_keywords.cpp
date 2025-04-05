@@ -3,12 +3,15 @@
  * @brief This file defines the ExportKeywords class, which provides functionality to export
  * keywords, specials, and operators in JSON format.
  */
-#include "utils.hpp"
 #include "export_keywords.hpp"
+
+#include "utils.hpp"
+
 #include <lang_definitions/key_spec_op.hpp>
+
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 namespace lsp {
 	/**
