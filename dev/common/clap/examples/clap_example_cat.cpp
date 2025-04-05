@@ -5,6 +5,8 @@
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 
+#include <base/int_conv.hpp>
+
 #include <iostream>
 
 void printFile(const fs::FilePath& file) {
@@ -30,9 +32,9 @@ int main(int argc, const char** argv) {
 	clap::ParsingResult result;
 	try {
 		// Real parsing happens here. Only this operation may throw clap exception.
-		result = clap.parse(argc, argv);
+		result = clap.parse(base::safeIntConv<usize>(argc), argv);
 
-		i64 times = result.getValue<i64>('n').value_or(1);
+		i64 times = result.getValue<i64>('n').valueOr(1);
 		while (times--) {
 			// Since we are using clap::FileParser, it automatically links
 			// specified input to real files!
