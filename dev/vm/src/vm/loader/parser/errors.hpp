@@ -4,7 +4,7 @@
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
 
-namespace vm::parser {
+namespace vm::loader::parser {
 	class ExpectedSemicolonAfterError final: public dia::Error {
 	public:
 		constexpr static std::string_view ERR_MSG = "Expected `;` after here";

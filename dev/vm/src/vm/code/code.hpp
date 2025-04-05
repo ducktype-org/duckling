@@ -25,4 +25,9 @@ namespace vm::code {
 
 		CodeBlock body;
 	};
+
+	struct CodeCollection {
+		std::vector<Function>   functions;
+		std::vector<TypeOfData> types;
+	};
 }

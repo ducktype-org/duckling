@@ -8,10 +8,10 @@
 
 #include <type_traits>
 
-namespace vm {
+namespace vm::loader {
 	template<class T>
 	concept IsElementVariant = requires(T t) {
-		std ::visit([](auto&& elem) { return static_cast<const code::ElementBase&>(elem); }, (t));
+		std ::visit([](auto&& elem) { return static_cast<const code::ElementBase&>(elem); }, t);
 	};
 
 	/**
@@ -42,14 +42,16 @@ namespace vm {
 		}
 
 		/**
-		 * @brief A more specialized version of error logging. It allows for attaching
+		 * @brief A more specialized version of error logging than `log`. It allows for attaching
 		 * notes to error messages by calling a callback with an error message as parameter.
 		 */
 		template<class ErrT, class Function, class... Args>
 		requires std::is_base_of_v<dia::Error, ErrT>
 		void logMap(const code::ElementBase& elem, const Function& callback, Args&&... args) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(base::strConcat(ErrT::ERR_MSG, " ", args...));
+				opt_none errors.push_back(
+					base::strConcat(ErrT::ERR_MSG, std::forward<Args>(args)...)
+				);
 				opt_some(pos) {
 					auto t = makeBox<ErrT>(pos, std::forward<Args>(args)...);
 					callback(t);
@@ -58,11 +60,17 @@ namespace vm {
 			}
 		}
 
+		/**
+		 * @brief Helper to add notes to error messages based on availability of bytecode source
+		 * position.
+		 */
 		template<class NoteT, class ErrT, class... Args>
 		requires std::is_base_of_v<dia::Note, NoteT>
 		void addNote(Box<ErrT>& error, const code::ElementBase& elem, Args&&... args) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(base::strConcat(NoteT::ERR_MSG, " ", args...));
+				opt_none errors.push_back(
+					base::strConcat(NoteT::ERR_MSG, std::forward<Args>(args)...)
+				);
 				opt_some(pos) { error->addNote(makeBox<NoteT>(pos, std::forward<Args>(args)...)); }
 			}
 		}
@@ -78,9 +86,9 @@ namespace vm {
 		}
 
 		/**
-		 * @brief The main method for logging errors. If given element has a source position, then
-		 * a proper error will be logged, otherwise error's message will be appended to internal
-		 * list or error messages.
+		 * @brief The main method for logging errors. If given element has a bytecode source
+		 * position, then a proper error will be logged, otherwise error's message will be appended
+		 * to internal list or error messages.
 		 */
 		template<class ErrT, class... Args>
 		requires std::is_base_of_v<dia::Error, ErrT>

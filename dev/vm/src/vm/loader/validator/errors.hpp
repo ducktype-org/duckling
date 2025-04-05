@@ -1,9 +1,7 @@
+#pragma once
 #include <diagnostic/message.hpp>
 
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
-
-namespace vm::validator {
+namespace vm::loader::validator {
 	class ByteCodeValidatorError: public dia::Error {
 	public:
 		ByteCodeValidatorError(dia::SourcePosition pos): dia::Error(pos) {}

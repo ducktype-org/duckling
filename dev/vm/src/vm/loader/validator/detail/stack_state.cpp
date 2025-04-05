@@ -5,7 +5,7 @@
 
 #include <vm/code/opcode_args.hpp>
 
-bool vm::validator::StackState::consume(CRef<parser::OpCode> opcode) {
+bool vm::loader::validator::StackState::consume(CRef<parser::OpCode> opcode) {
 	if (opcode->opcode_name == "init_type") {
 		variant_match(opcode->args.at(0)) {
 			variant_case(opargs::Type, tp) {
@@ -22,4 +22,5 @@ bool vm::validator::StackState::consume(CRef<parser::OpCode> opcode) {
 	return true;
 }
 
-vm::validator::StackState::StackState(const TypeMetadata& meta_data): type_metadata(meta_data) {}
+vm::loader::validator::StackState::StackState(const TypeMetadata& meta_data):
+	  type_metadata(meta_data) {}

@@ -9,18 +9,18 @@
 #include <iomanip>
 
 namespace vm::code {
-	std::string toString(vm::opargs::Immediate arg) { return std::to_string(arg.value); }
+	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
 #define OFFSET_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
 
 	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
 
-	std::string toString(vm::opargs::Type arg) { return arg.type_name.str(); }
+	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
-	std::string toString(vm::opargs::FunctionName arg) { return arg.function_name.str(); }
+	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
-	std::string toString(vm::opargs::Label arg) { return arg.label_name.str(); }
+	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
 	void writeComment(const std::string_view comment_content, std::ostream& out) {
 		out << '#' << ' ' << comment_content;
@@ -49,18 +49,18 @@ namespace vm::code {
 	struct InstructionSerializerVisitor {
 		std::ostream& out;
 
-		void operator()(const instructions::Comment& comment) {
+		void operator()(const instructions::Comment& comment) const {
 			writeComment(comment.comment.strView(), out);
 		}
 
 #define HANDLE_OPCODE_0ARGS(opcode) \
-	void operator()(VM_INSTR_FROM_NAME(opcode)) { write0ArgOpcodeTemplate(#opcode, out); }
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)              \
-	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) {    \
-		write1ArgOpcodeTemplate(#opcode, opcode.arg0, out); \
+	void operator()(VM_INSTR_FROM_NAME(opcode)) const { write0ArgOpcodeTemplate(#opcode, out); }
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                 \
+	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const { \
+		write1ArgOpcodeTemplate(#opcode, opcode.arg0, out);    \
 	}
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                 \
-	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) {                  \
+	void operator()(VM_INSTR_FROM_NAME(opcode) opcode) const {            \
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
@@ -81,7 +81,7 @@ namespace vm::code {
 		const Function& function;
 		i64             current_indentation = 0;
 
-		void withIdentWriteLine(const std::function<void(std::ostream&)>& write) {
+		void withIdentWriteLine(const std::function<void(std::ostream&)>& write) const {
 			out << std::string(base::safeIntConv<size_t>(current_indentation), ' ');
 			write(out);
 			out << "\n";
@@ -136,43 +136,42 @@ namespace vm::code {
 	};
 
 	class TypeSerializer final {
-		std::ostream&               out;
-		const vm::code::TypeOfData& type;
+		std::ostream&     out;
+		const TypeOfData& type;
 
-	private:
 		struct TypeSerializerVisitor {
 			std::ostream& out;
 
-			void operator()(const PrimitiveType& type) {
+			void operator()(const PrimitiveType& type) const {
 				out << "type primitive: ";
 				out << type.name.strView() << " ";
 				out << type.size;
 			}
 
-			void operator()(const PointerType&) {
+			void operator()(const PointerType&) const {
 				throw base::NotYetImplemented("PointerType serialization");
 			}
 
-			void operator()(const StaticTableType& type) {
+			void operator()(const StaticTableType& type) const {
 				out << "type static_table: ";
 				out << type.name.strView() << " ";
 				out << type.inner.strView() << " ";
 				out << type.table_size;
 			}
 
-			void operator()(const DynamicTableType&) {
+			void operator()(const DynamicTableType&) const {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const DataType&) {
+			void operator()(const DataType&) const {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const VariantType&) {
+			void operator()(const VariantType&) const {
 				throw base::NotYetImplemented("DynamicTableType serialization");
 			}
 
-			void operator()(const FunctionType& fun) {
+			void operator()(const FunctionType& fun) const {
 				// type fun: main {} int64
 				out << "type fun: ";
 				out << fun.name.strView() << " {";
@@ -190,9 +189,9 @@ namespace vm::code {
 		};
 
 	public:
-		TypeSerializer(std::ostream& out, const vm::code::TypeOfData& type): out(out), type(type) {}
+		TypeSerializer(std::ostream& out, const TypeOfData& type): out(out), type(type) {}
 
-		void write() { std::visit(TypeSerializerVisitor{ out }, type); }
+		void write() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
 	void serialize(const Function& function, std::ostream& out) {

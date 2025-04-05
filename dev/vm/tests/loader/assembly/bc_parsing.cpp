@@ -6,6 +6,8 @@
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 
+using namespace vm::loader;
+
 class BCParsingTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCParsingTests
@@ -26,7 +28,7 @@ private:
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 	) {
 		fs::FilePath file(path(dbc_filename));
-		auto         parsing_result = vm::parser::parse({ file });
+		auto         parsing_result = parser::parse({ file });
 		match_optional(parsing_result) {
 			opt_err(logger) {
 				std::stringstream ss;
@@ -46,7 +48,7 @@ private:
 		parseInvalidDbc(
 			"invalid_opcode.dbc",
 			{
-				base::strConcat(vm::parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
+				base::strConcat(parser::UnknownOpCodeError::ERR_MSG, "mov_l46_imm"),
 			}
 		);
 	}
@@ -55,7 +57,7 @@ private:
 		parseInvalidDbc(
 			"no_semicolon.dbc",
 			{
-				vm::parser::ExpectedSemicolonAfterError::ERR_MSG,
+				parser::ExpectedSemicolonAfterError::ERR_MSG,
 			}
 		);
 	}
@@ -65,7 +67,7 @@ private:
 			"invalid_literal.dbc",
 			{
 				base::strConcat(
-					vm::parser::InvalidLiteral::ERR_MSG,
+					parser::InvalidLiteral::ERR_MSG,
 					"Not a valid number for `vm::opargs::StackLocalI64`"
 				),
 			}

@@ -11,7 +11,7 @@
 
 #include <vm/code/opcode_args.hpp>
 
-namespace vm::parser {
+namespace vm::loader::parser {
 	namespace opargs_parsers {
 		template<class T, class K>
 		T parseInt(F8ParserState& state) {
@@ -121,9 +121,7 @@ namespace vm::parser {
 					out->args
 						= opargs_parsers::OP_CODE_TO_ARGS_PARSER.at(out->opcode_name.str())(state);
 					if (!state.tryEat(lang_def::Special::Semicolon)) {
-						state.log(
-							makeBox<vm::parser::ExpectedSemicolonAfterError>(state.getPosition(-1))
-						);
+						state.log(makeBox<ExpectedSemicolonAfterError>(state.getPosition(-1)));
 						logged = true;
 						continue;
 					}
@@ -138,9 +136,8 @@ namespace vm::parser {
 
 					return out;
 				} else if (!logged) {
-					state.log(makeBox<vm::parser::UnknownOpCodeError>(
-						state.getPosition(-1), identifier1.value
-					));
+					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value)
+					);
 					logged = true;
 				}
 			} else {
@@ -355,7 +352,7 @@ namespace vm::parser {
 			}
 
 			state.goDown();
-			std::vector<Field> fields;
+			std::vector<DataType::Field> fields;
 			while (state.notEmpty()) {
 				tpc::Identifier field_name;
 				tpc::Identifier field_type;

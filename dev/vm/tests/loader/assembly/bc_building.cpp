@@ -81,7 +81,7 @@ private:
 		buildInvalidDbc(
 			"unknown_type.dbc",
 			{
-				base::strConcat(vm::loader::UnknownType::ERR_MSG, "in64"),
+				base::strConcat(vm::loader::UnknownTypeError::ERR_MSG, "in64"),
 			}
 		);
 	}
@@ -90,7 +90,7 @@ private:
 		buildInvalidDbc(
 			"unknown_function.dbc",
 			{
-				base::strConcat(vm::loader::UnknownFunction::ERR_MSG, "foo"),
+				base::strConcat(vm::loader::UnknownFunctionError::ERR_MSG, "foo"),
 			}
 		);
 	}

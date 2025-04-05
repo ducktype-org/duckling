@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vm/code/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/loader/parser/elements.hpp>
 
 #include <vector>
 
-namespace vm::validator {
+namespace vm::loader::validator {
 	/**
 	 * @brief Holds a state of the local stack.
 	 *
@@ -22,7 +21,7 @@ namespace vm::validator {
 		const TypeMetadata&     type_metadata;
 
 	public:
-		StackState(const TypeMetadata& meta_data);
+		explicit StackState(const TypeMetadata& meta_data);
 
 		/**
 		 * @brief Takes an instruction and updates the stack.

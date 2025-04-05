@@ -69,16 +69,28 @@ namespace vm::code::builders {
 	template<TypesContextState state = TypesContextState::AddingTypes>
 	class TypesContext;
 
+	/**
+	 * @brief TypesContext specialization that allows for adding types.
+	 * It can be used to build TypesContext<TypesContextState::Finalized>.
+	 */
 	template<>
 	class TypesContext<TypesContextState::AddingTypes> {
 		base::StableTypeIdNameMap<TypeOfData> types;
 
 	public:
-		const base::StableTypeIdNameMap<TypeOfData>& getTypes() const;
 		void                                         addType(const TypeOfData& type);
-		TypesContext<TypesContextState::Finalized>   finalized() const;
+		const base::StableTypeIdNameMap<TypeOfData>& getTypes() const;
+
+		/**
+		 * @brief Finalizes currently added types by building them.
+		 */
+		TypesContext<TypesContextState::Finalized> finalized() const;
 	};
 
+	/**
+	 * @brief TypesContext specialization that contains built types.
+	 * It can be used built using TypesContext<TypesContextState::AddingTypes>.
+	 */
 	template<>
 	class TypesContext<TypesContextState::Finalized> {
 		friend TypesContext<TypesContextState::AddingTypes>;
@@ -163,6 +175,7 @@ namespace vm::code::builders {
 
 		void handleLabel(instructions::Op_label label);
 		void handleCallFunc(instructions::Op_call_func call);
+		void handleDeinit();
 
 	public:
 		FunctionBuilder(base::StrID name, const TypesContext<TypesContextState::Finalized>& types);
@@ -173,11 +186,10 @@ namespace vm::code::builders {
 		void setRetSize(usize ret_size);
 
 		/**
-		 * @brief Return variable's stack offset.
+		 * @brief Return variable's stack offset. Also pushes `init_type` instruction.
 		 */
 		usize initType(instructions::Op_init_type init);
 
-		void                deinitType();
 		[[nodiscard]] usize getLocalSize() const;
 
 		void addInstruction(const Instruction& instruction);

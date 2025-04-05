@@ -30,7 +30,7 @@ namespace vm {
 		VMProcess::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = loader.getProgram(path);
+		auto code_result = loader->getProgram(path);
 
 		if (code_result.has_value()) {
 			loaded_program.emplace(std::move(code_result).value());
@@ -213,7 +213,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), loader(VALIDATE_CODE) {
+	VMProcess::VMProcess():
+		  status(api::ExecutionNotStarted{}),
+		  loader(makeBox<loader::Loader>(VALIDATE_CODE)) {
 		vm_threads.emplace_back(*this);
 	}
 

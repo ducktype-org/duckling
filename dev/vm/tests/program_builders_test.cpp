@@ -110,8 +110,8 @@ private:
 
 		func_builder.addInstruction(instr);
 
-		func_builder.deinitType();
-		func_builder.deinitType();
+		func_builder.addInstruction(Op_deinit());
+		func_builder.addInstruction(Op_deinit());
 		auto d = func_builder.initType(Op_init_type{ int32 });
 		ASSERT_EQUAL(4, d);
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
@@ -153,11 +153,12 @@ private:
 		InstructionBuilder instr_output(OpKind::output);
 		instr_output.pushArgs(vm::opargs::StackLocalI64(i64(a)));
 		func_builder.addInstruction(instr_output);
-		func_builder.deinitType();  // a
-		func_builder.deinitType();  // b
-		func_builder.deinitType();  // ret val (int64)
+		func_builder.addInstruction(Op_deinit());  // a
+		func_builder.addInstruction(Op_deinit());  // b
+		func_builder.addInstruction(Op_deinit());  // ret val (int64)
 		assertThrows<EmptyStackDeinitError>(
-			[&] { func_builder.deinitType(); }, "Cannot pop from empty variable stack"
+			[&] { func_builder.addInstruction(Op_deinit()); },
+			"Cannot pop from empty variable stack"
 		);
 
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));

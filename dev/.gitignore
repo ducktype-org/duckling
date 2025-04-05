@@ -12,10 +12,9 @@ CMakeUserPresets.json
 coverage/
 coverage.info
 
-# windows cmake
-/out/build/
-/build*/
-/cmake-build*/
+# builds
+/out/*build*/
+/*build*/
 
 # bin:
 bin/

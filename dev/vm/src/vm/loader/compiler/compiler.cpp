@@ -23,7 +23,7 @@
 
 #include <expected>
 
-namespace vm {
+namespace vm::loader::compiler {
 	namespace {
 		class CompilationContext final {
 			const base::StableTypeIdNameMap<code::Function>& func_map;
@@ -34,8 +34,8 @@ namespace vm {
 
 		public:
 			CompilationContext(
-				const base::StableTypeIdNameMap<code::Function, usize>& func_map,
-				const TypeMetadata&                                     type_map
+				const base::StableTypeIdNameMap<code::Function>& func_map,
+				const TypeMetadata&                              type_map
 			):
 				  func_map(func_map),
 				  type_map(type_map) {}
@@ -73,10 +73,10 @@ namespace vm {
 								label.arg0.label_name, new_func.body.size()
 							);
 							if (!inserted) {
-								logger.logMap<vm::loader::RepeatedLabel>(label, [&](auto& err) {
+								logger.logMap<RepeatedLabel>(label, [&](auto& err) {
 									for (auto&& lbl: label_positions)
 										if (lbl.first == label.arg0.label_name) {
-											logger.addNote<loader::RepeatedLabelNote>(
+											logger.addNote<RepeatedLabelNote>(
 												err, labels[label.arg0.label_name]
 											);
 										}
@@ -94,9 +94,9 @@ namespace vm {
 		};
 
 		i64 getOpCodeArgValue(
-			CompilationContext&          ctx,
-			usize                        instruction_index,
-			const vm::opargs::OpCodeArg& opcode_arg
+			CompilationContext&      ctx,
+			const usize              instruction_index,
+			const opargs::OpCodeArg& opcode_arg
 		) {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
@@ -106,10 +106,9 @@ namespace vm {
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
-					auto type_obj = ctx.types().atMaybe(type_arg.type_name);
-					if (type_obj)
+					if (auto type_obj = ctx.types().atMaybe(type_arg.type_name))
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-					ctx.log().log<vm::loader::UnknownType>(type_arg, type_arg.type_name);
+					ctx.log().log<UnknownTypeError>(type_arg, type_arg.type_name);
 					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
@@ -117,7 +116,7 @@ namespace vm {
 						if (ctx.functions().at(base::safeIntConv<u64>(i))->name
 						    == func.function_name)
 							return i;
-					ctx.log().log<vm::loader::UnknownFunction>(func, func.function_name);
+					ctx.log().log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
@@ -129,15 +128,15 @@ namespace vm {
 						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
 						     - 1;
 					}
-					ctx.log().log<vm::loader::UnknownLabel>(label);
+					ctx.log().log<UnknownLabel>(label);
 					return 0;
 				}
 			}
 			CORE_UNREACHABLE();
 		}
 
-		vm::low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
-			vm::low::FuncData func_data;
+		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
+			low::FuncData func_data;
 			func_data.name             = ctx.func().name;
 			func_data.arg_size         = ctx.func().arg_size;
 			func_data.local_stack_size = ctx.func().local_stack_size;
@@ -162,7 +161,7 @@ namespace vm {
 #include <vm/code/opcodes_list.hpp>
 				}
 
-				func_data.bc.emplace_back(vm::Fix8Instruction{
+				func_data.bc.emplace_back(Fix8Instruction{
 #ifdef USE_TAIL_CALLS
 					.opfun = vm::OpFuns::OPFUNS.at(low::fix8FromInstr(op)),
 #else
@@ -175,7 +174,7 @@ namespace vm {
 		}
 	}
 
-	std::expected<low::LowVMProgram, LoaderLogger> compiler::compile(const Program& program) {
+	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.funcMap().size());
 

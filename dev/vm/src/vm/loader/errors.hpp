@@ -96,7 +96,7 @@ namespace vm::loader {
 			  type_name(type_name) {}
 	};
 
-	class UnknownType final: public dia::Error {
+	class UnknownTypeError final: public dia::Error {
 		base::StrID type_name;
 
 	public:
@@ -114,12 +114,12 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UnknownType(dia::SourcePosition pos, base::StrID type_name):
+		UnknownTypeError(dia::SourcePosition pos, base::StrID type_name):
 			  dia::Error(pos),
 			  type_name(type_name) {}
 	};
 
-	class UnknownFunction final: public dia::Error {
+	class UnknownFunctionError final: public dia::Error {
 		base::StrID func_name;
 
 	public:
@@ -137,7 +137,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UnknownFunction(dia::SourcePosition pos, base::StrID func_name):
+		UnknownFunctionError(dia::SourcePosition pos, base::StrID func_name):
 			  dia::Error(pos),
 			  func_name(func_name) {}
 	};

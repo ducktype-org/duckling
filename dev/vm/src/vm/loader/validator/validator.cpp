@@ -16,12 +16,7 @@
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/validator/detail/stack_state.hpp>
 
-#include <expected>
-
-#define ADD_CHECK(name) \
-	if (!name()) good = false;
-
-namespace vm::validator {
+namespace vm::loader::validator {
 	namespace {
 		/**
 		 * @brief Performs static validation of the program.
@@ -74,15 +69,11 @@ namespace vm::validator {
 								= program.funcMap().atMaybe(op_tailcall.arg0.function_name);
 							if_opt_some(maybe_called_func, called_func) {
 								if (func.arg_size != called_func->arg_size)
-									log.log<vm::validator::CallerCalledArgSizeMismatch>(op_tailcall
-									);
+									log.log<CallerCalledArgSizeMismatch>(op_tailcall);
 								if (func.local_stack_size != called_func->local_stack_size)
-									log.log<vm::validator::CallerCalledStackSizeMismatch>(
-										op_tailcall
-									);
+									log.log<CallerCalledStackSizeMismatch>(op_tailcall);
 								if (func.ret_size != called_func->ret_size)
-									log.log<vm::validator::CallerCalledRetSizeMismatch>(op_tailcall
-									);
+									log.log<CallerCalledRetSizeMismatch>(op_tailcall);
 							}
 						}
 					}

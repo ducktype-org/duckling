@@ -1,13 +1,16 @@
 #pragma once
 
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/code/element_base.hpp>
 
 #include <ostream>
-#include <variant>
 
 namespace vm::code {
+	/**
+	 * @brief Represents a very simple primitive, like 8-byte integer, 4-byte float, etc.
+	 */
 	struct PrimitiveType: ElementBase {
 		PrimitiveType() = default;
 
@@ -23,9 +26,14 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const PrimitiveType& other) const = default;
+		bool operator==(const PrimitiveType& other) const {
+			return name == other.name && size == other.size;
+		}
 	};
 
+	/**
+	 * @brief Represents a pointer.
+	 */
 	struct PointerType: ElementBase {
 		PointerType() = default;
 
@@ -41,9 +49,14 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const PointerType& other) const = default;
+		bool operator==(const PointerType& other) const {
+			return name == other.name && inner == other.inner;
+		}
 	};
 
+	/**
+	 * @brief Represents a fixed-size array of elements of the same type.
+	 */
 	struct StaticTableType: ElementBase {
 		StaticTableType() = default;
 
@@ -64,9 +77,14 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const StaticTableType& other) const = default;
+		bool operator==(const StaticTableType& other) const {
+			return name == other.name && inner == other.inner && table_size == other.table_size;
+		}
 	};
 
+	/**
+	 * @brief Represents a dynamic array of elements of the same type.
+	 */
 	struct DynamicTableType: ElementBase {
 		DynamicTableType() = default;
 
@@ -82,21 +100,32 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const DynamicTableType& other) const = default;
+		bool operator==(const DynamicTableType& other) const {
+			return name == other.name && inner == other.inner;
+		}
 	};
 
-	struct Field: ElementBase {
-		Field() = default;
-
-		Field(base::StrID name, base::StrID type): name(name), type(type) {}
-
-		base::StrID name;
-		base::StrID type;
-
-		bool operator==(const Field& other) const = default;
-	};
-
+	/**
+	 * @brief Represents a structure with arbitrary types of fields.
+	 */
 	struct DataType: ElementBase {
+		/**
+		 * @brief Field is a building block of a datatype. It represents a storage
+		 * for value of some type.
+		 */
+		struct Field: ElementBase {
+			Field() = default;
+
+			Field(base::StrID name, base::StrID type): name(name), type(type) {}
+
+			base::StrID name;
+			base::StrID type;
+
+			bool operator==(const Field& other) const {
+				return name == other.name && type == other.type;
+			}
+		};
+
 		DataType() = default;
 
 		DataType(base::StrID name, std::vector<Field> fields):
@@ -116,9 +145,15 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const DataType& other) const = default;
+		bool operator==(const DataType& other) const {
+			return name == other.name && fields == other.fields;
+		}
 	};
 
+	/**
+	 * @brief Represents a variant of types.
+	 * @note This is a partial feature, as there are no bytecode instructions regarding variants.
+	 */
 	struct VariantType: ElementBase {
 		VariantType() = default;
 
@@ -138,9 +173,16 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const VariantType& other) const = default;
+		bool operator==(const VariantType& other) const {
+			return name == other.name && variant_alternatives == other.variant_alternatives;
+		}
 	};
 
+	/**
+	 * @brief Represents a function pointer type.
+	 * @note This is currently as a declaration of a function with corresponding name. This is
+	 * likely to change.
+	 */
 	struct FunctionType: ElementBase {
 		FunctionType(base::StrID name, std::vector<base::StrID> parameters, base::StrID result):
 			  name(name),
@@ -161,9 +203,14 @@ namespace vm::code {
 			out << "}";
 		}
 
-		bool operator==(const FunctionType& other) const = default;
+		bool operator==(const FunctionType& other) const {
+			return name == other.name && parameters == other.parameters && result == other.result;
+		}
 	};
 
+	/**
+	 * @brief Storage for any type of bytecode data.
+	 */
 	using TypeOfData = std::variant<
 		PrimitiveType,
 		PointerType,
@@ -173,7 +220,7 @@ namespace vm::code {
 		VariantType,
 		FunctionType>;
 
-	inline base::StrID typeName(const TypeOfData& type) {
-		return std::visit([](const auto& t) { return t.name; }, type);
+	constexpr base::StrID typeName(const TypeOfData& type) {
+		return VISIT(type, tp, return tp.name);
 	}
 }

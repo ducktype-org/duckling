@@ -43,7 +43,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			return;
 		}
 		variant_case(instructions::Op_deinit, instr) {
-			deinitType();
+			handleDeinit();
 			return;
 		}
 		variant_case(instructions::Op_label, label) {
@@ -114,7 +114,7 @@ usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	return offset;
 }
 
-void FunctionBuilder::deinitType() {
+void FunctionBuilder::handleDeinit() {
 	if (local_stack.empty()) throw EmptyStackDeinitError();
 	instructions.emplace_back(instructions::Op_deinit{});
 	local_stack.pop_back();
@@ -190,7 +190,7 @@ TypesContext<TypesContextState::Finalized>
 				);
 			}
 			variant_case(vm::code::DataType, data) {
-				std::vector<std::pair<base::StrID, vm::TypeRef>> fields;
+				std::vector<std::pair<base::StrID, TypeRef>> fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
 					fields.emplace_back(
