@@ -283,10 +283,23 @@ namespace vm {
 	}
 
 	bool Type::instantiable() const {
+		auto is_concrete_class = [](const VTable& vtable) {
+			variant_match(vtable.kind) {
+				variant_case(VTable::Class, clazz) {
+					return clazz.modifier != VTable::Class::Modifier::Abstract;
+				}
+			}
+			return false;
+		};
+
 		// This recursion follows only data and variants (not pointers),
 		// so its depth is bounded by type size, there cannot be a cycle.
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
+				if_opt_some(data.vtable, vtable) {
+					if (!is_concrete_class(vtable)) return false;
+				}
+
 				for (auto& field: data.fields)
 					if (!field.type->instantiable()) return false;
 			}
