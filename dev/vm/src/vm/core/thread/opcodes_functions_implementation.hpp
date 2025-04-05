@@ -499,7 +499,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
@@ -508,10 +508,9 @@ namespace vm {
 			auto dst_block        = frame->block_stack[dst_block_idx];
 			auto dst_pointer_type = thread.process_memory.getBlockType(dst_block);
 			auto dst_type         = dst_pointer_type->getInnerType().value();
+			auto cast_allowed     = thread.process_memory.downcastableTo(src, dst_type);
 
-			thread.process_memory.setPointer(
-				dst, thread.process_memory.downcastableTo(src, dst_type) ? src : Pointer::null()
-			);
+			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}
 		FUNCTION_CONT(1);
 	}

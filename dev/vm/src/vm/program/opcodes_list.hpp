@@ -172,7 +172,7 @@ DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // tries to cast a pointer to its subclass
-DEF_OPCODE(downcast_lptr_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 
 // terminates execution

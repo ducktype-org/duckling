@@ -282,6 +282,22 @@ namespace vm {
 		return false;
 	}
 
+	bool Type::instantiable() const {
+		// This recursion follows only data and variants (not pointers),
+		// so its depth is bounded by type size, there cannot be a cycle.
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				for (auto& field: data.fields)
+					if (!field.type->instantiable()) return false;
+			}
+			variant_case(kind::Variant, variant) {
+				for (auto& alt: variant.alternatives)
+					if (!alt->instantiable()) return false;
+			}
+		}
+		return true;
+	}
+
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {
 		return get<kind::Variant>().map([](const kind::Variant& variant) {

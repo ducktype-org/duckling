@@ -140,6 +140,8 @@ namespace vm {
 		base::Optional<const VTable&> getVTable() const;
 		[[nodiscard]]
 		bool inheritsFrom(TypeCRef other) const;
+		[[nodiscard]]
+		bool instantiable() const;
 
 		// variant
 		[[nodiscard]]
