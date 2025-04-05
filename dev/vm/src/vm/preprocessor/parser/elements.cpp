@@ -438,10 +438,24 @@ namespace vm::parser {
 
 	MBox<Inheritable> Inheritable::parse(F8ParserState& state) {
 		auto out = makeBox<Inheritable>(state.getPosition());
+		state.parse().all(
+			lang_def::Keyword::BCInheritable, &out->name, lang_def::NamedOperator::Colon
+		);
 
 		switch (state.tokens().next().asKeyword()) {
-		case lang_def::Keyword::BCClass: {
-			out->kind = Kind::Class;
+		case lang_def::Keyword::BCOpen: {
+			state.parse().one(lang_def::Keyword::BCClass);
+			out->kind = Kind::OpenClass;
+			break;
+		}
+		case lang_def::Keyword::BCFinal: {
+			state.parse().one(lang_def::Keyword::BCClass);
+			out->kind = Kind::FinalClass;
+			break;
+		}
+		case lang_def::Keyword::BCAbstract: {
+			state.parse().one(lang_def::Keyword::BCClass);
+			out->kind = Kind::AbstractClass;
 			break;
 		}
 		case lang_def::Keyword::BCInterface: {
@@ -454,8 +468,6 @@ namespace vm::parser {
 		}
 		}
 
-		state.parse().one(&out->name);
-
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
 			return nullptr;
@@ -467,6 +479,10 @@ namespace vm::parser {
 			auto next = state.tokens().next();
 			switch (next.asKeyword()) {
 			case lang_def::Keyword::BCExtends: {
+				if (out->kind == Kind::Interface) {
+					state.err.failAndLog(state.getPosition(), "interfaces cannot extend classes");
+					return nullptr;
+				}
 				out->extends.emplace();
 				state.parse().all(
 					lang_def::NamedOperator::Colon,
@@ -554,8 +570,7 @@ namespace vm::parser {
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
-			} else if (state[0].is(lang_def::Keyword::BCClass)
-			           || state[0].is(lang_def::Keyword::BCInterface)) {
+			} else if (state[0].is(lang_def::Keyword::BCInheritable)) {
 				auto inheritable = Inheritable::parse(state).toOptBox();
 				if (inheritable) out->inheritables.emplace_back(std::move(*inheritable));
 			} else {
