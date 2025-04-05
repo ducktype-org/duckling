@@ -2,12 +2,18 @@
 
 #include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <variant>
+#include <base/string_id.hpp>
+
 #include <vm/core/process/type_metadata/definitions.hpp>
+
+#include <variant>
 
 namespace vm {
 	struct VTable {
 		struct Class {
+			enum class Modifier { Open, Final, Abstract };
+
+			Modifier                modifier;
 			base::Optional<TypeRef> extends;
 		};
 

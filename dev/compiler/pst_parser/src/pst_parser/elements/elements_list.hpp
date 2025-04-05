@@ -50,6 +50,7 @@ namespace pst {
 	class AccessBlock;
 	class ClassSpecial;
 	class Constructor;
+	class CopyConstructor;
 	class Destructor;
 	class Method;
 	class Field;

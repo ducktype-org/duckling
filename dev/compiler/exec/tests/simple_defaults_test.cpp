@@ -2,8 +2,6 @@
 #include <exec/exec.hpp>
 #include <exec/helpers.hpp>
 #include <exec/vtable_creation.hpp>
-
-
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>

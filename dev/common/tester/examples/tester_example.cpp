@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+
 #include <thread>
 
 // Class representing suite of tets

@@ -1,19 +1,23 @@
 #pragma once
 
+#include "type_of_data.hpp"
+
 #include <diagnostic/source_position.hpp>
+#include <token_file/file.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/token_stream.hpp>
+
 #include <base/box.hpp>
+#include <base/for_each.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
-#include <base/for_each.hpp>
-#include <vm/program/opcode_args.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <token_file/file.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
-#include <token_parser_core/token_stream.hpp>
-#include "type_of_data.hpp"
-#include <token_parser_core/base_element.hpp>
 #include <base/variant.hpp>
+
+#include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/program/opcode_args.hpp>
+
 #include <vector>
 
 namespace vm::parser {
@@ -143,7 +147,7 @@ namespace vm::parser {
 			tpc::Identifier type;
 		};
 
-		enum class Kind { Class, Interface };
+		enum class Kind { AbstractClass, OpenClass, FinalClass, Interface };
 
 		Kind                            kind;
 		tpc::Identifier                 name;
@@ -154,8 +158,24 @@ namespace vm::parser {
 		static MBox<Inheritable> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override {
+			std::string_view str_kind;
+			switch (kind) {
+			case Kind::AbstractClass:
+				str_kind = "abstract class";
+				break;
+			case Kind::OpenClass:
+				str_kind = "open class";
+				break;
+			case Kind::FinalClass:
+				str_kind = "final class";
+				break;
+			case Kind::Interface:
+				str_kind = "inteface";
+				break;
+			}
+
 			out << "inheritable  {\n";
-			out << "    kind: " << (kind == Kind::Class ? "class" : "interface");
+			out << "    kind: " << str_kind;
 			out << "    name: " << name.value.strView() << "\n";
 			if_opt_some(extends, superclass) {
 				out << "    extends: " << superclass.value.strView() << "\n";

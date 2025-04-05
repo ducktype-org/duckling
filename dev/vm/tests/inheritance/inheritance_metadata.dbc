@@ -31,25 +31,32 @@ type data: Child {
     bar: int64,
 }
 
-interface I1 {
+type data: PietMondrian {
+    vtable: VT,
+}
+
+inheritable I1: interface {
     virtual_methods: {
         foo: method_I1_int,
         bar: method_I1_int,
     };
 }
 
-interface I2 {
+inheritable I2: interface {
 }
 
-class Parent {
+inheritable Parent: open class {
     virtual_methods: {
         lorem: method_parent_int_int,
     };
 }
 
-class Child {
+inheritable Child: final class {
     extends: Parent;
     implements: {I1, I2};
+}
+
+inheritable PietMondrian: abstract class {
 }
 
 function main {

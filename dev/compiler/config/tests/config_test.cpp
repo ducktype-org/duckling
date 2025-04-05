@@ -1,6 +1,6 @@
-#include <tester/tester.hpp>
-#include <config/config.hpp>
 #include <clap/exceptions.hpp>
+#include <config/config.hpp>
+#include <tester/tester.hpp>
 
 class ConfigTests: public tester::TestSuite {
 #undef TESTER_CLASS

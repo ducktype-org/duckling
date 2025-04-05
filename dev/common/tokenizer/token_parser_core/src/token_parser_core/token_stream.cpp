@@ -2,11 +2,13 @@
  * @file token_stream.cpp
  */
 
+#include "token_stream.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
-#include <utility>
+
 #include <iostream>
-#include "token_stream.hpp"
+#include <utility>
 
 namespace tpc {
 

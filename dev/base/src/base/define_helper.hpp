@@ -22,8 +22,8 @@ code inside this pair.
  */
 #pragma once
 
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace base {
 	/**

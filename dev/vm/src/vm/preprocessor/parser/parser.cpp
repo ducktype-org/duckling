@@ -1,10 +1,15 @@
 
 
-#include <vm/preprocessor/parser/elements.hpp>
-#include <token_file/file.hpp>
-#include <deque>
-#include <base/optional.hpp>
 #include "errors.hpp"
+
+#include <token_file/file.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
+#include <vm/preprocessor/parser/elements.hpp>
+
+#include <deque>
 
 namespace vm::parser {
 
@@ -41,11 +46,24 @@ namespace vm::parser {
 			for (auto& [name, type]: inheritable->virtual_methods)
 				virtual_methods.put(name.value, identifier_to_typeref(type));
 
+			auto class_kind_to_modifier = [](Inheritable::Kind kind) {
+				switch (kind) {
+				case Inheritable::Kind::FinalClass:
+					return VTable::Class::Modifier::Final;
+				case Inheritable::Kind::OpenClass:
+					return VTable::Class::Modifier::Open;
+				case Inheritable::Kind::AbstractClass:
+					return VTable::Class::Modifier::Abstract;
+				default:
+					std::unreachable();
+				}
+			};
 
 			VTable::Kind kind = VTable::Interface{};
-			if (inheritable->kind == Inheritable::Kind::Class) {
+			if (inheritable->kind != Inheritable::Kind::Interface) {
 				kind = VTable::Class{
-					.extends = inheritable->extends.map(identifier_to_typeref),
+					.modifier = class_kind_to_modifier(inheritable->kind),
+					.extends  = inheritable->extends.map(identifier_to_typeref),
 				};
 			}
 

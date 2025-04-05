@@ -1,11 +1,13 @@
 #pragma once
 
+#include "../definitions.hpp"
+#include "../vtable.hpp"
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
 #include <unordered_map>
 #include <vector>
-#include <base/string_id.hpp>
-#include "../definitions.hpp"
-#include <base/optional.hpp>
-#include "../vtable.hpp"
 
 namespace vm::kind {
 

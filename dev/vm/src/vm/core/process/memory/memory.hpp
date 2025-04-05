@@ -1,24 +1,26 @@
 #pragma once
 
-#include <deque>
-#include <mutex>
-#include <shared_mutex>
-#include <cstring>
-#include <base/ints.hpp>
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
-#include <base/stable_container.hpp>
-#include <base/maps.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include "frame.hpp"
-
-#include "block.hpp"
-#include "pointer.hpp"
-#include "thread_stack.hpp"
 #include "allocator/block_data.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "allocator/stack_allocator.hpp"
+#include "block.hpp"
+#include "frame.hpp"
+#include "pointer.hpp"
+#include "thread_stack.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/maps.hpp>
+#include <base/raw_view.hpp>
+#include <base/ref.hpp>
+#include <base/stable_container.hpp>
+
+#include <vm/core/process/type_metadata/definitions.hpp>
+
+#include <cstring>
+#include <deque>
+#include <mutex>
+#include <shared_mutex>
 
 namespace vm {
 	class Memory {
