@@ -60,6 +60,19 @@
  * 	std::cout << "Test2 has no value.\n";
  * }
  *
+ *
+ * // Furthermore, it can be used with `std::expected<T, K>`!
+ *	std::expected<int, float> t = 1;
+ *	match_optional(t) {
+ *		opt_some(val) { assert(val == 1); }
+ *		opt_err(err) { CORE_PANIC("No error!") }
+ *	}
+ *  t = std::unexpected(1.5f);
+ *	match_optional(t) {
+ *		opt_some(val) { CORE_PANIC("No value!") }
+ *		opt_err(err) { assert(err == 1.5f); }
+ *	}
+ *
  */
 #define match_optional(optional)                                                             \
 	PUSH_DIAGNOSTIC                                                                          \
@@ -201,25 +214,25 @@ namespace base {
 		 */
 		[[nodiscard]]
 		constexpr const T& value() const& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& value() const&& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
 		constexpr T& value() & {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
 		constexpr T&& value() && {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
@@ -229,25 +242,25 @@ namespace base {
 		 * @return
 		 */
 		[[nodiscard]]
-		const T& value_or(const T& or_value) const& {
+		constexpr const T& valueOr(const T& or_value) const& {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		const T&& value_or(const T&& or_value) const&& {
+		constexpr const T&& valueOr(const T&& or_value) const&& {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
 		[[nodiscard]]
-		T& value_or(T& or_value) & {
+		constexpr T& valueOr(T& or_value) & {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		T&& value_or(T&& or_value) && {
+		constexpr T&& valueOr(T&& or_value) && {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
@@ -344,13 +357,13 @@ namespace base {
 		 */
 		[[nodiscard]]
 		constexpr const T* operator->() const {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
 		constexpr T* operator->() {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.operator->();
 		}
 
@@ -365,14 +378,16 @@ namespace base {
 		 * nothing.
 		 */
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) const
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function)
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
@@ -386,7 +401,8 @@ namespace base {
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const
+			-> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
@@ -394,14 +410,14 @@ namespace base {
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 	protected:
-		void _throwOnNoValue() const {
+		constexpr void throwOnNoValue() const {
 			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
@@ -455,48 +471,48 @@ namespace base {
 		// Accessors.
 		[[nodiscard]]
 		constexpr const T& value() const& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value().get();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& value() const&& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value().get());
 		}
 
 		[[nodiscard]]
 		constexpr T& value() & {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value().get();
 		}
 
 		[[nodiscard]]
 		constexpr T&& value() && {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value().get());
 		}
 
 		[[nodiscard]]
-		const T& value_or(const T& or_value) const& {
+		constexpr const T& valueOr(const T& or_value) const& {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		const T&& value_or(const T&& or_value) const&& {
+		constexpr const T&& valueOr(const T&& or_value) const&& {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
 		[[nodiscard]]
-		T& value_or(T& or_value) & {
+		constexpr T& valueOr(T& or_value) & {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		T&& value_or(T&& or_value) && {
+		constexpr T&& valueOr(T&& or_value) && {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
@@ -526,14 +542,14 @@ namespace base {
 		[[nodiscard]]
 		constexpr const T*
 		operator->() const {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return &value();
 		}
 
 		[[nodiscard]]
 		constexpr T*
 		operator->() {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return &value();
 		}
 
@@ -592,33 +608,36 @@ namespace base {
 		}
 
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) const
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function)
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const
+			-> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 	private:
-		void _throwOnNoValue() const {
+		constexpr void throwOnNoValue() const {
 			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
