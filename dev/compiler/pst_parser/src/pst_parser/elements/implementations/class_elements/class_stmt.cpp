@@ -47,6 +47,9 @@ namespace pst {
 			return detail::parseStmt<Method>(state, ctx);
 		case Keyword::Const:
 			return detail::parseStmt<Field>(state, ctx);
+		case Keyword::Alias:
+		case Keyword::Using:
+			return detail::parseStmt<NonClassStmt>(state, ctx);
 		default:
 			break;
 		}

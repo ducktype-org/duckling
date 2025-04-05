@@ -150,6 +150,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };
 
+	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
+
 	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
 	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
 	ClassStmtExample<pst::AccessBlock, true>  protected_access_block{ "protected {}" };

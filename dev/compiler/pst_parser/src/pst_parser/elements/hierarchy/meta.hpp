@@ -75,6 +75,7 @@ namespace pst {
 		CopyConstructor,
 		Destructor,
 		AccessBlock,
+		NonClassStmt
 	};
 
 	/**
