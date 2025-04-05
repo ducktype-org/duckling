@@ -31,7 +31,7 @@
 #define MAKE_VISIT(type)                                                                           \
 	void visit##type(pst::Access<pst SQ type> element) override {                                  \
 		if (getScopeKind(ctx, element) == ElementScopeKind::Standard) {                            \
-			output(scopeOf(element));                                                              \
+			out.insert(scopeOf(element));                                                              \
 		}                                                                                          \
 		for (auto sub: element->viewSubElements()) {                                               \
 			variant_match(sub) {                                                                   \
@@ -337,11 +337,6 @@ namespace compiler::helios {
 				return ctx.query<QueryPrimaryCodeScopeFor>(element);
 			}
 
-			template<class... Args>
-			void output(Args&&... args) {
-				this->out.insert(std::forward<Args>(args)...);
-			}
-
 			// @todo
 			// remove this macro when there is a visitor with default method
 			FOR_EACH(
@@ -391,7 +386,7 @@ namespace compiler::helios {
 
 			for (auto file: *source_files) {
 				auto scopes = getScopes(ctx, key, file);
-				output.insert(scopes.begin(), scopes.end());
+				output.merge(scopes);
 			}
 
 			// validate output:
