@@ -183,7 +183,7 @@ namespace dia {
 		std::ostringstream o;
 		o << "\"";
 		for (char c: s)
-			if (c == '"' || c == '\\' || c <= '\x1f')
+			if (c == '"' || c == '\\' || ('\x00' <= c && c <= '\x1f'))
 				o << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
 			else
 				o << c;
