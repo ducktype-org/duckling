@@ -6,9 +6,9 @@
 #include "instruction.hpp"
 
 #include <base/stable_hashmap.hpp>
-#include <base/stable_type_id_name_map.hpp>
 
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <utility>
 
@@ -40,7 +40,7 @@ namespace vm::low {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 		}
 
-		base::StableTypeIdNameMap<FuncData, usize> functions;
-		Box<TypeMetadata>                          types;
+		StableTypeIdNameMap<FuncData, usize> functions;
+		Box<TypeMetadata>                    types;
 	};
 }

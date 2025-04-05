@@ -75,15 +75,3 @@ bool vm::code::utils::areInstrEqual(const Instruction& instr0, const Instruction
 
 	CORE_UNREACHABLE();
 }
-
-bool vm::code::utils::areTypesEqual(const TypeOfData& type0, const TypeOfData& type1) {
-	if (type0.index() != type1.index()) return false;
-
-	return std::visit(
-		[&]<class T>(const T& t0) {
-			const auto& t1 = std::get<T>(type1);
-			return t0 == t1;
-		},
-		type0
-	);
-}

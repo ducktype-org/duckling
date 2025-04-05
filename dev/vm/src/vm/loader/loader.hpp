@@ -4,14 +4,13 @@
 
 #include <filesystem/file.hpp>
 
-#include <base/stable_type_id_name_map.hpp>
-
 #include <vm/code/builders/builders.hpp>
 #include <vm/code/code.hpp>
 #include <vm/code/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/parser/elements.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <expected>
 
@@ -28,7 +27,7 @@ namespace vm::loader {
 
 		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
 		);
-		const base::StableTypeIdNameMap<code::Function>& funcMap() const;
+		const StableTypeIdNameMap<code::Function>&  funcMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 
@@ -39,10 +38,10 @@ namespace vm::loader {
 		void
 			insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
-		base::StableTypeIdNameMap<code::Function> functions;
-		Box<TypeMetadata>                         type_metadata = makeBox<TypeMetadata>();
-		std::vector<code::TypeOfData>             types;  /// used only for error messages
-		code::builders::TypesContext<>            types_context_adding;
+		StableTypeIdNameMap<code::Function> functions;
+		Box<TypeMetadata>                   type_metadata = makeBox<TypeMetadata>();
+		std::vector<code::TypeOfData>       types;  /// used only for error messages
+		code::builders::TypesContext<>      types_context_adding;
 	};
 
 	/**

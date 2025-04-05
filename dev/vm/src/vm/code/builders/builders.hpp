@@ -4,7 +4,7 @@
 
 #include <base/maps.hpp>
 #include <base/ref.hpp>
-#include <base/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 #include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
@@ -75,11 +75,11 @@ namespace vm::code::builders {
 	 */
 	template<>
 	class TypesContext<TypesContextState::AddingTypes> {
-		base::StableTypeIdNameMap<TypeOfData> types;
+		StableTypeIdNameMap<TypeOfData> types;
 
 	public:
 		void                                         addType(const TypeOfData& type);
-		const base::StableTypeIdNameMap<TypeOfData>& getTypes() const;
+		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
 
 		/**
 		 * @brief Finalizes currently added types by building them.

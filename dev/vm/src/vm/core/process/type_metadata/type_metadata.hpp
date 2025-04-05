@@ -2,9 +2,8 @@
 
 #include "type.hpp"
 
-#include <base/stable_type_id_name_map.hpp>
-
 #include <vm/code/type_of_data.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm {
 	/**
@@ -14,7 +13,7 @@ namespace vm {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableTypeIdNameMap<Type, TypeID> types;
+		StableTypeIdNameMap<Type, TypeID> types;
 
 		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 

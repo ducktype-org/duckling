@@ -3,7 +3,6 @@
 #include <diagnostic/logger.hpp>
 
 #include <base/optional.hpp>
-#include <base/stable_type_id_name_map.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
@@ -20,22 +19,22 @@
 #include <vm/loader/logger.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <expected>
 
 namespace vm::loader::compiler {
 	namespace {
 		class CompilationContext final {
-			const base::StableTypeIdNameMap<code::Function>& func_map;
-			const TypeMetadata&                              type_map;
-			LoaderLogger                                     logger;
-			base::Optional<code::Function>                   function{};
-			base::HashMap<base::StrID, usize>                label_positions{};
+			const StableTypeIdNameMap<code::Function>& func_map;
+			const TypeMetadata&                        type_map;
+			LoaderLogger                               logger;
+			base::Optional<code::Function>             function{};
+			base::HashMap<base::StrID, usize>          label_positions{};
 
 		public:
 			CompilationContext(
-				const base::StableTypeIdNameMap<code::Function>& func_map,
-				const TypeMetadata&                              type_map
+				const StableTypeIdNameMap<code::Function>& func_map, const TypeMetadata& type_map
 			):
 				  func_map(func_map),
 				  type_map(type_map) {}
@@ -49,7 +48,7 @@ namespace vm::loader::compiler {
 
 			LoaderLogger&& moveLogger() { return std::move(logger); }
 
-			const base::StableTypeIdNameMap<code::Function>& functions() const { return func_map; }
+			const StableTypeIdNameMap<code::Function>& functions() const { return func_map; }
 
 			const TypeMetadata& types() const { return type_map; }
 

@@ -235,7 +235,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 	return std::unexpected(std::move(opt_program).error());
 }
 
-const base::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
+const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
 
 void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
 	for (const auto& type: new_types) insertType(type, types_context_adding, logger);

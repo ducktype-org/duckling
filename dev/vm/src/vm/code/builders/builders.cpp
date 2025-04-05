@@ -155,7 +155,7 @@ void FunctionBuilder::saveStackState(base::StrID at_label_name) {
 
 void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
 
-const base::StableTypeIdNameMap<vm::code::TypeOfData, usize>&
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
 	vm::code::builders::TypesContext<TypesContextState::AddingTypes>::getTypes() const {
 	return types;
 }
