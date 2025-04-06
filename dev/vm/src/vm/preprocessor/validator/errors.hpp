@@ -42,4 +42,23 @@ namespace vm::validator {
 	DEFINE_VALIDATOR_ERROR(
 		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
 	);
+	DEFINE_VALIDATOR_ERROR(
+		InvalidImplements,
+		"An interface/class can implement only interfaces"
+	);
+	DEFINE_VALIDATOR_ERROR(
+		InvalidExtends,
+		"An class can extend only classes"
+	);
+	DEFINE_VALIDATOR_ERROR(
+		MissingVtablePointer,
+		"The implementation of an interface/class has to contain a VTable pointer"
+	);
+	DEFINE_VALIDATOR_ERROR(
+		InstanceDataInInterface,
+		"The implementation of an interface should only contain a VTable pointer"
+	);
+	DEFINE_VALIDATOR_ERROR(
+		MissingAncestorField, "The implementation of a class has to contain all ancestors' fields"
+	);
 }

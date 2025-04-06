@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/variant.hpp"
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
@@ -24,5 +25,12 @@ namespace vm {
 		Kind                                kind;
 		std::vector<TypeRef>                implements;
 		base::HashMap<base::StrID, TypeRef> virtual_methods;
+
+		base::Optional<const Class&> getClass() const {
+			variant_match(kind) {
+				variant_case(Class, clazz) { return clazz; }
+			}
+			return {};
+		}
 	};
 }

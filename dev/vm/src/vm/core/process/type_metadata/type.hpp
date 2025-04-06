@@ -127,6 +127,8 @@ namespace vm {
 
 		// data
 		[[nodiscard]]
+		base::Optional<size_t> getFieldCount() const;
+		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
 		[[nodiscard]]
 		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
@@ -141,7 +143,14 @@ namespace vm {
 		[[nodiscard]]
 		bool inheritsFrom(TypeCRef other) const;
 		[[nodiscard]]
-		bool instantiable() const;
+		bool isInstantiable() const;
+		[[nodiscard]]
+		bool isClass() const;
+		[[nodiscard]]
+		bool isInterface() const;
+		[[nodiscard]]
+		bool isPlain() const;
+
 
 		// variant
 		[[nodiscard]]

@@ -201,6 +201,10 @@ namespace vm {
 	}
 
 	// struct
+	base::Optional<size_t> Type::getFieldCount() const {
+		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
+	}
+
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
@@ -282,7 +286,7 @@ namespace vm {
 		return false;
 	}
 
-	bool Type::instantiable() const {
+	bool Type::isInstantiable() const {
 		auto is_concrete_class = [](const VTable& vtable) {
 			variant_match(vtable.kind) {
 				variant_case(VTable::Class, clazz) {
@@ -301,15 +305,29 @@ namespace vm {
 				}
 
 				for (auto& field: data.fields)
-					if (!field.type->instantiable()) return false;
+					if (!field.type->isInstantiable()) return false;
 			}
 			variant_case(kind::Variant, variant) {
 				for (auto& alt: variant.alternatives)
-					if (!alt->instantiable()) return false;
+					if (!alt->isInstantiable()) return false;
 			}
 		}
 		return true;
 	}
+
+	bool Type::isClass() const {
+		return getVTable()
+		    .map([](auto& vt) { return std::holds_alternative<VTable::Class>(vt.kind); })
+		    .value_or(false);
+	}
+
+	bool Type::isInterface() const {
+		return getVTable()
+		    .map([](auto& vt) { return std::holds_alternative<VTable::Interface>(vt.kind); })
+		    .value_or(false);
+	}
+
+	bool Type::isPlain() const { return !getVTable().has_value(); }
 
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {
