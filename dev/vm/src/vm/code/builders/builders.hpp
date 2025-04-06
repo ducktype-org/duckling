@@ -4,7 +4,6 @@
 
 #include <base/maps.hpp>
 #include <base/ref.hpp>
-#include <vm/utils/stable_type_id_name_map.hpp>
 #include <base/string_id.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
@@ -13,6 +12,7 @@
 #include <vm/code/opcode_args.hpp>
 #include <vm/code/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <cstdint>
 #include <deque>
@@ -78,7 +78,7 @@ namespace vm::code::builders {
 		StableTypeIdNameMap<TypeOfData> types;
 
 	public:
-		void                                         addType(const TypeOfData& type);
+		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
 
 		/**

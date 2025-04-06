@@ -9,6 +9,7 @@
 #include <base/for_each.hpp>
 #include <base/optional.hpp>
 
+#include "vm/code/serializer/serializer.hpp"
 #include <vm/code/opcode_args.hpp>
 
 namespace vm::loader::parser {
@@ -465,7 +466,7 @@ namespace vm::loader::parser {
 
 	void Type::dprint(std::ostream& out) const {
 		out << "type: ";
-		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { data.dprint(out); }))
+		VARIANT_VISIT(datatype, VISIT_CASE(auto&, data, { vm::code::serialize(data, out); }))
 		out << "\n}";
 	}
 

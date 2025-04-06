@@ -19,13 +19,6 @@ namespace vm::code {
 		base::StrID name;
 		usize       size{};
 
-		void dprint(std::ostream& out) const {
-			out << "primitive {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    size: " << size << "\n";
-			out << "}";
-		}
-
 		bool operator==(const PrimitiveType& other) const {
 			return name == other.name && size == other.size;
 		}
@@ -41,13 +34,6 @@ namespace vm::code {
 
 		base::StrID name;
 		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "pointer {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
 
 		bool operator==(const PointerType& other) const {
 			return name == other.name && inner == other.inner;
@@ -69,14 +55,6 @@ namespace vm::code {
 		base::StrID inner;
 		usize       table_size{};
 
-		void dprint(std::ostream& out) const {
-			out << "static_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "    table_size: " << table_size << "\n";
-			out << "}";
-		}
-
 		bool operator==(const StaticTableType& other) const {
 			return name == other.name && inner == other.inner && table_size == other.table_size;
 		}
@@ -92,13 +70,6 @@ namespace vm::code {
 
 		base::StrID name;
 		base::StrID inner;
-
-		void dprint(std::ostream& out) const {
-			out << "dynamic_table {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    inner: " << inner.strView() << "\n";
-			out << "}";
-		}
 
 		bool operator==(const DynamicTableType& other) const {
 			return name == other.name && inner == other.inner;
@@ -135,16 +106,6 @@ namespace vm::code {
 		base::StrID        name;
 		std::vector<Field> fields;
 
-		void dprint(std::ostream& out) const {
-			out << "data {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    fields: [";
-			for (auto& field: fields)
-				out << field.name.strView() << ": " << field.type.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
-
 		bool operator==(const DataType& other) const {
 			return name == other.name && fields == other.fields;
 		}
@@ -163,15 +124,6 @@ namespace vm::code {
 
 		base::StrID              name;
 		std::vector<base::StrID> variant_alternatives;
-
-		void dprint(std::ostream& out) const {
-			out << "variant {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    alternatives: [";
-			for (auto& alt: variant_alternatives) out << alt.strView() << ", ";
-			out << "]\n";
-			out << "}";
-		}
 
 		bool operator==(const VariantType& other) const {
 			return name == other.name && variant_alternatives == other.variant_alternatives;
@@ -192,16 +144,6 @@ namespace vm::code {
 		base::StrID              name;
 		std::vector<base::StrID> parameters;
 		base::StrID              result;
-
-		void dprint(std::ostream& out) const {
-			out << "function {\n";
-			out << "    name: " << name.strView() << "\n";
-			out << "    parameters: [";
-			for (auto& param: parameters) out << param.strView() << ", ";
-			out << "]\n";
-			out << "    result: " << result.strView() << "\n";
-			out << "}";
-		}
 
 		bool operator==(const FunctionType& other) const {
 			return name == other.name && parameters == other.parameters && result == other.result;

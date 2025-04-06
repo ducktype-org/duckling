@@ -29,8 +29,6 @@ namespace vm::loader::parser {
 	};
 
 	struct AsmElement: tpc::Element {
-		~AsmElement() = default;
-
 		Box<dia::SourcePosition> position;
 
 		AsmElement(const dia::SourcePosition& position):
