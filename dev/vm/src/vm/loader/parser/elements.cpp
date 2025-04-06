@@ -9,8 +9,8 @@
 #include <base/for_each.hpp>
 #include <base/optional.hpp>
 
-#include "vm/code/serializer/serializer.hpp"
 #include <vm/code/opcode_args.hpp>
+#include <vm/code/serializer/serializer.hpp>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {

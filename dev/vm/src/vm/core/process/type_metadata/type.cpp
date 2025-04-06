@@ -12,8 +12,6 @@
 #include <utility>
 
 namespace vm {
-	using std::plus;
-
 	// Type declaration:
 	Type Type::declareType(base::StrID name) {
 		Type type{};
