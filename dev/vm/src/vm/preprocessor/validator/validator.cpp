@@ -47,6 +47,12 @@ namespace vm::validator {
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
 			void validateInheritanceHierarchy();
+
+			// Helpers for inheritance hierarchy
+			void validateAncestors(const VTable& vtable, const dia::SourcePosition& position);
+			void validateFields(
+				TypeCRef type, const VTable& vtable, const dia::SourcePosition& position
+			);
 		};
 
 		base::Optional<std::string> Validator::validateProgram() {
@@ -115,7 +121,59 @@ namespace vm::validator {
 			}
 		}
 
-		void Validator::validateDuplicateFunctionDeclarations() { return; }
+		void Validator::validateAncestors(
+			const VTable& vtable, const dia::SourcePosition& position
+		) {
+			for (auto iface: vtable.implements)
+				if (!iface->isInterface()) log.log(makeBox<InvalidImplements>(position));
+
+			auto is_valid_superclass = [](TypeCRef super) {
+				if_opt_some(super->getVTable(), super_vt) {
+					variant_match(super_vt.kind) {
+						variant_case(VTable::Class, super_clazz) {
+							if (super_clazz.modifier != VTable::Class::Modifier::Final) return true;
+						}
+					}
+				}
+				return false;
+			};
+
+			variant_match(vtable.kind) {
+				variant_case(VTable::Class, clazz) {
+					if (clazz.extends && !is_valid_superclass(*clazz.extends))
+						log.log(makeBox<InvalidExtends>(position));
+				}
+			}
+		}
+
+		void Validator::validateFields(TypeCRef type, const VTable& vtable, const dia::SourcePosition& position) {
+			// Check if vtable exists
+			// @TODO this is VERY temporary!!!
+			// we need some sort of builtin vtable pointer type, not silly name checking
+			auto has_vtable_pointer
+				= type->getFieldType(0)
+			          .map([](auto field_type) { return field_type->getName() == "VT"; })
+			          .value_or(false);
+			if (!has_vtable_pointer) log.log(makeBox<MissingVtablePointer>(position));
+
+			// Check if interfaces are data-less
+			if (std::holds_alternative<VTable::Interface>(vtable.kind)) {
+				if (type->getFieldType(1).has_value())
+					log.log(makeBox<InstanceDataInInterface>(position));
+			}
+
+			// Check if superclass fields are inherited
+			variant_match(vtable.kind) {
+				variant_case(VTable::Class, clazz) {
+					if_opt_some(clazz.extends, super) {
+						auto n_super_fields = super->getFieldCount().value();
+						for (size_t i = 0; i < n_super_fields; i++)
+							if (super->getFieldType(i) != type->getFieldType(i))
+								log.log(makeBox<MissingAncestorField>(position));
+					}
+				}
+			}
+		}
 
 		void Validator::validateInheritanceHierarchy() {
 			for (auto& parser_type: program.types) {
@@ -123,60 +181,8 @@ namespace vm::validator {
 				                ->getTypeByName(VISIT(parser_type->datatype, dt, return dt.name))
 				                .value();
 				if_opt_some(type->getVTable(), vtable) {
-					// Check implements/extends
-					for (auto iface: vtable.implements)
-						if (!iface->isInterface())
-							log.log(makeBox<InvalidImplements>(*parser_type->position));
-					variant_match(vtable.kind) {
-						variant_case(VTable::Class, clazz) {
-							auto is_extends_valid
-								= clazz.extends
-							          .map([](auto super) {
-										  if_opt_some(super->getVTable(), super_vt) {
-											  variant_match(super_vt.kind) {
-												  variant_case(VTable::Class, super_clazz) {
-													  if (super_clazz.modifier
-											              != VTable::Class::Modifier::Final)
-														  return true;
-												  }
-											  }
-										  }
-										  return false;
-									  })
-							          .value_or(true);  // Does not extend anything.
-							if (!is_extends_valid)
-								log.log(makeBox<InvalidExtends>(*parser_type->position));
-						}
-					}
-
-					// Check if vtable exists
-					// @TODO this is VERY temporary!!!
-					// we need some sort of builtin vtable pointer type, not silly name checking
-					auto has_vtable_pointer
-						= type->getFieldType(0)
-					          .map([](auto field_type) { return field_type->getName() == "VT"; })
-					          .value_or(false);
-					if (!has_vtable_pointer)
-						log.log(makeBox<MissingVtablePointer>(*parser_type->position));
-
-					// Check if interfaces are data-less
-					if (std::holds_alternative<VTable::Interface>(vtable.kind)) {
-						if (type->getFieldType(1).has_value())
-							log.log(makeBox<InstanceDataInInterface>(*parser_type->position));
-					}
-
-					// Check if superclass fields are inherited
-					variant_match(vtable.kind) {
-						variant_case(VTable::Class, clazz) {
-							if_opt_some(clazz.extends, super) {
-								auto n_super_fields = super->getFieldCount().value();
-								for (size_t i = 0; i < n_super_fields; i++)
-									if (super->getFieldType(i) != type->getFieldType(i))
-										log.log(makeBox<MissingAncestorField>(*parser_type->position
-										));
-							}
-						}
-					}
+					validateAncestors(vtable, *parser_type->position);
+					validateFields(type, vtable, *parser_type->position);
 				}
 			}
 		}
