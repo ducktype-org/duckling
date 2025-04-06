@@ -23,7 +23,7 @@ namespace tester {
 		return result;
 	}
 
-	constexpr usize HEADER_LINE_LENGTH = 40;
+	constexpr usize HEADER_LINE_LENGTH = 80;
 
 	usize beginEqualSignL(usize name_l) { return HEADER_LINE_LENGTH / 2 - (name_l / 2); }
 
