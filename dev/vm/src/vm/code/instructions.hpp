@@ -17,14 +17,14 @@
 namespace vm::code {
 	namespace instructions {
 #define HANDLE_OPCODE_0ARGS(opcode) \
-	struct Op_##opcode: ElementBase {};
+	struct Op_##opcode final: ElementBase {};
 #define HANDLE_OPCODE_1ARGS(opcode, arg0_type)     \
-	struct Op_##opcode: ElementBase {              \
+	struct Op_##opcode final: ElementBase {        \
 		Op_##opcode(arg0_type arg0): arg0(arg0) {} \
 		arg0_type arg0;                            \
 	};
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                      \
-	struct Op_##opcode: ElementBase {                                          \
+	struct Op_##opcode final: ElementBase {                                    \
 		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
 		arg0_type arg0;                                                        \
 		arg1_type arg1;                                                        \
@@ -41,7 +41,7 @@ namespace vm::code {
 		 * @note It also helps with macro, because without it the template
 		 * below would finish with a `,`, which does not compile.
 		 */
-		struct Comment: ElementBase {
+		struct Comment final: ElementBase {
 			Comment() = default;
 
 			Comment(base::StrID comment): comment(comment) {}

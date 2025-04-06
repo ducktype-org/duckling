@@ -46,7 +46,7 @@ namespace vm::code {
 		out << ";";
 	}
 
-	struct InstructionSerializerVisitor {
+	struct InstructionSerializerVisitor final {
 		std::ostream& out;
 
 		void operator()(const instructions::Comment& comment) const {
@@ -139,7 +139,7 @@ namespace vm::code {
 		std::ostream&     out;
 		const TypeOfData& type;
 
-		struct TypeSerializerVisitor {
+		struct TypeSerializerVisitor final {
 			std::ostream& out;
 
 			void operator()(const PrimitiveType& type) const {

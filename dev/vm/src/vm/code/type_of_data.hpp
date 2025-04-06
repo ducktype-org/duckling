@@ -11,7 +11,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents a very simple primitive, like 8-byte integer, 4-byte float, etc.
 	 */
-	struct PrimitiveType: ElementBase {
+	struct PrimitiveType final: ElementBase {
 		PrimitiveType() = default;
 
 		PrimitiveType(const base::StrID name, const usize size): name(name), size(size) {}
@@ -27,7 +27,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents a pointer.
 	 */
-	struct PointerType: ElementBase {
+	struct PointerType final: ElementBase {
 		PointerType() = default;
 
 		PointerType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
@@ -43,7 +43,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents a fixed-size array of elements of the same type.
 	 */
-	struct StaticTableType: ElementBase {
+	struct StaticTableType final: ElementBase {
 		StaticTableType() = default;
 
 		StaticTableType(base::StrID name, base::StrID inner, usize table_size):
@@ -63,7 +63,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents a dynamic array of elements of the same type.
 	 */
-	struct DynamicTableType: ElementBase {
+	struct DynamicTableType final: ElementBase {
 		DynamicTableType() = default;
 
 		DynamicTableType(base::StrID name, base::StrID inner): name(name), inner(inner) {}
@@ -79,12 +79,12 @@ namespace vm::code {
 	/**
 	 * @brief Represents a structure with arbitrary types of fields.
 	 */
-	struct DataType: ElementBase {
+	struct DataType final: ElementBase {
 		/**
 		 * @brief Field is a building block of a datatype. It represents a storage
 		 * for value of some type.
 		 */
-		struct Field: ElementBase {
+		struct Field final: ElementBase {
 			Field() = default;
 
 			Field(base::StrID name, base::StrID type): name(name), type(type) {}
@@ -115,7 +115,7 @@ namespace vm::code {
 	 * @brief Represents a variant of types.
 	 * @note This is a partial feature, as there are no bytecode instructions regarding variants.
 	 */
-	struct VariantType: ElementBase {
+	struct VariantType final: ElementBase {
 		VariantType() = default;
 
 		VariantType(base::StrID name, std::vector<base::StrID> variant_alternatives):
@@ -135,7 +135,7 @@ namespace vm::code {
 	 * @note This is currently as a declaration of a function with corresponding name. This is
 	 * likely to change.
 	 */
-	struct FunctionType: ElementBase {
+	struct FunctionType final: ElementBase {
 		FunctionType(base::StrID name, std::vector<base::StrID> parameters, base::StrID result):
 			  name(name),
 			  parameters(std::move(parameters)),

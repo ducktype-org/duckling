@@ -16,7 +16,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents bytecode a function.
 	 */
-	struct Function: ElementBase {
+	struct Function final: ElementBase {
 		base::StrID name;
 		usize       local_stack_size = 0;
 		usize       arg_size         = 0;
@@ -26,7 +26,7 @@ namespace vm::code {
 		CodeBlock body;
 	};
 
-	struct CodeCollection {
+	struct CodeCollection final {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;
 	};

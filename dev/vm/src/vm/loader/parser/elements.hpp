@@ -37,7 +37,7 @@ namespace vm::loader::parser {
 		void debugPrint(std::ostream& out) const override;
 	};
 
-	struct Type: AsmElement {
+	struct Type final: AsmElement {
 		using AsmElement::AsmElement;
 
 		code::TypeOfData  datatype;
@@ -46,7 +46,7 @@ namespace vm::loader::parser {
 		void dprint(std::ostream& out) const override;
 	};
 
-	struct OpCode: AsmElement {
+	struct OpCode final: AsmElement {
 		using AsmElement::AsmElement;
 
 		base::StrID opcode_name;
@@ -60,7 +60,7 @@ namespace vm::loader::parser {
 		~OpCode() override = default;
 	};
 
-	struct ByteCode: AsmElement {
+	struct ByteCode final: AsmElement {
 		using AsmElement::AsmElement;
 
 		std::vector<Box<OpCode>> opcodes;
@@ -74,7 +74,7 @@ namespace vm::loader::parser {
 
 	constexpr usize SIZE_T_MAX = std::numeric_limits<usize>::max();
 
-	struct Func: AsmElement {
+	struct Func final: AsmElement {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier name;
@@ -90,7 +90,7 @@ namespace vm::loader::parser {
 		~Func() override = default;
 	};
 
-	struct ParsedFile {
+	struct ParsedFile final {
 		std::vector<Box<Func>> functions;
 		std::vector<Box<Type>> types;
 		fs::FilePath           source_file;

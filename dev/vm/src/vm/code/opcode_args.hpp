@@ -13,7 +13,7 @@
  */
 namespace vm::opargs {
 
-	struct Immediate: code::ElementBase {
+	struct Immediate final: code::ElementBase {
 		Immediate() = default;
 
 		Immediate(const i64 value): value(value) {}
@@ -21,7 +21,7 @@ namespace vm::opargs {
 		i64 value = 0;
 	};
 
-	struct StackLocalI8: code::ElementBase {
+	struct StackLocalI8 final: code::ElementBase {
 		StackLocalI8() = default;
 
 		StackLocalI8(const i64 offset): offset(offset) {}
@@ -29,7 +29,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct StackLocalI16: code::ElementBase {
+	struct StackLocalI16 final: code::ElementBase {
 		StackLocalI16() = default;
 
 		StackLocalI16(const i64 offset): offset(offset) {}
@@ -37,7 +37,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct StackLocalI32: code::ElementBase {
+	struct StackLocalI32 final: code::ElementBase {
 		StackLocalI32() = default;
 
 		StackLocalI32(const i64 offset): offset(offset) {}
@@ -45,7 +45,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct StackLocalI64: code::ElementBase {
+	struct StackLocalI64 final: code::ElementBase {
 		StackLocalI64() = default;
 
 		StackLocalI64(const i64 offset): offset(offset) {}
@@ -53,7 +53,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct StackLocalAny: code::ElementBase {
+	struct StackLocalAny final: code::ElementBase {
 		StackLocalAny() = default;
 
 		StackLocalAny(const i64 offset): offset(offset) {}
@@ -61,7 +61,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct StackLocalPtr: code::ElementBase {
+	struct StackLocalPtr final: code::ElementBase {
 		StackLocalPtr() = default;
 
 		StackLocalPtr(const i64 offset): offset(offset) {}
@@ -69,7 +69,7 @@ namespace vm::opargs {
 		i64 offset = 0;
 	};
 
-	struct ArgsOffset: code::ElementBase {
+	struct ArgsOffset final: code::ElementBase {
 		ArgsOffset() = default;
 
 		ArgsOffset(const i64 offset): offset(offset) {}
@@ -81,7 +81,7 @@ namespace vm::opargs {
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
 		ArgsOffset
 
-	struct Type: code::ElementBase {
+	struct Type final: code::ElementBase {
 		Type() = default;
 
 		Type(const base::StrID type_name): type_name(type_name) {}
@@ -89,7 +89,7 @@ namespace vm::opargs {
 		base::StrID type_name = base::StrID("");
 	};
 
-	struct FunctionName: code::ElementBase {
+	struct FunctionName final: code::ElementBase {
 		FunctionName() = default;
 
 		FunctionName(const base::StrID function_name): function_name(function_name) {}
@@ -97,7 +97,7 @@ namespace vm::opargs {
 		base::StrID function_name = base::StrID("");
 	};
 
-	struct Label: code::ElementBase {
+	struct Label final: code::ElementBase {
 		Label() = default;
 
 		Label(base::StrID label_name): label_name(label_name) {}
