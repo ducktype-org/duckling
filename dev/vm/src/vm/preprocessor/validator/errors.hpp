@@ -1,3 +1,5 @@
+#pragma once
+
 #include <diagnostic/message.hpp>
 
 #include <base/str_utils.hpp>
@@ -48,7 +50,7 @@ namespace vm::validator {
 	);
 	DEFINE_VALIDATOR_ERROR(
 		InvalidExtends,
-		"An class can extend only classes"
+		"An class can extend only nonfinal classes"
 	);
 	DEFINE_VALIDATOR_ERROR(
 		MissingVtablePointer,

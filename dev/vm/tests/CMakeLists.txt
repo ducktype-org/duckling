@@ -49,7 +49,10 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_validation_test validation/bc_validation.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_inheritance_test inheritance/inheritance.cpp
+        duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
+            USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
+            inheritance/inheritance_hierarchy_correctness.cpp
             USES ${libvm} Tester ${vmtester})
 endfunction()
 

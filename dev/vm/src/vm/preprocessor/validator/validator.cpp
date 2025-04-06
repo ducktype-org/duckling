@@ -4,6 +4,7 @@
 
 #include <diagnostic/logger.hpp>
 
+#include "base/optional.hpp"
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
@@ -52,7 +53,7 @@ namespace vm::validator {
 			validateMainExistance();
 			validateTailcallSignatures();
 			validateDuplicateFunctionDeclarations();
-            validateInheritanceHierarchy();
+			validateInheritanceHierarchy();
 
 			if (log.bad()) {
 				std::stringstream stream;
@@ -129,8 +130,20 @@ namespace vm::validator {
 					variant_match(vtable.kind) {
 						variant_case(VTable::Class, clazz) {
 							auto is_extends_valid
-								= clazz.extends.map([](auto super) { return super->isClass(); }
-							    ).value_or(true);
+								= clazz.extends
+							          .map([](auto super) {
+										  if_opt_some(super->getVTable(), super_vt) {
+											  variant_match(super_vt.kind) {
+												  variant_case(VTable::Class, super_clazz) {
+													  if (super_clazz.modifier
+											              != VTable::Class::Modifier::Final)
+														  return true;
+												  }
+											  }
+										  }
+										  return false;
+									  })
+							          .value_or(true);  // Does not extend anything.
 							if (!is_extends_valid)
 								log.log(makeBox<InvalidExtends>(*parser_type->position));
 						}
@@ -157,12 +170,10 @@ namespace vm::validator {
 						variant_case(VTable::Class, clazz) {
 							if_opt_some(clazz.extends, super) {
 								auto n_super_fields = super->getFieldCount().value();
-								for (size_t i = 0; i < n_super_fields; i++) {
-									if (super->getFieldType(i) != type->getFieldType(i)) {
+								for (size_t i = 0; i < n_super_fields; i++)
+									if (super->getFieldType(i) != type->getFieldType(i))
 										log.log(makeBox<MissingAncestorField>(*parser_type->position
 										));
-									}
-								}
 							}
 						}
 					}
@@ -174,5 +185,4 @@ namespace vm::validator {
 	base::Optional<std::string> verify(const parser::ParsedProgram& program) {
 		return Validator(program).validateProgram();
 	}
-
 }

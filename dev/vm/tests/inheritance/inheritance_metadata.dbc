@@ -66,6 +66,8 @@ function main {
     local_size: 8;
     
     code: {
+        # Print anything, so that `runTestOnVm` doesn't get stuck
+        output_l64 0;
         ret;
     }
 }

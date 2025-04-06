@@ -1,0 +1,30 @@
+type primitive: int64 8
+type fun: main {} int64
+
+type primitive: VT 8
+
+type data: Drawable {
+    vt: VT,
+}
+
+type data: Circle {
+    vt: VT,
+    radius: int64,
+}
+
+inheritable Drawable: interface {}
+
+inheritable Circle: final class {
+    extends: Drawable;
+}
+
+function main {
+    arg_size: 0;
+    ret_size: 8;
+    
+    local_size: 8;
+    
+    code: {
+        ret;
+    }
+}
