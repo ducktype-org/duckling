@@ -18,4 +18,7 @@ protected:
 	void runTestOnVm(
 		const std::string& rbc_filename, const std::string& input, const std::string& output
 	);
+	void loadInvalidDbc(
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	);
 };

@@ -25,3 +25,26 @@ void VmTestSuite::runTestOnVm(
 	auto join_response = vm::api::join(pid);
 	assertTrue(join_response.has_value(), "Join failed (1)");
 }
+
+/**
+ * @brief Parses a file containing a program which violates syntactic or static verification
+ * guidelines. Checks if the error message contains the provided keywords.
+ */
+void VmTestSuite::loadInvalidDbc(
+	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+) {
+	auto process_pid_response = vm::api::spawn();
+	ASSERT_TRUE(process_pid_response.has_value());
+	auto pid = process_pid_response.expect("Spawn failed").pid;
+
+	fs::FilePath file(path(dbc_filename));
+	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	ASSERT_TRUE(loaded_file_response.has_error());
+	auto err = loaded_file_response.error();
+	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
+	auto core_op = std::get<vm::api::CoreOperationError>(err);
+	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
+	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
+	for (auto err_key: error_keywords)
+		assertTrue(err_str.contains(err_key), base::strConcat("Not found: ", err_key));
+}
