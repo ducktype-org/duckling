@@ -318,13 +318,13 @@ namespace vm {
 	bool Type::isClass() const {
 		return getVTable()
 		    .map([](auto& vt) { return std::holds_alternative<VTable::Class>(vt.kind); })
-		    .value_or(false);
+		    .valueOr(false);
 	}
 
 	bool Type::isInterface() const {
 		return getVTable()
 		    .map([](auto& vt) { return std::holds_alternative<VTable::Interface>(vt.kind); })
-		    .value_or(false);
+		    .valueOr(false);
 	}
 
 	bool Type::isPlain() const { return !getVTable().has_value(); }

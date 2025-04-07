@@ -211,7 +211,7 @@ namespace vm::validator {
 			auto has_vtable_pointer
 				= type->getFieldType(0)
 			          .map([](auto field_type) { return field_type->getName() == "VT"; })
-			          .value_or(false);
+			          .valueOr(false);
 			if (!has_vtable_pointer) log.log(makeBox<MissingVtablePointer>(position));
 
 			// Check if interfaces are data-less

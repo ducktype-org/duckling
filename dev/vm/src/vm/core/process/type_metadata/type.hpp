@@ -129,9 +129,9 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<usize> getFieldCount() const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID field_id) const;
 		[[nodiscard]]
-		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
+		base::Optional<Offset> getFieldOffset(kind::Data::FieldID field_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
 		[[nodiscard]]
