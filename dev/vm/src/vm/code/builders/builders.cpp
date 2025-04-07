@@ -120,8 +120,6 @@ void FunctionBuilder::handleDeinit() {
 	local_stack.pop_back();
 }
 
-usize FunctionBuilder::getLocalSize() const { return local_stack.size(); }
-
 void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 	for (auto&& instr: instruction.build()) this->addInstruction(instr);
 }

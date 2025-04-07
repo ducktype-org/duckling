@@ -190,8 +190,6 @@ namespace vm::code::builders {
 		 */
 		usize initType(instructions::Op_init_type init);
 
-		[[nodiscard]] usize getLocalSize() const;
-
 		void addInstruction(const Instruction& instruction);
 		void addInstruction(const InstructionBuilder& instruction);
 
