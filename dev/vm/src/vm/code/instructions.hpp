@@ -1,5 +1,7 @@
 /**
- * @brief This file contains a list of structures representing VM instructions.
+ * @brief This file contains structures representing VM instructions.
+ * Each opcode has a corresponding structure with name `Op_{opcode_name}`.
+ * A variant structure that can store any instruction is called `Instruction`.
  */
 
 #pragma once
@@ -16,18 +18,28 @@
 
 namespace vm::code {
 	namespace instructions {
-#define HANDLE_OPCODE_0ARGS(opcode) \
-	struct Op_##opcode final: ElementBase {};
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)     \
-	struct Op_##opcode final: ElementBase {        \
-		Op_##opcode(arg0_type arg0): arg0(arg0) {} \
-		arg0_type arg0;                            \
+#define HANDLE_OPCODE_0ARGS(opcode)                                                   \
+	struct Op_##opcode final: ElementBase {                                           \
+		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \
 	};
+
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                               \
+	struct Op_##opcode final: ElementBase {                                  \
+		Op_##opcode(arg0_type arg0): arg0(arg0) {}                           \
+		arg0_type      arg0;                                                 \
+		constexpr bool operator==(const Op_##opcode& other) const noexcept { \
+			return arg0 == other.arg0;                                       \
+		}                                                                    \
+	};
+
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                      \
 	struct Op_##opcode final: ElementBase {                                    \
 		Op_##opcode(arg0_type arg0, arg1_type arg1): arg0(arg0), arg1(arg1) {} \
-		arg0_type arg0;                                                        \
-		arg1_type arg1;                                                        \
+		arg0_type      arg0;                                                   \
+		arg1_type      arg1;                                                   \
+		constexpr bool operator==(const Op_##opcode& other) const noexcept {   \
+			return arg0 == other.arg0 && arg1 == other.arg1;                   \
+		}                                                                      \
 	};
 
 #include <vm/code/opcodes_list.hpp>
@@ -47,6 +59,10 @@ namespace vm::code {
 			Comment(base::StrID comment): comment(comment) {}
 
 			base::StrID comment;
+
+			constexpr bool operator==(const Comment& other) const noexcept {
+				return comment == other.comment;
+			}
 		};
 	}
 
@@ -55,5 +71,4 @@ namespace vm::code {
 #include <vm/code/opcodes_list.hpp>
 #undef HANDLE_OPCODE
 		instructions::Comment>;
-
 }

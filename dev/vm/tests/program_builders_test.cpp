@@ -12,7 +12,6 @@
 #include <vm/code/opcode_args.hpp>
 #include <vm/code/serializer/serializer.hpp>
 #include <vm/code/type_of_data.hpp>
-#include <vm/code/utils.hpp>
 
 #include <sstream>
 
@@ -35,8 +34,7 @@ public:
 private:
 	template<class T>
 	void assertInstrEq(Instruction instruction1, T instruction2) {
-		ASSERT_TRUE(std::holds_alternative<T>(instruction1));
-		ASSERT_TRUE(vm::code::utils::areInstrEqual(std::get<T>(instruction1), instruction2));
+		ASSERT_EQUAL(instruction1, Instruction{ instruction2 });
 	}
 
 	void testInstructionBuilder() {

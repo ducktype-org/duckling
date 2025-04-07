@@ -4,7 +4,6 @@
 #include <base/variant.hpp>
 
 #include <vm/code/opcode_args.hpp>
-#include <vm/code/utils.hpp>
 
 #include <sstream>
 
@@ -84,7 +83,6 @@ namespace vm::code::builders {
 				variant_case_novalue(StackLocalI64) out << "l64";
 				variant_case_novalue(StackLocalAny) out << "any";
 				variant_case_novalue(StackLocalPtr) out << "lptr";
-				variant_case_novalue(ArgsOffset) out << "arg64";
 				variant_case_novalue(opargs::Type) out << "type";
 				variant_case_novalue(FunctionName) out << "func";
 				variant_case_novalue(Label) out << "label";
@@ -122,7 +120,7 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 	if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul || kind == OpKind::div
 	    || kind == OpKind::mod) {
 		if (new_args.size() == 3) {
-			if (vm::code::utils::areArgsEqual(new_args[0], new_args[1])) {
+			if (new_args[0] == new_args[1]) {
 				// This resolves e.g. `a = a + b;` by doing `a = b`
 				new_args.pop_front();
 			} else {

@@ -9,21 +9,18 @@
 #include <string_view>
 #include <utility>
 
-#define EMPTY
-#define DEF_BUILDER_ERR(name, err_msg, cons_args, super_args)                 \
-	class name: public BuilderError {                                         \
-	public:                                                                   \
-		constexpr const static std::string_view ERR_MSG = err_msg;            \
-		name(cons_args): BuilderError(base::strConcat(ERR_MSG super_args)) {} \
-	}
-
 namespace vm::code::builders {
 	class BuilderError: public base::LogicError {
 	public:
 		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
 	};
 
-	DEF_BUILDER_ERR(DuplicatedTypeError, "Duplicated type: ", base::StrID name, COMMA name);
+	class DuplicatedTypeError: public BuilderError {
+	public:
+		constexpr const static std ::string_view ERR_MSG = "Duplicated type: ";
+
+		DuplicatedTypeError(base ::StrID name): BuilderError(base ::strConcat(ERR_MSG, name)) {}
+	};
 
 	class StackStructureMismatchError: public BuilderError {
 	public:
@@ -46,9 +43,13 @@ namespace vm::code::builders {
 			  FUNC_NAME(func_name) {}
 	};
 
-	DEF_BUILDER_ERR(
-		TypeIsNotFunctionalError, "Type is not functional: ", base::StrID name, COMMA name
-	);
+	class TypeIsNotFunctionalError: public BuilderError {
+	public:
+		constexpr const static std ::string_view ERR_MSG = "Type is not functional: ";
+
+		TypeIsNotFunctionalError(base ::StrID name):
+			  BuilderError(base ::strConcat(ERR_MSG, name)) {}
+	};
 
 	class MissingSubtypeError: public BuilderError {
 	public:
@@ -72,8 +73,10 @@ namespace vm::code::builders {
 			  TYPE(type) {}
 	};
 
-	DEF_BUILDER_ERR(EmptyStackDeinitError, "Popping from empty variable stack.", EMPTY, EMPTY);
-}
+	class EmptyStackDeinitError: public BuilderError {
+	public:
+		constexpr const static std ::string_view ERR_MSG = "Popping from empty variable stack.";
 
-#undef DEF_BUILDER_ERR
-#undef EMPTY
+		EmptyStackDeinitError(): BuilderError(base ::strConcat(ERR_MSG)) {}
+	};
+}
