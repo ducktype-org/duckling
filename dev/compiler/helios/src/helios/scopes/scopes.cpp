@@ -31,7 +31,7 @@
 #define MAKE_VISIT(type)                                                                           \
 	void visit##type(pst::Access<pst SQ type> element) override {                                  \
 		if (getScopeKind(ctx, element) == ElementScopeKind::Standard) {                            \
-			out.insert(scopeOf(element));                                                              \
+			out.insert(scopeOf(element));                                                          \
 		}                                                                                          \
 		for (auto sub: element->viewSubElements()) {                                               \
 			variant_match(sub) {                                                                   \
@@ -374,16 +374,27 @@ namespace compiler::helios {
 			ScopeGrabVisitor scope_grab(ctx, key);
 
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
-			root->acceptVisitor(scope_grab);
+
+			// handle TopLevel separetly
+			scope_grab.out.insert(scope_grab.scopeOf(root));                                                            
+			for (auto sub: root->viewSubElements()) {                                               
+				variant_match(sub) {                                                                   
+					variant_case(pst::LangElement::ConstChild, child) { child->acceptVisitor(scope_grab); } 
+				}                                                                                      
+			}
 
 			return std::move(scope_grab.out);
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::set<ScopeID> output;
+			// fetch scopes from main module file
+			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			std::set<ScopeID> output    = getScopes(ctx, key, main_file);
 
+			// fetch scopes from other module files
+			// @todo
+			// refactor if TopLevel is included in PstVisitor 
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
-
 			for (auto file: *source_files) {
 				auto scopes = getScopes(ctx, key, file);
 				output.merge(scopes);
