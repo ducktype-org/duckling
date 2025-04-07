@@ -36,7 +36,7 @@ function main {
         init_type DogPtr;  # 8
         init_type CatPtr;  # 24
         alloc_lptr_type 8, Dog;
-        set_vtable_lptr_type 8, Dog;
+        setVTable_lptr_type 8, Dog;
         upcast_lptr_lptr 24, 8;  # cat := static_cast<CatPtr>(dog)
         ret;
     }

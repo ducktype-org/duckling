@@ -507,7 +507,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_vtable_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto type    = thread.executing_program->type_metadata->getType(
