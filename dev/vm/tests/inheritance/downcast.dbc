@@ -1,0 +1,95 @@
+type primitive: int64 8
+type primitive: void 0
+type fun: main {} int64
+type fun: print_flag {} void
+
+type primitive: VT 8
+
+type data: Animal {
+    vt: VT
+}
+
+type data: Dog {
+    vt: VT
+}
+
+type data: Cat {
+    vt: VT
+}
+
+type pointer: AnimalPtr Animal
+type pointer: DogPtr Dog
+type pointer: CatPtr Cat
+
+inheritable Animal: abstract class {}
+inheritable Dog: final class {
+    extends: Animal;
+}
+inheritable Cat: final class {
+    extends: Animal;
+}
+
+function print_flag {
+    arg_size: 0;
+    ret_size: 0;
+    
+    local_size: 8;
+    
+    code: {
+        init_type int64;  # 0
+
+        jmpRelIf_label set;
+        jmpRel_label out;
+        label set;
+            mov_l64_imm 0, 1;
+
+        label out;
+            output_l64 0;
+        deinit;
+        ret;
+    }
+}
+
+function main {
+    arg_size: 0;
+    ret_size: 8;
+    
+    local_size: 64;
+    
+    code: {
+        init_type AnimalPtr;  # 8
+        init_type CatPtr;     # 24
+        init_type DogPtr;     # 40
+
+        alloc_lptr_type 8, Dog;
+        set_vtable_lptr_type 8, Dog;
+
+        downcast_lptr_lptr 24, 8;  # cat := static_cast<CatPtr>(animal)
+        cmpNull_lptr 24;  # flag := cat != nullptr
+
+        # Check if succeeded
+        init_type int64;  # 56
+        jmpRelIf_label setCat;
+        jmpRel_label outCat;
+        label setCat;
+            mov_l64_imm 56, 1;
+        label outCat;
+            output_l64 56;
+        deinit;
+
+        downcast_lptr_lptr 40, 8;  # dog := static_cast<DogPtr>(animal)
+        cmpNull_lptr 40;  # flag := cat != nullptr
+
+        # Check if succeeded
+        init_type int64;  # 56
+        jmpRelIf_label setDog;
+        jmpRel_label outDog;
+        label setDog;
+            mov_l64_imm 56, 1;
+        label outDog;
+            output_l64 56;
+        deinit;
+
+        ret;
+    }
+}

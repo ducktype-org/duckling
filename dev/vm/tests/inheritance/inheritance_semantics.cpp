@@ -6,16 +6,19 @@
 #include <vm/api/api.hpp>
 #include <vm/preprocessor/validator/errors.hpp>
 
-class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
+class VmInheritanceSemanticsTest: public VmTestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS VmInheritanceHierarchyCorrectnessTest
+#define TESTER_CLASS VmInheritanceSemanticsTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(hierarchyCorrectness); }
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(semantics); }
 
 
 private:
-	void hierarchyCorrectness() {
+	void semantics() {
+        runTestOnVm("downcast.dbc", "", "10");
+        runTestOnVm("valid_upcast.dbc", "", "0");
+
 		// Invalid
 		using namespace vm::validator;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({

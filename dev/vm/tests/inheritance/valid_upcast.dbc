@@ -16,7 +16,7 @@ type data: Cat {
 }
 
 type pointer: DogPtr Dog
-type pointer: CatPtr Cat
+type pointer: AnimalPtr Animal
 
 inheritable Animal: abstract class {}
 inheritable Dog: final class {
@@ -34,10 +34,14 @@ function main {
     
     code: {
         init_type DogPtr;  # 8
-        init_type CatPtr;  # 24
+        init_type AnimalPtr;  # 24
         alloc_lptr_type 8, Dog;
         set_vtable_lptr_type 8, Dog;
-        upcast_lptr_lptr 24, 8;  # cat := static_cast<CatPtr>(dog)
+        upcast_lptr_lptr 24, 8;  # animal := static_cast<AnimalPtr>(dog)
+        
+        # Print anything, so that `runTestOnVm` doesn't get stuck
+        output_l64 0;
         ret;
     }
 }
+

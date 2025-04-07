@@ -161,7 +161,10 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
-		{ frame->flags.flag = derefStack<Pointer>(local_stack, instr->arg0).isNull(); }
+		{
+			auto pointer          = derefStack<Pointer>(local_stack, instr->arg0);
+			frame->flags.flag = pointer.isNull();
+		}
 		FUNCTION_CONT(1);
 	}
 
@@ -504,19 +507,19 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(set_vtable_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_vtable_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto pointer_type
-				= getLocalType(static_cast<u32>(instr->arg0), frame, thread.process_memory);
-			auto object_type = pointer_type->getInnerType().value();
+			auto type    = thread.executing_program->type_metadata->getType(
+                vm::TypeID(static_cast<u32>(instr->arg1))
+            );
 
 			// Objects are guaranteed to hold vtable pointer as their first field
 			// by static verification.
-			auto vt_pointer = reinterpret_cast<const Type*>(
+			auto vt_pointer = reinterpret_cast<const Type**>(
 				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
 			);
-			vt_pointer = &*object_type;
+			*vt_pointer = type.get();
 		}
 		FUNCTION_CONT(1);
 	}
@@ -542,7 +545,7 @@ namespace vm {
 
 			// Objects are guaranteed to hold vtable pointer as their first field
 			// by static verification.
-			TypeCRef real_src_type = reinterpret_cast<const Type*>(
+			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
 				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
 			);
 			auto cast_allowed = real_src_type->inheritsFrom(dst_type);
