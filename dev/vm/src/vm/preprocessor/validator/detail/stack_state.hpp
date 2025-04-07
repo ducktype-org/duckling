@@ -18,7 +18,7 @@ namespace vm::validator {
 	 * @todo Add tests.
 	 */
 	class StackState {
-        std::vector<usize> offset_stack;
+		std::vector<usize>             offset_stack;
 		base::HashMap<usize, TypeCRef> offset_to_type;
 		const TypeMetadata&            type_metadata;
 		TypeCRef                       return_type;

@@ -29,27 +29,6 @@ inheritable Cat: final class {
     extends: Animal;
 }
 
-function print_flag {
-    arg_size: 0;
-    ret_size: 0;
-    
-    local_size: 8;
-    
-    code: {
-        init_type int64;  # 0
-
-        jmpRelIf_label set;
-        jmpRel_label out;
-        label set;
-            mov_l64_imm 0, 1;
-
-        label out;
-            output_l64 0;
-        deinit;
-        ret;
-    }
-}
-
 function main {
     arg_size: 0;
     ret_size: 8;
@@ -60,6 +39,7 @@ function main {
         init_type AnimalPtr;  # 8
         init_type CatPtr;     # 24
         init_type DogPtr;     # 40
+        init_type int64;      # 56
 
         alloc_lptr_type 8, Dog;
         setVTable_lptr_type 8, Dog;
@@ -68,27 +48,19 @@ function main {
         cmpNull_lptr 24;  # flag := cat != nullptr
 
         # Check if succeeded
-        init_type int64;  # 56
-        jmpRelIf_label setCat;
-        jmpRel_label outCat;
-        label setCat;
-            mov_l64_imm 56, 1;
-        label outCat;
-            output_l64 56;
-        deinit;
+        jmpRelNotIf_label notCat;
+            add_l64_imm 56, 10;
+        label notCat;
 
         downcast_lptr_lptr 40, 8;  # dog := static_cast<DogPtr>(animal)
         cmpNull_lptr 40;  # flag := cat != nullptr
 
         # Check if succeeded
-        init_type int64;  # 56
-        jmpRelIf_label setDog;
-        jmpRel_label outDog;
-        label setDog;
-            mov_l64_imm 56, 1;
-        label outDog;
-            output_l64 56;
-        deinit;
+        jmpRelNotIf_label notDog;
+            add_l64_imm 56, 1;
+        label notDog;
+
+        output_l64 56;
 
         ret;
     }

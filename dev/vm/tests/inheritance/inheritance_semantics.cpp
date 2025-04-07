@@ -1,4 +1,4 @@
-#include "vm_tester_utils.hpp"
+#include <vm_tester_utils.hpp>
 
 #include <base/optional.hpp>
 #include <base/variant.hpp>
@@ -16,8 +16,8 @@ public:
 
 private:
 	void semantics() {
-        runTestOnVm("downcast.dbc", "", "10");
-        runTestOnVm("valid_upcast.dbc", "", "0");
+		runTestOnVm("downcast.dbc", "", "10");
+		runTestOnVm("valid_upcast.dbc", "", "0");
 
 		// Invalid
 		using namespace vm::validator;

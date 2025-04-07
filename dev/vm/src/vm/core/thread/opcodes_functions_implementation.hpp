@@ -162,7 +162,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
 		{
-			auto pointer          = derefStack<Pointer>(local_stack, instr->arg0);
+			auto pointer      = derefStack<Pointer>(local_stack, instr->arg0);
 			frame->flags.flag = pointer.isNull();
 		}
 		FUNCTION_CONT(1);

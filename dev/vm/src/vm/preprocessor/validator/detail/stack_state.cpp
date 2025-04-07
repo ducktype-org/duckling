@@ -15,9 +15,9 @@ namespace vm::validator {
 	}
 
 	void StackState::pop() {
-        auto offset = offset_stack.back();
-        offset_stack.pop_back();
-        offset_to_type.erase(offset);
+		auto offset = offset_stack.back();
+		offset_stack.pop_back();
+		offset_to_type.erase(offset);
 	}
 
 	TypeCRef StackState::top() const { return offset_to_type[offset_stack.back()]; }

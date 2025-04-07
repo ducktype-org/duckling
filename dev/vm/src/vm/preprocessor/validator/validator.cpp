@@ -4,9 +4,9 @@
 
 #include <diagnostic/logger.hpp>
 
-#include "base/optional.hpp"
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/preprocessor/parser/elements.hpp>

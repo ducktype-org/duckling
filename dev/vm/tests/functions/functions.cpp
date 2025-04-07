@@ -11,7 +11,7 @@ public:
 		TESTER_ADD_TEST(testReturnL32);
 		TESTER_ADD_TEST(testDifferentSizedParams);
 		TESTER_ADD_TEST(testDoubleCall);
-        // @TODO should this be allowed or not?
+		// @TODO should this be allowed or not?
 		TESTER_ADD_TEST(testDeinitializeReturnValue);
 		TESTER_ADD_TEST(testRecurence);
 		TESTER_ADD_TEST(testManyFunctions);
