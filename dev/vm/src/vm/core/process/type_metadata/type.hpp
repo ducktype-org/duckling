@@ -127,7 +127,7 @@ namespace vm {
 
 		// data
 		[[nodiscard]]
-		base::Optional<size_t> getFieldCount() const;
+		base::Optional<usize> getFieldCount() const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
 		[[nodiscard]]

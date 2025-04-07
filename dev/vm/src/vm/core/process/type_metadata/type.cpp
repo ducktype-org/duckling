@@ -201,7 +201,7 @@ namespace vm {
 	}
 
 	// struct
-	base::Optional<size_t> Type::getFieldCount() const {
+	base::Optional<usize> Type::getFieldCount() const {
 		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
 	}
 

@@ -225,7 +225,7 @@ namespace vm::validator {
 				variant_case(VTable::Class, clazz) {
 					if_opt_some(clazz.extends, super) {
 						auto n_super_fields = super->getFieldCount().value();
-						for (size_t i = 0; i < n_super_fields; i++)
+						for (usize i = 0; i < n_super_fields; i++)
 							if (super->getFieldType(i) != type->getFieldType(i))
 								log.log(makeBox<MissingAncestorField>(position));
 					}
