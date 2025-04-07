@@ -109,58 +109,18 @@ void vm::code::builders::InstructionBuilder::setKind(OpKind kind) {
 std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build() const {
 	CORE_ASSERT(kind_set, "InstructionBuilder::build: kind_set = false");
 
-	std::deque<vm::code::Instruction> result;
+	std::vector<vm::code::Instruction> result;
 
-	std::deque new_args = args;
+	std::vector new_args = args;
 
 	// Transforms arguments.
-	if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul || kind == OpKind::div
-	    || kind == OpKind::mod) {
-		if (new_args.size() == 3) {
-			if (new_args[0] == new_args[1]) {
-				// This resolves e.g. `a = a + b;` by doing `a = b`
-				new_args.pop_front();
-			} else {
-				// This resolves e.g. `a = b + c;`
-				// by splitting it into two instructions:
-				// a = b;
-				// a += c;
-				InstructionBuilder instr_mov;
-
-				instr_mov.setKind(OpKind::mov);
-				instr_mov.pushArg(new_args[0]);
-				instr_mov.pushArg(new_args[1]);
-
-				auto built = instr_mov.build();
-				result.insert(result.end(), built.begin(), built.end());
-				new_args.pop_front();
-				new_args.pop_front();
-				new_args.push_front(args.front());
-			}
-		}
-	} else if (kind == OpKind::neg) {
-		if (new_args.size() == 2) {
-			InstructionBuilder instr_mov;
-
-			instr_mov.setKind(OpKind::mov);
-			instr_mov.pushArg(new_args[0]);
-			instr_mov.pushArg(new_args[1]);
-
-			auto built = instr_mov.build();
-			result.insert(result.end(), built.begin(), built.end());
-
-			new_args.pop_back();
-		}
-	} else if (kind == OpKind::load || kind == OpKind::store) {
-		InstructionBuilder load_or_store_instr;
-		load_or_store_instr.kind = kind;
-		load_or_store_instr.pushArg(new_args[0]);
-		load_or_store_instr.pushArg(new_args[1]);
+	if ((kind == OpKind::load || kind == OpKind::store) && args.size() == 3) {
+		InstructionBuilder load_or_store_instr(kind);
+		load_or_store_instr.pushArgs(new_args[0], new_args[1]);
 		auto built = load_or_store_instr.build();
 		result.insert(result.end(), built.begin(), built.end());
 
-		InstructionBuilder ext;
-		ext.kind = OpKind::ext;
+		InstructionBuilder ext(OpKind::ext);
 		ext.pushArg(new_args[2]);
 		auto built2 = load_or_store_instr.build();
 		result.insert(result.end(), built2.begin(), built2.end());

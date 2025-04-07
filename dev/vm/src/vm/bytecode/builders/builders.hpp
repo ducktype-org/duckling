@@ -15,8 +15,8 @@
 #include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <cstdint>
-#include <deque>
 #include <utility>
+#include <vector>
 
 
 /**
@@ -105,15 +105,12 @@ namespace vm::code::builders {
 	 * It supports creating all available opcodes.
 	 *
 	 * Some operations support more arguments than their corresponding opcodes:
-	 * * In case of arithmetic operations, 3 arguments mean first argument
-	 *  	should store the result of the operation on the succeeding arguments.
-	 * * In case of `neg`, 2 arguments mean the first stores the result of neg on the successor.
 	 * * In case of `load` and `store`, third argument gets its own `ext` opcode.
 	 */
 	class InstructionBuilder {
-		std::deque<vm::opargs::OpCodeArg> args;
-		OpKind                            kind{};
-		bool                              kind_set = false;
+		std::vector<vm::opargs::OpCodeArg> args;
+		OpKind                             kind{};
+		bool                               kind_set = false;
 
 	public:
 		InstructionBuilder() = default;

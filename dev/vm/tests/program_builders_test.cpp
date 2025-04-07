@@ -33,7 +33,7 @@ public:
 
 private:
 	template<class T>
-	void assertInstrEq(Instruction instruction1, T instruction2) {
+	void assertInstructionsEqual(Instruction instruction1, T instruction2) {
 		ASSERT_EQUAL(instruction1, Instruction{ instruction2 });
 	}
 
@@ -48,36 +48,16 @@ private:
 		instr_builder.setKind(OpKind::mov);
 		const auto arg0 = vm::opargs::StackLocalI32{ 0 };
 		const auto arg1 = vm::opargs::StackLocalI32{ 4 };
-		const auto arg2 = vm::opargs::Immediate{ 10 };
 		instr_builder.pushArgs(arg0, arg1);
 		std::vector<Instruction> instr = instr_builder.build();
 		ASSERT_TRUE(instr.size() == 1);
-		assertInstrEq(instr[0], Op_mov_l32_l32{ arg0, arg1 });
+		assertInstructionsEqual(instr[0], Op_mov_l32_l32{ arg0, arg1 });
 
 		// Test `ret_l32_l32` does not exist
 		instr_builder.setKind(vm::code::builders::OpKind::ret);
 		assertThrows<base::Panic>(
 			[] { auto _ = InstructionBuilder().build(); }, "Built an invalid instruction"
 		);
-
-		// Test a = b + c
-		// "add a b c" is supported by the builder
-		// Should output:
-		// mov a b  # a = b
-		// add a c  # a += c
-		instr_builder.setKind(vm::code::builders::OpKind::add);
-		instr_builder.pushArg(arg2);
-		std::vector<Instruction> instr1 = instr_builder.build();
-		ASSERT_TRUE(instr1.size() == 2);
-		assertInstrEq(instr1[0], Op_mov_l32_l32{ arg0, arg1 });
-		assertInstrEq(instr1[1], Op_add_l32_imm{ arg0, arg2 });
-
-		// Test whether `a = a + b` resolves to `add a b`.
-		InstructionBuilder instr_builder1(OpKind::add);
-		instr_builder1.pushArgs(arg0, arg0, arg2);
-		auto instr2 = instr_builder1.build();
-		ASSERT_EQUAL(1, instr2.size());
-		assertInstrEq(instr2[0], Op_add_l32_imm{ arg0, arg2 });
 	}
 
 	void testFunctionBuilder() {
@@ -120,12 +100,12 @@ private:
 		ASSERT_EQUAL(0, func.arg_size);
 		ASSERT_EQUAL(0, func.next_arg_size);
 
-		assertInstrEq(func.body[0], Op_init_type{ int32 });
-		assertInstrEq(func.body[1], Op_init_type{ int64 });
-		assertInstrEq(func.body[2], Op_init_type{ int64 });
-		assertInstrEq(func.body[3], Op_add_l32_imm{ arg0, arg1 });
-		assertInstrEq(func.body[4], Op_deinit{});
-		assertInstrEq(func.body.back(), Op_ret{});
+		assertInstructionsEqual(func.body[0], Op_init_type{ int32 });
+		assertInstructionsEqual(func.body[1], Op_init_type{ int64 });
+		assertInstructionsEqual(func.body[2], Op_init_type{ int64 });
+		assertInstructionsEqual(func.body[3], Op_add_l32_imm{ arg0, arg1 });
+		assertInstructionsEqual(func.body[4], Op_deinit{});
+		assertInstructionsEqual(func.body.back(), Op_ret{});
 	}
 
 	void testFileBuilder() {
