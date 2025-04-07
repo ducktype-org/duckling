@@ -1,0 +1,26 @@
+type primitive: int64 8
+type fun: main {} int64
+
+type primitive: VT 8
+
+type data: Widget {
+    vt: VT
+}
+
+inheritable Widget: abstract class {}
+
+type data: Wrapper {
+    wrapped: Widget,
+}
+
+function main {
+    arg_size: 0;
+    ret_size: 8;
+    
+    local_size: 16;
+    
+    code: {
+        init_type Wrapper;
+        ret;
+    }
+}

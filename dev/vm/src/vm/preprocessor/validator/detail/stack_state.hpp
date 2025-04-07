@@ -18,11 +18,18 @@ namespace vm::validator {
 	 * @todo Add tests.
 	 */
 	class StackState {
-		std::vector<CRef<Type>> stack_state;
-		const TypeMetadata&     type_metadata;
+        std::vector<usize> offset_stack;
+		base::HashMap<usize, TypeCRef> offset_to_type;
+		const TypeMetadata&            type_metadata;
+		TypeCRef                       return_type;
+
+		void     push(TypeCRef type);
+		void     pop();
+		TypeCRef top() const;
+		bool     empty() const;
 
 	public:
-		StackState(const TypeMetadata& meta_data);
+		StackState(const TypeMetadata& meta_data, TypeCRef function_type);
 
 		/**
 		 * @brief Takes an instruction and updates the stack.
@@ -31,5 +38,7 @@ namespace vm::validator {
 		 * Otherwise, returns false.
 		 */
 		bool consume(CRef<parser::OpCode> opcode);
+
+		[[nodiscard]] base::Optional<TypeCRef> atOffset(usize offset) const;
 	};
 }

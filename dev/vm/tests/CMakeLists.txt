@@ -58,6 +58,8 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
             inheritance/inheritance_hierarchy_correctness.cpp
             USES ${libvm} Tester ${vmtester})
+        duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
+            USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")

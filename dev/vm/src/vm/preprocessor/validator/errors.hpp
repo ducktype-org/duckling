@@ -45,13 +45,14 @@ namespace vm::validator {
 		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
 	);
 	DEFINE_VALIDATOR_ERROR(
-		InvalidImplements,
-		"An interface/class can implement only interfaces"
+		InvalidStackOperation,
+		"Trying to pop an empty stack or call a function with invalid arguments"
 	);
-	DEFINE_VALIDATOR_ERROR(
-		InvalidExtends,
-		"An class can extend only nonfinal classes"
-	);
+	DEFINE_VALIDATOR_ERROR(InvalidStackOffset, "Trying to use uninitialised memory");
+	DEFINE_VALIDATOR_ERROR(UninstantiableValue, "This type cannot be instantiated");
+	DEFINE_VALIDATOR_ERROR(InvalidUpcast, "The source does not inherit from the destination type");
+	DEFINE_VALIDATOR_ERROR(InvalidImplements, "An interface/class can implement only interfaces");
+	DEFINE_VALIDATOR_ERROR(InvalidExtends, "An class can extend only nonfinal classes");
 	DEFINE_VALIDATOR_ERROR(
 		MissingVtablePointer,
 		"The implementation of an interface/class has to contain a VTable pointer"

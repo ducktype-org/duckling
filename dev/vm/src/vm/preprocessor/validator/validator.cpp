@@ -47,6 +47,9 @@ namespace vm::validator {
 			void validateTailcallSignatures();
 			void validateDuplicateFunctionDeclarations();
 			void validateInheritanceHierarchy();
+			void validateInstructions();
+			void validateOpcode(CRef<parser::OpCode> opcode, const StackState& stack);
+
 
 			// Helpers for inheritance hierarchy
 			void validateAncestors(const VTable& vtable, const dia::SourcePosition& position);
@@ -60,6 +63,7 @@ namespace vm::validator {
 			validateTailcallSignatures();
 			validateDuplicateFunctionDeclarations();
 			validateInheritanceHierarchy();
+			validateInstructions();
 
 			if (log.bad()) {
 				std::stringstream stream;
@@ -121,6 +125,58 @@ namespace vm::validator {
 			}
 		}
 
+		void Validator::validateDuplicateFunctionDeclarations() { return; }
+
+		void Validator::validateOpcode(CRef<parser::OpCode> opcode, const StackState& stack) {
+			auto type_from_arg = [&](const opargs::OpCodeArg& arg) {
+				return program.type_metadata->getTypeByName(std::get<opargs::Type>(arg).type_name)
+				    .value();
+			};
+
+			// This big if-else is temporary before the new high-level representation is merged.
+			auto name = opcode->opcode_name;
+			if (name == base::StrID("init_type") || name == base::StrID("alloc_lptr_type")) {
+				auto type = type_from_arg(opcode->args.back().arg);
+
+				if (!type->isInstantiable())
+					log.log(makeBox<UninstantiableValue>(*opcode->position));
+			} else if (name == base::StrID("upcast_lptr_lptr")) {
+				auto dst_pointer_type = stack.atOffset(
+					static_cast<usize>(std::get<opargs::StackLocalPtr>(opcode->args[0].arg).offset)
+				);
+				auto src_pointer_type = stack.atOffset(
+					static_cast<usize>(std::get<opargs::StackLocalPtr>(opcode->args[1].arg).offset)
+				);
+				if (!(dst_pointer_type && src_pointer_type)) {
+					log.log(makeBox<InvalidStackOffset>(*opcode->position));
+					return;
+				}
+
+				auto dst_type = dst_pointer_type.value()->getInnerType().value();
+				auto src_type = src_pointer_type.value()->getInnerType().value();
+
+				if (!src_type->inheritsFrom(dst_type))
+					log.log(makeBox<InvalidUpcast>(*opcode->position));
+			}
+		}
+
+		void Validator::validateInstructions() {
+			for (auto& function: program.functions) {
+				CRef<Type> function_type
+					= program.type_metadata->getTypeByName(function->name.value)
+				          .expect("Invalid funciton type");
+				StackState stack{ *program.type_metadata, function_type };
+
+				if (!function->code) continue;
+				for (auto& opcode: function->code->opcodes) {
+					if (!stack.consume(opcode.ref()))
+						log.log(makeBox<InvalidStackOperation>(*opcode->position));
+
+					validateOpcode(opcode.ref(), stack);
+				}
+			}
+		}
+
 		void Validator::validateAncestors(
 			const VTable& vtable, const dia::SourcePosition& position
 		) {
@@ -146,7 +202,9 @@ namespace vm::validator {
 			}
 		}
 
-		void Validator::validateFields(TypeCRef type, const VTable& vtable, const dia::SourcePosition& position) {
+		void Validator::validateFields(
+			TypeCRef type, const VTable& vtable, const dia::SourcePosition& position
+		) {
 			// Check if vtable exists
 			// @TODO this is VERY temporary!!!
 			// we need some sort of builtin vtable pointer type, not silly name checking
@@ -157,7 +215,7 @@ namespace vm::validator {
 			if (!has_vtable_pointer) log.log(makeBox<MissingVtablePointer>(position));
 
 			// Check if interfaces are data-less
-			if (std::holds_alternative<VTable::Interface>(vtable.kind)) {
+			if (type->isInterface()) {
 				if (type->getFieldType(1).has_value())
 					log.log(makeBox<InstanceDataInInterface>(position));
 			}
