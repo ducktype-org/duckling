@@ -1,23 +1,22 @@
 type primitive: int64 8
+type fun: main {} int64
 
 function main {
   arg_size: 0;
-  next_arg_size: 0;
-  ret_size: 0;
-
-  # x - 0
-  local_size: 8;
+  ret_size: 8;
+  local_size: 16;
 
   code: {
-    init_type int64;
+    # [0, 8) -> main ret_val
+    # [8, 16) -> x
 
-    jmpRel_label Outside;
+    init_type     int64; # x
+    jmpRel_label  Outside;
+    deinit; # x
 
-    deinit;
+    label         Outside;
 
-    label Outside;
-
-    ret_imm             0;
+    ret;
   }
 
 }
