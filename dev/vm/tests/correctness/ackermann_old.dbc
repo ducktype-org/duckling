@@ -56,9 +56,6 @@ function ackermann {
         free_lptr           48;
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
         deinit; # A() ret_val
-        deinit; # n
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label N0;
@@ -79,9 +76,6 @@ function ackermann {
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
         
         deinit; # A() ret_val
-        deinit; # n
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label M0;

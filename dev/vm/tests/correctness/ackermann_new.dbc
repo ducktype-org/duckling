@@ -45,8 +45,6 @@ function ackermann {
 
         mov_l64_l64         0, 24;
         deinit; # A() ret_val
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label N0;
@@ -61,8 +59,6 @@ function ackermann {
 
         mov_l64_l64         0, 24;
         deinit; # A() ret_val
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label M0;
