@@ -1,16 +1,14 @@
 /**
- * @file code.hpp
+ * @file low_program.hpp
  */
 #pragma once
 
 #include "instruction.hpp"
 
-#include <base/stable_hashmap.hpp>
 
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
-#include <utility>
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -33,6 +31,7 @@ namespace vm::low {
 	 * @note In the future, this class will use micro bytecode instead.
 	 *
 	 * @note It's guaranteed to contain main, if validator is enabled.
+@important The order of functions in the `std::vector<FuncData>` is important, as the `ID` of the function in the function calls is the index in this vector
 	 */
 	struct LowVMProgram {
 		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> types):
