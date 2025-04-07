@@ -37,34 +37,28 @@ vm::code::Function FunctionBuilder::build() const {
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
+	using namespace instructions;
 	variant_match(instruction) {
-		variant_case(instructions::Op_init_type, instr) {
-			initType(instr);
-			return;
-		}
-		variant_case(instructions::Op_deinit, instr) {
-			handleDeinit();
-			return;
-		}
-		variant_case(instructions::Op_label, label) {
-			handleLabel(label);
-			return;
-		}
-		variant_case(instructions::Op_call_func, func) {
-			handleCallFunc(func);
-			return;
-		}
-		variant_case(instructions::Op_jmpRel_label, jmp) {
+		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
+		variant_case(Op_deinit, instr) { handleDeinit(); }
+		variant_case(Op_label, label) { handleLabel(label); }
+		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
+		variant_case(Op_jmpRel_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(instructions::Op_jmpRelIf_label, jmp) {
+		variant_case(Op_jmpRelIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(instructions::Op_jmpRelNotIf_label, jmp) {
+		variant_case(Op_jmpRelNotIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
+		}
+		variant_case(Op_ret, ret) { handleRet(); }
+		variant_case(Op_ret_tailcall_func, tailcall) {
+			verifyCall(tailcall.arg0);
+			handleRet();
 		}
 	}
 	instructions.push_back(instruction);
@@ -83,18 +77,13 @@ FunctionBuilder::FunctionBuilder(
 	initType(instructions::Op_init_type{ func_result_type->getName() });
 	instructions.pop_back();
 	auto params = types_context.getMetadata().at(name)->getParameters().value();
-	for (TypeCRef param: params) {
-		initType(instructions::Op_init_type{ param->getName() });
-		instructions.pop_back();
-	}
+	for (TypeCRef param: params) pushStackState({ param->getName() });
 }
 
-usize FunctionBuilder::initType(instructions::Op_init_type init) {
-	instructions.emplace_back(init);
-
+usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
 	const usize type_size = types_context.getMetadata()
-	                            .atMaybe(init.arg0.type_name)
-	                            .expect<UnknownTypeError>(init.arg0)
+	                            .atMaybe(type.type_name)
+	                            .expect<UnknownTypeError>(type)
 	                            ->getSize();
 
 	usize offset = 0;
@@ -105,7 +94,7 @@ usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	}
 
 	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
-	                                          .tp                   = init.arg0.type_name,
+	                                          .type_name            = type.type_name,
 	                                          .local_stack_position = offset,
 	                                          .type_size            = type_size });
 
@@ -114,9 +103,13 @@ usize FunctionBuilder::initType(instructions::Op_init_type init) {
 	return offset;
 }
 
+usize FunctionBuilder::initType(instructions::Op_init_type init) {
+	instructions.emplace_back(init);
+	return pushStackState(init.arg0);
+}
+
 void FunctionBuilder::handleDeinit() {
 	if (local_stack.empty()) throw EmptyStackDeinitError();
-	instructions.emplace_back(instructions::Op_deinit{});
 	local_stack.pop_back();
 }
 
@@ -126,28 +119,63 @@ void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 
 void FunctionBuilder::handleLabel(instructions::Op_label label) {
 	saveStackState(label.arg0.label_name);
-	instructions.emplace_back(label);
 	label_users[label.arg0.label_name].emplace_back(label);
 }
 
-void FunctionBuilder::handleCallFunc(instructions::Op_call_func func) {
-	auto func_name = func.arg0.function_name;
-	auto params    = types_context.getMetadata()
-	                  .atMaybe(func_name)
-	                  .expect<MissingFunctionalTypeError>(func_name)
-	                  ->getParameterCount()
-	                  .expect<TypeIsNotFunctionalError>(func_name);
-	for (usize i = 0; i < params; i++) local_stack.pop_back();
-	instructions.emplace_back(func);
+void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName function) {
+	auto func_type = types_context.getMetadata()
+	                     .atMaybe(function.function_name)
+	                     .expect<MissingFunctionalTypeError>(function.function_name);
+	auto param_count
+		= func_type->getParameterCount().expect<TypeIsNotFunctionalError>(function.function_name);
+
+	auto min_stack_size = param_count + 1;  // +1 because return value
+	if (func_type->getResultType().value()->getSize() == 0) {
+		// return value is void
+		if (local_stack.size() < min_stack_size - 1) throw InvalidFunctionCallArguments();
+	} else {
+		// Too few arguments
+		if (local_stack.size() < min_stack_size) throw InvalidFunctionCallArguments();
+		// Invalid result type
+		if (local_stack.at(local_stack.size() - 1 - param_count).type_name
+		    != func_type->getResultType().value()->getName()) {
+			throw InvalidFunctionCallArguments();
+		}
+	}
+
+	for (usize i = 0; i < param_count; i++) {
+		// Invalid arguments
+		auto tp = func_type->getNthParameterType(i).value();
+		if (tp->getName() != local_stack.at(local_stack.size() - 1 - i).type_name)
+			throw InvalidFunctionCallArguments();
+	}
 }
 
-void FunctionBuilder::saveStackState(base::StrID at_label_name) {
-	if (stack_state_at_label.contains(at_label_name)) {
-		if (stack_state_at_label[at_label_name] != local_stack)
-			throw builders::StackStructureMismatchError(label_users.at(at_label_name));
+void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
+	verifyCall(function);
+	auto param_count = types_context.getMetadata()
+	                       .atMaybe(function.function_name)
+	                       .expect<MissingFunctionalTypeError>(function.function_name)
+	                       ->getParameterCount()
+	                       .expect<TypeIsNotFunctionalError>(function.function_name);
+	for (usize i = 0; i < param_count; i++) local_stack.pop_back();
+}
+
+void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
+	if (stack_state_at_label.contains(at_label.label_name)) {
+		if (stack_state_at_label[at_label.label_name] != local_stack)
+			throw builders::StackStructureMismatchError(label_users.at(at_label.label_name));
 	} else {
-		stack_state_at_label.put(at_label_name, local_stack);
-		label_users.put(at_label_name, {});
+		stack_state_at_label.put(at_label.label_name, local_stack);
+		label_users.put(at_label.label_name, {});
+	}
+}
+
+void vm::code::builders::FunctionBuilder::handleRet() {
+	if (local_stack.empty()
+	    || local_stack.at(0).type_name
+	           != types_context.getMetadata().at(name)->getResultType().value()->getName()) {
+		throw BadReturnError();
 	}
 }
 

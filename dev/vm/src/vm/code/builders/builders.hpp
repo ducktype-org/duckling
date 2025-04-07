@@ -154,7 +154,7 @@ namespace vm::code::builders {
 			// This is does not equal to variable index.
 			// It is used to check stack state between jumps.
 			LocalStackEntryID unique_id;
-			base::StrID       tp;
+			base::StrID       type_name;
 			usize             local_stack_position;
 			usize             type_size;
 
@@ -171,11 +171,15 @@ namespace vm::code::builders {
 		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
 		base::HashMap<base::StrID, std::vector<Instruction>>     label_users;
 
-		void saveStackState(base::StrID at_label_name);
+		void saveStackState(opargs::Label at_label);
 
+		void verifyCall(opargs::FunctionName function);
+		void handleCall(opargs::FunctionName function);
 		void handleLabel(instructions::Op_label label);
-		void handleCallFunc(instructions::Op_call_func call);
 		void handleDeinit();
+		void handleRet();
+
+		usize pushStackState(opargs::Type type);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypesContext<TypesContextState::Finalized>& types);

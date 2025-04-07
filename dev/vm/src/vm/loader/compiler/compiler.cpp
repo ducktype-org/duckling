@@ -25,71 +25,12 @@
 
 namespace vm::loader::compiler {
 	namespace {
-		class CompilationContext final {
+		struct CompilationContext final {
 			const StableTypeIdNameMap<code::Function>& func_map;
 			const TypeMetadata&                        type_map;
-			LoaderLogger                               logger;
+			LoaderLogger                               log{};
 			base::Optional<code::Function>             function{};
 			base::HashMap<base::StrID, usize>          label_positions{};
-
-		public:
-			CompilationContext(
-				const StableTypeIdNameMap<code::Function>& func_map, const TypeMetadata& type_map
-			):
-				  func_map(func_map),
-				  type_map(type_map) {}
-
-			void setFunction(const code::Function& function) {
-				this->function = function;
-				splitCodeAndLabels();
-			}
-
-			LoaderLogger& log() { return logger; }
-
-			LoaderLogger&& moveLogger() { return std::move(logger); }
-
-			const StableTypeIdNameMap<code::Function>& functions() const { return func_map; }
-
-			const TypeMetadata& types() const { return type_map; }
-
-			const base::HashMap<base::StrID, usize>& labels() const { return label_positions; }
-
-			const code::Function& func() const {
-				return function.expect("No function is currently set!");
-			}
-
-		private:
-			void splitCodeAndLabels() {
-				code::Function new_func = function.value();
-				new_func.body.clear();
-				base::HashMap<base::StrID, usize>                        label_positions;
-				base::HashMap<base::StrID, code::instructions::Op_label> labels;
-				for (const auto& instr: function.value().body) {
-					variant_match(instr) {
-						variant_case(code::instructions::Comment, _);
-						variant_case(code::instructions::Op_label, label) {
-							auto [_, inserted] = label_positions.insert_or_assign(
-								label.arg0.label_name, new_func.body.size()
-							);
-							if (!inserted) {
-								logger.logMap<RepeatedLabel>(label, [&](auto& err) {
-									for (auto&& lbl: label_positions)
-										if (lbl.first == label.arg0.label_name) {
-											logger.addNote<RepeatedLabelNote>(
-												err, labels[label.arg0.label_name]
-											);
-										}
-								});
-							} else {
-								labels.put(label.arg0.label_name, label);
-							}
-						}
-						variant_default { new_func.body.push_back(instr); }
-					}
-				}
-				this->function        = std::move(new_func);
-				this->label_positions = std::move(label_positions);
-			}
 		};
 
 		i64 getOpCodeArgValue(
@@ -105,29 +46,28 @@ namespace vm::loader::compiler {
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
-					if (auto type_obj = ctx.types().atMaybe(type_arg.type_name))
+					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-					ctx.log().log<UnknownTypeError>(type_arg, type_arg.type_name);
+					ctx.log.log<UnknownTypeError>(type_arg, type_arg.type_name);
 					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					for (i64 i = 0; i < ctx.functions().size(); i++)
-						if (ctx.functions().at(base::safeIntConv<u64>(i))->name
-						    == func.function_name)
+					for (i64 i = 0; i < ctx.func_map.size(); i++)
+						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
-					ctx.log().log<UnknownFunctionError>(func, func.function_name);
+					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
-					auto it = ctx.labels().find(label.label_name);
-					if (it != ctx.labels().end()) {
+					auto it = ctx.label_positions.find(label.label_name);
+					if (it != ctx.label_positions.end()) {
 						// We have to calculate the
 						// difference instead of absolute jump position,
 						// because our instruction counter is a pointer.
 						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
 						     - 1;
 					}
-					ctx.log().log<UnknownLabel>(label);
+					ctx.log.log<UnknownLabel>(label);
 					return 0;
 				}
 			}
@@ -136,13 +76,13 @@ namespace vm::loader::compiler {
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
-			func_data.name             = ctx.func().name;
-			func_data.arg_size         = ctx.func().arg_size;
-			func_data.local_stack_size = ctx.func().local_stack_size;
-			func_data.ret_size         = ctx.func().ret_size;
+			func_data.name             = ctx.function->name;
+			func_data.arg_size         = ctx.function->arg_size;
+			func_data.local_stack_size = ctx.function->local_stack_size;
+			func_data.ret_size         = ctx.function->ret_size;
 
-			for (usize op_idx = 0; op_idx < ctx.func().body.size(); op_idx++) {
-				const auto& op    = ctx.func().body[op_idx];
+			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
+				const auto& op    = ctx.function->body[op_idx];
 				i64         arg_0 = 0;
 				i64         arg_1 = 0;
 				variant_match(op) {
@@ -171,6 +111,39 @@ namespace vm::loader::compiler {
 			}
 			return func_data;
 		}
+
+		void splitCodeAndLabels(CompilationContext& ctx) {
+			code::Function new_func = ctx.function.value();
+			new_func.body.clear();
+			base::HashMap<base::StrID, usize>                        label_positions;
+			base::HashMap<base::StrID, code::instructions::Op_label> labels;
+			for (const auto& instr: ctx.function.value().body) {
+				variant_match(instr) {
+					variant_case(code::instructions::Comment, _);
+					variant_case(code::instructions::Op_label, label) {
+						auto [_, inserted] = label_positions.insert_or_assign(
+							label.arg0.label_name, new_func.body.size()
+						);
+						if (!inserted) {
+							ctx.log.logMap<RepeatedLabel>(label, [&](auto& err) {
+								for (auto&& lbl: label_positions)
+									if (lbl.first == label.arg0.label_name) {
+										ctx.log.addNote<RepeatedLabelNote>(
+											err, labels[label.arg0.label_name]
+										);
+									}
+							});
+						} else {
+							labels.put(label.arg0.label_name, label);
+						}
+					}
+					variant_default { new_func.body.push_back(instr); }
+				}
+			}
+			ctx.function        = std::move(new_func);
+			ctx.label_positions = std::move(label_positions);
+		}
+
 	}
 
 	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
@@ -181,12 +154,14 @@ namespace vm::loader::compiler {
 		auto              ctx   = CompilationContext(program.funcMap(), *types);
 
 		for (auto& func: program.funcMap()) {
-			ctx.setFunction(func);
+			ctx.function = func;
+			splitCodeAndLabels(ctx);
+
 			auto converted_func = changeFuncToFuncData(ctx);
 			converted_functions.push_back(converted_func);
 		}
 
-		if (ctx.log().bad()) return std::unexpected(ctx.moveLogger());
+		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
 		return low::LowVMProgram{ converted_functions, std::move(types) };
 	}
 }

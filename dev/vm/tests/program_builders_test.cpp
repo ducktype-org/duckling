@@ -159,6 +159,7 @@ private:
 			"Cannot pop from empty variable stack"
 		);
 
+		func_builder.initType(Op_init_type{ int64 });  // reinit ret val (int64)
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 
 		std::stringstream ss;
