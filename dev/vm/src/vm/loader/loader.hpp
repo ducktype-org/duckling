@@ -39,9 +39,7 @@ namespace vm::loader {
 			insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
 		StableTypeIdNameMap<code::Function> functions;
-		Box<TypeMetadata>                   type_metadata = makeBox<TypeMetadata>();
-		std::vector<code::TypeOfData>       types;  /// used only for error messages
-		code::builders::TypesContext<>      types_context_adding;
+		code::builders::TypeContextBuilder  type_context_builder;
 	};
 
 	/**

@@ -62,8 +62,8 @@
  * @brief Add std::hash specialization to given ID type.
  * Usage: ID_STD_HASH(MY_ID)
  */
-#define ID_STD_HASH(TYPE)                                                           \
-	template<>                                                                      \
-	struct std::hash<TYPE> final {                                                  \
+#define ID_STD_HASH(TYPE)                                                                   \
+	template<>                                                                              \
+	struct std::hash<TYPE> final {                                                          \
 		usize operator()(const TYPE& key) const { return static_cast<usize>(key.asInt()); } \
 	};

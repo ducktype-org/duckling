@@ -59,42 +59,15 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 // NOLINTEND
 
 namespace vm::code::builders {
-
-	enum class TypesContextState : bool {
-		AddingTypes,
-		Finalized,
-	};
-
-
-	template<TypesContextState state = TypesContextState::AddingTypes>
-	class TypesContext;
+	class TypeContextBuilder;
 
 	/**
-	 * @brief TypesContext specialization that allows for adding types.
-	 * It can be used to build TypesContext<TypesContextState::Finalized>.
-	 */
-	template<>
-	class TypesContext<TypesContextState::AddingTypes> {
-		StableTypeIdNameMap<TypeOfData> types;
-
-	public:
-		void                                   addType(const TypeOfData& type);
-		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
-
-		/**
-		 * @brief Finalizes currently added types by building them.
-		 */
-		TypesContext<TypesContextState::Finalized> finalized() const;
-	};
-
-	/**
-	 * @brief TypesContext specialization that contains built types.
+	 * @brief TypeContext contains built types.
 	 * It can be used built using TypesContext<TypesContextState::AddingTypes>.
 	 */
-	template<>
-	class TypesContext<TypesContextState::Finalized> {
-		friend TypesContext<TypesContextState::AddingTypes>;
-		TypesContext() = default;
+	class TypeContext {
+		friend TypeContextBuilder;
+		TypeContext() = default;
 
 		Box<TypeMetadata>       metadata = makeBox<TypeMetadata>();
 		std::vector<TypeOfData> types;
@@ -105,6 +78,23 @@ namespace vm::code::builders {
 		[[nodiscard]] const TypeMetadata& getMetadata() const;
 
 		Box<TypeMetadata> moveMetadata() &&;
+	};
+
+	/**
+	 * @brief TypeContextBuilder allows for adding types.
+	 * It is used to build TypeContext.
+	 */
+	class TypeContextBuilder {
+		StableTypeIdNameMap<TypeOfData> types;
+
+	public:
+		void                                   addType(const TypeOfData& type);
+		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
+
+		/**
+		 * @brief Builds currently added types by building them.
+		 */
+		TypeContext build() const;
 	};
 
 	/**
@@ -166,7 +156,7 @@ namespace vm::code::builders {
 		usize max_stack_size = 0;
 		usize ret_size       = 0;
 
-		const TypesContext<TypesContextState::Finalized>& types_context;
+		const TypeContext& type_context;
 
 		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
 		base::HashMap<base::StrID, std::vector<Instruction>>     label_users;
@@ -182,7 +172,7 @@ namespace vm::code::builders {
 		usize pushStackState(opargs::Type type);
 
 	public:
-		FunctionBuilder(base::StrID name, const TypesContext<TypesContextState::Finalized>& types);
+		FunctionBuilder(base::StrID name, const TypeContext& types);
 
 		/**
 		 * @note This is temporary, look at impl of build().
@@ -194,7 +184,16 @@ namespace vm::code::builders {
 		 */
 		usize initType(instructions::Op_init_type init);
 
+		/**
+		 * @brief Adds instruction to the function.
+		 * @note It can throw exceptions.
+		 */
 		void addInstruction(const Instruction& instruction);
+
+		/**
+		 * @brief Builds and adds instruction(s) to the function.
+		 * @note It can throw exceptions.
+		 */
 		void addInstruction(const InstructionBuilder& instruction);
 
 		[[nodiscard]] Function build() const;

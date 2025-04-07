@@ -123,9 +123,9 @@ namespace {
 	}
 
 	void insertType(
-		const vm::code::TypeOfData&         type,
-		vm::code::builders::TypesContext<>& types,
-		LoaderLogger&                       log
+		const vm::code::TypeOfData&             type,
+		vm::code::builders::TypeContextBuilder& types,
+		LoaderLogger&                           log
 	) {
 		using namespace vm;
 		try {
@@ -178,19 +178,19 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			code::builders::TypesContext<> types_context_adding;
-			LoaderLogger                   log;
+			code::builders::TypeContextBuilder type_context_builder;
+			LoaderLogger                       log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
-					insertType(tp->datatype, types_context_adding, log);
+					insertType(tp->datatype, type_context_builder, log);
 
 			try {
-				auto                        types_context = types_context_adding.finalized();
+				auto                        type_context = type_context_builder.build();
 				std::vector<code::Function> functions;
 
 				for (const auto& parsed_file: parsed_files) {
 					for (const auto& func: parsed_file.functions) {
-						code::builders::FunctionBuilder func_builder(func->name, types_context);
+						code::builders::FunctionBuilder func_builder(func->name, type_context);
 
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
@@ -203,8 +203,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 					}
 				}
 				if (log.good())
-					return getProgram({ .functions = functions, .types = types_context.getTypes() }
-					);
+					return getProgram({ .functions = functions, .types = type_context.getTypes() });
 			} catch (code::builders::MissingSubtypeError& e) {
 				log.log<MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			}
@@ -238,12 +237,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
 
 void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
-	for (const auto& type: new_types) insertType(type, types_context_adding, logger);
-	auto finalized = types_context_adding.finalized();
-	types          = finalized.getTypes();
-	type_metadata  = std::move(finalized).moveMetadata();
+	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
 }
 
 Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
-	return std::move(types_context_adding.finalized()).moveMetadata();
+	return std::move(type_context_builder.build()).moveMetadata();
 }

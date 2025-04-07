@@ -30,7 +30,7 @@ vm::code::Function FunctionBuilder::build() const {
 	// https://github.com/ducktype-org/duckling/issues/539
 	function.local_stack_size = max_stack_size;
 	function.ret_size         = ret_size;
-	function.arg_size         = types_context.getMetadata().at(name)->getParametersSize().value();
+	function.arg_size         = type_context.getMetadata().at(name)->getParametersSize().value();
 	function.next_arg_size    = 0;
 
 	return function;
@@ -64,24 +64,22 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-FunctionBuilder::FunctionBuilder(
-	base::StrID name, const TypesContext<TypesContextState::Finalized>& types
-):
+FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	  name(name),
-	  types_context(types) {
-	TypeCRef func_result_type = types_context.getMetadata()
+	  type_context(types) {
+	TypeCRef func_result_type = type_context.getMetadata()
 	                                .atMaybe(name)
 	                                .expect<MissingFunctionalTypeError>(name)
 	                                ->getResultType()
 	                                .expect<TypeIsNotFunctionalError>(name);
 	initType(instructions::Op_init_type{ func_result_type->getName() });
 	instructions.pop_back();
-	auto params = types_context.getMetadata().at(name)->getParameters().value();
+	auto params = type_context.getMetadata().at(name)->getParameters().value();
 	for (TypeCRef param: params) pushStackState({ param->getName() });
 }
 
 usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
-	const usize type_size = types_context.getMetadata()
+	const usize type_size = type_context.getMetadata()
 	                            .atMaybe(type.type_name)
 	                            .expect<UnknownTypeError>(type)
 	                            ->getSize();
@@ -123,7 +121,7 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 }
 
 void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName function) {
-	auto func_type = types_context.getMetadata()
+	auto func_type = type_context.getMetadata()
 	                     .atMaybe(function.function_name)
 	                     .expect<MissingFunctionalTypeError>(function.function_name);
 	auto param_count
@@ -153,7 +151,7 @@ void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName functi
 
 void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 	verifyCall(function);
-	auto param_count = types_context.getMetadata()
+	auto param_count = type_context.getMetadata()
 	                       .atMaybe(function.function_name)
 	                       .expect<MissingFunctionalTypeError>(function.function_name)
 	                       ->getParameterCount()
@@ -174,7 +172,7 @@ void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
 void vm::code::builders::FunctionBuilder::handleRet() {
 	if (local_stack.empty()
 	    || local_stack.at(0).type_name
-	           != types_context.getMetadata().at(name)->getResultType().value()->getName()) {
+	           != type_context.getMetadata().at(name)->getResultType().value()->getName()) {
 		throw BadReturnError();
 	}
 }
@@ -182,13 +180,12 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
 
 const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
-	vm::code::builders::TypesContext<TypesContextState::AddingTypes>::getTypes() const {
+	vm::code::builders::TypeContextBuilder::getTypes() const {
 	return types;
 }
 
-TypesContext<TypesContextState::Finalized>
-	TypesContext<TypesContextState::AddingTypes>::finalized() const {
-	TypesContext<TypesContextState::Finalized> tctx;
+TypeContext TypeContextBuilder::build() const {
+	TypeContext tctx;
 	for (const auto& type: types) {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
@@ -253,20 +250,13 @@ TypesContext<TypesContextState::Finalized>
 	return tctx;
 }
 
-const std::vector<vm::code::TypeOfData>&
-	TypesContext<TypesContextState::Finalized>::getTypes() const {
-	return types;
-}
+const std::vector<vm::code::TypeOfData>& TypeContext::getTypes() const { return types; }
 
-const vm::TypeMetadata& TypesContext<TypesContextState::Finalized>::getMetadata() const {
-	return *metadata;
-}
+const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
-Box<vm::TypeMetadata> TypesContext<TypesContextState::Finalized>::moveMetadata() && {
-	return std::move(metadata);
-}
+Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
-void TypesContext<>::addType(const TypeOfData& type) {
+void TypeContextBuilder::addType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {

@@ -118,6 +118,9 @@ namespace vm::opargs {
 		}
 	};
 
+	/**
+	 * @brief List of all argument types that target stack offset.
+	 */
 #define VM_OPARG_OFFSET_TYPES \
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr
 
