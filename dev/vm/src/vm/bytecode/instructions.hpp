@@ -17,6 +17,9 @@
 #define VM_INSTR_FROM_NAME(opcode) vm::code::instructions::Op_##opcode
 
 namespace vm::code {
+	/**
+	 * @brief `instructions` namespace encapsulates available VM instructions.
+	 */
 	namespace instructions {
 #define HANDLE_OPCODE_0ARGS(opcode)                                                   \
 	struct Op_##opcode final: ElementBase {                                           \
