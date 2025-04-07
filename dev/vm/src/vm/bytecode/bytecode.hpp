@@ -4,8 +4,8 @@
 
 #include <base/string_id.hpp>
 
-#include <vm/code/element_base.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/element_base.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 namespace vm::code {
 	/**

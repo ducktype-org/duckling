@@ -8,9 +8,9 @@
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 
-#include <vm/code/code.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
@@ -19,6 +19,9 @@
 #include <utility>
 
 
+/**
+ * @brief Builder-level instruction kind to set which instruction to build.
+ */
 // Disable liting, because of invalid naming convention.
 // NOLINTBEGIN
 // clang-format off

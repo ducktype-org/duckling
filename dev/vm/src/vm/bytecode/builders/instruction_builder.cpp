@@ -3,7 +3,7 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/opcode_args.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 
 #include <sstream>
 
@@ -34,8 +34,7 @@ namespace vm::code::builders {
 #define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)
 
 		const std::unordered_map<std::string, Instruction (*)()> OPCODE_TO_0_ARGS_FACTORY = {
-#include <vm/code/opcodes_list.hpp>
-
+#include <vm/bytecode/opcode_definitions.hpp>
 		};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -49,8 +48,7 @@ namespace vm::code::builders {
 
 		const std::unordered_map<std::string, Instruction (*)(vm::opargs::OpCodeArg)>
 			OPCODE_TO_1_ARGS_FACTORY = {
-#include <vm/code/opcodes_list.hpp>
-
+#include <vm/bytecode/opcode_definitions.hpp>
 			};
 
 #undef HANDLE_OPCODE_0ARGS
@@ -64,8 +62,7 @@ namespace vm::code::builders {
 
 		const std::unordered_map<std::string, Instruction (*)(opargs::OpCodeArg, opargs::OpCodeArg)>
 			OPCODE_TO_2_ARGS_FACTORY = {
-#include <vm/code/opcodes_list.hpp>
-
+#include <vm/bytecode/opcode_definitions.hpp>
 			};
 
 #undef HANDLE_OPCODE_0ARGS

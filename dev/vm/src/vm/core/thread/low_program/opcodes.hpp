@@ -8,7 +8,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/instructions.hpp>
+#include <vm/bytecode/instructions.hpp>
 
 #include <type_traits>
 
@@ -35,7 +35,7 @@
 namespace vm::low {
 	enum class OpcodeFix8 : u16 {
 #define HANDLE_OPCODE(opcode) opcode,
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 
 #undef HANDLE_OPCODE
 		Comment
@@ -55,7 +55,7 @@ namespace vm::low {
 		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
 	};
 
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 #undef HANDLE_OPCODE
 
 	constexpr u16 fix8FromInstr(const code::Instruction& instruction) {

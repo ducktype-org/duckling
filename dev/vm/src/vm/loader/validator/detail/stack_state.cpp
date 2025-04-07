@@ -3,7 +3,7 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/opcode_args.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 
 bool vm::loader::validator::StackState::consume(CRef<parser::OpCode> opcode) {
 	if (opcode->opcode_name == "init_type") {

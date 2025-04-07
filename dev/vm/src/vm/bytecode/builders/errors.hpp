@@ -2,9 +2,9 @@
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
 
-#include <vm/code/instructions.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <string_view>
 #include <utility>

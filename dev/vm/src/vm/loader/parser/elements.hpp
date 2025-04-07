@@ -14,8 +14,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 namespace vm::loader::parser {

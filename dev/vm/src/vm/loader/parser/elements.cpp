@@ -9,8 +9,8 @@
 #include <base/for_each.hpp>
 #include <base/optional.hpp>
 
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/serializer/serializer.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 
 namespace vm::loader::parser {
 	namespace opargs_parsers {
@@ -100,7 +100,7 @@ namespace vm::loader::parser {
 	MAKE_LINK(opcode, parseOpCode2Args<arg0_type COMMA arg1_type>)
 
 		const std::unordered_map OP_CODE_TO_ARGS_PARSER = {
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 
 		};
 

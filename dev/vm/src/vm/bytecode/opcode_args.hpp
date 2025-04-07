@@ -3,7 +3,7 @@
 #include <base/ints.hpp>
 #include <base/string_id.hpp>
 
-#include <vm/code/element_base.hpp>
+#include <vm/bytecode/element_base.hpp>
 
 #include <variant>
 
@@ -169,5 +169,8 @@ namespace vm::opargs {
 		}
 	};
 
+	/**
+	 * @brief Storage class for any kind of opcode argument.
+	 */
 	using OpCodeArg = std::variant<VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, Label>;
 }

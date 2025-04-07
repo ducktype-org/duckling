@@ -9,9 +9,9 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/code.hpp>
-#include <vm/code/instructions.hpp>
-#include <vm/code/opcode_args.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/loader/loader.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/validator/detail/stack_state.hpp>

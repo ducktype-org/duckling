@@ -3,7 +3,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/element_base.hpp>
+#include <vm/bytecode/element_base.hpp>
 
 #include <ostream>
 

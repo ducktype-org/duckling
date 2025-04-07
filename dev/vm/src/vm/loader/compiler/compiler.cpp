@@ -6,10 +6,10 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/code.hpp>
-#include <vm/code/instructions.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/serializer/serializer.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -97,7 +97,7 @@ namespace vm::loader::compiler {
 		arg_0 = getOpCodeArgValue(ctx, op_idx, instr.arg0); \
 		arg_1 = getOpCodeArgValue(ctx, op_idx, instr.arg1); \
 	}
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 				}
 
 				func_data.bc.emplace_back(Fix8Instruction{

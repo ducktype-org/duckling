@@ -1,6 +1,6 @@
 /**
- * @file opcodes_list.hpp
- * @brief Contains a list of all DuckBC opcodes. Can be used for generating
+ * @file opcode_definitions.hpp
+ * @brief Contains definitions of all DuckBC opcodes. Can be used for generating
  * repetitive code based on list of opcodes.
  *
  * you can just define `HANDLE_OPCODE` macro and include this
@@ -9,7 +9,7 @@
  *  constexpr u16 countOpCases() {
  *  	u16 count = 0;
  *		#define HANDLE_OPCODE(opcode) count++;
- * 		#include "opcodes_list.hpp"
+ * 		#include "opcode_definitions.hpp"
  * 		#undef HANDLE_OPCODE
  * 		return count;
  * 	}

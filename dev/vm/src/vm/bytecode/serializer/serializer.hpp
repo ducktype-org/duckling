@@ -1,7 +1,7 @@
 #pragma once
 
-#include <vm/code/code.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <iostream>
 

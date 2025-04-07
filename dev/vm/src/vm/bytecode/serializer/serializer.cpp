@@ -3,8 +3,8 @@
 #include <base/for_each.hpp>
 #include <base/int_conv.hpp>
 
-#include <vm/code/code.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
 
@@ -64,7 +64,7 @@ namespace vm::code {
 		write2ArgsOpcodeTemplate(#opcode, opcode.arg0, opcode.arg1, out); \
 	}
 
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 
 
 #undef HANDLE_OPCODE_0ARGS

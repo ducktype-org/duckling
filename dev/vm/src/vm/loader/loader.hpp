@@ -4,9 +4,9 @@
 
 #include <filesystem/file.hpp>
 
-#include <vm/code/builders/builders.hpp>
-#include <vm/code/code.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/loader/parser/elements.hpp>

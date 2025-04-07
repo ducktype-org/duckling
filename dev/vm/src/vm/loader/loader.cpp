@@ -11,13 +11,13 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/code/builders/builders.hpp>
-#include <vm/code/builders/errors.hpp>
-#include <vm/code/code.hpp>
-#include <vm/code/element_base.hpp>
-#include <vm/code/instructions.hpp>
-#include <vm/code/opcode_args.hpp>
-#include <vm/code/type_of_data.hpp>
+#include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/element_base.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -78,7 +78,7 @@ namespace {
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
 	}
 
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -88,7 +88,7 @@ namespace {
 	std::make_pair(std::string(#opcode), getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>),
 
 	std::unordered_map instr_to_factory{
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 	};
 
 #undef HANDLE_OPCODE

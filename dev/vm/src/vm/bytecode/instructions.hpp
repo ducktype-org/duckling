@@ -10,7 +10,7 @@
 
 #include <base/box.hpp>
 
-#include <vm/code/opcode_args.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 
 #include <variant>
 
@@ -42,7 +42,7 @@ namespace vm::code {
 		}                                                                      \
 	};
 
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 
 #undef HANDLE_OPCODE_0ARGS
 #undef HANDLE_OPCODE_1ARGS
@@ -68,7 +68,7 @@ namespace vm::code {
 
 	using Instruction = std::variant<
 #define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
-#include <vm/code/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 #undef HANDLE_OPCODE
 		instructions::Comment>;
 }

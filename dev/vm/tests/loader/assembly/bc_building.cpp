@@ -2,7 +2,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/code/builders/errors.hpp>
+#include <vm/bytecode/builders/errors.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
