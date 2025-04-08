@@ -1,5 +1,4 @@
 #include <backends/dvm/backend.hpp>
-
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
@@ -7,17 +6,29 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/type_of_data.hpp>
+#include "vm/bytecode/builders/builders.hpp"
+#include "vm/bytecode/instructions.hpp"
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 #include <ostream>
 #include <ranges>
+
+#define NOIMPL_CASE(tp, reason)                                                          \
+	variant_case(tp, _) {                                                                \
+		throw base::NotYetImplemented(                                                   \
+			base::strConcat("Unsupported type ", base::typeName<tp>(), " for: ", reason) \
+		);                                                                               \
+	}
+
+using namespace vm::code;
+using namespace vm::code::builders;
 
 namespace compiler::backend_vm {
 	vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
 		variant_match(layout()) {
 			variant_case_novalue(tsl::EmptyTypeLayout) {
-				return vm::code::PrimitiveType{ .name = base::StrID("void"), .size = 0 };
+				return vm::code::PrimitiveType(base::StrID("void"), 0);
 			}
 			variant_case_novalue(tsl::IntegralTypeLayout) {
 				auto bits = usize(layout.getSize());
@@ -25,8 +36,7 @@ namespace compiler::backend_vm {
 				usize       bytes = bits / 8;
 				std::string name  = "i" + std::to_string(bits);
 
-				return vm::parser::PrimitiveType{ .name = base::StrID(name.c_str()),
-					                              .size = bytes };
+				return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 			}
 			variant_case_novalue(tsl::FloatTypeLayout) {
 				auto bits = usize(layout.getSize());
@@ -38,8 +48,7 @@ namespace compiler::backend_vm {
 				usize       bytes = bits / 8;
 				std::string name  = "f" + std::to_string(bits);
 
-				return vm::parser::PrimitiveType{ .name = base::StrID(name.c_str()),
-					                              .size = bytes };
+				return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
 			}
 			variant_default {
 				CORE_PANIC(
@@ -53,24 +62,22 @@ namespace compiler::backend_vm {
 	namespace {
 		struct AddLirFuncContext {
 			CRef<lir::Function> lir_function;
-			vm::code::builders::FunctionBuilder     func_builder;
+			FunctionBuilder     func_builder;
 
-			base::HashMap<usize, base::StrID>                block_id_to_label;
-			base::Map<lir::LocalRef, usize>                  lir_local_to_stack;
-			base::Map<lir::LocalRef, vm::parser::TypeOfData> lir_local_types;
+			base::HashMap<usize, base::StrID>    block_id_to_label;
+			base::Map<lir::LocalRef, usize>      lir_local_to_stack;
+			base::Map<lir::LocalRef, TypeOfData> lir_local_types;
 
 			base::Map<lir::LocalRef, u64> variable_to_id;
 			base::Map<lir::BlockRef, u64> block_to_id;
 
-			AddLirFuncContext(
-				CRef<lir::Function>                                       lir_function,
-				const base::HashMap<base::StrID, vm::parser::TypeOfData>& available_types
-			):
+			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& types):
 				  lir_function(lir_function),
-				  func_builder(lir_function->name, available_types) {
+				  func_builder(lir_function->name, types) {
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
 
+				// init all variables
 				for (auto&& var: lir_function->local_list) {
 					// This is most likely redundant
 					CORE_ASSERT(!lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
@@ -79,18 +86,18 @@ namespace compiler::backend_vm {
 					lir_local_types.put(var.ref(), vm_type);
 
 					auto tp_name = VISIT(vm_type, tp, return tp.name);
-					auto offset  = func_builder.initType(tp_name);
+					auto offset  = func_builder.initType(instructions::Op_init_type(tp_name));
 					lir_local_to_stack.put(var.ref(), offset);
 				}
 			}
 		};
 
-		void insertTypes(Ref<CodeFileBuilder> file_builder, CRef<lir::Function> lir_function) {
+		void insertTypes(TypeContextBuilder type_context, CRef<lir::Function> lir_function) {
 			auto&& local_layouts
 				= lir_function->local_list
 			    | std::views::transform([](auto&& local) { return local->layout; });
 
-			for (auto&& layout: local_layouts) file_builder->addType(getTypeFromLayout(layout));
+			for (auto&& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
 		}
 
 		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -98,7 +105,7 @@ namespace compiler::backend_vm {
 
 			auto label_name       = base::strConcat(ctx.lir_function->name, "_label_", id);
 			auto [block_entry, _] = ctx.block_id_to_label.put(id, base::StrID(label_name.data()));
-			ctx.func_builder.addInstruction(Op_label{ block_entry->second });
+			ctx.func_builder.addInstruction(instructions::Op_label{ block_entry->second });
 		}
 
 		vm::opargs::OpCodeArg
@@ -107,7 +114,7 @@ namespace compiler::backend_vm {
 			auto&&              var_type = ctx.lir_local_types[output];
 
 			variant_match(var_type) {
-				variant_case(vm::parser::PrimitiveType, primitive) {
+				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
 						throw base::NotYetImplemented(base::strConcat(
@@ -127,14 +134,14 @@ namespace compiler::backend_vm {
 						return vm::opargs::StackLocalI8{ i64(ctx.lir_local_to_stack[output]) };
 				}
 
-				variant_case(vm::parser::PointerType, pointer) {
+				variant_case(vm::code::PointerType, pointer) {
 					return vm::opargs::StackLocalPtr(i64(ctx.lir_local_to_stack[output]));
 				}
-				NOIMPL_CASE(vm::parser::StaticTableType, "add_instr")
-				NOIMPL_CASE(vm::parser::DynamicTableType, "add_instr")
-				NOIMPL_CASE(vm::parser::DataType, "add_instr")
-				NOIMPL_CASE(vm::parser::VariantType, "add_instr")
-				variant_case(vm::parser::FunctionType, function_tp) {
+				NOIMPL_CASE(vm::code::StaticTableType, "add_instr")
+				NOIMPL_CASE(vm::code::DynamicTableType, "add_instr")
+				NOIMPL_CASE(vm::code::DataType, "add_instr")
+				NOIMPL_CASE(vm::code::VariantType, "add_instr")
+				variant_case(vm::code::FunctionType, function_tp) {
 					return vm::opargs::FunctionName(function_tp.name);
 				}
 			}
@@ -156,7 +163,8 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		OpKind lirOpToOpKind(lir::Operation operation) {
+		vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
+			using namespace vm::code::builders;
 			switch (operation) {
 			case lir::Operation::Assign:
 				return OpKind::mov;
@@ -186,7 +194,8 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		OpKind lirTerminatorToOpKind(lir::Operation terminator) {
+		vm::code::builders::OpKind lirTerminatorToOpKind(lir::Operation terminator) {
+			using namespace vm::code::builders;
 			switch (terminator) {
 			case lir::Operation::Jump:
 				return OpKind::jmp;
@@ -200,55 +209,110 @@ namespace compiler::backend_vm {
 			}
 			CORE_UNREACHABLE();
 		}
-	}
 
-	void Module::addLirFunction(CRef<lir::Function> lir_function) {
-		std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
+		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
+			// Insert a comment about operation type.
+			// @TODO: Improve this to contain more information.
+			ctx.func_builder.addInstruction(vm::code::instructions::Comment(base::StrID(
+				base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
+			)));
 
-		insertTypes(&file_builder, lir_function);
+			const auto kind   = lirOpToOpKind(lir_instruction.operation);
+			const auto output = lirOutputToOpArg(ctx, lir_instruction);
 
-		AddLirFuncContext ctx(lir_function, file_builder.getAvailableTypes());
+			// Add output as an argument.
+			std::deque args = { output };
 
-		for (auto&& lir_block: lir_function->blocks) {
-			for (auto& lir_instruction: lir_block->instructions) {
-				addBlockLabel(ctx, lir_block.ref());
+			// Add other arguments.
+			for (auto&& lir_location: lir_instruction.arguments)
+				args.push_back(lirArgToOpArg(ctx, lir_location));
 
-				// Insert a comment about operation type.
-				// @TODO: Improve this to contain more information.
-				ctx.func_builder.addInstruction(Comment{ base::StrID(
-					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
-						.data()
-				) });
 
-				InstructionBuilder instr;
-				instr.setKind(lirOpToOpKind(lir_instruction.operation));
+			// Transforms arguments.
+			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
+			    || kind == OpKind::div || kind == OpKind::mod) {
+				if (args.size() == 3) {
+					if (args[0] == args[1]) {
+						// This resolves e.g. `a = a + b;` by doing `a = b`
+						args.pop_front();
+					} else {
+						// This resolves e.g. `a = b + c;`
+						// by splitting it into two instructions:
+						// a = b;
+						// a += c;
+						InstructionBuilder instr_mov;
 
-				// Add output as an argument.
-				instr.pushArg(lirOutputToOpArg(ctx, lir_instruction));
+						instr_mov.setKind(OpKind::mov);
+						instr_mov.pushArg(args[0]);
+						instr_mov.pushArg(args[1]);
+						ctx.func_builder.addInstruction(instr_mov);
 
-				// Add other arguments.
-				for (auto&& lir_location: lir_instruction.arguments)
-					instr.pushArg(lirArgToOpArg(ctx, lir_location));
-				ctx.func_builder.addInstruction(instr);
+						args.pop_front();
+						args.pop_front();
+						args.push_front(output);
+					}
+				}
+			} else if (kind == OpKind::neg) {
+				if (args.size() == 2) {
+					if (args[0] == args[1]) {
+						args.pop_back();
+					} else {
+						InstructionBuilder instr_mov(OpKind::mov);
+						instr_mov.pushArg(args[0]);
+						instr_mov.pushArg(args[1]);
+
+						auto built = instr_mov.build();
+						ctx.func_builder.addInstruction(instr_mov);
+
+						args.pop_back();
+					}
+				}
 			}
 
-			// @TODO
-			ctx.func_builder.addInstruction(Comment{ base::StrID(
-				base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
-					.data()
-			) });
+			vm::code::builders::InstructionBuilder instr(kind);
 
-			InstructionBuilder terminator_instr;
-			terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
+			for (const auto& arg: args) instr.pushArgs(arg);
 
-			for (auto&& lir_location: lir_block->terminator.arguments)
-				terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
-
-			ctx.func_builder.addInstruction(terminator_instr);
+			ctx.func_builder.addInstruction(instr);
 		}
-
-		file_builder.addFunction(ctx.func_builder);
 	}
 
-	Module::Module(base::StrID module_id): module_id(module_id) {}
+	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
+		  module_id(module_id) {
+		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
+
+		TypeContext types = type_context_builder.build();
+		code.types        = types.getTypes();
+
+		for (const auto& lir_function: functions) {
+			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
+
+			AddLirFuncContext ctx(lir_function, types);
+
+			for (auto&& lir_block: lir_function->blocks) {
+				addBlockLabel(ctx, lir_block.ref());
+				for (auto& lir_instruction: lir_block->instructions)
+					addLirInstruction(ctx, lir_instruction);
+
+				ctx.func_builder.addInstruction(instructions::Comment(
+					base::StrID(base::strConcat(
+									"Terminator: ", base::enumToStr(lir_block->terminator.operation)
+					)
+				                    .data())
+				));
+
+				InstructionBuilder terminator_instr;
+				terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
+
+				for (auto&& lir_location: lir_block->terminator.arguments)
+					terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
+
+				ctx.func_builder.addInstruction(terminator_instr);
+			}
+
+			code.functions.emplace_back(ctx.func_builder.build());
+		}
+	}
+
+	vm::code::CodeCollection Module::build() const { return code; }
 }

@@ -2,7 +2,6 @@
 #include <lir/lir_structure/function_forward.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/ref.hpp>
 
 #include "vm/bytecode/bytecode.hpp"
@@ -21,11 +20,10 @@ namespace compiler::backend_vm {
 		/**
 		 * @brief Builds a module representation.
 		 */
-		[[nodiscard]] vm::code::CodeCollection build() const {
-			throw base::NotYetImplemented("Building DVM module.");
-		}
+		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::CodeCollection code;
+		vm::code::builders::TypeContextBuilder type_context_builder;
+		vm::code::CodeCollection               code;
 	};
 }
