@@ -23,8 +23,8 @@ namespace compiler::backend_llvm {
 		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
-	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
-		addFunctionToModuleImpl(impl.refMut(), lir_function);
+	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
+		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
 	}
 
 	base::OkBad Module::verify() const {
@@ -48,6 +48,16 @@ namespace compiler::backend_llvm {
 
 	void Module::compile(base::StrID output_file, CompilationOutputType output_type) {
 		compileModuleToObject(impl.refMut(), output_file, output_type);
+	}
+
+	u64 Module::getFunctionCount(bool including_prototypes) const {
+		const auto& func_list = impl->module->getFunctionList();
+		u64         count     = 0;
+		for (auto& func: func_list) {
+			if (func.isDeclaration() and (not including_prototypes)) continue;
+			count++;
+		}
+		return count;
 	}
 
 	Module::~Module() = default;
