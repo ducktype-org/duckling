@@ -11,7 +11,7 @@ namespace compiler::driver {
 	public:
 		DVMDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compileModule(const BackendModuleData&) override {
+		void compileModule(query::Context&, const BackendModuleData&) override {
 			throw base::NotYetImplemented("compilation for BC driver");
 		}
 
