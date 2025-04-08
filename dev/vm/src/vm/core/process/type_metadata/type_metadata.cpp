@@ -4,11 +4,8 @@ namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 
-
 		types.emplaceBack(std::move(type));
-		auto id = TypeID::next();
-
-		CORE_ASSERT(u64(id) == types.lastIndex(), "bad TypeID");
+		auto id = TypeID::fromU64(types.lastIndex());
 
 		types.last()->id = id;
 		types_ids.push_back(id);

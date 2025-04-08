@@ -5,7 +5,7 @@
 #include <base/strongly_typed_id.hpp>
 
 namespace vm {
-	STRONG_TYPEDEF_ID(TypeID);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(TypeID);
 	using Offset = u64;
 	class Type;
 

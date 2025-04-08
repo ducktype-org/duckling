@@ -334,7 +334,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
 		{
 			auto type = thread.executing_program->type_metadata->getType(
-				vm::TypeID::unsafeIDFromU64(static_cast<u64>(instr->arg0))
+				vm::TypeID::fromU64(static_cast<u64>(instr->arg0))
 			);
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
@@ -408,7 +408,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type = thread.executing_program->type_metadata->getType(
-				vm::TypeID::unsafeIDFromU64(static_cast<u64>(instr->arg1))
+				vm::TypeID::fromU64(static_cast<u64>(instr->arg1))
 			);
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
