@@ -142,7 +142,7 @@ namespace compiler::backend_llvm {
 	 * of how we are creating llvm modules, as we need to know what function in local to which
 	 * module.
 	 */
-	llvm::FunctionCallee addOrInsertFunctionPrototypeFromLirFunction(
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
 		Ref<llvm::Module> module, const lir::Function& lir_function
 	) {
 		// @TODO: work here on mangled name instead #510
@@ -159,9 +159,9 @@ namespace compiler::backend_llvm {
 	}
 
 	/**
-	 * Same as addOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
+	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
 	 */
-	llvm::FunctionCallee addOrInsertFunctionPrototypeFromSymID(
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
 		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
 	) {
 		// @TODO: work here on mangled name instead #510
@@ -408,7 +408,7 @@ namespace compiler::backend_llvm {
 
 				// I'm not sure if this is the efficient way to do it, but for now it is
 				// simple enough and works without some additional mechanism in the pipeline:
-				auto callee = addOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
+				auto callee = getOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
 
 				const auto args = lirValueList2LLVM(
 					std::vector(
@@ -435,8 +435,8 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			Ref fun = llvm::dyn_cast<llvm::Function>(
-				addOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
+			Ref fun = llvm::cast<llvm::Function>(
+				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
 
 			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
