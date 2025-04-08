@@ -13,15 +13,16 @@ namespace vm {
 	 * This class is used to store and access all types
 	 * that are used in the VCPU.
 	 *
-	 * @TODO: Refactor TypeMetaData such that types are referenced by reference and TypeID does not exist (apart from perhaps being stored in types for some identification).
+	 * @TODO: Refactor TypeMetaData such that types are referenced by reference and TypeID does not
+	 * exist (apart from perhaps being stored in types for some identification).
 	 */
 	class TypeMetadata {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type> types{};
-		std::vector<TypeID>              types_ids{};
-		base::Map<base::StrID, TypeID>   names_to_type{};
+		base::StableVector<Type>       types{};
+		std::vector<TypeID>            types_ids{};
+		base::Map<base::StrID, TypeID> names_to_type{};
 
 		TypeMetadataState state = TypeMetadataState::AddingTypes;
 
@@ -37,7 +38,7 @@ namespace vm {
 
 		[[nodiscard]]
 		TypeCRef getType(TypeID id) const;
-		
+
 		// @TODO: This function is currently used by parser, but
 		// should be deleted in the future
 		[[nodiscard]]

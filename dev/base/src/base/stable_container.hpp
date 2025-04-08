@@ -12,8 +12,8 @@
 namespace base {
 
 	/**
-	 * @brief Expandable list (like std::vector), but with stable references (References are valid after the addition of new
-	 * elements).
+	 * @brief Expandable list (like std::vector), but with stable references (References are valid
+	 * after the addition of new elements).
 	 *
 	 * @tparam Key must be convertible to and from usize.
 	 *
@@ -63,9 +63,7 @@ namespace base {
 
 		constexpr Ref<Data> operator[](size_type pos) { return data.at(pos).refMut(); }
 
-		constexpr CRef<Data> operator[](size_type pos) const {
-			return data.at(pos).ref();
-		}
+		constexpr CRef<Data> operator[](size_type pos) const { return data.at(pos).ref(); }
 
 		constexpr void pushBack(const Data& value) {
 			auto new_ptr = makeBox<Data>(value);

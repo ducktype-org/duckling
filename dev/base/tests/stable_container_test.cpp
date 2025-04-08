@@ -49,14 +49,10 @@ private:
 		// we check that it doesn't throw:
 		vector[102];
 
-		assertThrows<std::exception>([&]() {
-			vector[103];
-		}, "Out of range access didn't throw");
+		assertThrows<std::exception>([&]() { vector[103]; }, "Out of range access didn't throw");
 
 
-		assertThrows<std::exception>([&]() {
-			vector[104];
-		}, "Out of range access didn't throw");
+		assertThrows<std::exception>([&]() { vector[104]; }, "Out of range access didn't throw");
 
 		assertTrue(vector.size() == 103, "bad list size");
 		assertTrue(!vector.empty(), "bad list empty");

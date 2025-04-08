@@ -264,8 +264,7 @@ namespace compiler::mir {
 
 			std::vector<Block> blocks;
 			blocks.reserve(this->blocks.size());
-			for (auto& block_builder: this->blocks)
-				blocks.emplace_back(block_builder->build());
+			for (auto& block_builder: this->blocks) blocks.emplace_back(block_builder->build());
 
 			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(

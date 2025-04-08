@@ -25,9 +25,7 @@ namespace vm {
 		for (auto id: types_ids) types[u64(id)]->finalize();
 	}
 
-	TypeCRef TypeMetadata::getType(TypeID id) const {
-		return types[u64(id)];
-	}
+	TypeCRef TypeMetadata::getType(TypeID id) const { return types[u64(id)]; }
 
 	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrID name) const {
 		if (names_to_type.contains(name))
