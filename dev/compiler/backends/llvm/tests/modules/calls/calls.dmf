@@ -1,11 +1,11 @@
 import submodule as sm;
 
-fun goo() -> i64 = {
+fun goo(arg1: i64, arg2: i64) -> i64 = {
     return 2;
 }
 
 fun main() -> i64 = {
-    return goo() + builtin_input_i64() + sm.foo() + hoo();
+    return goo(5, 6) + builtin_input_i64() + sm.foo() + hoo();
 }
 
 fun hoo() -> i64 = {
