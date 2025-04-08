@@ -7,6 +7,7 @@
 #include <query_framework/query_int.hpp>
 
 #include "lang_parser_element.hpp"
+#include "pst_parser/elements/hierarchy/actions.hpp"
 
 namespace pst {
 	/**
@@ -147,6 +148,10 @@ namespace pst {
 		AccessLocked& operator=(AccessLocked<E>&& oth) noexcept {
 			ref = std::move(oth).ref;
 			return *this;
+		}
+
+		static AccessLocked illegalConstructor(base::Ref<Element> e) {
+			return {e};
 		}
 	};
 

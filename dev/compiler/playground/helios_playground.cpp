@@ -1,3 +1,5 @@
+#include "filesystem/file.hpp"
+#include "helios/scopes/scopes.hpp"
 #include <lexer/lexer.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -15,30 +17,10 @@ void printContextErrors() {
 	}
 }
 
-int notMain(int argc, const char* const* argv) {
+int notMain() {
 	init::InitObject _;
 
-
-	auto clap
-		= clap::Clap().addHelpFlag().add(clap::ParamBuilder::ofValue(clap::FileParser::make("Path"))
-	                                         .addShortName('p')
-	                                         .addShortDesc("Path to Duckling source root")
-	                                         .required()
-	                                         .build());
-
-	clap::ParsingResult options;
-
-	try {
-		options = clap.parse(usize(argc), argv);
-	} catch (clap::exceptions::HelpException& e) {
-		std::cerr << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
-		return 1;
-	} catch (clap::exceptions::ClapException& e) {
-		std::cerr << e.what() << '\n';
-		return 1;
-	}
-
-	auto path_to_compile = options.getValue<fs::FilePath>('p').value();
+	fs::FilePath path_to_compile = fs::FilePath("/home/krzysiek/rift/duckling/dev/compiler/helios/tests/test_modules/hout_simple_test");
 
 	using namespace compiler;
 
@@ -46,17 +28,20 @@ int notMain(int argc, const char* const* argv) {
 
 	defer(printContextErrors());
 
-	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level->debugPrint();
+	auto scopes = query::entryPoint<helios::QueryScopesInModule>(root);
+
+	for (auto s: *scopes) {
+		s.debugPrintScopeAndParents();
+	}
 
 	return 0;
 }
 
-int main(int argc, const char* argv[]) {
+int main() {
 	// note: we need to catch exception here,
 	// because otherwise stack unwinding might not happen,
 	// and defers might not be called.
 	try {
-		return notMain(argc, argv);
+		return notMain();
 	} catch (std::exception& e) { std::cerr << "exception was thrown: " << e.what() << '\n'; }
 }
