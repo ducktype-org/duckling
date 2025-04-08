@@ -158,8 +158,8 @@ namespace vm::code::builders {
 
 		const TypeContext& type_context;
 
-		base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_state_at_label;
-		base::HashMap<base::StrID, std::vector<Instruction>>     label_users;
+		base::HashMap<base::StrID, base::Optional<LocalStackEntry>> stack_top_at_label;
+		base::HashMap<base::StrID, std::vector<Instruction>>        label_users;
 
 		void saveStackState(opargs::Label at_label);
 
