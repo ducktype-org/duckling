@@ -28,8 +28,12 @@ private:
 		assertTrue(vector.size() == 0, "bad list size");
 
 		vector.pushBack(2);
+		ASSERT_EQUAL(vector.lastIndex(), 0);
+		
 		vector.pushBack(3);
 		vector.pushBack(4);
+
+		ASSERT_EQUAL(vector.lastIndex(), 2);
 
 		assertTrue(*vector[0] == 2, "Bad stable list pushBack (0)");
 		assertTrue(*vector[1] == 3, "Bad stable list pushBack (1)");
@@ -55,6 +59,7 @@ private:
 		assertThrows<std::exception>([&]() { vector[104]; }, "Out of range access didn't throw");
 
 		assertTrue(vector.size() == 103, "bad list size");
+		ASSERT_EQUAL(vector.lastIndex(), 102);
 		assertTrue(!vector.empty(), "bad list empty");
 		assertTrue(vector.notEmpty(), "bad list not empty");
 

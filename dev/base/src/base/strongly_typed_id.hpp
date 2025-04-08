@@ -21,6 +21,9 @@
  *  * id.isBad(), id.idGood() - check if given ID is good/bad
  *  * id.asInt() - get underlying integer
  *  * <=>, <, ==, etc - all standard comparision operators
+ *  * Type::unsafeIDFromU64(v) - creates ID that corresponds to provided integer.
+ *    It bypasses Type::next(), and in general should only be used when there are good reasons to,
+ *    and only to create ID that was already made before using Type::next().
  *
  * @note it creates normal class, it can be used in namespace
  */
@@ -45,6 +48,7 @@
 			return out;                                                  \
 		}                                                                \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
+		static NAME unsafeIDFromU64(u64 v) { return NAME{v}; }           \
 		[[nodiscard]]                                                    \
 		inline constexpr explicit operator u64() const noexcept {        \
 			return id;                                                   \

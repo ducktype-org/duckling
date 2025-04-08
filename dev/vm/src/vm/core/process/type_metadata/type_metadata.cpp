@@ -8,7 +8,7 @@ namespace vm {
 		types.emplaceBack(std::move(type));
 		auto id = TypeID::next();
 
-		CORE_ASSERT(u64(id) == types.size() - 1, "bad TypeID");
+		CORE_ASSERT(u64(id) == types.lastIndex(), "bad TypeID");
 
 		types.last()->id = id;
 		types_ids.push_back(id);

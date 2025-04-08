@@ -348,7 +348,7 @@ namespace compiler::mir {
 		BlockBuilderRef newBlock() {
 			auto vector_index = blocks.size();
 			blocks.emplaceBack(BlockBuilder{ vector_index });
-			CORE_ASSERT(u64(blocks.last()->getID()) == blocks.size() - 1, "Bad block id");
+			CORE_ASSERT(u64(blocks.last()->getID()) == blocks.lastIndex(), "Bad block id");
 			return blocks.last();
 		}
 

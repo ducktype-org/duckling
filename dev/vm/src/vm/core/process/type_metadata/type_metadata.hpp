@@ -12,9 +12,6 @@ namespace vm {
 	 *
 	 * This class is used to store and access all types
 	 * that are used in the VCPU.
-	 *
-	 * @TODO: Refactor TypeMetaData such that types are referenced by reference and TypeID does not
-	 * exist (apart from perhaps being stored in types for some identification).
 	 */
 	class TypeMetadata {
 	private:
