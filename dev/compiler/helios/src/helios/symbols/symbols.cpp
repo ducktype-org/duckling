@@ -189,9 +189,9 @@ namespace compiler::helios {
 		base::StableVector<const SymbolData> symbol_table;
 
 		template<class... T>
-		auto putInSymtable(T&&... args) {
-			auto key = symbol_table.emplaceBack(std::forward<T>(args)...);
-			return symbol_table.getCRef(key).value();
+		CRef<SymbolData> putInSymtable(T&&... args) {
+			symbol_table.emplaceBack(std::forward<T>(args)...);
+			return symbol_table.last();
 		}
 	}
 

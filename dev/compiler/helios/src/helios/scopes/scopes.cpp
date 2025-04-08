@@ -78,9 +78,9 @@ namespace compiler::helios {
 		base::StableVector<ScopeData> scope_table;
 
 		template<class... T>
-		auto putInScopeTable(T&&... args) {
-			auto key = scope_table.emplaceBack(std::forward<T>(args)...);
-			return scope_table.getRef(key).value();
+		Ref<ScopeData> putInScopeTable(T&&... args) {
+			scope_table.emplaceBack(std::forward<T>(args)...);
+			return scope_table.last();
 		}
 	}
 
