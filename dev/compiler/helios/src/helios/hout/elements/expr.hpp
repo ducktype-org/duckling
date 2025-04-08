@@ -21,6 +21,7 @@ namespace compiler::helios::code {
 	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
+		// in this PR: remove this:
 		ScopeID lifetime_scope;
 
 		/**

@@ -16,6 +16,7 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
+		// in this PR: remove this:
 		ScopeID lifetime_scope;
 
 		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}

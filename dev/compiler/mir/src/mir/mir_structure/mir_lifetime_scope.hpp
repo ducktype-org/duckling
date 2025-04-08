@@ -1,0 +1,32 @@
+/**
+ * This file holds structure defining mir-lifetime-scopes,
+ * and mir-lifetime-scope-tree. There are the structure
+ * that then MIR uses to deduce lifetime scopes of variables.
+ *
+ * MIR scopes are in many ways similar to typical scopes in the program, differing mostly in some details and corner cases.
+ * MIR scope tree is generated per mir function, during the creation of it.
+ */
+
+#pragma once
+
+#include <base/ref.hpp>
+#include <base/stable_container.hpp>
+
+namespace compiler::mir {
+    /**
+     * MIR Lifetime scope.
+     */
+    struct LifetimeScope final{
+        MCRef<LifetimeScope> parent;
+        u64 depth;
+    };
+
+    struct LifetimeScopeTree final {
+        base::StableVector<const LifetimeScope> scopes;
+        CRef<LifetimeScope> root;
+       
+        LifetimeScopeTree();
+
+        CRef<LifetimeScope> newScope(CRef<LifetimeScope> parent);
+    };
+}
