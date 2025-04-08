@@ -10,7 +10,7 @@
 #include <functional>
 
 namespace vm {
-	class BlockData {
+	class BlockData final {
 	private:
 		TypeCRef          element_type;
 		base::ModRawView  view;

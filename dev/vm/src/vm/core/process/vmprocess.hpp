@@ -13,15 +13,17 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
 
 #include <condition_variable>
 #include <deque>
-#include <mutex>
 #include <shared_mutex>
+
+namespace vm::loader {
+	class Loader;
+}
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -59,11 +61,10 @@ namespace vm {
 
 		Memory memory;
 
-		// @TODO: Read Processors' docs and do the TODO there...
-		Preprocessor preprocessor;
+		Box<loader::Loader> loader;
 
 		//@TODO: For now assume that bytecode validation is always turned on.
-		static const bool VALIDATE_CODE = true;
+		static constexpr const bool VALIDATE_CODE = true;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.

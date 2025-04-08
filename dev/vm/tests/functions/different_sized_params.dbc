@@ -1,4 +1,4 @@
-# Tests a function call with multiple parameters of diffrent sizes.
+# Tests a function call with multiple parameters of different sizes.
 # input = "a b c"
 # output = a * c
 
@@ -18,14 +18,14 @@ function check {
 		# [8, 12) arg1
 		# [12, 20) arg2
 
-		init_type 			int64; 	# [20, 28) temp
+		init_type 			int64; 	# [20, 28) acc
 		mov_l64_imm			20, 1; 	# acc := 1
 		mul_l64_l64			20, 0; 	# acc *= a
 		mul_l64_l64			20, 12; # acc *= c
 
 		output_l64			20;
 
-		deinit; # temp
+		deinit; # acc
 		deinit; # arg2
 		deinit; # arg1
 		deinit; # arg0
