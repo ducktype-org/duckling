@@ -1,24 +1,29 @@
 
-#include <mutex>
-#include <utility>
-#include <cstring>
-#include <base/ints.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <vm/code_data/instruction.hpp>
-#include <vm/code_data/opcodes.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/kill_process_exception.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/api/data/response.hpp>
-#include <vm/api/data/status.hpp>
-#include <base/variant.hpp>
-#include "op_case.hpp"
 #include "vmthread.hpp"
+
+#include "low_program/instruction.hpp"
+#include "low_program/opcodes.hpp"
+#include "op_case.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/core/kill_process_exception.hpp>
+#include <vm/core/process/memory/pointer.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/supervisor/supervisor.hpp>
+
+#include <cstring>
 #include <iostream>
+#include <mutex>
+#include <utility>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -91,7 +96,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(CRef<FuncData> main_func) {
+	u64 VMThread::internalCallMain(CRef<low::FuncData> main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -99,27 +104,40 @@ namespace vm {
 #ifdef USE_TAIL_CALLS
 		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
 #else
-		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(OpcodeFix8::exit),
+		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(low::OpcodeFix8::exit),
 			                        .arg0   = 0,
 			                        .arg1   = 0 };
 #endif
 
 		pre_frame->instr       = &exit_instr;
-		pre_frame->local_stack = runtime_data.local_stack_top;
+		pre_frame->local_stack = runtime_data.local_stack_base;
 
 		// Frame of the main function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
-		std::byte* local_stack = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func->stack_size;
+		std::byte* local_stack = runtime_data.local_stack_base;
+		if (local_stack + main_func->local_stack_size > runtime_data.local_stack_end)
+			CORE_PANIC("VM stack overflow.");
 
-		frame->next_args = runtime_data.local_stack_top;
-		runtime_data.local_stack_top += main_func->next_arg_size;
+		// Preinitialize the main ret_val block.
+		auto main_func_type = executing_program->type_metadata->getTypeByName(main_func->name)
+		                          .expect("Expected main!");
+		auto main_return_type
+			= main_func_type->getResultType().expect("Expected main to have a return value!");
+		auto block = process_memory.allocateStack(main_return_type, local_stack);
 
-		auto* instr = main_func->bc.data();
+		frame->block_stack.push_back(block);
+		frame->block_idx_to_local_offset.put(0, frame->local_stack_head);
+		frame->local_offset_to_block_idx.put(frame->local_stack_head, 0);
+
+		pre_frame->called_func_ret_size = main_return_type->getSize();
+		frame->local_stack_head += main_return_type->getSize();
+
+		u64   main_ret_val = 0;
+		auto* instr        = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
+
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
 		// so we turn off pedantic warnings
@@ -131,7 +149,7 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 			};
 
@@ -147,19 +165,17 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
-
 
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
 		while (true) {
-			switch (static_cast<OpcodeFix8>(instr->opcode)) {
+			switch (static_cast<low::OpcodeFix8>(instr->opcode)) {
 	#define HANDLE_OPCODE(opcode_name)                                      \
-	case OpcodeFix8::opcode_name: {                                         \
+	case low::OpcodeFix8::opcode_name: {                                    \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
 		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
 		              opcode_str == "exit") {                               \
@@ -168,7 +184,7 @@ namespace vm {
 			break;                                                          \
 		}                                                                   \
 	}
-	#include <vm/code_data/opcodes_list.hpp>
+	#include <vm/program/opcodes_list.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {
@@ -177,10 +193,14 @@ namespace vm {
 			}
 		}
 	End:
-		return base::safeIntConv<u64>(runtime_data.frame_stack_base->regs.p64_reg_0);
-
-
 #endif
+
+		main_ret_val = derefStack<u64>(local_stack, 0);
+		block        = pre_frame->block_stack.back();
+		pre_frame->block_stack.pop_back();
+		process_memory.freeBlock(block);
+
+		return main_ret_val;
 	}
 
 	// internalCallMain end
@@ -263,7 +283,7 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(CRef<VMProgram> program) {
+	void VMThread::run(CRef<low::LowVMProgram> program) {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
@@ -363,7 +383,7 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(CRef<vm::VMProgram> program) {
+	bool VMThread::initThreadAndRun(CRef<vm::low::LowVMProgram> program) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 

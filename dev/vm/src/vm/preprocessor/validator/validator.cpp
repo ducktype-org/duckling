@@ -1,12 +1,17 @@
 #include "validator.hpp"
+
+#include "errors.hpp"
+
+#include <diagnostic/logger.hpp>
+
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
-#include <vm/code_data/opcode_args.hpp>
-#include <diagnostic/logger.hpp>
-#include "errors.hpp"
-#include <vm/preprocessor/validator/detail/stack_state.hpp>
+
 #include <vm/preprocessor/parser/elements.hpp>
+#include <vm/preprocessor/validator/detail/stack_state.hpp>
+#include <vm/program/opcode_args.hpp>
+
 #include <sstream>
 
 namespace vm::validator {
@@ -72,19 +77,11 @@ namespace vm::validator {
 			for (const auto& func: program.functions) {
 				for (const auto& op: func->code->opcodes) {
 					if (op->opcode_name.strView() == "ret_tailcall") {
-						if (func->arg_size != func->next_arg_size)
-							log.log(makeBox<vm::validator::CallerArgSizeMismatch>(*op->position));
-
 						variant_match(op->args[0].arg) {
 							variant_case(vm::opargs::FunctionName, function_name_arg) {
 								auto maybe_called_func
 									= program.name_to_func.atMaybe(function_name_arg.function_name);
 								if_opt_some(maybe_called_func, called_func) {
-									if (called_func->arg_size != called_func->next_arg_size) {
-										log.log(makeBox<vm::validator::CalledArgSizeMismatch>(
-											*op->position
-										));
-									}
 									if (func->arg_size != called_func->arg_size) {
 										log.log(makeBox<vm::validator::CallerCalledArgSizeMismatch>(
 											*op->position

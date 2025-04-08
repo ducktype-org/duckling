@@ -4,17 +4,14 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-
-#include <tester/tester.hpp>
-
+#include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/queries.cpp>
-
-#include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -37,6 +34,7 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(functionParametersTest);
 	}
 
 private:
@@ -71,7 +69,7 @@ private:
 				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 				assertTrue(
-					lir_func->validateBlockOrder(),
+					lir_func->validateBlockOrder().isOk(),
 					base::strConcat("Could not validate LIR function ", lir_func->name)
 				);
 				result.funcs.put(
@@ -140,6 +138,53 @@ private:
 			foo_lir->debugPrint(ctx, std::cerr);
 			foo_mir->debugPrint(std::cerr);
 		});
+	}
+
+	void functionParametersTest() {
+		auto module  = getLirOfModule(path("modules/function_with_parameters"));
+		auto foo_lir = module.lirFunc("foo");
+
+		// this is also called by LIR lowering,
+		// but we keep it here as a sanity check:
+		ASSERT_TRUE(foo_lir->validateParameters().isOk());
+
+		bool was_x = false;
+		bool was_y = false;
+		bool was_z = false;
+
+		for (auto& local: foo_lir->local_list) {
+			if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "x") {
+				ASSERT_TRUE(not was_x);
+				ASSERT_EQUAL(local->parameter_index.value(), 0);
+				was_x = true;
+			} else if (local->helios_id.has_value()
+			           and helios::name(local->helios_id.value()) == "y") {
+				ASSERT_TRUE(not was_y);
+				ASSERT_EQUAL(local->parameter_index.value(), 1);
+				was_y = true;
+			} else if (local->helios_id.has_value()
+			           and helios::name(local->helios_id.value()) == "z") {
+				ASSERT_TRUE(not was_z);
+				ASSERT_EQUAL(local->parameter_index.value(), 2);
+				was_z = true;
+			} else {
+				ASSERT_TRUE(local->parameter_index.empty());
+			}
+		}
+
+		ASSERT_TRUE(was_x and was_y and was_z);
+
+		// check if value in return instruction is indeed the parameter we expect:
+		u64 return_value_count = 0;
+		for (auto& block: foo_lir->block_order) {
+			if (block->terminator.operation == compiler::lir::Operation::ReturnValue) {
+				auto z_local = block->terminator.arguments.at(0).get<compiler::lir::LocalRef>();
+				ASSERT_EQUAL(z_local->parameter_index.value(), 2);
+				return_value_count++;
+			}
+		}
+
+		ASSERT_EQUAL(return_value_count, 1);
 	}
 };
 

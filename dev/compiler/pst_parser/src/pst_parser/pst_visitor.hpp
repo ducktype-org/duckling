@@ -1,11 +1,13 @@
 #pragma once
 
+#include "access.hpp"
 #include "elements/elements_list.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/visitor.hpp>
 
 namespace pst {
-	MAKE_VISITOR(
+	MAKE_ACCESS_VISITOR(
 		Pst,
 		Import,
 		Using,
@@ -30,6 +32,7 @@ namespace pst {
 		Method,
 		Field,
 		Constructor,
+		CopyConstructor,
 		Destructor,
 		AccessBlock,
 		FunParam

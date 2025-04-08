@@ -1,7 +1,8 @@
 #pragma once
 
+#include "frame.hpp"
+
 #include <vector>
-#include <vm/code_data/frame.hpp>
 
 namespace vm {
 	class ThreadStack {

@@ -5,25 +5,30 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Instructions.h>
+#include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
-#include <llvm/IR/IRBuilder.h>
+#include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/MemoryBuffer.h>
+#include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 LLVM_INCLUDE_END()
 
-#include <backends/llvm/llvm_backend.hpp>
+#include "get_parameter_types.hpp"
 #include "module_impl.hpp"
 
-#include <typesystem/lower/type_layout.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
+#include <backends/llvm/llvm_backend.hpp>
 #include <init/init.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <typesystem/lower/type_layout.hpp>
+
 #include <base/box.hpp>
-#include <base/ref.hpp>
-#include <base/maps.hpp>
 #include <base/int_conv.hpp>
+#include <base/maps.hpp>
+#include <base/ref.hpp>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
@@ -111,9 +116,66 @@ namespace compiler::backend_llvm {
 		CORE_UNREACHABLE();
 	}
 
-	auto getFunType(llvm::LLVMContext& context, const tsl::TypeLayout& return_type) {
-		// @TODO: #486 - process function argument types
-		return llvm::FunctionType::get(typeFromLayout(context, return_type), {}, false);
+	auto getFunType(
+		llvm::LLVMContext&                  context,
+		const std::vector<tsl::TypeLayout>& parameters,
+		const tsl::TypeLayout&              return_type
+	) {
+		std::vector<llvm::Type*> llvm_parameters;
+		llvm_parameters.reserve(parameters.size());
+		for (const auto& param: parameters)
+			llvm_parameters.push_back(typeFromLayout(context, param));
+
+		return llvm::FunctionType::get(
+			typeFromLayout(context, return_type), llvm_parameters, false
+		);
+	}
+
+	/**
+	 * Gets a function from a module by mangled name.
+	 *
+	 * If the function doesn't exits it adds a function prototype with
+	 * external linkage to the module based on provided lir_functions.
+	 *
+	 * @note We use it to add all functions to the module currently.
+	 * This will have to change in the future, but it will require some restructuring
+	 * of how we are creating llvm modules, as we need to know what function in local to which
+	 * module.
+	 */
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromLirFunction(
+		Ref<llvm::Module> module, const lir::Function& lir_function
+	) {
+		// @TODO: work here on mangled name instead #510
+
+		// We check if function exist first, to avoid unnecessary construction of types:
+		if (auto func = module->getFunction(lir_function.name.strView())) return func;
+
+		auto& context = module->getContext();
+
+		return module->getOrInsertFunction(
+			lir_function.name.strView(),
+			getFunType(context, lir_function.parameter_layouts, lir_function.return_type_layout)
+		);
+	}
+
+	/**
+	 * Same as getOrInsertFunctionPrototypeFromLirFunction but gets function data from SymID.
+	 */
+	llvm::FunctionCallee getOrInsertFunctionPrototypeFromSymID(
+		query::Context& ctx, Ref<llvm::Module> module, helios::SymID sym_id
+	) {
+		// @TODO: work here on mangled name instead #510
+
+		auto& context = module->getContext();
+		auto  name    = compiler::helios::name(sym_id);
+
+		// We check if function exist first, to avoid unnecessary construction of types:
+		if (auto func = module->getFunction(name.strView())) return func;
+
+		auto types = getParameterAndResultFromSymID(ctx, sym_id);
+		return module->getOrInsertFunction(
+			name.strView(), getFunType(context, types.parameters, types.result_type)
+		);
 	}
 
 	/**
@@ -124,13 +186,18 @@ namespace compiler::backend_llvm {
 	 */
 	struct LIR2LLVMFunction {
 		llvm::LLVMContext&  context;
+		query::Context&     ctx;
 		CRef<lir::Function> lir_function;
 		Ref<llvm::Module>   module;
 
 		LIR2LLVMFunction(
-			llvm::LLVMContext& context, CRef<lir::Function> lir_function, Ref<llvm::Module> module
+			llvm::LLVMContext&  context,
+			query::Context&     ctx,
+			CRef<lir::Function> lir_function,
+			Ref<llvm::Module>   module
 		):
 			  context(context),
+			  ctx(ctx),
 			  lir_function(lir_function),
 			  module(module) {}
 
@@ -168,6 +235,11 @@ namespace compiler::backend_llvm {
 		 */
 		base::Map<lir::LocalRef, Ref<llvm::Instruction>> local_register_map;
 
+		/**
+		 * Fills local_register_map and block_mapping.
+		 * @note It creates a IR Block that initialized all of local-values registers,
+		 * and fill the ones representing function parameters with appropriate values.
+		 */
 		void generateMainBlocksAndLocals(llvm::Function* fun) {
 			// allocate all local variables:
 
@@ -179,10 +251,21 @@ namespace compiler::backend_llvm {
 				= llvm::BasicBlock::Create(context, "local_variables", fun);
 			llvm::IRBuilder<> locals_builder(locals_block);
 			for (auto& var: lir_function->local_list) {
-				// @TODO: add llvm types:
+				CORE_ASSERT(
+					var->layout.getSize() > Bits(0),
+					"local variable with size 0 is not allowed in LLVM"
+				);
 				auto reg = locals_builder.CreateAlloca(
 					typeFromLayout(context, var->layout), nullptr, llvmLocalName(var.ref())
 				);
+
+				// If local is a parameter we initialize it from
+				// llvm parameter:
+				if_opt_some(var->parameter_index, parameter_index) {
+					locals_builder.CreateStore(
+						fun->getArg(base::safeIntConv<unsigned>(parameter_index)), reg
+					);
+				}
 				local_register_map.put(var.ref(), reg);
 			}
 
@@ -313,6 +396,30 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
+			case Call: {
+				CORE_ASSERT(
+					lir_instruction.arguments.size() > 0, "call instruction without callee"
+				);
+
+				const auto output = lir_instruction.output.value();
+
+				const auto callee_helios_id
+					= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
+
+				// I'm not sure if this is the efficient way to do it, but for now it is
+				// simple enough and works without some additional mechanism in the pipeline:
+				auto callee = getOrInsertFunctionPrototypeFromSymID(ctx, module, callee_helios_id);
+
+				const auto args = lirValueList2LLVM(
+					std::vector(
+						lir_instruction.arguments.begin() + 1, lir_instruction.arguments.end()
+					),
+					builder
+				);
+				const auto value = builder.CreateCall(callee, args);
+				builder.CreateStore(value, local_register_map.at(output).get());
+				break;
+			}
 			default:
 				std::cerr << "unknown lir operation (skip): "
 						  << base::enumToStr(lir_instruction.operation).strView() << "\n";
@@ -328,15 +435,13 @@ namespace compiler::backend_llvm {
 		 * @return llvm::Function*
 		 */
 		llvm::Function* createFunction() {
-			// this also adds the function to the module:
-			llvm::Function* fun = llvm::Function::Create(
-				getFunType(context, lir_function->return_type_layout),
-				llvm::Function::ExternalLinkage,
-				lir_function->name.strView(),
-				*module
+			Ref fun = llvm::cast<llvm::Function>(
+				getOrInsertFunctionPrototypeFromLirFunction(module, *lir_function).getCallee()
 			);
 
-			generateMainBlocksAndLocals(fun);
+			CORE_ASSERT(fun->isDeclaration(), "function is not a declaration");
+
+			generateMainBlocksAndLocals(fun.get());
 
 			for (auto& block: lir_function->block_order) {
 				auto              llvm_block = block_mapping[block];
@@ -346,9 +451,9 @@ namespace compiler::backend_llvm {
 				lir2LLVMInstruction(block->terminator, builder);
 			}
 
-			EliminateUnreachableBlocks(*fun);
+			llvm::EliminateUnreachableBlocks(*fun);
 
-			return fun;
+			return fun.get();
 		}
 	};
 
@@ -360,14 +465,26 @@ namespace compiler::backend_llvm {
 		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function) {
-		LIR2LLVMFunction lir2llvm{ getLLVMContext(), lir_function, module->module.refMut() };
-		lir2llvm.createFunction();
+	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code) {
+		auto memory_buffer = llvm::MemoryBuffer::getMemBuffer(llvm::StringRef(llvm_ir_code));
+		if (!memory_buffer) CORE_PANIC("failed to create memory buffer");
+		llvm::SMDiagnostic error;
+		auto               m = llvm::parseIR(*memory_buffer.get(), error, getLLVMContext());
+		if (!m) {
+			std::string              error_message;
+			llvm::raw_string_ostream error_stream(error_message);
+			error.print("LLVM IR parsing error", error_stream);
+			CORE_PANIC(error_message);
+		}
+
+		auto llvm_module = Box<llvm::Module>::fromPointer(m.release());
+		return makeBox<ModuleImpl>(std::move(llvm_module));
 	}
 
-	Module lirFunctionToModule(CRef<lir::Function> lir_function) {
-		auto module_impl = initModuleImpl(base::StrID("test"));
-		addFunctionToModuleImpl(module_impl.refMut(), lir_function);
-		return Module{ std::move(module_impl) };
+	void addFunctionToModuleImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	) {
+		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		lir2llvm.createFunction();
 	}
 }

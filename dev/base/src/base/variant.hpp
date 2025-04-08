@@ -41,10 +41,10 @@
  */
 #pragma once
 
-#include <variant>
-#include <type_traits>
-
 #include "define_helper.hpp"
+
+#include <type_traits>
+#include <variant>
 
 namespace base::detail {
 	template<typename... T>

@@ -1,25 +1,26 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include <vm/code_data/program.hpp>
+#include "low_program/instruction.hpp"
+
+#include <result.hpp>
+
+#include <base/box.hpp>
+#include <base/ints.hpp>
+#include <base/optional.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
-#include <base/box.hpp>
-#include <base/optional.hpp>
-#include <base/ints.hpp>
-#include <condition_variable>
+#include <vm/api/data/status.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/code_data/instruction.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 
-#include <vm/api/data/request.hpp>
-#include <vm/api/data/status.hpp>
-
-#include <mutex>
 #include <atomic>
-#include <result.hpp>
+#include <condition_variable>
+#include <mutex>
 
 /**
  * For now only single threaded execution is suported
@@ -67,7 +68,6 @@ namespace vm {
 		Frame* frame_stack_end;       /// Pointer to the first value not allocated.
 		Frame* frame_stack_current;   /// Pointer to the current frame - used only when debugging.
 		std::byte* local_stack_base;  /// Pointer to the start of `local_stack_reserved`.
-		std::byte* local_stack_top;   /// Pointer to the place, where new stack should start.
 		std::byte* local_stack_end;   /// Pointer to the first value not allocated.
 
 		RuntimeData(Ref<ThreadStack> stack):
@@ -75,7 +75,6 @@ namespace vm {
 			  frame_stack_end(stack->getFrameStack()->data() + stack->getFrameStack()->size()),
 			  frame_stack_current(stack->getFrameStack()->data()),
 			  local_stack_base(stack->getLocalStack()->data()),
-			  local_stack_top(stack->getLocalStack()->data()),
 			  local_stack_end(stack->getLocalStack()->data() + stack->getLocalStack()->size()) {}
 	};
 
@@ -143,7 +142,7 @@ namespace vm {
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
 		 */
-		MCRef<VMProgram> executing_program = nullptr;
+		MCRef<low::LowVMProgram> executing_program = nullptr;
 
 		/**
 		 * @TODO:
@@ -161,7 +160,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<FuncData>);
+		u64 internalCallMain(CRef<low::FuncData>);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -180,7 +179,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<VMProgram> program);
+		bool initThreadAndRun(CRef<low::LowVMProgram> program);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -216,7 +215,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<VMProgram>);
+		void run(CRef<low::LowVMProgram>);
 
 		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
 

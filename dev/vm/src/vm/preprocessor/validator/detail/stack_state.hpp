@@ -2,8 +2,9 @@
 
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/preprocessor/parser/elements.hpp>
+#include <vm/preprocessor/parser/type_of_data.hpp>
+
 #include <vector>
-#include <vm/preprocessor/parser/type_data.hpp>
 
 namespace vm::validator {
 	/**

@@ -2,10 +2,13 @@
  * @file token_stream.cpp
  */
 
-#include <base/exceptions.hpp>
-#include <utility>
-#include <iostream>
 #include "token_stream.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+
+#include <iostream>
+#include <utility>
 
 namespace tpc {
 
@@ -46,10 +49,14 @@ namespace tpc {
 
 	const Token& TokenStream::peek(i64 fwd) const {
 		if (std::max(-fwd, (i64) 0) > where) return sentinel_begin;
-		return (where + fwd >= to ? sentinel_end : tokens[where + fwd]);
+		return (
+			base::safeIntConv<i64>(where) + fwd >= to ? sentinel_end : tokens[where + (usize) fwd]
+		);
 	}
 
-	void TokenStream::skip(usize n) { where += n; }
+	void TokenStream::skip(i64 n) {
+		where = base::safeIntConv<usize>(std::max(base::safeIntConv<i64>(where) + n, (i64) 0));
+	}
 
 	usize TokenStream::size() const { return (where >= to ? 0 : to - where); }
 

@@ -1,6 +1,6 @@
-#include "preamble.hpp"
-#include "../../hierarchy/statements.hpp"
 #include "../../hierarchy/declarations.hpp"
+#include "../../hierarchy/statements.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 
@@ -64,7 +64,7 @@ namespace pst {
 			}
 
 			if (lang_def::keywordFlags(as_keyword)
-			        .contains(lang_def::KeywordFlagsOptions::IS_ACTION))
+			        .contains(lang_def::KeywordFlagsOptions::IsAction))
 				return detail::parseStmt<Action>(state);
 
 			if (as_special == Special::Semicolon) {

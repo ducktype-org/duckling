@@ -12,12 +12,13 @@
  */
 
 #include "lir_lowering.hpp"
+
 #include "../lir_structure/lir_structure.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <typesystem/lower/queries.hpp>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -44,7 +45,7 @@ namespace compiler::lir {
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
-		return LirLocal{ mir_local->helios_id, type_layout };
+		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
@@ -372,13 +373,19 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
+				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				std::vector<tsl::TypeLayout> parameter_types;
+				parameter_types.reserve(key.function->parameter_types.size());
+				for (const auto& param: key.function->parameter_types)
+					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
 				return Function{
-					.name = key.function->name,
-					.return_type_layout
-					= ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type),
-					.blocks      = std::move(blocks),
-					.local_list  = std::move(locals),
-					.block_order = std::move(block_order),
+					.name               = key.function->name,
+					.return_type_layout = return_type,
+					.parameter_layouts  = std::move(parameter_types),
+					.blocks             = std::move(blocks),
+					.local_list         = std::move(locals),
+					.block_order        = std::move(block_order),
 				};
 			}
 		};
@@ -407,7 +414,8 @@ namespace compiler::lir {
 			auto fun = std::move(mir2lir).get();
 
 			// @opt: remove it in optimized, release builds
-			CORE_ASSERT(fun.validateBlockOrder(), "Invalid block order");
+			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
+			CORE_ASSERT(fun.validateParameters().isOk(), "Invalid parameters");
 
 			return fun;
 		}

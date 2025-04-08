@@ -5,13 +5,14 @@
  */
 #pragma once
 
+#include "exceptions.hpp"
+#include "optional.hpp"
+#include "type_traits.hpp"
+
 #include <map>
+#include <type_traits>
 #include <unordered_map>
 #include <vector>
-#include <type_traits>
-#include "type_traits.hpp"
-#include "optional.hpp"
-#include "exceptions.hpp"
 
 namespace base {
 	/**

@@ -1,22 +1,22 @@
 #pragma once
 
 #include "../../lang_parser_state.hpp"
-#include "../../pst_visitor.hpp"        // IWYU pragma: export
 #include "../../pst_expr_visitor.hpp"   // IWYU pragma: export
+#include "../../pst_visitor.hpp"        // IWYU pragma: export
+#include "../hierarchy/lists.hpp"       // IWYU pragma: export
 #include "../parser_common_errors.hpp"  // IWYU pragma: export
-
-#include <token_parser_core/automatic.hpp>
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <lang_definitions/operator_precedence.hpp>
-#include <lexer/token.hpp>
 #include <lexer/classifications.hpp>
-
-#include <base/variant.hpp>
+#include <lexer/token.hpp>
+#include <token_parser_core/automatic.hpp>
 
 #include <base/exceptions.hpp>
-#include <ostream>
+#include <base/variant.hpp>
+
 #include <functional>  // IWYU pragma: export
+#include <ostream>
 
 namespace pst {
 	using lang_def::Keyword;

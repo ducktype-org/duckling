@@ -1,0 +1,23 @@
+type primitive: int64 8
+
+function main {
+  arg_size: 0;
+  next_arg_size: 0;
+  ret_size: 0;
+
+  # x - 0
+  local_size: 8;
+
+  code: {
+    jmpRel_label Inside;
+
+    init_type int64;
+
+    label Inside;
+
+    deinit;
+
+    ret_imm             0;
+  }
+
+}

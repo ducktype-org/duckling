@@ -1,13 +1,13 @@
 #include "classifications.hpp"
 
+#include <init/init.hpp>
+#include <unicode/errorcode.h>
+#include <unicode/uclean.h>
+#include <unicode/ustream.h>
+#include <unicode/utypes.h>
+
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
-#include <init/init.hpp>
-
-#include <unicode/utypes.h>
-#include <unicode/errorcode.h>
-#include <unicode/ustream.h>
-#include <unicode/uclean.h>
 
 #include <iostream>
 

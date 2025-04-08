@@ -1,6 +1,5 @@
-#include "preamble.hpp"
-
 #include "../../hierarchy/expr.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class EmptyExprError final: public dia::Error {
@@ -39,7 +38,7 @@ namespace pst {
 		out << "{";
 
 		out << R"("expr":)";
-		tpc::nullAwareDprint(expr, out);
+		nullAwareDprint(expr, out);
 
 		out << "}";
 	}

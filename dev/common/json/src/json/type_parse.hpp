@@ -2,9 +2,10 @@
 
 #include <base/constexpr_cat.hpp>
 #include <base/ints.hpp>
+
+#include <memory>
 #include <variant>
 #include <vector>
-#include <memory>
 
 template<typename T>
 struct TypeParseTraits;

@@ -8,12 +8,13 @@
 
 #pragma once
 
-#include <string>
-#include <base/ints.hpp>
+#include "kind.hpp"
 
 #include <query_framework/query_int.hpp>
 
-#include "kind.hpp"
+#include <base/ints.hpp>
+
+#include <string>
 
 /**
  * @brief Several type definitions for quick reference,
@@ -174,7 +175,7 @@ namespace tsh {
 		 * @return Whether the implicit coercion is allowed or not.
 		 */
 		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::detail::ContextType& context) const;
+		bool isImplicitlyCoercible(AbstractType target, query::Context& context) const;
 
 		/**
 		 * @brief Get the text representation of this type.

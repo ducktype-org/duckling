@@ -1,6 +1,6 @@
-#include <base/ints.hpp>
-
 #include "type_unique_code.hpp"
+
+#include <base/ints.hpp>
 
 namespace hashing::detail {
 

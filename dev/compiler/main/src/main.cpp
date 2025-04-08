@@ -6,19 +6,21 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <filesystem/file.hpp>
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <iostream>
 #include <clap/clap.hpp>
-#include <printer/stream_printer.hpp>
 #include <config/config.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <driver/driver.hpp>
+#include <filesystem/file.hpp>
 #include <helios/queries.hpp>
 #include <init/init.hpp>
-#include <driver/driver.hpp>
+#include <lexer/lexer.hpp>
+#include <printer/stream_printer.hpp>
+#include <pst_parser/pst.hpp>
+#include <query_framework/query_entry_point.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+
+#include <iostream>
 
 constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
 constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
@@ -273,6 +275,21 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dump-llvm-ir")
+		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("compile-to-assembly")
+		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("add-builtin-library")
+		             .addShortDesc("Links builtin library into the final executable.")
+		             .build());
+
 		auto options = configureDuckMainWith(clap, command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
@@ -287,9 +304,11 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		driver::Driver driver{ driver::Options{
 			.backend_type = driver::BackendType::LLVM,
 			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly = false,
-			.dump_llvm_ir        = false,
-		} };
+			.compile_to_assembly    = options.isFlag("compile-to-assembly"),
+			.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+			.add_builtin_library    = options.isFlag("add-builtin-library"),
+			.external_objects_files = {},
+			.external_libs          = {} } };
 
 		driver.compileHOUTUnit(top_level, base::StrID("main_module"));
 

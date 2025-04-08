@@ -1,11 +1,10 @@
 #pragma once
 
-#include <vector>
+#include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
 
-// @todo relax this dependency, just expr is needed (#404)
-#include <helios/hout/elements/expr.hpp>
+#include <vector>
 
 namespace compiler::helios::test_utils {
 	/**

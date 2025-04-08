@@ -1,15 +1,17 @@
 #pragma once
 
-#include <vector>
-#include <variant>
-#include <helios/scopes/scopes.hpp>
-#include <typesystem/higher/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <base/stable_container.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <base/stringifyable_enum.hpp>
-
 #include "mir_local_ref.hpp"
+
+#include <helios/scopes/scopes.hpp> // in this pr :delete this
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/types.hpp>
+
+#include <base/stable_container.hpp>
+#include <base/stringifyable_enum.hpp>
+#include <base/strongly_typed_id.hpp>
+
+#include <variant>
+#include <vector>
 
 // clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
@@ -123,6 +125,11 @@ namespace compiler::mir {
 		 */
 		bool ignore_lifetime = false;
 
+		/** 
+		 * If this local is a function parameter, this field contains the index of the parameter.
+		 */
+		base::Optional<u64> parameter_index;
+
 	private:
 		// @note: Constructing MirLocal from helios_id
 		// might work poorly for template/generic instantiations.
@@ -132,6 +139,18 @@ namespace compiler::mir {
 			  helios_id(helios_id),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
+
+		MirLocal(
+			helios::SymID     helios_id,
+			tsh::SymbolType<> type,
+			helios::ScopeID   lifetime_scope,
+			u64               parameter_index
+		):
+			  id(LocalID::next()),
+			  helios_id(helios_id),
+			  type(type),
+			  lifetime_scope(lifetime_scope),
+			  parameter_index(parameter_index) {}
 
 		MirLocal(tsh::SymbolType<> type, helios::ScopeID lifetime_scope, bool ignore_lifetime = false):
 			  id(LocalID::next()),
@@ -309,8 +328,11 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrID                  name;
-		tsh::SymbolType<>            return_type;
+		base::StrID name;
+
+		tsh::SymbolType<>              return_type;
+		std::vector<tsh::SymbolType<>> parameter_types;
+
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
@@ -331,13 +353,14 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                  name,
-			tsh::SymbolType<>            return_type,
-			std::vector<Block>           blocks,
-			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block,
-			helios::ScopeID              top_lifetime_scope,
-			helios::SymID                helios_id
+			base::StrID                    name,
+			tsh::SymbolType<>              return_type,
+			std::vector<tsh::SymbolType<>> parameter_types,
+			std::vector<Block>             blocks,
+			base::StableVector<MirLocal>   local_list,
+			BlockID                        entry_block,
+			helios::ScopeID                top_lifetime_scope,
+			helios::SymID                  helios_id
 		);
 
 		[[nodiscard]]

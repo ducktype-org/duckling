@@ -1,15 +1,17 @@
 #include "vmprocess.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+
+#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/api/data/core_operation_error.hpp>
-#include <base/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/preprocessor/preprocessor.hpp>
 
 #include <mutex>
-#include <base/variant.hpp>
-#include <vm/api/data/request.hpp>
 #include <shared_mutex>
 #include <variant>
 
@@ -207,7 +209,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(*this, VALIDATE_CODE) {
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(VALIDATE_CODE) {
 		vm_threads.emplace_back(*this);
 	}
 

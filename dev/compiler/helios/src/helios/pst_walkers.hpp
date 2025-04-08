@@ -7,12 +7,14 @@
 #pragma once
 
 #include <pst_parser/elements/elements.hpp>  // for pst::Stmt
+
 #include <base/ref.hpp>
+
 #include <vector>
 
 namespace compiler::helios {
 	template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-	using StmtList = std::vector<MCRef<Stmt>>;
+	using StmtList = std::vector<pst::AccessLocked<Stmt>>;
 
 	/**
 	 * @brief Returns all children statements of given LangElement
@@ -26,5 +28,5 @@ namespace compiler::helios {
 	 *
 	 * @return StmtList
 	 */
-	StmtList<> getStmtsFromStmtAggregate(MCRef<pst::LangElement>);
+	StmtList<> getStmtsFromStmtAggregate(query::Context&, pst::AccessLocked<pst::LangElement>);
 }

@@ -1,22 +1,62 @@
 #include "queries.hpp"
 
+#include "hout/elements.hpp"
+#include "scopes/scopes.hpp"
+#include "symbols/symbols.hpp"
+
+#include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <base/stable_hashmap.hpp>
-#include <pst_parser/pst_visitor.hpp>
-
 #include <base/exceptions.hpp>
-#include "scopes/scopes.hpp"
-#include "hout/elements.hpp"
-
-#include "symbols/symbols.hpp"
+#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 
+	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			auto scopes = ctx.query<QueryScopesInModule>(key);
+
+			HOUTUnit out;
+			for (auto scope: *scopes) {
+				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+				for (auto sym: *symbols_in_scope) {
+					// grab constants:
+					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
+					// grab functions:
+					if (kind(sym) == SymbolKind::Function)
+						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+				}
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUT);
+
+	struct IMPLEMENT_QUERY(QueryModuleHOUTRecursively, std::vector<HOUTUnit>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			std::vector<HOUTUnit> out = { ctx.query<QueryModuleHOUT>(key) };
+
+			auto submodules = ctx.query<frontend::QuerySubmodules>(key);
+			for (auto submodule: *submodules) {
+				// @TODO optimize multiple concatenations
+				auto submodule_hout = ctx.query<QueryModuleHOUTRecursively>(submodule.second);
+				for (const auto& i: submodule_hout) out.push_back(i);
+			}
+			return out;
+		}
+
+		QUERY_AUTO_CACHE_COPY
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryModuleHOUTRecursively);
+
 	struct IMPLEMENT_QUERY(QueryTopLevelEntities, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// go over all to level symbols and get theirs hout
+			// go over all top level symbols and get theirs hout
 			// store it in some vector or something
 			// lookup all and stuff
 
@@ -26,15 +66,13 @@ namespace compiler::helios {
 
 			HOUTUnit out;
 
-			// grab constants:
-			for (auto sym: *symbols_in_module_root)
+			for (auto sym: *symbols_in_module_root) {
+				// grab constants:
 				if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
-
-
-			// grab functions:
-			for (auto sym: *symbols_in_module_root)
+				// grab functions:
 				if (kind(sym) == SymbolKind::Function)
 					out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
+			}
 
 			return out;
 		}
@@ -53,9 +91,9 @@ namespace compiler::helios {
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
 			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
 			code::CodeBlock block(scope, {});
-			for (const auto& stmt: *container) {
+			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
-				stmt->acceptVisitor(stmt_maker);
+				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
 				if (not stmt_maker.empty)
 					block.statements.emplace_back(std::move(stmt_maker.out.value()));
 			}
@@ -70,8 +108,8 @@ namespace compiler::helios {
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
 			template<class T>
-			ScopeID scopeOf(const T& element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&element) });
+			ScopeID scopeOf(pst::Access<T> element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(element);
 			}
 
 			// @TODO: visits for all valid stmt-s
@@ -86,9 +124,9 @@ namespace compiler::helios {
 				this->out.emplace(makeBox<std::remove_reference_t<T>>(std::forward<T>(value)));
 			}
 
-			void visitReturn(const pst::Return& stmt) override {
-				if (auto val = stmt.getValue()) {
-					auto expr = ctx.query<QueryHoutOfExpr>({ val.value()->getExpr() })
+			void visitReturn(pst::Access<pst::Return> stmt) override {
+				if (auto val = stmt->getValue()) {
+					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
 					                .expect("Not handling errors here yet... (return expr)");
 					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
 				} else {
@@ -96,17 +134,18 @@ namespace compiler::helios {
 				}
 			}
 
-			void visitAlias(const pst::Alias&) override { empty = true; }
+			void visitAlias(pst::Access<pst::Alias>) override { empty = true; }
 
-			void visitUsing(const pst::Using&) override { empty = true; }
+			void visitUsing(pst::Access<pst::Using>) override { empty = true; }
 
-			void visitExprStmt(const pst::ExprStmt& stmt) override {
+			void visitExprStmt(pst::Access<pst::ExprStmt> stmt) override {
 				// @TODO: handle null here
-				auto inner_expr = stmt.getExpr().toOpt().value()->getExpr();
+				auto inner_expr = stmt->getExpr().unlock(ctx)->getExpr().unlock(ctx);
 
 				// here if we encounter an assignment expression
 				// we should create an assignment statement:
-				if (auto assignment = dynamic_cast<const pst::expr::Assignment*>(&*inner_expr)) {
+				if (auto assignment_opt = inner_expr.dynamicCast<pst::expr::Assignment>()) {
+					auto assignment = assignment_opt.value();
 					CORE_ASSERT(
 						assignment->getAssignmentType() == base::StrID("="),
 						"Unsupported assignment type"
@@ -142,26 +181,27 @@ namespace compiler::helios {
 				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
 			}
 
-			void visitIf(const pst::If& stmt) override {
+			void visitIf(pst::Access<pst::If> stmt) override {
 				// Get scopes:
 				auto outer_scope = scopeOf(stmt);
 
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
-				auto condition = ctx.query<QueryHoutOfExpr>({ stmt.getCondition()->getExpr() })
-				                     .expect("Not handling errors here yet");
+				auto condition
+					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
+				          .expect("Not handling errors here yet");
 
-				auto body = queryCodeOfCodeBlock(ctx, stmt.getBody());
+				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
 
 				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
 			}
 
-			void visitVariable(const pst::Variable& stmt) override {
+			void visitVariable(pst::Access<pst::Variable> stmt) override {
 				// @TODO: do something with mut/immut
 
 				// @TODO: error handling
 
-				auto symbol = ctx.query<QuerySymbolOfSTMT>({ MCRef<pst::Stmt>(&stmt) });
+				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
@@ -170,7 +210,7 @@ namespace compiler::helios {
 				// for now initial value is assumed to always be present:
 				// this will probably change:
 				auto initial_value
-					= ctx.query<QueryHoutOfExpr>({ stmt.getValue()->getExpr() })
+					= ctx.query<QueryHoutOfExpr>(stmt->getValue().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
 				output(
@@ -191,7 +231,7 @@ namespace compiler::helios {
 
 			// @TODO: make failure more explicit
 
-			void visitFun(const pst::Fun& stmt) final {
+			void visitFun(pst::Access<pst::Fun> stmt) final {
 				// @TODO: create function here...
 				// - create types, attributes, flags, ...
 				// @TODO: rest, flags, attributes, etc
@@ -206,7 +246,7 @@ namespace compiler::helios {
 
 				// body:
 
-				auto fun_body = stmt.getBody();
+				auto fun_body = stmt->getBody();
 
 				code::CodeBlock function_body = queryCodeOfCodeBlock(ctx, fun_body);
 				output.content.body
@@ -217,12 +257,12 @@ namespace compiler::helios {
 
 				std::vector<code::Parameter> parameters;
 
-				for (auto param: *stmt.getParams()) {
+				for (auto param: *stmt->getParams().unlock(ctx)) {
 					auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
 					auto param_name   = name(param_symbol);
 					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
 
-					auto value = param->getValue();
+					auto value = param.unlock(ctx)->getValue();
 
 					if (param_type->hasError()) {
 						// we just fail here, because we can't continue without type
@@ -235,7 +275,7 @@ namespace compiler::helios {
 						);
 					} else {
 						auto initial_value
-							= ctx.query<QueryHoutOfExpr>({ value.value()->getExpr() });
+							= ctx.query<QueryHoutOfExpr>(value.value().unlock(ctx)->getExpr());
 
 						if (initial_value.hasError()) {
 							// we just fail here, because we can't continue without correct initial
@@ -265,7 +305,7 @@ namespace compiler::helios {
 			);
 
 			HOUTFunctionMaker func_maker(ctx, key);
-			stmt(key)->acceptVisitor(func_maker);
+			stmt(ctx, key).value()->acceptVisitor(func_maker);
 
 			return func_maker.out.value();
 		}

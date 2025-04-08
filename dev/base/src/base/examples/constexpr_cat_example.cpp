@@ -1,4 +1,5 @@
 #include <base/constexpr_cat.hpp>
+
 #include <iostream>
 #include <string>
 

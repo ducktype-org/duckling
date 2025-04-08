@@ -1,11 +1,13 @@
 #pragma once
 
+#include "access.hpp"
 #include "elements/elements_list.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/visitor.hpp>
 
 namespace pst::expr {
-	MAKE_VISITOR(
+	MAKE_ACCESS_VISITOR(
 		PstExpr,
 		PrefixOperator,
 		SuffixOperator,

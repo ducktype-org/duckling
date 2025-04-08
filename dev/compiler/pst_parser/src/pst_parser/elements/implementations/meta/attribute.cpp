@@ -1,6 +1,5 @@
-#include "preamble.hpp"
-
 #include "../../hierarchy/not_statements.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class AttrStarError final: public dia::Error {
@@ -28,8 +27,8 @@ namespace pst {
 		state.parse(out).all(Special::AtSign, &out->name);
 
 		// @TODO: Make a more general solution to dotted names that can't have stars
-		if (out->name && out->name->getStar())
-			state.log(makeBox<AttrStarError>(out->name->getSourcePosition()));
+		if (out->name.internal() && out->name.internal()->getStar())
+			state.log(makeBox<AttrStarError>(out->name.internal()->getSourcePosition()));
 		if (state[0].isBracketGroup(Token::BracketType::Round)) state.parse(out).one(&out->args);
 
 		return out;
@@ -39,7 +38,7 @@ namespace pst {
 		out << "{";
 		out << "\"name\" : ";
 		nullAwareDprint(name, out);
-		if (args) {
+		if (args.internal()) {
 			out << ", \"args\": ";
 			nullAwareDprint(args, out);
 		}

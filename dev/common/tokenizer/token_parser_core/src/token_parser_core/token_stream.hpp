@@ -51,7 +51,7 @@ namespace tpc {
 		/**
 		 * @brief Increases the current position by `n`
 		 */
-		void skip(usize n = 1);
+		void skip(i64 n = 1);
 
 		/**
 		 * @brief Go into the recursive stream of the current token. If the current token doesn't
