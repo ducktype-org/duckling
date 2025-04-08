@@ -7,10 +7,11 @@
 #pragma once
 
 #include <base/box.hpp>
-#include <any>
 #include <base/exceptions.hpp>
-#include <base/type_traits.hpp>
 #include <base/optional.hpp>
+#include <base/type_traits.hpp>
+
+#include <any>
 #include <regex>
 #include <utility>
 
@@ -91,7 +92,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().value_or("string");
+			return getCustomValueName().valueOr("string");
 		}
 	};
 
@@ -113,7 +114,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().value_or("int");
+			return getCustomValueName().valueOr("int");
 		}
 	};
 
@@ -139,7 +140,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().value_or("int..int");
+			return getCustomValueName().valueOr("int..int");
 		}
 	};
 
@@ -170,7 +171,7 @@ namespace clap {
 
 		[[nodiscard]]
 		std::string getTypeName() const override {
-			return getCustomValueName().value_or("file");
+			return getCustomValueName().valueOr("file");
 		}
 	};
 

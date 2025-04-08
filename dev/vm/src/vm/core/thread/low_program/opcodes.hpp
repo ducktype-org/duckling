@@ -4,8 +4,13 @@
  */
 #pragma once
 
+#include <base/exceptions.hpp>
 #include <base/ints.hpp>
-#include <unordered_map>
+#include <base/variant.hpp>
+
+#include <vm/bytecode/instructions.hpp>
+
+#include <type_traits>
 
 /**
  * Opcodes names conventions:
@@ -30,13 +35,34 @@
 namespace vm::low {
 	enum class OpcodeFix8 : u16 {
 #define HANDLE_OPCODE(opcode) opcode,
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
+		Comment
 	};
-	// @TODO: Add constructors to base::HashMap to allow usage of base::HashMap here.
-	const std::unordered_map<std::string, OpcodeFix8> STR_TO_OPCODE_FIX8{
-#define HANDLE_OPCODE(opcode) { #opcode, OpcodeFix8::opcode },
-#include <vm/program/opcodes_list.hpp>
+
+	template<class Instr>
+	struct InstrToOpcodeFix8;
+
+	template<>
+	struct InstrToOpcodeFix8<code::instructions::Comment> {
+		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::Comment;
+	};
+
+#define HANDLE_OPCODE(opcode)                                         \
+	template<>                                                        \
+	struct InstrToOpcodeFix8<VM_INSTR_FROM_NAME(opcode)> {            \
+		static constexpr OpcodeFix8 OPCODE_FIX8 = OpcodeFix8::opcode; \
+	};
+
+#include <vm/bytecode/opcode_definitions.hpp>
 #undef HANDLE_OPCODE
-	};
+
+	constexpr u16 fix8FromInstr(const code::Instruction& instruction) {
+		return u16(
+			VISIT(instruction,
+		          var,
+		          return low::InstrToOpcodeFix8<std::remove_cvref_t<decltype(var)>>::OPCODE_FIX8;)
+		);
+	}
 }

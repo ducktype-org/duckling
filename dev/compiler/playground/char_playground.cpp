@@ -1,9 +1,9 @@
-#include <filesystem/encoding.hpp>
-#include <lexer/decode.hpp>
-#include <filesystem/file.hpp>
 #include <diagnostic/logger.hpp>
-#include <token_file/file.hpp>
+#include <filesystem/encoding.hpp>
+#include <filesystem/file.hpp>
 #include <init/init.hpp>
+#include <lexer/decode.hpp>
+#include <token_file/file.hpp>
 
 int main(int argc, char** argv) {
 	init::InitObject _;

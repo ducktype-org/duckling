@@ -1,4 +1,5 @@
 #include "operation.hpp"
+
 #include "internal/builtin_operations.hpp"
 
 namespace operation {

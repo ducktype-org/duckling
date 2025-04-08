@@ -1,13 +1,13 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
+#include "module_tree.hpp"  // @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
+
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
+#include <query_framework/query_int.hpp>
+
 #include <base/maps.hpp>
 #include <base/ref.hpp>
-
-// @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
-#include "module_tree.hpp"
 
 namespace compiler::frontend {
 
@@ -53,7 +53,7 @@ namespace compiler::frontend {
 	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
 	 * module.
 	 */
-	ModuleID extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element);
+	ModuleID extendQueryModuleIDOfPST(query::Context&, pst::AccessLocked<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to

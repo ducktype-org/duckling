@@ -1,9 +1,10 @@
 #include "helios_test_utils.hpp"
 
+#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements/query_hout_of_expr.hpp>
+
 #include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {
@@ -60,17 +61,17 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitConst(const pst::Const& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitConst(pst::Access<pst::Const> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -81,17 +82,17 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitVariable(const pst::Variable& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitVariable(pst::Access<pst::Variable> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 

@@ -12,18 +12,25 @@ from .helpers import (
 from .duck_linter import duck_linter_impl
 from .cpp_linter import simulate_cpp_linter
 
+
 def pr_validate_impl(clang_tidy_path: str, clang_format_path: str, build: str):
     # Step 1 - build
-    bash_command('cmake --build build -- all build_all_tests build_all_playgrounds')
+    bash_command(f"cmake --build {build} -- all build_all_tests build_all_playgrounds")
 
     # Step 2 - test
-    bash_command('cmake --build build -- test')
+    bash_command(f"cmake --build {build} -- test")
 
     # Step 3 - duck linter
     if not duck_linter_impl():
-        exit_with_error('Duck linter has failed')
+        exit_with_error("Duck linter has failed")
 
     # Step 4 - cpp linter
-    clang_tidy_failed, clang_format_failed = simulate_cpp_linter(clang_tidy_path=clang_tidy_path, clang_format_path=clang_format_path, build=build)
+    clang_tidy_failed, clang_format_failed = simulate_cpp_linter(
+        clang_tidy_path=clang_tidy_path,
+        clang_format_path=clang_format_path,
+        build=build,
+    )
     if clang_tidy_failed or clang_format_failed:
-        exit_with_error(f'CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}')
+        exit_with_error(
+            f"CPP linter has failed: {clang_tidy_failed=} {clang_format_failed=}"
+        )

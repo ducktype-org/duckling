@@ -1,7 +1,12 @@
-#include <base/ref.hpp>
+
 #include <lir/lir_structure/function_forward.hpp>
 #include <typesystem/lower/type_layout.hpp>
-#include "builders.hpp"
+
+#include "base/exceptions.hpp"
+#include <base/ref.hpp>
+
+#include "vm/bytecode/bytecode.hpp"
+#include <vm/bytecode/builders/builders.hpp>
 
 namespace compiler::backend_vm {
 	/**
@@ -11,19 +16,16 @@ namespace compiler::backend_vm {
 		base::StrID module_id;
 
 	public:
-		Module(base::StrID module_id);
+		Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions);
 
 		/**
-		 * @brief Inserts a function into the module.
+		 * @brief Builds a module representation.
 		 */
-		void addLirFunction(CRef<lir::Function> lir_function);
-
-		/**
-		 * @brief Builds a module representation as parse-able bytecode.
-		 */
-		void buildRepr(std::ostream& out) const;
+		[[nodiscard]] vm::code::CodeCollection build() const {
+			throw base::NotYetImplemented("Building DVM module.");
+		}
 
 	private:
-		CodeFileBuilder file_builder;
+		vm::code::CodeCollection code;
 	};
 }

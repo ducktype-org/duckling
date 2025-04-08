@@ -1,19 +1,22 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <listener/listener.hpp>
 #include <filesystem/file.hpp>
-#include <vm/core/process/vmprocess.hpp>
+#include <listener/listener.hpp>
+
+#include <base/optional.hpp>
+
 #include <vm/api/api.hpp>
 
 namespace vm {
-	class Supervisor {
+	class VMProcess;
+
+	class Supervisor final {
 	private:
 		Supervisor() = default;
 
-		std::shared_mutex                       rwProcessTable;
+		std::shared_mutex                       rw_process_table;
 		PID                                     next = 0;
-		std::unordered_map<PID, Box<VMProcess>> processTable;
+		std::unordered_map<PID, Box<VMProcess>> process_table;
 
 		cpp::result<Ref<VMProcess>, api::ApiError> getProcess(PID pid);
 

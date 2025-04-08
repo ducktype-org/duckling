@@ -1,11 +1,12 @@
 #include <filesystem/file.hpp>
+#include <graphviz/gvc.h>
+#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/variant.hpp>
-#include <init/init.hpp>
-#include <iostream>
 
-#include <graphviz/gvc.h>
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN(-avoid-c-arrays)
@@ -109,9 +110,9 @@ int main(int argc, char** argv) {
 		pst.dprint(std::cerr);
 		std::cerr << "\n";
 	}
-	if (pst.getRootElement() != nullptr) {
+	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, pst.getRootElement());
+		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess().value()));
 		hdl.writeToSVG(argv[2]);
 	}
 }

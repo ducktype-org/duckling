@@ -2,30 +2,34 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#include <iostream>
+
 #include <base64.hpp>
 
-#include <clap/clap.hpp>
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <filesystem/file.hpp>
-#include <base/variant.hpp>
-#include <base/int_conv.hpp>
+#include <base/define_helper.hpp>  // This is included to allow for pushing and popping of diagnostics
 
-PUSH_DIAGNOSTIC
+#include <iostream>
+
+PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
-POP_DIAGNOSTIC
+POP_DIAGNOSTIC;
 
-// vm includes:
-#include <vm/server.hpp>
-#include <vm/cli.hpp>
-#include <vm/config.hpp>
-
-#include "utils.hpp"
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
+#include "utils.hpp"
+
+#include <clap/clap.hpp>
+#include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
+
+#include <base/int_conv.hpp>
+#include <base/variant.hpp>
+
+#include <vm/cli.hpp>
+#include <vm/config.hpp>
+#include <vm/server.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -178,7 +182,9 @@ void server(i32 port) {
 				return crow::response(200, ss.str());
 			};
 
-			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
+			return crow::response(
+				200, lsp::getSemanticTokens({ &*pst.getRootElement().illegalAccess().value() })
+			);
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);

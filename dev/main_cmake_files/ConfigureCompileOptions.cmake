@@ -2,6 +2,7 @@ option(USE_MARCH_NATIVE "Use -march=native. This should be disabled for portable
 
 # disable compiler-specific extensions
 set(CMAKE_CXX_EXTENSIONS OFF)
+
 # require compiler to support C++ standard it is asked for
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -18,13 +19,13 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 		"-Wall -Wextra "
 		"-pedantic "
 		"-Wno-sign-compare "
-		)
+	)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_GNU_FLAGS}")
-	
+
 	# Debug version uses O0.
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
 
-elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
@@ -40,7 +41,7 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		"-Wno-sign-compare"
 	)
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}")
 
 	# Debug version uses O0.
 	# For some reason -Og does not work in clang
@@ -49,9 +50,9 @@ else()
 	message(FATAL_ERROR "Error: UNKNOWN COMPILER")
 endif()
 
-if (USE_MARCH_NATIVE)
+if(USE_MARCH_NATIVE)
 	add_compile_options(-march=native)
-endif (USE_MARCH_NATIVE)
+endif(USE_MARCH_NATIVE)
 
 # Release version uses O2, not O3. It might change.
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")

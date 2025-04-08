@@ -1,10 +1,13 @@
+#include <tester/tester.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/api/api.hpp>
-#include <tester/tester.hpp>
+
 #include <chrono>
 #include <thread>
-#include <base/int_conv.hpp>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -71,13 +74,13 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
-		assertEqual(3, execution_position.instr_number, "Line number is not correct");
+		assertEqual(6, execution_position.instr_number, "Line number is not correct");
 
 		vm::api::resume(pid).expect("Resume failed (1)");
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
-		assertEqual(7, execution_position.instr_number, "Line number is not correct");
+		assertEqual(10, execution_position.instr_number, "Line number is not correct");
 
 		vm::api::resume(pid).expect("Resume failed (2)");
 
@@ -94,19 +97,19 @@ private:
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
-		assertEqual(3, execution_position.instr_number, "Line number is not correct");
+		assertEqual(6, execution_position.instr_number, "Line number is not correct");
 
 		u64 line = stepAndGetLine(pid);
-		assertEqual(4, line, "Line number is not correct (2)");
+		assertEqual(7, line, "Line number is not correct (2)");
 
 		line = stepAndGetLine(pid);
-		assertEqual(5, line, "Line number is not correct (3)");
+		assertEqual(8, line, "Line number is not correct (3)");
 
 		vm::api::resume(pid).expect("Resume failed (1)");
 
 		execution_position
 			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (2)");
-		assertEqual(7, execution_position.instr_number, "Line number is not correct (4)");
+		assertEqual(10, execution_position.instr_number, "Line number is not correct (4)");
 
 		vm::api::resume(pid).expect("Resume failed (2)");
 

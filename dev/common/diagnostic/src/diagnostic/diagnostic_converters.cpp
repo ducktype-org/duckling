@@ -2,8 +2,8 @@
 
 #include <token_file/file.hpp>
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace dia {
 	/**
@@ -96,7 +96,7 @@ namespace dia {
 		                           .map([&](SourcePosition pos) {
 									   return pos.genPrinterContents(note_ptr->toString(detailed));
 								   })
-		                           .value_or({ note_ptr->toString(detailed) });
+		                           .valueOr({ note_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
 
 		return result_contents;
@@ -236,7 +236,7 @@ namespace dia {
 		CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
 	) {
 		auto source_position
-			= note_ptr->getSourcePosition().value_or(parent_message->getSourcePosition());
+			= note_ptr->getSourcePosition().valueOr(parent_message->getSourcePosition());
 		auto source_uri = (source_position.getSource() != nullptr)
 		                    ? source_position.getSource()->getPath().uri()
 		                    : "file:///dev/null";

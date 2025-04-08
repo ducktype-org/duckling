@@ -1,19 +1,20 @@
-#include <iostream>
 #include "system_command.hpp"
+
+#include <iostream>
 
 namespace system_command {
 
-	SystemCommand& SystemCommand::addArg(base::StrID arg) {
-		arguments.push_back(arg);
+	SystemCommand& SystemCommand::addArg(std::string arg) {
+		arguments.push_back(std::move(arg));
 		return *this;
 	}
 
 	i32 SystemCommand::execute(bool echo, bool error_on_exit_code) {
-		std::string out = program_name.str();
+		std::string out = program_name;
 		out += " ";
 
 		for (const auto& arg: arguments) {
-			out += arg.strView();
+			out += arg;
 			out += " ";
 		}
 		if (echo) std::cerr << "[CMD] " << out << "\n";

@@ -1,11 +1,12 @@
-#include <iostream>
-
-#include "llvm_includes/ir_verifier.hpp"
-#include "llvm_includes/filesystem.hpp"
-#include "llvm_lowering.hpp"
 #include "compile_llvm.hpp"
+#include "llvm_includes/filesystem.hpp"
+#include "llvm_includes/ir_verifier.hpp"
+#include "llvm_lowering.hpp"
 #include "module_impl.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
+
+#include <iostream>
 
 namespace base::extend {
 	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
@@ -18,15 +19,19 @@ namespace base::extend {
 namespace compiler::backend_llvm {
 	Module::Module(base::StrID module_id): impl(initModuleImpl(module_id)) {}
 
-	void Module::addFunctionToModule(CRef<lir::Function> lir_function) {
-		addFunctionToModuleImpl(impl.refMut(), lir_function);
+	Module Module::fromIRCode(std::string_view llvm_ir_code) {
+		return { parseIRCodeToModuleImpl(llvm_ir_code) };
 	}
 
-	bool Module::verify() const {
+	void Module::addFunctionToModule(query::Context& ctx, CRef<lir::Function> lir_function) {
+		addFunctionToModuleImpl(ctx, impl.refMut(), lir_function);
+	}
+
+	base::OkBad Module::verify() const {
 		std::cerr << "LLVMVerification: \n";
 		bool error_found = llvm::verifyModule(*impl->module, &llvm::errs());
 		std::cerr << "\n";
-		return not error_found;
+		return error_found ? base::BAD : base::OK;
 	}
 
 	void Module::debugPrint() const { return impl->module->print(llvm::errs(), nullptr); }
@@ -43,6 +48,16 @@ namespace compiler::backend_llvm {
 
 	void Module::compile(base::StrID output_file, CompilationOutputType output_type) {
 		compileModuleToObject(impl.refMut(), output_file, output_type);
+	}
+
+	u64 Module::getFunctionCount(bool including_prototypes) const {
+		const auto& func_list = impl->module->getFunctionList();
+		u64         count     = 0;
+		for (auto& func: func_list) {
+			if (func.isDeclaration() and (not including_prototypes)) continue;
+			count++;
+		}
+		return count;
 	}
 
 	Module::~Module() = default;

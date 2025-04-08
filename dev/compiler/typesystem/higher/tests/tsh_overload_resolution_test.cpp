@@ -1,11 +1,11 @@
+#include <helios/test_utils/helios_test_utils.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/all.hpp>
 
 #include <base/variant.hpp>
-#include <helios/test_utils/helios_test_utils.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -16,10 +16,10 @@ class TypeSystemOverloadResolutionTest final: public tester::TestSuite {
 #define TESTER_CLASS TypeSystemOverloadResolutionTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(overload_resolution_test); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(overloadResolutionTest); }
 
 private:
-	void overload_resolution_test() {
+	void overloadResolutionTest() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("class_definitions")));
 		const compiler::helios::SymID my_class_symbol = getChain("MyClass", root_scope).back();
 

@@ -1,9 +1,15 @@
+#include "access.hpp"
 #include "lang_parser_element.hpp"
 #include "lang_parser_state.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 
 namespace pst {
+	AccessLocked<LangElement> LangElement::getParent() const {
+		return { parent.map([](auto arg) -> MCRef<LangElement> { return arg; }).valueOr(nullptr) };
+	}
+
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
 	const dia::SourcePosition& LangElement::getSourcePosition() const { return source_position; }

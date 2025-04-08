@@ -1,8 +1,10 @@
+#include <tester/tester.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/api/api.hpp>
-#include <tester/tester.hpp>
-#include <base/int_conv.hpp>
 
 /**
  * @brief This test set is responsible for testing the debugger when the VM is running endlessly.
@@ -45,13 +47,14 @@ private:
 		vm::api::run(pid).expect("Run failed (1)");
 
 		auto position = vm::api::pause(pid).expect("Pause failed (1)");
+		std::cout << position.instr_number << '\n';
 		assertTrue(
-			1 <= position.instr_number && position.instr_number <= 2, "Line number is not correct"
+			2 <= position.instr_number && position.instr_number <= 3, "Line number is not correct"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 1) return 2;
-			if (x == 2) return 1;
+			if (x == 2) return 3;
+			if (x == 3) return 2;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};

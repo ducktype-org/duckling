@@ -4,9 +4,10 @@
  */
 #pragma once
 
-#include <functional>
 #include <operations/operation.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include <functional>
 
 namespace operation {
 	TypedOperation createDefaultEquality(ts::TypeInfo type_info);

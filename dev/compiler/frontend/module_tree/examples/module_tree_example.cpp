@@ -1,6 +1,7 @@
 #include <frontend/module_tree/module_tree.hpp>
-#include <iostream>
 #include <init/init.hpp>
+
+#include <iostream>
 
 int main() {
 	init::InitObject _;

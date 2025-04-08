@@ -1,39 +1,43 @@
 #include "type_metadata.hpp"
 
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+
 namespace vm {
 	TypeRef TypeMetadata::addType(Type&& type) {
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 
+		base::StrID name = type.name;
+		TypeID      id   = types.insert(std::move(type), name);
+		TypeRef     ref  = types.at(id);
+		ref->id          = id;
 
-		auto id      = types.emplaceBack(std::move(type));
-		types[id].id = id;
-		types_ids.push_back(id);
-
-		names_to_type.put(types[id].getName(), id);
-
-		return types.getRef(id).value();
+		return ref;
 	}
 
 	void TypeMetadata::finalize() {
 		CORE_ASSERT(state == TypeMetadataState::AddingTypes, "bad TypeMetadata state");
 		state = TypeMetadataState::Finalized;
 
-		for (auto id: types_ids) types[id].finalize();
+		for (auto& tp: types) tp.finalize();
 	}
 
-	TypeCRef TypeMetadata::getType(TypeID id) const {
-		return types.getCRef(id).expect("Bad TypeID in getType");
+	TypeCRef TypeMetadata::at(TypeID id) const { return types.at(id); }
+
+	base::Optional<TypeCRef> TypeMetadata::atMaybe(TypeID id) const { return types.atMaybe(id); }
+
+	base::Optional<TypeRef> TypeMetadata::atMaybe(TypeID id) { return types.atMaybe(id); }
+
+	base::Optional<TypeCRef> TypeMetadata::atMaybe(base::StrID name) const {
+		return types.atMaybe(name);
 	}
 
-	base::Optional<TypeCRef> TypeMetadata::getTypeSafe(TypeID id) const {
-		return types.getCRef(id);
-	}
+	base::Optional<TypeRef> TypeMetadata::atMaybe(base::StrID name) { return types.atMaybe(name); }
 
-	base::Optional<TypeCRef> TypeMetadata::getTypeByName(base::StrID name) const {
-		if (names_to_type.contains(name))
-			return getType(names_to_type[name]);
-		else
-			return {};
-	}
+	TypeRef TypeMetadata::at(TypeID id) { return types.at(id); }
+
+	TypeRef TypeMetadata::at(base::StrID name) { return types.at(name); }
+
+	TypeCRef TypeMetadata::at(base::StrID name) const { return types.at(name); }
 
 }

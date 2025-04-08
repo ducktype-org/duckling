@@ -1,5 +1,7 @@
 #include <tester/tester.hpp>
+
 #include <base/strongly_typed_id.hpp>
+
 #include <string>
 
 STRONG_TYPEDEF_ID(A);

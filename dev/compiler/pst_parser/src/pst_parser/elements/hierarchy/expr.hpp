@@ -1,14 +1,15 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include "lists.hpp"           // IWYU pragma: keep
+#include "meta.hpp"
+#include "not_statements.hpp"  // IWYU pragma: keep
+
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
-
-#include "meta.hpp"
-#include "lists.hpp"           // IWYU pragma: keep
-#include "not_statements.hpp"  // IWYU pragma: keep
 #include <token_parser_core/common_elements.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
@@ -25,22 +26,16 @@ namespace pst {
 		ExprClassify() = delete;
 
 		CONDITION(isComparison) {
-			static std::set<lang_def::NamedOperator> comparisons = {
-				NamedOperator::Lesser, NamedOperator::LEqual, NamedOperator::Greater,
-				NamedOperator::GEqual, NamedOperator::Equal,  NamedOperator::NotEqual,
-			};
-			return state[fwd].isOperator()
-			    && comparisons.contains(state[fwd].asOperator().asNamed());
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
+			).valueOr(false);
 		}
 
 		CONDITION(isAssignment) {
-			return state[fwd].isOperator() && !isComparison(state, fwd)
-			    && state[fwd].getStrValue().back() == '=';
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
+			).valueOr(false);
 		}
 
 		CONDITION(exprStmtEnd) { return state[fwd].is(Special::Semicolon); }
-
-		CONDITION(isOperator) { return state[fwd].isOperator(); }
 	};
 
 	namespace expr {
@@ -61,8 +56,8 @@ namespace pst {
 		 */
 		class PrefixOperator: public ExprElement {
 		protected:
-			MBox<ExprElement> expr;
-			Operator          op;
+			AccessInternal<ExprElement> expr;
+			Operator                    op;
 
 		public:
 			explicit PrefixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -81,7 +76,7 @@ namespace pst {
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 			[[nodiscard]]
-			MCRef<ExprElement> getExpr() const;
+			AccessLocked<ExprElement> getExpr() const;
 		};
 
 		/**
@@ -89,8 +84,8 @@ namespace pst {
 		 */
 		class SuffixOperator: public ExprElement {
 		protected:
-			Operator          op;
-			MBox<ExprElement> expr;
+			Operator                    op;
+			AccessInternal<ExprElement> expr;
 
 		public:
 			explicit SuffixOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -109,7 +104,7 @@ namespace pst {
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 			[[nodiscard]]
-			MCRef<ExprElement> getExpr() const;
+			AccessLocked<ExprElement> getExpr() const;
 		};
 
 		/**
@@ -117,9 +112,9 @@ namespace pst {
 		 */
 		class BinaryOperator: public ExprElement {
 		protected:
-			MBox<ExprElement> left;
-			Operator          op;
-			MBox<ExprElement> right;
+			AccessInternal<ExprElement> left;
+			Operator                    op;
+			AccessInternal<ExprElement> right;
 
 		public:
 			explicit BinaryOperator(const dia::SourcePosition& pos, Operator op, i64 precedence):
@@ -131,9 +126,9 @@ namespace pst {
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			MCRef<ExprElement> getLeftOperand() const;
+			AccessLocked<ExprElement> getLeftOperand() const;
 			[[nodiscard]]
-			MCRef<ExprElement> getRightOperand() const;
+			AccessLocked<ExprElement> getRightOperand() const;
 			[[nodiscard]]
 			lexer::Operator getOperator() const;
 
@@ -190,7 +185,7 @@ namespace pst {
 		 * it's own parsing in the future
 		 */
 		class TemplateSpecifier final: public ExprElement {
-			MBox<TemplateList> inner;
+			AccessInternal<TemplateList> inner;
 
 		public:
 			TemplateSpecifier(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -211,8 +206,8 @@ namespace pst {
 		 * @brief Element that represents an identifier literal in an expression
 		 */
 		class IdentifierLiteral final: public ExprElement {
-			tpc::Identifier                   name;
-			base::Optional<MBox<ExprElement>> template_specifier;
+			tpc::Identifier                             name;
+			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
 			IdentifierLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -238,8 +233,8 @@ namespace pst {
 		 * @brief Element that represents an keyword literal in an expression
 		 */
 		class KeywordLiteral final: public ExprElement {
-			Keyword                           keyword = Keyword::NotAKeyword;
-			base::Optional<MBox<ExprElement>> template_specifier;
+			Keyword                                     keyword = Keyword::NotAKeyword;
+			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
 			KeywordLiteral(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -266,9 +261,9 @@ namespace pst {
 		 * .?][name][optionally template specifier]`
 		 */
 		class Access final: public ExprElement {
-			base::StrID                       type;  ///< either `.` or `.?`
-			tpc::Identifier                   name;
-			base::Optional<MBox<ExprElement>> template_specifier;
+			base::StrID                                 type;  ///< either `.` or `.?`
+			tpc::Identifier                             name;
+			base::Optional<AccessInternal<ExprElement>> template_specifier;
 
 		public:
 			Access(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -290,8 +285,8 @@ namespace pst {
 			const tpc::Identifier& getName() const;
 
 			[[nodiscard]]
-			base::Optional<MCRef<ExprElement>> getTemplateSpecifier() const {
-				return template_specifier.map([](const auto& t) { return t.ref(); });
+			base::Optional<AccessLocked<ExprElement>> getTemplateSpecifier() const {
+				return template_specifier.map([](const auto& t) { return t.give(); });
 			}
 		};
 
@@ -301,7 +296,7 @@ namespace pst {
 		class Call final: public ExprElement {
 			lexer::Token::BracketType type
 				= lexer::Token::BracketType::None;  ///< either Round or Square
-			MBox<CallList> args;
+			AccessInternal<CallList> args;
 
 		public:
 			Call(const dia::SourcePosition& pos): ExprElement(pos, 300) {}
@@ -314,7 +309,7 @@ namespace pst {
 
 			[[nodiscard]] lexer::Token::BracketType getType() const;
 
-			[[nodiscard]] MCRef<CallList> getArgs() const;
+			[[nodiscard]] AccessLocked<CallList> getArgs() const { return args.give(); }
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -328,8 +323,8 @@ namespace pst {
 		class ChainExpr final: public ExprElement {
 			using Lower = Atom;
 
-			MBox<ExprElement>              atom;
-			std::vector<MBox<ExprElement>> chain;
+			AccessInternal<ExprElement>              atom;
+			std::vector<AccessInternal<ExprElement>> chain;
 
 			/**
 			 * @brief checks length before the start of the next link
@@ -351,16 +346,22 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getAtom() const;
+			AccessLocked<ExprElement> getAtom() const;
+
 			[[nodiscard]]
-			const std::vector<MBox<ExprElement>>& getChain() const;
+			auto getChain() const {
+				using namespace std::views;
+				static auto give_one
+					= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
+				return std::ranges::ref_view(chain) | transform(give_one);
+			}
 		};
 
 		/**
 		 * @brief Expression in round brackets
 		 */
 		class RoundExpr final: public ExprElement {
-			MBox<ExprElement> expr;
+			AccessInternal<ExprElement> expr;
 
 		public:
 			explicit RoundExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
@@ -377,8 +378,8 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getInner() const {
-				return expr.ref();
+			AccessLocked<ExprElement> getInner() const {
+				return expr.give();
 			}
 		};
 
@@ -388,7 +389,7 @@ namespace pst {
 		 * A block that has value equal to the value returned from it.
 		 */
 		class BlockExpr final: public ExprElement {
-			MBox<CodeBlock> block;
+			AccessInternal<CodeBlock> block;
 
 		public:
 			explicit BlockExpr(const dia::SourcePosition& pos): ExprElement(pos, 200) {}
@@ -399,7 +400,7 @@ namespace pst {
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
-			MCRef<CodeBlock> getBlock() { return block.ref(); }
+			AccessLocked<CodeBlock> getBlock() { return block.give(); }
 
 			[[nodiscard]]
 			std::string elementType() const override {
@@ -452,32 +453,6 @@ namespace pst {
 			using Lower = GeneralSuffix;
 			using Self  = GeneralBinary;
 
-			/**
-			 * @brief is a general binary operators
-			 */
-			CONDITION(isGenBinOp) {
-				static const std::set<lang_def::NamedOperator> gen_bin_ops = {
-					NamedOperator::Exponentiate, NamedOperator::Multiply, NamedOperator::Divide,
-					NamedOperator::Remainder,    NamedOperator::Plus,     NamedOperator::Minus,
-					NamedOperator::Pipe,
-				};
-				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
-			}
-
-			static i64 getOpPrec(Operator op) {
-				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Pipe, 540 },      { NamedOperator::Exponentiate, 550 },
-					{ NamedOperator::Multiply, 560 },  { NamedOperator::Divide, 560 },
-					{ NamedOperator::Remainder, 560 }, { NamedOperator::Plus, 570 },
-					{ NamedOperator::Minus, 570 },
-				};
-				if (not precedences.contains(op.asNamed()))
-					throw base::NotYetImplemented(
-						base::strConcat("Operator precedence for operator: ", op.value.strView())
-					);
-				return precedences.at(op.asNamed());
-			}
-
 			struct OperatorBuilder;
 
 			using BuilderExpr = std::variant<i64, Box<OperatorBuilder>>;
@@ -490,7 +465,7 @@ namespace pst {
 
 		public:
 			explicit GeneralBinary(const dia::SourcePosition& pos, Operator op):
-				  BinaryOperator(pos, op, getOpPrec(op)) {}
+				  BinaryOperator(pos, op, op.getGenBinOpPrecedence()) {}
 
 			/**
 			 * @brief
@@ -521,8 +496,8 @@ namespace pst {
 		class ComparisonChain final: public ExprElement {
 			using Lower = GeneralBinary;
 
-			std::vector<MBox<ExprElement>> sub_expr;
-			std::vector<Operator>          operators;
+			std::vector<AccessInternal<ExprElement>> sub_expr;
+			std::vector<Operator>                    operators;
 
 			static i64 skipToOp(const LangParserState& state, i64 base, i64 length);
 
@@ -601,9 +576,9 @@ namespace pst {
 		class Ternary final: public ExprElement {
 			using Lower = LogicOr;
 
-			MBox<ExprElement> condition;
-			MBox<ExprElement> if_true;
-			MBox<ExprElement> if_false;
+			AccessInternal<ExprElement> condition;
+			AccessInternal<ExprElement> if_true;
+			AccessInternal<ExprElement> if_false;
 
 		public:
 			explicit Ternary(const dia::SourcePosition& position): ExprElement(position, 800) {}
@@ -629,7 +604,7 @@ namespace pst {
 		class Comma final: public ExprElement {
 			using Lower = Ternary;
 
-			std::vector<MBox<ExprElement>> expressions;
+			std::vector<AccessInternal<ExprElement>> expressions;
 
 		public:
 			explicit Comma(const dia::SourcePosition& position): ExprElement(position, 900) {}
@@ -646,7 +621,12 @@ namespace pst {
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
 
 			[[nodiscard]]
-			const std::vector<MBox<ExprElement>>& getExpressions() const;
+			auto getExpressions() const {
+				using namespace std::views;
+				static auto give_one
+					= [](const auto& ref) -> AccessLocked<ExprElement> { return ref.give(); };
+				return std::ranges::ref_view(expressions) | transform(give_one);
+			}
 		};
 
 		/**
@@ -657,9 +637,9 @@ namespace pst {
 		class Assignment final: public ExprElement {
 			using Lower = Comma;
 
-			MBox<ExprElement> variables;
-			base::StrID       type;
-			MBox<ExprElement> value;
+			AccessInternal<ExprElement> variables;
+			base::StrID                 type;
+			AccessInternal<ExprElement> value;
 
 		public:
 			explicit Assignment(const dia::SourcePosition& position):
@@ -671,8 +651,8 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getVariables() const {
-				return variables.ref();
+			AccessLocked<ExprElement> getVariables() const {
+				return variables.give();
 			}
 
 			[[nodiscard]]
@@ -681,8 +661,8 @@ namespace pst {
 			}
 
 			[[nodiscard]]
-			MCRef<ExprElement> getValue() const {
-				return value.ref();
+			AccessLocked<ExprElement> getValue() const {
+				return value.give();
 			}
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);

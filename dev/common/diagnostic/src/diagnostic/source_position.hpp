@@ -17,11 +17,13 @@ int main() {
 
 #pragma once
 
-#include <token_file/forward.hpp>
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
-#include <string>
+#include <token_file/forward.hpp>
+
 #include <base/ref.hpp>
+
+#include <string>
 
 namespace dia {
 	/**
@@ -48,6 +50,8 @@ namespace dia {
 		SourcePosition(const SourcePosition& other, usize source_end);
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
+
+		bool operator==(const SourcePosition& other) const = default;
 
 		/**
 		 * @brief Get lines surrounding with error colored.

@@ -2,8 +2,8 @@
 
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
-#include <base/ref.hpp>
 #include <base/raw_view.hpp>
+#include <base/ref.hpp>
 
 namespace vm {
 
@@ -13,8 +13,8 @@ namespace vm {
 	 * @brief Basic pointer used in the VM.
 	 * Contains the pointer to the block and the offset in the block.
 	 *
-	 * Most of it's methods are moved to the static methods of the Memory class,
-	 * to avoid circular dependencies and becasue it requires nontrivial logic.
+	 * Most of its methods are moved to the static methods of the Memory class,
+	 * to avoid circular dependencies and because it requires nontrivial logic.
 	 * It's good to think that the Memory class governs the pointers.
 	 */
 	class Pointer final {

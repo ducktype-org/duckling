@@ -1,7 +1,8 @@
 
-#include <base/string_id.hpp>
-#include <tester/tester.hpp>
 #include <system_command/system_command.hpp>
+#include <tester/tester.hpp>
+
+#include <base/string_id.hpp>
 
 class SystemCommandTests final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -13,13 +14,13 @@ public:
 private:
 	void exitCode() {
 		// https://en.wikipedia.org/wiki/True_and_false_(commands)
-		auto true_ec = system_command::SystemCommand(base::StrID("true")).execute();
+		auto true_ec = system_command::SystemCommand("true").execute();
 		assertTrue(true_ec == 0, "true command should return 0");
-		auto false_ec = system_command::SystemCommand(base::StrID("false")).execute(true, false);
+		auto false_ec = system_command::SystemCommand("false").execute(true, false);
 		assertTrue(false_ec == 1, "false command should return 1");
 
 		assertThrows<base::Panic>(
-			[&]() { system_command::SystemCommand(base::StrID("false")).execute(); },
+			[&]() { system_command::SystemCommand("false").execute(); },
 			"command should panic on non-zero exit code"
 		);
 	}

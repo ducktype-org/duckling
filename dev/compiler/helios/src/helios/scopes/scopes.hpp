@@ -18,18 +18,17 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
-#include <query_framework/query_int.hpp>
-#include <base/perfect_hash.hpp>
-#include <pst_parser/elements/elements.hpp>
-#include <pst_parser/lang_parser_state.hpp>
-#include <pst_parser/generic_query_key.hpp>
-
-#include "../scope_symbol_id.hpp"
 #include "../lookup_result.hpp"
+#include "../scope_symbol_id.hpp"
 
-// @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
-#include <frontend/module_tree/queries.hpp>
+#include <frontend/module_tree/queries.hpp>  // @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
+#include <pst_parser/elements/elements.hpp>
+#include <pst_parser/generic_query_key.hpp>
+#include <pst_parser/lang_parser_state.hpp>
+#include <query_framework/query_int.hpp>
+
+#include <base/perfect_hash.hpp>
+#include <base/string_id.hpp>
 
 namespace compiler::helios {
 	/**
@@ -86,7 +85,7 @@ namespace compiler::helios {
 	 * Intuitively this is a scope, that you associate with given element,
 	 * when looking at the code (think of namespaces for example).
 	 */
-	ScopeID queryBodyCodeScopeFor(query::Context&, MCRef<pst::Stmt> stmt);
+	ScopeID queryBodyCodeScopeFor(query::Context&, pst::AccessLocked<pst::Stmt> stmt);
 
 	struct KeyOf_LookupInScope final {
 		ScopeID     scope;
@@ -113,6 +112,12 @@ namespace compiler::helios {
 	 * Also: dictates what symbols are contained in what scopes.
 	 */
 	DECLARE_QUERY(QuerySymbolsInScope, ScopeID, CRef<std::vector<SymID>>);
+
+	/**
+	 * @brief Query all scopes defined in a given module.
+	 * Note: Not implemented yet.
+	 */
+	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
 	/**
 	 * @brief Root scope of main module file.

@@ -1,28 +1,29 @@
-#include <base/exceptions.hpp>
+#include <filesystem/file.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
+#include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
-#include <base/optional.hpp>
-#include <helios/helios_errors.hpp>
+#include <helios/hout/visitors.hpp>
+#include <helios/queries.hpp>
 #include <helios/scopes/scopes.hpp>
 #include <helios/symbols/symbols.hpp>
-#include <helios/queries.hpp>
-#include <helios/hout/elements.hpp>
-#include <helios/hout/visitors.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
+#include <lexer/lexer.hpp>
+#include <pst_parser/test_utils/pst_test_utils.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>  // @todo relax it to just Context type #404
 #include <tester/tester.hpp>
-#include <pst_parser/test_utils/pst_test_utils.hpp>
-#include <filesystem/file.hpp>
-#include <lexer/lexer.hpp>
-#include <type_traits>
 #include <typesystem/higher/all.hpp>
 #include <typesystem/higher/internal/queries.hpp>
 
-#include <helios/test_utils/helios_test_utils.hpp>
-#include <base/variant.hpp>
 #include <base/box.hpp>
-#include <helios/helios_result.hpp>
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <type_traits>
 
 using namespace compiler::helios::test_utils;
 
@@ -40,6 +41,7 @@ public:
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testSimpleHOUT);
+		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
@@ -203,6 +205,27 @@ private:
 
 		// just for cov and to see if it does not throw:
 		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
+	}
+
+	void testModuleHOUT() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_module_test")));
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
+		unsigned long functions = 0;
+		unsigned long glob_data = 0;
+
+		for (const auto& hout: houts) {
+			functions += hout.functions.size();
+			glob_data += hout.glob_data.size();
+		}
+
+		ASSERT_EQUAL(functions, 0);
+		ASSERT_EQUAL(glob_data, 0);
+
+		// @TODO uncomment when QueryScopesInModule is implemented
+		// ASSERT_EQUAL(functions, 3);
+		// ASSERT_EQUAL(glob_data, 5);
 	}
 
 	void testHoutVisitor() {
@@ -712,30 +735,31 @@ private:
 			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
 				ASSERT_TRUE(expr->isTopLevel());
 				auto expected_scope
-					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ expr });
+					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr.toMRef());
 
 				// this can't be auto because of recursive lambda
-				std::function<void(CRef<pst::LangElement>)> sub_test_expr =
-					[&](CRef<pst::LangElement> inner_expr) {
-						auto inner_scope
-							= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>({ inner_expr });
-						ASSERT_EQUAL(expected_scope, inner_scope);
+				std::function<void(CRef<pst::LangElement>)> sub_test_expr
+					= [&](CRef<pst::LangElement> inner_expr) {
+						  auto inner_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(
+							  inner_expr.toMRef()
+						  );
+						  ASSERT_EQUAL(expected_scope, inner_scope);
 
-						for (auto sub_inner: inner_expr->viewSubElements()) {
-							variant_match(sub_inner) {
-								variant_case(pst::LangElement::ConstChild, sub_expr) {
-									sub_test_expr(sub_expr);
-								}
-								variant_default {}
-							}
-						}
-					};
+						  for (auto sub_inner: inner_expr->viewSubElements()) {
+							  variant_match(sub_inner) {
+								  variant_case(pst::LangElement::ConstChild, sub_expr) {
+									  sub_test_expr(sub_expr);
+								  }
+								  variant_default {}
+							  }
+						  }
+					  };
 
 				sub_test_expr(expr);
 			};
 
 			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
-				pst->getRootElement().toOpt().value()
+				&*pst->getRootElement().illegalAccess().value()
 			);
 
 			// We test that each expr_holder and all its sub expressions
@@ -746,18 +770,18 @@ private:
 					test_expr(expr_holder);
 				} else {
 					// test that element has a top-expr parent
-					auto element = expr_holder->getParent().value();
+					auto element = expr_holder->getParent().illegalAccess();
 
 					while (true) {
-						if (auto holder = dynamic_cast<const pst::ExprHolder*>(&*element)) {
-							if (holder->isTopLevel()) {
+						if (auto holder = element.value().dynamicCast<pst::ExprHolder>()) {
+							if (holder.value()->isTopLevel()) {
 								// OK, we found parent
 								break;
 							}
 						}
 						// if parent doesn't exist, we will
 						// hit panic here at some point:
-						element = element->getParent().value();
+						element = element.value()->getParent().illegalAccess();
 					}
 				}
 			}
