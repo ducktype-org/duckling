@@ -1,3 +1,9 @@
+# Allow our dotfiles
+!.python-version
+!.pre-commit-config.yaml
+!.gitignore
+!.gitattributes
+
 # General
 .DS_Store
 .AppleDouble

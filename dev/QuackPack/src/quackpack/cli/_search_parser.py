@@ -1,0 +1,26 @@
+from quackpack.util.global_context import GlobalContext
+
+from ._parser import CliParser
+
+
+def get_parser() -> CliParser:
+    """
+    Get the argument parser for `search` command.
+    ----
+    Returns:
+    - `CliParser`: Parser for `search` command.
+    """
+    return CliParser.subcommand(name="search", description="Search for a package in the registry").add_str(
+        long_name="package", help="Package name"
+    )
+
+
+def execute(ctx: GlobalContext) -> None:
+    """
+    Execute this subcommand.
+    ----
+    Args:
+    - `ctx`: all possibly needed context for this function.
+    """
+    ctx.console.debug("Implement 'execute()' for 'search'")
+    raise NotImplementedError

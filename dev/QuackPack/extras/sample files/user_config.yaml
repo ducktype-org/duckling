@@ -1,16 +1,3 @@
-Aliases: {}
-Build:
-  ExtraFlags: ''
-Cache:
-  MaxSize: 10G
-  Path: ~/.cache/duck/qp
-Packaging:
-  BuildFromSource: false
-Repository:
-  Default:
-  - 'TODO: Add here Ducknest URL.'
-  Extra: null
-Security:
-  TypoTolerance:
-    Enabled: false
-    MaxDistance: 10
+version https://git-lfs.github.com/spec/v1
+oid sha256:84fdc88ca03e0cf2fd19138dc1e94b1eb9c4e4108904c43df2650aa60ee1d03b
+size 320

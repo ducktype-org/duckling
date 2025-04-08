@@ -17,14 +17,7 @@ Check their [Installation guide](https://docs.astral.sh/uv/getting-started/insta
 
 To run Quack Pack all you need is:
 ```bash
-cd quackpack
-uv run
-```
-
-And building our self hosted packages server, Ducknest, is as simple as building Quack Pack.
-```bash
-cd ducknest
-uv run
+uv run quackpack
 ```
 
 ## Testing locally CI
@@ -38,7 +31,6 @@ ruff format
 
 and last by a combination pytest+uv:
 ```bash
-# In appropriate subproject directory.
 uv run pytest
 ```
 
