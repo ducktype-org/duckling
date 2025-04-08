@@ -29,7 +29,7 @@ private:
 
 		vector.pushBack(2);
 		ASSERT_EQUAL(vector.lastIndex(), 0);
-		
+
 		vector.pushBack(3);
 		vector.pushBack(4);
 

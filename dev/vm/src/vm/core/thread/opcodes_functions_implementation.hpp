@@ -198,7 +198,7 @@ namespace vm {
 			// the frame of the caller.
 			auto& runtime_data = thread.runtime_data;
 			auto  function_id  = static_cast<usize>(instr->arg0);
-			auto called_func  = thread.executing_program->functions[function_id];
+			auto  called_func  = thread.executing_program->functions[function_id];
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func->arg_size + called_func->ret_size;
@@ -270,9 +270,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto  function_id = static_cast<usize>(instr->arg0);
+			auto function_id = static_cast<usize>(instr->arg0);
 			auto function    = thread.executing_program->functions[function_id];
-			instr             = function->bc.data();
+			instr            = function->bc.data();
 
 			if (local_stack + function->local_stack_size > thread.runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
