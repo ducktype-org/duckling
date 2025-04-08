@@ -82,9 +82,9 @@ public:
 			ASSERT_TRUE(id <= id);
 			ASSERT_TRUE(id >= id);
 			ASSERT_TRUE(id == id);
-			ASSERT_TRUE(not (id != id));
-			ASSERT_TRUE(not (id < id));
-			ASSERT_TRUE(not (id > id));
+			ASSERT_TRUE(not(id != id));
+			ASSERT_TRUE(not(id < id));
+			ASSERT_TRUE(not(id > id));
 			ASSERT_TRUE(id < Direct::fromU64(i + 1));
 			ASSERT_TRUE(id < Direct::bad());
 		}
