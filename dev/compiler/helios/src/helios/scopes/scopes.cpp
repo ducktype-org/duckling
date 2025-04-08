@@ -20,25 +20,9 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include "base/anycast.hpp"
 #include "base/for_each.hpp"
 #include "pst_parser/lang_parser_element.hpp"
-
-// @todo
-// remove this macro when there is a visitor with default method
-// @todo
-// is viewSubElements illegal?
-#define SQ ::
-#define MAKE_VISIT(type)                                                                           \
-	void visit##type(pst::Access<pst SQ type> element) override {                                  \
-		if (getScopeKind(ctx, element) == ElementScopeKind::Standard) {                            \
-			out.insert(scopeOf(element));                                                          \
-		}                                                                                          \
-		for (auto sub: element->viewSubElements()) {                                               \
-			variant_match(sub) {                                                                   \
-				variant_case(pst::LangElement::ConstChild, child) { child->acceptVisitor(*this); } \
-			}                                                                                      \
-		}                                                                                          \
-	}
 
 namespace compiler::helios {
 
@@ -325,63 +309,36 @@ namespace compiler::helios {
 		/**
 		 * @brief Gets scopes for a module.
 		 */
-		struct ScopeGrabVisitor final: pst::PstVisitorPanicky {
-			ScopeGrabVisitor(Context& ctx, const QKey& key): ctx(ctx), key(key) {}
+		struct ScopeGrabPseudoVisitor {
+			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
 
 			std::set<ScopeID> out;
 			Context&          ctx;
-			const QKey&       key;
 
 			template<class T>
 			ScopeID scopeOf(pst::Access<T> element) {
 				return ctx.query<QueryPrimaryCodeScopeFor>(element);
 			}
 
-			// @todo
-			// remove this macro when there is a visitor with default method
-			FOR_EACH(
-				MAKE_VISIT,
-				Import,
-				Using,
-				Alias,
-				ExprStmt,
-				Return,
-				Defer,
-				Restart,
-				Break,
-				Redo,
-				Continue,
-				Throw,
-				Const,
-				Block,
-				Namespace,
-				Class,
-				Fun,
-				For,
-				Variable,
-				If,
-				While,
-				Method,
-				Field,
-				Constructor,
-				Destructor,
-				AccessBlock,
-				FunParam
-			)
+			template<class T>
+			void visit(pst::Access<T> element) {
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out.insert(scopeOf(element));
+				for (auto sub: element->viewSubElements()) {
+					variant_match(sub) {
+						variant_case(pst::LangElement::ConstChild, child) {
+							this->visit(child);
+						}
+					}
+				}
+			}
 		};
 
-		static auto getScopes(Context& ctx, QKey key, frontend::FileID file) -> std::set<ScopeID> {
-			ScopeGrabVisitor scope_grab(ctx, key);
-
+		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
 			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
 
-			// handle TopLevel separetly
-			scope_grab.out.insert(scope_grab.scopeOf(root));                                                            
-			for (auto sub: root->viewSubElements()) {                                               
-				variant_match(sub) {                                                                   
-					variant_case(pst::LangElement::ConstChild, child) { child->acceptVisitor(scope_grab); } 
-				}                                                                                      
-			}
+			ScopeGrabPseudoVisitor scope_grab(ctx);
+			scope_grab.visit(root);
 
 			return std::move(scope_grab.out);
 		}
@@ -389,14 +346,12 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// fetch scopes from main module file
 			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
-			std::set<ScopeID> output    = getScopes(ctx, key, main_file);
+			std::set<ScopeID> output    = getScopes(ctx, main_file);
 
 			// fetch scopes from other module files
-			// @todo
-			// refactor if TopLevel is included in PstVisitor 
 			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
 			for (auto file: *source_files) {
-				auto scopes = getScopes(ctx, key, file);
+				auto scopes = getScopes(ctx, file);
 				output.merge(scopes);
 			}
 
