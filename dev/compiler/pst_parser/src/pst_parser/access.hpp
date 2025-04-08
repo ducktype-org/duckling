@@ -7,7 +7,6 @@
 #include <query_framework/query_int.hpp>
 
 #include "lang_parser_element.hpp"
-#include "pst_parser/elements/hierarchy/actions.hpp"
 
 namespace pst {
 	/**
@@ -150,7 +149,11 @@ namespace pst {
 			return *this;
 		}
 
-		static AccessLocked illegalConstructor(base::Ref<Element> e) {
+
+		// @todo
+		// tmp solution to work around children access
+		// see: dev/compiler/helios/src/helios/scopes/scopes.cpp QueryScopesInModule
+		static AccessLocked illegalConstructor(base::MCRef<Element> e) {
 			return {e};
 		}
 	};

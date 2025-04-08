@@ -40,7 +40,6 @@ public:
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testSimpleHOUT);
-		TESTER_ADD_TEST(testModuleScopes);
 		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
 		TESTER_ADD_TEST(testHeliosResultConcept);
@@ -207,16 +206,8 @@ private:
 		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
 	}
 
-	void testModuleScopes() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/simple_scopes")));
-
-		auto scopes = query::entryPoint<compiler::helios::QueryScopesInModule>(module);
-
-		ASSERT_EQUAL(scopes->size(), 6);
-	}
-
 	void testModuleHOUT() {
-		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_module_test")));
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/simple_scopes")));
 
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
 
@@ -228,12 +219,8 @@ private:
 			glob_data += hout.glob_data.size();
 		}
 
-		ASSERT_EQUAL(functions, 0);
-		ASSERT_EQUAL(glob_data, 0);
-
-		// @TODO uncomment when QueryScopesInModule is implemented
-		// ASSERT_EQUAL(functions, 3);
-		// ASSERT_EQUAL(glob_data, 5);
+		ASSERT_EQUAL(functions, 3);
+		ASSERT_EQUAL(glob_data, 1);
 	}
 
 	void testHoutVisitor() {

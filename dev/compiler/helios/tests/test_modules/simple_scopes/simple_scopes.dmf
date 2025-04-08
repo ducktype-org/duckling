@@ -1,13 +1,13 @@
-fun foo(a:i32) -> i32 {
+fun foo(a:i32) -> i32 = {
     return a;
 }
 
 namespace aaa {
-    fun aaa_foo(aaa:i32) -> i32 {
+    fun aaa_foo(aaa:i32) -> i32 = {
         return aaa;
     }
 
-    fun aaa_moo(aaa:i64) -> i64 {
+    fun aaa_moo(aaa:i64) -> i64 = {
         return aaa;
     }
 }

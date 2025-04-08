@@ -20,7 +20,7 @@ void printContextErrors() {
 int notMain() {
 	init::InitObject _;
 
-	fs::FilePath path_to_compile = fs::FilePath("/home/krzysiek/rift/duckling/dev/compiler/helios/tests/test_modules/hout_simple_test");
+	fs::FilePath path_to_compile = fs::FilePath("/home/krzysiek/rift/duckling/dev/compiler/helios/tests/test_modules/simple_scopes");
 
 	using namespace compiler;
 
@@ -28,11 +28,12 @@ int notMain() {
 
 	defer(printContextErrors());
 
-	auto scopes = query::entryPoint<helios::QueryScopesInModule>(root);
+	std::cerr << "Fetching main module.\n";
+	auto main_hout = query::entryPoint<helios::QueryModuleHOUT>(root);
+	std::cerr << "Main module HOUT fetched:\n";
+	std::cerr << main_hout.debugPrint();
 
-	for (auto s: *scopes) {
-		s.debugPrintScopeAndParents();
-	}
+	auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(root);
 
 	return 0;
 }

@@ -325,11 +325,11 @@ namespace compiler::helios {
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out.insert(scopeOf(element));
 				// @todo 
-				// fix when children get access
+				// change when children get access
 				for (auto sub: element->viewSubElements()) {
 					variant_match(sub) {
 						variant_case(pst::LangElement::ConstChild, child) {
-							this->visit(pst::AccessLocked<T>::illegalConstructor(child).unlock(ctx));
+							this->visit(pst::AccessLocked<pst::LangElement>::illegalConstructor(child).unlock(ctx));
 						}
 					}
 				}
