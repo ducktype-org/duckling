@@ -86,7 +86,7 @@ namespace base {
 		 * @brief Erases value at @p key position if it exists.
 		 * @returns Whether a value was erased.
 		 */
-		bool erase(const KEY_T& key) { data.erase(key); }
+		bool erase(const KEY_T& key) { return data.erase(key); }
 
 		/**
 		 * Clears all data from the data structure.

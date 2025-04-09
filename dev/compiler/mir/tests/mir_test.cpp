@@ -2,6 +2,7 @@
  * @file mir_tests.cpp
  */
 
+#include "base/exceptions.hpp"
 #include "mir/mir_structure/mir_structure.hpp"
 #include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -29,6 +30,7 @@ public:
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(simpleFunctionCalls);
 		TESTER_ADD_TEST(functionParametersTest);
+		TESTER_ADD_TEST(functionEndTest);
 	}
 
 private:
@@ -64,9 +66,13 @@ private:
 			// It also make debug_prints covered by tests.
 			std::stringstream all_functions;
 			foo1_mir.debugPrint(all_functions);
+			ASSERT_TRUE(foo1_mir.validateBlockIDs().isOk());
 			foo2_mir.debugPrint(all_functions);
+			ASSERT_TRUE(foo2_mir.validateBlockIDs().isOk());
 			foo3_mir.debugPrint(all_functions);
+			ASSERT_TRUE(foo3_mir.validateBlockIDs().isOk());
 			foo4_mir.debugPrint(all_functions);
+			ASSERT_TRUE(foo4_mir.validateBlockIDs().isOk());
 		});
 	}
 
@@ -120,6 +126,7 @@ private:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
 			foo_mir.debugPrint(foo_str);
+			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 		});
 	}
 
@@ -187,6 +194,7 @@ private:
 			ASSERT_EQUAL(1, functions.size());
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			ASSERT_TRUE(foo_mir->validateBlockIDs().isOk());
 
 			// note: it might change where those branch operations are placed:
 			// if this happen just see mir-output of tested module for mir block numbers
@@ -208,6 +216,7 @@ private:
 
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
 			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
+			ASSERT_TRUE(foo_mir->validateBlockIDs().isOk());
 
 			u64 count_of_calls = 0;
 
@@ -288,6 +297,43 @@ private:
 				}
 			}
 			ASSERT_EQUAL(return_value_count, 1);
+		});
+	}
+
+	void functionEndTest() {
+		auto [module, scope] = getModule(fs::FilePath(path("modules/function_end_test")));
+
+		withContextDo([&](query::Context& ctx) {
+			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
+			auto& functions = unit->functions;
+			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(functions.at(0).original_name, base::StrID("missing_return"));
+			ASSERT_EQUAL(functions.at(1).original_name, base::StrID("should_add_retvoid"));
+			ASSERT_EQUAL(functions.at(2).original_name, base::StrID("unreachable_end"));
+
+			auto x = ctx.query<compiler::mir::LowerToMirFunction>(
+				{ functions.at(0) }
+			);
+			x->debugPrint(std::cout);
+			// assertThrows<base::Panic>(
+			// 	[&]() {
+			// 		ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
+			// 	},
+			// 	"Return value in function without return type"
+			// );
+
+			auto should_add_retvoid_fun = ctx.query<compiler::mir::LowerToMirFunction>(
+				{ functions.at(1) }
+			);
+			
+			should_add_retvoid_fun->debugPrint(std::cout);
+			should_add_retvoid_fun->validateBlockIDs();
+
+			auto unreachable_end_fun = ctx.query<compiler::mir::LowerToMirFunction>(
+				{ functions.at(2) }
+			);
+			unreachable_end_fun->debugPrint(std::cout);
+			unreachable_end_fun->validateBlockIDs();
 		});
 	}
 };

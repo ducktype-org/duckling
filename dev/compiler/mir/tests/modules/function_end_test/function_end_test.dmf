@@ -1,0 +1,29 @@
+
+fun missing_return() -> i64 = {
+    if (true) {
+        return 1;
+    }
+}
+
+fun should_add_retvoid() = {
+    if (true) {
+        if (true) {
+            return;
+        }
+        if (false) {
+            return;
+        }
+    }
+}
+
+fun unreachable_end() = {    
+    if (true) {
+        if (true) {
+
+        }
+        if (false) {
+
+        }
+    }
+    return;
+}

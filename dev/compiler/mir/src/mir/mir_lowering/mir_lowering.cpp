@@ -5,6 +5,7 @@
  */
 
 #include "mir_lowering.hpp"
+#include <unordered_set>
 
 #include "mir/mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
@@ -248,16 +249,16 @@ namespace compiler::mir {
 			block_order.reserve(this->blocks.size());
 
 			base::StableHashMap<BlockID, Block> function_blocks;
-			
+
 			// First element in block order is the entry block
 			block_order.push_back(entry_block_id);
 
 			// Count in "reverse order" to have more intuitive order
 			// since creation of blocks is done from the end of the function.
-			for (usize i = this->blocks.size(); i-- > 0; ) {
+			for (usize i = this->blocks.size(); i-- > 0;) {
 				Block block = this->blocks.getRef(i).value()->build();
-				
-				if (block.id != entry_block_id) // entry block is already added to the block order
+
+				if (block.id != entry_block_id)  // entry block is already added to the block order
 					block_order.emplace_back(block.id);
 
 				function_blocks.put(block.id, std::move(block));
@@ -775,11 +776,58 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
+	bool isBlockReachable(const Function &function, BlockID checked_block_id) {
+		for (const auto block_id : function.block_order) {
+			const auto& block = function.blocks[block_id];
+			auto successors = getTerminatorSuccessors(block.terminator);
+			for (const auto successor : successors) {
+				if (successor == checked_block_id) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * @brief The last block of the MIR function has "FunctionEnd" terminator which is a mock-up.
+	 * 
+	 * This function deals with this terminator:
+	 * * if block is unreachable, it is removed
+	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
+	 * * if block is reachable and function returns value, throws missing return error
+
+	 * @note It is assumed that the last block is the last in the block order.
+	 */
+	Function eliminateFunctionEnd(query::Context& ctx, Function function) {
+		CORE_ASSERT(
+			function.blocks.size() > 0,
+			"Function should have at least one block after lowering"
+		);
+
+		auto last_block_id = function.block_order.back();
+		CORE_ASSERT(function.blocks[last_block_id].terminator.operation  == Operation::FunctionEnd, "Last block doesn't have FunctionEnd terminator");
+		if (not isBlockReachable(function, last_block_id)) {
+			function.blocks.erase(last_block_id);
+			function.block_order.pop_back();
+
+			return function;
+		}
+		if (function.return_type.getType() == ctx.query<tsh::QueryVoidType>({})) {
+			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
+			return function;
+		}
+		else {
+			// CORE_PANIC("Function with return value cannot have FunctionEnd terminator");
+			return function;
+		}
+	}
+
 	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-
+			// return function_no_lifetime;
 			// second step: lifetime stuff
 			return addDestructors(ctx, std::move(function_no_lifetime));
 		}

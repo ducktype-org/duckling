@@ -180,25 +180,26 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function->blocks) {
+				for (const auto& mir_block_id: key.function->block_order) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
+					mir_to_lir_block.put(mir_block_id, blocks.getRef(pos).value());
 				}
 			}
 
 			void lowerBlocks() {
 				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function->blocks | std::views::reverse) {
-					const auto lir_block = mir_to_lir_block[block.id];
+				for (const auto& mir_block_id: key.function->block_order) {
+					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
 
 					auto curr_block = lir_block;
-					for (const auto& mir_instruction: block.instructions)
+					const auto& mir_block = key.function->blocks[mir_block_id];
+					for (const auto& mir_instruction: mir_block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
 
-					lowerTerminator(curr_block, block.terminator);
+					lowerTerminator(curr_block, mir_block.terminator);
 				}
 			}
 
