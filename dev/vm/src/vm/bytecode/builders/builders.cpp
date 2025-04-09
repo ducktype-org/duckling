@@ -160,11 +160,12 @@ void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 }
 
 void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
-	if (stack_state_at_label.contains(at_label.label_name)) {
-		if (stack_state_at_label[at_label.label_name] != local_stack)
+	auto top = local_stack.empty() ? base::Optional<LocalStackEntry>{} : local_stack.back();
+	if (stack_top_at_label.contains(at_label.label_name)) {
+		if (stack_top_at_label[at_label.label_name] != top)
 			throw builders::StackStructureMismatchError(label_users.at(at_label.label_name));
 	} else {
-		stack_state_at_label.put(at_label.label_name, local_stack);
+		stack_top_at_label.put(at_label.label_name, top);
 		label_users.put(at_label.label_name, {});
 	}
 }
