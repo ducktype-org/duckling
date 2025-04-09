@@ -7,6 +7,7 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
@@ -36,7 +37,9 @@ namespace compiler::driver {
 
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
-		backend_driver->compileModule(module_data);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			backend_driver->compileModule(ctx, module_data);
+		});
 
 		backend_driver->link();
 	}

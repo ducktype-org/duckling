@@ -19,7 +19,7 @@ namespace compiler::driver {
 	 * @brief The last intermediate representation of the module before the backends.
 	 * It will be fed to the backends to generate the final output.
 	 */
-	struct BackendModuleData {
+	struct BackendModuleData final {
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
 	};
@@ -55,7 +55,7 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compileModule(const BackendModuleData& module_data) = 0;
+		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
 
 		virtual void link() = 0;
 

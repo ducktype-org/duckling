@@ -87,7 +87,7 @@ namespace vm {
 	 * It also provides endpoints for the VCPU to control the execution of the code
 	 * in a memory-safe way (see `external_api_mutex`).
 	 */
-	class VMThread {
+	class VMThread final {
 	private:
 		base::Optional<std::thread> exec_thread;
 
