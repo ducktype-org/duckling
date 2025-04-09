@@ -28,6 +28,7 @@ namespace vm::loader {
 		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
 		);
 		const StableTypeIdNameMap<code::Function>&  funcMap() const;
+		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 
