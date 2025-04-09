@@ -60,11 +60,8 @@ namespace compiler::mir {
 		// Idea of implementation: for each block we iterate over instructions
 		// and add destructors after each instruction (often 0 of them),
 		// based on scopes that ends there.
-
 		// context is unused, but left since it might be useful in the future.
-
 		// preserving block order is important, because of how MIR BlockIDs works
-		std::vector<Block> new_blocks;
 
 		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list)
@@ -73,8 +70,9 @@ namespace compiler::mir {
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
-		for (auto& block: function.blocks) {
+		for (auto& block_id: function.block_order) {
 			// each block is considered independently
+			const auto& block = function.blocks[block_id];
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -130,7 +128,7 @@ namespace compiler::mir {
 				// some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
 					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, function.blocks.at(u64(succ)).beginScope()
+						terminator.scope, function.blocks[succ].beginScope()
 					);
 
 					if (ending_scopes.has_value()) {
@@ -145,11 +143,16 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			new_blocks.push_back({ block.id, std::move(new_instructions), block.terminator });
+			function.blocks.put(
+				block.id,
+				{
+					.id           = block.id,
+					.instructions = std::move(new_instructions),
+					.terminator   = terminator,
+				}
+			);
 		}
 
-
-		function.blocks = std::move(new_blocks);
 		return function;
 	}
 }

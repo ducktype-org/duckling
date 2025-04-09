@@ -83,6 +83,12 @@ namespace base {
 		}
 
 		/**
+		 * @brief Erases value at @p key position if it exists.
+		 * @returns Whether a value was erased.
+		 */
+		bool erase(const KEY_T& key) { data.erase(key); }
+
+		/**
 		 * Clears all data from the data structure.
 		 */
 		void clear() { data.clear(); }
@@ -102,6 +108,8 @@ namespace base {
 		usize size() const {
 			return data.size();
 		}
+
+		bool operator==(const StableHashMap& other) const { return data == other.data; }
 
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;

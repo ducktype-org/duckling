@@ -2,11 +2,30 @@
 
 #include <helios/symbols/symbols.hpp>
 
+#include "base/ok_bad.hpp"
 #include <base/variant.hpp>
 
 #include <sstream>
 
 namespace compiler::mir {
+	Function::Function(
+		base::StrID                         name,
+		tsh::SymbolType<>                   return_type,
+		std::vector<tsh::SymbolType<>>      parameter_types,
+		base::StableHashMap<BlockID, Block> blocks,
+		std::vector<BlockID>                block_order,
+		base::StableVector<MirLocal>        local_list,
+		helios::ScopeID                     top_lifetime_scope,
+		helios::SymID                       helios_id
+	):
+		  name(name),
+		  return_type(return_type),
+		  parameter_types(std::move(parameter_types)),
+		  blocks(std::move(blocks)),
+		  block_order(std::move(block_order)),
+		  local_list(std::move(local_list)),
+		  top_lifetime_scope(top_lifetime_scope),
+		  helios_id(helios_id) {}
 
 	base::HashT Function::customPerfectHash() const { return base::perfectHash(helios_id); }
 
@@ -61,9 +80,11 @@ namespace compiler::mir {
 		}
 		output << "{\n";
 
-		for (const auto& block: blocks | std::views::reverse) {
+		for (const auto block_id: block_order) {
+			const auto& block = blocks[block_id];
+
 			output << "  block " << u64(block.id);
-			if (block.id == entry_block) output << " [entry]";
+			if (block.id == block_order[0]) output << " [entry]";
 			output << ":\n";
 			for (const auto& instruction: block.instructions) {
 				output << "    ";
@@ -161,5 +182,27 @@ namespace compiler::mir {
 		}
 		output << " ";
 		local->debugPrint(output);
+	}
+
+
+	base::OkBad Function::validateBlockIDs() const {
+		if (blocks.size() != block_order.size())
+			return base::BAD;
+
+		for (const auto& block_id: block_order) {
+			if (blocks.atMaybe(block_id).empty()) return base::BAD;
+			if (blocks[block_id].id != block_id) return base::BAD;
+		}
+
+		for (const auto& block_id: block_order) {
+			const auto& block = blocks[block_id];
+
+			auto successors = getTerminatorSuccessors(block.terminator);
+			for (const auto successor: successors) {
+				if (not blocks.contains(successor)) return base::BAD;
+			}
+		}
+
+		return base::OK;
 	}
 }

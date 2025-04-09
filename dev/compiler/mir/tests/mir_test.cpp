@@ -2,6 +2,7 @@
  * @file mir_tests.cpp
  */
 
+#include "mir/mir_structure/mir_structure.hpp"
 #include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -13,6 +14,7 @@
 using namespace tsh;
 using namespace compiler::helios::test_utils;
 using query::utils::withContextDo;
+using compiler::mir::BlockID;
 
 class MIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -100,19 +102,18 @@ private:
 
 			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
 
-			// @note: block order is reversed:
 			// @note: instruction count does not include terminator instruction:
 
 			using enum compiler::mir::Operation;
+			
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
 
-			ASSERT_EQUAL(foo_mir.blocks.at(4).id, foo_mir.entry_block);
-			ASSERT_EQUAL(foo_mir.blocks.at(4).instructions.size(), 1);
-			ASSERT_EQUAL(foo_mir.blocks.at(4).instructions.at(0).operation, Assign);
-			ASSERT_EQUAL(foo_mir.blocks.at(4).terminator.operation, Branch);
-
-			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.size(), 1);
-			ASSERT_EQUAL(foo_mir.blocks.at(3).instructions.at(0).operation, Assign);
-			ASSERT_EQUAL(foo_mir.blocks.at(3).terminator.operation, Jump);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
 
 
 			// Test debug print:
@@ -138,12 +139,11 @@ private:
 			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
 
 			auto get_block_terminator
-				= [&](u64 block_id) { return foo_mir->blocks.at(block_id).terminator; };
+				= [&](u64 block_id) { return foo_mir->blocks[BlockID(block_id)].terminator; };
 			auto get_block_successors = [&](u64 block_id) {
 				return getTerminatorSuccessors(get_block_terminator(block_id));
 			};
 
-			using compiler::mir::BlockID;
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(0), BlockList{});
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
@@ -190,8 +190,8 @@ private:
 
 			// note: it might change where those branch operations are placed:
 			// if this happen just see mir-output of tested module for mir block numbers
-			auto true_mir_value  = foo_mir->blocks.at(6).terminator.arguments.at(0);
-			auto false_mir_value = foo_mir->blocks.at(3).terminator.arguments.at(0);
+			auto true_mir_value  = foo_mir->blocks[BlockID(6)].terminator.arguments.at(0);
+			auto false_mir_value = foo_mir->blocks[BlockID(3)].terminator.arguments.at(0);
 
 			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
 			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
@@ -216,8 +216,8 @@ private:
 				base::StrID("arg0"), base::StrID("arg1"), base::StrID("arg1"),
 			};
 
-			auto entry_block = foo_mir->entry_block;
-			for (auto& instruction: foo_mir->blocks.at(u64(entry_block)).instructions) {
+			auto entry_block = foo_mir->block_order[0];
+			for (auto& instruction: foo_mir->blocks[entry_block].instructions) {
 				if (instruction.operation == compiler::mir::Operation::Call) {
 					auto callee
 						= instruction.arguments.at(0).get<compiler::mir::MirFunctionLiteral>();
@@ -279,7 +279,8 @@ private:
 
 			// check if value in return instruction is indeed the parameter we expect:
 			u64 return_value_count = 0;
-			for (auto& block: foo_mir->blocks) {
+			for (auto block_id: foo_mir->block_order) {
+				const auto &block = foo_mir->blocks[block_id];
 				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
 					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
 					ASSERT_EQUAL(z_local->parameter_index.value(), 2);

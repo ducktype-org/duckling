@@ -6,6 +6,7 @@
 
 #include "mir_lowering.hpp"
 
+#include "mir/mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <helios/hout/elements.hpp>
@@ -17,26 +18,6 @@
 #include <base/stable_hashmap.hpp>
 
 namespace compiler::mir {
-
-	Function::Function(
-		base::StrID                    name,
-		tsh::SymbolType<>              return_type,
-		std::vector<tsh::SymbolType<>> parameter_types,
-		std::vector<Block>             blocks,
-		base::StableVector<MirLocal>   local_list,
-		BlockID                        entry_block,
-		helios::ScopeID                top_lifetime_scope,
-		helios::SymID                  helios_id
-	):
-		  name(name),
-		  return_type(return_type),
-		  parameter_types(std::move(parameter_types)),
-		  blocks(std::move(blocks)),
-		  local_list(std::move(local_list)),
-		  entry_block(entry_block),
-		  top_lifetime_scope(top_lifetime_scope),
-		  helios_id(helios_id) {}
-
 
 	namespace hc = helios::code;
 
@@ -261,11 +242,26 @@ namespace compiler::mir {
 		[[nodiscard]]
 		Function build() {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
+			auto entry_block_id = entry_block.value()->getID();
 
-			std::vector<Block> blocks;
-			blocks.reserve(this->blocks.size());
-			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			std::vector<BlockID> block_order;
+			block_order.reserve(this->blocks.size());
+
+			base::StableHashMap<BlockID, Block> function_blocks;
+			
+			// First element in block order is the entry block
+			block_order.push_back(entry_block_id);
+
+			// Count in "reverse order" to have more intuitive order
+			// since creation of blocks is done from the end of the function.
+			for (usize i = this->blocks.size(); i-- > 0; ) {
+				Block block = this->blocks.getRef(i).value()->build();
+				
+				if (block.id != entry_block_id) // entry block is already added to the block order
+					block_order.emplace_back(block.id);
+
+				function_blocks.put(block.id, std::move(block));
+			}
 
 			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
@@ -278,9 +274,9 @@ namespace compiler::mir {
 				name.value(),
 				function_type.getResultType(),
 				function_type.getParameterTypes(),
-				std::move(blocks),
+				std::move(function_blocks),
+				std::move(block_order),
 				std::move(local_list),
-				entry_block.value()->getID(),
 				top_lifetime_scope.value(),
 				helios_symbol,
 			};
