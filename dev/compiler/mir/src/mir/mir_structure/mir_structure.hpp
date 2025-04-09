@@ -63,13 +63,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 // clang-format on
 
 namespace compiler::mir {
-
-	/**
-	 * @brief Whether given operation is an operation that can (and has to be)
-	 * the last operation in the block (i.e. be a terminator).
-	 */
-	bool isTerminating(Operation);
-
 	/**
 	 * @brief BlockID is a temporary solution that should be replaced by
 	 * proper BlockReference.
@@ -77,6 +70,17 @@ namespace compiler::mir {
 	 * transformation between that BlockRef to this "BlockRef".
 	 */
 	STRONG_TYPEDEF_INT(BlockID, u64);
+}
+
+STRONGLY_TYPED_INT_STD_HASH(::compiler::mir::BlockID);
+
+namespace compiler::mir {
+
+	/**
+	 * @brief Whether given operation is an operation that can (and has to be)
+	 * the last operation in the block (i.e. be a terminator).
+	 */
+	bool isTerminating(Operation);
 
 	struct MirIntegerConst final {
 		i64 value;
@@ -366,10 +370,10 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Checks if the id's from the HashMap match the id's in the blocks,
-		 * if all block_order elements are present in the HashMap and 
+		 * if all block_order elements are present in the HashMap and
 		 * if the jump targets exist.
 		 * Used for debugging.
-		 
+
 		 * @note If there is a block in hte HashMap but not in the block_order,
 		 * it is considered invalid.
 		 */
