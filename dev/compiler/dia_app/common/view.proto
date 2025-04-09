@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package view;
+
+import "google/protobuf/empty.proto";
+
+enum TextDisplayType {
+    PLAIN = 0;
+    CODE = 1;
+}
+
+message TextEntry {
+    string text = 1;
+    TextDisplayType type = 2;
+    int32 group_id = 3;
+}
+
+message TextComponent {
+    repeated TextEntry entries = 1;
+}
+
+message ListComponent {
+    repeated Component components = 1;
+}
+
+message Component {
+    // Object can be clicked iff id is not equal to zero.
+    int32 id = 3;
+    oneof component {
+        TextComponent text_component = 1;
+        ListComponent list_component = 2;
+    }
+}
+
+message ViewResponse {
+    Component component = 1;
+}
+
+message ClickRequest {
+    int32 object_id = 1;
+}
+
+message ClickResponse {
+    string status = 1;
+}
+
+service ViewService {
+    rpc GetView(google.protobuf.Empty) returns (ViewResponse);
+    rpc Click(ClickRequest) returns (ClickResponse);
+}
