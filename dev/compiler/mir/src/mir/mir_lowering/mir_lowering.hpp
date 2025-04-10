@@ -24,14 +24,14 @@ namespace compiler::mir {
 	using helios::errors::HResult;
 	using HFailed = helios::errors::Failed;
 
-	using LowerToMirFunctionResult = HResult<CRef<Function>, HFailed>;
+	using LowerToMirFunctionResult = HResult<Function, HFailed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<Function>)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.

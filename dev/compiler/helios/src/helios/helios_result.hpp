@@ -400,4 +400,4 @@ namespace compiler::helios::errors {
 #define UNPACK_RESULT(var, new_value)                                                            \
 	auto&& RES_VAR_NAME = new_value;                                                             \
 	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
-	var RES_VAR_NAME.value()
+	var std::move(RES_VAR_NAME).value()

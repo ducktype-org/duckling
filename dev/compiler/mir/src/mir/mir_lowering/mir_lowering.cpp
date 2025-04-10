@@ -5,8 +5,9 @@
  */
 
 #include "mir_lowering.hpp"
-#include <unordered_set>
 
+#include "diagnostic/source_position.hpp"
+#include "helios/helios_result.hpp"
 #include "mir/mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
 #include "typesystem/higher/queries/types.hpp"
@@ -18,6 +19,8 @@
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+
+#include <unordered_set>
 
 namespace compiler::mir {
 
@@ -777,27 +780,51 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
-	bool isBlockReachable(const Function &function, BlockID checked_block_id) {
+	bool isBlockReachable(const Function& function, BlockID checked_block_id) {
 		// First block is always reachable
-		if (checked_block_id == function.block_order[0]) {
-			return true;
-		}
+		if (checked_block_id == function.block_order[0]) return true;
 
-		for (const auto block_id : function.block_order) {
-			const auto& block = function.blocks[block_id];
-			auto successors = getTerminatorSuccessors(block.terminator);
-			for (const auto successor : successors) {
-				if (successor == checked_block_id) {
-					return true;
-				}
-			}
+		for (const auto block_id: function.block_order) {
+			const auto& block      = function.blocks[block_id];
+			auto        successors = getTerminatorSuccessors(block.terminator);
+			for (const auto successor: successors)
+				if (successor == checked_block_id) return true;
 		}
 		return false;
 	}
 
+	Function eliminateUnreachable(Function function) {
+		std::unordered_set<BlockID> reachable;
+		std::stack<BlockID>         stack;
+
+		stack.push(function.block_order[0]);
+		while (!stack.empty()) {
+			BlockID block_id = stack.top();
+			stack.pop();
+
+			if (reachable.contains(block_id)) continue;
+
+			auto successors = getTerminatorSuccessors(function.blocks[block_id].terminator);
+
+			reachable.insert(block_id);
+			for (auto successor: successors) stack.push(successor);
+		}
+
+		std::vector<BlockID> new_block_order;
+
+		for (auto block_id: function.block_order)
+			if (reachable.contains(block_id))
+				new_block_order.push_back(block_id);
+			else
+				function.blocks.erase(block_id);
+		function.block_order = new_block_order;
+
+		return function;
+	}
+
 	/**
 	 * @brief The last block of the MIR function has "FunctionEnd" terminator which is a mock-up.
-	 * 
+	 *
 	 * This function deals with this terminator:
 	 * * if block is unreachable, it is removed
 	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
@@ -805,37 +832,44 @@ namespace compiler::mir {
 
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	Function finalizeFunctionEnd(query::Context& ctx, Function function) {
+	HResult<Function, HFailed> finalizeFunctionEnd(query::Context& ctx, Function function) {
 		CORE_ASSERT(
-			function.blocks.size() > 0,
-			"Function should have at least one block after lowering"
+			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
 		auto last_block_id = function.block_order.back();
-		CORE_ASSERT(function.blocks[last_block_id].terminator.operation  == Operation::FunctionEnd, "Last block doesn't have FunctionEnd terminator");
+		CORE_ASSERT(
+			function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
+			"Last block doesn't have FunctionEnd terminator"
+		);
 		if (not isBlockReachable(function, last_block_id)) {
 			function.blocks.erase(last_block_id);
 			function.block_order.pop_back();
 
 			return function;
 		}
-		
+
 		if (function.return_type.getType() == ctx.query<tsh::QueryUnitType>({})) {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
-		}
-		else {
-			CORE_PANIC("Function with return value cannot have FunctionEnd terminator");
+		} else {
+			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Misc>>(
+				dia::SourcePosition::fakePosition(), "control reaches end of non-void function"
+			));
+			return helios::errors::HError(helios::errors::Failed());
 		}
 	}
 
-	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
+	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-			auto function_no_func_end = finalizeFunctionEnd(ctx, std::move(function_no_lifetime));
+			auto   function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
+
+			UNPACK_RESULT(auto function_no_func_end=, finalizeFunctionEnd(ctx,std::move(function_no_lifetime)));
+			
+			auto function_reachable = eliminateUnreachable(std::move(function_no_func_end));
 			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_no_func_end));
+			return addDestructors(ctx, std::move(function_reachable));
 		}
 
 		QUERY_AUTO_CACHE_REF
