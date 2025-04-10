@@ -2,8 +2,8 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
-#include <pst_parser/elements/hierarchy/expr.hpp>  // this is needed here so contraint from GenericPSTQueryKey is satisfied
 #include <pst_parser/generic_query_key.hpp>
+#include <pst_parser/elements/elements_list.hpp>
 #include <query_framework/query_int.hpp>
 
 namespace compiler::helios {

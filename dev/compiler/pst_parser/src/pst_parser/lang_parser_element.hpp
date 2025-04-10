@@ -72,7 +72,7 @@ namespace pst {
 
 	public:
 		/**
-		 * @brief Non-const view all sub-elements.
+		 * @brief View all sub-elements.
 		 */
 		[[nodiscard]]
 		auto viewSubElements() const {
@@ -81,7 +81,7 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Non-const view all child elements.
+		 * @brief View all child elements.
 		 */
 		[[nodiscard]]
 		auto viewChildren() const {
@@ -91,7 +91,7 @@ namespace pst {
 		}
 
 		/**
-		 * @brief Non-const view all child tokens.
+		 * @brief View all child tokens.
 		 */
 		[[nodiscard]]
 		auto viewTokens() const {
