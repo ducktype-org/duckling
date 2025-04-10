@@ -189,7 +189,6 @@ namespace compiler::lir {
 			}
 
 			void lowerBlocks() {
-				// here we iterate in reverse only to emit better block order:
 				for (const auto& mir_block_id: key.function->block_order) {
 					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
@@ -358,8 +357,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
-					// @TODO...
-					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+					CORE_PANIC("FunctionEnd is illegal outside of MirLowering phase");
 					break;
 				}
 				// @TODO: add more cases

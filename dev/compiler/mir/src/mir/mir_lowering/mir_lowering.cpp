@@ -5,16 +5,16 @@
  */
 
 #include "mir_lowering.hpp"
-
 #include "mir_lifetimes.hpp"
 
 #include <helios/helios_result.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/higher/queries/types.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -861,8 +861,8 @@ namespace compiler::mir {
 	}
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
-		static auto provide(Context& ctx, QKey key)  // NOLINT(performance-unnecessary-value-param)
-			-> PResult {
+		static auto provide(Context& ctx, QKey key) // NOLINT(performance-unnecessary-value-param)
+			-> PResult { 
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 			// auto function_reachable = eliminateUnreachable(std::move(function_no_lifetime));
