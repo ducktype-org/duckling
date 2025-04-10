@@ -5,16 +5,16 @@
  */
 
 #include "mir_lowering.hpp"
+
 #include "mir_lifetimes.hpp"
 
 #include <helios/helios_result.hpp>
-#include <mir/mir_structure/mir_structure.hpp>
-#include <typesystem/higher/queries/types.hpp>
-
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -839,17 +839,13 @@ namespace compiler::mir {
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
-		auto last_block_id = function.block_order.back();
+		auto last_block_id = BlockID(0);
+		if (not function.blocks.contains(last_block_id)) return function;
+
 		CORE_ASSERT(
 			function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
 			"Last block doesn't have FunctionEnd terminator"
 		);
-		if (not isBlockReachable(function, last_block_id)) {
-			function.blocks.erase(last_block_id);
-			function.block_order.pop_back();
-
-			return function;
-		}
 
 		if (function.return_type.getType() == ctx.query<tsh::QueryUnitType>({})) {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
@@ -861,15 +857,15 @@ namespace compiler::mir {
 	}
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
-		static auto provide(Context& ctx, QKey key) // NOLINT(performance-unnecessary-value-param)
-			-> PResult { 
+		static auto provide(Context& ctx, QKey key)  // NOLINT(performance-unnecessary-value-param)
+			-> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-			// auto function_reachable = eliminateUnreachable(std::move(function_no_lifetime));
+			// eliminating unreachable blocks
+			auto function_reachable   = eliminateUnreachable(std::move(function_no_lifetime));
 
 			UNPACK_RESULT(
-				auto function_no_func_end =,
-				finalizeFunctionEnd(ctx, std::move(function_no_lifetime))
+				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
 			);
 
 			// second step: lifetime stuff
