@@ -778,19 +778,6 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
-	bool isBlockReachable(const Function& function, BlockID checked_block_id) {
-		// First block is always reachable
-		if (checked_block_id == function.block_order[0]) return true;
-
-		for (const auto block_id: function.block_order) {
-			const auto& block      = function.blocks[block_id];
-			auto        successors = getTerminatorSuccessors(block.terminator);
-			for (const auto successor: successors)
-				if (successor == checked_block_id) return true;
-		}
-		return false;
-	}
-
 	/**
 	 * @brief Deletes from mir Function from block_order and blocks unreachable blocks.
 	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
