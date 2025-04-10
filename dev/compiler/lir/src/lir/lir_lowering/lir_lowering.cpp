@@ -194,8 +194,8 @@ namespace compiler::lir {
 					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
 
-					auto curr_block = lir_block;
-					const auto& mir_block = key.function->blocks[mir_block_id];
+					auto        curr_block = lir_block;
+					const auto& mir_block  = key.function->blocks[mir_block_id];
 					for (const auto& mir_instruction: mir_block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
 

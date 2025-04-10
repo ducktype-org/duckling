@@ -6,16 +6,15 @@
 
 #include "mir_lowering.hpp"
 
-#include "diagnostic/source_position.hpp"
-#include "helios/helios_result.hpp"
-#include "mir/mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
-#include "typesystem/higher/queries/types.hpp"
 
+#include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
@@ -261,11 +260,10 @@ namespace compiler::mir {
 			// since creation of blocks is done from the end of the function.
 			for (usize i = this->blocks.size(); i-- > 0;) {
 				Block block = this->blocks.getRef(i).value()->build();
-
-				if (block.id != entry_block_id)  // entry block is already added to the block order
-					block_order.emplace_back(block.id);
-
 				function_blocks.put(block.id, std::move(block));
+
+				if (block.id != entry_block_id)  // entry block is already added to the block_order
+					block_order.emplace_back(block.id);
 			}
 
 			const auto function_type
@@ -793,6 +791,10 @@ namespace compiler::mir {
 		return false;
 	}
 
+	/**
+	 * @brief Deletes from mir Function from block_order and blocks unreachable blocks.
+	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
+	 */
 	Function eliminateUnreachable(Function function) {
 		std::unordered_set<BlockID> reachable;
 		std::stack<BlockID>         stack;
@@ -823,10 +825,10 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief The last block of the MIR function has "FunctionEnd" terminator which is a mock-up.
+	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a mock-up.
 	 *
 	 * This function deals with this terminator:
-	 * * if block is unreachable, it is removed
+	 * * if block doesn't exists it means that it was unreachable, we do nothing
 	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
 	 * * if block is reachable and function returns value, throws missing return error
 
@@ -853,23 +855,25 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			ctx.log(makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Misc>>(
-				dia::SourcePosition::fakePosition(), "control reaches end of non-void function"
-			));
+			// @todo log the query
 			return helios::errors::HError(helios::errors::Failed());
 		}
 	}
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, QKey key)  // NOLINT(performance-unnecessary-value-param)
+			-> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
-			auto   function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
+			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
+			// auto function_reachable = eliminateUnreachable(std::move(function_no_lifetime));
 
-			UNPACK_RESULT(auto function_no_func_end=, finalizeFunctionEnd(ctx,std::move(function_no_lifetime)));
-			
-			auto function_reachable = eliminateUnreachable(std::move(function_no_func_end));
+			UNPACK_RESULT(
+				auto function_no_func_end =,
+				finalizeFunctionEnd(ctx, std::move(function_no_lifetime))
+			);
+
 			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_reachable));
+			return addDestructors(ctx, std::move(function_no_func_end));
 		}
 
 		QUERY_AUTO_CACHE_REF

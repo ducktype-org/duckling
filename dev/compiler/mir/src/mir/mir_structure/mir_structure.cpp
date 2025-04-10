@@ -2,7 +2,6 @@
 
 #include <helios/symbols/symbols.hpp>
 
-#include "base/ok_bad.hpp"
 #include <base/variant.hpp>
 
 #include <sstream>
@@ -70,8 +69,8 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "[MIR] Function " << name.strView() << ": TODO -> " << this->return_type.toString()
-			   << "\n";
+		output << "[MIR] Function " << name.strView() << ": TODO -> "
+			   << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
@@ -184,10 +183,8 @@ namespace compiler::mir {
 		local->debugPrint(output);
 	}
 
-
 	base::OkBad Function::validateBlockIDs() const {
-		if (blocks.size() != block_order.size())
-			return base::BAD;
+		if (blocks.size() != block_order.size()) return base::BAD;
 
 		for (const auto& block_id: block_order) {
 			if (blocks.atMaybe(block_id).empty()) return base::BAD;
@@ -198,9 +195,8 @@ namespace compiler::mir {
 			const auto& block = blocks[block_id];
 
 			auto successors = getTerminatorSuccessors(block.terminator);
-			for (const auto successor: successors) {
+			for (const auto successor: successors)
 				if (not blocks.contains(successor)) return base::BAD;
-			}
 		}
 
 		return base::OK;

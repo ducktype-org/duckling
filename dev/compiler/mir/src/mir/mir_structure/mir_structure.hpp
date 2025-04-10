@@ -6,8 +6,8 @@
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 
-#include "base/stable_hashmap.hpp"
 #include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 
@@ -327,6 +327,7 @@ namespace compiler::mir {
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
 
+		/// Block with ID "0" is the one with FunctionEnd
 		base::StableHashMap<BlockID, Block> blocks;
 		/// First block in the block order is the entry block.
 		std::vector<BlockID> block_order;

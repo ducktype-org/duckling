@@ -127,9 +127,8 @@ namespace compiler::mir {
 				// implementation. This hole for is just for this validation. Maybe we should have
 				// some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
-					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, function.blocks[succ].beginScope()
-					);
+					auto succ_ending_scopes
+						= getEndingScopes(terminator.scope, function.blocks[succ].beginScope());
 
 					if (ending_scopes.has_value()) {
 						// we have to validate that all paths have the same ending scopes
@@ -148,7 +147,7 @@ namespace compiler::mir {
 				{
 					.id           = block.id,
 					.instructions = std::move(new_instructions),
-					.terminator   = terminator,
+					.terminator   = block.terminator,
 				}
 			);
 		}

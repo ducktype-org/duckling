@@ -2,17 +2,14 @@
  * @file mir_tests.cpp
  */
 
-#include "mir/mir_structure/mir_structure.hpp"
-
 #include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
-
-#include "base/exceptions.hpp"
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -322,23 +319,23 @@ private:
 				ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->hasError()
 			);
 
-			const auto& should_add_retvoid_fun
+			auto& should_add_retvoid_fun
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) })->value();
 			should_add_retvoid_fun.validateBlockIDs();
-			// should_add_retvoid_fun.debugPrint(std::cout);
+			should_add_retvoid_fun.debugPrint(std::cout);
 
-			const auto& last_block
+			auto& last_block
 				= should_add_retvoid_fun.blocks[should_add_retvoid_fun.block_order.back()];
 			ASSERT_EQUAL(last_block.terminator.operation, compiler::mir::Operation::ReturnVoid);
 
 
-			const auto& unreachable_end_fun
+			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
 			unreachable_end_fun.validateBlockIDs();
-			// unreachable_end_fun.debugPrint(std::cout);
+			unreachable_end_fun.debugPrint(std::cout);
 			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 4);
 
-			const auto& empty
+			auto& empty
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) })->value();
 			ASSERT_EQUAL(empty.block_order.size(), 1);
 		});
