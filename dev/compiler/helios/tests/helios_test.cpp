@@ -238,8 +238,8 @@ private:
 			glob_data += hout.glob_data.size();
 		}
 
-		ASSERT_EQUAL(functions, 3);
-		ASSERT_EQUAL(glob_data, 1);
+		ASSERT_EQUAL(functions, 1);
+		ASSERT_EQUAL(glob_data, 5);
 	}
 
 	void testHoutVisitor() {

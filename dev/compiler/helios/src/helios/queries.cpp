@@ -20,7 +20,6 @@ namespace compiler::helios {
 			HOUTUnit out;
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
-				scope.debugPrintScopeAndParents();
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
