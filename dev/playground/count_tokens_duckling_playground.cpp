@@ -6,11 +6,12 @@
  * @note Outputs and returns -1 on error in code;
  */
 
-#include <iostream>
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
 #include <token_file/file.hpp>
+
+#include <iostream>
 
 int count_tokens(const lexer::Tokens& tokens);
 

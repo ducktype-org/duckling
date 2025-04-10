@@ -15,7 +15,7 @@ function ackermann {
         # [16, 24) -> arg1 -> nPtr
 
         init_type           int64;      # [24, 32) n
-        load_l64_lptr_ofs   24, 16;     # n = *nPtr 
+        load_l64_lptr_ofs   24, 16;     # n = *nPtr
 
         # if m == 0
         cmpEq_l64_imm       8, 0;
@@ -56,9 +56,6 @@ function ackermann {
         free_lptr           48;
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
         deinit; # A() ret_val
-        deinit; # n
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label N0;
@@ -77,11 +74,8 @@ function ackermann {
         free_lptr           48;
 
         mov_l64_l64         0, 32;      # ret_val = A(m-1, A(m, n-1))
-        
+
         deinit; # A() ret_val
-        deinit; # n
-        deinit; # arg1
-        deinit; # arg0
         ret;
 
         label M0;

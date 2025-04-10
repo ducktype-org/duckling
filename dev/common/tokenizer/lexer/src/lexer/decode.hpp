@@ -1,6 +1,7 @@
 #pragma once
 
 #include "char.hpp"
+
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <token_file/forward.hpp>

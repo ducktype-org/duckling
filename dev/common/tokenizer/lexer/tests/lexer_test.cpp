@@ -1,7 +1,7 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <token_file/file.hpp>
 #include <tester/tester.hpp>
+#include <token_file/file.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -106,7 +106,7 @@ private:
 	}
 
 	void testGroup3() {
-		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperator>();
+		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperatorSymbol>();
 	}
 
 	void testGroup4() {

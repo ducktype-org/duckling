@@ -1,12 +1,11 @@
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
-
-
-#include <lexer/lexer.hpp>
-#include <sstream>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <sstream>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -102,6 +101,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
+	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
@@ -149,6 +149,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };
+
+	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
 	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
 	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
@@ -200,6 +203,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  new_operators{ "<> 3 <> 5 <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x + {return 2;}" };

@@ -8,8 +8,9 @@
 
 #pragma once
 
-#include <base/flag.hpp>
 #include <helios/symbols/symbols.hpp>
+
+#include <base/flag.hpp>
 
 namespace tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"

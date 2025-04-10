@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+
 #include <base/stringifyable_enum.hpp>
 
 MAKE_STRINGIFYABLE_ENUM(n, u64, ZeroElements);

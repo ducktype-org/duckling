@@ -1,13 +1,13 @@
-#include <base/exceptions.hpp>
-#include <tester/tester.hpp>
-
-#include <query_framework/utils/with_context_do.hpp>
-#include <query_framework/query_impl.hpp>
+#include <backends/llvm/llvm_backend.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
+
+#include <base/exceptions.hpp>
 
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -19,11 +19,33 @@ public:
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleanLiteralsTests);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 	}
 
 private:
+	auto getLLVMModuleFromPath(std::string module_path) {
+		using namespace compiler;
+
+		backend_llvm::Module llvm_module(base::StrID("test_module"));
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+
+			for (auto& fun: top_level->functions) {
+				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+
+				llvm_module.addFunctionToModule(ctx, lir_fun);
+			}
+		});
+
+		ASSERT_TRUE(llvm_module.verify().isOk());
+		return llvm_module;
+	}
+
 	void runTestForModuleWithSingleFunction(std::string module_path) {
 		using namespace compiler;
 		query::utils::withContextDo([&](query::Context& ctx) {
@@ -37,7 +59,7 @@ private:
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));
-			llvm_module.addFunctionToModule(lir_fun);
+			llvm_module.addFunctionToModule(ctx, lir_fun);
 
 			// debug print for coverage only:
 			llvm_module.debugPrint();
@@ -59,6 +81,19 @@ private:
 	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
 
 	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
+
+	void functionCalls() {
+		{
+			auto llvm_module = getLLVMModuleFromPath("modules/calls_simple");
+			ASSERT_EQUAL(llvm_module.getFunctionCount(), 3);
+			ASSERT_EQUAL(llvm_module.getFunctionCount(false), 3);
+		}
+		{
+			auto llvm_module = getLLVMModuleFromPath("modules/calls");
+			ASSERT_EQUAL(llvm_module.getFunctionCount(false), 3);
+			ASSERT_EQUAL(llvm_module.getFunctionCount(), 5);
+		}
+	}
 
 	void parseFromIRCodeTest() {
 		auto llvm_module = compiler::backend_llvm::Module::fromIRCode(

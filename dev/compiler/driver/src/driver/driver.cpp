@@ -1,13 +1,16 @@
-#include <base/str_utils.hpp>
-#include <base/string_id.hpp>
+#include "driver.hpp"
+
+#include "dvm_driver.hpp"
+#include "llvm_driver.hpp"
+
+#include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 
-#include "llvm_driver.hpp"
-#include "dvm_driver.hpp"
-#include "driver.hpp"
+#include <base/str_utils.hpp>
+#include <base/string_id.hpp>
 
 namespace compiler::driver {
 
@@ -34,7 +37,9 @@ namespace compiler::driver {
 
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
-		backend_driver->compileModule(module_data);
+		query::utils::withContextDo([&](query::Context& ctx) {
+			backend_driver->compileModule(ctx, module_data);
+		});
 
 		backend_driver->link();
 	}

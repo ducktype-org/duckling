@@ -1,17 +1,15 @@
 #include "queries.hpp"
 
-#include <iostream>
+#include "hout/elements.hpp"
+#include "scopes/scopes.hpp"
+#include "symbols/symbols.hpp"
+
+#include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include <base/stable_hashmap.hpp>
-#include <pst_parser/pst_visitor.hpp>
-
 #include <base/exceptions.hpp>
-#include "scopes/scopes.hpp"
-#include "hout/elements.hpp"
-
-#include "symbols/symbols.hpp"
+#include <base/stable_hashmap.hpp>
 
 namespace compiler::helios {
 

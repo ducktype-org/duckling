@@ -1,24 +1,29 @@
 #pragma once
 
-#include <vm/api/data/status.hpp>
-#include <deque>
-#include <mutex>
-#include <vm/services/profiler/profiler.hpp>
-#include <vm/services/service_manager.hpp>
-#include <vm/services/reference_counter/reference_counter.hpp>
-#include <vm/api/api.hpp>
 #include <listener/listener.hpp>
-#include <vm/core/process/memory/memory.hpp>
-#include <vm/core/process/type_metadata/type_metadata.hpp>
-#include <vm/core/process/proc_io.hpp>
-#include <condition_variable>
-#include <shared_mutex>
+
 #include <base/optional.hpp>
-#include <vm/api/vm.hpp>
-#include <vm/core/thread/vmthread.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/request.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
+#include <vm/core/process/memory/memory.hpp>
+#include <vm/core/process/proc_io.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
+#include <vm/core/thread/vmthread.hpp>
+#include <vm/services/profiler/profiler.hpp>
+#include <vm/services/reference_counter/reference_counter.hpp>
+#include <vm/services/service_manager.hpp>
+
+#include <condition_variable>
+#include <deque>
+#include <shared_mutex>
+
+namespace vm::loader {
+	class Loader;
+}
 
 namespace vm {
 	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
@@ -56,11 +61,10 @@ namespace vm {
 
 		Memory memory;
 
-		// @TODO: Read Processors' docs and do the TODO there...
-		Preprocessor preprocessor;
+		Box<loader::Loader> loader;
 
 		//@TODO: For now assume that bytecode validation is always turned on.
-		static const bool VALIDATE_CODE = true;
+		static constexpr const bool VALIDATE_CODE = true;
 
 		/**
 		 * @brief Performs external execution request on the VCPU.

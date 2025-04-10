@@ -1,13 +1,17 @@
+#include "llvm_driver.hpp"
+
+#include "llvm_ir_lib.hpp"
+
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <system_command/system_command.hpp>
-#include "llvm_driver.hpp"
 
 namespace compiler::driver {
 
-	void LLVMDriver::compileModule(const BackendModuleData& lir_module) {
+	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
-		for (const auto& lir_function: lir_module.functions) mod.addFunctionToModule(lir_function);
+		for (const auto& lir_function: lir_module.functions)
+			mod.addFunctionToModule(ctx, lir_function);
 
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
@@ -34,11 +38,7 @@ namespace compiler::driver {
 
 	void LLVMDriver::link() {
 		if (options->add_builtin_library) {
-			auto mod                 = backend_llvm::Module::fromIRCode(R"(
-define void @builtin_output_i64(i64 %0) {
-    ret void
-}
-)");
+			auto mod                 = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
 			auto builtin_object_path = base::StrID("builtin.o");
 			mod.compile(builtin_object_path, backend_llvm::CompilationOutputType::Object);
 			object_file_paths.push_back(builtin_object_path);

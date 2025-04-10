@@ -1,10 +1,11 @@
 #pragma once
 
-#include <vector>
 #include "frame.hpp"
 
+#include <vector>
+
 namespace vm {
-	class ThreadStack {
+	class ThreadStack final {
 	private:
 		static constexpr u64 FRAMES_LENGTH = 16'384;
 		static constexpr u64 STACK_LENGTH  = FRAMES_LENGTH * 256;

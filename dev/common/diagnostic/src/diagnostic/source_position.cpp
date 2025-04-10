@@ -4,12 +4,14 @@
  */
 
 
-#include <string>
+#include "source_position.hpp"
+
 #include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
+
 #include <base/exceptions.hpp>
 
-#include "source_position.hpp"
+#include <string>
 
 namespace dia {
 	std::vector<printer::PrinterContent> SourcePosition::getPrettySourceLines() const {

@@ -1,16 +1,19 @@
 #include "vmprocess.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/variant.hpp>
+
+#include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/api/data/core_operation_error.hpp>
-#include <base/exceptions.hpp>
 #include <vm/core/process/memory/memory.hpp>
-#include <vm/preprocessor/preprocessor.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/loader/loader.hpp>
 
 #include <mutex>
-#include <base/variant.hpp>
-#include <vm/api/data/request.hpp>
 #include <shared_mutex>
+#include <sstream>
 #include <variant>
 
 namespace vm {
@@ -27,13 +30,15 @@ namespace vm {
 		VMProcess::loadProgram(const fs::FilePath& path) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = preprocessor.getProgram(path);
+		auto code_result = loader->getProgram(path);
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(std::move(code_result.value()));
+			loaded_program.emplace(std::move(code_result).value());
 			return api::Response(api::response::Empty());
 		} else {
-			return cpp::failure(api::LoadProgramError{ code_result.error() });
+			std::stringstream ss;
+			code_result.error().dump(ss);
+			return cpp::failure(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
 		}
 	}
 
@@ -163,7 +168,7 @@ namespace vm {
 		variant_match(request) {
 			variant_case(api::request::TypeMetadata, type_request) {
 				auto res
-					= loaded_program->getTypeByName(base::StrID(type_request.type_name.c_str()));
+					= loaded_program->types->atMaybe(base::StrID(type_request.type_name.c_str()));
 				match_optional(res) {
 					opt_some(value) { response = value; }
 					opt_none {
@@ -207,7 +212,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}), preprocessor(VALIDATE_CODE) {
+	VMProcess::VMProcess():
+		  status(api::ExecutionNotStarted{}),
+		  loader(makeBox<loader::Loader>(VALIDATE_CODE)) {
 		vm_threads.emplace_back(*this);
 	}
 

@@ -1,25 +1,29 @@
 
-#include <mutex>
-#include <utility>
-#include <cstring>
-#include <base/ints.hpp>
-#include <base/exceptions.hpp>
-#include <base/optional.hpp>
-#include <vm/core/process/type_metadata/type.hpp>
-#include <vm/core/supervisor/supervisor.hpp>
-#include <vm/core/kill_process_exception.hpp>
-#include <vm/core/process/memory/pointer.hpp>
-#include <vm/api/data/response.hpp>
-#include <vm/api/data/status.hpp>
-#include <base/variant.hpp>
-#include "op_case.hpp"
+#include "vmthread.hpp"
+
 #include "low_program/instruction.hpp"
 #include "low_program/opcodes.hpp"
-#include "vmthread.hpp"
+#include "op_case.hpp"
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <vm/api/data/response.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/core/kill_process_exception.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/supervisor/supervisor.hpp>
+
+#include <cstring>
 #include <iostream>
+#include <mutex>
+#include <utility>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -115,8 +119,8 @@ namespace vm {
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
-		auto main_func_type = executing_program->type_metadata->getTypeByName(main_func->name)
-		                          .expect("Expected main!");
+		auto main_func_type
+			= executing_program->types->atMaybe(main_func->name).expect("Expected main!");
 		auto main_return_type
 			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
@@ -145,7 +149,8 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
+
 	#undef HANDLE_OPCODE
 			};
 
@@ -161,7 +166,8 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
+
 	#undef HANDLE_OPCODE
 
 	End:
@@ -180,7 +186,7 @@ namespace vm {
 			break;                                                          \
 		}                                                                   \
 	}
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {
@@ -283,9 +289,7 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(
-				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
-			);
+			internalCallMain(executing_program->functions.at(base::StrID("main")));
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
@@ -345,7 +349,7 @@ namespace vm {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->getNumberOfFunctions(); ++index) {
+				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
@@ -386,7 +390,6 @@ namespace vm {
 		exec_thread = std::thread([this, program] {
 			try {
 				run(program);
-
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";

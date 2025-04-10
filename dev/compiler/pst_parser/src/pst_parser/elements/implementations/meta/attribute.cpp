@@ -1,6 +1,5 @@
-#include "preamble.hpp"
-
 #include "../../hierarchy/not_statements.hpp"
+#include "preamble.hpp"
 
 namespace pst {
 	class AttrStarError final: public dia::Error {

@@ -8,12 +8,12 @@
  */
 #pragma once
 
-#include <base/maps.hpp>
 #include <base/ints.hpp>
-
+#include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <vm/core/process/memory/pointer.hpp>
+
 #include <vm/core/process/memory/block.hpp>
+#include <vm/core/process/memory/pointer.hpp>
 
 namespace vm {
 
@@ -67,7 +67,7 @@ namespace vm {
 
 		/**
 		 * @brief Mapping from stack offset to ID of block
-		 * responisble for data on that offset.
+		 * responsible for data on that offset.
 		 *
 		 * Used when creating pointers to local variables.
 		 */

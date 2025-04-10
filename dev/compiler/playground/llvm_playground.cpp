@@ -1,14 +1,15 @@
-#include <lexer/lexer.hpp>
+#include <backends/llvm/llvm_backend.hpp>
+#include <clap/clap.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
-#include <clap/clap.hpp>
-#include <iostream>
+#include <init/init.hpp>
+#include <lexer/lexer.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <mir/mir_lowering/mir_lowering.hpp>
-#include <lir/lir_lowering/lir_lowering.hpp>
-#include <backends/llvm/llvm_backend.hpp>
-#include <init/init.hpp>
+
+#include <iostream>
 
 int main(int argc, const char* argv[]) {
 	init::InitObject _;
@@ -55,7 +56,10 @@ int main(int argc, const char* argv[]) {
 		std::cerr << "\n\n\n";
 
 		auto llvm_module = compiler::backend_llvm::Module(base::StrID("test_module"));
-		llvm_module.addFunctionToModule(lir_fun);
+
+		query::utils::withContextDo([&](query::Context& ctx) {
+			llvm_module.addFunctionToModule(ctx, lir_fun);
+		});
 		auto v = llvm_module.verify();
 
 		if (v.isOk())

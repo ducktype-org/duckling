@@ -4,10 +4,11 @@
  */
 #pragma once
 
+#include "box.hpp"
 #include "ints.hpp"
 #include "optional.hpp"
 #include "ref.hpp"
-#include "box.hpp"
+
 #include <vector>
 
 namespace base {

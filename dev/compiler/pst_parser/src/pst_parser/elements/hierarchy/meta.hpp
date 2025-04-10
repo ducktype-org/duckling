@@ -4,9 +4,9 @@
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
 
@@ -72,8 +72,10 @@ namespace pst {
 		Method,
 		Field,
 		Constructor,
+		CopyConstructor,
 		Destructor,
 		AccessBlock,
+		NonClassStmt
 	};
 
 	/**
