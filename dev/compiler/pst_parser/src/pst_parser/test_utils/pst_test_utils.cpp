@@ -4,21 +4,16 @@
 
 namespace pst {
 	void viewAllSubTreeElementsAux(
-		std::vector<CRef<pst::LangElement>>& output, CRef<pst::LangElement> root
+		std::vector<AccessLocked<pst::LangElement>>& output, AccessLocked<pst::LangElement> root
 	) {
 		output.push_back(root);
-		for (const auto& sub: root->viewSubElements()) {
-			variant_match(sub) {
-				variant_case(pst::LangElement::ConstChild, sub) {
-					viewAllSubTreeElementsAux(output, sub);
-				}
-				variant_default {}
-			}
+		for (const auto& sub: root.illegalAccess().value()->viewChildren()) {
+			viewAllSubTreeElementsAux(output, sub);
 		}
 	}
 
-	std::vector<CRef<pst::LangElement>> viewAllSubTreeElements(CRef<pst::LangElement> root) {
-		std::vector<CRef<pst::LangElement>> result;
+	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(AccessLocked<pst::LangElement> root) {
+		std::vector<AccessLocked<pst::LangElement>> result;
 		viewAllSubTreeElementsAux(result, root);
 		return result;
 	}
