@@ -327,8 +327,6 @@ namespace compiler::mir {
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
 
-		/// Note that using references to blocks instead of ID's is not advised,
-		/// since some functions (addDestructors) copy the whole map.
 		base::StableHashMap<BlockID, Block> blocks;
 		/// First block in the block order is the entry block.
 		std::vector<BlockID> block_order;

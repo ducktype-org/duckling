@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../mir_structure/mir_structure.hpp"
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
 
 #include <helios/hout/hout.hpp>
 #include <query_framework/query_int.hpp>
@@ -18,6 +20,11 @@ namespace compiler::mir {
 			return function == oth.function;
 		}
 	};
+
+	using helios::errors::HResult;
+	using HFailed = helios::errors::Failed;
+
+	using LowerToMirFunctionResult = HResult<CRef<Function>, HFailed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction

@@ -2,8 +2,8 @@
  * @file mir_tests.cpp
  */
 
-#include "base/exceptions.hpp"
 #include "mir/mir_structure/mir_structure.hpp"
+
 #include <helios/queries.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -12,10 +12,12 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
+#include "base/exceptions.hpp"
+
 using namespace tsh;
 using namespace compiler::helios::test_utils;
-using query::utils::withContextDo;
 using compiler::mir::BlockID;
+using query::utils::withContextDo;
 
 class MIRConstructionTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -57,10 +59,10 @@ private:
 			ASSERT_EQUAL(foo3_mir.name, base::StrID("foo3"));
 			ASSERT_EQUAL(foo4_mir.name, base::StrID("foo4"));
 
-			ASSERT_EQUAL(foo1_mir.blocks.size(), 1);
-			ASSERT_EQUAL(foo2_mir.blocks.size(), 2);
-			ASSERT_EQUAL(foo3_mir.blocks.size(), 6);
-			ASSERT_EQUAL(foo4_mir.blocks.size(), 2);
+			ASSERT_EQUAL(foo1_mir.block_order.size(), 1);
+			ASSERT_EQUAL(foo2_mir.block_order.size(), 2);
+			ASSERT_EQUAL(foo3_mir.block_order.size(), 6);
+			ASSERT_EQUAL(foo4_mir.block_order.size(), 2);
 
 			// This doesn't test much other then that the code doesn't crash/throw exceptions.
 			// It also make debug_prints covered by tests.
@@ -106,12 +108,12 @@ private:
 
 			// Test code generation:
 
-			ASSERT_EQUAL(foo_mir.blocks.size(), 5);
+			ASSERT_EQUAL(foo_mir.block_order.size(), 5);
 
 			// @note: instruction count does not include terminator instruction:
 
 			using enum compiler::mir::Operation;
-			
+
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 1);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
@@ -142,7 +144,7 @@ private:
 			auto foo_mir = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
 
 			ASSERT_EQUAL(foo_mir->name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir->blocks.size(), 5);
+			ASSERT_EQUAL(foo_mir->block_order.size(), 4);
 			ASSERT_EQUAL(foo_mir->local_list.size(), 2);
 
 			auto get_block_terminator
@@ -152,7 +154,6 @@ private:
 			};
 
 			using BlockList = std::vector<BlockID>;
-			ASSERT_EQUAL(get_block_successors(0), BlockList{});
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
@@ -289,7 +290,7 @@ private:
 			// check if value in return instruction is indeed the parameter we expect:
 			u64 return_value_count = 0;
 			for (auto block_id: foo_mir->block_order) {
-				const auto &block = foo_mir->blocks[block_id];
+				const auto& block = foo_mir->blocks[block_id];
 				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
 					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
 					ASSERT_EQUAL(z_local->parameter_index.value(), 2);
@@ -306,34 +307,33 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
-			ASSERT_EQUAL(3, functions.size());
+			ASSERT_EQUAL(4, functions.size());
 			ASSERT_EQUAL(functions.at(0).original_name, base::StrID("missing_return"));
 			ASSERT_EQUAL(functions.at(1).original_name, base::StrID("should_add_retvoid"));
 			ASSERT_EQUAL(functions.at(2).original_name, base::StrID("unreachable_end"));
+			ASSERT_EQUAL(functions.at(3).original_name, base::StrID("empty"));
 
-			auto x = ctx.query<compiler::mir::LowerToMirFunction>(
-				{ functions.at(0) }
+			assertThrows<base::Panic>(
+				[&]() { ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) }); },
+				"Return value in function without return type"
 			);
-			x->debugPrint(std::cout);
-			// assertThrows<base::Panic>(
-			// 	[&]() {
-			// 		ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) });
-			// 	},
-			// 	"Return value in function without return type"
-			// );
 
-			auto should_add_retvoid_fun = ctx.query<compiler::mir::LowerToMirFunction>(
-				{ functions.at(1) }
-			);
-			
-			should_add_retvoid_fun->debugPrint(std::cout);
+			auto should_add_retvoid_fun
+				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) });
 			should_add_retvoid_fun->validateBlockIDs();
 
-			auto unreachable_end_fun = ctx.query<compiler::mir::LowerToMirFunction>(
-				{ functions.at(2) }
-			);
-			unreachable_end_fun->debugPrint(std::cout);
+			auto last_block
+				= should_add_retvoid_fun->blocks[should_add_retvoid_fun->block_order.back()];
+			ASSERT_EQUAL(last_block.terminator.operation, compiler::mir::Operation::ReturnVoid);
+
+
+			auto unreachable_end_fun
+				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) });
 			unreachable_end_fun->validateBlockIDs();
+			ASSERT_EQUAL(unreachable_end_fun->block_order.size(), 4);
+
+			auto empty = ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) });
+			ASSERT_EQUAL(empty->block_order.size(), 1);
 		});
 	}
 };

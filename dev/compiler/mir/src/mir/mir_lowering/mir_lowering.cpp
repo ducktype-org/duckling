@@ -9,6 +9,7 @@
 
 #include "mir/mir_structure/mir_structure.hpp"
 #include "mir_lifetimes.hpp"
+#include "typesystem/higher/queries/types.hpp"
 
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
@@ -777,6 +778,11 @@ namespace compiler::mir {
 	}
 
 	bool isBlockReachable(const Function &function, BlockID checked_block_id) {
+		// First block is always reachable
+		if (checked_block_id == function.block_order[0]) {
+			return true;
+		}
+
 		for (const auto block_id : function.block_order) {
 			const auto& block = function.blocks[block_id];
 			auto successors = getTerminatorSuccessors(block.terminator);
@@ -799,7 +805,7 @@ namespace compiler::mir {
 
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	Function eliminateFunctionEnd(query::Context& ctx, Function function) {
+	Function finalizeFunctionEnd(query::Context& ctx, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0,
 			"Function should have at least one block after lowering"
@@ -813,13 +819,13 @@ namespace compiler::mir {
 
 			return function;
 		}
-		if (function.return_type.getType() == ctx.query<tsh::QueryVoidType>({})) {
+		
+		if (function.return_type.getType() == ctx.query<tsh::QueryUnitType>({})) {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		}
 		else {
-			// CORE_PANIC("Function with return value cannot have FunctionEnd terminator");
-			return function;
+			CORE_PANIC("Function with return value cannot have FunctionEnd terminator");
 		}
 	}
 
@@ -827,9 +833,9 @@ namespace compiler::mir {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-			// return function_no_lifetime;
+			auto function_no_func_end = finalizeFunctionEnd(ctx, std::move(function_no_lifetime));
 			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_no_lifetime));
+			return addDestructors(ctx, std::move(function_no_func_end));
 		}
 
 		QUERY_AUTO_CACHE_REF
