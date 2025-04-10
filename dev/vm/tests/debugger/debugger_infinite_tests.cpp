@@ -44,9 +44,9 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid).expect("Run failed (1)");
+		vm::api::run(pid).value(); // "Run failed (1)"
 
-		auto position = vm::api::pause(pid).expect("Pause failed (1)");
+		auto position = vm::api::pause(pid).value(); // "Pause failed (1)"
 		std::cout << position.instr_number << '\n';
 		assertTrue(
 			2 <= position.instr_number && position.instr_number <= 3, "Line number is not correct"
@@ -76,15 +76,15 @@ private:
 			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
 		);
 
-		vm::api::resume(pid).expect("Resume failed (1)");
+		vm::api::resume(pid).value(); // "Resume failed (1)"
 
-		vm::api::stop(pid).expect("Stop failed (1)");
+		vm::api::stop(pid).value(); // "Stop failed (1)"
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
+		vm::api::step(base::safeIntConv<vm::PID>(pid)).value(); // "Step failed"
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .expect("Get current position failed");
+		                              .value(); // "Get current position failed"
 		return execution_position.instr_number;
 	}
 };

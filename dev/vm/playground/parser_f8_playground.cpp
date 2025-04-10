@@ -11,11 +11,11 @@ int main(int argc, char** argv) {
 	}
 	fs::FilePath file(argv[1]);
 
-	auto process_pid = vm::api::spawn().expect("Process spawn error").pid;
+	auto process_pid = vm::api::spawn().value().pid; // "Process spawn error"
 
 	auto loaded_file_response = vm::api::loadFile(process_pid, file);
 
-	if (loaded_file_response.has_error()) {
+	if (!loaded_file_response.has_value()) {
 		auto error = loaded_file_response.error();
 
 		variant_match(error) {
@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
 		// this is not failing for some strange reason:
 		// error is lost somewhere on api-vcpu path
-		vm::api::run(process_pid).expect("Run error");
+		vm::api::run(process_pid).value(); // "Process spawn error"
 
 		[[maybe_unused]]
 		auto join_result
