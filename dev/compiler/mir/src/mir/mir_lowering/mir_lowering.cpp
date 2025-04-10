@@ -862,7 +862,7 @@ namespace compiler::mir {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 			// eliminating unreachable blocks
-			auto function_reachable   = eliminateUnreachable(std::move(function_no_lifetime));
+			auto function_reachable = eliminateUnreachable(std::move(function_no_lifetime));
 
 			UNPACK_RESULT(
 				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
