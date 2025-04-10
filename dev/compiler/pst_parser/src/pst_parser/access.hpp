@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lang_parser_element.hpp"
-
 #include <query_framework/query_int.hpp>
 
 #include <base/box.hpp>
@@ -9,6 +7,8 @@
 #include <base/ref.hpp>
 
 namespace pst {
+	class LangElement;
+
 	/**
 	 * @brief Wrapper for a reference to pst that allows access, it should never be passed between
 	 * different queries.
@@ -85,7 +85,7 @@ namespace pst {
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
 		friend class LangElement;
-		template<std::derived_from<LangElement> T>
+		template</*std::derived_from<LangElement>*/ typename T>
 		friend struct GenericPSTQueryKey;
 
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
