@@ -324,11 +324,8 @@ namespace compiler::helios {
 				// change when children get access
 				for (auto sub: element->viewSubElements()) {
 					variant_match(sub) {
-						variant_case(pst::LangElement::ConstChild, child) {
-							this->visit(
-								pst::AccessLocked<pst::LangElement>::illegalConstructor(child)
-									.unlock(ctx)
-							);
+						variant_case(pst::LangElement::Child, child) {
+							this->visit(child.unlock(ctx));
 						}
 					}
 				}

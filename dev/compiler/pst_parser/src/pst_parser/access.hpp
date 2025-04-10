@@ -148,11 +148,6 @@ namespace pst {
 			ref = std::move(oth).ref;
 			return *this;
 		}
-
-		// @todo
-		// tmp solution to work around children access
-		// see: dev/compiler/helios/src/helios/scopes/scopes.cpp QueryScopesInModule
-		static AccessLocked illegalConstructor(base::MCRef<Element> e) { return { e }; }
 	};
 
 	/**
