@@ -10,7 +10,8 @@ namespace pst {
 	 * @brief Generates vector that contain Refs to all elements in the subtree of the root element
 	 * (recursively). Order of elements is arbitrary. Should probably be used for tests only.
 	 */
-	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(AccessLocked<pst::LangElement> root);
+	std::vector<AccessLocked<pst::LangElement>>
+		viewAllSubTreeElements(AccessLocked<pst::LangElement> root);
 
 	/**
 	 * @brief Same as viewAllSubTreeElements,
@@ -18,8 +19,9 @@ namespace pst {
 	 * Should probably be used for tests only. Might be slow, due to dynamic_cast's.
 	 */
 	template<class T>
-	std::vector<AccessLocked<T>> viewAllSubTreeElementsFillter(AccessLocked<pst::LangElement> root) {
-		auto                 all = viewAllSubTreeElements(root);
+	std::vector<AccessLocked<T>> viewAllSubTreeElementsFillter(AccessLocked<pst::LangElement> root
+	) {
+		auto                         all = viewAllSubTreeElements(root);
 		std::vector<AccessLocked<T>> result;
 		for (auto el: all) {
 			auto casted = el.dynamicCast<T>().illegalAccess();

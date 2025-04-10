@@ -1,5 +1,6 @@
 #pragma once
 
+#include "access.hpp"
 #include "element_kind.hpp"
 
 #include <token_parser_core/automatic.hpp>
@@ -12,8 +13,6 @@
 
 #include <ranges>
 #include <variant>
-
-#include "access.hpp"
 
 namespace pst {
 	class Import;
@@ -30,11 +29,11 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	public:
-		using Child      = AccessLocked<LangElement>;
+		using Child = AccessLocked<LangElement>;
 
 		using SubToken = base::CRef<tpc::Token>;
 
-		using SubElement      = std::variant<SubToken, Child>;
+		using SubElement = std::variant<SubToken, Child>;
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
@@ -164,8 +163,8 @@ namespace pst {
 		friend class PSTAutomatic;
 
 	protected:
-		dia::SourcePosition              source_position;
-		std::vector<SubElement>          sub_elements;
+		dia::SourcePosition                       source_position;
+		std::vector<SubElement>                   sub_elements;
 		base::Optional<AccessLocked<LangElement>> parent;
 
 		/**
@@ -201,7 +200,7 @@ namespace pst {
 		 */
 		void setFirstToken(dia::SourcePosition pos);
 
-		void setParent(Ref<LangElement> parent) { this->parent = {parent}; }
+		void setParent(Ref<LangElement> parent) { this->parent = { parent }; }
 
 	private:
 		PstID id = PstID::next();

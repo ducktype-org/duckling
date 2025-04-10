@@ -6,9 +6,7 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const {
-		return parent;
-	}
+	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
@@ -26,7 +24,7 @@ namespace pst {
 	void LangElement::addChild(MCRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(AccessLocked{el});
+			sub_elements.emplace_back(AccessLocked{ el });
 			setLastToken(opt.value()->getSourcePosition());
 		}
 	}

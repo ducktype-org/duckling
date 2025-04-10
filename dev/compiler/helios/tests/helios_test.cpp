@@ -735,15 +735,13 @@ private:
 			auto test_expr = [&](pst::AccessLocked<pst::ExprHolder> expr) {
 				auto unlocked = expr.unlock(ctx);
 				ASSERT_TRUE(unlocked->isTopLevel());
-				auto expected_scope
-					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr);
+				auto expected_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr);
 
 				// this can't be auto because of recursive lambda
 				std::function<void(pst::AccessLocked<pst::LangElement>)> sub_test_expr
 					= [&](pst::AccessLocked<pst::LangElement> inner_expr) {
-						  auto inner_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(
-							  inner_expr
-						  );
+						  auto inner_scope
+							  = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(inner_expr);
 						  ASSERT_EQUAL(expected_scope, inner_scope);
 
 						  for (auto sub_inner: inner_expr.unlock(ctx)->viewSubElements()) {
@@ -759,9 +757,8 @@ private:
 				sub_test_expr(expr);
 			};
 
-			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
-				pst->getRootElement()
-			);
+			auto all_expr_holders
+				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"

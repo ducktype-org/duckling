@@ -60,8 +60,9 @@ namespace lsp {
 		return jsonDict(result);
 	}
 
-	void
-		getSemanticTokens(pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list) {
+	void getSemanticTokens(
+		pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list
+	) {
 		auto unlocked = element.illegalAccess().value();
 		for (auto sub: unlocked->viewSubElements()) {
 			variant_match(sub) {
