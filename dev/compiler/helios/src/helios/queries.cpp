@@ -23,13 +23,10 @@ namespace compiler::helios {
 
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
-					if (kind(sym) == SymbolKind::Const) {
-						out.glob_data.emplace_back(sym, ctx);
-					}
+					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
 					// grab functions:
-					if (kind(sym) == SymbolKind::Function) {
+					if (kind(sym) == SymbolKind::Function)
 						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
-					}
 				}
 			}
 			return out;

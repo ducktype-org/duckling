@@ -3,6 +3,7 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
+#include "pst_parser/lang_parser_element.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -12,8 +13,6 @@
 
 #include "base/anycast.hpp"
 #include "base/for_each.hpp"
-#include "pst_parser/lang_parser_element.hpp"
-
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
@@ -323,12 +322,15 @@ namespace compiler::helios {
 			void visit(pst::Access<T> element) {
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out.insert(scopeOf(element));
-				// @todo 
+				// @todo
 				// change when children get access
 				for (auto sub: element->viewSubElements()) {
 					variant_match(sub) {
 						variant_case(pst::LangElement::ConstChild, child) {
-							this->visit(pst::AccessLocked<pst::LangElement>::illegalConstructor(child).unlock(ctx));
+							this->visit(
+								pst::AccessLocked<pst::LangElement>::illegalConstructor(child)
+									.unlock(ctx)
+							);
 						}
 					}
 				}
