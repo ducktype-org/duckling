@@ -3,7 +3,6 @@
 #include "../lookup_result.hpp"
 #include "../pst_walkers.hpp"
 #include "../symbols/symbols.hpp"
-#include "pst_parser/lang_parser_element.hpp"
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
@@ -11,8 +10,6 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
 
-#include "base/anycast.hpp"
-#include "base/for_each.hpp"
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/stable_container.hpp>
