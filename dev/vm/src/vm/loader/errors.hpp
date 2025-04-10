@@ -2,6 +2,8 @@
 
 #include <base/string_id.hpp>
 
+#include <string_view>
+
 namespace vm::loader {
 	class UnknownLabel final: public dia::Error {
 	public:
@@ -254,4 +256,10 @@ namespace vm::loader {
 			  dia::Error(pos),
 			  error_message(error_message) {}
 	};
+
+	constexpr const std::string_view NO_MAIN_ERR
+		= "Provided program does not have `main` function.";
+
+	constexpr const std::string_view WRONG_MAIN_RET_VAL_ERR
+		= "Main function has to return an 8 byte primitive type.";
 }

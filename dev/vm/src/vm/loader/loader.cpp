@@ -146,6 +146,42 @@ namespace {
 			);
 		}
 	}
+
+	std::expected<void, LoaderLogger> validateMain(const Program& program) {
+		LoaderLogger log;
+
+		auto is_valid_main_return_type = [](const vm::code::TypeOfData& type) -> bool {
+			variant_match(type) {
+				variant_case(vm::code::PrimitiveType, primitive) { return primitive.size == 8; }
+				variant_default { return false; }
+			}
+			return false;
+		};
+
+		// Check if main function exists
+		auto opt_main = program.funcMap().atMaybe(base::StrID("main"));
+		if (!opt_main.has_value()) {
+			log.logSimple(NO_MAIN_ERR.data());
+			return std::unexpected(std::move(log));
+		}
+
+		// Check if main type exists and is a function type
+		// @note: We are guaranteed that a function type for each function exists. It's checked by
+		// builders.
+		auto main_type = *program.typeMap().atMaybe(base::StrID("main"));
+
+		variant_match(*main_type) {
+			variant_case(vm::code::FunctionType, func_type) {
+				auto opt_return_type = program.typeMap().atMaybe(func_type.result);
+				if (!opt_return_type || !is_valid_main_return_type(**opt_return_type)) {
+					log.logSimple(WRONG_MAIN_RET_VAL_ERR.data());
+					return std::unexpected(std::move(log));
+				}
+			}
+		}
+
+		return {};
+	}
 }
 
 void Program::insertFunctions(
@@ -225,6 +261,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();
 
+		auto main_validation = validateMain(program);
+		if (!main_validation.has_value())
+			return std::unexpected(std::move(main_validation).error());
+
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
 			return std::unexpected(std::move(validation_result).error());
@@ -235,6 +275,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 }
 
 const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
+
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
+	return type_context_builder.getTypes();
+}
 
 void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
 	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
