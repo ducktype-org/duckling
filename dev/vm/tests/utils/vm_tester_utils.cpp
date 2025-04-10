@@ -5,7 +5,7 @@ void VmTestSuite::runTestOnVm(
 ) {
 	auto process_pid_response = vm::api::spawn();
 	assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-	auto pid = process_pid_response.value().pid; // "Spawn failed (2)"
+	auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
 
 	fs::FilePath file(path(rbc_filename));
 	auto         loaded_file_response = vm::api::loadFile(pid, file);

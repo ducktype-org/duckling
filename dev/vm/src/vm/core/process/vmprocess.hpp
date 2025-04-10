@@ -77,7 +77,7 @@ namespace vm {
 		 * @return cpp::result<api::Response, api::CoreOperationError>
 		 */
 		// cpp::result<api::Response, api::CoreOperationError>
-			// doRequest(const api::ExecutorRequest& request);
+		// doRequest(const api::ExecutorRequest& request);
 		std::expected<api::Response, api::CoreOperationError>
 			doRequest(const api::ExecutorRequest& request);
 
@@ -92,13 +92,16 @@ namespace vm {
 		 * @param request
 		 * @return cpp::result<api::Response, api::CoreOperationError>
 		 */
-		// cpp::result<api::Response, api::CoreOperationError> doRequest(const api::DataRequest& request);
+		// cpp::result<api::Response, api::CoreOperationError> doRequest(const api::DataRequest&
+		// request);
 		std::expected<api::Response, api::CoreOperationError>
 			doRequest(const api::DataRequest& request);
 
 
-		// cpp::result<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request);
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request);
+		// cpp::result<api::Response, api::CoreOperationError> doRequest(const api::IORequest&
+		// request);
+		std::expected<api::Response, api::CoreOperationError>
+			doRequest(const api::IORequest& request);
 
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
@@ -124,8 +127,10 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		// cpp::result<api::Response, api::CoreOperationError> input(const api::request::Input& request);
-		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request);
+		// cpp::result<api::Response, api::CoreOperationError> input(const api::request::Input&
+		// request);
+		std::expected<api::Response, api::CoreOperationError>
+			input(const api::request::Input& request);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
@@ -188,7 +193,7 @@ namespace vm {
 		 * @brief Entry point to perform requests on the process.
 		 */
 		// cpp::result<api::Response, api::CoreOperationError>
-			// doRequest(const api::RequestVariant& request);
+		// doRequest(const api::RequestVariant& request);
 		std::expected<api::Response, api::CoreOperationError>
 			doRequest(const api::RequestVariant& request);
 

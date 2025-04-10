@@ -89,9 +89,8 @@ void server(i32 port) {
 
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
 	([](vm::PID pid, const std::string& type_name) {
-		return toResponse(vm::api::getType(pid, type_name).transform([](const vm::TypeCRef& type_ptr) {
-			return *type_ptr;
-		}));
+		return toResponse(vm::api::getType(pid, type_name)
+		                      .transform([](const vm::TypeCRef& type_ptr) { return *type_ptr; }));
 	});
 	CROW_ROUTE(app, "/data/block/<uint>/<uint>")
 	([](vm::PID pid, u32 block_id) {

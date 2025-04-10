@@ -44,7 +44,9 @@ namespace vm::api {
 	}
 
 	std::expected<ProcessInfo, ApiError> spawn() {
-		return Supervisor::get().newProcess().transform([](const auto& x) { return ProcessInfo{ x }; });
+		return Supervisor::get().newProcess().transform([](const auto& x) {
+			return ProcessInfo{ x };
+		});
 	}
 
 	std::expected<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {

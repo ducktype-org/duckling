@@ -105,13 +105,15 @@ namespace vm {
 			}
 			variant_case_novalue(api::request::Resume) {
 				auto response = getMainVMThread().resume();
-				if (!response) return std::unexpected(api::CoreOperationError{ api::ResumeError{} });
+				if (!response)
+					return std::unexpected(api::CoreOperationError{ api::ResumeError{} });
 				return api::Response(api::response::Empty());
 			}
 			variant_case_novalue(api::request::Step) {
 				auto response = getMainVMThread().step();
 				if (!response)
-					return std::unexpected(api::CoreOperationError{ api::OtherError{ "step error" } });
+					return std::unexpected(api::CoreOperationError{
+						api::OtherError{ "step error" } });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
@@ -230,7 +232,8 @@ namespace vm {
 	std::expected<api::Response, api::CoreOperationError>
 		VMProcess::attach(std::istream& istream, std::ostream& ostream) {
 		// @TODO: Flush the ostream from ProcIO to new ostream.
-		if (io_redirecter) return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
+		if (io_redirecter)
+			return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
 
 		// So long this object lives, any IO is redirected.
 		io_redirecter.emplace(io.attach(istream, ostream));
