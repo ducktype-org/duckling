@@ -7,6 +7,10 @@
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 
+#include <type_traits>
+
+using namespace vm::code::builders;
+
 class BCBuildingTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCBuildingTests
@@ -18,47 +22,37 @@ public:
 		TESTER_ADD_TEST(labelNotFound);
 		TESTER_ADD_TEST(unknownType);
 		TESTER_ADD_TEST(unknownFunction);
+		TESTER_ADD_TEST(noFuncType);
+		TESTER_ADD_TEST(invalidFunctionCall);
+		TESTER_ADD_TEST(invalidRetTypeInCall);
 	}
 
 private:
-	/**
-	 * @brief Preprocesses a syntactically incorrect file. Asserts that `error_keywords` are present
-	 * in the error message.
-	 */
-	void buildInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
-	) {
+	template<class T>
+	requires std::is_base_of_v<BuilderError, T>
+	void loadInvalidDbcAssertThrows(const std::string& dbc_filename) {
 		auto process_pid_response = vm::api::spawn();
 		ASSERT_TRUE(process_pid_response.has_value());
 		auto pid = process_pid_response.expect("Spawn failed").pid;
 
 		fs::FilePath file(path(dbc_filename));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
-		ASSERT_TRUE(!loaded_file_response.has_value());
-		auto err = loaded_file_response.error();
-		ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
-		auto core_op = std::get<vm::api::CoreOperationError>(err);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
-		auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-		for (auto err_key: error_keywords) {
-			assertTrue(
-				err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
-			);
-		}
+		assertThrows<T>(
+			[&] { auto loaded_file_response = vm::api::loadFile(pid, file); }, T::ERR_MSG
+		);
 	}
 
 	void multipleLabels() {
-		buildInvalidDbc(
+		loadInvalidDbc(
 			"multiple_labels.dbc",
 			{
-				vm::loader::RepeatedLabel::ERR_MSG,
+				vm::loader::RepeatedLabelError::ERR_MSG,
 				vm::loader::RepeatedLabelNote::ERR_MSG,
 			}
 		);
 	}
 
 	void repeatedTypes() {
-		buildInvalidDbc(
+		loadInvalidDbc(
 			"repeated_types.dbc",
 			{
 				vm::loader::DuplicatedTypeError::ERR_MSG,
@@ -68,17 +62,17 @@ private:
 	}
 
 	void labelNotFound() {
-		buildInvalidDbc(
+		loadInvalidDbc(
 			"label_not_found.dbc",
 			{
-				vm::loader::UnknownLabel::ERR_MSG,
+				vm::loader::UnknownLabelError::ERR_MSG,
 				"LB",
 			}
 		);
 	}
 
 	void unknownType() {
-		buildInvalidDbc(
+		loadInvalidDbc(
 			"unknown_type.dbc",
 			{
 				base::strConcat(vm::loader::UnknownTypeError::ERR_MSG, "in64"),
@@ -87,13 +81,41 @@ private:
 	}
 
 	void unknownFunction() {
-		buildInvalidDbc(
+		loadInvalidDbc(
 			"unknown_function.dbc",
 			{
 				base::strConcat(vm::loader::UnknownFunctionError::ERR_MSG, "foo"),
 			}
 		);
 	}
+
+	void noFuncType() {
+		loadInvalidDbc(
+			"no_func_type.dbc",
+			{
+				base::strConcat(vm::code::builders::InvalidFunctionCallArguments::ERR_MSG, "main"),
+			}
+		);
+	}
+
+	void invalidFunctionCall() {
+		loadInvalidDbc(
+			"invalid_function_call.dbc",
+			{
+				vm::code::builders::InvalidFunctionCallArguments::ERR_MSG,
+			}
+		);
+	}
+
+	void invalidRetTypeInCall() {
+		loadInvalidDbc(
+			"invalid_ret_type_in_call.dbc",
+			{
+				vm::code::builders::InvalidFunctionCallArguments::ERR_MSG,
+			}
+		);
+	}
+
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/assembly/");

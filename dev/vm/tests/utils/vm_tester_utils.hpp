@@ -18,4 +18,18 @@ protected:
 	void runTestOnVm(
 		const std::string& rbc_filename, const std::string& input, const std::string& output
 	);
+
+	/**
+	 * @brief Parses a file containing a program which violates syntactic or static verification
+	 * guidelines. the error message.
+	 */
+	void loadInvalidDbc(
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	);
+
+	/**
+	 * @brief Parses a file containing a program which does not violate syntactic and static
+	 * verification guidelines.
+	 */
+	void loadValidDbc(const std::string& dbc_filename);
 };

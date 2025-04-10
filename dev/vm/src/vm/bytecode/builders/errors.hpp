@@ -35,11 +35,11 @@ namespace vm::code::builders {
 
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
-		constexpr const static std ::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                        FUNC_NAME;
+		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
+		const base::StrID                       FUNC_NAME; // TODO: Try to remove that
 
 		MissingFunctionalTypeError(base::StrID func_name):
-			  BuilderError(base ::strConcat(ERR_MSG, func_name)),
+			  BuilderError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
@@ -47,8 +47,8 @@ namespace vm::code::builders {
 	public:
 		constexpr const static std ::string_view ERR_MSG = "Type is not functional: ";
 
-		TypeIsNotFunctionalError(base ::StrID name):
-			  BuilderError(base ::strConcat(ERR_MSG, name)) {}
+		TypeIsNotFunctionalError(base::StrID type_name):
+			  BuilderError(base::strConcat(ERR_MSG, type_name)) {}
 	};
 
 	class MissingSubtypeError: public BuilderError {
