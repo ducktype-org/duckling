@@ -17,36 +17,23 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryModuleHOUT, HOUTUnit) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			std::cerr << "Fetching scopes.\n";
 			auto scopes = ctx.query<QueryScopesInModule>(key);
-			std::cerr << "Scopes fetched.\n";
 
-			std::cerr << "Fetching symbols.\n";
 			HOUTUnit out;
-			int i=1;
 			for (auto scope: *scopes) {
-				std::cerr << "Fetching symbols in scope " << i << "/" << scopes->size() << ".\n";
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
 				scope.debugPrintScopeAndParents();
 
-				std::cerr << "    Aggregating symbols.\n";
-				int j=1;
 				for (auto sym: *symbols_in_scope) {
-					std::cerr << "        Symbol " << j << "/" << symbols_in_scope->size() << ".\n";
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) {
-						std::cerr << "        Symbol is a constant.\n";
 						out.glob_data.emplace_back(sym, ctx);
 					}
 					// grab functions:
 					if (kind(sym) == SymbolKind::Function) {
-						std::cerr << "        Symbol is a function.\n";
 						out.functions.push_back(ctx.query<QueryCodeOFFun>(sym));
 					}
-					j++;
 				}
-				std::cerr << "    Symbols aggregated.\n";
-				i++;
 			}
 			return out;
 		}
