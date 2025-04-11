@@ -58,7 +58,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
  * @return crow::response The HTTP response corresponding to the result.
  */
 template<class E>
-crow::response toResponse(const cpp::result<void, E>& x) {
+crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();
