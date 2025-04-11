@@ -1,0 +1,21 @@
+type primitive: int64 8
+type fun: main {} int64
+
+function main {
+  arg_size: 0;
+  ret_size: 8;
+  local_size: 8;
+
+  code: {
+    # [0, 8) -> main ret_val
+
+    jmpRel_label  Here;
+
+    label         Here;
+    
+    label         Here;
+
+    ret;
+  }
+
+}

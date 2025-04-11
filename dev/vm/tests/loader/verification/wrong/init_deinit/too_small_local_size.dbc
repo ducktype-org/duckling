@@ -1,0 +1,19 @@
+type primitive: int64 8
+type fun: main {} int64
+
+function main {
+  arg_size: 0;
+  ret_size: 8;
+  local_size: 8;
+
+  code: {
+    # [0, 8) -> main ret_val
+    # [8, 16) -> x
+    
+    output_l64          8;
+    deinit; # x
+
+    ret;
+  }
+
+}

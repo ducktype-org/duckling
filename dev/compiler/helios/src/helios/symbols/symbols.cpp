@@ -398,7 +398,7 @@ namespace compiler::helios {
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
 			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent());
+			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent().value());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {

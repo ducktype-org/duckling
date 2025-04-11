@@ -60,16 +60,18 @@ namespace lsp {
 		return jsonDict(result);
 	}
 
-	void
-		getSemanticTokens(MCRef<pst::LangElement> element, std::vector<SemanticToken>& token_list) {
-		for (auto sub: element->viewSubElements()) {
+	void getSemanticTokens(
+		pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list
+	) {
+		auto unlocked = element.illegalAccess().value();
+		for (auto sub: unlocked->viewSubElements()) {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
 					// add token to list
 					auto semantic_token = SemanticToken(token);
 					token_list.push_back(semantic_token);
 				}
-				variant_case(pst::LangElement::ConstChild, child) {
+				variant_case(pst::LangElement::Child, child) {
 					// recursive token generation
 					getSemanticTokens(child, token_list);
 				}
@@ -77,7 +79,7 @@ namespace lsp {
 		}
 	}
 
-	std::string getSemanticTokens(MCRef<pst::LangElement> element) {
+	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement> element) {
 		std::vector<SemanticToken> tokens;
 		getSemanticTokens(element, tokens);
 

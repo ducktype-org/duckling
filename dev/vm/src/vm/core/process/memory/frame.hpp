@@ -67,7 +67,7 @@ namespace vm {
 
 		/**
 		 * @brief Mapping from stack offset to ID of block
-		 * responisble for data on that offset.
+		 * responsible for data on that offset.
 		 *
 		 * Used when creating pointers to local variables.
 		 */
