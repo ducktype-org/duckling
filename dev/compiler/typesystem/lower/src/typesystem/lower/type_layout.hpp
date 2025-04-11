@@ -51,7 +51,7 @@ namespace tsl {
 		Bits getSize() const {
 			return size;
 		}
-		
+
 		/**
 		 * @brief Get the source type of a layout.
 		 * @return The source type of a layout.

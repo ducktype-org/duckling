@@ -1,7 +1,8 @@
 /**
  * @file diagnostics.hpp
  *
- * @brief Push/pop diagnostics allows to push/pop diagnostic options via pragmas with acts like diagnostic scope. 
+ * @brief Push/pop diagnostics allows to push/pop diagnostic options via pragmas with acts like
+ diagnostic scope.
  * If a diagnostic option is changed using `_Pragma` inside push/pop pair, it will only affect
  * code inside this pair.
  *
@@ -25,6 +26,6 @@
 	#define PUSH_DIAGNOSTIC _Pragma("GCC diagnostic push")
 	#define NO_SHADOW                                        \
 		_Pragma("GCC diagnostic ignored \"-Wshadow=local\"") \
-		_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"")
+			_Pragma("GCC diagnostic ignored \"-Wshadow=compatible-local\"")
 	#define POP_DIAGNOSTIC _Pragma("GCC diagnostic pop")
 #endif

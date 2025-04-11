@@ -12,9 +12,9 @@
 #include <init/init.hpp>  // IWYU pragma: export
 #include <printer/stream_printer.hpp>
 
-#include <base/macros/diagnostics.hpp>
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
+#include <base/macros/diagnostics.hpp>
 
 #include <exception>
 #include <string>

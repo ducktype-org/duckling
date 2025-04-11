@@ -8,7 +8,7 @@
  */
 #pragma once
 
-#define STRINGIFY(arg) #arg
+#define STRINGIFY(arg)   #arg
 #define STRINGIFY_2(arg) STRINGIFY(arg)
 
 #define CONCAT(arg1, arg2) arg1##arg2
@@ -35,10 +35,10 @@
 /**
  * @brief If that can be used in macros
  */
- #define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
- #define IF_false(t, e) e
- #define IF_true(t, e)  t
- 
- #define IF_NOT(cond, t, e) CONCAT(IF_NOT, cond)(t, e)
- #define IF_NOT_false(t, e) t
- #define IF_NOT_true(t, e)  e
+#define IF(cond, t, e) CONCAT(IF_, cond)(t, e)
+#define IF_false(t, e) e
+#define IF_true(t, e)  t
+
+#define IF_NOT(cond, t, e) CONCAT(IF_NOT, cond)(t, e)
+#define IF_NOT_false(t, e) t
+#define IF_NOT_true(t, e)  e

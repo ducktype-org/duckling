@@ -2,9 +2,9 @@
 
 // Feel free to modify this file, as this code is very generic and tough to write once.
 
-#include <base/macros/utils.hpp>
-#include <base/macros/diagnostics.hpp>
 #include <base/exceptions.hpp>
+#include <base/macros/diagnostics.hpp>
+#include <base/macros/utils.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
 
