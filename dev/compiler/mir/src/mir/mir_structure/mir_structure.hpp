@@ -114,6 +114,9 @@ namespace compiler::mir {
 		// Locals without a helios_id are locals created for temporary values
 		base::Optional<helios::SymID> helios_id;
 		tsh::SymbolType<>             type;
+
+		// maybe we should have this to be an optional?:
+		// this PR: remove this
 		helios::ScopeID               lifetime_scope;
 
 		/**
