@@ -16,6 +16,7 @@
 
 #include <base/string_id.hpp>
 #include <typesystem/higher/symbol_type.hpp>
+#include <json/json.hpp>
 
 namespace compiler::helios {
 
@@ -44,6 +45,25 @@ namespace compiler::helios {
 		Destructor,
 		// ...
 	};
+
+	NLOHMANN_JSON_SERIALIZE_ENUM(
+		SymbolKind,
+		{ { SymbolKind::Namespace, "namespace" },
+	      { SymbolKind::Function, "function" },
+	      { SymbolKind::Const, "const" },
+	      { SymbolKind::Class, "class" },
+	      { SymbolKind::Alias, "alias" },
+	      { SymbolKind::Using, "using" },
+	      { SymbolKind::Variable, "variable" },
+	      { SymbolKind::Import, "import" },
+	      { SymbolKind::Parameter, "parameter" },
+	      { SymbolKind::BuiltinFunction, "builtin_function" },
+	      { SymbolKind::Method, "method" },
+	      { SymbolKind::Field, "field" },
+	      { SymbolKind::Constructor, "constructor" },
+	      { SymbolKind::Destructor, "destructor" } }
+	)
+
 
 	// Following functions are left as functions (instead of beeing a query):
 	// in the future once Query System implementation will mature

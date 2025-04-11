@@ -1,4 +1,5 @@
 #include <query_framework/query_impl.hpp>
+#include <diagnostic/interactive_logger.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 
 #include <base/optional.hpp>
@@ -8,6 +9,7 @@
 #include "../visitors.hpp"
 #include "query_hout_of_expr.hpp"
 #include <base/exceptions.hpp>
+#include "diagnostic/interactive_message.hpp"
 #include "expr.hpp"
 #include <pst_parser/elements/hierarchy/expr.hpp>
 
@@ -230,20 +232,34 @@ namespace compiler::helios::code {
 				// * make function call
 				// For now we support just builtins
 
-				// if no function call is found, we try to use builtin operators:
+				dia::InteractiveLogger logger;
+				logger.log(base::makeBox<dia::OperatorNotFound>(
+					stmt->getSourcePosition(), stmt->getOperator(), std::move(lhs), std::move(rhs)
+				));
 
-				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
-				if (builtin.has_value()) {
-					node = std::move(builtin).value();
-					return;
+				// This code is temporarly commented out.
+				// TODO: Refactor this code so lhs and rhs are not moved.
+				// if no function call is found, we try to use builtin operators:
+				// auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs),
+				// std::move(rhs));
+				/* if (builtin.has_value()) {
+				    node = std::move(builtin).value();
+				    return;
 				} else {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getSourcePosition(), "No builtin operator found"
-						)
-					);
-					// failed
-				}
+				    dia::InteractiveLogger logger;
+				    logger.log(base::makeBox<dia::OperatorNotFound>(
+				        stmt->getSourcePosition(),
+				        stmt->getOperator(),
+				        std::move(lhs),
+				        std::move(rhs)
+				    ));
+				    ctx.log(
+				        makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+				            stmt->getSourcePosition(), "No builtin operator found"
+				        )
+				    );
+				    // failed
+				} */
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> stmt) override {

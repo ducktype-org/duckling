@@ -12,6 +12,7 @@ namespace dia {
 	private:
 		dia::SourcePosition               position;
 		std::set<compiler::helios::SymID> symbols;
+		std::set<tsh::AbstractType>       types;
 
 	public:
 		InteractiveCode(dia::SourcePosition position): position(position) {}
@@ -22,5 +23,7 @@ namespace dia {
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }
+
+		std::set<tsh::AbstractType> get_types() const { return types; }
 	};
 }

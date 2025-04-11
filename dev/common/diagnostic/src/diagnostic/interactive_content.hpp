@@ -6,6 +6,7 @@
 #include "diagnostic/source_position.hpp"
 #include "interactive_code.hpp"
 #include "serializable.hpp"
+#include "typesystem/higher/abstract_type.hpp"
 
 namespace dia {
 	enum ContentType { ERROR, WARNING, NOTE };
@@ -19,10 +20,13 @@ namespace dia {
 	class ContentParams {
 	protected:
 		std::set<compiler::helios::SymID> symbols{};
+		std::set<tsh::AbstractType>       types{};
 		ContentParams() = default;
 
 	public:
 		std::set<compiler::helios::SymID> get_symbols() { return symbols; }
+
+		std::set<tsh::AbstractType> get_types() { return types; }
 
 		virtual json tojson()    = 0;
 		virtual ~ContentParams() = default;
@@ -75,6 +79,13 @@ namespace dia {
 			auto code_symbols   = interactive_code.get_symbols();
 			params_symbols.insert(code_symbols.begin(), code_symbols.end());
 			return params_symbols;
+		}
+
+		std::set<tsh::AbstractType> get_types() {
+			auto params_types = params->get_types();
+			auto code_types   = interactive_code.get_types();
+			params_types.insert(code_types.begin(), code_types.end());
+			return params_types;
 		}
 	};
 

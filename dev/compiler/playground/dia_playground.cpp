@@ -8,6 +8,6 @@ int main() {
 	init::InitObject _;
 	json             j = dia::ExampleMessage{};
 
-	std::cout << j.dump() << std::endl;
+	std::cout << j.dump(4) << std::endl;
 	return 0;
 }
