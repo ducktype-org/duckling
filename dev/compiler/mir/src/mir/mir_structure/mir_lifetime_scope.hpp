@@ -13,20 +13,25 @@
 #include <base/stable_container.hpp>
 
 namespace compiler::mir {
-    /**
-     * MIR Lifetime scope.
-     */
-    struct LifetimeScope final{
-        MCRef<LifetimeScope> parent;
-        u64 depth;
-    };
-
+    
     struct LifetimeScopeTree final {
+        /**
+        * MIR Lifetime scope.
+        */
+        struct LifetimeScope final{
+            MCRef<LifetimeScope> parent;
+            u64 depth;
+        };
+        
         base::StableVector<const LifetimeScope> scopes;
         CRef<LifetimeScope> root;
        
         LifetimeScopeTree();
 
         CRef<LifetimeScope> newScope(CRef<LifetimeScope> parent);
+
+        bool operator==(const LifetimeScopeTree& other) const;
     };
+
+    using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;
 }

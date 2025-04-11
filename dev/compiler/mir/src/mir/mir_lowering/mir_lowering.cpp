@@ -25,7 +25,7 @@ namespace compiler::mir {
 		std::vector<Block>             blocks,
 		base::StableVector<MirLocal>   local_list,
 		BlockID                        entry_block,
-		helios::ScopeID                top_lifetime_scope,
+		LifetimeScopeTree              lifetime_scope_tree,
 		helios::SymID                  helios_id
 	):
 		  name(name),
@@ -34,7 +34,7 @@ namespace compiler::mir {
 		  blocks(std::move(blocks)),
 		  local_list(std::move(local_list)),
 		  entry_block(entry_block),
-		  top_lifetime_scope(top_lifetime_scope),
+		  lifetime_scope_tree(std::move(lifetime_scope_tree)),
 		  helios_id(helios_id) {}
 
 
@@ -248,7 +248,8 @@ namespace compiler::mir {
 		base::StableVector<BlockBuilder> blocks;
 		base::Optional<BlockBuilderRef>  entry_block;
 		base::StableVector<MirLocal>     local_list;
-		base::Optional<helios::ScopeID>  top_lifetime_scope;
+
+		LifetimeScopeTree lifetime_scope_tree;
 
 		query::Context& ctx;
 		helios::SymID   helios_symbol;
@@ -281,7 +282,7 @@ namespace compiler::mir {
 				std::move(blocks),
 				std::move(local_list),
 				entry_block.value()->getID(),
-				top_lifetime_scope.value(),
+				std::move(lifetime_scope_tree),
 				helios_symbol,
 			};
 		}
@@ -289,11 +290,6 @@ namespace compiler::mir {
 		void setName(base::StrID name) {
 			CORE_ASSERT(not this->name.has_value(), "Name already set");
 			this->name.emplace(name);
-		}
-
-		void setTopLifetimeScope(helios::ScopeID scope) {
-			CORE_ASSERT(top_lifetime_scope.empty(), "Top lifetime scope already set");
-			top_lifetime_scope.emplace(scope);
 		}
 
 		/**
@@ -781,7 +777,6 @@ namespace compiler::mir {
 	Function lowerToPreMirFunction(query::Context& ctx, const helios::HOUTFunction& function) {
 		FunctionBuilder function_builder{ ctx, function.original_symbol };
 		function_builder.setName(function.original_name);
-		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);

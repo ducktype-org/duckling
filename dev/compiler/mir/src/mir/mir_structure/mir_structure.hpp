@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mir_local_ref.hpp"
+#include "mir_lifetime_scope.hpp"
 
 #include <helios/scopes/scopes.hpp> // in this pr :delete this
 #include <typesystem/higher/expression_type.hpp>
@@ -252,11 +253,9 @@ namespace compiler::mir {
 		// @TODO: each Instruction should have source position reference
 
 		/**
-		 * @brief Helios Scope this instruction comes from.
-		 * Used for lifetime analysis.
-		 * @todo: we might or might now want to create "MIR scopes" in the future.
+		 * @brief ...
 		 */
-		helios::ScopeID scope;
+		ScopeRef scope;
 
 		Instruction()                   = delete;
 		Instruction(const Instruction&) = default;
@@ -272,7 +271,7 @@ namespace compiler::mir {
 			base::Optional<LocalRef>   output,
 			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
-			helios::ScopeID            scope
+			ScopeRef                   scope
 		):
 			  operation(operation),
 			  output(output),
@@ -336,7 +335,8 @@ namespace compiler::mir {
 		std::vector<Block>           blocks;
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
-		helios::ScopeID              top_lifetime_scope;
+
+		LifetimeScopeTree lifetime_scope_tree;
 
 		// helios ID for hashes, ... this it temporary?
 		// pushing this ID all the way here is problematic
@@ -359,7 +359,7 @@ namespace compiler::mir {
 			std::vector<Block>             blocks,
 			base::StableVector<MirLocal>   local_list,
 			BlockID                        entry_block,
-			helios::ScopeID                top_lifetime_scope,
+			LifetimeScopeTree              lifetime_scope_tree,
 			helios::SymID                  helios_id
 		);
 
