@@ -113,7 +113,7 @@ namespace vm {
 				auto response = getMainVMThread().step();
 				if (!response)
 					return std::unexpected(api::CoreOperationError{
-						api::OtherError{ "step error" } });
+						api::OtherError{ "step error" }, });
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
