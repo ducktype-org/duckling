@@ -1,7 +1,5 @@
 #include "vm_tester_utils.hpp"
 
-#include <exception>
-
 void VmTestSuite::runTestOnVm(
 	const std::string& rbc_filename, const std::string& input, const std::string& output
 ) {

@@ -211,7 +211,6 @@ namespace vm::loader {
 		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	// TODO: This maybe has to be moved to validator errors
 	class PointerDereferenceAfterDeinitError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
@@ -230,53 +229,6 @@ namespace vm::loader {
 		}
 
 		PointerDereferenceAfterDeinitError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class MissingFunctionalTypeError final: public dia::Error {
-		base::StrID func_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "Functional type is not declared for: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, func_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		MissingFunctionalTypeError(dia::SourcePosition pos, base::StrID func_name):
-			  dia::Error(pos),
-			  func_name(func_name) {}
-	};
-
-	class TypeIsNotFunctionalError final: public dia::Error {
-		base::StrID type_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "Type is not functional: ";
-		
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, type_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		TypeIsNotFunctionalError(dia::SourcePosition pos, base::StrID type_name):
-			  dia::Error(pos),
-			  type_name(type_name) {}
 	};
 
 	class WrongTypePointerDereferenceError final: public dia::Error {

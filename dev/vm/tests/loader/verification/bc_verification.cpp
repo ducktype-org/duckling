@@ -14,20 +14,20 @@ public:
 		TESTER_ADD_TEST(jumpSkipBlock);
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
-		
+
 		// TESTER_ADD_TEST(validJumpOutOfBlock);
-		
+
 		// Function verification
 		TESTER_ADD_TEST(noMain);
 		TESTER_ADD_TEST(invalidMainRetSize);
 		TESTER_ADD_TEST(invalidMainRetType);
 		TESTER_ADD_TEST(multipleFunctions);
-		
+
 		// Jump verfification
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
-		
+
 		// @note: Not implemented yet
 		// TESTER_ADD_TEST(noInit);
 		// TESTER_ADD_TEST(beforeInit);

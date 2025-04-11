@@ -20,16 +20,15 @@ protected:
 	);
 
 	/**
-	 * @brief Parses a file containing a program which violates syntactic or static verification
-	 * guidelines. the error message.
+	 * @brief Loads a file containing a program which violates syntactic or static verification
+	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
 		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 	);
 
 	/**
-	 * @brief Parses a file containing a program which does not violate syntactic and static
-	 * verification guidelines.
+	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
 	void loadValidDbc(const std::string& dbc_filename);
 };

@@ -7,10 +7,6 @@
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
 
-#include <type_traits>
-
-using namespace vm::code::builders;
-
 class BCBuildingTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS BCBuildingTests
@@ -28,19 +24,6 @@ public:
 	}
 
 private:
-	template<class T>
-	requires std::is_base_of_v<BuilderError, T>
-	void loadInvalidDbcAssertThrows(const std::string& dbc_filename) {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response.expect("Spawn failed").pid;
-
-		fs::FilePath file(path(dbc_filename));
-		assertThrows<T>(
-			[&] { auto loaded_file_response = vm::api::loadFile(pid, file); }, T::ERR_MSG
-		);
-	}
-
 	void multipleLabels() {
 		loadInvalidDbc(
 			"multiple_labels.dbc",
@@ -115,7 +98,6 @@ private:
 			}
 		);
 	}
-
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/assembly/");
