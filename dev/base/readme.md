@@ -6,7 +6,7 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - constexpr_cat.hpp
 - convert.hpp
 - defer.hpp
-- define_helper.hpp
+- argument_splitter.hpp
 - [exceptions.hpp](@ref base/exceptions.hpp)
 - flag.hpp
 - init_guard.hpp

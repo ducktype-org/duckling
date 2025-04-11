@@ -3,7 +3,7 @@
 #include <json/json.hpp>
 #include <result.hpp>
 
-#include <base/define_helper.hpp>
+#include <base/macros/diagnostics.hpp>
 #include <base/int_conv.hpp>
 
 #include <vm/api/api.hpp>

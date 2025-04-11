@@ -35,6 +35,7 @@
 #include "ok_bad.hpp"
 #include "simple_char_classifications.hpp"
 #include "string_id.hpp"
+#include "argument_splitter.hpp"  // IWYU pragma: export
 
 #include <type_traits>  // IWYU pragma: export
 #include <utility>      // IWYU pragma: export

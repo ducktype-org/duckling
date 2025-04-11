@@ -20,9 +20,9 @@
  */
 #pragma once
 
-#include "define_helper.hpp"
+#include "macros/utils.hpp"
 
-#include <type_traits>
+#include <type_traits> // IWYU pragma: export
 
 /**
  * @brief This is helper macro, do not use directly
