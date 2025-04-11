@@ -21,6 +21,7 @@
 #include "ints.hpp"
 
 #include <type_traits>
+#include <concepts>
 
 namespace base {
 
