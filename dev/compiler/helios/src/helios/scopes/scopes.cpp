@@ -128,7 +128,7 @@ namespace compiler::helios {
 
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
-			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::CodeBlockOrStmt)
 				return ElementScopeKind::Transparent;
 			else
@@ -140,7 +140,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassBlock: {
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::Class)
 				return ElementScopeKind::Standard;
 			else
@@ -236,8 +236,8 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = element->getParent().unlockOpt(ctx)
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent())
+			ScopeID parent = element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );

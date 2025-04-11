@@ -2,30 +2,30 @@
 
 #include "type.hpp"
 
-namespace vm {
-	namespace parser {
-		struct ParsedProgram;
-	}
+#include <vm/bytecode/type_of_data.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
+namespace vm {
 	/**
-	 * @brief Holds metadata about all types in the VCPU.
-	 *
-	 * This class is used to store and access all types
-	 * that are used in the VCPU.
+	 * @brief Holds metadata about all types in the program.
 	 */
-	class TypeMetadata {
+	class TypeMetadata final {
 	private:
 		enum class TypeMetadataState { AddingTypes, Finalized };
 
-		base::StableVector<Type>       types{};
-		std::vector<TypeID>            types_ids{};
-		base::Map<base::StrID, TypeID> names_to_type{};
+		StableTypeIdNameMap<Type, TypeID> types;
 
-		TypeMetadataState state = TypeMetadataState::AddingTypes;
-
-		TypeMetadata() = default;
+		TypeMetadataState state{ TypeMetadata::TypeMetadataState::AddingTypes };
 
 	public:
+		TypeMetadata() = default;
+
+		// Deleting copy and move constructors/operator= because pointers inside types
+		TypeMetadata(const TypeMetadata&)            = delete;
+		TypeMetadata(TypeMetadata&&) noexcept        = delete;
+		TypeMetadata& operator=(const TypeMetadata&) = delete;
+		TypeMetadata& operator=(TypeMetadata&&)      = delete;
+
 		TypeRef addType(Type&& type);
 
 		/**
@@ -34,13 +34,27 @@ namespace vm {
 		void finalize();
 
 		[[nodiscard]]
-		TypeCRef getType(TypeID id) const;
+		TypeCRef at(TypeID id) const;
+		TypeRef  at(TypeID id);
 
-		// @TODO: This function is currently used by parser, but
-		// should be deleted in the future
 		[[nodiscard]]
-		base::Optional<TypeCRef> getTypeByName(base::StrID name) const;
+		TypeCRef at(base::StrID name) const;
+		TypeRef  at(base::StrID name);
 
-		friend parser::ParsedProgram;
+		[[nodiscard]]
+		base::Optional<TypeCRef> atMaybe(TypeID id) const;
+		base::Optional<TypeRef>  atMaybe(TypeID id);
+
+		[[nodiscard]]
+		base::Optional<TypeCRef> atMaybe(base::StrID name) const;
+		base::Optional<TypeRef>  atMaybe(base::StrID name);
+
+		auto begin() const { return types.begin(); }
+
+		auto begin() { return types.begin(); }
+
+		auto end() const { return types.end(); }
+
+		auto end() { return types.end(); }
 	};
 }

@@ -20,7 +20,7 @@ namespace vm {
 	 * Holds all the block metadata and pointers to the real data.
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
-	class Block {
+	class Block final {
 	private:
 		/**
 		 * @brief The unique identifier for the block.

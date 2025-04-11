@@ -43,10 +43,13 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_disable_tc_in_debug("debugger_infinite_test" ${test_set})
 
-        duck_add_test_custom(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
+        duck_add_test_custom(vm ${test_set}_building_test loader/assembly/bc_building.cpp
                 USES ${libvm} Tester ${vmtester})
 
-        duck_add_test_custom(vm ${test_set}_validation_test validation/bc_validation.cpp
+        duck_add_test_custom(vm ${test_set}_parsing_test loader/assembly/bc_parsing.cpp
+                USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_verification_test loader/verification/bc_verification.cpp
                 USES ${libvm} Tester ${vmtester})
 endfunction()
 

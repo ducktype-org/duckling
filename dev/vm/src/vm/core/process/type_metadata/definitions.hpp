@@ -12,3 +12,8 @@ namespace vm {
 	using TypeRef  = Ref<Type>;
 	using TypeCRef = CRef<Type>;
 }
+
+template<>
+struct std ::hash<vm ::TypeID> final {
+	usize operator()(const vm ::TypeID& key) const { return static_cast<usize>(key); }
+};
