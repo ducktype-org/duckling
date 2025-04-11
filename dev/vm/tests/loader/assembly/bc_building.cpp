@@ -30,7 +30,7 @@ private:
 	) {
 		auto process_pid_response = vm::api::spawn();
 		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response.expect("Spawn failed").pid;
+		auto pid = process_pid_response.value().pid;  // "Spawn failed"
 
 		fs::FilePath file(path(dbc_filename));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);

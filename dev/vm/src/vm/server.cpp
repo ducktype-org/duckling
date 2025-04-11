@@ -1,7 +1,6 @@
 #include "server.hpp"
 
 #include <json/json.hpp>
-#include <result.hpp>
 
 #include <base/define_helper.hpp>
 #include <base/int_conv.hpp>
@@ -24,7 +23,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
 }
 
 template<class T, class E>
-crow::response toResponse(const cpp::result<T, E>& x) {
+crow::response toResponse(const std::expected<T, E>& x) {
 	static auto convert = []([[maybe_unused]]
 	                         const auto& v) { return crow::response(200, nlohmann::json(v)); };
 
@@ -33,7 +32,7 @@ crow::response toResponse(const cpp::result<T, E>& x) {
 }
 
 template<class E>
-crow::response toResponse(const cpp::result<void, E>& x) {
+crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();
@@ -90,14 +89,13 @@ void server(i32 port) {
 
 	CROW_ROUTE(app, "/data/type/<uint>/<string>")
 	([](vm::PID pid, const std::string& type_name) {
-		return toResponse(vm::api::getType(pid, type_name).map([](const vm::TypeCRef& type_ptr) {
-			return *type_ptr;
-		}));
+		return toResponse(vm::api::getType(pid, type_name)
+		                      .transform([](const vm::TypeCRef& type_ptr) { return *type_ptr; }));
 	});
 	CROW_ROUTE(app, "/data/block/<uint>/<uint>")
 	([](vm::PID pid, u32 block_id) {
 		return toResponse(
-			vm::api::getBlock(pid, block_id).map([](const vm::api::response::Block& block) {
+			vm::api::getBlock(pid, block_id).transform([](const vm::api::response::Block& block) {
 				const byte* begin = block.data.getBegin();
 				const byte* end   = begin + block.data.size();
 				return std::vector<byte>(begin, end);
