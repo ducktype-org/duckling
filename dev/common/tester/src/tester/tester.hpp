@@ -14,7 +14,6 @@
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
-#include <base/macros/diagnostics.hpp>
 
 #include <exception>
 #include <string>

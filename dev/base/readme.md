@@ -25,4 +25,9 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - type_traits.hpp
 - [variant.hpp](@ref base/variant.hpp)
 
+Macros that are used as helpers for other macros are defined in `macro` folder
+- utils.hpp - common simple utils macros like EXPAND, STRIGIFY_2, COMMA, IF
+- for_each.hpp
+- diagnostics.hpp
+
 @TODO Generate list of files automatically, currently it is hardcoded.
