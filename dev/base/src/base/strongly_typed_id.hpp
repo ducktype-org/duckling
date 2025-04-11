@@ -68,7 +68,7 @@
  *
  *  * Type() - default constructor creating bad ID
  *  * Type::bad() - get bad id
- *  * Type::fromU64(u64 v) - creates id from u64
+ *  * Type::fromU64(v), Type(v) - creates id from u64
  *  * id.isBad(), id.idGood() - check if given ID is good/bad
  *  * id.asInt() - get underlying integer
  *  * <=>, <, ==, etc - all standard comparision operators
@@ -81,8 +81,8 @@
 	private:                                                             \
 		constexpr static u64 BAD_ID = u64(-1);                           \
 		u64                  id     = BAD_ID;                            \
-		inline constexpr explicit NAME(u64 id): id{ id } {}              \
 	public:                                                              \
+		inline constexpr explicit NAME(u64 id): id{ id } {}              \
 		inline constexpr NAME()                               = default; \
 		inline constexpr NAME(const NAME& mX)                 = default; \
 		inline constexpr NAME(NAME&& mX) noexcept             = default; \

@@ -343,7 +343,7 @@ namespace vm {
 		return false;
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -351,15 +351,15 @@ namespace vm {
 
 				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
-					if (func->bc.data() <= instr && instr < func->bc.data() + func->bc.size()) {
+					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
 							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func->bc.data()) });
+							.instr_number = static_cast<u64>(instr - func.bc.data()) });
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::CoreOperationError{
+				return cpp::failure(api::CoreOperationError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}

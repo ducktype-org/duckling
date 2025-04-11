@@ -198,16 +198,16 @@ namespace vm {
 			// the frame of the caller.
 			auto& runtime_data = thread.runtime_data;
 			auto  function_id  = static_cast<usize>(instr->arg0);
-			auto  called_func  = thread.executing_program->functions[function_id];
+			auto& called_func  = thread.executing_program->functions[function_id];
 
 			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func->arg_size + called_func->ret_size;
+			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
 
 			// Save current registers and flow.
 			frame->instr                = instr + 1;
 			frame->local_stack          = local_stack;
-			frame->called_func_arg_size = called_func->arg_size;
-			frame->called_func_ret_size = called_func->ret_size;
+			frame->called_func_arg_size = called_func.arg_size;
+			frame->called_func_ret_size = called_func.ret_size;
 
 			// Save the last frame
 			auto* prev_frame = frame;
@@ -217,13 +217,13 @@ namespace vm {
 			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
 
 			// Update values passed as arguments.
-			instr = called_func->bc.data();
+			instr = called_func.bc.data();
 			// New local_stack address is the local_stack_head (all typed initialized by the caller
 			// up to this point) - the size of ret_val and arguments passed to callee.
 			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
 
 			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func->local_stack_size > runtime_data.local_stack_end)
+			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 
 			// Move shared blocks into callee's block stack and block_local_offset map.
@@ -232,7 +232,7 @@ namespace vm {
 			auto called_func_type = thread.executing_program->types->at(called_func.name);
 			u64  arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
-			u64 shared_block_count     = called_func->ret_size != 0 ? arg_count + 1 : arg_count;
+			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
 			frame->local_stack_head = shared_stack_space_size;
@@ -249,7 +249,7 @@ namespace vm {
 
 			// Remove the argument and return value blocks from caller's block stack.
 			// The return value block may have been uninitialized and initialized again.
-			prev_frame->local_stack_head -= called_func->arg_size + called_func->ret_size;
+			prev_frame->local_stack_head -= called_func.arg_size + called_func.ret_size;
 			for (u64 i = 0; i < shared_block_count; i++) {
 				prev_frame->block_stack.pop_back();
 				// @note: Removing block_id to local_offset mappings from the frame is not needed,
@@ -268,11 +268,11 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
 		{
-			auto function_id = static_cast<usize>(instr->arg0);
-			auto function    = thread.executing_program->functions[function_id];
-			instr            = function->bc.data();
+			auto  function_id = static_cast<usize>(instr->arg0);
+			auto& function    = thread.executing_program->functions[function_id];
+			instr             = function.bc.data();
 
-			if (local_stack + function->local_stack_size > thread.runtime_data.local_stack_end)
+			if (local_stack + function.local_stack_size > thread.runtime_data.local_stack_end)
 				CORE_PANIC("VM stack overflow.");
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
@@ -405,7 +405,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<u64>(instr->arg1)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}
