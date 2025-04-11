@@ -2,8 +2,8 @@
 
 #include <json/json.hpp>
 
-#include <base/define_helper.hpp>
 #include <base/int_conv.hpp>
+#include <base/macros/diagnostics.hpp>
 
 #include <vm/api/api.hpp>
 #include <vm/core/supervisor/supervisor.hpp>

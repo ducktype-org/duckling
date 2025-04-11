@@ -5,7 +5,7 @@
 
 #include <base64.hpp>
 
-#include <base/define_helper.hpp>  // This is included to allow for pushing and popping of diagnostics
+#include <base/macros/diagnostics.hpp>
 
 #include <iostream>
 
