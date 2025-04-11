@@ -35,6 +35,7 @@
 
 #include <functional>
 #include <optional>
+#include <base/macros/diagnostics.hpp>
 
 /* Some cool macros.
  *
