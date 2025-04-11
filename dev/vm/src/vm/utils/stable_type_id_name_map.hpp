@@ -5,7 +5,7 @@
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
 
-#include <base/stable_container.hpp>
+#include <deque>
 
 namespace vm {
 	/**
@@ -28,14 +28,14 @@ namespace vm {
 
 		constexpr TID insert(T&& new_value, base::StrID name) {
 			auto id = TID(values.size());
-			values.emplaceBack(std::move(new_value));
+			values.push_back(std::move(new_value));
 			createLink(id, name);
 			return id;
 		}
 
 		constexpr TID insert(const T& new_value, base::StrID name) {
 			auto id = TID(values.size());
-			values.emplaceBack(new_value);
+			values.push_back(new_value);
 			createLink(id, name);
 			return id;
 		}
@@ -125,7 +125,14 @@ namespace vm {
 			name_to_id.put(name, id);
 		}
 
-		base::StableVector<T>           values{};
+		/**
+		 * @note We are using std::deque here, because references to its data are always valid (do
+		 * not become dangling).
+		 * This is because:
+		 * * Deleting from the structure is not possible.
+		 * * deque does not relocate memory (unlike vector)
+		 */
+		std::deque<T>                   values{};
 		base::HashMap<TID, base::StrID> id_to_name{};
 		base::HashMap<base::StrID, TID> name_to_id{};
 	};
