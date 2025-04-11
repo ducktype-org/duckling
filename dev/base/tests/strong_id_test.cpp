@@ -76,6 +76,7 @@ public:
 			auto id = Direct::fromU64(i);
 			ASSERT_EQUAL(id.asInt(), i);
 			ASSERT_EQUAL(u64(id), i);
+			ASSERT_EQUAL(id, Direct(i));
 			ASSERT_TRUE(id.isGood());
 			ASSERT_TRUE(not id.isBad());
 
