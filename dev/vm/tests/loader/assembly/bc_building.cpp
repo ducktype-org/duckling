@@ -93,7 +93,7 @@ private:
 		loadInvalidDbc(
 			"no_func_type.dbc",
 			{
-				base::strConcat(vm::code::builders::InvalidFunctionCallArguments::ERR_MSG, "main"),
+				base::strConcat(vm::code::builders::MissingFunctionalTypeError::ERR_MSG, "main"),
 			}
 		);
 	}

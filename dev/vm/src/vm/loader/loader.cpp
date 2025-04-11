@@ -242,11 +242,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
 			} catch (code::builders::MissingSubtypeError& e) {
 				log.log<MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			} 
-			catch (code::builders::MissingFunctionalTypeError& e) {
-				log.logSimple(e.what());
-			}
-			catch (code::builders::TypeIsNotFunctionalError& e) {
+			} catch (code::builders::BuilderError& e) {
 				log.logSimple(e.what());
 			}
 			return std::unexpected(std::move(log));
