@@ -25,41 +25,41 @@ using namespace vm::code;
 using namespace vm::code::builders;
 
 namespace compiler::backend_vm {
-	vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
-		variant_match(layout()) {
-			variant_case_novalue(tsl::EmptyTypeLayout) {
-				return vm::code::PrimitiveType(base::StrID("void"), 0);
-			}
-			variant_case_novalue(tsl::IntegralTypeLayout) {
-				auto bits = usize(layout.getSize());
-				if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
-				usize       bytes = bits / 8;
-				std::string name  = "i" + std::to_string(bits);
-
-				return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
-			}
-			variant_case_novalue(tsl::FloatTypeLayout) {
-				auto bits = usize(layout.getSize());
-				CORE_ASSERT(
-					bits == 16 || bits == 32 || bits == 64 || bits == 80,
-					"Invalid size of float: ",
-					bits
-				);
-				usize       bytes = bits / 8;
-				std::string name  = "f" + std::to_string(bits);
-
-				return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
-			}
-			variant_default {
-				CORE_PANIC(
-					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
-				);
-			}
-		}
-		CORE_UNREACHABLE();
-	}
-
 	namespace {
+		vm::code::TypeOfData getTypeFromLayout(const tsl::TypeLayout& layout) {
+			variant_match(layout()) {
+				variant_case_novalue(tsl::EmptyTypeLayout) {
+					return vm::code::PrimitiveType(base::StrID("void"), 0);
+				}
+				variant_case_novalue(tsl::IntegralTypeLayout) {
+					auto bits = usize(layout.getSize());
+					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
+					usize       bytes = bits / 8;
+					std::string name  = "i" + std::to_string(bits);
+
+					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+				}
+				variant_case_novalue(tsl::FloatTypeLayout) {
+					auto bits = usize(layout.getSize());
+					CORE_ASSERT(
+						bits == 16 || bits == 32 || bits == 64 || bits == 80,
+						"Invalid size of float: ",
+						bits
+					);
+					usize       bytes = bits / 8;
+					std::string name  = "f" + std::to_string(bits);
+
+					return vm::code::PrimitiveType(base::StrID(name.c_str()), bytes);
+				}
+				variant_default {
+					CORE_PANIC(
+						base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+					);
+				}
+			}
+			CORE_UNREACHABLE();
+		}
+
 		struct AddLirFuncContext {
 			CRef<lir::Function> lir_function;
 			FunctionBuilder     func_builder;
@@ -323,18 +323,15 @@ namespace compiler::backend_vm {
 
 	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
 		  module_id(module_id) {
-		// @TODO: This is temporary. Look #692
-		// https://github.com/ducktype-org/duckling/issues/692
-
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
-		TypeContext types = type_context_builder.build();
-		code.types        = types.getTypes();
+		TypeContext type_context = type_context_builder.build();
+		code.types        = type_context.getTypes();
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
 
-			AddLirFuncContext ctx(lir_function, types);
+			AddLirFuncContext ctx(lir_function, type_context);
 
 			for (auto&& lir_block: lir_function->blocks) {
 				addBlockLabel(ctx, lir_block.ref());
@@ -369,8 +366,12 @@ namespace compiler::backend_vm {
 						terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
 				}
 
-
 				ctx.func_builder.addInstruction(terminator_instr);
+				// @TODO: This will be removed by #539
+				// https://github.com/ducktype-org/duckling/issues/539
+				ctx.func_builder.setRetSize(
+					type_context.getMetadata().at(lir_function->name)->getResultType().value()->getSize()
+				);
 			}
 
 			code.functions.emplace_back(ctx.func_builder.build());
