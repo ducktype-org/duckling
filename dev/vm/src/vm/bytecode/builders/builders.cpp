@@ -26,10 +26,14 @@ vm::code::Function FunctionBuilder::build() const {
 	function.body = instructions;
 	function.name = name;
 
+	function.local_stack_size = max_stack_size;
+
 	// @TODO: ret_size will be fixed in this issue:
 	// https://github.com/ducktype-org/duckling/issues/539
-	function.local_stack_size = max_stack_size;
-	function.ret_size         = ret_size;
+	auto expected_result_size = type_context.getMetadata().at(name)->getResultType().value()->getSize();
+	CORE_ASSERT(expected_result_size == ret_size, "Ret size not set");
+	function.ret_size         = expected_result_size;
+
 	function.arg_size         = type_context.getMetadata().at(name)->getParametersSize().value();
 	function.next_arg_size    = 0;
 
@@ -160,11 +164,12 @@ void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 }
 
 void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
-	if (stack_state_at_label.contains(at_label.label_name)) {
-		if (stack_state_at_label[at_label.label_name] != local_stack)
+	auto top = local_stack.empty() ? base::Optional<LocalStackEntry>{} : local_stack.back();
+	if (stack_top_at_label.contains(at_label.label_name)) {
+		if (stack_top_at_label[at_label.label_name] != top)
 			throw builders::StackStructureMismatchError(label_users.at(at_label.label_name));
 	} else {
-		stack_state_at_label.put(at_label.label_name, local_stack);
+		stack_top_at_label.put(at_label.label_name, top);
 		label_users.put(at_label.label_name, {});
 	}
 }

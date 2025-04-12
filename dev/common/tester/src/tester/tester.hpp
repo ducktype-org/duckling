@@ -12,7 +12,6 @@
 #include <init/init.hpp>  // IWYU pragma: export
 #include <printer/stream_printer.hpp>
 
-#include <base/define_helper.hpp>
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
 
@@ -30,7 +29,7 @@
 	)
 
 
-#define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
+#define ASSERT_TRUE(actual) ASSERT_EQUAL(true, bool(actual))
 
 
 class SimpleTesterTest;

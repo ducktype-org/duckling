@@ -343,7 +343,7 @@ namespace vm {
 		return false;
 	}
 
-	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -359,7 +359,7 @@ namespace vm {
 				}
 			}
 			variant_default {
-				return cpp::failure(api::CoreOperationError{
+				return std::unexpected(api::CoreOperationError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}

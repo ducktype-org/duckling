@@ -92,14 +92,51 @@ namespace compiler::backend_vm {
 			}
 		};
 
-		void insertTypes(TypeContextBuilder type_context, CRef<lir::Function> lir_function) {
-			auto&& local_layouts
-				= lir_function->local_list
-			    | std::views::transform([](auto&& local) { return local->layout; });
+		void
+			insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+			auto param_layouts = lir_function->local_list
+			                   | std::views::transform([](auto&& local) { return local->layout; });
 
-			for (auto&& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
-			lir_function.
-			type_context.addType(FunctionType(lir_function->name, ))
+			auto param_types = param_layouts | std::views::transform([](auto&& layout) {
+								   return getTypeFromLayout(layout);
+							   });
+
+			std::ranges::for_each(param_types, [&](auto&& type) { type_context.addType(type); });
+
+			auto param_names
+				= param_types
+			    | std::views::transform([](auto&& type) { return VISIT(type, tp, return tp.name); })
+			    | std::ranges::to<std::vector>();
+
+			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
+			type_context.addType(result_type);
+
+			auto result_type_name = VISIT(result_type, type, return type.name);
+
+			// @TODO: This is temporary. Look #692
+			// https://github.com/ducktype-org/duckling/issues/692
+			if (lir_function->name == "main") {
+				type_context.addType(PrimitiveType{ base::StrID("int64"), 8 });
+				type_context.addType(FunctionType{
+					lir_function->name,
+					{},
+					base::StrID("int64"),
+				});
+			} else {
+				type_context.addType(FunctionType{
+					lir_function->name, param_names, result_type_name });
+			}
+		}
+
+		void insertTypes(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+			// Insert function type
+			insertFunctionType(type_context, lir_function);
+
+			// Insert local types
+			auto local_layouts = lir_function->local_list
+			                   | std::views::transform([](auto&& local) { return local->layout; });
+
+			for (const auto& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
 		}
 
 		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -151,7 +188,7 @@ namespace compiler::backend_vm {
 		}
 
 		vm::opargs::OpCodeArg
-			lirArgToOpArg(AddLirFuncContext& ctx, const lir::LIRValue& lir_value) {
+			lirValueToOpArg(AddLirFuncContext& ctx, const lir::LIRValue& lir_value) {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
@@ -227,7 +264,7 @@ namespace compiler::backend_vm {
 
 			// Add other arguments.
 			for (auto&& lir_location: lir_instruction.arguments)
-				args.push_back(lirArgToOpArg(ctx, lir_location));
+				args.push_back(lirValueToOpArg(ctx, lir_location));
 
 
 			// Transforms arguments.
@@ -286,6 +323,9 @@ namespace compiler::backend_vm {
 
 	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
 		  module_id(module_id) {
+		// @TODO: This is temporary. Look #692
+		// https://github.com/ducktype-org/duckling/issues/692
+
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
 		TypeContext types = type_context_builder.build();
@@ -311,8 +351,24 @@ namespace compiler::backend_vm {
 				InstructionBuilder terminator_instr;
 				terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
 
-				for (auto&& lir_location: lir_block->terminator.arguments)
-					terminator_instr.pushArg(lirArgToOpArg(ctx, lir_location));
+				// Since VM does not support `return X;` operation, we must move the value to 0th
+				// index and then return.
+				if (lir_block->terminator.operation == lir::Operation::ReturnValue) {
+					InstructionBuilder move_ret(OpKind::mov);
+					CORE_ASSERT(
+						lir_block->terminator.arguments.size() == 1,
+						"Invalid number of arguments for value-return."
+					);
+					move_ret.pushArgs(
+						vm::opargs::StackLocalI64(0),
+						lirValueToOpArg(ctx, lir_block->terminator.arguments.at(0))
+					);
+					ctx.func_builder.addInstruction(move_ret);
+				} else {
+					for (auto&& lir_location: lir_block->terminator.arguments)
+						terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
+				}
+
 
 				ctx.func_builder.addInstruction(terminator_instr);
 			}

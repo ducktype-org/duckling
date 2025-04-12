@@ -12,6 +12,7 @@
 #include <base/exceptions.hpp>
 
 #include "vm/api/vm.hpp"
+#include "vm/bytecode/serializer/serializer.hpp"
 
 #include <utility>
 
@@ -51,28 +52,32 @@ private:
 	) {
 		using namespace compiler;
 		auto module = getModuleFromPath(std::move(module_path));
+		auto code   = module.build();
+
+		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
+		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
 
 		auto process_pid_response = vm::api::spawn();
-		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
+		ASSERT_TRUE(process_pid_response);
+		auto pid = process_pid_response->pid;
 
-		ASSERT_TRUE(vm::api::loadCode(pid, module.build()).has_value());
-		ASSERT_TRUE(vm::api::run(pid).has_value());
+		ASSERT_TRUE(vm::api::loadCode(pid, code));
+		ASSERT_TRUE(vm::api::run(pid));
 
 		if_opt_some(input, in_str) {
 			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response.has_value());
-			ASSERT_EQUAL(in_str, output_response.value().output);
+			ASSERT_TRUE(output_response);
+			ASSERT_EQUAL(in_str, output_response->output);
 		}
 
 		if_opt_some(output, out_str) {
 			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response.has_value());
-			ASSERT_EQUAL(out_str, output_response.value().output);
+			ASSERT_TRUE(output_response);
+			ASSERT_EQUAL(out_str, output_response->output);
 		}
 
 		auto join_response = vm::api::join(pid);
-		ASSERT_TRUE(join_response.has_value());
+		ASSERT_TRUE(join_response);
 	}
 
 	void simpleTest() { runTest("modules/simple"); }

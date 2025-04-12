@@ -68,7 +68,7 @@ std::string stringPosition(dia::SourcePosition pos) {
  *
  * @note Adds information about position and element class
  */
-Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
+Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 
@@ -84,8 +84,8 @@ Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
 				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
 			}
 
-			variant_case(pst::LangElement::ConstChild, child) {
-				auto sub_node = dotElement(hdl, child);
+			variant_case(pst::LangElement::Child, child) {
+				auto sub_node = dotElement(hdl, child.illegalAccess().value());
 				hdl.addEdge(self, sub_node);
 			}
 		}
@@ -112,7 +112,7 @@ int main(int argc, char** argv) {
 	}
 	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess().value()));
+		dotElement(hdl, pst.getRootElement().illegalAccess().value());
 		hdl.writeToSVG(argv[2]);
 	}
 }

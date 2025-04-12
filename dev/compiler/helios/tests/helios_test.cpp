@@ -732,22 +732,21 @@ private:
 			auto main_file = ctx.query<compiler::frontend::QueryMainSourceFile>({ module });
 			auto pst       = ctx.query<compiler::frontend::QueryFilePST>({ main_file });
 
-			auto test_expr = [&](CRef<pst::ExprHolder> expr) {
-				ASSERT_TRUE(expr->isTopLevel());
-				auto expected_scope
-					= ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr.toMRef());
+			auto test_expr = [&](pst::AccessLocked<pst::ExprHolder> expr) {
+				auto unlocked = expr.unlock(ctx);
+				ASSERT_TRUE(unlocked->isTopLevel());
+				auto expected_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(expr);
 
 				// this can't be auto because of recursive lambda
-				std::function<void(CRef<pst::LangElement>)> sub_test_expr
-					= [&](CRef<pst::LangElement> inner_expr) {
-						  auto inner_scope = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(
-							  inner_expr.toMRef()
-						  );
+				std::function<void(pst::AccessLocked<pst::LangElement>)> sub_test_expr
+					= [&](pst::AccessLocked<pst::LangElement> inner_expr) {
+						  auto inner_scope
+							  = ctx.query<compiler::helios::QueryPrimaryCodeScopeFor>(inner_expr);
 						  ASSERT_EQUAL(expected_scope, inner_scope);
 
-						  for (auto sub_inner: inner_expr->viewSubElements()) {
+						  for (auto sub_inner: inner_expr.unlock(ctx)->viewSubElements()) {
 							  variant_match(sub_inner) {
-								  variant_case(pst::LangElement::ConstChild, sub_expr) {
+								  variant_case(pst::LangElement::Child, sub_expr) {
 									  sub_test_expr(sub_expr);
 								  }
 								  variant_default {}
@@ -758,22 +757,22 @@ private:
 				sub_test_expr(expr);
 			};
 
-			auto all_expr_holders = pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(
-				&*pst->getRootElement().illegalAccess().value()
-			);
+			auto all_expr_holders
+				= pst::viewAllSubTreeElementsFillter<pst::ExprHolder>(pst->getRootElement());
 
 			// We test that each expr_holder and all its sub expressions
 			// have the same scope as their "top expr_holder"
-			for (auto expr_holder: all_expr_holders) {
+			for (auto expr_locked: all_expr_holders) {
+				auto expr_holder = expr_locked.unlock(ctx);
 				if (expr_holder->isTopLevel()) {
 					// test all sub elements:
 					test_expr(expr_holder);
 				} else {
 					// test that element has a top-expr parent
-					auto element = expr_holder->getParent().illegalAccess();
+					auto element = expr_holder->getParent().value().unlock(ctx);
 
 					while (true) {
-						if (auto holder = element.value().dynamicCast<pst::ExprHolder>()) {
+						if (auto holder = element.dynamicCast<pst::ExprHolder>()) {
 							if (holder.value()->isTopLevel()) {
 								// OK, we found parent
 								break;
@@ -781,7 +780,7 @@ private:
 						}
 						// if parent doesn't exist, we will
 						// hit panic here at some point:
-						element = element.value()->getParent().illegalAccess();
+						element = element->getParent().value().unlock(ctx);
 					}
 				}
 			}
