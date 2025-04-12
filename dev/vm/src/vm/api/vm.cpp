@@ -49,7 +49,13 @@ namespace vm::api {
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Load{ path }))
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadFile{ path }))
+		    .map(ignoreResponse);
+	}
+
+	cpp::result<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadCode{ code }))
 		    .map(ignoreResponse);
 	}
 
@@ -119,4 +125,5 @@ namespace vm::api {
 		    .doRequest(api::makeExecutorRequest(pid, request::ExecutionPosition{}))
 		    .flat_map(mapOrWrongResponse<response::CodePosition>);
 	}
+
 }

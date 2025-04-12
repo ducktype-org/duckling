@@ -4,6 +4,7 @@
 
 #include <base/optional.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/api/api.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/status.hpp>
@@ -57,7 +58,8 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		cpp::result<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+		cpp::result<api::Response, api::LoadProgramError>
+			loadProgram(const std::variant<fs::FilePath, code::CodeCollection>& source);
 
 		Memory memory;
 

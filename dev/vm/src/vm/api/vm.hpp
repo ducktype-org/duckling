@@ -7,6 +7,7 @@
 #include <filesystem/file.hpp>
 #include <result.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/api/api.hpp>
 
 namespace vm::api {
@@ -39,6 +40,7 @@ namespace vm::api {
 	cpp::result<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path);
+	cpp::result<void, ApiError> loadCode(PID pid, const code::CodeCollection& code);
 	cpp::result<void, ApiError> run(PID pid);
 	cpp::result<void, ApiError> join(PID pid);
 	cpp::result<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);

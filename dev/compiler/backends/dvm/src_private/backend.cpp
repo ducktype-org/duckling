@@ -14,11 +14,11 @@
 #include <ostream>
 #include <ranges>
 
-#define NOIMPL_CASE(tp, reason)                                                          \
-	variant_case(tp, _) {                                                                \
-		throw base::NotYetImplemented(                                                   \
-			base::strConcat("Unsupported type ", base::typeName<tp>(), " for: ", reason) \
-		);                                                                               \
+#define NOIMPL_CASE(tp, reason)                                              \
+	variant_case(tp, _) {                                                    \
+		throw base::NotYetImplemented(                                       \
+			base::strConcat("Type ", base::typeName<tp>(), " for: ", reason) \
+		);                                                                   \
 	}
 
 using namespace vm::code;
@@ -98,6 +98,8 @@ namespace compiler::backend_vm {
 			    | std::views::transform([](auto&& local) { return local->layout; });
 
 			for (auto&& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
+			lir_function.
+			type_context.addType(FunctionType(lir_function->name, ))
 		}
 
 		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -137,10 +139,10 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PointerType, pointer) {
 					return vm::opargs::StackLocalPtr(i64(ctx.lir_local_to_stack[output]));
 				}
-				NOIMPL_CASE(vm::code::StaticTableType, "add_instr")
-				NOIMPL_CASE(vm::code::DynamicTableType, "add_instr")
-				NOIMPL_CASE(vm::code::DataType, "add_instr")
-				NOIMPL_CASE(vm::code::VariantType, "add_instr")
+				NOIMPL_CASE(vm::code::StaticTableType, __func__)
+				NOIMPL_CASE(vm::code::DynamicTableType, __func__)
+				NOIMPL_CASE(vm::code::DataType, __func__)
+				NOIMPL_CASE(vm::code::VariantType, __func__)
 				variant_case(vm::code::FunctionType, function_tp) {
 					return vm::opargs::FunctionName(function_tp.name);
 				}
@@ -231,41 +233,46 @@ namespace compiler::backend_vm {
 			// Transforms arguments.
 			if (kind == OpKind::add || kind == OpKind::sub || kind == OpKind::mul
 			    || kind == OpKind::div || kind == OpKind::mod) {
-				if (args.size() == 3) {
-					if (args[0] == args[1]) {
-						// This resolves e.g. `a = a + b;` by doing `a = b`
-						args.pop_front();
-					} else {
-						// This resolves e.g. `a = b + c;`
-						// by splitting it into two instructions:
-						// a = b;
-						// a += c;
-						InstructionBuilder instr_mov;
+				CORE_ASSERT(args.size() == 3, "Invalid arithmetic operation argument count");
+				if (args[0] == args[1]) {
+					// This resolves e.g. `a = a + b;` by doing `a = b`
+					args.pop_front();
+				} else {
+					// This resolves e.g. `a = b + c;`
+					// by splitting it into two instructions:
+					// a = b;
+					// a += c;
+					InstructionBuilder instr_mov;
 
-						instr_mov.setKind(OpKind::mov);
-						instr_mov.pushArg(args[0]);
-						instr_mov.pushArg(args[1]);
-						ctx.func_builder.addInstruction(instr_mov);
+					instr_mov.setKind(OpKind::mov);
+					instr_mov.pushArg(args[0]);
+					instr_mov.pushArg(args[1]);
+					ctx.func_builder.addInstruction(instr_mov);
 
-						args.pop_front();
-						args.pop_front();
-						args.push_front(output);
-					}
+					args.pop_front();
+					args.pop_front();
+					args.push_front(output);
 				}
 			} else if (kind == OpKind::neg) {
-				if (args.size() == 2) {
-					if (args[0] == args[1]) {
-						args.pop_back();
-					} else {
-						InstructionBuilder instr_mov(OpKind::mov);
-						instr_mov.pushArg(args[0]);
-						instr_mov.pushArg(args[1]);
+				CORE_ASSERT(args.size() == 2, "Invalid argument count for neg");
+				if (args[0] == args[1]) {
+					// a = -a;
+					args.pop_back();
+				} else {
+					// a = -b;
+					// =>
+					// a = b;
+					// a = -a;
 
-						auto built = instr_mov.build();
-						ctx.func_builder.addInstruction(instr_mov);
+					// a = b;
+					InstructionBuilder instr_mov(OpKind::mov);
+					instr_mov.pushArg(args[0]);
+					instr_mov.pushArg(args[1]);
 
-						args.pop_back();
-					}
+					auto built = instr_mov.build();
+					ctx.func_builder.addInstruction(instr_mov);
+
+					args.pop_back();
 				}
 			}
 

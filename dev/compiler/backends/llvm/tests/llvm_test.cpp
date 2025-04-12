@@ -126,4 +126,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/backends/tests/")
+TESTER_COMMON_MAIN("/compiler/backends/llvm/tests/")

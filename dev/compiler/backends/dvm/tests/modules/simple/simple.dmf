@@ -1,0 +1,4 @@
+fun main() = {
+	var a: i32 = 23;
+	return a;
+}

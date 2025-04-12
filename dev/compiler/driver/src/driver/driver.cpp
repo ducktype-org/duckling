@@ -46,10 +46,4 @@ namespace compiler::driver {
 
 		backend_driver->link();
 	}
-
-	void DuckBCBackendDriver::compile(const BackendModuleData& lir_module) {
-		backend_vm::Module mod(lir_module.module_id);
-		for (const auto& lir_function: lir_module.functions) mod.addLirFunction(lir_function);
-		throw base::NotYetImplemented("Creating files for DuckBC backend");
-	}
 }

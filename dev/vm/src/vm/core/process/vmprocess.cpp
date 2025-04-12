@@ -3,6 +3,9 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
+#include "vm/core/thread/low_program/low_program.hpp"
+#include "vm/loader/logger.hpp"
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -27,10 +30,16 @@ namespace vm {
 	}
 
 	cpp::result<api::Response, api::LoadProgramError>
-		VMProcess::loadProgram(const fs::FilePath& path) {
+		VMProcess::loadProgram(const std::variant<fs::FilePath, code::CodeCollection>& source) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = loader->getProgram(path);
+		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
+			variant_match(source) {
+				variant_case(fs::FilePath, file) { return loader->getProgram(file); }
+				variant_case(code::CodeCollection, code) { return loader->getProgram(code); }
+			}
+			CORE_UNREACHABLE();
+		}();
 
 		if (code_result.has_value()) {
 			loaded_program.emplace(std::move(code_result).value());
@@ -114,8 +123,13 @@ namespace vm {
 					return cpp::failure(api::CoreOperationError{ api::OtherError{ "step error" } });
 				return getMainVMThread().getCurrentPosition();
 			}
-			variant_case(api::request::Load, load_request) {
+			variant_case(api::request::LoadFile, load_request) {
 				return loadProgram(load_request.filename).map_error([](auto err) {
+					return api::CoreOperationError{ err };
+				});
+			}
+			variant_case(api::request::LoadCode, load_request) {
+				return loadProgram(load_request.code_collection).map_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
@@ -251,4 +265,5 @@ namespace vm {
 		}
 		status_cv.notify_all();
 	}
+
 }
