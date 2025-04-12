@@ -316,19 +316,16 @@ namespace compiler::helios {
 				return ctx.query<QueryPrimaryCodeScopeFor>(element);
 			}
 
+			// @todo
+			// handling lambdas, expand statements, templates, etc. might be much more tricky and
+			// require a different approach
 			template<class T>
 			void visit(pst::Access<T> element) {
+				// @todo
+				// some elements don't have a well defined scope yet leading to a panic
 				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
 					out.insert(scopeOf(element));
-				// @todo
-				// change when children get access
-				for (auto sub: element->viewSubElements()) {
-					variant_match(sub) {
-						variant_case(pst::LangElement::Child, child) {
-							this->visit(child.unlock(ctx));
-						}
-					}
-				}
+				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
 			}
 		};
 
