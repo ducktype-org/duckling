@@ -81,9 +81,11 @@ namespace base {
 
 		/**
 		 * Returns index of the last element (i.e. size - 1).
-		 * Undefined if the size is 0.
 		 */
-		constexpr size_type lastIndex() const { return size() - 1; }
+		constexpr size_type lastIndex() const {
+			CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty StableVector");
+			return size() - 1;
+		}
 
 		template<class... Args>
 		constexpr void emplaceBack(Args&&... args) {
