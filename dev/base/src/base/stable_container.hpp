@@ -12,8 +12,7 @@
 namespace base {
 
 	/**
-	 * @brief Expandable list (like std::vector), but with stable references (References are valid
-	 * after the addition of new elements).
+	 * @brief Expandable list (like std::vector), but with stable references (References never become dangling, because actual data never moves).
 	 *
 	 * @tparam Key must be convertible to and from usize.
 	 *
