@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/optional.hpp"
 #include "base/stringifyable_enum.hpp"
 #include "typesystem/higher/abstract_type.hpp"
 #include <json/json.hpp>
@@ -18,6 +19,14 @@ namespace nlohmann {
 	template<dia::Serializable T>
 	struct adl_serializer<Box<T>> {
 		static void to_json(json& j, const Box<T>& opt) { j = opt->tojson(); }
+	};
+
+	template<typename T>
+	struct adl_serializer<base::Optional<T>> {
+		static void to_json(json& j, const base::Optional<T>& opt) {
+			if_opt_some(opt, val) { j = json{ val }; }
+			if_opt_none(opt) { j = json{}; }
+		}
 	};
 
 	template<>
@@ -56,7 +65,7 @@ namespace nlohmann {
 	struct adl_serializer<std::set<T>> {
 		static void to_json(json& j, const std::set<T>& symbols) {
 			j = json{};
-			for (auto s: symbols) j[std::to_string(s.customPerfectHash())] = s;
+			for (auto& s: symbols) j[std::to_string(s.customPerfectHash())] = s;
 			// TODO: Ask how symbols are represented in lsp, because I don't see any way to
 			// deserialize them.
 		}

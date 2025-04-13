@@ -66,17 +66,17 @@ namespace dia {
 				  op(op),
 				  lhs(std::move(lhs)),
 				  rhs(std::move(rhs)) {
-				auto lhs_type = this->lhs->expression_type;
-				auto rhs_type = this->rhs->expression_type;
+				auto& lhs_type = this->lhs->expression_type;
+				auto& rhs_type = this->rhs->expression_type;
 				types.insert(lhs_type.getType());
 				types.insert(rhs_type.getType());
 			}
 
 			json tojson() override {
 				json lhs_type, rhs_type;
-				lhs_type["symbol"]
+				lhs_type["type"]
 					= std::to_string(lhs->expression_type.getType().customPerfectHash());
-				rhs_type["symbol"]
+				rhs_type["type"]
 					= std::to_string(rhs->expression_type.getType().customPerfectHash());
 				return json{ { "operator", op.strView() },
 					         { "left_type", lhs_type },
@@ -87,7 +87,7 @@ namespace dia {
 		class Content: public InteractiveContent {
 		public:
 			Content(Box<ContentParams> params, dia::SourcePosition position):
-				  InteractiveContent(ERROR, 1'001, std::move(params), position) {}
+				  InteractiveContent(ContentType::ERROR, 1'001, std::move(params), position) {}
 		};
 
 	public:

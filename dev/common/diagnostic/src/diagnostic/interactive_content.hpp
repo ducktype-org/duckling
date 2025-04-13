@@ -3,16 +3,21 @@
 #include <json/json.hpp>
 #include <helios/symbols/symbols.hpp>
 #include <base/box.hpp>
+#include <utility>
+#include "base/optional.hpp"
 #include "diagnostic/source_position.hpp"
 #include "interactive_code.hpp"
 #include "serializable.hpp"
 #include "typesystem/higher/abstract_type.hpp"
 
 namespace dia {
-	enum ContentType { ERROR, WARNING, NOTE };
+	enum class ContentType { ERROR, WARNING, NOTE };
 
 	NLOHMANN_JSON_SERIALIZE_ENUM(
-		ContentType, { { ERROR, "error" }, { WARNING, "warning" }, { NOTE, "note" } }
+		ContentType,
+		{ { ContentType::ERROR, "error" },
+	      { ContentType::WARNING, "warning" },
+	      { ContentType::NOTE, "note" } }
 	)
 
 	using nlohmann::json;
@@ -32,17 +37,17 @@ namespace dia {
 		virtual ~ContentParams() = default;
 	};
 
-	class EmptyParams: public virtual ContentParams {
+	class EmptyParams: public ContentParams {
 	public:
 		json tojson() override { return json{}; }
 	};
 
 	class InteractiveContent {
 	private:
-		const ContentType     content_type;
-		const uint64_t        message_code;  // TODO: Probably soon to be replaced by string.
-		Box<ContentParams>    params;
-		const InteractiveCode interactive_code;
+		const ContentType  content_type;
+		const uint64_t     message_code;  // TODO: Probably soon to be replaced by string.
+		Box<ContentParams> params;
+		const base::Optional<InteractiveCode> interactive_code;
 
 	public:
 		InteractiveContent(
@@ -57,6 +62,14 @@ namespace dia {
 			  interactive_code(InteractiveCode{ position }) {}
 
 		InteractiveContent(
+			ContentType content_type, uint64_t message_code, Box<ContentParams> params
+		):
+			  content_type(content_type),
+			  message_code(message_code),
+			  params(std::move(params)),
+			  interactive_code() {}
+
+		InteractiveContent(
 			ContentType        content_type,
 			uint64_t           message_code,
 			Box<ContentParams> params,
@@ -65,10 +78,10 @@ namespace dia {
 			  content_type(content_type),
 			  message_code(message_code),
 			  params(std::move(params)),
-			  interactive_code(interactive_code) {}
+			  interactive_code(std::move(interactive_code)) {}
 
 		json tojson() {
-			return json{ { "type", content_type },  // TODO: Don't include this field in notes.
+			return json{ { "type", content_type },
 				         { "message_code", message_code },
 				         { "params", params },
 				         { "code", interactive_code } };
@@ -76,15 +89,19 @@ namespace dia {
 
 		std::set<compiler::helios::SymID> get_symbols() {
 			auto params_symbols = params->get_symbols();
-			auto code_symbols   = interactive_code.get_symbols();
-			params_symbols.insert(code_symbols.begin(), code_symbols.end());
+			if_opt_some(interactive_code, val) {
+				auto code_symbols = val.get_symbols();
+				params_symbols.insert(code_symbols.begin(), code_symbols.end());
+			}
 			return params_symbols;
 		}
 
 		std::set<tsh::AbstractType> get_types() {
 			auto params_types = params->get_types();
-			auto code_types   = interactive_code.get_types();
-			params_types.insert(code_types.begin(), code_types.end());
+			if_opt_some(interactive_code, val) {
+				auto code_types = val.get_types();
+				params_types.insert(code_types.begin(), code_types.end());
+			}
 			return params_types;
 		}
 	};
@@ -93,7 +110,10 @@ namespace dia {
 	public:
 		ExampleContent():
 			  InteractiveContent(
-				  ERROR, 123, base::makeBox<EmptyParams>(), SourcePosition::fakePosition()
+				  ContentType::ERROR,
+				  123,
+				  base::makeBox<EmptyParams>(),
+				  SourcePosition::fakePosition()
 			  ) {}
 	};
 
@@ -102,7 +122,7 @@ namespace dia {
 			uint64_t message_code, Box<ContentParams> params, InteractiveCode&& interactive_code
 		):
 			  InteractiveContent(
-				  NOTE,
+				  ContentType::NOTE,
 				  message_code,
 				  std::move(params),
 				  std::forward<InteractiveCode>(interactive_code)
