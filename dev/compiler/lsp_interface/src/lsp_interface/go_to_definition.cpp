@@ -33,9 +33,18 @@ namespace lsp {
 		);
 	}
 
-	std::vector<Definition> findDefinitions(MCRef<pst::LangElement> element) {
-        // @todo
-        // implement finding element definition
-        CORE_PANIC("Finding definition for LSP is not implemented yet");
-     }
+	base::MCRef<pst::LangElement> findElement(CRef<pst::LangElement> element, usize offset) {
+        for (auto sub: element->viewChildren()) {
+			auto curr_position = sub->getSourcePosition();
+			if (curr_position.getStart() <= offset && curr_position.getEnd() >= offset)
+				return findElement(sub, offset);
+		}
+        return element;
+	}
+
+	Definition findDefinition(MCRef<pst::LangElement> element) {
+		// @todo
+		// implement finding element definition
+		CORE_PANIC("Finding definition for LSP is not implemented yet");
+	}
 }

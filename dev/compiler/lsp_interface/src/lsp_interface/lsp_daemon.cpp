@@ -210,14 +210,9 @@ void server(i32 port) {
 			};
 			auto pst_root = pst.getRootElement();
 
-			// @todo
-			// fint element in PST
-			auto pst_elment = pst_root;
+			auto definition = lsp::findDefinition(lsp::findElement(pst_root, offset));
 
-			auto definitions = lsp::findDefinitions(pst_element);
-
-			std::vector<std::string> out;
-			for (auto definition: definitions) out.push_back(definition.toJSON());
+			std::vector<std::string> out = { definition.toJSON() };
 
 			return crow::response(200, lsp::jsonList(out));
 		} catch (std::exception& e) {

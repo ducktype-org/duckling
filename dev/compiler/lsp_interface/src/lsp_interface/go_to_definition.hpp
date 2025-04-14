@@ -5,12 +5,12 @@
 
 #pragma once
 
+#include "pst_parser/lang_parser_element.hpp"
 #include <pst_parser/pst.hpp>
 #include <base/ref.hpp>
 
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace lsp {
 	struct Definition {
@@ -21,5 +21,6 @@ namespace lsp {
         std::string toJSON();
 	};
 
-	std::vector<Definition> findDefinitions(MCRef<pst::LangElement>);
+    base::MCRef<pst::LangElement> findElement(CRef<pst::LangElement> root, usize offset);
+	Definition findDefinition(MCRef<pst::LangElement>);
 }
