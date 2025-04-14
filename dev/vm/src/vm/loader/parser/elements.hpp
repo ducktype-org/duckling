@@ -9,7 +9,7 @@
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/box.hpp>
-#include <base/for_each.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>

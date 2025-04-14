@@ -6,7 +6,7 @@
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/token_stream.hpp>
 
-#include <base/for_each.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
 #include <vm/bytecode/opcode_args.hpp>

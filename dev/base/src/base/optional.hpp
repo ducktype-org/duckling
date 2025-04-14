@@ -33,6 +33,8 @@
 
 #include "exceptions.hpp"
 
+#include <base/macros/diagnostics.hpp>
+
 #include <functional>
 #include <optional>
 
