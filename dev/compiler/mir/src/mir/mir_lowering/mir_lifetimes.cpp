@@ -6,26 +6,22 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Lowest common ancestor of @p a and @p b
-	 *
-	 * @param a
-	 * @param b
-	 * @return helios::ScopeID
 	 */
-	helios::ScopeID lca(helios::ScopeID a, helios::ScopeID b) {
-		auto depth_a = helios::scopeDepth(a);
-		auto depth_b = helios::scopeDepth(b);
+	ScopeRef lca(ScopeRef a, ScopeRef b) {
+		auto depth_a = a->depth;
+		auto depth_b = b->depth;
 
 		while (depth_a > depth_b) {
-			a = helios::parent(a).value();
+			a = a->parent.toOpt().value();
 			depth_a--;
 		}
 		while (depth_b > depth_a) {
-			b = helios::parent(b).value();
+			b = b->parent.toOpt().value();
 			depth_b--;
 		}
 		while (a != b) {
-			a = helios::parent(a).value();
-			b = helios::parent(b).value();
+			a = a->parent.toOpt().value();
+			b = b->parent.toOpt().value();
 		}
 
 		return a;
@@ -34,7 +30,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
 	 * first from @p begin scope, second from @p end scope.
-	 * In general its the list of scopes between @p begin and lca(begin, end).
+	 * In general its the list of scopes between @p begin and lca(@[begin, end).
 	 *
 	 * @todo this is a general implementation that always works.
 	 * In the future we should find some invariant about two consecutive scopes
@@ -42,15 +38,15 @@ namespace compiler::mir {
 	 *
 	 * @param begin
 	 * @param end
-	 * @return std::vector<helios::ScopeID>
+	 * @return std::vector<ScopeRef>
 	 */
-	std::vector<helios::ScopeID> getEndingScopes(helios::ScopeID begin, helios::ScopeID end) {
-		std::vector<helios::ScopeID> result;
+	std::vector<ScopeRef> getEndingScopes(ScopeRef begin, ScopeRef end) {
+		std::vector<ScopeRef> result;
 
 		auto ancestor = lca(begin, end);
 		while (begin != ancestor) {
 			result.push_back(begin);
-			begin = helios::parent(begin).value();
+			begin = begin->parent.toOpt().value();
 		}
 
 		return result;
@@ -66,10 +62,11 @@ namespace compiler::mir {
 		// preserving block order is important, because of how MIR BlockIDs works
 		std::vector<Block> new_blocks;
 
-		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
+		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list) {
-			if (local->ignore_lifetime) continue;
-			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
+			if_opt_some(local->scope, lifetime_scope) {
+				locals_by_scope[lifetime_scope].emplace_back(local.ref());
+			}
 		}
 
 		// No lifetime analysis here, since it is quite complex.
@@ -82,15 +79,15 @@ namespace compiler::mir {
 			new_instructions.reserve(block.instructions.size());
 
 			// lambdas used just to not duplicate code:
-			auto add_destructor = [&](helios::ScopeID instr_scope, LocalRef local) {
+			auto add_destructor = [&](ScopeRef instr_scope, LocalRef local) {
 				new_instructions.push_back(Instruction{
 					Operation::DestructIf,
 					{},
 					{ local },
-					{ OperationFlag{ OperationFlag::Flag::Destruct, local } },
+					{ OperationFlag{ .flag=OperationFlag::Flag::Destruct,.local= local }, },
 					instr_scope });
 			};
-			auto add_destructors = [&](const auto& ending_scopes, helios::ScopeID instr_scope) {
+			auto add_destructors = [&](const auto& ending_scopes, ScopeRef instr_scope) {
 				for (auto scope: ending_scopes) {
 					auto& locals = locals_by_scope[scope];
 					for (auto& local: locals) add_destructor(instr_scope, local);
@@ -117,10 +114,10 @@ namespace compiler::mir {
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
-				auto ending_scopes = getEndingScopes(terminator.scope, function.top_lifetime_scope);
+				auto ending_scopes = getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
 				add_destructors(ending_scopes, terminator.scope);
 			} else {
-				base::Optional<std::vector<helios::ScopeID>> ending_scopes;
+				base::Optional<std::vector<ScopeRef>> ending_scopes;
 
 				// we have to validate here that each path has the same ending scopes
 				// @todo there are two possible futures:

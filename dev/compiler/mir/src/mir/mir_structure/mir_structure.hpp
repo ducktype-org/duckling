@@ -176,9 +176,9 @@ namespace compiler::mir {
 
 		friend struct Function;
 		friend struct FunctionBuilder;
+		friend struct ExprBlockVisitor;
+		friend struct StmtBlockVisitor;
 		friend LocalRef;
-
-
 
 	public:
 		void debugPrint(std::ostream& output, bool detailed = false) const;
@@ -207,7 +207,11 @@ namespace compiler::mir {
 
 		MIRValue(MirBoolConst value): value(value) {}
 
+		// we can't have this, cause it is ambiguous with the one below
+		// @overload_priority would be so cool here...
 		MIRValue(LocalRef value): value(value) {}
+		
+		MIRValue(MutLocalRef value): value(value) {}
 
 		MIRValue(BlockID value): value(value) {}
 
@@ -349,6 +353,8 @@ namespace compiler::mir {
 		std::vector<tsh::SymbolType<>> parameter_types;
 
 		std::vector<Block>           blocks;
+
+		// @TODO: make it store const MirLocal?
 		base::StableVector<MirLocal> local_list;
 		BlockID                      entry_block;
 

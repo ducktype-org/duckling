@@ -295,13 +295,12 @@ namespace compiler::mir {
 		/**
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
-		LocalRef addLocal(const helios::SymID helios_id) {
+		MutLocalRef addLocal(const helios::SymID helios_id) {
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
-				scope(helios_id),
 			});
 			return local_list.getRef(key).value();
 		}
@@ -309,29 +308,32 @@ namespace compiler::mir {
 		/**
 		 * Adds a local parameter variable to MIR function from helios_id representing it.
 		 */
-		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
+		MutLocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
 			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
 			const auto key = local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
-				scope(helios_id),
 				parameter_index,
 			});
 			return local_list.getRef(key).value();
 		}
 
+		/**
+	     * Creates a temporary local value, i.e. local value
+		 * not arising from local in the source code.
+		 */
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::SymbolType<> type, const helios::ScopeID scope) {
-			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
+		MutLocalRef addTmp(const tsh::SymbolType<> type) {
+			const auto key = local_list.emplaceBack(MirLocal{ type });
 			return local_list.getRef(key).value();
 		}
 
 		[[nodiscard]]
-		LocalRef addBoolTmp(const helios::ScopeID scope) {
+		MutLocalRef addBoolTmp() {
 			auto type = tsh::SymbolType<>(ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable);
-			const auto key = local_list.emplaceBack(MirLocal{ type, scope , true});
+			const auto key = local_list.emplaceBack(MirLocal{ type });
 			return local_list.getRef(key).value();
 		}
 
@@ -341,8 +343,8 @@ namespace compiler::mir {
 		 * @return The local variable reference, if found.
 		 */
 		[[nodiscard]]
-		LocalRef findLocal(const helios::SymID helios_id) const {
-			// @TODO: Optimise into a hashmap.
+		MutLocalRef findLocal(const helios::SymID helios_id) const {
+			// @TODO: Optimize into a hashmap.
 			for (const auto& local: local_list)
 				if (local->helios_id == helios_id) return local.ref();
 			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
@@ -477,7 +479,7 @@ namespace compiler::mir {
 			output({ expr_res.begin });
 		}
 
-		void visitVoidReturnStmt(const hc::VoidReturnStmt& stmt) override {
+		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {
 			auto return_block = function.newBlock();
 			auto return_scope = function.newScope(parent_scope);
 			return_block->setTerminator({ Operation::ReturnVoid, {}, {}, {}, return_scope });
@@ -517,7 +519,7 @@ namespace compiler::mir {
 			auto condition_block = function.newBlock();
 			
 			auto get_bool_hole = condition_block->addHole();
-			auto condition_result_tmp = function.addBoolTmp(stmt.lifetime_scope);
+			auto condition_result_tmp = function.addBoolTmp();
 
 			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
@@ -530,11 +532,13 @@ namespace compiler::mir {
 			});
 
 			condition_block->setTerminator(
-				{ Operation::Branch,
-			      {},
-			      {condition_result_tmp, then_body.begin->getID(), else_block->getID() },
-			      {},
-			      condition_scope }
+				{ 
+					Operation::Branch,
+			      	{},
+			      	{condition_result_tmp, then_body.begin->getID(), else_block->getID() },
+			      	{},
+			      	condition_scope,
+				}
 			);
 
 			output({ expr_result.begin });
@@ -629,7 +633,7 @@ namespace compiler::mir {
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
 			output({ .begin = continuation,
-			         .value = MIRValue{ function.findLocal(expr.symbol).get() } });
+			         .value = MIRValue{ LocalRef(function.findLocal(expr.symbol).get()) } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -647,7 +651,7 @@ namespace compiler::mir {
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different types"
 			);
-			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const auto      target_location = function.addTmp(argument_type);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -666,7 +670,8 @@ namespace compiler::mir {
 
 			// Fill the hole with the unary operation.
 			const auto      argument_type   = locationType(sub_res, function.getContext());
-			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
+			const auto      target_location = function.addTmp(argument_type);
+			target_location->setLifetimeScope(expr_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -698,7 +703,7 @@ namespace compiler::mir {
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto       call = continuation->addHole();
 			const auto call_result
-				= function.addTmp(expr.expression_type.getSymbolType(), expr.lifetime_scope);
+				= function.addTmp(expr.expression_type.getSymbolType());
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
