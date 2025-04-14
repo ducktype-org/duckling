@@ -418,7 +418,8 @@ namespace compiler::mir {
 
 			u64 parameter_index = 0;
 			for (const auto& parameter: *hout_function.content.parameters) {
-				function.addParameter(parameter.helios_symbol, parameter_index);
+				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
+				local->setLifetimeScope(function.getRootScope());
 				parameter_index++;
 			}
 			goOverCodeBlock(*hout_function.content.body);
@@ -550,6 +551,7 @@ namespace compiler::mir {
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			// @TODO this PR: here we should set scope of the local:
 			auto local                   = function.findLocal(stmt.helios_symbol);
+			local->setLifetimeScope(parent_scope);
 			auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
@@ -655,6 +657,7 @@ namespace compiler::mir {
 				"Binary operator with different types"
 			);
 			const auto      target_location = function.addTmp(argument_type);
+			target_location->setLifetimeScope(expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -707,6 +710,7 @@ namespace compiler::mir {
 			auto       call = continuation->addHole();
 			const auto call_result
 				= function.addTmp(expr.expression_type.getSymbolType());
+			call_result->setLifetimeScope(expr_scope);
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;

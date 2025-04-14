@@ -1,8 +1,8 @@
-fun foo() = {
-	var a: i32 = 23;
+fun foo(c: i32) = {
+	var a: i32 = 23 + 3;
 	if (a) {
 		var b: i32 = 7;
 	}
-	return 0;
+	return a;
 }
 

@@ -17,4 +17,8 @@ namespace compiler::mir {
         auto key = scopes.emplaceBack(parent, parent->depth + 1, next_id++);
         return scopes.getCRef(key).value();
     }
+
+    ScopeRef getSuperRootScope() {
+        return &root_scope;
+    }
 }

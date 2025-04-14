@@ -178,6 +178,7 @@ namespace compiler::mir {
 		friend struct FunctionBuilder;
 		friend struct ExprBlockVisitor;
 		friend struct StmtBlockVisitor;
+		friend struct LocalVarCollectionVisitor;
 		friend LocalRef;
 
 	public:

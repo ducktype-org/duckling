@@ -43,4 +43,10 @@ namespace compiler::mir {
     };
 
     using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;
+
+    /**
+     * Returns a scope that is above all other scopes.
+     */
+     ScopeRef getSuperRootScope();
+
 }

@@ -114,7 +114,7 @@ namespace compiler::mir {
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
-				auto ending_scopes = getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
+				auto ending_scopes = getEndingScopes(terminator.scope, getSuperRootScope());
 				add_destructors(ending_scopes, terminator.scope);
 			} else {
 				base::Optional<std::vector<ScopeRef>> ending_scopes;
