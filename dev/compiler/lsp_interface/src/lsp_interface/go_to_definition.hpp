@@ -9,7 +9,17 @@
 #include <base/ref.hpp>
 
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace lsp {
-    std::string findDefinitions(MCRef<pst::LangElement>);
+	struct Definition {
+		std::string             uri;
+		std::pair<usize, usize> start;  // line, char
+		std::pair<usize, usize> end;    // line, char
+
+        std::string toJSON();
+	};
+
+	std::vector<Definition> findDefinitions(MCRef<pst::LangElement>);
 }
