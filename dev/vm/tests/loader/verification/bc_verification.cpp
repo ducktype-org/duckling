@@ -85,7 +85,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
 			{
-				vm::loader::DuplicateFunctionDefinitionError::ERR_MSG,
+				vm::loader::DuplicatedFunctionError::ERR_MSG,
 			}
 		);
 	}

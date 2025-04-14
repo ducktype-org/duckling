@@ -144,7 +144,7 @@ namespace vm::loader {
 			  func_name(func_name) {}
 	};
 
-	class DuplicateFunctionDefinitionError final: public dia::Error {
+	class DuplicatedFunctionError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Function with this name already exists.";
 
@@ -160,7 +160,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		DuplicateFunctionDefinitionError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicatedFunctionError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class DuplicateFunctionDefinitionNote final: public dia::NoteWithPosition {

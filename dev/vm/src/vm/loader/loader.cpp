@@ -189,7 +189,7 @@ void Program::insertFunctions(
 ) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
-			logger.logMap<DuplicateFunctionDefinitionError>(func, [&](auto& err) {
+			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
 				const auto dup_func = functions.at(func_name);
 				logger.addNote<DuplicateFunctionDefinitionNote>(err, *dup_func);
 			});
