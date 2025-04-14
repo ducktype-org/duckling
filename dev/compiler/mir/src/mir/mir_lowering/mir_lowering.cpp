@@ -275,6 +275,9 @@ namespace compiler::mir {
 				)
 			          .getType();
 
+			// @TODO This PR: add validation that all helios-locals
+			// have a lifetime scope set.
+
 			return Function{
 				name.value(),
 				function_type.getResultType(),
@@ -346,7 +349,7 @@ namespace compiler::mir {
 		MutLocalRef findLocal(const helios::SymID helios_id) const {
 			// @TODO: Optimize into a hashmap.
 			for (const auto& local: local_list)
-				if (local->helios_id == helios_id) return local.ref();
+				if (local->helios_id == helios_id) return local.refMut();
 			CORE_PANIC(base::strConcat("MIR Local not found: ", compiler::helios::name(helios_id)));
 		}
 
