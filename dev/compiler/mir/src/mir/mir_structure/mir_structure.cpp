@@ -43,7 +43,7 @@ namespace compiler::mir {
 		}
 	}
 
-	helios::ScopeID Block::beginScope() const {
+	ScopeRef Block::beginScope() const {
 		if (instructions.empty())
 			return terminator.scope;
 		else
@@ -111,7 +111,7 @@ namespace compiler::mir {
 			flag.debugPrint(output);
 			separator = ", ";
 		}
-		output << "], scope:" << scope.customPerfectHash();
+		output << "], scope:" << scope->id;
 
 		// restore flags
 		output.flags(output_flags);
@@ -123,7 +123,9 @@ namespace compiler::mir {
 			output << ": Helios Name: " << getName().strView();
 			output << ", Type: ";
 			output << this->type.toString();
-			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
+			if_opt_some (this->scope, scope) {
+				output << ", Lifetime Scope: " << scope->id;
+			}
 			if (parameter_index.has_value())
 				output << ", Parameter Index: " << parameter_index.value();
 		}

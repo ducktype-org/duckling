@@ -21,6 +21,15 @@ namespace compiler::mir {
         struct LifetimeScope final{
             MCRef<LifetimeScope> parent;
             u64 depth;
+            
+            /**
+             * Unique id, for mapping, comparision, etc.
+             */
+            u64 id;
+            
+            bool operator==(const LifetimeScope& other) const {
+                return id == other.id;
+            }
         };
         
         base::StableVector<const LifetimeScope> scopes;
