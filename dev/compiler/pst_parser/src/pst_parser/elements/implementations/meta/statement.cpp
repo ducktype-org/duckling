@@ -84,7 +84,7 @@ namespace pst {
 		while (as_special == Special::AtSign) {
 			MBox<Attribute> attr = Attribute::parse(state);
 			auto            opt  = std::move(attr).toOptBox();
-			if (opt) attributes.push_back(std::move(opt.value()));
+			if (opt) attributes.emplace_back(std::move(opt.value()));
 			as_special = state[0].asSpecial();
 		}
 		return attributes;
@@ -112,7 +112,7 @@ namespace pst {
 		if (not attributes.empty()) {
 			out << R"("attributes": [)";
 			for (auto& attribute: attributes) {
-				attribute->debugPrint(out);
+				attribute.internal()->debugPrint(out);
 				out << ",";
 			}
 			out << "],";
@@ -123,13 +123,14 @@ namespace pst {
 		attributes = std::move(additions);
 
 		using namespace std::views;
-		auto borrow             = [](Box<Attribute>& arg) -> Child { return arg.refMut(); };
+		auto borrow = [](AccessInternal<Attribute>& arg) -> Child { return arg.give(); };
 		auto borrowed_additions = attributes | transform(borrow);
 
 		sub_elements.insert(
 			sub_elements.end(), borrowed_additions.begin(), borrowed_additions.end()
 		);
 
-		if (attributes.size() > 0) setFirstToken(attributes.front()->getSourcePosition());
+		if (attributes.size() > 0)
+			setFirstToken(attributes.front().internal()->getSourcePosition());
 	}
 }

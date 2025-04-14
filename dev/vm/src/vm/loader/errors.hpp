@@ -163,7 +163,7 @@ namespace vm::loader {
 		DuplicatedFunctionError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class DuplicateFunctionDefinitionNote final: public dia::NoteWithPosition {
+	class DuplicatedFunctionNote final: public dia::NoteWithPosition {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Previous function declaration here.";
 
@@ -174,7 +174,7 @@ namespace vm::loader {
 		}
 
 	public:
-		DuplicateFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		DuplicatedFunctionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class StackStructureMismatchError final: public dia::Error {
@@ -211,7 +211,7 @@ namespace vm::loader {
 		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class PointerDereferenceAfterDeinitError final: public dia::Error {
+	class UseAfterDeinit final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "This instruction tries to dereference a pointer to a deinitialized value.";
@@ -228,10 +228,10 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		PointerDereferenceAfterDeinitError(dia::SourcePosition pos): dia::Error(pos) {}
+		UseAfterDeinit(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class WrongTypePointerDereferenceError final: public dia::Error {
+	class DeferenceTypeMismatchError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "The dereferenced pointer's type does not match the target variable's type.";
@@ -248,13 +248,13 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		WrongTypePointerDereferenceError(dia::SourcePosition pos): dia::Error(pos) {}
+		DeferenceTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class LocalUsedAsPointerError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
-			= "This instruction tries to use a primitive typed variable as a pointer.";
+			= "This instruction tries to use a primitive as a pointer.";
 
 	protected:
 		[[nodiscard]]
@@ -291,7 +291,7 @@ namespace vm::loader {
 		OpCodeTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class UninitializedLocalUsedError final: public dia::Error {
+	class UninitializedLocalError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "Tried to access an uninitizlized local variable.";
@@ -308,13 +308,13 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UninitializedLocalUsedError(dia::SourcePosition pos): dia::Error(pos) {}
+		UninitializedLocalError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class WrongOffsetStackDerefError final: public dia::Error {
+	class StackOffsetError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
-			= "Tried to derference a local stack with an invalid offset.";
+			= "Tried to dereference a stack variable with an invalid offset.";
 
 	protected:
 		[[nodiscard]]
@@ -328,10 +328,10 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		WrongOffsetStackDerefError(dia::SourcePosition pos): dia::Error(pos) {}
+		StackOffsetError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class MissingSubtypeError final: public dia::Error {
+	class UnknownSubtypeError final: public dia::Error {
 		base::StrID subtype_name;
 
 	public:
@@ -349,7 +349,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		MissingSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
+		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
 			  dia::Error(pos),
 			  subtype_name(subtype_name) {}
 	};

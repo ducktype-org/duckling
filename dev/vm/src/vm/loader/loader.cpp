@@ -191,7 +191,7 @@ void Program::insertFunctions(
 		if (const auto func_name = func.name; functions.contains(func_name)) {
 			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
 				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicateFunctionDefinitionNote>(err, *dup_func);
+				logger.addNote<DuplicatedFunctionNote>(err, *dup_func);
 			});
 		} else {
 			functions.insert(func, func_name);
@@ -241,7 +241,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 				if (log.good())
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
 			} catch (code::builders::MissingSubtypeError& e) {
-				log.log<MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
+				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}

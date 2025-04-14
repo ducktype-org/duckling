@@ -5,7 +5,7 @@ void VmTestSuite::runTestOnVm(
 ) {
 	auto process_pid_response = vm::api::spawn();
 	assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-	auto pid = process_pid_response.expect("Spawn failed (2)").pid;
+	auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
 
 	fs::FilePath file(path(rbc_filename));
 	auto         loaded_file_response = vm::api::loadFile(pid, file);
@@ -29,13 +29,11 @@ void VmTestSuite::runTestOnVm(
 void VmTestSuite::loadInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
-	auto process_pid_response = vm::api::spawn();
-	ASSERT_TRUE(process_pid_response.has_value());
-	auto pid = process_pid_response.expect("Spawn failed").pid;
+	auto pid = vm::api::spawn()->pid;
 
 	fs::FilePath file(path(dbc_filename));
 	auto         loaded_file_response = vm::api::loadFile(pid, file);
-	ASSERT_TRUE(loaded_file_response.has_error());
+	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
 	auto core_op = std::get<vm::api::CoreOperationError>(err);
@@ -50,11 +48,7 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	auto process_pid_response = vm::api::spawn();
-	ASSERT_TRUE(process_pid_response.has_value());
-	auto pid = process_pid_response.expect("Spawn failed").pid;
-
-	fs::FilePath file(path(dbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
-	ASSERT_TRUE(!loaded_file_response.has_error());
+	ASSERT_TRUE(
+		vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))).has_value()
+	);
 }
