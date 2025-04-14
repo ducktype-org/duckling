@@ -35,7 +35,7 @@ void VmTestSuite::loadInvalidDbc(
 
 	fs::FilePath file(path(dbc_filename));
 	auto         loaded_file_response = vm::api::loadFile(pid, file);
-	ASSERT_TRUE(loaded_file_response.has_error());
+	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
 	auto core_op = std::get<vm::api::CoreOperationError>(err);
