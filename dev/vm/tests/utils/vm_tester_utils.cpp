@@ -1,5 +1,7 @@
 #include "vm_tester_utils.hpp"
 
+#include "vm/api/vm.hpp"
+
 void VmTestSuite::runTestOnVm(
 	const std::string& rbc_filename, const std::string& input, const std::string& output
 ) {
@@ -48,5 +50,7 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))));
+	ASSERT_TRUE(
+		vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))).has_value()
+	);
 }

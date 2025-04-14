@@ -144,7 +144,7 @@ namespace vm::loader {
 			  func_name(func_name) {}
 	};
 
-	class DuplicateFunctionDefinitionError final: public dia::Error {
+	class DuplicatedFunctionDefinitionError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Function with this name already exists.";
 
@@ -160,7 +160,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		DuplicatedFunctionError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicatedFunctionDefinitionError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class DuplicatedFunctionNote final: public dia::NoteWithPosition {
@@ -174,7 +174,7 @@ namespace vm::loader {
 		}
 
 	public:
-		DuplicateFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		DuplicatedFunctionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class StackStructureMismatchError final: public dia::Error {
@@ -228,7 +228,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		PointerDereferenceAfterDeinitError(dia::SourcePosition pos): dia::Error(pos) {}
+		UseAfterDeinit(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class DeferenceTypeMismatchError final: public dia::Error {
@@ -248,7 +248,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		WrongTypePointerDereferenceError(dia::SourcePosition pos): dia::Error(pos) {}
+		DeferenceTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class LocalUsedAsPointerError final: public dia::Error {
@@ -308,7 +308,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UninitializedLocalUsedError(dia::SourcePosition pos): dia::Error(pos) {}
+		UninitializedLocalError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class StackOffsetError final: public dia::Error {
@@ -328,10 +328,10 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		WrongOffsetStackDerefError(dia::SourcePosition pos): dia::Error(pos) {}
+		StackOffsetError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class MissingSubtypeError final: public dia::Error {
+	class UnknownSubtypeError final: public dia::Error {
 		base::StrID subtype_name;
 
 	public:
@@ -349,7 +349,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		MissingSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
+		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
 			  dia::Error(pos),
 			  subtype_name(subtype_name) {}
 	};

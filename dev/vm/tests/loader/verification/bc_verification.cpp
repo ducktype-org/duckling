@@ -15,7 +15,9 @@ public:
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
 
-		// TESTER_ADD_TEST(validJumpOutOfBlock);
+		// @note: This tests breaks the current implementation of jump verification, but will be
+		// used soon when better verification is implemented.
+		//  TESTER_ADD_TEST(validJumpOutOfBlock);
 
 		// Function verification
 		TESTER_ADD_TEST(noMain);
@@ -85,7 +87,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
 			{
-				vm::loader::DuplicateFunctionDefinitionError::ERR_MSG,
+				vm::loader::DuplicatedFunctionDefinitionError::ERR_MSG,
 			}
 		);
 	}
@@ -126,7 +128,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
 			{
-				vm::loader::UninitializedLocalUsedError::ERR_MSG,
+				vm::loader::UninitializedLocalError::ERR_MSG,
 			}
 		);
 	}
@@ -135,7 +137,8 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::loader::UninitializedLocalUsedError::ERR_MSG,
+				vm::loader::UninitializedLocalError::ERR_MSG,
+
 			}
 		);
 	}
@@ -144,7 +147,8 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::loader::UninitializedLocalUsedError::ERR_MSG,
+				vm::loader::UninitializedLocalError::ERR_MSG,
+
 			}
 		);
 	}
@@ -153,7 +157,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/invalid_offset.dbc",
 			{
-				vm::loader::WrongOffsetStackDerefError::ERR_MSG,
+				vm::loader::StackOffsetError::ERR_MSG,
 			}
 		);
 	}
@@ -163,7 +167,7 @@ private:
 		loadInvalidDbc(
 			"wrong/pointers/deref_after_deinit.dbc",
 			{
-				vm::loader::PointerDereferenceAfterDeinitError::ERR_MSG,
+				vm::loader::UseAfterDeinit::ERR_MSG,
 			}
 		);
 	}
@@ -172,7 +176,7 @@ private:
 		loadInvalidDbc(
 			"wrong/pointers/deref_after_deinit_and_init.dbc",
 			{
-				vm::loader::PointerDereferenceAfterDeinitError::ERR_MSG,
+				vm::loader::UseAfterDeinit::ERR_MSG,
 			}
 		);
 	}
@@ -181,7 +185,7 @@ private:
 		loadInvalidDbc(
 			"wrong/pointers/deref_wrong_type.dbc",
 			{
-				vm::loader::WrongTypePointerDereferenceError::ERR_MSG,
+				vm::loader::DeferenceTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
