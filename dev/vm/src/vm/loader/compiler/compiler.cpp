@@ -67,7 +67,7 @@ namespace vm::loader::compiler {
 						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
 						     - 1;
 					}
-					ctx.log.log<UnknownLabel>(label);
+					ctx.log.log<UnknownLabelError>(label);
 					return 0;
 				}
 			}
@@ -125,7 +125,7 @@ namespace vm::loader::compiler {
 							label.arg0.label_name, new_func.body.size()
 						);
 						if (!inserted) {
-							ctx.log.logMap<RepeatedLabel>(label, [&](auto& err) {
+							ctx.log.logMap<RepeatedLabelError>(label, [&](auto& err) {
 								for (auto&& lbl: label_positions)
 									if (lbl.first == label.arg0.label_name) {
 										ctx.log.addNote<RepeatedLabelNote>(
