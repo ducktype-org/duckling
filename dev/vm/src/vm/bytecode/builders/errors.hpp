@@ -19,7 +19,7 @@ namespace vm::code::builders {
 	public:
 		constexpr const static std ::string_view ERR_MSG = "Duplicated type: ";
 
-		DuplicatedTypeError(base ::StrID name): BuilderError(base ::strConcat(ERR_MSG, name)) {}
+		DuplicatedTypeError(base::StrID name): BuilderError(base::strConcat(ERR_MSG, name)) {}
 	};
 
 	class StackStructureMismatchError: public BuilderError {
@@ -29,26 +29,26 @@ namespace vm::code::builders {
 		std::vector<Instruction> linked_instructions;  /// all jumps to the label and the label
 
 		StackStructureMismatchError(std::vector<Instruction> linked_instructions):
-			  BuilderError(base ::strConcat(ERR_MSG)),
+			  BuilderError(base::strConcat(ERR_MSG)),
 			  linked_instructions(std::move(linked_instructions)) {}
 	};
 
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
-		constexpr const static std ::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                        FUNC_NAME;
+		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
+		const base::StrID                       FUNC_NAME;
 
 		MissingFunctionalTypeError(base::StrID func_name):
-			  BuilderError(base ::strConcat(ERR_MSG, func_name)),
+			  BuilderError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
 	class TypeIsNotFunctionalError: public BuilderError {
 	public:
-		constexpr const static std ::string_view ERR_MSG = "Type is not functional: ";
+		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
 
-		TypeIsNotFunctionalError(base ::StrID name):
-			  BuilderError(base ::strConcat(ERR_MSG, name)) {}
+		TypeIsNotFunctionalError(base::StrID type_name):
+			  BuilderError(base::strConcat(ERR_MSG, type_name)) {}
 	};
 
 	class MissingSubtypeError: public BuilderError {
@@ -75,7 +75,7 @@ namespace vm::code::builders {
 
 	class EmptyStackDeinitError: public BuilderError {
 	public:
-		constexpr const static std ::string_view ERR_MSG = "Popping from empty variable stack.";
+		constexpr const static std::string_view ERR_MSG = "Popping from empty variable stack.";
 
 		EmptyStackDeinitError(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};

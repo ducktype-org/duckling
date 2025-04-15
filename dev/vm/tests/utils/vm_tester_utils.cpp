@@ -25,3 +25,30 @@ void VmTestSuite::runTestOnVm(
 	auto join_response = vm::api::join(pid);
 	assertTrue(join_response.has_value(), "Join failed (1)");
 }
+
+void VmTestSuite::loadInvalidDbc(
+	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+) {
+	auto pid = vm::api::spawn()->pid;
+
+	fs::FilePath file(path(dbc_filename));
+	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	ASSERT_TRUE(!loaded_file_response.has_value());
+	auto err = loaded_file_response.error();
+	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
+	auto core_op = std::get<vm::api::CoreOperationError>(err);
+	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
+	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
+	// std::cerr << err_str << '\n';
+	for (auto err_key: error_keywords) {
+		assertTrue(
+			err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
+		);
+	}
+}
+
+void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
+	ASSERT_TRUE(
+		vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))).has_value()
+	);
+}
