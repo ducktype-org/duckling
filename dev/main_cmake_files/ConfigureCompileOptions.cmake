@@ -28,16 +28,17 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	message("-- Clang compiler")
 
 	# I didn't find a good -Werror=terminate alternative for Clang.
+	# The "-Werror=shadow" is more strict than "-Werror=shadow=local".
 	string(CONCAT ADDITIONAL_CLANG_FLAGS
 		"-Werror=return-type "
-		"-Werror=shadow-all "
 		"-Werror=return-stack-address "
 		"-Werror=free-nonheap-object "
 		"-Werror=conversion "
-		"-Wno-shadow-field-in-constructor "
-		"-Wno-shadow-field "
 		"-Wall -Wextra "
-		"-Wno-sign-compare"
+		"-pedantic "
+		"-Wno-sign-compare "
+		"-Wno-sign-conversion "
+		"-Wno-defaulted-function-deleted"
 	)
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
