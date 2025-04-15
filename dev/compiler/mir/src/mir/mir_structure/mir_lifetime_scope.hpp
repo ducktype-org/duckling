@@ -1,6 +1,6 @@
 /**
- * This file holds structure defining mir-lifetime-scopes,
- * and mir-lifetime-scope-tree. There are the structure
+ * This file holds structure defining mir LifetimeScope,
+ * and mir LifetimeScopeTree. These are the structures
  * that then MIR uses to deduce lifetime scopes of variables.
  *
  * MIR scopes are in many ways similar to typical scopes in the program, differing mostly in some details and corner cases.
@@ -14,6 +14,9 @@
 
 namespace compiler::mir {
     
+    /**
+     * @TODO this PR: write it
+     */
     struct LifetimeScopeTree final {
         /**
         * MIR Lifetime scope.

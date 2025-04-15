@@ -3,7 +3,6 @@
 #include "mir_local_ref.hpp"
 #include "mir_lifetime_scope.hpp"
 
-#include <helios/scopes/scopes.hpp> // in this pr :delete this
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 

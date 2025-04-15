@@ -17,8 +17,8 @@ namespace compiler::mir {
     }
 
     ScopeRef LifetimeScopeTree::newScope(CRef<LifetimeScope> parent) {
-        auto key = scopes.emplaceBack(parent, parent->depth + 1, next_id++);
-        return scopes.getCRef(key).value();
+        scopes.emplaceBack(parent, parent->depth + 1, next_id++);
+        return scopes.last();
     }
 
     ScopeRef getSuperRootScope() {
