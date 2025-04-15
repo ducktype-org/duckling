@@ -1,12 +1,12 @@
 #include "query_hout_of_expr.hpp"
 
-#include "../../scopes/scopes.hpp"
 #include "../visitors.hpp"
 #include "expr.hpp"
 
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -59,12 +59,10 @@ namespace compiler::helios::code {
 		 * but it might get removed from hout creation in the future.
 		 */
 		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
-			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
+			explicit HoutResultingSymbolListVisitor(query::Context& ctx):
+				  ctx(ctx) {}
 
 			query::Context& ctx;
-			ScopeID         scope;
 
 			base::Optional<SymbolList> symbols;
 
@@ -79,7 +77,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitParenthesisExpr(const ParenthesisExpr& val) override {
-				HoutResultingSymbolListVisitor vis(ctx, scope);
+				HoutResultingSymbolListVisitor vis(ctx);
 				val.inner->acceptVisitor(vis);
 				symbols = vis.symbols;
 			}
@@ -96,18 +94,16 @@ namespace compiler::helios::code {
 		};
 
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
-			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
+			explicit PstExprToHoutExprVisitor(query::Context& ctx):
+				  ctx(ctx) {}
 
 			query::Context& ctx;
-			ScopeID         scope;
 
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt->getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
 			}
 
 			/**
@@ -155,7 +151,7 @@ namespace compiler::helios::code {
 
 				if (operators.contains(op)) {
 					return makeBox<BinaryOperatorExpr>(
-						ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs)
+						ctx, operators.at(op), std::move(lhs), std::move(rhs)
 					);
 				} else {
 					return {};
@@ -183,7 +179,7 @@ namespace compiler::helios::code {
 				};
 
 				if (operators.contains(op))
-					return makeBox<UnaryOperatorExpr>(scope, operators.at(op), std::move(expr));
+					return makeBox<UnaryOperatorExpr>(operators.at(op), std::move(expr));
 				else
 					return {};
 			}
@@ -212,7 +208,7 @@ namespace compiler::helios::code {
 						}
 						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
 					}
-					node = makeBox<VariantTypeConstructorExpr>(ctx, scope, std::move(all_subtypes));
+					node = makeBox<VariantTypeConstructorExpr>(ctx, std::move(all_subtypes));
 					return;
 				}
 
@@ -258,7 +254,7 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
+				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx);
 				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
 
 				CORE_ASSERT(resulting_symbol_vis.symbols, "Failed to get symbols");
@@ -323,21 +319,24 @@ namespace compiler::helios::code {
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
 					if (call_arguments)
 						node = makeBox<CallExpr>(
-							ctx, scope, dealiased.back(), std::move(*call_arguments)
+							ctx, dealiased.back(), std::move(*call_arguments)
 						);
 					else
-						node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
+						node = makeBox<LinkedIdentifierExpr>(ctx, std::move(dealiased));
 				}
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
-				PstExprToHoutExprVisitor vis(ctx, scope);
+				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
+				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				auto&& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
+				// note: this is a mock, it should be unified with ChainExpr
+				
+				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({stmt});
+				const auto& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
 					{ scope, stmt->getName().value, true }
 				);
 
@@ -348,7 +347,7 @@ namespace compiler::helios::code {
 				}
 
 				if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
-					node = makeBox<IdentifierExpr>(ctx, scope, dealiased.back());
+					node = makeBox<IdentifierExpr>(ctx, dealiased.back());
 				}
 			}
 
@@ -356,91 +355,91 @@ namespace compiler::helios::code {
 				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
-					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
+					node = makeBox<LiteralBoolExpr>(ctx, true);
 					break;
 				case pst::Keyword::False:
-					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
+					node = makeBox<LiteralBoolExpr>(ctx, false);
 					break;
 
 
 				// types:
 				case pst::Keyword::Bool:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryBoolType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryBoolType>({}));
 					break;
 
 				case pst::Keyword::Char:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryCharType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
 					break;
 
 					// @todo: add meta keyword and type
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, true })
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, true })
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, true })
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, true })
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, false })
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, false })
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, false })
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, false })
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, false })
 					);
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(80));
 					break;
 				case pst::Keyword::f128:
 					node
-						= makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+						= makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(64));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(32));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(32));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(16));
 					break;
 
 
@@ -462,7 +461,7 @@ namespace compiler::helios::code {
 					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
+				node = makeBox<TupleTypeConstructorExpr>(ctx, std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
@@ -503,13 +502,12 @@ namespace compiler::helios::code {
 
 		ExprConstructionResult
 			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
 
 			// std::cerr << "\nExpr: \n";
 			// root->debugPrint(std::cerr);
 			// std::cerr << '\n'
 
-			PstExprToHoutExprVisitor visitor(ctx, scope);
+			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);
