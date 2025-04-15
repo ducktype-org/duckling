@@ -275,8 +275,17 @@ namespace compiler::mir {
 				)
 			          .getType();
 
-			// @TODO This PR: add validation that all helios-locals
-			// have a lifetime scope set.
+			// we sanity check here, that all local variables
+			// that have a helios id also have lifetime scope,
+			// as thery always have to have it.
+			for (auto& local: local_list) {
+				if (local->helios_id.has_value()) {
+					CORE_ASSERT(
+						local->scope.has_value(),
+						"Local variable without lifetime scope"
+					);
+				}
+			}
 
 			return Function{
 				name.value(),
@@ -574,7 +583,6 @@ namespace compiler::mir {
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			// @TODO this PR: here we should set scope of the local:
 			auto local                   = function.findLocal(stmt.helios_symbol);
 			local->setLifetimeScope(parent_scope);
 			auto local_construction_hole = continuation->addHole();
