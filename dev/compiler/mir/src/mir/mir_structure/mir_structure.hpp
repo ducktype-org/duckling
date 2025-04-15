@@ -76,9 +76,8 @@ namespace compiler::mir {
 	 * proper BlockReference.
 	 * It is like that for now, to avoid confusion with BlockRef used in mir_lowering and
 	 * transformation between that BlockRef to this "BlockRef".
-	 * @TODO: change to ID with direct creation 
 	 */
-	STRONG_TYPEDEF_INT(BlockID, u64);
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(BlockID);
 
 	struct MirIntegerConst final {
 		i64 value;
@@ -173,9 +172,14 @@ namespace compiler::mir {
 			  id(LocalID::next()),
 			  helios_id({}),
 			  type(type) {}
-
-		void setLifetimeScope(ScopeRef scope);
 		
+		/**
+		 * Setter of lifetime scope of this local.
+		 * MIR lowering uses it to set the lifetime scope of the local
+		 * during the process of generating function code from HOUT.
+		 */
+		void setLifetimeScope(ScopeRef scope);
+
 		friend struct Function;
 		friend struct FunctionBuilder;
 		friend struct ExprBlockVisitor;
@@ -210,8 +214,6 @@ namespace compiler::mir {
 
 		MIRValue(MirBoolConst value): value(value) {}
 
-		// we can't have this, cause it is ambiguous with the one below
-		// @overload_priority would be so cool here...
 		MIRValue(LocalRef value): value(value) {}
 		
 		MIRValue(MutLocalRef value): value(value) {}

@@ -78,6 +78,7 @@ namespace compiler::mir {
 	 * @param stmt
 	 * @param continuation Block that should be executed after this statement.
 	 * @param function Function that we are lowering this statement in.
+	 * @param parent_scope Scope of the parent of this Statement.
 	 * @return StmtLowerRes
 	 */
 	StmtLowerRes
@@ -89,6 +90,7 @@ namespace compiler::mir {
 	 * @param expr
 	 * @param continuation Block that should be executed after this expression.
 	 * @param function Function that we are lowering this expression in.
+	 * @param expr_scope Lifetime Scope this expression should be in.
 	 * @return ExprLowerRes
 	 */
 	ExprLowerRes
@@ -333,8 +335,8 @@ namespace compiler::mir {
 		}
 
 		/**
-	     * Creates a temporary local value, i.e. local value
-		 * not arising from local in the source code.
+		 * Creates a temporary local value, i.e. local value
+		 * not arising from variable written directly in the Duckling source code.
 		 */
 		[[nodiscard]]
 		MutLocalRef addTmp(const tsh::SymbolType<> type) {
@@ -342,6 +344,21 @@ namespace compiler::mir {
 			return local_list.last();
 		}
 
+		/**
+		 * Creates a temporary local value, and also sets its lifetime scope.
+		 */
+		 [[nodiscard]]
+		 MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
+			 auto tmp = addTmp(type);
+			 tmp->setLifetimeScope(scope);
+			 return tmp;
+		 }
+		
+		/**
+		 * Add a temporary value of type bool.
+		 * Used for example by if/while lowering to store
+		 * the result of the condition.
+		 */
 		[[nodiscard]]
 		MutLocalRef addBoolTmp() {
 			auto type = tsh::SymbolType<>(ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable);
@@ -386,7 +403,6 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-
 		query::Context& getContext() { return ctx; }
 
 		/**
@@ -401,6 +417,9 @@ namespace compiler::mir {
 	/**
 	 * @brief Visitor that collects all local variables in the function and adds them directly to
 	 * the FunctionBuilder.
+	 * It sets variable scopes for parameters, but doesn't set it for other local variables.
+	 * Scope of other local variables is set when visiting VariableStmt in StmtBlockVisitor,
+	 * since only then is the scope of the variable known.
 	 */
 	struct LocalVarCollectionVisitor: public hc::HoutStmtVisitorPanicky {
 		FunctionBuilder& function;
@@ -535,7 +554,9 @@ namespace compiler::mir {
 
 			auto condition_scope = function.newScope(parent_scope);
 
-			// do we need it?:
+			// I'm not sure if we need these scopes,
+			// maybe we could just pass parent_scope as-is.
+			// But this way it for sure works.
 			auto then_scope = function.newScope(parent_scope);
 			auto else_scope = function.newScope(parent_scope);
 
@@ -556,12 +577,15 @@ namespace compiler::mir {
 			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
 			
-			auto get_bool_hole = condition_block->addHole();
+			// we have to "move" the condition result
+			// into special temporary value, so we can use it
+			// after the actual condition result is destroyed.
+			auto get_condition_return = condition_block->addHole();
 			auto condition_result_tmp = function.addBoolTmp();
 
 			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			get_bool_hole.fill(Instruction{
+			get_condition_return.fill(Instruction{
 				Operation::Assign,
 				{ condition_result_tmp },
 				{ expr_result.value },
@@ -584,7 +608,11 @@ namespace compiler::mir {
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto local                   = function.findLocal(stmt.helios_symbol);
+			
+			// we set the lifetime scope of the local variable here
+			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
+
 			auto local_construction_hole = continuation->addHole();
 
 			match_optional(stmt.initial_value) {
@@ -689,8 +717,7 @@ namespace compiler::mir {
 				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different types"
 			);
-			const auto      target_location = function.addTmp(argument_type);
-			target_location->setLifetimeScope(expr_scope);
+			const auto      target_location = function.addTmp(argument_type, expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -709,8 +736,7 @@ namespace compiler::mir {
 
 			// Fill the hole with the unary operation.
 			const auto      argument_type   = locationType(sub_res, function.getContext());
-			const auto      target_location = function.addTmp(argument_type);
-			target_location->setLifetimeScope(expr_scope);
+			const auto      target_location = function.addTmp(argument_type, expr_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -742,8 +768,7 @@ namespace compiler::mir {
 		void visitCallExpr(const hc::CallExpr& expr) override {
 			auto       call = continuation->addHole();
 			const auto call_result
-				= function.addTmp(expr.expression_type.getSymbolType());
-			call_result->setLifetimeScope(expr_scope);
+				= function.addTmp(expr.expression_type.getSymbolType(), expr_scope);
 
 			auto                  sub_continuation = continuation;
 			std::vector<MIRValue> args;
