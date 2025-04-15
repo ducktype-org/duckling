@@ -184,8 +184,8 @@ namespace tsh {
 	struct IMPLEMENT_QUERY(QueryRawPointerType, RawPointerAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
 			static auto raw_pointer_impl
-				= std::array{ internal::RawPointerAbstractTypeImpl{ false },
-				              internal::RawPointerAbstractTypeImpl{ true } };
+				= std::array{ internal::RawPointerAbstractTypeImpl{ Mutability::Immutable },
+				              internal::RawPointerAbstractTypeImpl{ Mutability::Mutable } };
 			return &raw_pointer_impl.at(key);
 		}
 
