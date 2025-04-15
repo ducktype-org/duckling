@@ -21,7 +21,10 @@ class DVMBackendTest final: public tester::TestSuite {
 #define TESTER_CLASS DVMBackendTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(functionCallsTest);
+	}
 
 protected:
 	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
@@ -81,6 +84,8 @@ private:
 	}
 
 	void simpleTest() { runTest("modules/simple"); }
+
+	void functionCallsTest() { runTest("modules/function_calls"); }
 };
 
 

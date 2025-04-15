@@ -2,17 +2,27 @@
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
+#include "base/int_conv.hpp"
 #include <base/exceptions.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/builders/builders.hpp"
-#include "vm/bytecode/instructions.hpp"
+#include "vm/core/process/type_metadata/type_metadata.hpp"
+#include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <algorithm>
 #include <ostream>
 #include <ranges>
+#include <unordered_map>
+
+#define INVALID_CASE(tp, reason)                                                    \
+	variant_case(tp, _) {                                                           \
+		CORE_PANIC("During handling of type ", base::typeName<tp>(), ": ", reason); \
+	}
 
 #define NOIMPL_CASE(tp, reason)                                              \
 	variant_case(tp, _) {                                                    \
@@ -20,6 +30,7 @@
 			base::strConcat("Type ", base::typeName<tp>(), " for: ", reason) \
 		);                                                                   \
 	}
+
 
 using namespace vm::code;
 using namespace vm::code::builders;
@@ -68,12 +79,21 @@ namespace compiler::backend_vm {
 			base::Map<lir::LocalRef, usize>      lir_local_to_stack;
 			base::Map<lir::LocalRef, TypeOfData> lir_local_types;
 
-			base::Map<lir::LocalRef, u64> variable_to_id;
-			base::Map<lir::BlockRef, u64> block_to_id;
+			base::Map<lir::LocalRef, u64>                variable_to_id;
+			base::Map<lir::BlockRef, u64>                block_to_id;
+			const vm::TypeMetadata&                      types;
+			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
-			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& types):
+			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& type_context):
 				  lir_function(lir_function),
-				  func_builder(lir_function->name, types) {
+				  func_builder(lir_function->name, type_context),
+				  types(type_context.getMetadata()),
+				  TYPE_OF_DATA([&type_context] {
+					  base::HashMap<base::StrID, TypeOfData> map;
+					  for (auto&& type: type_context.getTypes())
+						  map.put(VISIT(type, tp, return tp.name), type);
+					  return map;
+				  }()) {
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
 
@@ -147,12 +167,8 @@ namespace compiler::backend_vm {
 			ctx.func_builder.addInstruction(instructions::Op_label{ block_entry->second });
 		}
 
-		vm::opargs::OpCodeArg
-			lirOutputToOpArg(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
-			const lir::LocalRef output   = lir_instruction.output.value();
-			auto&&              var_type = ctx.lir_local_types[output];
-
-			variant_match(var_type) {
+		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, const i64 offset) {
+			variant_match(type) {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
@@ -163,31 +179,32 @@ namespace compiler::backend_vm {
 							", size: ",
 							primitive.size
 						));
-					if (primitive.size == 8)
-						return vm::opargs::StackLocalI64{ i64(ctx.lir_local_to_stack[output]) };
-					if (primitive.size == 4)
-						return vm::opargs::StackLocalI32{ i64(ctx.lir_local_to_stack[output]) };
-					if (primitive.size == 2)
-						return vm::opargs::StackLocalI16{ i64(ctx.lir_local_to_stack[output]) };
-					if (primitive.size == 1)
-						return vm::opargs::StackLocalI8{ i64(ctx.lir_local_to_stack[output]) };
+					if (primitive.size == 8) return vm::opargs::StackLocalI64{ offset };
+					if (primitive.size == 4) return vm::opargs::StackLocalI32{ offset };
+					if (primitive.size == 2) return vm::opargs::StackLocalI16{ offset };
+					if (primitive.size == 1) return vm::opargs::StackLocalI8{ offset };
+				}
+				variant_case(vm::code::PointerType, pointer) {
+					return vm::opargs::StackLocalPtr(offset);
 				}
 
-				variant_case(vm::code::PointerType, pointer) {
-					return vm::opargs::StackLocalPtr(i64(ctx.lir_local_to_stack[output]));
-				}
-				NOIMPL_CASE(vm::code::StaticTableType, __func__)
-				NOIMPL_CASE(vm::code::DynamicTableType, __func__)
-				NOIMPL_CASE(vm::code::DataType, __func__)
-				NOIMPL_CASE(vm::code::VariantType, __func__)
-				variant_case(vm::code::FunctionType, function_tp) {
-					return vm::opargs::FunctionName(function_tp.name);
-				}
+				INVALID_CASE(vm::code::StaticTableType, "output target");
+				INVALID_CASE(vm::code::DynamicTableType, "output target");
+				INVALID_CASE(vm::code::DataType, "output target");
+				INVALID_CASE(vm::code::VariantType, "output target");
+				INVALID_CASE(vm::code::FunctionType, "output target");
 			}
 			CORE_UNREACHABLE();
 		}
 
 		vm::opargs::OpCodeArg
+			lirOutputToOpArg(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
+			const lir::LocalRef output   = lir_instruction.output.value();
+			auto&&              var_type = ctx.lir_local_types[output];
+			return outputToOpArg(var_type, i64(ctx.lir_local_to_stack[output]));
+		}
+
+		constexpr vm::opargs::OpCodeArg
 			lirValueToOpArg(AddLirFuncContext& ctx, const lir::LIRValue& lir_value) {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
@@ -198,11 +215,32 @@ namespace compiler::backend_vm {
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
+				variant_case(lir::FunctionLiteral, function) {
+					return vm::opargs::FunctionName(helios::name(function.helios_id));
+				}
+				variant_default { CORE_PANIC("Unhandled value case"); }
 			}
 			CORE_UNREACHABLE();
 		}
 
-		vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
+		constexpr vm::opargs::OpCodeArg
+			modifyOffsetOpArg(const vm::opargs::OpCodeArg& op_arg, const i64 new_offset) {
+			variant_match(op_arg) {
+#define OFFSET_CASE(type)                         \
+	variant_case(vm::opargs::type, offset_type) { \
+		auto copy   = offset_type;                \
+		copy.offset = new_offset;                 \
+		return copy;                              \
+	}
+				FOR_EACH(OFFSET_CASE, VM_OPARG_OFFSET_TYPES);
+#undef OFFSET_CASE
+				variant_default { CORE_PANIC("Given op_arg is not an offset kind"); }
+			}
+
+			CORE_UNREACHABLE();
+		}
+
+		constexpr vm::code::builders::OpKind lirOpToOpKind(lir::Operation operation) {
 			using namespace vm::code::builders;
 			switch (operation) {
 			case lir::Operation::Assign:
@@ -223,6 +261,8 @@ namespace compiler::backend_vm {
 				return OpKind::mod;
 			case lir::Operation::IntegerNeg:
 				return OpKind::neg;
+			case lir::Operation::Call:
+				return OpKind::call;
 			case lir::Operation::IntegerULt:
 				throw base::NotYetImplemented(base::enumToStr(operation).str());
 			case lir::Operation::IntegerSLt:
@@ -233,7 +273,7 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::code::builders::OpKind lirTerminatorToOpKind(lir::Operation terminator) {
+		constexpr vm::code::builders::OpKind lirTerminatorToOpKind(lir::Operation terminator) {
 			using namespace vm::code::builders;
 			switch (terminator) {
 			case lir::Operation::Jump:
@@ -247,6 +287,52 @@ namespace compiler::backend_vm {
 				CORE_PANIC("Invalid terminator: ", base::enumToStr(terminator));
 			}
 			CORE_UNREACHABLE();
+		}
+
+		void handleAddCall(
+			AddLirFuncContext&                ctx,
+			const lir::Instruction&           lir_instruction,
+			std::deque<vm::opargs::OpCodeArg> args
+		) {
+			base::StrID called_func_name
+				= std::get<vm::opargs::FunctionName>(args.at(1)).function_name;
+			auto called_func = ctx.types.at(called_func_name);
+
+			auto lir_result_argument = args.front();
+			auto func_result_storage_offset
+				= ctx.func_builder.initType(instructions::Op_init_type(called_func_name));
+			auto func_result_argument = modifyOffsetOpArg(
+				lir_result_argument, base::safeIntConv<i64>(func_result_storage_offset)
+			);
+
+			// Instantiate function parameters on the stack.
+
+			auto func_params = called_func->getParameters().value();
+			auto instr_args  = lir_instruction.arguments | std::views::drop(1);
+			auto op_args     = args | std::views::drop(1);
+			std::cerr << func_params.size() << " " << instr_args.size() << '\n';
+			CORE_ASSERT(
+				func_params.size() == instr_args.size(), "Invalid number of arguments in call"
+			);
+			for (const auto& [instr_arg, op_arg, param_type]:
+			     std::views::zip(instr_args, op_args, func_params)) {
+				auto        type_of_argument = param_type;
+				base::StrID type_name        = type_of_argument->getName();
+				auto offset = ctx.func_builder.initType(instructions::Op_init_type{ type_name });
+
+				InstructionBuilder mov_arg(OpKind::mov);
+				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], i64(offset)));
+				mov_arg.pushArg(op_arg);
+				ctx.func_builder.addInstruction(mov_arg);
+				// mov_l64?_instr_arg.value()
+			}
+
+			InstructionBuilder call(OpKind::call);
+			ctx.func_builder.addInstruction(call);
+
+			InstructionBuilder mov_to_output(OpKind::mov);
+			mov_to_output.pushArgs(lir_result_argument, func_result_argument);
+			ctx.func_builder.addInstruction(instructions::Op_deinit());  // Deinit func result
 		}
 
 		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
@@ -311,9 +397,12 @@ namespace compiler::backend_vm {
 
 					args.pop_back();
 				}
+			} else if (kind == OpKind::call) {
+				handleAddCall(ctx, lir_instruction, args);
+				return;
 			}
 
-			vm::code::builders::InstructionBuilder instr(kind);
+			InstructionBuilder instr(kind);
 
 			for (const auto& arg: args) instr.pushArgs(arg);
 
@@ -326,15 +415,15 @@ namespace compiler::backend_vm {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
 		TypeContext type_context = type_context_builder.build();
-		code.types        = type_context.getTypes();
+		code.types               = type_context.getTypes();
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
 
 			AddLirFuncContext ctx(lir_function, type_context);
 
-			for (auto&& lir_block: lir_function->blocks) {
-				addBlockLabel(ctx, lir_block.ref());
+			for (auto&& lir_block: lir_function->block_order) {
+				addBlockLabel(ctx, lir_block);
 				for (auto& lir_instruction: lir_block->instructions)
 					addLirInstruction(ctx, lir_instruction);
 
@@ -348,8 +437,8 @@ namespace compiler::backend_vm {
 				InstructionBuilder terminator_instr;
 				terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
 
-				// Since VM does not support `return X;` operation, we must move the value to 0th
-				// index and then return.
+				// Since VM does not support `return X;` operation, we must move the value to
+				// 0th index and then return.
 				if (lir_block->terminator.operation == lir::Operation::ReturnValue) {
 					InstructionBuilder move_ret(OpKind::mov);
 					CORE_ASSERT(
@@ -369,9 +458,11 @@ namespace compiler::backend_vm {
 				ctx.func_builder.addInstruction(terminator_instr);
 				// @TODO: This will be removed by #539
 				// https://github.com/ducktype-org/duckling/issues/539
-				ctx.func_builder.setRetSize(
-					type_context.getMetadata().at(lir_function->name)->getResultType().value()->getSize()
-				);
+				ctx.func_builder.setRetSize(type_context.getMetadata()
+				                                .at(lir_function->name)
+				                                ->getResultType()
+				                                .value()
+				                                ->getSize());
 			}
 
 			code.functions.emplace_back(ctx.func_builder.build());

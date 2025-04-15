@@ -1,0 +1,7 @@
+fun plus_two(value: i64) -> i64 = {
+    return value + 2;
+}
+
+fun main() -> i64 = {
+    return plus_two(2);
+}
