@@ -43,6 +43,7 @@ namespace compiler::helios {
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
+		// PR: remove it?
 		u64 depth;
 
 		// We would like the function bellow to be deleted to prevent any copy of scope data.
