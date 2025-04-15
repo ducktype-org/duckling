@@ -12,7 +12,8 @@
 namespace base {
 
 	/**
-	 * @brief Expandable list (like std::vector), but with stable references (References never become dangling, because actual data never moves).
+	 * @brief Expandable list (like std::vector), but with stable references (References never
+	 * become dangling, because actual data never moves).
 	 *
 	 * @tparam Key must be convertible to and from usize.
 	 *
@@ -21,7 +22,10 @@ namespace base {
 	template<typename Data>
 	class StableVector final {
 		std::vector<Box<Data>> data;
-		using size_type = std::vector<Box<Data>>::size_type;
+		static_assert(
+			std::is_same_v<typename std::vector<Box<Data>>::size_type, usize>,
+			"When this fail, figure out what to do."
+		);
 
 	public:
 		using RefT  = Ref<Data>;
@@ -46,7 +50,7 @@ namespace base {
 		bool operator==(const StableVector& other) const = default;
 
 		[[nodiscard]]
-		constexpr size_type size() const noexcept {
+		constexpr usize size() const noexcept {
 			return data.size();
 		}
 
@@ -60,9 +64,15 @@ namespace base {
 			return not data.empty();
 		}
 
-		constexpr Ref<Data> operator[](size_type pos) { return data.at(pos).refMut(); }
+		[[nodiscard]]
+		constexpr Ref<Data> operator[](usize pos) {
+			return data.at(pos).refMut();
+		}
 
-		constexpr CRef<Data> operator[](size_type pos) const { return data.at(pos).ref(); }
+		[[nodiscard]]
+		constexpr CRef<Data> operator[](usize pos) const {
+			return data.at(pos).ref();
+		}
 
 		constexpr void pushBack(const Data& value) {
 			auto new_ptr = makeBox<Data>(value);
@@ -74,14 +84,21 @@ namespace base {
 			data.emplace_back(std::move(new_ptr));
 		}
 
-		RefT last() { return data.back().refMut(); }
+		[[nodiscard]]
+		RefT last() {
+			return data.back().refMut();
+		}
 
-		CRefT last() const { return data.back().ref(); }
+		[[nodiscard]]
+		CRefT last() const {
+			return data.back().ref();
+		}
 
 		/**
 		 * Returns index of the last element (i.e. size - 1).
 		 */
-		constexpr size_type lastIndex() const {
+		[[nodiscard]]
+		constexpr usize lastIndex() const {
 			CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty StableVector");
 			return size() - 1;
 		}
