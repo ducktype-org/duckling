@@ -111,7 +111,6 @@ namespace compiler::mir {
 	 * description.
 	 */
 	struct MirLocal final {
-	// @TODO: make this private:?
 		LocalID id;
 
 		// Locals without a helios_id are locals created for temporary values
@@ -362,8 +361,7 @@ namespace compiler::mir {
 
 		std::vector<Block>           blocks;
 
-		// @TODO: make it store const MirLocal?
-		base::StableVector<MirLocal> local_list;
+		base::StableVector<const MirLocal> local_list;
 		BlockID                      entry_block;
 
 		LifetimeScopeTree lifetime_scope_tree;
@@ -387,7 +385,7 @@ namespace compiler::mir {
 			tsh::SymbolType<>              return_type,
 			std::vector<tsh::SymbolType<>> parameter_types,
 			std::vector<Block>             blocks,
-			base::StableVector<MirLocal>   local_list,
+			base::StableVector<const MirLocal>   local_list,
 			BlockID                        entry_block,
 			LifetimeScopeTree              lifetime_scope_tree,
 			helios::SymID                  helios_id

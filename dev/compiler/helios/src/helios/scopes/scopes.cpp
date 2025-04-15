@@ -19,6 +19,9 @@
 
 namespace compiler::helios {
 
+	/**
+	 * Structure holding all data directly stored for each created scope.
+	 */
 	struct ScopeData final {
 		// created on startup:
 		std::optional<ScopeID> parent;
@@ -43,7 +46,10 @@ namespace compiler::helios {
 		// any lookup in the scope requires calculation of symbols witch itself is done only once!
 		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
-		// PR: remove it?
+		/**
+		 * Scope depth, i.e. distance to the root scope.
+		 * It is currently unused but might be useful in the future.
+		 */
 		u64 depth;
 
 		// We would like the function bellow to be deleted to prevent any copy of scope data.

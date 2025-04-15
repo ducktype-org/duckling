@@ -24,7 +24,7 @@ namespace compiler::mir {
 		tsh::SymbolType<>              return_type,
 		std::vector<tsh::SymbolType<>> parameter_types,
 		std::vector<Block>             blocks,
-		base::StableVector<MirLocal>   local_list,
+		base::StableVector<const MirLocal>   local_list,
 		BlockID                        entry_block,
 		LifetimeScopeTree              lifetime_scope_tree,
 		helios::SymID                  helios_id
@@ -292,7 +292,7 @@ namespace compiler::mir {
 				function_type.getResultType(),
 				function_type.getParameterTypes(),
 				std::move(blocks),
-				std::move(local_list),
+				std::move(local_list).toConstData(),
 				entry_block.value()->getID(),
 				std::move(lifetime_scope_tree),
 				helios_symbol,
