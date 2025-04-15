@@ -18,6 +18,8 @@
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
+	Nop,
+
 	Call,
 	VCall,
 
@@ -237,6 +239,11 @@ namespace compiler::mir {
 		template<class T>
 		const T& get() const {
 			return std::get<T>(value);
+		}
+
+		[[nodiscard]]
+		bool isLocal() const {
+			return std::holds_alternative<LocalRef>(value);
 		}
 	};
 

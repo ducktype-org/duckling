@@ -472,13 +472,38 @@ namespace compiler::mir {
 			auto return_block = function.newBlock();
 			auto return_scope = function.newScope(parent_scope);
 
+			auto retrieve_value = return_block->addHole();
+
 			// lower expr:
 			auto expr_res = lowerExpr(*stmt.value, return_block, function, return_scope);
 
-			// This PR: this does not work, we need to safe the value on the side for later, and don't destroy it!
-			return_block->setTerminator(
-				Instruction(Operation::ReturnValue, {}, { expr_res.value }, {}, return_scope)
-			);
+			if (expr_res.value.isLocal()) {
+				// we need to store the result of the expression
+				// in additional variable, so it doesn't get destroyed:
+				auto return_value = function.addTmp(expr_res.value.get<LocalRef>()->type);
+				retrieve_value.fill(Instruction{
+					Operation::Assign,
+					{ return_value },
+					{ expr_res.value },
+					{ flagConstruct(return_value), flagMove(expr_res.value.get<LocalRef>()) },
+					return_scope,
+				});
+				return_block->setTerminator(
+					Instruction(Operation::ReturnValue, {}, { return_value }, {}, return_scope)
+				);
+			}
+			else {	
+				retrieve_value.fill(Instruction{
+					Operation::Nop,
+					{ },
+					{ },
+					{ },
+					return_scope,
+				});
+				return_block->setTerminator(
+					Instruction(Operation::ReturnValue, {}, { expr_res.value }, {}, return_scope)
+				);
+			}
 
 			output({ expr_res.begin });
 		}
