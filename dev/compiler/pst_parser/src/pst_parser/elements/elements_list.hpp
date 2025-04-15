@@ -60,6 +60,7 @@ namespace pst {
 		class SuffixOperator;
 		class BinaryOperator;
 		class ExprValue;
+		class ExprStrValue;
 		class Literal;
 		class TemplateSpecifier;
 		class IdentifierLiteral;

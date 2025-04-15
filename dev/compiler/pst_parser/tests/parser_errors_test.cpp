@@ -200,7 +200,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad3_ternary{ "if 5 else y" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
+	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
+	Example<pst::ExprStmt, false> bad_operator{ "x = y z + 3" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };

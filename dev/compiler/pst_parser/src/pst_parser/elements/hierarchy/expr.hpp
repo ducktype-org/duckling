@@ -167,6 +167,34 @@ namespace pst {
 		};
 
 		/**
+		 * @brief Element representing a number value in an expression
+		 */
+		class ExprStrValue final: public ExprElement {
+			lexer::StringValue string;
+
+		public:
+			[[nodiscard]]
+			lexer::StringValue getValue() const {
+				return string;
+			}
+
+			explicit ExprStrValue(const dia::SourcePosition& position, lexer::StringValue value):
+				  ExprElement(position, 0),
+				  string(value) {}
+
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			~ExprStrValue() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			std::string elementType() const override {
+				return "String Value Expr";
+			}
+		};
+
+		/**
 		 * @brief This is a helper element for parsing literals and bracket subexpressions that
 		 * decides which literal to parse.
 		 */
