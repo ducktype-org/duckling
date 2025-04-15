@@ -136,6 +136,11 @@ namespace compiler::mir {
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
 	}
 
+	void MirLocal::setLifetimeScope(ScopeRef scope) {
+		CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
+		this->scope.emplace(scope);
+	}
+
 	void MIRValue::debugPrint(std::ostream& output) const {
 		variant_match(this->value) {
 			variant_case(LocalRef, local) { local->debugPrint(output); }

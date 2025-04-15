@@ -3,18 +3,25 @@
 namespace compiler::mir {
 
     namespace {
-        constinit u64 next_id = 0;
-        LifetimeScopeTree::LifetimeScope super_root_scope{
+        /**
+         * It starts at 1, so SUPER_ROOT_SCOPE can have id 0 created at compile-time.
+         */
+        constinit u64 next_id = 1;
+
+        /**
+         * Root scopes above all scopes trees.
+         * It is a scope returned by getSuperRootScope() function.
+         */
+        constexpr LifetimeScopeTree::LifetimeScope SUPER_ROOT_SCOPE{
             .parent=nullptr, 
             .depth=0,
-            .id=next_id++,
+            .id=0,
         };
     }
 
-    // we have to set root to something first here..
-    LifetimeScopeTree::LifetimeScopeTree(): root(&super_root_scope) {
-        root = newScope(&super_root_scope);
-    }
+    LifetimeScopeTree::LifetimeScopeTree():
+        scopes(),
+        root(newScope(&SUPER_ROOT_SCOPE)) { }
 
     ScopeRef LifetimeScopeTree::newScope(CRef<LifetimeScope> parent) {
         scopes.emplaceBack(parent, parent->depth + 1, next_id++);
@@ -22,6 +29,6 @@ namespace compiler::mir {
     }
 
     ScopeRef getSuperRootScope() {
-        return &super_root_scope;
+        return &SUPER_ROOT_SCOPE;
     }
 }

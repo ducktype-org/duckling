@@ -30,7 +30,7 @@ namespace compiler::mir {
 	/**
 	 * @brief Returns list of scopes that lifetime ends between two consecutive instruction,
 	 * first from @p begin scope, second from @p end scope.
-	 * In general its the list of scopes between @p begin and lca(@[begin, end).
+	 * In general its the list of scopes between @p begin and lca(begin, end).
 	 *
 	 * @todo this is a general implementation that always works.
 	 * In the future we should find some invariant about two consecutive scopes

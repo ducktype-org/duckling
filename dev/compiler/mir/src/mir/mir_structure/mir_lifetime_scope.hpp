@@ -1,10 +1,8 @@
 /**
  * This file holds structure defining mir LifetimeScope,
  * and mir LifetimeScopeTree. These are the structures
- * that then MIR uses to deduce lifetime scopes of variables.
- *
+ * that then MIR uses to handle lifetime scopes of variables and instructions.
  * MIR scopes are in many ways similar to typical scopes in the program, differing mostly in some details and corner cases.
- * MIR scope tree is generated per mir function, during the creation of it.
  */
 
 #pragma once
@@ -15,7 +13,12 @@
 namespace compiler::mir {
     
     /**
-     * @TODO this PR: write it
+     * A simple tree-like structure that holds MIR lifetime scopes.
+     * It allows for new scope creation in imperative manner.
+     * @note It doesn't have any special semantical properties, it is literally just a tree
+     * used by MIR for lifetime scopes.
+     *
+     * Each MIR function will creates its own LifetimeScopeTree during its creation.
      */
     struct LifetimeScopeTree final {
         /**
@@ -34,22 +37,41 @@ namespace compiler::mir {
                 return id == other.id;
             }
         };
-        
+
+        using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;
+   
+    private:
+
+        /**
+         * Storage of all scopes within given tree.
+         * It is a stable vector for convenience of using it simple references to the scopes.
+         * @note We can refactor it to more competitive-programming like approach in the future
+         * if it will be needed for performance.
+         */
         base::StableVector<const LifetimeScope> scopes;
-        CRef<LifetimeScope> root;
+
+    public:
+
+        /**
+         * Root of the scope tree, created at tree creation, with depth 1.
+         * Its parent will be the scope returned by getSuperRootScope.
+         */
+        ScopeRef root;
        
         LifetimeScopeTree();
 
-        CRef<LifetimeScope> newScope(CRef<LifetimeScope> parent);
+        /**
+         * Creates a new scope, with given parent.
+         */
+        ScopeRef newScope(ScopeRef parent);
 
         bool operator==(const LifetimeScopeTree& other) const;
     };
 
-    using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;
+    using ScopeRef = LifetimeScopeTree::ScopeRef;
 
     /**
-     * Returns a scope that is above all other scopes.
+     * Returns a scope that is above all other scopes, and does not have a parent.
      */
      ScopeRef getSuperRootScope();
-
 }

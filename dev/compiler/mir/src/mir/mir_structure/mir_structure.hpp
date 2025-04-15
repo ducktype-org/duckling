@@ -113,13 +113,18 @@ namespace compiler::mir {
 	struct MirLocal final {
 		LocalID id;
 
-		// Locals without a helios_id are locals created for temporary values
+		/**
+		 * HELIOS SymID of the local variable.
+		 * Locals without a helios_id are locals created for temporary values.
+		 */
 		base::Optional<helios::SymID> helios_id;
 		tsh::SymbolType<>             type;
 
 		/**
 		 * Lifetime scopes of this local.
 		 * This is used to determine when the local is valid (i.e. "live") and when it should be destructed.
+		 * The local is valid only in instructions for which the scope of the local
+		 * is in the scope-sub-tree of the lifetime scope of the instruction.
 		 *
 		 * If this is not set, then the local will be ignored by lifetime analysis.
 		 * This means that no destructors will be inserted for this local,
@@ -169,12 +174,8 @@ namespace compiler::mir {
 			  helios_id({}),
 			  type(type) {}
 
-		void setLifetimeScope(ScopeRef scope) {
-			// PR: move to cpp
-			CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
-			this->scope.emplace(scope);
-		}
-
+		void setLifetimeScope(ScopeRef scope);
+		
 		friend struct Function;
 		friend struct FunctionBuilder;
 		friend struct ExprBlockVisitor;
@@ -265,7 +266,6 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Single instruction of MIR code.
-	 *
 	 */
 	struct Instruction final {
 		Operation operation = Operation::Uninitialized;
@@ -280,7 +280,7 @@ namespace compiler::mir {
 		// @TODO: each Instruction should have source position reference
 
 		/**
-		 * @brief ...
+		 * @brief lifetime-scope of this instruction.
 		 */
 		ScopeRef scope;
 
@@ -364,6 +364,9 @@ namespace compiler::mir {
 		base::StableVector<const MirLocal> local_list;
 		BlockID                      entry_block;
 
+		/**
+		 * Lifetimes scope-tree of this function. 
+		 */
 		LifetimeScopeTree lifetime_scope_tree;
 
 		// helios ID for hashes, ... this it temporary?
