@@ -3,8 +3,7 @@
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
 #include <vm/loader/errors.hpp>
-
-#include <variant>
+#include <vm/loader/validator/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -12,50 +11,210 @@ class BCVerificationTests: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(jumpSkipBlock);
+		TESTER_ADD_TEST(manyJumps);
+		TESTER_ADD_TEST(initDeinit);
+
+		// @note: This tests breaks the current implementation of jump verification, but will be
+		// used soon when better verification is implemented.
+		//  TESTER_ADD_TEST(validJumpOutOfBlock);
+
+		// Function verification
 		TESTER_ADD_TEST(noMain);
 		TESTER_ADD_TEST(invalidMainRetSize);
 		TESTER_ADD_TEST(invalidMainRetType);
+		TESTER_ADD_TEST(multipleFunctions);
+
+		// Jump verfification
+		TESTER_ADD_TEST(jumpBetween);
+		TESTER_ADD_TEST(jumpIntoBlock);
+		TESTER_ADD_TEST(jumpOutOfBlock);
+
+		// @note: Not implemented yet
+		// TESTER_ADD_TEST(noInit);
+		// TESTER_ADD_TEST(beforeInit);
+		// TESTER_ADD_TEST(afterDeinit);
+		// TESTER_ADD_TEST(invalidOffset);
+
+		// TESTER_ADD_TEST(derefAfterDeinit);
+		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
+		// TESTER_ADD_TEST(derefWrongType);
+		// TESTER_ADD_TEST(refOnPrimitive);
+
+		// TESTER_ADD_TEST(wrongTypeMov);
+		// TESTER_ADD_TEST(wrongTypeSize);
 	}
 
 private:
-	/**
-	 * @brief Parses a file containing a program which violates static verification guidelines.
-	 * Asserts that `error_keywords` are present in the error message.
-	 */
-	void parseInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
-	) {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response.value().pid;  // "Spawn failed"
+	// False positives
+	void jumpSkipBlock() { loadValidDbc("right/jump_skip_block.dbc"); }
 
-		fs::FilePath file(path(dbc_filename));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
-		ASSERT_TRUE(!loaded_file_response.has_value());
-		auto err = loaded_file_response.error();
-		ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
-		auto core_op = std::get<vm::api::CoreOperationError>(err);
-		ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
-		auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-		// std::cerr << err_str << '\n';
-		for (auto err_key: error_keywords) {
-			assertTrue(
-				err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
-			);
-		}
+	void validJumpOutOfBlock() { loadValidDbc("right/vaild_jump_out_of_block.dbc"); }
+
+	void initDeinit() { loadValidDbc("right/init_deinit.dbc"); }
+
+	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
+
+	// Function verification
+	void noMain() {
+		loadInvalidDbc(
+			"wrong/functions/no_main.dbc",
+			{
+				vm::loader::NO_MAIN_ERR,
+			}
+		);
 	}
 
-	void noMain() { parseInvalidDbc("wrong/functions/no_main.dbc", { vm::loader::NO_MAIN_ERR }); }
-
 	void invalidMainRetSize() {
-		parseInvalidDbc(
-			"wrong/functions/invalid_main_ret_size.dbc", { vm::loader::WRONG_MAIN_RET_VAL_ERR }
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_size.dbc",
+			{
+				vm::loader::WRONG_MAIN_RET_VAL_ERR,
+			}
 		);
 	}
 
 	void invalidMainRetType() {
-		parseInvalidDbc(
-			"wrong/functions/invalid_main_ret_type.dbc", { vm::loader::WRONG_MAIN_RET_VAL_ERR }
+		loadInvalidDbc(
+			"wrong/functions/invalid_main_ret_type.dbc",
+			{
+				vm::loader::WRONG_MAIN_RET_VAL_ERR,
+			}
+		);
+	}
+
+	void multipleFunctions() {
+		loadInvalidDbc(
+			"wrong/functions/multiple_functions.dbc",
+			{
+				vm::loader::DuplicatedFunctionError::ERR_MSG,
+			}
+		);
+	}
+
+	// Jump verification
+	void jumpBetween() {
+		loadInvalidDbc(
+			"wrong/jumps/jump_between.dbc",
+			{
+				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::loader::StackStructureMismatchNote::ERR_MSG,
+			}
+		);
+	}
+
+	void jumpIntoBlock() {
+		loadInvalidDbc(
+			"wrong/jumps/jump_into_block.dbc",
+			{
+				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::loader::StackStructureMismatchNote::ERR_MSG,
+			}
+		);
+	}
+
+	void jumpOutOfBlock() {
+		loadInvalidDbc(
+			"wrong/jumps/jump_out_of_block.dbc",
+			{
+				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::loader::StackStructureMismatchNote::ERR_MSG,
+			}
+		);
+	}
+
+	// Deinitialized valued verification
+	void noInit() {
+		loadInvalidDbc(
+			"wrong/init_deinit/no_init.dbc",
+			{
+				vm::loader::UninitializedLocalError::ERR_MSG,
+			}
+		);
+	}
+
+	void beforeInit() {
+		loadInvalidDbc(
+			"wrong/init_deinit/before_init.dbc",
+			{
+				vm::loader::UninitializedLocalError::ERR_MSG,
+
+			}
+		);
+	}
+
+	void afterDeinit() {
+		loadInvalidDbc(
+			"wrong/init_deinit/after_deinit.dbc",
+			{
+				vm::loader::UninitializedLocalError::ERR_MSG,
+
+			}
+		);
+	}
+
+	void invalidOffset() {
+		loadInvalidDbc(
+			"wrong/init_deinit/invalid_offset.dbc",
+			{
+				vm::loader::StackOffsetError::ERR_MSG,
+			}
+		);
+	}
+
+	// Pointer verification
+	void derefAfterDeinit() {
+		loadInvalidDbc(
+			"wrong/pointers/deref_after_deinit.dbc",
+			{
+				vm::loader::UseAfterDeinit::ERR_MSG,
+			}
+		);
+	}
+
+	void derefAfterDeinitAndInit() {
+		loadInvalidDbc(
+			"wrong/pointers/deref_after_deinit_and_init.dbc",
+			{
+				vm::loader::UseAfterDeinit::ERR_MSG,
+			}
+		);
+	}
+
+	void derefWrongType() {
+		loadInvalidDbc(
+			"wrong/pointers/deref_wrong_type.dbc",
+			{
+				vm::loader::DeferenceTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void refOnPrimitive() {
+		loadInvalidDbc(
+			"wrong/pointers/ref_on_primitive.dbc",
+			{
+				vm::loader::LocalUsedAsPointerError::ERR_MSG,
+			}
+		);
+	}
+
+	// Type verification
+	void wrongTypeMov() {
+		loadInvalidDbc(
+			"wrong/types/wrong_type_mov.dbc",
+			{
+				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void wrongTypeSize() {
+		loadInvalidDbc(
+			"wrong/types/wrong_type_size.dbc",
+			{
+				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+			}
 		);
 	}
 };
