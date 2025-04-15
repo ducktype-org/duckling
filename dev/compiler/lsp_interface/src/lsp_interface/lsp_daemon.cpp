@@ -2,6 +2,7 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
+#include "base/anycast.hpp"
 #include <iostream>
 #include <base64.hpp>
 
@@ -210,7 +211,9 @@ void server(i32 port) {
 			};
 			auto pst_root = pst.getRootElement();
 
-			auto definition = lsp::findDefinition(lsp::findElement(pst_root, offset));
+			auto element = lsp::findElement(pst_root, offset);
+
+			auto definition = lsp::findDefinition(element);
 
 			std::vector<std::string> out = { definition.toJSON() };
 

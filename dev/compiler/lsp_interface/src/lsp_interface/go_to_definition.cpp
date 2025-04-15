@@ -4,7 +4,7 @@
  */
 
 #include "go_to_definition.hpp"
-#include "base/exceptions.hpp"
+#include <base/exceptions.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <helios/queries.hpp>
 #include <format>
@@ -48,8 +48,5 @@ namespace lsp {
 		// @todo
 		// implement finding element definition
 		CORE_PANIC("Finding definition for LSP is not implemented yet");
-
-        auto scope = query::entryPoint<QueryPrimaryCodeScopeFor>(element);
-        auto symbol = compiler::helios::makeSymbolFromPSTElement(scope, element);
 	}
 }

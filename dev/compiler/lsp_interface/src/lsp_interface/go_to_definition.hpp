@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "pst_parser/lang_parser_element.hpp"
+#include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst.hpp>
 #include <base/ref.hpp>
 
