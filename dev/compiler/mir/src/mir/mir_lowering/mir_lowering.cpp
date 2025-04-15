@@ -12,6 +12,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>

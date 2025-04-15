@@ -74,6 +74,7 @@ namespace compiler::mir {
 	 * proper BlockReference.
 	 * It is like that for now, to avoid confusion with BlockRef used in mir_lowering and
 	 * transformation between that BlockRef to this "BlockRef".
+	 * @TODO: change to ID with direct creation 
 	 */
 	STRONG_TYPEDEF_INT(BlockID, u64);
 
