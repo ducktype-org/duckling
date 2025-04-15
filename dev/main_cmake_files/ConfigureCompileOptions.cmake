@@ -38,7 +38,6 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 		"-pedantic "
 		"-Wno-sign-compare "
 		"-Wno-sign-conversion "
-		"-Wno-defaulted-function-deleted"
 	)
 
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ADDITIONAL_CLANG_FLAGS}" )
