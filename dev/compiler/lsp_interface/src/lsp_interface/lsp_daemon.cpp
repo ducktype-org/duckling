@@ -5,7 +5,7 @@
 
 #include <base64.hpp>
 
-#include <base/define_helper.hpp>  // This is included to allow for pushing and popping of diagnostics
+#include <base/macros/diagnostics.hpp>
 
 #include <iostream>
 
@@ -58,7 +58,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
  * @return crow::response The HTTP response corresponding to the result.
  */
 template<class E>
-crow::response toResponse(const cpp::result<void, E>& x) {
+crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();

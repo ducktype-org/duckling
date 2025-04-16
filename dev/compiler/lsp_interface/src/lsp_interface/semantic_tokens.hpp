@@ -10,6 +10,7 @@
 
 #include <base/ints.hpp>
 #include <base/ref.hpp>
+#include <base/stringifyable_enum.hpp>
 
 #include <string>
 

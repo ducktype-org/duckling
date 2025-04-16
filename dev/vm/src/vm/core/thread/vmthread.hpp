@@ -3,8 +3,6 @@
 #include "blocking_queue.hpp"
 #include "low_program/instruction.hpp"
 
-#include <result.hpp>
-
 #include <base/box.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
@@ -217,7 +215,7 @@ namespace vm {
 		 */
 		void run(CRef<low::LowVMProgram>);
 
-		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
+		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.

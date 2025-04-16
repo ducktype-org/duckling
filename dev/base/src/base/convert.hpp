@@ -2,6 +2,8 @@
 
 #include "ints.hpp"
 
+#include <string>
+
 namespace base {
 	/**
 	 * @brief converts a number to a string of its hex notation

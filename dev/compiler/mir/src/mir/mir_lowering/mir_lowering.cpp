@@ -264,8 +264,7 @@ namespace compiler::mir {
 
 			std::vector<Block> blocks;
 			blocks.reserve(this->blocks.size());
-			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			for (auto& block_builder: this->blocks) blocks.emplace_back(block_builder->build());
 
 			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
@@ -300,14 +299,14 @@ namespace compiler::mir {
 		 * Adds a local variable to MIR function, from helios_id representing it.
 		 */
 		LocalRef addLocal(const helios::SymID helios_id) {
-			const auto key = local_list.emplaceBack(MirLocal{
+			local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
 				),
 				scope(helios_id),
 			});
-			return local_list.getRef(key).value();
+			return local_list.last();
 		}
 
 		/**
@@ -315,7 +314,7 @@ namespace compiler::mir {
 		 */
 		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
 			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
-			const auto key = local_list.emplaceBack(MirLocal{
+			local_list.emplaceBack(MirLocal{
 				helios_id,
 				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
 					"Handling ERRORS in MIR is not supported yet..."
@@ -323,13 +322,13 @@ namespace compiler::mir {
 				scope(helios_id),
 				parameter_index,
 			});
-			return local_list.getRef(key).value();
+			return local_list.last();
 		}
 
 		[[nodiscard]]
 		LocalRef addTmp(const tsh::SymbolType<> type, const helios::ScopeID scope) {
-			const auto key = local_list.emplaceBack(MirLocal{ type, scope });
-			return local_list.getRef(key).value();
+			local_list.emplaceBack(MirLocal{ type, scope });
+			return local_list.last();
 		}
 
 		/**
@@ -347,10 +346,10 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		BlockBuilderRef newBlock() {
-			auto index = blocks.size();
-			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
-			CORE_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
-			return res;
+			auto vector_index = blocks.size();
+			blocks.emplaceBack(BlockBuilder{ vector_index });
+			CORE_ASSERT(u64(blocks.last()->getID()) == blocks.lastIndex(), "Bad block id");
+			return blocks.last();
 		}
 
 		void setEntry(BlockBuilderRef block) {

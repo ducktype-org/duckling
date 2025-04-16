@@ -168,11 +168,14 @@ namespace compiler::lir {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
-					auto pos      = locals.pushBack(std::move(lir_local));
-					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
+					locals.pushBack(std::move(lir_local));
+					auto local_index = locals.lastIndex();
 
-					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
-					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos).value());
+					locals.pushBack(std::move(lifetime_flag));
+					auto flag_index = locals.lastIndex();
+
+					mir_to_lir_local.put(mir_local.ref(), locals[local_index]);
+					mir_to_lifetime_flag.put(mir_local.ref(), locals[flag_index]);
 				}
 			}
 
@@ -183,8 +186,8 @@ namespace compiler::lir {
 				for (const auto& mir_block: key.function->blocks) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
-					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
+					blocks.pushBack({});
+					mir_to_lir_block.put(mir_block.id, blocks.last());
 				}
 			}
 

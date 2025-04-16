@@ -5,7 +5,7 @@
 #include <string_view>
 
 namespace vm::loader {
-	class UnknownLabel final: public dia::Error {
+	class UnknownLabelError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Label does not exist.";
 
@@ -21,10 +21,10 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UnknownLabel(dia::SourcePosition pos): dia::Error(pos) {}
+		UnknownLabelError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class RepeatedLabel final: public dia::Error {
+	class RepeatedLabelError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Repeated label.";
 
@@ -40,7 +40,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		RepeatedLabel(dia::SourcePosition pos): dia::Error(pos) {}
+		RepeatedLabelError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class RepeatedLabelNote final: public dia::NoteWithPosition {
@@ -144,7 +144,7 @@ namespace vm::loader {
 			  func_name(func_name) {}
 	};
 
-	class DuplicateFunctionDefinitionError final: public dia::Error {
+	class DuplicatedFunctionError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Function with this name already exists.";
 
@@ -160,10 +160,10 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		DuplicateFunctionDefinitionError(dia::SourcePosition pos): dia::Error(pos) {}
+		DuplicatedFunctionError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class DuplicatedFunctionDefinitionNote final: public dia::NoteWithPosition {
+	class DuplicatedFunctionNote final: public dia::NoteWithPosition {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Previous function declaration here.";
 
@@ -174,7 +174,7 @@ namespace vm::loader {
 		}
 
 	public:
-		DuplicatedFunctionDefinitionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+		DuplicatedFunctionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class StackStructureMismatchError final: public dia::Error {
@@ -211,7 +211,127 @@ namespace vm::loader {
 		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class MissingSubtypeError final: public dia::Error {
+	class UseAfterDeinit final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "This instruction tries to dereference a pointer to a deinitialized value.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		UseAfterDeinit(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class DeferenceTypeMismatchError final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "The dereferenced pointer's type does not match the target variable's type.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		DeferenceTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class LocalUsedAsPointerError final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "This instruction tries to use a primitive as a pointer.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		LocalUsedAsPointerError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class OpCodeTypeMismatchError final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "This instruction tries to be constructed with arguments of wrong types.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		OpCodeTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UninitializedLocalError final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "Tried to access an uninitizlized local variable.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		UninitializedLocalError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class StackOffsetError final: public dia::Error {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "Tried to dereference a stack variable with an invalid offset.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		StackOffsetError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnknownSubtypeError final: public dia::Error {
 		base::StrID subtype_name;
 
 	public:
@@ -229,7 +349,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		MissingSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
+		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
 			  dia::Error(pos),
 			  subtype_name(subtype_name) {}
 	};
