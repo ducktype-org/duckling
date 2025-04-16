@@ -21,6 +21,6 @@ namespace lsp {
         std::string toJSON();
 	};
 
-    base::MCRef<pst::LangElement> findElement(CRef<pst::LangElement> root, usize offset);
+    base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> root, usize offset);
 	Definition findDefinition(MCRef<pst::LangElement>);
 }
