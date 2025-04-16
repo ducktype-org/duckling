@@ -16,7 +16,10 @@ public:
 
 protected:
 	void runTestOnVm(
-		const std::string& rbc_filename, const std::string& input, const std::string& output
+		const std::string&                 rbc_filename,
+		const base::Optional<std::string>& optional_input,
+		const base::Optional<std::string>& optional_output,
+		i64                                exit_code = 0
 	);
 
 	/**

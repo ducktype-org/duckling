@@ -21,7 +21,7 @@ private:
 
 	void testAckermannNew() { runTestOnVm("ackermann_new.dbc", "3 3", "61"); }
 
-	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936"); }
+	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936", 4'242); }
 
 	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875"); }
 

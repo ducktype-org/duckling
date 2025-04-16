@@ -24,7 +24,12 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	struct ExecutionCompleted {};
+	using ExitCode = i64;
+
+	struct ExecutionCompleted {
+		ExitCode exit_code;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_code);
+	};
 
 	struct ExecutionStopped {};
 
@@ -49,6 +54,7 @@ namespace vm::api {
 	};
 
 	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
+
 }
 
 

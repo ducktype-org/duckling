@@ -46,6 +46,8 @@ namespace vm::api {
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
 
+	std::expected<ExitCode, ApiError> getExitCode(PID pid);
+
 	std::expected<response::Output, ApiError> output(PID pid);
 
 	std::expected<TypeCRef, ApiError>               getType(PID pid, const std::string& type_name);

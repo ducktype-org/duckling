@@ -12,7 +12,7 @@ public:
 	}
 
 private:
-	void oneValue() { runTestOnVm("one_value.dbc", "", "0"); }
+	void oneValue() { runTestOnVm("one_value.dbc", "", "0", 3); }
 
 	void arrSum() { runTestOnVm("arr_sum.dbc", "", "903"); }
 
