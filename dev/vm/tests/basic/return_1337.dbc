@@ -8,7 +8,7 @@ function main {
 
 	code: {
 		# [0, 8) main ret_val
-        mov_l64_imm 0, 1337;
+		mov_l64_imm 0, 1337;
 		ret;
 	}
 }
