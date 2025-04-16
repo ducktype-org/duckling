@@ -114,12 +114,9 @@ namespace compiler::backend_vm {
 
 		void
 			insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
-			auto param_layouts = lir_function->local_list
-			                   | std::views::transform([](auto&& local) { return local->layout; });
-
-			auto param_types = param_layouts | std::views::transform([](auto&& layout) {
-								   return getTypeFromLayout(layout);
-							   });
+			auto param_types
+				= lir_function->parameter_layouts
+			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
 
 			std::ranges::for_each(param_types, [&](auto&& type) { type_context.addType(type); });
 
@@ -291,16 +288,21 @@ namespace compiler::backend_vm {
 
 		void handleAddCall(
 			AddLirFuncContext&                ctx,
-			const lir::Instruction&           lir_instruction,
 			std::deque<vm::opargs::OpCodeArg> args
 		) {
+			auto lir_result_argument = args.front();
+			args.pop_front();
+			auto called_func_arg = args.front();
+			args.pop_front();
+
 			base::StrID called_func_name
-				= std::get<vm::opargs::FunctionName>(args.at(1)).function_name;
+				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
 			auto called_func = ctx.types.at(called_func_name);
 
-			auto lir_result_argument = args.front();
+			// Init result type
+
 			auto func_result_storage_offset
-				= ctx.func_builder.initType(instructions::Op_init_type(called_func_name));
+				= ctx.func_builder.initType(instructions::Op_init_type(called_func->getResultType().value()->getName()));
 			auto func_result_argument = modifyOffsetOpArg(
 				lir_result_argument, base::safeIntConv<i64>(func_result_storage_offset)
 			);
@@ -308,26 +310,20 @@ namespace compiler::backend_vm {
 			// Instantiate function parameters on the stack.
 
 			auto func_params = called_func->getParameters().value();
-			auto instr_args  = lir_instruction.arguments | std::views::drop(1);
-			auto op_args     = args | std::views::drop(1);
-			std::cerr << func_params.size() << " " << instr_args.size() << '\n';
-			CORE_ASSERT(
-				func_params.size() == instr_args.size(), "Invalid number of arguments in call"
-			);
-			for (const auto& [instr_arg, op_arg, param_type]:
-			     std::views::zip(instr_args, op_args, func_params)) {
+			for (const auto& [op_arg, param_type]: std::views::zip(args, func_params)) {
 				auto        type_of_argument = param_type;
 				base::StrID type_name        = type_of_argument->getName();
+				std::cerr << "Initializing: " << type_name.str() << '\n';
 				auto offset = ctx.func_builder.initType(instructions::Op_init_type{ type_name });
 
 				InstructionBuilder mov_arg(OpKind::mov);
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], i64(offset)));
 				mov_arg.pushArg(op_arg);
 				ctx.func_builder.addInstruction(mov_arg);
-				// mov_l64?_instr_arg.value()
 			}
 
 			InstructionBuilder call(OpKind::call);
+			call.pushArg(called_func_arg);
 			ctx.func_builder.addInstruction(call);
 
 			InstructionBuilder mov_to_output(OpKind::mov);
@@ -398,7 +394,7 @@ namespace compiler::backend_vm {
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
-				handleAddCall(ctx, lir_instruction, args);
+				handleAddCall(ctx, args);
 				return;
 			}
 
