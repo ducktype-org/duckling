@@ -7,11 +7,13 @@
 #include "base/anycast.hpp"
 #include "helios/hout/elements/expr.hpp"
 #include "helios/hout/elements/query_hout_of_expr.hpp"
+#include "helios/symbols/symbols.hpp"
 #include "pst_parser/elements/hierarchy/not_statements.hpp"
 #include "pst_parser/elements/hierarchy/statements.hpp"
 #include "pst_parser/lang_parser_element.hpp"
 #include "pst_parser/pst_visitor.hpp"
 #include <base/exceptions.hpp>
+#include <memory>
 #include <query_framework/query_entry_point.hpp>
 #include <helios/queries.hpp>
 #include <format>
@@ -52,11 +54,7 @@ namespace lsp {
 	}
 
 	Definition findDefinition(MCRef<pst::LangElement> element) {
-		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>({element});
-		
-		// @todo
-		// fix it
-		compiler::helios::code::IdentifierExpr idexpr = expr;
-		return {idexpr.symbol.ref.getPSTData().pst_element};
+		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>({element}).value();
+		return compiler::helios::stmt(expr.symbol);
 	}
 }
