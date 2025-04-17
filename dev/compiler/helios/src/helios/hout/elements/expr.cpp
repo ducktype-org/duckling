@@ -11,6 +11,7 @@
 
 #include <helios/symbols/simple.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 
 
 namespace compiler::helios::code {

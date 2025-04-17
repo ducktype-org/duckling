@@ -595,7 +595,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryConstValueOf);
 
 
-	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QuerySymbolType_Result) {
+	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryTypeFromDefinition_Result) {
 		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;
 			const QKey& key;
