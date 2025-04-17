@@ -66,12 +66,6 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>)
 
-	using QuerySymbolType_Result = errors::HResult<tsh::SymbolType<>, errors::Failed>;
-
-	/**
-	 * @brief Query type of the symbol.
-	 */
-	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>);
 
 	/**
 	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
