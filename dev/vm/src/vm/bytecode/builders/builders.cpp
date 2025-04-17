@@ -12,8 +12,6 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-#include <utility>
-
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \
 		throw base::NotYetImplemented(                                                   \

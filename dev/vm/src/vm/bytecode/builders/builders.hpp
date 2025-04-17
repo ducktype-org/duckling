@@ -134,8 +134,6 @@ namespace vm::code::builders {
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
 		base::StrID              name;
-		std::vector<base::StrID> parameter_types;
-		base::StrID              result_type;
 
 		STRONG_TYPEDEF_ID(LocalStackEntryID)
 
