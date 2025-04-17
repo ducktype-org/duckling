@@ -303,7 +303,7 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
 		/**
-		 * @brief Gets scopes for a module.
+		 * @brief Gets scopes in a module.
 		 */
 		struct ScopeGrabPseudoVisitor {
 			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
