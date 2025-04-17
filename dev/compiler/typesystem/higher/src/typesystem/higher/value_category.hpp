@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/scope_symbol_id.hpp>
 
 #include <base/flag.hpp>
 

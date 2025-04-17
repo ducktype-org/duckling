@@ -21,6 +21,7 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <helios/symbols/simple.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -29,6 +30,9 @@ LLVM_INCLUDE_END()
 #include <base/int_conv.hpp>
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 

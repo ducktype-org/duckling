@@ -2,6 +2,8 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios_private/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>

@@ -7,6 +7,9 @@
 
 #include "../visitors.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
 
 namespace compiler::helios::code {

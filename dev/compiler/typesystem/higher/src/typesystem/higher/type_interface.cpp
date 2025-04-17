@@ -2,7 +2,7 @@
 
 #include "queries.hpp"
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/symbols/simple.hpp>
 #include <query_framework/context.hpp>
 
 #include <base/optional.hpp>

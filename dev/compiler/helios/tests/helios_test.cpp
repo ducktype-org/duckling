@@ -1,4 +1,5 @@
 #include <filesystem/file.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
@@ -6,9 +7,13 @@
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/queries.hpp>
-#include <helios/scopes/scopes.hpp>
-#include <helios/symbols/symbols.hpp>
+#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <query_framework/context.hpp>
