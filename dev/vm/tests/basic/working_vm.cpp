@@ -20,7 +20,7 @@ private:
 		auto         loaded_file_response = vm::api::loadFile(pid, file);
 		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
-		auto run_response = vm::api::run(pid);
+		auto run_response = vm::api::run(pid, {});
 		assertTrue(run_response.has_value(), "Run failed (1)");
 
 		auto join_response = vm::api::join(pid);

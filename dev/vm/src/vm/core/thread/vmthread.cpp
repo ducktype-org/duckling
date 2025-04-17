@@ -96,7 +96,9 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(CRef<low::FuncData> main_func) {
+	u64 VMThread::internalCallMain(
+		CRef<low::FuncData> main_func, const std::vector<std::string>& args
+	) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -285,11 +287,11 @@ namespace vm {
 	/**
 	 * @brief Starts the execution of the program.
 	 */
-	void VMThread::run(CRef<low::LowVMProgram> program) {
+	void VMThread::run(CRef<low::LowVMProgram> program, const std::vector<std::string>& args) {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(executing_program->functions.at(base::StrID("main")));
+			internalCallMain(executing_program->functions.at(base::StrID("main")), args);
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
@@ -383,13 +385,15 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRun(CRef<vm::low::LowVMProgram> program) {
+	bool VMThread::initThreadAndRun(
+		CRef<vm::low::LowVMProgram> program, const std::vector<std::string>& args
+	) {
 		if (exec_thread)  // there is already a thread running
 			return false;
 
-		exec_thread = std::thread([this, program] {
+		exec_thread = std::thread([this, program, args] {
 			try {
-				run(program);
+				run(program, args);
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";

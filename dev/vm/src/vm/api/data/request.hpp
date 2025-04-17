@@ -8,6 +8,7 @@
 #include <vm/core/process/memory/pointer.hpp>
 
 #include <variant>
+#include <vector>
 
 namespace vm::api {
 	namespace request {
@@ -21,7 +22,9 @@ namespace vm::api {
 
 		struct Stop {};
 
-		struct Run {};
+		struct Run {
+			std::vector<std::string> args;
+		};
 
 		struct Input {
 			std::string input;

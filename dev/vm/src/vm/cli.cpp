@@ -47,13 +47,14 @@ void cli() {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	cli(fs::FilePath(filepath));
+	// TODO: This is just temporary. Change that to take in real arguments.
+	cli(fs::FilePath(filepath), { "hello", "from", "main" });
 }
 
-void cli(const fs::FilePath& filepath) {
+void cli(const fs::FilePath& filepath, const std::vector<std::string>& args) {
 	vm::PID pid = expect(vm::api::spawn()).pid;
 	expect(vm::api::loadFile(pid, filepath));
 	expect(vm::api::attach(pid, std::cin, std::cout));
-	expect(vm::api::run(pid));
+	expect(vm::api::run(pid, args));
 	expect(vm::api::join(pid));
 }

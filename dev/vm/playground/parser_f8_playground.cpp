@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
 		// this is not failing for some strange reason:
 		// error is lost somewhere on api-vcpu path
-		vm::api::run(process_pid).value();
+		vm::api::run(process_pid, {}).value();
 
 		[[maybe_unused]]
 		auto join_result

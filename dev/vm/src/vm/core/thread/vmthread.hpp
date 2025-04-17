@@ -158,7 +158,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<low::FuncData>);
+		u64 internalCallMain(CRef<low::FuncData> program, const std::vector<std::string>& args);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -177,7 +177,8 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<low::LowVMProgram> program);
+		bool
+			initThreadAndRun(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -213,7 +214,7 @@ namespace vm {
 		/**
 		 * @brief Run the program.
 		 */
-		void run(CRef<low::LowVMProgram>);
+		void run(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
 
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 

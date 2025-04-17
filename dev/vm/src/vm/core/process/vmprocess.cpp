@@ -42,12 +42,13 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::run() {
+	std::expected<api::Response, api::CoreOperationError>
+		VMProcess::run(const std::vector<std::string>& args) {
 		std::unique_lock lock(rw_global);
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_program));
+		bool response = getMainVMThread().initThreadAndRun(&*loaded_program, args);
 		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -96,7 +97,7 @@ namespace vm {
 	std::expected<api::Response, api::CoreOperationError>
 		VMProcess::doRequest(const api::ExecutorRequest& request) {
 		variant_match(request) {
-			variant_case_novalue(api::request::Run) { return run(); }
+			variant_case(api::request::Run, run_request) { return run(run_request.args); }
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
 				auto response = getMainVMThread().pause();

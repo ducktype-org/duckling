@@ -98,7 +98,8 @@ namespace vm {
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
 		 */
-		std::expected<api::Response, api::CoreOperationError> run();
+		std::expected<api::Response, api::CoreOperationError>
+			run(const std::vector<std::string>& args);
 
 		/**
 		 * @brief Joins the executing thread.
