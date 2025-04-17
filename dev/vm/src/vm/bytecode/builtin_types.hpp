@@ -1,13 +1,12 @@
 #include <base/box.hpp>
 #include <base/string_id.hpp>
 
-#include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/builders/builders.hpp>
-
+#include <vm/bytecode/type_of_data.hpp>
 
 namespace vm::code::builtin_types {
 	Box<code::builders::TypeContextBuilder> getBuiltinTypes() {
-		const std::array BUILTIN_TYPES = {
+		const std::array builtin_types = {
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
 			TypeOfData(PrimitiveType(base::StrID("i64"), 8)),
@@ -21,7 +20,7 @@ namespace vm::code::builtin_types {
 		};
 		auto type_context_builder = makeBox<code::builders::TypeContextBuilder>();
 
-		for (const auto& tp: BUILTIN_TYPES) type_context_builder->addType(tp);
+		for (const auto& tp: builtin_types) type_context_builder->addType(tp);
 
 		return type_context_builder;
 	}
