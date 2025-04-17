@@ -1,9 +1,13 @@
 #include "helios_test_utils.hpp"
 
-#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <helios_private/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <frontend/module_tree/queries.hpp>
+
 
 #include <base/anycast.hpp>
 

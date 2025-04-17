@@ -1,8 +1,10 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
-#include <helios/scopes/scopes.hpp>
-#include <helios/symbols/symbols.hpp>
+
+#include <frontend/module_tree/module_id.hpp>
+#include <filesystem/file.hpp>
+#include <helios/scope_symbol_id.hpp>
 
 #include <vector>
 
