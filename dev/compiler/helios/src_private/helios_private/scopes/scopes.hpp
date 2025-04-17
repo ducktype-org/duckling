@@ -18,10 +18,10 @@
  */
 #pragma once
 
-#include "../lookup_result.hpp"
-#include "../scope_symbol_id.hpp"
+#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios/scope_symbol_id.hpp>
 
-#include <frontend/module_tree/queries.hpp>  // @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
+#include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <pst_parser/lang_parser_state.hpp>

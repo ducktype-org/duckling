@@ -1,7 +1,9 @@
 #include "symbols.hpp"
 
-#include <helios/comp_time/int_eval.hpp>
-#include <helios/comp_time/type_eval.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+
+#include <helios_private/comp_time/int_eval.hpp>
+#include <helios_private/comp_time/type_eval.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>

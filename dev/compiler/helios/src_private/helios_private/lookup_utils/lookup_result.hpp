@@ -7,11 +7,11 @@
 
 #pragma once
 
-#include "helios_errors.hpp"
-#include "helios_result.hpp"
-#include "scope_symbol_id.hpp"
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
+#include <helios/scope_symbol_id.hpp>
 
-#include <query_framework/query_int.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <base/variant.hpp>
 

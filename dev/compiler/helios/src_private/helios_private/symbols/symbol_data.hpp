@@ -1,6 +1,8 @@
 #pragma once
 
 #include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+#include <pst_parser/access.hpp>
 
 #include <base/string_id.hpp>
 

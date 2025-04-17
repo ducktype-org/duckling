@@ -1,6 +1,7 @@
 #pragma once
 
-#include "module_tree.hpp"  // @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
+#include "module_id.hpp"
+#include "file_id.hpp"
 
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>

@@ -6,9 +6,9 @@
 
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
-#include <helios/lookup_result.hpp>
+#include <helios_private/lookup_utils/lookup_result.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/scopes/scopes.hpp>
+#include <helios_private/scopes/scopes.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/abstract_type.hpp>
@@ -16,7 +16,7 @@
 
 #include <base/string_id.hpp>
 
-#include "symbol_kind.hpp"
+#include <helios/symbols/symbol_kind.hpp>
 
 namespace compiler::helios {
 
