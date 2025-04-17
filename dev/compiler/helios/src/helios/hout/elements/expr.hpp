@@ -1,10 +1,9 @@
 #pragma once
 
 #include "../../scope_symbol_id.hpp"
-#include "../../symbols/symbols.hpp"  // @todo ... #404
 
-#include <helios/lookup_result.hpp>
 #include <query_framework/query_int.hpp>
+#include <helios/utils/symbol_list.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
 

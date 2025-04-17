@@ -10,6 +10,7 @@
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
+#include <helios/utils/symbol_list.hpp>
 
 #include <query_framework/context_fd.hpp>
 
@@ -18,8 +19,6 @@
 #include <vector>
 
 namespace compiler::helios {
-
-	using SymbolList = std::vector<SymID>;
 
 	errors::HResult<SymbolList, errors::Failed>
 		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list);

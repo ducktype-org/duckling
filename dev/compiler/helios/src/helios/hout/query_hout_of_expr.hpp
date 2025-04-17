@@ -1,6 +1,11 @@
 #pragma once
 
-#include "expr.hpp"
+#include "elements/expr.hpp"
+#include <query_framework/query_int.hpp>
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
+#include <pst_parser/generic_query_key.hpp>
+#include <pst_parser/elements/hierarchy/expr.hpp>
 
 // @todo this file should not be here
 // we might want to review HELIOS folder structure in general,
