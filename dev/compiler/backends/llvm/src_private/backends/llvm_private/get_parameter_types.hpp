@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/scope_symbol_id.hpp>
 #include <query_framework/context_fd.hpp>
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>

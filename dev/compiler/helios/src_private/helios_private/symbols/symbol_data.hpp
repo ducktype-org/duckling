@@ -3,8 +3,12 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
+#include <pst_parser/elements/elements.hpp>
 
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
+
+#include <typesystem/higher/types.hpp>
 
 namespace compiler::helios {
     	/**
@@ -62,6 +66,79 @@ namespace compiler::helios {
 		 */
 		pst::AccessLocked<pst::LangElement> pst_element;
 	};
+
+
+
+	namespace builtin {
+		struct BuiltinFunctionData final {
+			tsh::FunctionAbstractType type;
+
+			BuiltinFunctionData(tsh::FunctionAbstractType type): type(type) {}
+		};
+	}
+
+	/**
+	 * @brief Stores generic symbol data.
+	 * @note Symbols and their associated SymbolData are created by HELIOS via queries.
+	 * SymbolData is by design a "read-only" structure.
+	 */
+	struct SymbolData final {
+		using OtherData = std::variant<PstSymbolData, builtin::BuiltinFunctionData>;
+
+		CommonSymbolData common;
+		OtherData        other;
+
+		static auto makePSTSymbolData(CommonSymbolData common_data, PstSymbolData pst_data) {
+			return SymbolData{
+				.common = common_data,
+				.other  = pst_data,
+			};
+		}
+
+		static auto
+			makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+			return SymbolData{
+				.common = {
+					.name = name,
+					.kind = SymbolKind::BuiltinFunction,
+				},
+				.other  = builtin_data,
+			};
+		}
+
+		template<class T>
+		[[nodiscard]]
+		CRef<T> getData() const {
+			return &std::get<T>(other);
+		}
+
+		[[nodiscard]]
+		CRef<PstSymbolData> getPSTData() const {
+			return getData<PstSymbolData>();
+		}
+
+		/**
+		 * Return associated pst_element cast to Stmt.
+		 * Panics if element is not a statement or if symbol is not associated with PST element.
+		 */
+		[[nodiscard]]
+		base::Optional<pst::Access<pst::Stmt>> stmtCast(query::Context& ctx) const {
+			return getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Stmt>();
+		}
+	};
+
+
+	/**
+	 * @brief Helper struct used to access private SymID data.
+	 * It is used by HELIOS only.
+	 */
+	 struct GetSymRef_Functor final {
+		static auto get(SymID id) { return id.ref; }
+
+		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
+	};
+
+	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
 }
 

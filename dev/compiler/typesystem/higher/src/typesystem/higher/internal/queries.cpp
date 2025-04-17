@@ -3,6 +3,8 @@
 #include "abstract_type_impl.hpp"
 
 #include <query_framework/query_impl.hpp>
+#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
 
 namespace tsh::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {

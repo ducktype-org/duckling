@@ -1,4 +1,6 @@
 #include "value_category.hpp"
+#include <helios/symbols/symbol_kind.hpp>
+#include <helios/symbols/simple.hpp>
 
 namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
