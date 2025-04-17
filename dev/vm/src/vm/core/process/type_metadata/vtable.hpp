@@ -11,7 +11,7 @@
 namespace vm {
 	struct VTable {
 		struct Class {
-            bool is_abstract;
+			bool                    is_abstract;
 			base::Optional<TypeRef> extends;
 		};
 
@@ -19,6 +19,7 @@ namespace vm {
 
 		using Kind = std::variant<Interface, Class>;
 
+		TypeCRef                            type;
 		Kind                                kind;
 		std::vector<TypeRef>                implements;
 		base::HashMap<base::StrID, TypeRef> virtual_methods;

@@ -55,6 +55,7 @@ namespace vm::parser {
 			}
 
 			return VTable{
+				.type            = type_map[data_name],
 				.kind            = kind,
 				.implements      = implements,
 				.virtual_methods = virtual_methods,

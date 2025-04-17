@@ -29,6 +29,7 @@ private:
 
 	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			assertTrue(vtable.implements.empty(), "I1 should not implement anything");
 			assertTrue(vtable.virtual_methods.size() == 2, "I1 should have two virtual methods");
 			auto foo_type = vtable.virtual_methods[base::StrID("foo")];
@@ -50,6 +51,7 @@ private:
 
 	void checkI2(vm::TypeCRef type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			assertTrue(
 				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
 				"I2 should be an interface"
@@ -65,6 +67,7 @@ private:
 
 	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
@@ -90,6 +93,7 @@ private:
 		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces
 	) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Child should be a concrete class");
@@ -118,6 +122,7 @@ private:
 
 	void checkPietMondrian(vm::TypeCRef type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
 					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
