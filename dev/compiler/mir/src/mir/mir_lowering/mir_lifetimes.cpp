@@ -2,6 +2,9 @@
 
 #include "../mir_structure/mir_structure.hpp"
 
+#include <helios/scopes/simple.hpp>
+
+
 namespace compiler::mir {
 
 	/**

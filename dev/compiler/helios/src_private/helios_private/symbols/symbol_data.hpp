@@ -138,7 +138,7 @@ namespace compiler::helios {
 		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
 	};
 
-	auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
+	inline auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
 }
 

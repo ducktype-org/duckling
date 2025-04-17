@@ -20,6 +20,7 @@
 
 #include <helios_private/lookup_utils/lookup_result.hpp>
 #include <helios/scope_symbol_id.hpp>
+#include <helios/scopes/simple.hpp>
 
 #include <frontend/module_tree/module_id.hpp>
 #include <pst_parser/elements/elements.hpp>
@@ -31,20 +32,7 @@
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
-	/**
-	 * @brief Return parent scope or none for root-scopes.
-	 */
-	base::Optional<ScopeID> parent(ScopeID);
-
-	/**
-	 * @brief Return module the scope was defined in
-	 */
-	frontend::ModuleID module(ScopeID id);
-
-	/**
-	 * @brief Return depth of the scope in the scope tree.
-	 */
-	u64 scopeDepth(ScopeID);
+	
 
 	/**
 	 * @brief Return all scopes currently stored by HELIOS.
