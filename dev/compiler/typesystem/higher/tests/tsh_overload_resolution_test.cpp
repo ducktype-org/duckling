@@ -1,4 +1,5 @@
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>

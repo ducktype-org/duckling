@@ -64,22 +64,7 @@ namespace compiler::helios {
 	/**
 	 * Calculates a value of a constant.
 	 */
-	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>)
-
-	using QueryTypeFromDefinition_Result = errors::HResult<tsh::SymbolType<>, errors::Failed>;
-
-	/**
-	 * @brief Query tsh::AbstractTypeImpl from a symbol definition (like class definition).
-	 *
-	 * Example:
-	 * class T {
-	 *	...
-	 * }
-	 * - Then we can use this query QueryTypeFromDefinition(T).
-	 */
-	DECLARE_QUERY(QueryTypeFromDefinition, SymID, CRef<QueryTypeFromDefinition_Result>);
-
-
+	DECLARE_QUERY(QueryConstValueOf, SymID, errors::HResult<i64 COMMA errors::Failed>);
 
 	namespace builtin {
 		/**
