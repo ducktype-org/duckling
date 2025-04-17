@@ -11,9 +11,7 @@
 namespace vm {
 	struct VTable {
 		struct Class {
-			enum class Modifier { Open, Final, Abstract };
-
-			Modifier                modifier;
+            bool is_abstract;
 			base::Optional<TypeRef> extends;
 		};
 

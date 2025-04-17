@@ -164,8 +164,6 @@ namespace lang_def {
 		BCFunType,
 		BCInheritable,
 		BCClass,
-		BCOpen,
-		BCFinal,
 		BCAbstract,
 		BCInterface,
 		BCExtends,

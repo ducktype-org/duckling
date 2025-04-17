@@ -46,24 +46,11 @@ namespace vm::parser {
 			for (auto& [name, type]: inheritable->virtual_methods)
 				virtual_methods.put(name.value, identifier_to_typeref(type));
 
-			auto class_kind_to_modifier = [](Inheritable::Kind kind) {
-				switch (kind) {
-				case Inheritable::Kind::FinalClass:
-					return VTable::Class::Modifier::Final;
-				case Inheritable::Kind::OpenClass:
-					return VTable::Class::Modifier::Open;
-				case Inheritable::Kind::AbstractClass:
-					return VTable::Class::Modifier::Abstract;
-				default:
-					std::unreachable();
-				}
-			};
-
 			VTable::Kind kind = VTable::Interface{};
 			if (inheritable->kind != Inheritable::Kind::Interface) {
 				kind = VTable::Class{
-					.modifier = class_kind_to_modifier(inheritable->kind),
-					.extends  = inheritable->extends.map(identifier_to_typeref),
+					.is_abstract = inheritable->kind == Inheritable::Kind::AbstractClass,
+					.extends     = inheritable->extends.map(identifier_to_typeref),
 				};
 			}
 

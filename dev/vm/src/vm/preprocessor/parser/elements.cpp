@@ -443,14 +443,8 @@ namespace vm::parser {
 		);
 
 		switch (state.tokens().next().asKeyword()) {
-		case lang_def::Keyword::BCOpen: {
-			state.parse().one(lang_def::Keyword::BCClass);
-			out->kind = Kind::OpenClass;
-			break;
-		}
-		case lang_def::Keyword::BCFinal: {
-			state.parse().one(lang_def::Keyword::BCClass);
-			out->kind = Kind::FinalClass;
+		case lang_def::Keyword::BCClass: {
+			out->kind = Kind::ConcreteClass;
 			break;
 		}
 		case lang_def::Keyword::BCAbstract: {

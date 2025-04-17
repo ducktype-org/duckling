@@ -147,7 +147,7 @@ namespace vm::parser {
 			tpc::Identifier type;
 		};
 
-		enum class Kind { AbstractClass, OpenClass, FinalClass, Interface };
+		enum class Kind { AbstractClass, ConcreteClass, Interface };
 
 		Kind                            kind;
 		tpc::Identifier                 name;
@@ -163,11 +163,8 @@ namespace vm::parser {
 			case Kind::AbstractClass:
 				str_kind = "abstract class";
 				break;
-			case Kind::OpenClass:
-				str_kind = "open class";
-				break;
-			case Kind::FinalClass:
-				str_kind = "final class";
+			case Kind::ConcreteClass:
+				str_kind = "class";
 				break;
 			case Kind::Interface:
 				str_kind = "inteface";

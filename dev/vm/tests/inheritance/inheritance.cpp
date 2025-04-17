@@ -1,4 +1,5 @@
 #include <tester/tester.hpp>
+#include <vm_tester_utils.hpp>
 
 #include <base/optional.hpp>
 #include <base/variant.hpp>
@@ -7,12 +8,12 @@
 
 #include <variant>
 
-class VmInheritanceTest: public tester::TestSuite {
+class VmInheritanceTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }
 
 
 private:
@@ -66,10 +67,7 @@ private:
 		if_opt_some(type->getVTable(), vtable) {
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Open,
-						"Parent should be an open class"
-					);
+					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
 					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
 				}
 				variant_default { fail("Parent should be a class"); }
@@ -94,10 +92,7 @@ private:
 		if_opt_some(type->getVTable(), vtable) {
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Final,
-						"Child should be a final class"
-					);
+					assertFalse(clazz.is_abstract, "Child should be a concrete class");
 					assertTrue(clazz.extends.has_value(), "Child has no superclass");
 					assertTrue(*clazz.extends == super_type, "Child is not Parent's child");
 				}
@@ -125,10 +120,7 @@ private:
 		if_opt_some(type->getVTable(), vtable) {
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Abstract,
-						"Piet mondrian was an *abstract* art pioneer"
-					);
+					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
 					assertFalse(
 						clazz.extends.has_value(), "PietMondrian should not extend anything"
 					);

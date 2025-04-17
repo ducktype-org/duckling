@@ -45,13 +45,13 @@ inheritable I1: interface {
 inheritable I2: interface {
 }
 
-inheritable Parent: open class {
+inheritable Parent: class {
     virtual_methods: {
         lorem: method_parent_int_int,
     };
 }
 
-inheritable Child: final class {
+inheritable Child: class {
     extends: Parent;
     implements: {I1, I2};
 }

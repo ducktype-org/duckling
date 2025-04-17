@@ -130,8 +130,6 @@ namespace lang_def {
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCInheritable, "inheritable", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
-			{ Keyword::BCOpen, "open", KeywordFlags() },
-			{ Keyword::BCFinal, "final", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
 			{ Keyword::BCInterface, "interface", KeywordFlags() },
 			{ Keyword::BCExtends, "extends", KeywordFlags() },
