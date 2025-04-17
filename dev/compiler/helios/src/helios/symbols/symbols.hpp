@@ -16,33 +16,9 @@
 
 #include <base/string_id.hpp>
 
+#include "symbol_kind.hpp"
+
 namespace compiler::helios {
-
-	/**
-	 * @brief Stores general kind/type of a symbol.
-	 */
-	enum class SymbolKind {
-		Namespace,
-		Function,
-		Const,
-		Class,
-		Alias,
-		Using,
-		Variable,
-		Import,
-		Parameter,
-
-		// we distinguish between functions and builtin functions
-		// as for example there is no code-gen for builtin functions
-		BuiltinFunction,
-
-		// Class Symbols
-		Method,
-		Field,
-		Constructor,
-		Destructor,
-		// ...
-	};
 
 	// Following functions are left as functions (instead of beeing a query):
 	// in the future once Query System implementation will mature
