@@ -1,6 +1,7 @@
 #include "abstract_type_impl.hpp"
 
 #include <query_framework/context.hpp>
+#include <helios/symbols/query_class_symbol_data.hpp>
 
 #include <utility>
 
