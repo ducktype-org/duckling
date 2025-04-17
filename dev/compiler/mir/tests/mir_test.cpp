@@ -3,8 +3,8 @@
  */
 
 #include <helios/queries.hpp>
-#include <helios/test_utils/helios_test_utils.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>

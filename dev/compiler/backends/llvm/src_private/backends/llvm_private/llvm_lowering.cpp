@@ -21,9 +21,9 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <helios/symbols/simple.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
-#include <helios/symbols/simple.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/box.hpp>

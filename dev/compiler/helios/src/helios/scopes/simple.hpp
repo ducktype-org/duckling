@@ -3,11 +3,11 @@
 
 #pragma once
 
-#include <helios/scope_symbol_id.hpp>
 #include <frontend/module_tree/module_id.hpp>
+#include <helios/scope_symbol_id.hpp>
 
 namespace compiler::helios {
-    /**
+	/**
 	 * @brief Return parent scope or none for root-scopes.
 	 */
 	base::Optional<ScopeID> parent(ScopeID);
@@ -22,4 +22,3 @@ namespace compiler::helios {
 	 */
 	u64 scopeDepth(ScopeID);
 }
-

@@ -1,15 +1,16 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
-#include <base/string_id.hpp>
-#include <helios/scope_symbol_id.hpp>
 #include <helios/helios_errors.hpp>
 #include <helios/helios_result.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <query_framework/query_int.hpp>
 #include <typesystem/higher/abstract_type.hpp>
+
+#include <base/string_id.hpp>
 
 namespace compiler::helios {
 
-    	/**
+	/**
 	 * @brief Struct returned by the `QueryClassSymbolData` query.
 	 */
 	struct ClassSymbolData {
@@ -53,4 +54,3 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryClassSymbolData, SymID, CRef<QueryClassSymbolData_Result>)
 
 }
-

@@ -1,16 +1,16 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <pst_parser/access.hpp>
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios_private/lookup_utils/lookup_result.hpp>
+#include <pst_parser/access.hpp>
+#include <query_framework/query_impl.hpp>  // @TODO #404 relax it to just cache entry
 
-#include <query_framework/query_impl.hpp> // @TODO #404 relax it to just cache entry
+#include <base/optional.hpp>
 
 namespace compiler::helios {
 
-    struct ScopeData final {
+	struct ScopeData final {
 		// created on startup:
 		std::optional<ScopeID> parent;
 
@@ -44,4 +44,3 @@ namespace compiler::helios {
 	};
 
 }
-

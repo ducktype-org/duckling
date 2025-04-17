@@ -7,6 +7,9 @@
 
 #pragma once
 
+#include "file_id.hpp"
+#include "module_id.hpp"
+
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
@@ -15,9 +18,6 @@
 #include <base/maps.hpp>
 
 #include <string>
-
-#include "file_id.hpp"
-#include "module_id.hpp"
 
 namespace compiler::frontend {
 

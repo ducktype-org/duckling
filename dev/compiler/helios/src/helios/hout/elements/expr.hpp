@@ -2,8 +2,8 @@
 
 #include "../../scope_symbol_id.hpp"
 
-#include <query_framework/query_int.hpp>
 #include <helios/utils/symbol_list.hpp>
+#include <query_framework/query_int.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
 

@@ -11,7 +11,6 @@
 #include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
-
 #include <query_framework/context_fd.hpp>
 
 #include <base/variant.hpp>

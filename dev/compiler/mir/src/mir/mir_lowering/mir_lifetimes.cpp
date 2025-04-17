@@ -4,7 +4,6 @@
 
 #include <helios/scopes/simple.hpp>
 
-
 namespace compiler::mir {
 
 	/**

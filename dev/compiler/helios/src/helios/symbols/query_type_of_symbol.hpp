@@ -16,4 +16,3 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryTypeOfSymbol, SymID, CRef<QuerySymbolType_Result>);
 
 }
-

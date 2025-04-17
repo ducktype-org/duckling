@@ -19,6 +19,7 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
+
 #include <base/variant.hpp>
 
 // @opt: make switch-cases in this file "sorted"

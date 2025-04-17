@@ -3,7 +3,6 @@
 #include "mir_local_ref.hpp"
 
 #include <helios/scope_symbol_id.hpp>
-
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 

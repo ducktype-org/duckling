@@ -1,7 +1,7 @@
 #pragma once
 
 namespace compiler::helios {
-    
+
 	/**
 	 * @brief Stores general kind/type of a symbol.
 	 */

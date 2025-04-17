@@ -4,7 +4,7 @@
 #include <base/perfect_hash.hpp>
 
 namespace compiler::frontend {
-    /**
+	/**
 	 * @brief Structure holding FileID within SourceFile
 	 * @todo: change to STRONG_TYPEDEF_ID
 	 */
@@ -27,4 +27,3 @@ namespace compiler::frontend {
 		FileID() = default;
 	};
 }
-

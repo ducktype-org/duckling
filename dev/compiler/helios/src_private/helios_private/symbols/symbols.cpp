@@ -1,10 +1,10 @@
 #include "symbols.hpp"
 
-#include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/scopes/scopes.hpp>
-
+#include <frontend/module_tree/queries.hpp>
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -12,15 +12,12 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
-#include <frontend/module_tree/queries.hpp>
-
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
-
 
 #include <vector>
 
@@ -44,7 +41,6 @@ namespace compiler::helios {
 	 * @note It is a partial-Query. It won't work for all symbol
 	 */
 	DECLARE_QUERY(QueryLinkedScope, SymID, ScopeID);
-
 
 	bool isWildcard(SymID id) { return getSymRef(id)->common.is_wildcard; }
 

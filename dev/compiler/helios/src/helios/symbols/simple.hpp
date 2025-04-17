@@ -5,14 +5,16 @@
 
 #pragma once
 
-#include <base/string_id.hpp>
-#include <helios/scope_symbol_id.hpp>
-#include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements.hpp> // @TODO #404 relax it somehow
 #include "symbol_kind.hpp"
 
+#include <helios/scope_symbol_id.hpp>
+#include <pst_parser/access.hpp>
+#include <pst_parser/elements/elements.hpp>  // @TODO #404 relax it somehow
+
+#include <base/string_id.hpp>
+
 namespace compiler::helios {
-    // Following functions are left as functions (instead of beeing a query):
+	// Following functions are left as functions (instead of beeing a query):
 	// in the future once Query System implementation will mature
 	// they will probably be have to be converted into queries
 	// from DefID/PstID to appropriate data:

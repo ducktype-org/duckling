@@ -4,14 +4,13 @@
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
 #include <pst_parser/elements/elements.hpp>
+#include <typesystem/higher/types.hpp>
 
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <typesystem/higher/types.hpp>
-
 namespace compiler::helios {
-    	/**
+	/**
 	 * Symbol data shared by all symbols.
 	 */
 	struct CommonSymbolData final {
@@ -66,8 +65,6 @@ namespace compiler::helios {
 		 */
 		pst::AccessLocked<pst::LangElement> pst_element;
 	};
-
-
 
 	namespace builtin {
 		struct BuiltinFunctionData final {
@@ -127,12 +124,11 @@ namespace compiler::helios {
 		}
 	};
 
-
 	/**
 	 * @brief Helper struct used to access private SymID data.
 	 * It is used by HELIOS only.
 	 */
-	 struct GetSymRef_Functor final {
+	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
 
 		static SymID make(CRef<SymbolData> ref) { return SymID{ ref }; }
@@ -141,4 +137,3 @@ namespace compiler::helios {
 	inline auto getSymRef(SymID id) { return GetSymRef_Functor::get(id); }
 
 }
-

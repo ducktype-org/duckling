@@ -1,10 +1,10 @@
 #include "query_type_of_symbol.hpp"
 
-#include <query_framework/query_impl.hpp>
-#include <pst_parser/pst_visitor.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
 namespace compiler::helios {
@@ -136,4 +136,3 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryTypeOfSymbol);
 }
-

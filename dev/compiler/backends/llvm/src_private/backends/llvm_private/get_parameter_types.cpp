@@ -1,7 +1,7 @@
 #include "get_parameter_types.hpp"
 
-#include <query_framework/context.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::backend_llvm {
 

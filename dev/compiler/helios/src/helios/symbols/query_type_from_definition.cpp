@@ -1,12 +1,13 @@
 
 #include "query_type_from_definition.hpp"
-#include <query_framework/query_impl.hpp>
-#include <pst_parser/pst_visitor.hpp>
-#include <typesystem/higher/queries/types.hpp>
+
 #include <helios_private/symbols/symbol_data.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 namespace compiler::helios {
-    
+
 	struct IMPLEMENT_QUERY(QueryTypeFromDefinition, QueryTypeFromDefinition_Result) {
 		class PstVisitor_GetTypeFromDefinition final: public pst::PstVisitorPanicky {
 			Context&    ctx;

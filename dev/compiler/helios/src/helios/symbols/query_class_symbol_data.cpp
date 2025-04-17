@@ -1,14 +1,15 @@
 
 #include "query_class_symbol_data.hpp"
 
-#include <query_framework/query_impl.hpp>
-#include "symbol_kind.hpp"
 #include "simple.hpp"
+#include "symbol_kind.hpp"
+
+#include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <helios_private/comp_time/type_eval.hpp>
-#include <pst_parser/pst_visitor.hpp>
 #include <pst_parser/elements/elements.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace compiler::helios {
 
@@ -102,4 +103,3 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryClassSymbolData);
 
 }
-

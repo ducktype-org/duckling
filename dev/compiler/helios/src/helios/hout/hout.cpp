@@ -2,11 +2,11 @@
 
 #include "elements.hpp"
 
-#include <query_framework/context.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios_private/symbols/symbols.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
-#include <helios_private/scopes/scopes.hpp> // for parent
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>  // for parent
+#include <helios_private/symbols/symbols.hpp>
+#include <query_framework/context.hpp>
 
 #include <sstream>
 
