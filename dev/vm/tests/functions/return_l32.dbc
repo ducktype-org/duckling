@@ -9,30 +9,17 @@ type fun: check {} int32
 
 
 function check {
-	arg_size: 0;
-	ret_size: 4;
-	local_size: 4;
-
-	code: {
-		input_l32       0;
-		ret;
-	}
+	input_l32       0;
+	ret;
 }
 
 
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 12;
+	# [0, 8) main ret_val
+	init_type 			int32; # [8, 12) check() ret_val
+	call_func          	check;
+	output_l32 			8;
 
-	code: {
-		# [0, 8) main ret_val
-		init_type 			int32; # [8, 12) check() ret_val
-		call_func          	check;
-		output_l32 			8;
-
-		deinit;
-		ret;
-	}
-
+	deinit;
+	ret;
 }

@@ -4,22 +4,15 @@ type fun: main {} int64
 
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 16;
+  # [0, 8) main ret_val
 
-  code: {
-    # [0, 8) main ret_val
+  # Note: This will be invalid once verification is added
+  input_l64           8;
+  mov_l64_imm         8, 1;
+  init_type           int64; # [8, 16)
+  output_l64          8;
 
-    # Note: This will be invalid once verification is added
-    input_l64           8;
-    mov_l64_imm         8, 1;
-    init_type           int64; # [8, 16)
-    output_l64          8;
+  deinit;
 
-    deinit;
-
-    ret;
-  }
-
+  ret;
 }

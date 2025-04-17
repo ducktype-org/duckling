@@ -8,30 +8,17 @@ type fun: check { int64 } void
 
 
 function check {
-	arg_size: 8;
-	ret_size: 0;
-	local_size: 8;
-
-	code: {
-        output_l64          0;
-		ret;
-	}
+	output_l64          0;
+	ret;
 }
 
 
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 12;
+	# [0, 8) main ret_val
+	init_type 			int32; # [8, 12) check() arg0
+	input_l64           8;
+	call_func          	check;
 
-	code: {
-		# [0, 8) main ret_val
-		init_type 			int32; # [8, 12) check() arg0
-        input_l64           8;
-		call_func          	check;
-		
-		mov_l64_imm			0, 42;
-		ret;
-	}
-
+	mov_l64_imm			0, 42;
+	ret;
 }

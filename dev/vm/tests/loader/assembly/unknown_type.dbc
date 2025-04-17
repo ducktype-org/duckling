@@ -2,13 +2,6 @@ type primitive: int64 8
 type fun: main {} int64
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 16;
-
-    code: {
-        init_type in64;
-        deinit;
-    }
-
+    init_type in64;
+    deinit;
 }
