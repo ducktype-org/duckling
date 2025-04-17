@@ -16,6 +16,7 @@
 #include <printer/stream_printer.hpp>
 #include <pst_parser/pst.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <frontend/module_tree/queries.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
