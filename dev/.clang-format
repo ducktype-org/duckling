@@ -242,7 +242,7 @@ PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0
 PenaltyBreakString: 650
 PenaltyBreakTemplateDeclaration: 10
-PenaltyExcessCharacter: 20
+PenaltyExcessCharacter: 50
 PenaltyIndentedWhitespace: 0
 PenaltyReturnTypeOnItsOwnLine: 2000
 

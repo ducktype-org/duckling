@@ -61,7 +61,8 @@ namespace compiler::helios::errors {
 		}
 
 		template<typename T>
-		using FlattenVariant_t = flatten::ToVariant<typename flatten::FlattenVariant<T>::type>::type;
+		using FlattenVariant_t
+			= flatten::ToVariant<typename flatten::FlattenVariant<T>::type>::type;
 
 		/**
 		 * @brief Check if ToCheck is in [Types...] list of types

@@ -115,7 +115,8 @@ namespace tsh {
 		return toCPimpl(pimpl)->getSymbol();
 	}
 
-	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx) const {
+	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 

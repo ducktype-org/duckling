@@ -160,7 +160,11 @@ namespace lexer {
 		createFromPattern(
 			format_control, u8R"([[:Pattern_White_Space:]&[:Default_Ignorable_Code_Point:]])"
 		);
-		vertical_space.clear().addAll(whitespace).removeAll(newline).removeAll(format_control).freeze();
+		vertical_space.clear()
+			.addAll(whitespace)
+			.removeAll(newline)
+			.removeAll(format_control)
+			.freeze();
 
 		createFromPattern(syntax, u8R"([[:Pattern_Syntax:]-[:ID_Compat_Math_Continue:]])");
 		createFromPattern(special, u8R"([;$@#,'"])");

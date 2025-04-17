@@ -333,7 +333,9 @@ namespace compiler::backend_llvm {
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
 		 * to the end of the block given by @p builder.
 		 */
-		void lir2LLVMInstruction(const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder) {
+		void lir2LLVMInstruction(
+			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
+		) {
 			using enum lir::Operation;
 			switch (lir_instruction.operation) {
 			case ReturnVoid: {

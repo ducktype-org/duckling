@@ -11,7 +11,10 @@ namespace pst {
 	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
 	 * other condition because of iteration.
 	 */
-	template<class ListElements, GetName getName, class Container = std::vector<AccessInternal<ListElements>>>
+	template<
+		class ListElements,
+		GetName getName,
+		class Container = std::vector<AccessInternal<ListElements>>>
 	class List: public NotStmt {
 	protected:
 		Container elements;
@@ -73,7 +76,8 @@ namespace pst {
 	/**
 	 * @brief Attribute argument list.
 	 */
-	class AtrArgList final: public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
+	class AtrArgList final:
+		  public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -99,7 +103,8 @@ namespace pst {
 	/**
 	 * @brief Call argument list.
 	 */
-	class CallList final: public List<UniversalExprHolderLowerLevel, detail::NameGetters::callList> {
+	class CallList final:
+		  public List<UniversalExprHolderLowerLevel, detail::NameGetters::callList> {
 	public:
 		explicit CallList(const dia::SourcePosition& pos): List(pos) {
 			this->element_kind = ElementKind::CallList;

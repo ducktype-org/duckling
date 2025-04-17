@@ -100,7 +100,10 @@ namespace pst {
 	 * @brief The version of the default entry point that isn't top-level
 	 */
 	class UniversalExprHolderLowerLevel final:
-		  public ExprHolderTemplate<UniversalExprHolderLowerLevel, ExprParserHelper::parseUniversal, false> {
+		  public ExprHolderTemplate<
+			  UniversalExprHolderLowerLevel,
+			  ExprParserHelper::parseUniversal,
+			  false> {
 	public:
 		using ExprHolderTemplate::ExprHolderTemplate;
 		~UniversalExprHolderLowerLevel() final = default;

@@ -101,7 +101,8 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.inner);
 			}
 
-			void visitTupleTypeConstructorExpr([[maybe_unused]] const code::TupleTypeConstructorExpr& expr
+			void visitTupleTypeConstructorExpr(
+				[[maybe_unused]] const code::TupleTypeConstructorExpr& expr
 			) final {
 				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 			}

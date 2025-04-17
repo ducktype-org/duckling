@@ -500,7 +500,8 @@ namespace compiler::helios {
 				// per-symbol-kind cases.
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-				return *ctx.query<QueryLookupInScope>({ linked_scope, key.name, key.follow_wildcards }
+				return *ctx.query<QueryLookupInScope>(
+					{ linked_scope, key.name, key.follow_wildcards }
 				);
 			}
 

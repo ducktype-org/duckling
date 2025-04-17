@@ -28,8 +28,14 @@ namespace vm::api {
 
 	struct ExecutionStopped {};
 
-	using ExecStatus = std::
-		variant<Running, Paused, WaitingForInput, NotStarted, ExecutionCompleted, ExecutionStopped, ExecutionPanicked>;
+	using ExecStatus = std::variant<
+		Running,
+		Paused,
+		WaitingForInput,
+		NotStarted,
+		ExecutionCompleted,
+		ExecutionStopped,
+		ExecutionPanicked>;
 
 	constexpr bool isStatusTerminal(const ExecStatus& status) {
 		return std::holds_alternative<ExecutionCompleted>(status)

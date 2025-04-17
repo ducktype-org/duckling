@@ -17,7 +17,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq toPrinterContents(CRef<Message> message_ptr, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Message> message_ptr, bool detailed
+		);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence ready to be printed for
@@ -62,7 +64,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq toPrinterContents(CRef<Message> message_ptr, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Message> message_ptr, bool detailed
+		);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence representing an

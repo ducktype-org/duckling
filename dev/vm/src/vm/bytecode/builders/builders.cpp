@@ -79,8 +79,10 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 }
 
 usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
-	const usize type_size
-		= type_context.getMetadata().atMaybe(type.type_name).expect<UnknownTypeError>(type)->getSize();
+	const usize type_size = type_context.getMetadata()
+	                            .atMaybe(type.type_name)
+	                            .expect<UnknownTypeError>(type)
+	                            ->getSize();
 
 	usize offset = 0;
 
@@ -216,7 +218,8 @@ TypeContext TypeContextBuilder::build() const {
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						tctx.metadata->atMaybe(field.type).expect<MissingSubtypeError>(data, field.name)
+						tctx.metadata->atMaybe(field.type)
+							.expect<MissingSubtypeError>(data, field.name)
 					);
 				tctx.metadata->at(data.name)->defineData(fields);
 			}

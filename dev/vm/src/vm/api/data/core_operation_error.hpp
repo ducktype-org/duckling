@@ -22,8 +22,14 @@ namespace vm::api {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(OtherError, error);
 	};
 
-	using CoreOperationError
-		= std::variant<ResumeError, PauseError, RunError, JoinError, AttachDetachError, OtherError, LoadProgramError>;
+	using CoreOperationError = std::variant<
+		ResumeError,
+		PauseError,
+		RunError,
+		JoinError,
+		AttachDetachError,
+		OtherError,
+		LoadProgramError>;
 }
 
 JSON_REGISTER_TYPE_WITH_NAME(vm::api::ResumeError, "ResumeError");

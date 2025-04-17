@@ -93,7 +93,9 @@ namespace compiler::backend_llvm {
 
 		// Using raw_fd_ostream is the recommended way to write files in LLVM,
 		// as it is much more efficient than using std::ofstream.
-		llvm::raw_fd_ostream output_stream(output_file.strView(), error_code, llvm::sys::fs::OF_None);
+		llvm::raw_fd_ostream output_stream(
+			output_file.strView(), error_code, llvm::sys::fs::OF_None
+		);
 		if (error_code) CORE_PANIC("LLVM error: unable to create file: " + error_code.message());
 
 		if (output_type == CompilationOutputType::Assembly)

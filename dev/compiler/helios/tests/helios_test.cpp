@@ -381,7 +381,9 @@ private:
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
 		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
-		ASSERT_EQUAL(base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str());
+		ASSERT_EQUAL(
+			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
+		);
 	}
 
 	void testError() {
@@ -439,7 +441,12 @@ private:
 					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<std::variant<int, float, int>, int, int, float, std::variant<int, int>>,
+					  UniqueTypesVariant_t<
+						  std::variant<int, float, int>,
+						  int,
+						  int,
+						  float,
+						  std::variant<int, int>>,
 					  std::variant<float, int>>);
 
 		struct A {};
@@ -455,7 +462,8 @@ private:
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
-					  UniqueTypesVariant_t<std::variant<std::variant<int, float, std::variant<bool>>>>>);
+					  UniqueTypesVariant_t<
+						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
 	void testHeliosResult() {
@@ -505,7 +513,9 @@ private:
 		HResult<int, Err2, Err4> sub_result = HError(Err2());
 		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
 		HResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
-		static_assert(std::is_same_v<decltype(result)::ErrorType, std::variant<Err1, Err3, Err2, Err4>>);
+		static_assert(std::is_same_v<
+					  decltype(result)::ErrorType,
+					  std::variant<Err1, Err3, Err2, Err4>>);
 		bool entered2 = false;
 		ASSERT_TRUE(!result.hasValue());
 		ASSERT_TRUE(result.hasError());

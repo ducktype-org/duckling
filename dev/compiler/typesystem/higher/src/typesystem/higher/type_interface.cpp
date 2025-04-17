@@ -156,7 +156,13 @@ namespace tsh {
 		// Categorise overloads into the above sets.
 		for (const auto& element: elements_matching_name) {
 			selectMatchCategoryForMethod(
-				positional_arg_types, named_args, ctx, element, exact_matches, coercion_matches, non_matches
+				positional_arg_types,
+				named_args,
+				ctx,
+				element,
+				exact_matches,
+				coercion_matches,
+				non_matches
 			)
 				.insert(element);
 		}
@@ -183,7 +189,8 @@ namespace tsh {
 
 	std::string TypeInterface::stringifyRequestSignature(
 		base::StrID name,
-		const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>& argument_info
+		const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
+			argument_info
 	) {
 		std::stringstream result;
 		result << name.str();

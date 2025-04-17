@@ -10,7 +10,8 @@ namespace pst {
 	 * @brief Generates vector that contain Refs to all elements in the subtree of the root element
 	 * (recursively). Order of elements is arbitrary. Should probably be used for tests only.
 	 */
-	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(AccessLocked<pst::LangElement> root
+	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(
+		AccessLocked<pst::LangElement> root
 	);
 
 	/**
