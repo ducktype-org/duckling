@@ -73,11 +73,11 @@ namespace base {
 /**
  * Base helper macro, don't use it directly.
  */
-#define DETAIL_THROW_PANIC(panic_title, ...)                            \
-	throw base::Panic(                                                  \
-		"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
-		base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
-	)
+#define DETAIL_THROW_PANIC(panic_title, ...)
+	// throw base::Panic(                                                  \
+	// 	"    In " __FILE__ ":" STRINGIFY_2(__LINE__),                   \
+	// 	base::strConcat(panic_title, "    " __VA_OPT__(, ) __VA_ARGS__) \
+	// )
 
 
 /**

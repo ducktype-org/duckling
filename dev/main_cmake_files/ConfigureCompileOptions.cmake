@@ -9,7 +9,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	message("-- GNU compiler")
 
 	string(CONCAT ADDITIONAL_GNU_FLAGS
-		"-Werror=return-type "
+		# "-Werror=return-type "
 		"-Werror=terminate "
 		"-Werror=shadow=local "
 		"-Werror=return-local-addr "

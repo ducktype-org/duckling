@@ -13,6 +13,7 @@ namespace compiler::driver {
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
 
+		// make it a core-assert:?
 		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
 		if (options->dump_llvm_ir) {

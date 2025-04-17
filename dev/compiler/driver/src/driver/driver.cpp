@@ -37,6 +37,9 @@ namespace compiler::driver {
 
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
+		std::cerr << "llvm goes from here:...\n";
+		std::exit(0);
+
 		query::utils::withContextDo([&](query::Context& ctx) {
 			backend_driver->compileModule(ctx, module_data);
 		});

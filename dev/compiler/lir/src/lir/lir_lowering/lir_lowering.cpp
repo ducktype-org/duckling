@@ -316,7 +316,7 @@ namespace compiler::lir {
 				}
 				case mir::Operation::DestructIf:
 					// @TODO implement it, once we know how to call destructors
-					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
+					// std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
 				case mir::Operation::Call: {
 					auto output = getLocal(mir_instruction.output.value());
