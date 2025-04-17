@@ -79,10 +79,8 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 }
 
 usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
-	const usize type_size = type_context.getMetadata()
-	                            .atMaybe(type.type_name)
-	                            .expect<UnknownTypeError>(type)
-	                            ->getSize();
+	const usize type_size
+		= type_context.getMetadata().atMaybe(type.type_name).expect<UnknownTypeError>(type)->getSize();
 
 	usize offset = 0;
 
@@ -180,8 +178,8 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 
 void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::
-	getTypes() const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
+) const {
 	return types;
 }
 
@@ -203,8 +201,7 @@ TypeContext TypeContextBuilder::build() const {
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner)
-						.expect<MissingSubtypeError>(data, data.inner),
+					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
@@ -219,8 +216,7 @@ TypeContext TypeContextBuilder::build() const {
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						tctx.metadata->atMaybe(field.type)
-							.expect<MissingSubtypeError>(data, field.name)
+						tctx.metadata->atMaybe(field.type).expect<MissingSubtypeError>(data, field.name)
 					);
 				tctx.metadata->at(data.name)->defineData(fields);
 			}
@@ -240,8 +236,7 @@ TypeContext TypeContextBuilder::build() const {
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result)
-						.expect<MissingSubtypeError>(data, data.result)
+					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
 				);
 			}
 			variant_default { CORE_PANIC("bad type"); }

@@ -52,9 +52,7 @@ namespace tsh {
 		 * @param symbol_type The source symbol type.
 		 * @param value_category The value category of the described value.
 		 */
-		ExpressionType(
-			const SymbolType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category
-		):
+		ExpressionType(const SymbolType<ABSTRACT_TYPE> symbol_type, const ValueCategory value_category):
 			  symbol_type(symbol_type),
 			  value_category(value_category) {}
 

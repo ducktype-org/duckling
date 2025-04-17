@@ -343,8 +343,7 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block already in order
 				CORE_ASSERT(
-					mir::isTerminating(mir_terminator.operation),
-					"non-Terminator in lowerTerminator"
+					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
 				lowerFlags(curr_block, mir_terminator);
 

@@ -27,8 +27,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
-				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet"
-				);
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
 			}
 
 			void visitCallExpr(const code::CallExpr&) final {
@@ -102,8 +101,7 @@ namespace compiler::helios {
 				result = evaluateExpr(ctx, *expr.inner);
 			}
 
-			void visitTupleTypeConstructorExpr(
-				[[maybe_unused]] const code::TupleTypeConstructorExpr& expr
+			void visitTupleTypeConstructorExpr([[maybe_unused]] const code::TupleTypeConstructorExpr& expr
 			) final {
 				throw base::NotYetImplemented("Evaluation of tuple values is not implemented yet");
 			}
@@ -111,8 +109,7 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(
 				[[maybe_unused]] const code::VariantTypeConstructorExpr& expr
 			) final {
-				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet"
-				);
+				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 
 			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {

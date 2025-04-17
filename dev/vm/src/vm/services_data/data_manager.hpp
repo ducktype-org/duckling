@@ -24,8 +24,8 @@ namespace vm {
 		using DynamicDataStorage = std::tuple<Dynamic<DynamicData>...>;
 
 		template<class T>
-		using IsCoreData = std::
-			integral_constant<bool, std::is_same_v<Memory, T> || std::is_same_v<TypeMetadata, T>>;
+		using IsCoreData
+			= std::integral_constant<bool, std::is_same_v<Memory, T> || std::is_same_v<TypeMetadata, T>>;
 
 		Memory       memory;
 		TypeMetadata typeMetadata;

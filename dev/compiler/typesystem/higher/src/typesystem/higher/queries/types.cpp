@@ -220,8 +220,7 @@ namespace tsh {
 
 	struct IMPLEMENT_QUERY(QueryVariantType, VariantAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
-			const auto variant_pimpl
-				= new internal::VariantAbstractTypeImpl{ key.underlying_types };
+			const auto variant_pimpl = new internal::VariantAbstractTypeImpl{ key.underlying_types };
 			pushType(Box<internal::VariantAbstractTypeImpl>::fromPointer(variant_pimpl));
 			return variant_pimpl;
 		}

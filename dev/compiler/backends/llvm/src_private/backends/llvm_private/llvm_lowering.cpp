@@ -108,8 +108,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_default {
-				CORE_PANIC(
-					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
 				);
 			}
 		}
@@ -126,9 +125,7 @@ namespace compiler::backend_llvm {
 		for (const auto& param: parameters)
 			llvm_parameters.push_back(typeFromLayout(context, param));
 
-		return llvm::FunctionType::get(
-			typeFromLayout(context, return_type), llvm_parameters, false
-		);
+		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
 	/**
@@ -336,9 +333,7 @@ namespace compiler::backend_llvm {
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
 		 * to the end of the block given by @p builder.
 		 */
-		void lir2LLVMInstruction(
-			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
-		) {
+		void lir2LLVMInstruction(const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder) {
 			using enum lir::Operation;
 			switch (lir_instruction.operation) {
 			case ReturnVoid: {
@@ -397,9 +392,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Call: {
-				CORE_ASSERT(
-					lir_instruction.arguments.size() > 0, "call instruction without callee"
-				);
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
 				const auto output = lir_instruction.output.value();
 

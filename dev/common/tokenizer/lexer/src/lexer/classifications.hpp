@@ -24,8 +24,7 @@ namespace lexer {
 		static icu::UnicodeSet
 			name_continue;  ///< set of codepoints continuing an identifier or a keyword
 
-		static icu::UnicodeSet
-			operator_start;  ///< set of codepoints indicating a start of an operator
+		static icu::UnicodeSet operator_start;  ///< set of codepoints indicating a start of an operator
 		static icu::UnicodeSet operator_continue;  ///< set of codepoints continuing an operator
 
 		static icu::UnicodeSet vertical_space;  ///< set of codepoints indicating a vertical space

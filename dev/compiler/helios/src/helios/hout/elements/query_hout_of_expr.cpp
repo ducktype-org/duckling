@@ -338,9 +338,9 @@ namespace compiler::helios::code {
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				auto&& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
-					{ scope, stmt->getName().value, true }
-				);
+				auto&& sym_list
+					= *ctx.query<QueryLookupInScopeAndParents>({ scope, stmt->getName().value, true }
+				    );
 
 				auto res = sym_list.getAsSingle();
 				if (res.hasError()) {
@@ -431,8 +431,7 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
 					break;
 				case pst::Keyword::f128:
-					node
-						= makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
 					break;
 				case pst::Keyword::f64:
 					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));

@@ -72,9 +72,7 @@ namespace dia {
 		return res;
 	}
 
-	SourcePosition::SourcePosition(
-		MRef<tokenizer::TokenFile> source_file, const usize source_start
-	):
+	SourcePosition::SourcePosition(MRef<tokenizer::TokenFile> source_file, const usize source_start):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
@@ -113,8 +111,7 @@ namespace dia {
 
 	MRef<tokenizer::TokenFile> SourcePosition::getSource() const { return source_file; }
 
-	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
-		const printer::PrinterContent& reason
+	printer::PrinterContentsSeq SourcePosition::genPrinterContents(const printer::PrinterContent& reason
 	) const {
 		if (source_file == nullptr) {
 			return {

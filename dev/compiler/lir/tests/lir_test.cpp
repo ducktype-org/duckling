@@ -90,15 +90,13 @@ private:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
 			for (auto& local: foo_lir->local_list) {
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "a") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 				}
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "b") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 32, true })

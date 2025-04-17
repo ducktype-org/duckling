@@ -22,8 +22,8 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::
-		getAsSingle() const {
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::getAsSingle(
+	) const {
 		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
 		if (!isSingle()) return errors::HError(errors::Ambiguity());
 

@@ -21,9 +21,8 @@ namespace hashing {
 		 * checks if the type is a span of const or non-const bytes
 		 */
 		template<typename T>
-		concept span_of_bytes
-			= base::IsInstantiationOfTypeValue<T, std::span>
-		   && std::same_as<std::remove_const_t<typename T::value_type>, std::byte>;
+		concept span_of_bytes = base::IsInstantiationOfTypeValue<T, std::span>
+		                     && std::same_as<std::remove_const_t<typename T::value_type>, std::byte>;
 
 		/**
 		 * checks if the type can be invoked with a span of byte
@@ -84,8 +83,8 @@ namespace hashing {
 		template<typename T>
 		concept tuple_of_refs = requires(T t) {
 			[]<typename... Args>(std::tuple<Args...>)
-				requires std::is_same_v<std::tuple<Args...>, T>
-			          && (std::is_reference_v<Args> && ...) {}(t);
+				requires std::is_same_v<std::tuple<Args...>, T> && (std::is_reference_v<Args> && ...)
+			{}(t);
 		};
 
 		/**
@@ -167,8 +166,7 @@ namespace hashing {
 		   && requires(HashAlgorithm::result_type res) {
 				  {
 					  res ^= res
-				  }
-				  -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
+				  } -> std::convertible_to<std::remove_cvref_t<typename HashAlgorithm::result_type>>;
 			  };
 
 		/**

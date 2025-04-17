@@ -23,8 +23,7 @@ namespace vm {
 		return next++;
 	}
 
-	std::expected<api::Response, api::ApiError> Supervisor::doRequest(
-		const api::SupervisorRequest& request
+	std::expected<api::Response, api::ApiError> Supervisor::doRequest(const api::SupervisorRequest& request
 	) {
 		return getProcess(request.pid).and_then([&request](Ref<VMProcess> process) {
 			return process->doRequest(request.request).transform_error([](const auto& x) {

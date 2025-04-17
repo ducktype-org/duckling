@@ -49,8 +49,7 @@ public:
 			throwPanic2();
 		} catch (base::Panic& panic) {
 			assertTrue(
-				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"),
-				"Bad panic reason"
+				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"), "Bad panic reason"
 			);
 			return;
 		}
@@ -85,9 +84,7 @@ public:
 			throw base::NotYetImplemented("NotYetImplemented test");
 		} catch (base::NotYetImplemented& nyi) {
 			assertTrue(
-				compareCstr(
-					nyi.what(), "The feature is not implemented yet: NotYetImplemented test"
-				),
+				compareCstr(nyi.what(), "The feature is not implemented yet: NotYetImplemented test"),
 				"Bad NotYetImplemented reason"
 			);
 			return;

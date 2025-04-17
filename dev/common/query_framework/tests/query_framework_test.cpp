@@ -46,8 +46,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 		else if (key.v == 1)
 			return 1;
 		else
-			return context.query<Fibonacci>({ key.v - 1 })
-			     + context.query<Fibonacci>({ key.v - 2 });
+			return context.query<Fibonacci>({ key.v - 1 }) + context.query<Fibonacci>({ key.v - 2 });
 	}
 
 	static auto load(QKey key) -> LoadResult {
@@ -363,9 +362,7 @@ private:
 		assertTrue(ReferenceQuery::getName() == "ReferenceQuery", "Bad query name (5)");
 		assertTrue(VectorReferenceQuery::getName() == "VectorReferenceQuery", "Bad query name (6)");
 		assertTrue(LifeTimeQueryStable::getName() == "LifeTimeQueryStable", "Bad query name (7)");
-		assertTrue(
-			LifeTimeQueryUnstable::getName() == "LifeTimeQueryUnstable", "Bad query name (8)"
-		);
+		assertTrue(LifeTimeQueryUnstable::getName() == "LifeTimeQueryUnstable", "Bad query name (8)");
 	}
 
 	void cycleDetectionTest() {

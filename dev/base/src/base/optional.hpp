@@ -388,8 +388,7 @@ namespace base {
 
 		// A non-const version.
 		template<typename Function>
-		constexpr auto map(const Function& function)
-			-> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
@@ -403,8 +402,7 @@ namespace base {
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
 		template<typename Function>
-		constexpr auto flatMap(const Function& function) const
-			-> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
@@ -617,15 +615,13 @@ namespace base {
 		}
 
 		template<typename Function>
-		constexpr auto map(const Function& function)
-			-> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		constexpr auto flatMap(const Function& function) const
-			-> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};

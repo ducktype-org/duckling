@@ -121,9 +121,7 @@ namespace compiler::helios {
 			};
 		}
 
-		static auto makeBuiltinFunction(
-			base::StrID name, builtin::BuiltinFunctionData builtin_data
-		) {
+		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
 			return SymbolData{
 				.common = {
 					.name = name,
@@ -371,9 +369,7 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	CRef<SymbolData> makeSymbolFromPSTElement(
-		ScopeID scope, pst::Access<pst::LangElement> element
-	) {
+	CRef<SymbolData> makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
 		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
@@ -504,8 +500,7 @@ namespace compiler::helios {
 				// per-symbol-kind cases.
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-				return *ctx.query<QueryLookupInScope>(
-					{ linked_scope, key.name, key.follow_wildcards }
+				return *ctx.query<QueryLookupInScope>({ linked_scope, key.name, key.follow_wildcards }
 				);
 			}
 
@@ -638,11 +633,9 @@ namespace compiler::helios {
 
 			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
 
-			auto alias_definition = getSymRef(key)
-			                            ->getPSTData()
-			                            ->pst_element.unlock(ctx)
-			                            .dynamicCast<pst::Alias>()
-			                            .value();
+			auto alias_definition
+				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Alias>().value(
+				);
 
 			bool       first_symbol = true;
 			SymbolList result;
@@ -657,11 +650,9 @@ namespace compiler::helios {
 						variant_case(errors::Ambiguity, _) {
 							// this error might need to be reported earlier:
 							ctx.log(
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
-									make(
-										alias_definition->getSourcePosition(),
-										"Ambiguity in dealias"
-									)
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+									alias_definition->getSourcePosition(), "Ambiguity in dealias"
+								)
 							);
 
 							return errors::HError(errors::Failed());
@@ -669,11 +660,10 @@ namespace compiler::helios {
 						variant_case(errors::SymbolNotFound, _) {
 							// this error might need to be reported earlier:
 							ctx.log(
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::
-									make(
-										alias_definition->getSourcePosition(),
-										"Symbol not found in dealias"
-									)
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+									alias_definition->getSourcePosition(),
+									"Symbol not found in dealias"
+								)
 							);
 
 							return errors::HError(errors::Failed());
@@ -701,11 +691,9 @@ namespace compiler::helios {
 		static auto provide(Context& ctx, QKey key) -> PResult {
 			CORE_ASSERT(kind(key) == SymbolKind::Const, "SymID is not a Const");
 
-			const auto const_symbol = getSymRef(key)
-			                              ->getPSTData()
-			                              ->pst_element.unlock(ctx)
-			                              .dynamicCast<pst::Const>()
-			                              .value();
+			const auto const_symbol
+				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
+				);
 
 			return ctx.query<EvalExprToI64>(const_symbol->getValue().unlock(ctx)->getExpr());
 		}
@@ -922,9 +910,7 @@ namespace compiler::helios {
 					break;
 				default:
 					throw base::NotYetImplemented(base::strConcat(
-						"Using ",
-						typeid(kind(sym)).name(),
-						" inside a class is not yet implemented."
+						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
 					));
 				}
 			}

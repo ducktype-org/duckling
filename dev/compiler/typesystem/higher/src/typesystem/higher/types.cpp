@@ -115,19 +115,16 @@ namespace tsh {
 		return toCPimpl(pimpl)->getSymbol();
 	}
 
-	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx
-	) const {
+	base::Optional<ClassAbstractType> ClassAbstractType::getBaseClassType(query::Context& ctx) const {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	base::Optional<compiler::helios::SymID> ClassAbstractType::getBaseClassSymbol(
-		query::Context& ctx
+	base::Optional<compiler::helios::SymID> ClassAbstractType::getBaseClassSymbol(query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	std::vector<ClassAbstractType> ClassAbstractType::getImplementedInterfaceTypes(
-		query::Context& ctx
+	std::vector<ClassAbstractType> ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx
 	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}

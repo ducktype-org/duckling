@@ -479,9 +479,7 @@ namespace pst {
 			 */
 			static i64 skipAtom(const LangParserState& state, i64 base, i64 length);
 
-			static MBox<ExprElement> parseRecursive(
-				LangParserState& state, const BuilderExpr& expr
-			);
+			static MBox<ExprElement> parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 

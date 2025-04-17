@@ -105,7 +105,5 @@ namespace base {
 	 * @param delimiter A string, that is used to separate the substrings.
 	 * @return A vector of separated strings.
 	 */
-	std::vector<std::string> strSplit(
-		const std::string_view str, const std::string& delimiter = " "
-	);
+	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
 }

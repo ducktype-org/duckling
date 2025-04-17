@@ -19,13 +19,11 @@
 #include <string>
 
 
-#define ASSERT_EQUAL(expected, actual)                                                    \
-	assertEqual(                                                                          \
-		expected,                                                                         \
-		actual,                                                                           \
-		base::strConcat(                                                                  \
-			"Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual \
-		)                                                                                 \
+#define ASSERT_EQUAL(expected, actual)                                                                 \
+	assertEqual(                                                                                       \
+		expected,                                                                                      \
+		actual,                                                                                        \
+		base::strConcat("Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual) \
 	)
 
 

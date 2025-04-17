@@ -230,8 +230,7 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			auto called_func_type = thread.executing_program->types->at(called_func.name);
-			u64  arg_count
-				= called_func_type->getParameterCount().expect("Parameter count not set!");
+			u64 arg_count = called_func_type->getParameterCount().expect("Parameter count not set!");
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
@@ -303,12 +302,8 @@ namespace vm {
 				if (non_void && callee_frame->block_stack.size() == 1) {
 					u64 callers_block_idx = frame->block_stack.size();
 					frame->block_stack.push_back(block);
-					frame->block_idx_to_local_offset.put(
-						callers_block_idx, frame->local_stack_head
-					);
-					frame->local_offset_to_block_idx.put(
-						frame->local_stack_head, callers_block_idx
-					);
+					frame->block_idx_to_local_offset.put(callers_block_idx, frame->local_stack_head);
+					frame->local_offset_to_block_idx.put(frame->local_stack_head, callers_block_idx);
 					frame->local_stack_head += frame->called_func_ret_size;
 				} else {
 					thread.process.getMemory().freeBlock(block);
@@ -369,8 +364,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0)
-				= thread.process.getIO().getInput<i64>(thread);
+			derefStack<i64>(local_stack, instr->arg0) = thread.process.getIO().getInput<i64>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
@@ -384,8 +378,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0)
-				= thread.process.getIO().getInput<i32>(thread);
+			derefStack<i64>(local_stack, instr->arg0) = thread.process.getIO().getInput<i32>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);

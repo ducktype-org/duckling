@@ -37,45 +37,42 @@ namespace {
 	template<class Instruction>
 	vm::code::Instruction getInstructionImpl(CRef<parser::OpCode> opcode);
 
-#define HANDLE_OPCODE_0ARGS(opcode)                                       \
-	template<>                                                            \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
-		CRef<parser::OpCode> opcode                                       \
-	) {                                                                   \
-		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");  \
-		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = *opcode->position;                           \
-		return instr;                                                     \
+#define HANDLE_OPCODE_0ARGS(opcode)                                                                  \
+	template<>                                                                                       \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(CRef<parser::OpCode> opcode \
+	) {                                                                                              \
+		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");                             \
+		auto instr         = VM_INSTR_FROM_NAME(opcode)();                                           \
+		instr.bytecode_pos = *opcode->position;                                                      \
+		return instr;                                                                                \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                  \
-	template<>                                                                                  \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                       \
-		CRef<parser::OpCode> opcode                                                             \
-	) {                                                                                         \
-		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0))) {                            \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)) }; \
-			instr.bytecode_pos = *opcode->position;                                             \
-			return instr;                                                                       \
-		}                                                                                       \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                       \
+	template<>                                                                                       \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(CRef<parser::OpCode> opcode \
+	) {                                                                                              \
+		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                             \
+		if (std::holds_alternative<arg0_type>(opcode->args.at(0))) {                                 \
+			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)) };      \
+			instr.bytecode_pos = *opcode->position;                                                  \
+			return instr;                                                                            \
+		}                                                                                            \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                                              \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                       \
-	template<>                                                                                  \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                       \
-		CRef<parser::OpCode> opcode                                                             \
-	) {                                                                                         \
-		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0))                               \
-		    && std::holds_alternative<arg1_type>(opcode->args.at(1))) {                         \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)),   \
-				                                     std::get<arg1_type>(opcode->args.at(1)) }; \
-			instr.bytecode_pos = *opcode->position;                                             \
-			return instr;                                                                       \
-		}                                                                                       \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                            \
+	template<>                                                                                       \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(CRef<parser::OpCode> opcode \
+	) {                                                                                              \
+		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");                             \
+		if (std::holds_alternative<arg0_type>(opcode->args.at(0))                                    \
+		    && std::holds_alternative<arg1_type>(opcode->args.at(1))) {                              \
+			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)),        \
+				                                     std::get<arg1_type>(opcode->args.at(1)) };      \
+			instr.bytecode_pos = *opcode->position;                                                  \
+			return instr;                                                                            \
+		}                                                                                            \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                                              \
 	}
 
 #include <vm/bytecode/opcode_definitions.hpp>
@@ -184,9 +181,7 @@ namespace {
 	}
 }
 
-void Program::insertFunctions(
-	const std::vector<code::Function>& new_functions, LoaderLogger& logger
-) {
+void Program::insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
 			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {

@@ -15,9 +15,7 @@ namespace pst {
 	 *
 	 * @tparam Element Root Element to parse.
 	 */
-	template<
-		std::derived_from<LangElement> Element = TopLevel,
-		std::derived_from<LangElement> Parser  = Element>
+	template<std::derived_from<LangElement> Element = TopLevel, std::derived_from<LangElement> Parser = Element>
 	class PST {
 	public:
 		/**

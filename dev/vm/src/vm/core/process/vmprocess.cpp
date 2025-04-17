@@ -26,8 +26,7 @@ namespace vm {
 		return status;
 	}
 
-	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const fs::FilePath& path
+	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(const fs::FilePath& path
 	) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings

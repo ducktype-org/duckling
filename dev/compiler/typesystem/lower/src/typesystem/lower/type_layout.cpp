@@ -198,9 +198,7 @@ namespace tsl {
 		std::vector<usize>      offset_idx_to_component_idx;
 		Bits                    total_size;
 
-		TupleTypeLayoutConstructionHelper(
-			const tsh::TupleAbstractType tuple_type, query::Context& ctx
-		):
+		TupleTypeLayoutConstructionHelper(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
 			  tuple_type(tuple_type),
 			  component_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
@@ -278,9 +276,7 @@ namespace tsl {
 			return types;
 		}
 
-		ClassTypeLayoutConstructionHelper(
-			const tsh::ClassAbstractType class_type, query::Context& ctx
-		):
+		ClassTypeLayoutConstructionHelper(const tsh::ClassAbstractType class_type, query::Context& ctx):
 			  class_type(class_type),
 			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
@@ -353,8 +349,7 @@ namespace tsl {
 		return VISIT(*this, l, return l.getSourceType());
 	}
 
-	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-		const {
+	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
 		return VISIT(*this, l, return l.toStringDefinition(ctx, recursive, indent));
 	}
 

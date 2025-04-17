@@ -128,9 +128,7 @@ private:
 
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
-			assertTrue(
-				pst.getLogger().good(), "there are unexpected errors in Duckling source-code"
-			);
+			assertTrue(pst.getLogger().good(), "there are unexpected errors in Duckling source-code");
 		}
 
 		assertTrue(testing_utils::compareJson(ss.str(), correct_string), "outputs are not equal");

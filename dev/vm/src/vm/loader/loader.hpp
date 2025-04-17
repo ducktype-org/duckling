@@ -36,9 +36,7 @@ namespace vm::loader {
 		Program() = default;
 
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
-		void insertFunctions(
-			const std::vector<code::Function>& new_functions, LoaderLogger& logger
-		);
+		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
 		StableTypeIdNameMap<code::Function> functions;
 		code::builders::TypeContextBuilder  type_context_builder;

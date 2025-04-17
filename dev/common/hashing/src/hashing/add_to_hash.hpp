@@ -48,10 +48,7 @@ namespace hashing {
 	 * @param hash_alg - hashing algorithm to use
 	 * @param t - object to hash
 	 */
-	template<
-		hash_algorithm HashAlgorithm,
-		typename T,
-		AddToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
+	template<hash_algorithm HashAlgorithm, typename T, AddToHashOptions Options = DEFAULT_ADD_TO_HASH_OPTIONS>
 	constexpr void addToHash(HashAlgorithm& hash_alg, const T& t) {
 		// For most types we only want to add to hash some subset of their subobjects (bases +
 		// members). This can be done easily by defining `hashDecompose` friend function that lists

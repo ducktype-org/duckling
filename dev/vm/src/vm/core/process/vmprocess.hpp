@@ -75,8 +75,7 @@ namespace vm {
 		 * @param request Request that performs action on the Execution Thread.
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::ExecutorRequest& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::ExecutorRequest& request
 		);
 
 		/**
@@ -90,12 +89,10 @@ namespace vm {
 		 * @param request
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::DataRequest& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::DataRequest& request
 		);
 
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::IORequest& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
 		);
 
 		/**
@@ -119,8 +116,7 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError> input(
-			const api::request::Input& request
+		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
 		);
 
 		/**
@@ -178,8 +174,7 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::RequestVariant& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::RequestVariant& request
 		);
 
 		VMProcess();

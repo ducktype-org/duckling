@@ -116,8 +116,7 @@ namespace tsh::internal {
 		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types
-	):
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}

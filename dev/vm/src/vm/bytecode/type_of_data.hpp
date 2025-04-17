@@ -153,14 +153,8 @@ namespace vm::code {
 	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
-	using TypeOfData = std::variant<
-		PrimitiveType,
-		PointerType,
-		StaticTableType,
-		DynamicTableType,
-		DataType,
-		VariantType,
-		FunctionType>;
+	using TypeOfData = std::
+		variant<PrimitiveType, PointerType, StaticTableType, DynamicTableType, DataType, VariantType, FunctionType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);

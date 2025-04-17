@@ -230,8 +230,7 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
@@ -279,8 +278,7 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
@@ -320,8 +318,7 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
-			const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
 	};
 
 	/**
