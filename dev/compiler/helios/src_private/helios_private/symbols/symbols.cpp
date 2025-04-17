@@ -1,6 +1,7 @@
 #include "symbols.hpp"
 
 #include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/scopes/scopes.hpp>
 
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
