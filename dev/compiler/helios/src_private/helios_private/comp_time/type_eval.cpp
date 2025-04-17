@@ -3,6 +3,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios_private/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
 #include <helios/hout/visitors.hpp>
 #include <query_framework/query_impl.hpp>
 

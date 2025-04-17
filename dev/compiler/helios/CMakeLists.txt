@@ -14,6 +14,7 @@ add_library(HELIOS
 	src/helios/test_utils/helios_test_utils.cpp
 	src/helios/symbols/query_type_of_symbol.cpp
 	src/helios/symbols/query_class_symbol_data.cpp
+	src/helios/symbols/query_type_from_definition.cpp
 	src/helios/helios_errors.hpp
 	src/helios/helios_result.hpp
 )
@@ -22,4 +23,4 @@ make_module(HELIOS USES Base QueryFramework PstParser ModuleTree TypeSystemHighe
 
 duck_add_test(compiler helios tests/helios_test.cpp 
 	USES Base TypeSystemHigher PstParser HELIOS
-	INCLUDES "src_private")
+	INCLUDE "${CMAKE_CURRENT_LIST_DIR}/src_private")

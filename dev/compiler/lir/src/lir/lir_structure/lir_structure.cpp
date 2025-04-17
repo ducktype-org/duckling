@@ -1,6 +1,10 @@
 #include "lir_structure.hpp"
 
 #include <base/maps.hpp>
+#include <iomanip>
+#include <set>
+#include <base/variant.hpp>
+#include <helios/symbols/simple.hpp>
 
 namespace compiler::lir {
 

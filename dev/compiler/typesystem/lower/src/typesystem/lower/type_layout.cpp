@@ -4,6 +4,7 @@
 
 #include <query_framework/context.hpp>
 #include <typesystem/higher/type_interface.hpp>
+#include <base/variant.hpp>
 
 using base::bytes2bits;
 

@@ -23,12 +23,16 @@ LLVM_INCLUDE_END()
 #include <backends/llvm/llvm_backend.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
+#include <helios/symbols/simple.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
 #include <base/box.hpp>
 #include <base/int_conv.hpp>
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
