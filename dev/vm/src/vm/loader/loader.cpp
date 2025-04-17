@@ -231,10 +231,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
 
-						func_builder.setRetSize(func->ret_size
-						);  // @note: this is temporary, since function meta-parameters will be
-						    // removed
-
 						functions.emplace_back(func_builder.build());
 					}
 				}

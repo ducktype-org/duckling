@@ -2,22 +2,15 @@ type primitive: int64 8
 type fun: main {} int64
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 16;
+	# [0, 8) -> main ret_val
+	# [8, 16) -> x
 
-  code: {
-    # [0, 8) -> main ret_val
-    # [8, 16) -> x
+	init_type       int64; # x
 
-    init_type       int64; # x
-    
-    mov_l64_imm     8, 1;
-    output_l64      8;
+	mov_l64_imm     8, 1;
+	output_l64      8;
 
-    deinit; # x
+	deinit; # x
 
-    ret;
-  }
-
+	ret;
 }

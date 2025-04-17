@@ -20,6 +20,7 @@ namespace compiler::helios {
 			HOUTUnit out;
 			for (auto scope: *scopes) {
 				auto symbols_in_scope = ctx.query<QuerySymbolsInScope>(scope);
+
 				for (auto sym: *symbols_in_scope) {
 					// grab constants:
 					if (kind(sym) == SymbolKind::Const) out.glob_data.emplace_back(sym, ctx);
