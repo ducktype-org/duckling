@@ -22,8 +22,8 @@ namespace compiler::helios {
 
 	bool LookupResult::isSingle() const { return symbolCount() == 1; }
 
-	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
-		LookupResult::getAsSingle() const {
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> LookupResult::
+		getAsSingle() const {
 		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
 		if (!isSingle()) return errors::HError(errors::Ambiguity());
 
@@ -69,8 +69,9 @@ namespace compiler::helios {
 		return { node, { .leaves = leaves, .children = children } };
 	}
 
-	errors::HResult<SymbolList, errors::Failed>
-		dealiasSymbolList(query::Context& ctx, const SymbolList& symbol_list) {
+	errors::HResult<SymbolList, errors::Failed> dealiasSymbolList(
+		query::Context& ctx, const SymbolList& symbol_list
+	) {
 		SymbolList dealiased;
 		for (auto sym: symbol_list) {
 			UNPACK_RESULT(auto res =, *ctx.query<QueryDealias>(sym));

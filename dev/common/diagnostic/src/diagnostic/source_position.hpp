@@ -69,8 +69,9 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::PrinterContent>
-			genPrinterContents(const printer::PrinterContent& reason) const;
+		std::vector<printer::PrinterContent> genPrinterContents(
+			const printer::PrinterContent& reason
+		) const;
 
 		/**
 		 * @brief Get formatted message string with a given reason.

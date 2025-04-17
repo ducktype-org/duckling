@@ -20,8 +20,9 @@ namespace compiler::helios::code {
 		 * QueryHoutOfExpr is mostly a wrapper for future cache.
 		 * @note This is a private function of this file.
 		 */
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element);
+		ExprConstructionResult fromPST(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		);
 
 		void getVariantSubExprsInPlace(
 			query::Context&                                   ctx,
@@ -501,8 +502,9 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
+		ExprConstructionResult fromPST(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		) {
 			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
 
 			// std::cerr << "\nExpr: \n";

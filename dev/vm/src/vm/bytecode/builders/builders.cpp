@@ -180,8 +180,8 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 
 void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
-	vm::code::builders::TypeContextBuilder::getTypes() const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::
+	getTypes() const {
 	return types;
 }
 

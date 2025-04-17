@@ -277,8 +277,9 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef
-				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef lowerInstruction(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
 				// curr_block already in order
 
 				CORE_ASSERT(

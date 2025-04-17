@@ -367,8 +367,9 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult
-			resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(
+			base::StrID name, AbstractType single_arg_type, query::Context& ctx
+		);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.

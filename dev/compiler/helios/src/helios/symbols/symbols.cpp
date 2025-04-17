@@ -121,8 +121,9 @@ namespace compiler::helios {
 			};
 		}
 
-		static auto
-			makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+		static auto makeBuiltinFunction(
+			base::StrID name, builtin::BuiltinFunctionData builtin_data
+		) {
 			return SymbolData{
 				.common = {
 					.name = name,
@@ -370,8 +371,9 @@ namespace compiler::helios {
 	 * @todo in the future this function should not use dynamic_casts,
 	 * and should be merged with makeSymbolFromStatement.
 	 */
-	CRef<SymbolData>
-		makeSymbolFromPSTElement(ScopeID scope, pst::Access<pst::LangElement> element) {
+	CRef<SymbolData> makeSymbolFromPSTElement(
+		ScopeID scope, pst::Access<pst::LangElement> element
+	) {
 		if (auto parameter_opt = element.dynamicCast<pst::FunParam>()) {
 			auto parameter = parameter_opt.value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
@@ -527,8 +529,9 @@ namespace compiler::helios {
 	/**
 	 * @brief Query extension for looking-up chain of names
 	 */
-	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound>
-		lookupChain(query::Context& ctx, const LookupChainKey& key) {
+	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> lookupChain(
+		query::Context& ctx, const LookupChainKey& key
+	) {
 		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
 
 		// initial symbol:

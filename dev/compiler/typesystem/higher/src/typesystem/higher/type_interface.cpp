@@ -9,8 +9,9 @@
 
 namespace tsh {
 	namespace {
-		base::Map<base::StrID, std::set<InterfaceElement>>
-			groupElementsByName(const std::set<InterfaceElement>& elements) {
+		base::Map<base::StrID, std::set<InterfaceElement>> groupElementsByName(
+			const std::set<InterfaceElement>& elements
+		) {
 			base::Map<base::StrID, std::set<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrID name = compiler::helios::name(element.getSymbol());

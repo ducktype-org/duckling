@@ -93,8 +93,9 @@ namespace hashing {
 
 	public:
 		// Spans of bytes
-		constexpr void
-			operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
+		constexpr void operator()(
+			detail::span_of_bytes auto span, Type type = Type::Other
+		) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));

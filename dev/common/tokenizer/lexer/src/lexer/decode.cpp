@@ -12,8 +12,9 @@
 namespace lexer {
 
 	namespace detail {
-		std::string
-			decodeError(Ref<tokenizer::TokenFile> file, usize byte, const std::string& reason) {
+		std::string decodeError(
+			Ref<tokenizer::TokenFile> file, usize byte, const std::string& reason
+		) {
 			std::stringstream res;
 			res << "In file: " << file->getPath().strView() << "\nAt byte " << byte << ": "
 				<< reason;

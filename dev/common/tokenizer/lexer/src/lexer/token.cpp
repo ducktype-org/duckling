@@ -72,8 +72,9 @@ namespace lexer {
 		return { Type::Operator, oper, position };
 	}
 
-	Token
-		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
+	Token Token::makeIdentifier(
+		const base::RawView identifier, const dia::SourcePosition& position
+	) {
 		if (lang_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };

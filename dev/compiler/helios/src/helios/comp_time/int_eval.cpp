@@ -14,8 +14,9 @@ namespace compiler::helios {
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static errors::HResult<i64, errors::Failed>
-				evaluateExpr(Context& ctx, const code::Expr& expr) {
+			static errors::HResult<i64, errors::Failed> evaluateExpr(
+				Context& ctx, const code::Expr& expr
+			) {
 				EvaluateHoutExprVisitor visitor(ctx);
 				expr.acceptVisitor(visitor);
 				return visitor.result;
