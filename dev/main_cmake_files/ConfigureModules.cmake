@@ -14,8 +14,7 @@
 # * Module Y will be linked to module X
 # * Module Y src folder will be in include paths of module X
 #
-# Both of the above are transitive, meaning that is X uses Z and Z uses Y,
-# then the behavior is such as if X would be uses Y.
+# Both of the above are transitive, meaning that if X uses Y and Y uses Z, then it behaves as if X uses Z
 #
 function(make_module MODULE_NAME)
 	set(multiValueArgs USES INCLUDE)
