@@ -13,6 +13,7 @@
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -214,14 +215,14 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			code::builders::TypeContextBuilder type_context_builder;
-			LoaderLogger                       log;
+			auto         type_context_builder = vm::code::builtin_types::getBuiltinTypes();
+			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
-					insertType(tp->datatype, type_context_builder, log);
+					insertType(tp->datatype, *type_context_builder, log);
 
 			try {
-				auto                        type_context = type_context_builder.build();
+				auto                        type_context = type_context_builder->build();
 				std::vector<code::Function> functions;
 
 				for (const auto& parsed_file: parsed_files) {

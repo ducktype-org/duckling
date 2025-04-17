@@ -1,14 +1,12 @@
-type primitive: int64 8
-type fun: main {} int64
-type fun: ackermann { int64, int64 } int64
-
+type fun: main {} i64
+type fun: ackermann { i64, i64 } i64
 
 function ackermann {
     # [0, 8) -> ret_val
     # [8, 16) -> arg0 -> m
     # [16, 24) -> arg1 -> nPtr
 
-    init_type           int64;      # [24, 32) n
+    init_type           i64;      # [24, 32) n
     load_l64_lptr_ofs   24, 16;     # n = *nPtr
 
     # if m == 0
@@ -21,13 +19,13 @@ function ackermann {
 
     # m, n > 0
     # return A(m-1, A(m, n-1))
-    init_type           int64;      # [32, 40) A(m, n-1) ret_val
-    init_type           int64;      # [40, 48) A(m, n-1) arg0 -> m
-    init_type           int64;      # [48, 56) A(m, n-1) arg1 -> nPtr
+    init_type           i64;      # [32, 40) A(m, n-1) ret_val
+    init_type           i64;      # [40, 48) A(m, n-1) arg0 -> m
+    init_type           i64;      # [48, 56) A(m, n-1) arg1 -> nPtr
 
     mov_l64_l64         40, 8;      # arg0 := m
     sub_l64_imm         24, 1;      # n := n-1
-    alloc_lptr_type     48, int64;  # arg1 := alloc *int64
+    alloc_lptr_type     48, i64;  # arg1 := alloc *i64
     store_lptr_l64_ofs  48, 24;     # arg1 := &n
 
     call_func           ackermann;  # A(m, n-1)
@@ -37,11 +35,11 @@ function ackermann {
 
     free_lptr           48;
 
-    init_type           int64;      # [40, 48) A(m-1, A(m, n-1)) arg0 -> m
-    init_type           int64;      # [48, 56) A(m-1, A(m, n-1)) arg1 -> nPtr
+    init_type           i64;      # [40, 48) A(m-1, A(m, n-1)) arg0 -> m
+    init_type           i64;      # [48, 56) A(m-1, A(m, n-1)) arg1 -> nPtr
     sub_l64_imm         8, 1;       # m := m-1
     mov_l64_l64         40, 8;      # arg0 := m
-    alloc_lptr_type     48, int64;  # arg1 := alloc *int64
+    alloc_lptr_type     48, i64;  # arg1 := alloc *i64
     store_lptr_l64_ofs  48, 24;     # arg1 := &A(m, n-1)
     call_func           ackermann;  # A(m-1, A(m, n-1))
 
@@ -57,14 +55,14 @@ function ackermann {
 
     label N0;
     # return A(m-1, 1)
-    init_type           int64;      # [32, 40) A(m-1, 1) ret_val
-    init_type           int64;      # [40, 48) A(m-1, 1) arg0 -> m
-    init_type           int64;      # [48, 56) A(m-1, 1) arg1 -> nPtr
+    init_type           i64;      # [32, 40) A(m-1, 1) ret_val
+    init_type           i64;      # [40, 48) A(m-1, 1) arg0 -> m
+    init_type           i64;      # [48, 56) A(m-1, 1) arg1 -> nPtr
 
     sub_l64_imm         8, 1;       # m := m-1
     mov_l64_l64         40, 8;      # arg0 := m
     mov_l64_imm         24, 1;      # n := 1
-    alloc_lptr_type     48, int64;  # arg1 := alloc *int64
+    alloc_lptr_type     48, i64;  # arg1 := alloc *i64
     store_lptr_l64_ofs  48, 24;     # arg1 := &n
     call_func           ackermann;  # A(m-1, 1)
 
@@ -91,14 +89,14 @@ function ackermann {
 
 function main {
     # [0, 8) main ret_val
-    init_type           int64;      # [8, 16) temp
-    init_type           int64;      # [16, 24) ackermann ret_val
-    init_type           int64;      # [24, 32) ackermann arg0 -> m
-    init_type           int64;      # [32, 40) ackermann arg2 -> nPtr
+    init_type           i64;      # [8, 16) temp
+    init_type           i64;      # [16, 24) ackermann ret_val
+    init_type           i64;      # [24, 32) ackermann arg0 -> m
+    init_type           i64;      # [32, 40) ackermann arg2 -> nPtr
 
     input_l64           24;         # arg0 := m
     input_l64           8;          # temp := n
-    alloc_lptr_type     32, int64;  # arg1 := alloc *int
+    alloc_lptr_type     32, i64;  # arg1 := alloc *int
     store_lptr_l64_ofs  32, 8;      # arg1 = &n
 
     call_func           ackermann;  # A(m, n, nPtr)

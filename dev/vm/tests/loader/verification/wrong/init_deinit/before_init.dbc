@@ -1,5 +1,4 @@
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 
 function main {
 	# [0, 8) -> main ret_val
@@ -7,7 +6,7 @@ function main {
 
 	mov_l64_imm         8, 1;
 
-	init_type           int64; # x
+	init_type           i64; # x
 	output_l64          8;
 	deinit; # x
 

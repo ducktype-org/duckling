@@ -1,5 +1,4 @@
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 
 function main {
     # n - 8
@@ -9,14 +8,14 @@ function main {
     # c - 40
 
     # [0, 8) main ret_val
-    init_type       int64; # [8, 16)
-    init_type       int64; # [16, 24)
+    init_type       i64; # [8, 16)
+    init_type       i64; # [16, 24)
 
     input_l64       8; # n := argument
     input_l64       16; # m (modulo)
 
-    init_type       int64; # [24, 32) a
-    init_type       int64; # [32, 40) b
+    init_type       i64; # [24, 32) a
+    init_type       i64; # [32, 40) b
 
     mov_l64_imm     24, 0; # a = 0
     mov_l64_imm     32, 1; # b = 1
@@ -24,7 +23,7 @@ function main {
     # while(x > 0)
     label Loop;
         # c = (a + b) % m
-        init_type       int64; # [40, 48) c
+        init_type       i64; # [40, 48) c
 
         mov_l64_l64     40, 24;
         add_l64_l64     40, 32;
