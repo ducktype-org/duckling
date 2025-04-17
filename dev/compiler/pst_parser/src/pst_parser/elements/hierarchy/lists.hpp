@@ -76,8 +76,7 @@ namespace pst {
 	/**
 	 * @brief Attribute argument list.
 	 */
-	class AtrArgList final:
-		  public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
+	class AtrArgList final: public List<UniversalExprHolder, detail::NameGetters::attributeArgList> {
 	public:
 		explicit AtrArgList(const dia::SourcePosition& pos): List(pos) {}
 
@@ -103,8 +102,7 @@ namespace pst {
 	/**
 	 * @brief Call argument list.
 	 */
-	class CallList final:
-		  public List<UniversalExprHolderLowerLevel, detail::NameGetters::callList> {
+	class CallList final: public List<UniversalExprHolderLowerLevel, detail::NameGetters::callList> {
 	public:
 		explicit CallList(const dia::SourcePosition& pos): List(pos) {
 			this->element_kind = ElementKind::CallList;

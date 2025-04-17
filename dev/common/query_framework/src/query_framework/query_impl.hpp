@@ -47,9 +47,7 @@ namespace query::detail {
 
 		if (auto v = QueryImplType::load(key)) {
 			// @FUTURE: Add ACD check here...
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n");
 
 			// @todo: This might bind & to a const&, via std::move "creating" &&.
 			// It should works for all cases in our codebase,

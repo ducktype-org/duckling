@@ -79,10 +79,8 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 }
 
 usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
-	const usize type_size = type_context.getMetadata()
-	                            .atMaybe(type.type_name)
-	                            .expect<UnknownTypeError>(type)
-	                            ->getSize();
+	const usize type_size
+		= type_context.getMetadata().atMaybe(type.type_name).expect<UnknownTypeError>(type)->getSize();
 
 	usize offset = 0;
 

@@ -39,9 +39,7 @@ private:
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
-		assertTrue(
-			td->getTokenData().tokens[index].isBracketGroup(), "Token is not a bracket group"
-		);
+		assertTrue(td->getTokenData().tokens[index].isBracketGroup(), "Token is not a bracket group");
 	}
 
 	void testGroup0() {

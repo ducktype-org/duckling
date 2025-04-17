@@ -188,15 +188,11 @@ namespace vm::loader::parser {
 				auto value = state.tokens().next();
 
 				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
+					state.err.failAndLog(state.getPosition(), "arg_size argument is not num-literal");
 				try {
 					out->arg_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
+					state.err.failAndLog(state.getPosition(), "arg_size argument is not num-literal");
 				}
 				state.parse().one(lang_def::Special::Semicolon);
 				break;
@@ -229,15 +225,11 @@ namespace vm::loader::parser {
 					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
 				auto value = state.tokens().next();
 				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
+					state.err.failAndLog(state.getPosition(), "ret_size argument is not num-literal");
 				try {
 					out->ret_size = strIDToNum<usize>(value.getValue());
 				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
+					state.err.failAndLog(state.getPosition(), "ret_size argument is not num-literal");
 				}
 
 				state.parse().one(lang_def::Special::Semicolon);

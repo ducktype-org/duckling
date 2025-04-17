@@ -156,13 +156,7 @@ namespace tsh {
 		// Categorise overloads into the above sets.
 		for (const auto& element: elements_matching_name) {
 			selectMatchCategoryForMethod(
-				positional_arg_types,
-				named_args,
-				ctx,
-				element,
-				exact_matches,
-				coercion_matches,
-				non_matches
+				positional_arg_types, named_args, ctx, element, exact_matches, coercion_matches, non_matches
 			)
 				.insert(element);
 		}

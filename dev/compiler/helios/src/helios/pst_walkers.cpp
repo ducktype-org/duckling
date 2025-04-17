@@ -10,9 +10,7 @@ namespace compiler::helios {
 
 	namespace detail {
 		void visitClassStmts(
-			query::Context&                   ctx,
-			StmtList<pst::ClassStmt>&         out,
-			pst::AccessLocked<pst::ClassStmt> stmt
+			query::Context& ctx, StmtList<pst::ClassStmt>& out, pst::AccessLocked<pst::ClassStmt> stmt
 		) {
 			if (auto access_block_opt = stmt.unlock(ctx).dynamicCast<pst::AccessBlock>()) {
 				auto access_block = access_block_opt.value();

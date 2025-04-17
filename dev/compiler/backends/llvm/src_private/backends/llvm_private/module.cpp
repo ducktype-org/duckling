@@ -9,8 +9,7 @@
 #include <iostream>
 
 namespace base::extend {
-	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(
-		compiler::backend_llvm::ModuleImpl* ptr
+	void BoxPtrDeleter<compiler::backend_llvm::ModuleImpl>::del(compiler::backend_llvm::ModuleImpl* ptr
 	) {
 		delete ptr;
 	}

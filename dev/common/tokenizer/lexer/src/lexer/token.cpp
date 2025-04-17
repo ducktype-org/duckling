@@ -38,9 +38,7 @@ namespace lexer {
 		CORE_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
-		CORE_ASSERT(
-			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
-		);
+		CORE_ASSERT(type == Type::BracketGroup, "non-bracket token created with bracket constructor");
 
 		// sets str_id of brackets to the pair of brackets for example "()"
 		std::string s;

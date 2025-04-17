@@ -184,9 +184,7 @@ namespace {
 	}
 }
 
-void Program::insertFunctions(
-	const std::vector<code::Function>& new_functions, LoaderLogger& logger
-) {
+void Program::insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
 			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
