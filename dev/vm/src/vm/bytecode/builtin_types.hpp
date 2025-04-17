@@ -4,8 +4,10 @@
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <type_traits>
+
 namespace vm::code::builtin_types {
-	Box<code::builders::TypeContextBuilder> getBuiltinTypes() {
+	code::builders::TypeContextBuilder getBuiltinTypes() {
 		const std::array builtin_types = {
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
@@ -18,9 +20,9 @@ namespace vm::code::builtin_types {
 			// https://github.com/ducktype-org/duckling/issues/656
 			TypeOfData(PrimitiveType(base::StrID("void"), 0)),
 		};
-		auto type_context_builder = makeBox<code::builders::TypeContextBuilder>();
+		builders::TypeContextBuilder type_context_builder;
 
-		for (const auto& tp: builtin_types) type_context_builder->addType(tp);
+		for (const auto& tp: builtin_types) type_context_builder.addType(tp);
 
 		return type_context_builder;
 	}

@@ -219,10 +219,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
-					insertType(tp->datatype, *type_context_builder, log);
+					insertType(tp->datatype, type_context_builder, log);
 
 			try {
-				auto                        type_context = type_context_builder->build();
+				auto                        type_context = type_context_builder.build();
 				std::vector<code::Function> functions;
 
 				for (const auto& parsed_file: parsed_files) {
