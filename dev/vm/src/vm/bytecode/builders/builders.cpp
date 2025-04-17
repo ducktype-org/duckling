@@ -12,6 +12,8 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
+#include <utility>
+
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \
 		throw base::NotYetImplemented(                                                   \
@@ -26,12 +28,7 @@ vm::code::Function FunctionBuilder::build() const {
 	function.body = instructions;
 	function.name = name;
 
-	// @TODO: ret_size will be fixed in this issue:
-	// https://github.com/ducktype-org/duckling/issues/539
 	function.local_stack_size = max_stack_size;
-	function.ret_size         = ret_size;
-	function.arg_size         = type_context.getMetadata().at(name)->getParametersSize().value();
-	function.next_arg_size    = 0;
 
 	return function;
 }
@@ -177,8 +174,6 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 		throw BadReturnError();
 	}
 }
-
-void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
 
 const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
 	vm::code::builders::TypeContextBuilder::getTypes() const {

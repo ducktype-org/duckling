@@ -3,21 +3,14 @@ type primitive: int32 4
 type fun: main {} int64
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 12;
+	# [0, 8) -> main ret_val
+	# [8, 12) -> x
 
-  code: {
-    # [0, 8) -> main ret_val
-    # [8, 12) -> x
+	init_type       int32; # x
 
-    init_type       int32; # x
+	mov_l64_imm     8, 1;
 
-    mov_l64_imm     8, 1;
+	deinit; # x
 
-    deinit; # x
-
-    ret;
-  }
-
+	ret;
 }

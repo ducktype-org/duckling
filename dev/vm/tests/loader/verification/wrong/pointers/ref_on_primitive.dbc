@@ -3,29 +3,22 @@ type primitive: int128 16
 type fun: main {} int64
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 40;
+	# [0, 8) -> main ret_val
+	# [8, 24) -> x
+	# [24, 32) -> y
+	# [32, 40) -> z
 
-  code: {
-    # [0, 8) -> main ret_val
-    # [8, 24) -> x
-    # [24, 32) -> y
-    # [32, 40) -> z
-    
-    init_type int128;
-    init_type int64;
-    init_type int64;
+	init_type int128;
+	init_type int64;
+	init_type int64;
 
-    mov_l64_imm         32, 1;
-    ref_lptr_any        8, 32;  # x = &z
-    load_l64_lptr       24, 8;  # y = *x
+	mov_l64_imm         32, 1;
+	ref_lptr_any        8, 32;  # x = &z
+	load_l64_lptr       24, 8;  # y = *x
 
-    deinit;
-    deinit;
-    deinit;
+	deinit;
+	deinit;
+	deinit;
 
-    ret;
-  }
-
+	ret;
 }
