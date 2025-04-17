@@ -4,6 +4,7 @@
 
 #include <helios/hout/elements.hpp>
 #include <helios_private/scopes/scopes.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/query_hout_of_expr.hpp>
 

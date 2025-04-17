@@ -3,6 +3,8 @@
 #include "elements.hpp"
 
 #include <query_framework/context.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
 
 #include <sstream>
 

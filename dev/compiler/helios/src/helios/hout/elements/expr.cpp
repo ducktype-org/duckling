@@ -9,6 +9,10 @@
 
 #include <query_framework/context.hpp>
 
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
+
+
 namespace compiler::helios::code {
 
 #define EXPR_VISITOR(type) \

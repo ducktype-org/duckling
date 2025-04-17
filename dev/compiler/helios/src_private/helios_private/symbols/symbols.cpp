@@ -11,12 +11,15 @@
 #include <typesystem/higher/abstract_type.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include <frontend/module_tree/queries.hpp>
+
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
+
 
 #include <vector>
 

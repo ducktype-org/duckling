@@ -4,6 +4,7 @@
 
 #include <helios_private/utils/pst_walkers.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios_private/lookup_utils/lookup_result.hpp>
 
 #include <frontend/module_tree/module_tree.hpp>

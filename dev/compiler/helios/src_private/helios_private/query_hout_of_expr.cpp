@@ -1,6 +1,7 @@
 #include "query_hout_of_expr.hpp"
 
 #include <helios_private/scopes/scopes.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios/hout/visitors.hpp>
 
