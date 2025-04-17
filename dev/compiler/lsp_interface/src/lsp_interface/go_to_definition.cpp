@@ -4,16 +4,11 @@
  */
 
 #include "go_to_definition.hpp"
-#include "base/anycast.hpp"
-#include "helios/hout/elements/expr.hpp"
-#include "helios/hout/elements/query_hout_of_expr.hpp"
-#include "helios/symbols/symbols.hpp"
-#include "pst_parser/elements/hierarchy/not_statements.hpp"
-#include "pst_parser/elements/hierarchy/statements.hpp"
-#include "pst_parser/lang_parser_element.hpp"
-#include "pst_parser/pst_visitor.hpp"
+#include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <helios/symbols/symbols.hpp>
+#include <pst_parser/lang_parser_element.hpp>
 #include <base/exceptions.hpp>
-#include <memory>
 #include <query_framework/query_entry_point.hpp>
 #include <helios/queries.hpp>
 #include <format>
@@ -45,16 +40,17 @@ namespace lsp {
 	}
 
 	base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> element, usize offset) {
-        for (auto sub: element->viewChildren()) {
+		for (auto sub: element->viewChildren()) {
 			auto curr_position = sub->getSourcePosition();
 			if (curr_position.getStart() <= offset && curr_position.getEnd() >= offset)
 				return findElement(sub, offset);
 		}
-        return element;
+		return element;
 	}
 
 	Definition findDefinition(MCRef<pst::LangElement> element) {
-		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>({element}).value();
-		return compiler::helios::stmt(expr.symbol);
+		auto expr    = query::entryPoint<compiler::helios::QueryHoutOfExpr>({ element }).value();
+		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr>(expr);
+		return compiler::helios::stmt(id_expr.symbol);
 	}
 }

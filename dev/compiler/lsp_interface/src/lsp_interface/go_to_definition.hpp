@@ -18,9 +18,9 @@ namespace lsp {
 		std::pair<usize, usize> start;  // line, char
 		std::pair<usize, usize> end;    // line, char
 
-        std::string toJSON();
+		std::string toJSON();
 	};
 
-    base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> root, usize offset);
-	Definition findDefinition(MCRef<pst::LangElement>);
+	base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> root, usize offset);
+	Definition                    findDefinition(MCRef<pst::LangElement>);
 }
