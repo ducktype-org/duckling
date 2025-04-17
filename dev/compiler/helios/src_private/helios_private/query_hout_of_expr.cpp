@@ -1,8 +1,8 @@
 #include "query_hout_of_expr.hpp"
 
-#include "../../scopes/scopes.hpp"
-#include "../visitors.hpp"
-#include "expr.hpp"
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios/hout/visitors.hpp>
 
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
