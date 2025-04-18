@@ -5,6 +5,7 @@
  */
 
 #include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
