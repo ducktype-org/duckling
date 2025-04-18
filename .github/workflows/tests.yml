@@ -85,23 +85,23 @@ jobs:
           string(TIMESTAMP current_date "%Y-%m-%d-%H::%M::%S" UTC)
           file(APPEND "$ENV{GITHUB_OUTPUT}" "timestamp=${current_date}")
 
-      # # Cache local branch and on miss fallback to main branch's cache. In case
-      # # main branch misses, fallback to any branch's cache.
-      # - name: Restore build cache
-      #   id: restore-build-cache
-      #   uses: actions/cache/restore@v4
-      #   with:
-      #     path: |
-      #       ${{ env.CCACHE_DIR }}
-      #     key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
-      #     # If there is no match with the key, then it tries to partially
-      #     # match with any of restore-keys (top to bottom).
-      #     # Most recent entry is used when multiple match to the same key.
-      #     # See readme for details.
-      #     restore-keys : |
-      #       ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
-      #       ${{ runner.os }}-build-${{ matrix.build-type }}-main
-      #       ${{ runner.os }}-build-${{ matrix.build-type }}
+      # Cache local branch and on miss fallback to main branch's cache. In case
+      # main branch misses, fallback to any branch's cache.
+      - name: Restore build cache
+        id: restore-build-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ${{ env.CCACHE_DIR }}
+          key: ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}-${{ steps.cache-timestamp.outputs.timestamp }}
+          # If there is no match with the key, then it tries to partially
+          # match with any of restore-keys (top to bottom).
+          # Most recent entry is used when multiple match to the same key.
+          # See readme for details.
+          restore-keys : |
+            ${{ runner.os }}-build-${{ matrix.build-type }}-${{ env.BRANCH_NAME }}
+            ${{ runner.os }}-build-${{ matrix.build-type }}-main
+            ${{ runner.os }}-build-${{ matrix.build-type }}
 
       # Remove ccache folder to prevent cache snowball growth
       - name: Remove ccache on main
