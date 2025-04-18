@@ -54,7 +54,8 @@ private:
 
 			ASSERT_TRUE(top_level->functions.size() == 1);
 
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] });
+			auto mir_fun
+				= ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] });
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));

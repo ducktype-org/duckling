@@ -214,11 +214,14 @@ namespace compiler::helios::code {
 		}
 	}
 
-	LinkedIdentifierExpr::LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols):
+	LinkedIdentifierExpr::LinkedIdentifierExpr(
+		query::Context& ctx, ScopeID scope, SymbolList symbols
+	):
 		  Expr(
 			  scope,
 			  tsh::ExpressionType(
-				  ctx.query<QueryTypeOfSymbol>(symbols.back())->expect("Not handling errors here yet"),
+				  ctx.query<QueryTypeOfSymbol>(symbols.back())
+					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -259,7 +262,8 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType(
 				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
-	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee))
+	                                    )
 	                                    .getType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )

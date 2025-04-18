@@ -24,7 +24,9 @@ namespace exec {
 		ts::TypeInfo type_info, const operation::Calls& calls, const CTV& a, const CTV& b
 	);
 
-	CTV defaultConstructEmpty(ts::TypeInfo type_info, const operation::Calls& calls, const CTV& ctv);
+	CTV defaultConstructEmpty(
+		ts::TypeInfo type_info, const operation::Calls& calls, const CTV& ctv
+	);
 
 	CTV defaultConstructFull(
 		ts::TypeInfo type_info, const operation::Calls& calls, const std::vector<CTV>& ctvs

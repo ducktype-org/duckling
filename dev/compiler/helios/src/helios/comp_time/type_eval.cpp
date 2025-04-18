@@ -53,7 +53,8 @@ namespace compiler::helios {
 					failed = true;
 			}
 
-			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr) override {
+			void visitTupleTypeConstructorExpr(const code::TupleTypeConstructorExpr& expr
+			) override {
 				std::vector<tsh::SymbolType<>> subtypes;
 				for (auto& sub_type: expr.elements) {
 					// should we here short-path or not?

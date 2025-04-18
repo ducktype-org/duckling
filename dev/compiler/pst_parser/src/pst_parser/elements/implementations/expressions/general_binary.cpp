@@ -33,7 +33,8 @@ namespace pst::expr {
 		return fwd;
 	}
 
-	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
+	MBox<ExprElement>
+		GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
@@ -51,8 +52,9 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto pos
-			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
+		auto pos = dia::SourcePosition(
+			state.getPosition(), state.getPosition((i64) length - 1).getEnd()
+		);
 
 		i64 fwd            = 0;
 		i64 reduced_length = length;

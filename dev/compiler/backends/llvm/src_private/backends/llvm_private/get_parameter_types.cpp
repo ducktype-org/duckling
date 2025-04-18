@@ -4,9 +4,8 @@
 
 namespace compiler::backend_llvm {
 
-	ParametersAndReturn getParameterAndResultFromSymID(
-		query::Context& ctx, helios::SymID helios_symbol
-	) {
+	ParametersAndReturn
+		getParameterAndResultFromSymID(query::Context& ctx, helios::SymID helios_symbol) {
 		auto        type           = ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)->value();
 		auto        function_type  = tsh::FunctionAbstractType(type.getType());
 		const auto& tsh_parameters = function_type.getParameterTypes();

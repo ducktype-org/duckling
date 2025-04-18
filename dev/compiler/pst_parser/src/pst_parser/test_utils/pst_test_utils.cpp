@@ -11,9 +11,8 @@ namespace pst {
 			viewAllSubTreeElementsAux(output, sub);
 	}
 
-	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(
-		AccessLocked<pst::LangElement> root
-	) {
+	std::vector<AccessLocked<pst::LangElement>>
+		viewAllSubTreeElements(AccessLocked<pst::LangElement> root) {
 		std::vector<AccessLocked<pst::LangElement>> result;
 		viewAllSubTreeElementsAux(result, root);
 		return result;

@@ -72,7 +72,6 @@ namespace compiler::frontend {
 	 *
 	 * @return Found module, none if no matching module was found.
 	 */
-	base::Optional<ModuleID> getRelativeModule(
-		query::Context&, ModuleID from, const std::vector<base::StrID>& path
-	);
+	base::Optional<ModuleID>
+		getRelativeModule(query::Context&, ModuleID from, const std::vector<base::StrID>& path);
 }

@@ -116,7 +116,8 @@ namespace tsh::internal {
 		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types
+	):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
@@ -138,18 +139,16 @@ namespace tsh::internal {
 		return {};
 	}
 
-	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
-		query::Context& ctx
-	) const {
+	std::vector<ClassAbstractType>
+		ClassAbstractTypeImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;
 		return { implements.begin(), implements.end() };
 	}
 
-	std::vector<compiler::helios::SymID> ClassAbstractTypeImpl::getImplementedInterfaceSymbols(
-		query::Context& ctx
-	) const {
+	std::vector<compiler::helios::SymID>
+		ClassAbstractTypeImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;

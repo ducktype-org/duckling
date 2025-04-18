@@ -15,8 +15,7 @@ namespace compiler::backend_llvm {
 	/**
 	 * Helper function to get type layouts of parameters and return value from HELIOS Symbol ID.
 	 */
-	ParametersAndReturn getParameterAndResultFromSymID(
-		query::Context& ctx, helios::SymID helios_symbol
-	);
+	ParametersAndReturn
+		getParameterAndResultFromSymID(query::Context& ctx, helios::SymID helios_symbol);
 
 }

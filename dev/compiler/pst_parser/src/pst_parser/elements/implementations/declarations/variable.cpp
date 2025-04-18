@@ -29,7 +29,9 @@ namespace pst {
 		out->is_const = is_let;
 
 		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon);
+		state.parse(out).all(
+			is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon
+		);
 
 		state.parse(out).one(&out->type);
 
