@@ -98,8 +98,7 @@ private:
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)
-		          ->valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow()
@@ -115,8 +114,7 @@ private:
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)
-		          ->valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
@@ -435,15 +433,12 @@ private:
 
 		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
 		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
-		static_assert(!std::
-		                  is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
 
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
 		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
-		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<int, int, float>,
-					  std::variant<int, float>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int, float>>);
 		static_assert(std::is_same_v<
 					  UniqueTypesVariant_t<int, int, float, int, int>,
 					  std::variant<float, int>>);
@@ -848,9 +843,7 @@ private:
 		);
 		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
-		ASSERT_EQUAL(
-			base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee)
-		);
+		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee));
 	}
 
 	void testScopeParentsAndDepth() {

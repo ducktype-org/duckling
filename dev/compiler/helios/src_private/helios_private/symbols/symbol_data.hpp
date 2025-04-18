@@ -92,8 +92,7 @@ namespace compiler::helios {
 			};
 		}
 
-		static auto
-			makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
+		static auto makeBuiltinFunction(base::StrID name, builtin::BuiltinFunctionData builtin_data) {
 			return SymbolData{
 				.common = {
 					.name = name,

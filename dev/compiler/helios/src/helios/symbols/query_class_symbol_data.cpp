@@ -57,9 +57,7 @@ namespace compiler::helios {
 					break;
 				default:
 					throw base::NotYetImplemented(base::strConcat(
-						"Using ",
-						typeid(kind(sym)).name(),
-						" inside a class is not yet implemented."
+						"Using ", typeid(kind(sym)).name(), " inside a class is not yet implemented."
 					));
 				}
 			}

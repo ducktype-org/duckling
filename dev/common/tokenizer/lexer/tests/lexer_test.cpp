@@ -49,8 +49,7 @@ private:
 		const auto& inner_tokens = td->getTokenData().tokens[0].getRecursive();
 
 		assertTrue(
-			inner_tokens.size() == 3,
-			"Expected 3 tokens, got " + std::to_string(inner_tokens.size())
+			inner_tokens.size() == 3, "Expected 3 tokens, got " + std::to_string(inner_tokens.size())
 		);
 
 		assertTrue(
