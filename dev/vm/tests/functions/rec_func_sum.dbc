@@ -3,7 +3,7 @@
 # input = n
 # output = n * (n + 1) / 2
 
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type fun: sum { i64 } i64
 
 function sum {

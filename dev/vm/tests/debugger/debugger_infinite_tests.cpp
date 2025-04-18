@@ -44,7 +44,7 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid, {}).value();                // "Run failed (1)"
+		vm::api::run(pid, {}).value();                    // "Run failed (1)"
 
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
 		std::cout << position.instr_number << '\n';

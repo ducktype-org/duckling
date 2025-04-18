@@ -1,4 +1,4 @@
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type fun: dummy { i64 } i64
 
 function dummy {

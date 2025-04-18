@@ -135,6 +135,8 @@ namespace vm {
 		void respondExecutionRequest(ExecutionResponse response);
 
 		void executeOneStep();
+		
+		void initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args);
 
 		/**
 		 * @brief @TODO:
@@ -145,7 +147,7 @@ namespace vm {
 		/**
 		 * @TODO:
 		 * following modifications should be made in the future:
-		 * - Error handling done by throwing (for efficiency)
+		 * - Error handling done by throwing ()
 		 * - Setup for execution recovery
 		 * - This functions currently can deref only simple pointers, and always return
 		 * view to data pointed by pointer. This does not take into consideration possibility
@@ -158,7 +160,7 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<low::FuncData> program, const std::vector<std::string>& args);
+		u64 internalCallFunction(CRef<low::FuncData> program, const std::vector<std::string>& args);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 

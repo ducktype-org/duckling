@@ -1,5 +1,5 @@
 
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 
 function main {
     init_type in64;

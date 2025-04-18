@@ -2,7 +2,7 @@
 # input = ""
 # output = "42"
 
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 
 function main {
     init_type       i64; # [0, 8) main ret_val

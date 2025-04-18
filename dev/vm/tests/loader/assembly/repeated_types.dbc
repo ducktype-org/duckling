@@ -1,4 +1,4 @@
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type static_table: i64 i64 4
 
 function main {

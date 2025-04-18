@@ -7,11 +7,15 @@
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
 
+#include "base/int_conv.hpp"
+#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/memory/memory.hpp"
+#include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -20,6 +24,7 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
+#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <mutex>
@@ -87,6 +92,48 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
+	void VMThread::initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args) {
+		std::byte* local_stack = runtime_data.local_stack_base;
+		
+		// Initialize the argc block.
+		auto i64_type = executing_program->types->atMaybe(base::StrID("i64")).expect("All programs are expected to have an existing i64 type!");
+		auto argc_block = process_memory.allocateStack(i64_type, local_stack + frame->local_stack_head);
+		derefStack<u64>(local_stack, base::safeIntConv<i64>(frame->local_stack_head)) = args.size();
+		frame->block_stack.push_back(argc_block);
+		// TODO: Make the numbers not hardcoded.
+		frame->block_idx_to_local_offset.put(1, frame->local_stack_head);
+		frame->local_offset_to_block_idx.put(frame->local_stack_head, 1);
+		frame->local_stack_head += i64_type->getSize();
+
+		// Initialize the argv pointer.
+		auto argv_ptr_type = executing_program->types->atMaybe(base::StrID("ptr_argv")).expect("All programs are expected to have an existing argv pointer type!");
+		auto argv_ptr_block = process_memory.allocateStack(argv_ptr_type, local_stack + frame->local_stack_head);
+		u64 argv_ptr_offset = frame->local_stack_head;
+		frame->block_stack.push_back(argv_ptr_block);
+		// TODO: Make the numbers not hardcoded.
+		frame->block_idx_to_local_offset.put(2, frame->local_stack_head);
+		frame->local_offset_to_block_idx.put(frame->local_stack_head, 2);
+		frame->local_stack_head += argv_ptr_type->getSize();
+
+		// Alloc the argv table.
+		auto argv_type = executing_program->types->atMaybe(base::StrID("temp_arg_arr")).expect("All programs are expected to have an existing argv type!");
+		auto argv_block   = process_memory.allocateHeap(argv_type);
+		auto data_pointer = Memory::getPointer(argv_block);
+		derefStack<Pointer>(local_stack, base::safeIntConv<i64>(argv_ptr_offset)) = data_pointer;
+
+		// Populate the argv table
+		// @note: Since strings don't exist in the VM yet, the argument array is a static_table of i64 with size of 2.
+		// which were created from the strings. This should be changed to a dynamic_table of strings.
+		u64 idx = 0;
+		// TODO: Possibly view_size should be determined by the size of the type in the table.
+		constexpr const uint8_t view_size = 8;
+		for (const auto& arg: args) {
+			u64  converted_arg = base::safeIntConv<u64>(std::stoi(arg));
+			auto view          = Memory::getPointerData(data_pointer, view_size);
+			std::memcpy(view.getBegin() + idx * view_size, &converted_arg, view_size);
+			idx++;
+		}
+	}
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -96,8 +143,8 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(
-		CRef<low::FuncData> main_func, const std::vector<std::string>& args
+	u64 VMThread::internalCallFunction(
+		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
@@ -110,32 +157,33 @@ namespace vm {
 			                        .arg0   = 0,
 			                        .arg1   = 0 };
 #endif
-
 		pre_frame->instr       = &exit_instr;
 		pre_frame->local_stack = runtime_data.local_stack_base;
 
-		// Frame of the main function.
+		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base + 1;
 		std::byte* local_stack = runtime_data.local_stack_base;
-		if (local_stack + main_func->local_stack_size > runtime_data.local_stack_end)
+		if (local_stack + func->local_stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
-		// Preinitialize the main ret_val block.
-		auto main_func_type
-			= executing_program->types->atMaybe(main_func->name).expect("Expected main!");
-		auto main_return_type
-			= main_func_type->getResultType().expect("Expected main to have a return value!");
-		auto block = process_memory.allocateStack(main_return_type, local_stack);
-
+		// Initialize the return value block. This happens for all called functions.
+		// TODO: What if a called function is a void.
+		auto func_type = executing_program->types->atMaybe(func->name).expect("Expected the called function to exist!");
+		auto func_return_type = func_type->getResultType().expect("Expected main to have a return value!");
+		pre_frame->called_func_ret_size = func_return_type->getSize();
+		auto block = process_memory.allocateStack(func_return_type, local_stack);
 		frame->block_stack.push_back(block);
 		frame->block_idx_to_local_offset.put(0, frame->local_stack_head);
 		frame->local_offset_to_block_idx.put(frame->local_stack_head, 0);
+		frame->local_stack_head += func_return_type->getSize();
+		// Command line arguments are passed only for main.
+		// TODO: Maybe we could use that to pass arguments in the REPL called functions.
+		if (func->name == base::StrID("main")) {
+			initializeMainLocalStack(frame, args);
+		}
 
-		pre_frame->called_func_ret_size = main_return_type->getSize();
-		frame->local_stack_head += main_return_type->getSize();
-
-		u64   main_ret_val = 0;
-		auto* instr        = main_func->bc.data();
+		u64   func_ret_val = 0;
+		auto* instr        = func->bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
@@ -198,16 +246,18 @@ namespace vm {
 		}
 	End:
 #endif
-
-		main_ret_val = derefStack<u64>(local_stack, 0);
+		// TODO: The return value may not be a i64.
+		func_ret_val = derefStack<u64>(local_stack, 0);
 		block        = pre_frame->block_stack.back();
 		pre_frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
 
-		return main_ret_val;
+		// Free the argc table. Maybe this will be done in main bytecode.
+
+		return func_ret_val;
 	}
 
-	// internalCallMain end
+	// internalCallFunction end
 
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
@@ -291,7 +341,7 @@ namespace vm {
 		respondExecutionRequest(ExecutionResponse::Running);
 		executing_program = program;
 		try {
-			internalCallMain(executing_program->functions.at(base::StrID("main")), args);
+			internalCallFunction(executing_program->functions.at(base::StrID("main")), args);
 			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
 		} catch (KillProcessException) {
 			respondExecutionRequest(ExecutionResponse::ExecutionStopped);

@@ -3,7 +3,7 @@
 # output == 1 <- test passed
 # output == 0 <- test failed
 
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type fun: check {} void
 
 function check {

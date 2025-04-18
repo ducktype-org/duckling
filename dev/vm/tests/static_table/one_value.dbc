@@ -1,10 +1,7 @@
 type static_table: tablei64 i64 4
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 
 function main {
-	# x - 0
-	# i - 8
-
 	# [0, 8) main ret_val
 	init_type           i64;          # [8,16)  # x
 	init_type           i64;          # [16,24) # i

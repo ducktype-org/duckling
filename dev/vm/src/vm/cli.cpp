@@ -48,7 +48,7 @@ void cli() {
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
 	// TODO: This is just temporary. Change that to take in real arguments.
-	cli(fs::FilePath(filepath), { "hello", "from", "main" });
+	cli(fs::FilePath(filepath), { "1", "2", "3", "4" });
 }
 
 void cli(const fs::FilePath& filepath, const std::vector<std::string>& args) {

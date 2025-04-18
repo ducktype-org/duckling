@@ -1,4 +1,4 @@
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type fun: run_every_opcode {} void
 
 function  {

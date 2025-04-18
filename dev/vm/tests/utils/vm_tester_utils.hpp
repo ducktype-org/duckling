@@ -15,8 +15,12 @@ public:
 		  tester::TestSuite(std::move(config), name) {}
 
 protected:
+	/**
+	 * @brief Runs a program from a given filepath with the specified input and command-line arguments.
+	 * Asserts that the actual output matches the expected one.
+	 */
 	void runTestOnVm(
-		const std::string& rbc_filename, const std::string& input, const std::string& output
+		const std::string& dbc_filename, const std::string& input, const std::vector<std::string>& args, const std::string& output
 	);
 
 	/**

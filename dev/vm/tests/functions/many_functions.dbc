@@ -2,7 +2,7 @@
 # Also if the stacks are seperate.
 # output = input + 1110
 
-type fun: main {} i64
+type fun: main { i64, ptr_argv } i64
 type fun: add1110 { i64 } i64
 type fun: add1100 { i64 } i64
 type fun: add1000 { i64 } i64

@@ -1,17 +1,17 @@
 #include "vm_tester_utils.hpp"
 
 void VmTestSuite::runTestOnVm(
-	const std::string& rbc_filename, const std::string& input, const std::string& output
+	const std::string& dbc_filename, const std::string& input, const std::vector<std::string>& args, const std::string& output
 ) {
 	auto process_pid_response = vm::api::spawn();
 	assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
 	auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
 
-	fs::FilePath file(path(rbc_filename));
+	fs::FilePath file(path(dbc_filename));
 	auto         loaded_file_response = vm::api::loadFile(pid, file);
 	assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
-	auto run_response = vm::api::run(pid, {});
+	auto run_response = vm::api::run(pid, args);
 	assertTrue(run_response.has_value(), "Run failed (1)");
 
 	auto input_response = vm::api::input(pid, input);
