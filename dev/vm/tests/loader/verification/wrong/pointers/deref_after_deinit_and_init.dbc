@@ -1,5 +1,3 @@
-type fun: main { i64, ptr_argv } i64
-
 function main {
 	# [0, 8) -> main ret_val
     # [8, 16) -> argc
@@ -19,10 +17,7 @@ function main {
 
 	deinit;
 	deinit;
-	
-	free_lptr     16;  # free argv
     deinit;       # *argv
     deinit;       # argc
-
 	ret;
 }

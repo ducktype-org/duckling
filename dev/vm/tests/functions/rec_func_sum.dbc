@@ -3,7 +3,6 @@
 # input = n
 # output = n * (n + 1) / 2
 
-type fun: main { i64, ptr_argv } i64
 type fun: sum { i64 } i64
 
 function sum {
@@ -44,5 +43,7 @@ function main {
     output_l64          32;
 
     deinit; # sum ret_val, sum arg0 is deinitialized by the call
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

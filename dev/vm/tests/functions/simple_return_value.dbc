@@ -2,7 +2,6 @@
 # input = n
 # output = n
 
-type fun: main { i64, ptr_argv } i64
 type fun: check {} i64
 
 function check {
@@ -21,5 +20,7 @@ function main {
 	output_l64      32;
 
 	deinit;
+	deinit; # *argv
+	deinit; # argc 
 	ret;
 }

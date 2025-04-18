@@ -1,6 +1,5 @@
 # Checks verifying the types of arguments passed to a function.
 
-type fun: main { i64, ptr_argv } i64
 type fun: check { i64 } void
 
 function check {
@@ -18,7 +17,6 @@ function main {
     call_func           check;
 
     mov_l64_imm         0, 42;
-    free_lptr           16; # free argv table
     deinit;             # *argv
     deinit;             # argc
     ret;

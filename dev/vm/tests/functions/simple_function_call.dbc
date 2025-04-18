@@ -2,7 +2,6 @@
 # input = n
 # output = n
 
-type fun: main { i64, ptr_argv } i64
 type fun: check { i64 } void
 
 function check {
@@ -20,5 +19,7 @@ function main {
 	call_func          	check;
 
 	mov_l64_imm			0, 42;
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

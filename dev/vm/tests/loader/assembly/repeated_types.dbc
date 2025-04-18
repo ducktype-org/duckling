@@ -1,4 +1,3 @@
-type fun: main { i64, ptr_argv } i64
 type primitive: int64 8
 type static_table: int64 i64 4
 

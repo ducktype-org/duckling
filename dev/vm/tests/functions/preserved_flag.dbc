@@ -3,7 +3,6 @@
 # output == 1 <- test passed
 # output == 0 <- test failed
 
-type fun: main { i64, ptr_argv } i64
 type fun: check {} void
 
 function check {
@@ -41,7 +40,9 @@ function main {
 	# print "1" (passed)
 	output_l64          32;
 
-	deinit;
-	deinit;
+	deinit; # local_2
+	deinit; # local_1
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

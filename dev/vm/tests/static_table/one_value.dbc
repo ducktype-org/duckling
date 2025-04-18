@@ -1,5 +1,4 @@
 type static_table: tablei64 i64 4
-type fun: main { i64, ptr_argv } i64
 
 function main {
 	# [0, 8) main ret_val
@@ -30,9 +29,7 @@ function main {
 	deinit;
 	deinit;
 	deinit;
-	free_lptr   16; # free argv table
 	deinit; # *argv
 	deinit; # argc
-
 	ret;
 }

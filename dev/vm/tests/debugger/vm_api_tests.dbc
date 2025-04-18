@@ -1,16 +1,19 @@
 type static_table: tablei64 i64 42
-type fun: main { i64, ptr_argv } i64
 
 function main {
-  # [0, 8) main ret_val
+	# [0, 8) main ret_val
+	# [8, 16) -> argc
+  # [16, 32) -> *argv
 
   # Note: This will be invalid once verification is added
-  input_l64           8;
-  mov_l64_imm         8, 1;
-  init_type           i64; # [8, 16)
-  output_l64          8;
+  input_l64           32;
+  mov_l64_imm         32, 1;
+  init_type           i64; # [32, 40)
+  output_l64         32;
 
   deinit;
+  deinit; # *argv
+  deinit; # argc
 
   ret;
 }

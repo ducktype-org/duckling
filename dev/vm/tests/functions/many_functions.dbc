@@ -2,7 +2,6 @@
 # Also if the stacks are seperate.
 # output = input + 1110
 
-type fun: main { i64, ptr_argv } i64
 type fun: add1110 { i64 } i64
 type fun: add1100 { i64 } i64
 type fun: add1000 { i64 } i64
@@ -50,7 +49,6 @@ function add1110 {
 	ret;
 }
 
-
 function main {
     # [0, 8) ret_val
     # [8, 16) argc
@@ -64,5 +62,7 @@ function main {
 	output_l64          32;
 
 	deinit; # add1110 ret_val, arg0 is deinitialized by the call.
+	deinit; # argv*
+	deinit; # argc
 	ret;
 }

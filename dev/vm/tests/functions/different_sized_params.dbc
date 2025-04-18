@@ -2,7 +2,6 @@
 # input = "a b c"
 # output = a * c
 
-type fun: main { i64, ptr_argv } i64
 type fun: check { i64, i32, i64 } void
 
 function check {
@@ -38,5 +37,7 @@ function main {
 	input_l64	44;
 	call_func          	check;
 
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

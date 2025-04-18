@@ -21,10 +21,14 @@ namespace vm::code::builtin_types {
 
 			// TODO: This is temporary. Just to see if passing arguments work, since dynamic
 			// arrays don't work for now.
+			// TypeOfData(DynamicTableType(base::StrID("byte_array"), base::StrID("byte"))),
 			TypeOfData(StaticTableType(base::StrID("temp_arg_arr"), base::StrID("i64"), 10)),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("temp_arg_arr"))),
-
-			// TypeOfData(DynamicTableType(base::StrID("byte_array"), base::StrID("byte"))),
+			TypeOfData(FunctionType(
+				base::StrID("main"),
+				{ base::StrID("i64"), base::StrID("ptr_argv") },
+				base::StrID("i64")
+			)),
 		};
 		builders::TypeContextBuilder type_context_builder;
 

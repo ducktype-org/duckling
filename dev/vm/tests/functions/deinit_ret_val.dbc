@@ -2,7 +2,6 @@
 # input = ""
 # output = "42"
 
-type fun: main { i64, ptr_argv } i64
 type fun: foo { i64 } i64
 
 function foo {
@@ -31,5 +30,7 @@ function main {
     output_l64 32;
 
     deinit; # foo ret_val
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

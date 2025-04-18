@@ -1,8 +1,0 @@
-type fun: main { i64, ptr_argv } i32
-
-function main {
-	# [0, 4) -> main ret_val
-	init_type i32;
-	deinit;
-	ret;
-}
