@@ -337,8 +337,9 @@ namespace compiler::helios {
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-		static std::vector<SymID>
-			filterSymbolsFromStmtList(query::Context& ctx, const StmtList<Stmt>& list) {
+		static std::vector<SymID> filterSymbolsFromStmtList(
+			query::Context& ctx, const StmtList<Stmt>& list
+		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt.unlock(ctx)->isDeclaration()) {
