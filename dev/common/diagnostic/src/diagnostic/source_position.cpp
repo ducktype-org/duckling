@@ -111,7 +111,8 @@ namespace dia {
 
 	MRef<tokenizer::TokenFile> SourcePosition::getSource() const { return source_file; }
 
-	printer::PrinterContentsSeq SourcePosition::genPrinterContents(const printer::PrinterContent& reason
+	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
+		const printer::PrinterContent& reason
 	) const {
 		if (source_file == nullptr) {
 			return {

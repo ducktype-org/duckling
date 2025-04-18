@@ -243,7 +243,7 @@ PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0
 PenaltyBreakString: 650
 PenaltyBreakTemplateDeclaration: 10
-PenaltyExcessCharacter: 30
+PenaltyExcessCharacter: 50
 PenaltyIndentedWhitespace: 0
 PenaltyReturnTypeOnItsOwnLine: 2000
 
@@ -268,8 +268,8 @@ StatementMacros:
 WhitespaceSensitiveMacros:
   - MAKE_FLAG_TYPE
   - MAKE_STRINGIFYABLE_ENUM
+  - MAKE_VISITOR
   
-
 
 # Other languages
 BreakAfterJavaFieldAnnotations: false

@@ -58,7 +58,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FunctionEnd
 )
 
-
 namespace compiler::mir {
 
 	/**

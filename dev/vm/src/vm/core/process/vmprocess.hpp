@@ -90,7 +90,8 @@ namespace vm {
 		 * @param request
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(const api::DataRequest& request
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::DataRequest& request
 		);
 
 		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request

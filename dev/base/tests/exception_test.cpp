@@ -84,7 +84,9 @@ public:
 			throw base::NotYetImplemented("NotYetImplemented test");
 		} catch (base::NotYetImplemented& nyi) {
 			assertTrue(
-				compareCstr(nyi.what(), "The feature is not implemented yet: NotYetImplemented test"),
+				compareCstr(
+					nyi.what(), "The feature is not implemented yet: NotYetImplemented test"
+				),
 				"Bad NotYetImplemented reason"
 			);
 			return;

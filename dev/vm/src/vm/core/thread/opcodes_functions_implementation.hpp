@@ -230,7 +230,8 @@ namespace vm {
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
 			auto called_func_type = thread.executing_program->types->at(called_func.name);
-			u64 arg_count = called_func_type->getParameterCount().expect("Parameter count not set!");
+			u64  arg_count
+				= called_func_type->getParameterCount().expect("Parameter count not set!");
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
@@ -364,7 +365,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l64)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0) = thread.process.getIO().getInput<i64>(thread);
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i64>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);
@@ -378,7 +380,8 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(input_l32)(FUNCTION_ARGS) {
 		{
 			thread.setProcessStatus(api::WaitingForInput{});
-			derefStack<i64>(local_stack, instr->arg0) = thread.process.getIO().getInput<i32>(thread);
+			derefStack<i64>(local_stack, instr->arg0)
+				= thread.process.getIO().getInput<i32>(thread);
 			thread.setProcessStatus(api::Running{});
 		}
 		FUNCTION_CONT(1);

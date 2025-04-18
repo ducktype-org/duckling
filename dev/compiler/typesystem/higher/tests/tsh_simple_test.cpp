@@ -201,7 +201,9 @@ private:
 		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
 		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
-		assertTrue(raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer.");
+		assertTrue(
+			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
+		);
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
 		const auto raw_3 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");

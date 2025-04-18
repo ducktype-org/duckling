@@ -355,7 +355,8 @@ namespace tsl {
 		return VISIT(*this, l, return l.getSourceType());
 	}
 
-	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
+	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+		const {
 		return VISIT(*this, l, return l.toStringDefinition(ctx, recursive, indent));
 	}
 
