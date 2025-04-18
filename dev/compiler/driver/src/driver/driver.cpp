@@ -42,7 +42,5 @@ namespace compiler::driver {
 		});
 	}
 
-	void Driver::link() {
-		backend_driver->link();
-	}
+	void Driver::link() { backend_driver->link(); }
 }

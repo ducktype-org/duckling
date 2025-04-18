@@ -56,7 +56,7 @@ namespace compiler::driver {
 		 * @param module_data
 		 */
 		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
-		
+
 		/**
 		 * @brief Link all compiled modules into a single program.
 		 */

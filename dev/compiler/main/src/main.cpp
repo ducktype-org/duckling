@@ -353,8 +353,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		u64 i = 0;
 		for (const auto& module: modules) {
 			driver.compileHOUTUnit(
-				&module,
-				base::StrID(base::strConcat("main_module", i++).c_str())
+				&module, base::StrID(base::strConcat("main_module", i++).c_str())
 			);
 		}
 
