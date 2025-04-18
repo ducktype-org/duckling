@@ -298,4 +298,20 @@ namespace tpc {
 
 		NoIdentifierError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
+
+	class NoStringError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected a string here.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		NoStringError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
 }

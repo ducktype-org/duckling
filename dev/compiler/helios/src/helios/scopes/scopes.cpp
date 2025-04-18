@@ -8,6 +8,7 @@
 #include <frontend/module_tree/queries.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <pst_parser/expander.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <base/exceptions.hpp>
@@ -487,6 +488,28 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
+
+	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
+		static inline base::HashMap<QKey, query::CacheEntry< pst::PST<pst::Stmt>>, base::PerfectHashFunctor<QKey>> cache;
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			return pst::Expander::expandStmt(key.element.unlock(ctx));
+		}
+
+		static auto load(const QKey& key) -> LoadResult {                                   
+			if (const auto& value = cache.atMaybe(key)) {                                   \
+				return QResWithACD{ value->data.getRootElement(), value->acd };                              
+			}                                                                            
+			return {};                                                                   
+		}                                                                             
+
+		static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {        
+			cache.put(key, { .data=std::move(res), .acd=acd });                                        
+			return cache.at(key).data.getRootElement();                                                      
+		}                                                                                   
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {

@@ -170,15 +170,15 @@ namespace pst {
 		 * @brief Element representing a number value in an expression
 		 */
 		class ExprStrValue final: public ExprElement {
-			lexer::StringValue string;
+			tpc::StringValue string;
 
 		public:
 			[[nodiscard]]
-			lexer::StringValue getValue() const {
+			tpc::StringValue getValue() const {
 				return string;
 			}
 
-			explicit ExprStrValue(const dia::SourcePosition& position, lexer::StringValue value):
+			explicit ExprStrValue(const dia::SourcePosition& position, tpc::StringValue value):
 				  ExprElement(position, 0),
 				  string(value) {}
 

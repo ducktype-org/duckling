@@ -133,6 +133,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
 	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true> expand_stmt{ "expand \"return 0;\";" };
 	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
@@ -149,6 +150,10 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };
+
+	Example<pst::Expand, true> nested_expand{ "expand \"expand \\\"return 0;\\\";\"" };
+	Example<pst::Expand, false> empty_expand{ "expand ;" };
+	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
 
 	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
 	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };

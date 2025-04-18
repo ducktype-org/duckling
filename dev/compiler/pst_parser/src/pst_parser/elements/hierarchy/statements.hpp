@@ -98,6 +98,34 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Simple expand macro
+	 */
+	class Expand final: public Stmt {
+		tpc::StringValue string;
+
+		friend class Expander;
+
+	public:
+		STMT_CHILD_CONSTRUCTOR(Expand, ElementKind::Expand);
+		static MBox<Expand> parse(LangParserState& state);
+
+		~Expand() final = default;
+		void dprint(std::ostream& out) const final;
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Expand";
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
+	};
+
+	/**
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {

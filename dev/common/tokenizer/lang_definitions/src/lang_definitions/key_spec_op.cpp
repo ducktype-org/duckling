@@ -21,7 +21,7 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 76>
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 77>
 		LANG_KEYWORDS_ARRAY{ {
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
@@ -61,6 +61,8 @@ namespace lang_def {
 			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsAction },
 			{ Keyword::Assert, "assert", KeywordFlags() },
 			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
+
+			{ Keyword::Expand, "expand", KeywordFlags() },
 
 			{ Keyword::i8, "i8", KeywordFlags() },
 			{ Keyword::i16, "i16", KeywordFlags() },

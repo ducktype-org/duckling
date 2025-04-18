@@ -26,6 +26,7 @@ namespace pst {
 	class Action;
 	class Decl;
 	class RiftTestingStmt;
+	class Expand;
 	// Declarations
 	class CodeDecl;
 	class TopLevel;

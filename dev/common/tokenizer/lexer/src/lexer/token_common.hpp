@@ -85,33 +85,4 @@ namespace lexer {
 		 */
 		inline bool operator==(Value& other) { return value == other.value; }
 	};
-
-	/**
-	 * @brief Simple wrapper for a value
-	 */
-	struct StringValue final {
-		const base::StrID value;
-
-		StringValue(): value(base::StrID("\"\"")) {}
-
-		StringValue(const base::StrID id): value(id) {}
-
-		StringValue(const std::string& str): value(base::StrID(str.c_str())) {}
-
-		StringValue(const StringValue&) = default;
-
-		operator base::StrID() { return value; }
-
-		[[nodiscard]]
-		std::string str() const {
-			std::stringstream ss;
-			ss << value.str().substr(1, value.str().size() - 2);
-			return ss.str();
-		}
-
-		/**
-		 * @note This should probably do something more in the future
-		 */
-		inline bool operator==(Value& other) { return str() == other.str(); }
-	};
 }

@@ -35,6 +35,12 @@ namespace pst {
 		CopyConstructor,
 		Destructor,
 		AccessBlock,
-		FunParam
+		FunParam,
+		Expand
 	);
+
+	#define VISITOR_RECURSE_ON_EXPANDING(context) \
+		void visitExpand(pst::Access<pst::Expand> stmt) override { \
+			context.query<QueryMacroExpansion>(stmt).unlock(ctx)->acceptVisitor(*this); \
+		} 
 }

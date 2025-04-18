@@ -416,7 +416,7 @@ namespace lexer {
 				next();
 			}
 		}
-		end = where - 1 + int(closed);
+		end = where - 1 + usize(closed);
 		if (closed) next();
 
 		dia::SourcePosition source_position(source_start, end);

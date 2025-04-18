@@ -120,6 +120,11 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
 	/**
+	 * @brief Query the expansion of an expand statement.
+	 */
+	DECLARE_QUERY(QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, pst::AccessLocked<pst::Stmt>)
+
+	/**
 	 * @brief Root scope of main module file.
 	 * It is currently the "effective" root scope of a module.
 	 * See: QueryRootScope for details
