@@ -18,7 +18,7 @@ namespace pst {
 	void Expand::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("value": ")" << string.str() <<  R"(",)";
+		out << R"("value": ")" << string.str() << R"(",)";
 
 		out << "}";
 	}
