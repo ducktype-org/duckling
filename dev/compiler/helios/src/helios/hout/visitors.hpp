@@ -5,9 +5,7 @@
 #include <base/visitor.hpp>
 
 namespace compiler::helios::code {
-	MAKE_VISITOR(
-		HoutStmt, ReturnStmt, VoidReturnStmt, ExprStmt, IfStmt, VariableStmt, AssignmentStmt
-	);
+	MAKE_VISITOR(HoutStmt, ReturnStmt, VoidReturnStmt, ExprStmt, IfStmt, VariableStmt, AssignmentStmt);
 	MAKE_VISITOR(
 		HoutExpr,
 		LiteralIntExpr,

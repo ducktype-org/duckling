@@ -98,8 +98,7 @@ private:
 
 		const auto first_class = getChain("FirstClassEver", root_scope).back();
 		const auto first_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)
-		          ->valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(first_class)->valueOrThrow();
 		const auto first_class_abstract_type
 			= query::entryPoint<compiler::helios::QueryTypeFromDefinition>(first_class)
 		          ->valueOrThrow()
@@ -115,8 +114,7 @@ private:
 
 		const auto second_class = getChain("SecondClass", root_scope).back();
 		auto       second_class_info
-			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)
-		          ->valueOrThrow();
+			= query::entryPoint<compiler::helios::QueryClassSymbolData>(second_class)->valueOrThrow();
 
 		ASSERT_EQUAL(0, second_class_info.members.size());
 		ASSERT_EQUAL(0, second_class_info.methods.size());
@@ -388,9 +386,7 @@ private:
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
 		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
-		ASSERT_EQUAL(
-			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
-		);
+		ASSERT_EQUAL(base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str());
 	}
 
 	void testError() {
@@ -435,15 +431,12 @@ private:
 
 		static_assert(std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<int>::types>);
 		static_assert(!std::is_same_v<UniqueTypes<int, int>::types, UniqueTypes<float>::types>);
-		static_assert(!std::
-		                  is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
+		static_assert(!std::is_same_v<UniqueTypes<int, int, float>::types, UniqueTypes<int>::types>);
 
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int>, std::variant<int>>);
 		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int>, std::variant<int>>);
 		static_assert(!std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int>>);
-		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<int, int, float>,
-					  std::variant<int, float>>);
+		static_assert(std::is_same_v<UniqueTypesVariant_t<int, int, float>, std::variant<int, float>>);
 		static_assert(std::is_same_v<
 					  UniqueTypesVariant_t<int, int, float, int, int>,
 					  std::variant<float, int>>);
@@ -451,12 +444,7 @@ private:
 					  UniqueTypesVariant_t<int, int, float, std::variant<int, int>>,
 					  std::variant<float, int>>);
 		static_assert(std::is_same_v<
-					  UniqueTypesVariant_t<
-						  std::variant<int, float, int>,
-						  int,
-						  int,
-						  float,
-						  std::variant<int, int>>,
+					  UniqueTypesVariant_t<std::variant<int, float, int>, int, int, float, std::variant<int, int>>,
 					  std::variant<float, int>>);
 
 		struct A {};
@@ -472,8 +460,7 @@ private:
 
 		static_assert(std::is_same_v<
 					  std::variant<int, float, bool>,
-					  UniqueTypesVariant_t<
-						  std::variant<std::variant<int, float, std::variant<bool>>>>>);
+					  UniqueTypesVariant_t<std::variant<std::variant<int, float, std::variant<bool>>>>>);
 	}
 
 	void testHeliosResult() {
@@ -523,9 +510,7 @@ private:
 		HResult<int, Err2, Err4> sub_result = HError(Err2());
 		static_assert(std::is_same_v<decltype(sub_result)::ErrorType, std::variant<Err2, Err4>>);
 		HResult<int, Err1, Err2, Err3, decltype(sub_result)::ErrorType> result(sub_result);
-		static_assert(std::is_same_v<
-					  decltype(result)::ErrorType,
-					  std::variant<Err1, Err3, Err2, Err4>>);
+		static_assert(std::is_same_v<decltype(result)::ErrorType, std::variant<Err1, Err3, Err2, Err4>>);
 		bool entered2 = false;
 		ASSERT_TRUE(!result.hasValue());
 		ASSERT_TRUE(result.hasError());
@@ -848,9 +833,7 @@ private:
 		);
 		Ref call_expr_2 = dynamic_cast<const compiler::helios::code::CallExpr*>(&*expr_stmt->expr);
 		ASSERT_EQUAL(compiler::helios::SymbolKind::BuiltinFunction, kind(call_expr_2->callee));
-		ASSERT_EQUAL(
-			base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee)
-		);
+		ASSERT_EQUAL(base::StrID("builtin_output_i64"), compiler::helios::name(call_expr_2->callee));
 	}
 
 	void testScopeParentsAndDepth() {

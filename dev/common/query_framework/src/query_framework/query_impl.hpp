@@ -47,9 +47,7 @@ namespace query::detail {
 
 		if (auto v = QueryImplType::load(key)) {
 			// @FUTURE: Add ACD check here...
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n");
 
 			// @todo: This might bind & to a const&, via std::move "creating" &&.
 			// It should works for all cases in our codebase,
@@ -74,13 +72,10 @@ namespace query::detail {
 			// prolog:
 			dep_graph::setEntry(node_id, from);
 
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
-			);
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
 			// This is all at the end, with defer above,
 			// to avoid false positive dangling reference warning.

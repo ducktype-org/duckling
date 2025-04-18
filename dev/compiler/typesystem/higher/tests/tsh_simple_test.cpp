@@ -201,9 +201,7 @@ private:
 		const auto raw_1 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1.getKind() == RawPointer, "Raw Pointer should have kind RawPointer.");
 		const auto raw_2 = query::entryPoint<QueryRawPointerType>(true);
-		assertTrue(
-			raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer."
-		);
+		assertTrue(raw_2.getKind() == RawPointer, "Mutable Raw Pointer should have kind RawPointer.");
 		assertTrue(raw_1 != raw_2, "Immutable and mutable Raw Pointers should be different.");
 		const auto raw_3 = query::entryPoint<QueryRawPointerType>(false);
 		assertTrue(raw_1 == raw_3, "There should be only one immutable Raw Pointer.");
@@ -324,8 +322,7 @@ private:
 		const auto fun_different_output
 			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_16) });
 		assertTrue(
-			fun_1 != fun_different_output,
-			"Functions of different output types should be different."
+			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
 			{ { st(int_16), st(int_32) }, st(int_32), true, true }

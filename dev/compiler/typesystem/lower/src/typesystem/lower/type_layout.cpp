@@ -17,8 +17,9 @@ namespace tsl {
 		 * @param ctx The query context.
 		 * @return The output TypeLayout vector.
 		 */
-		std::vector<TypeLayout>
-			getLayoutVector(const std::vector<tsh::SymbolType<>>& types, query::Context& ctx) {
+		std::vector<TypeLayout> getLayoutVector(
+			const std::vector<tsh::SymbolType<>>& types, query::Context& ctx
+		) {
 			std::vector<TypeLayout> layouts;
 			layouts.reserve(types.size());
 			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
@@ -256,8 +257,8 @@ namespace tsl {
 		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
 		Bits                                 total_size;
 
-		static std::vector<tsh::InterfaceElement>
-			getFieldsOfInterface(const tsh::TypeInterface& interface) {
+		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
+		                                                                   interface) {
 			const auto&                        elements = interface.getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
@@ -354,8 +355,7 @@ namespace tsl {
 		return VISIT(*this, l, return l.getSourceType());
 	}
 
-	std::string
-		TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
+	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
 		return VISIT(*this, l, return l.toStringDefinition(ctx, recursive, indent));
 	}
 

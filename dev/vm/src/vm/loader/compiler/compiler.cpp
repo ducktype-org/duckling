@@ -35,9 +35,7 @@ namespace vm::loader::compiler {
 		};
 
 		i64 getOpCodeArgValue(
-			CompilationContext&      ctx,
-			const usize              instruction_index,
-			const opargs::OpCodeArg& opcode_arg
+			CompilationContext& ctx, const usize instruction_index, const opargs::OpCodeArg& opcode_arg
 		) {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;

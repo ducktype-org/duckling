@@ -61,8 +61,7 @@ private:
 		[[maybe_unused]] auto neg
 			= operatorAssociativity(NamedOperator::Minus, OperatorType::UnaryRight);
 
-		auto exponentiate
-			= operatorAssociativity(NamedOperator::Exponentiate, OperatorType::Binary);
+		auto exponentiate = operatorAssociativity(NamedOperator::Exponentiate, OperatorType::Binary);
 
 		auto multiply = operatorAssociativity(NamedOperator::Multiply, OperatorType::Binary);
 

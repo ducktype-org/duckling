@@ -133,9 +133,9 @@ namespace pst {
 			// Handle opening brackets:
 			if constexpr (BRACKETS != lexer::Token::BracketType::None) {
 				if (!state[0].isBracketGroup(BRACKETS)) {
-					state.log(makeBox<OpeningBracketMissingError<getName>>(
-						state.getPosition(-1), BRACKETS
-					));
+					state.log(
+						makeBox<OpeningBracketMissingError<getName>>(state.getPosition(-1), BRACKETS)
+					);
 					return nullptr;
 				}
 				state.parse(out).goDown();

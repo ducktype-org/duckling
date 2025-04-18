@@ -38,15 +38,11 @@ namespace lexer {
 		CORE_ASSERT(
 			this->sentinel_end->getType() == Type::Sentinel, "non-sentinel token passed as sentinel"
 		);
-		CORE_ASSERT(
-			type == Type::BracketGroup, "non-bracket token created with bracket constructor"
-		);
+		CORE_ASSERT(type == Type::BracketGroup, "non-bracket token created with bracket constructor");
 
 		// sets str_id of brackets to the pair of brackets for example "()"
 		std::string s;
-		icu::UnicodeString(bracket_type)
-			.append(u_getBidiPairedBracket(bracket_type))
-			.toUTF8String(s);
+		icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
 		str_id = base::StrID(base::RawView(s.data()));
 	}
 
@@ -72,8 +68,7 @@ namespace lexer {
 		return { Type::Operator, oper, position };
 	}
 
-	Token
-		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
+	Token Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
 		if (lang_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };

@@ -83,8 +83,7 @@ namespace {
 }
 
 namespace clap {
-	std::string
-		HelpMessageGenerator::generate(const Clap& clap, const ParsingResult& parsing_result) {
+	std::string HelpMessageGenerator::generate(const Clap& clap, const ParsingResult& parsing_result) {
 		std::string program_name = getFileName(parsing_result.getFilePath());
 
 		std::string output;

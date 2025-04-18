@@ -21,8 +21,8 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 76>
-		LANG_KEYWORDS_ARRAY{ {
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 76> LANG_KEYWORDS_ARRAY{
+		{
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
@@ -109,21 +109,20 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
-		} };
-
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 9> BC_KEYWORDS_ARRAY{
-		{
-			{ Keyword::BCFunction, "function", KeywordFlags() },
-			{ Keyword::BCType, "type", KeywordFlags() },
-			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
-			{ Keyword::BCPointer, "pointer", KeywordFlags() },
-			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
-			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
-			{ Keyword::BCData, "data", KeywordFlags() },
-			{ Keyword::BCVariant, "variant", KeywordFlags() },
-			{ Keyword::BCFunType, "fun", KeywordFlags() },
 		}
 	};
+
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 9> BC_KEYWORDS_ARRAY{ {
+		{ Keyword::BCFunction, "function", KeywordFlags() },
+		{ Keyword::BCType, "type", KeywordFlags() },
+		{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
+		{ Keyword::BCPointer, "pointer", KeywordFlags() },
+		{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+		{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
+		{ Keyword::BCData, "data", KeywordFlags() },
+		{ Keyword::BCVariant, "variant", KeywordFlags() },
+		{ Keyword::BCFunType, "fun", KeywordFlags() },
+	} };
 
 
 	/**
