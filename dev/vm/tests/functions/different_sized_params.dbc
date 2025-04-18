@@ -25,14 +25,17 @@ function check {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type i64; # [8, 16) check() arg0
-	init_type i32; # [16, 20) check() arg1
-	init_type i64; # [20, 28) check() arg2
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-	input_l64	8;
-	input_l32	16;
-	input_l64	20;
+	init_type i64; # [32, 40) check() arg0
+	init_type i32; # [40, 44) check() arg1
+	init_type i64; # [44, 52) check() arg2
+
+	input_l64	32;
+	input_l32	40;
+	input_l64	44;
 	call_func          	check;
 
 	ret;

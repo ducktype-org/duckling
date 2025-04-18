@@ -1,23 +1,30 @@
 type primitive: int128 16
-type fun: main { i64, ptr_argv } i64
+type fun: main {} i64
 
 function main {
 	# [0, 8) -> main ret_val
-	# [8, 24) -> x
-	# [24, 32) -> y
-	# [32, 40) -> z
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
+
+	# [32, 48) -> x
+	# [48, 56) -> y
+	# [56, 64) -> z
 
 	init_type int128;
 	init_type i64;
 	init_type i64;
 
-	mov_l64_imm         32, 1;
-	ref_lptr_any        8, 32;  # x = &z
-	load_l64_lptr       24, 8;  # y = *x
+	mov_l64_imm         56, 1;
+	ref_lptr_any        32, 56;  # x = &z
+	load_l64_lptr       48, 32;  # y = *x
 
 	deinit;
 	deinit;
 	deinit;
+	
+	free_lptr     16;  # free argv
+    deinit;       # *argv
+    deinit;       # argc
 
 	ret;
 }

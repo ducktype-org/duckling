@@ -1,4 +1,4 @@
-type fun: main {} i32
+type fun: main { i64, ptr_argv } i32
 
 function main {
 	# [0, 4) -> main ret_val

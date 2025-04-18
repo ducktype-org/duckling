@@ -42,15 +42,22 @@ function fib {
 }
 
 function main {
-    # n := argument
     # [0, 8) main ret_val
-    init_type   i64; # [8, 16) fib() ret_val
-    init_type   i64; # [16, 24) fib() arg0
-    input_l64   16;
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
+    
+    # n := argument
+    init_type   i64; # [32, 40) fib() ret_val
+    init_type   i64; # [40, 48) fib() arg0
+    input_l64   40;
 
     call_func   fib;
 
-    output_l64  8;
+    output_l64  32;
+    
     deinit; # fib() ret_val
+    free_lptr     16;  # free argv
+    deinit;       # *argv
+    deinit;       # argc
     ret;
 }

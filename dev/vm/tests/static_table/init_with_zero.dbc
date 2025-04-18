@@ -2,39 +2,37 @@ type static_table: tablei64 i64 2
 type fun: main { i64, ptr_argv } i64
 
 function main {
-	# x - 0
-	# i - 8
-	# y - 16
-	# t - 24
+    # [0, 8) main ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-	# [0, 8) main ret_val
-	init_type           i64; # [8, 16) x
-	init_type           i64; # [16, 24) i
-	init_type           i64; # [24, 32) y
-	init_type           i64; # [32, 40) t
+	init_type           i64; # [32, 40) x
+	init_type           i64; # [40, 48) i
+	init_type           i64; # [48, 56) y
+	init_type           i64; # [56, 64) t
 
-	mov_l64_imm         32, 42;
-	mov_l64_imm         40, 42;
+	mov_l64_imm         56, 42;
+	mov_l64_imm         64, 42;
 
-	alloc_lptr_type     32, tablei64;
+	alloc_lptr_type     56, tablei64;
 
 	# x := t[0]
-	mov_l64_imm         16, 0;
-	load_l64_lptr_ofs   8, 32;
-	ext_l64             16;
+	mov_l64_imm         40, 0;
+	load_l64_lptr_ofs   32, 56;
+	ext_l64             40;
 
-	mov_l64_l64         24, 8;
+	mov_l64_l64         48, 32;
 
 	# x := t[1]
-	mov_l64_imm         16, 1;
-	load_l64_lptr_ofs   8, 32;
-	ext_l64             16;
+	mov_l64_imm         40, 1;
+	load_l64_lptr_ofs   32, 56;
+	ext_l64             40;
 
-	add_l64_l64         24, 8;
+	add_l64_l64         48, 32;
 
-	output_l64          24;
+	output_l64          48;
 
-	free_lptr           32;
+	free_lptr           56;
 
 	deinit;
 	deinit;

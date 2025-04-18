@@ -12,10 +12,13 @@ function check {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type       i64; # [8, 16) check() ret_val
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+	
+	init_type       i64; # [32, 40) check() ret_val
 	call_func       check;
-	output_l64      8;
+	output_l64      32;
 
 	deinit;
 	ret;

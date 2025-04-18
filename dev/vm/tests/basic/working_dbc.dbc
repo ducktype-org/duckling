@@ -1,0 +1,31 @@
+type fun: main { i64, ptr_argv } i64
+
+function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+	init_type 		i64; # [32, 40)
+	init_type 		i64; # [40, 48)
+	init_type 		i64; # [48, 56)
+
+	mov_l64_imm   32, 10;
+	mov_l64_imm   40, 0;
+	mov_l64_imm   48, 1;
+
+	label Loop;
+
+	output_l64       40;
+	add_l64_l64      40, 48;
+
+	cmpEq_l64_l64    40, 32;
+	jmpRelNotIf_label Loop;
+
+	deinit;
+	deinit;
+	deinit;
+    free_lptr   16; # free argv table
+    deinit; # *argv
+    deinit; # argc
+	ret;
+}

@@ -52,13 +52,16 @@ function add1110 {
 
 
 function main {
-	# [0, 8) main ret_val
-	init_type 			i64; # [8, 16) add1110 ret_val
-	init_type 			i64; # [16, 24) add1110 arg0
-	input_l64           16;
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+	init_type 			i64; # [32, 40) add1110 ret_val
+	init_type 			i64; # [40, 48) add1110 arg0
+	input_l64           40;
 
 	call_func          	add1110;
-	output_l64          8;
+	output_l64          32;
 
 	deinit; # add1110 ret_val, arg0 is deinitialized by the call.
 	ret;

@@ -11,10 +11,13 @@ function check {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type 			i32; # [8, 12) check() ret_val
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+	init_type 			i32; # [32, 36) check() ret_val
 	call_func          	check;
-	output_l32 			8;
+	output_l32 			32;
 
 	deinit;
 	ret;

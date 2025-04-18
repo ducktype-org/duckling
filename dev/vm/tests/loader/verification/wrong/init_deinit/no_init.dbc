@@ -1,10 +1,12 @@
 type fun: main { i64, ptr_argv } i64
 
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # [0, 8) -> main ret_val
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
+    # [32, 40) -> x
 
-	output_l64          8;
+	output_l64          32;
 	deinit; # x
 
 	ret;

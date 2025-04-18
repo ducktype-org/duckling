@@ -1,14 +1,19 @@
 type fun: main { i64, ptr_argv } i64
 
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # [0, 8) -> main ret_val
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
 
-	init_type           i64; # x
-	output_l64          8;
-	deinit; # x
+    init_type           i64; # [32,40) x
+    output_l64          32;
+    deinit;             # x
 
-	mov_l64_imm         8, 1;
+    mov_l64_imm         0, 1;
 
-	ret;
+    free_lptr 16;		 # free argv
+    deinit;             # *argv
+    deinit;             # argc
+
+    ret;
 }

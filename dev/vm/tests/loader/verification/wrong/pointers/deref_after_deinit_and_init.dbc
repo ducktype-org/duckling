@@ -2,24 +2,27 @@ type fun: main { i64, ptr_argv } i64
 
 function main {
 	# [0, 8) -> main ret_val
-	# [8, 24) -> x
-	# [24, 32) -> y
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
 
-	init_type prt_i64;
-	init_type i64;
+	init_type prt_i64; 	# [32, 48) -> x
+	init_type i64; 		# [48, 56) -> y
 
-	mov_l64_imm         24, 1;
-	ref_lptr_any        8, 24;  # x = &y
+	mov_l64_imm         48, 1;
+	ref_lptr_any        32, 48;  # x = &y
+
+	deinit; # y
+
+	init_type i64; # [48, 56) -> z
+
+	load_l64_lptr       48, 32;  # z = *x
 
 	deinit;
-
-	# [24, 32) -> z
-	init_type i64;
-
-	load_l64_lptr       24, 8;  # z = *x
-
 	deinit;
-	deinit;
+	
+	free_lptr     16;  # free argv
+    deinit;       # *argv
+    deinit;       # argc
 
 	ret;
 }

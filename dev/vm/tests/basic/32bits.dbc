@@ -61,12 +61,18 @@ function foo {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type 	i32; # [8, 12) foo() ret_val
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+	init_type 	i32; # [32, 40) foo() ret_val
 
 	call_func 	foo;
-	output_l32 	8;
+	output_l32 	32;
 
 	deinit;
+    free_lptr   16; # free argv table
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

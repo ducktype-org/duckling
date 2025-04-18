@@ -15,28 +15,31 @@ function check {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type           i64; # [8, 16) local_1
-	init_type           i64; # [16, 24) local_2
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-	mov_l64_imm         8,  1;
-	cmpEq_l64_imm       8,  1;
+	init_type           i64; # [32, 40) local_1
+	init_type           i64; # [40, 48) local_2
+
+	mov_l64_imm         32,  1;
+	cmpEq_l64_imm       32,  1;
 
 	call_func          	check;
 
-	mov_l64_imm         8,  1;
-	mov_l64_imm         16,  0;
+	mov_l64_imm         32,  1;
+	mov_l64_imm         40,  0;
 
 	# flag from cmpEq should be on
 	jmpRelIf_label      ok_label;
 
 	# print "0" (failed)
-	output_l64          16;
+	output_l64          40;
 	ret;
 
 	label ok_label;
 	# print "1" (passed)
-	output_l64          8;
+	output_l64          32;
 
 	deinit;
 	deinit;

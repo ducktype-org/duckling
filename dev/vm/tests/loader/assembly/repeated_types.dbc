@@ -1,5 +1,6 @@
 type fun: main { i64, ptr_argv } i64
-type static_table: i64 i64 4
+type primitive: int64 8
+type static_table: int64 i64 4
 
 function main {
     mov_l64_imm 0, 5;
