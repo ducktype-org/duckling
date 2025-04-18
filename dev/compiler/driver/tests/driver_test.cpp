@@ -36,6 +36,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
 		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");
@@ -60,6 +61,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
 		assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
@@ -83,7 +85,10 @@ private:
 		                        .external_libs          = {} });
 
 		assertThrows<base::NotYetImplemented>(
-			[&]() { driver.compileHOUTUnit(top_level, base::StrID("test_module")); },
+			[&]() {
+				driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+				driver.link();
+			},
 			"compilation for BC driver"
 		);
 	}
@@ -104,6 +109,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
 		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");

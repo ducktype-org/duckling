@@ -56,7 +56,10 @@ namespace compiler::driver {
 		 * @param module_data
 		 */
 		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
-
+		
+		/**
+		 * @brief Link all compiled modules into a single program.
+		 */
 		virtual void link() = 0;
 
 		virtual ~BackendDriver() = default;
@@ -73,7 +76,15 @@ namespace compiler::driver {
 			  options(std::move(opts)),
 			  backend_driver(createBackendDriver(&options)) {}
 
+		/**
+		 * @brief Compiles the HOUTUnit to the backend module.
+		 */
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
+
+		/**
+		 * @brief Links all module compiled so far into a complete program.
+		 */
+		void link();
 
 	private:
 		Options            options;

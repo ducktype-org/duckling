@@ -40,7 +40,9 @@ namespace compiler::driver {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			backend_driver->compileModule(ctx, module_data);
 		});
+	}
 
+	void Driver::link() {
 		backend_driver->link();
 	}
 }
