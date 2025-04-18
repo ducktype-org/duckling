@@ -13,7 +13,6 @@
 #include <variant>
 #include <vector>
 
-// clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
@@ -59,7 +58,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FunctionEnd
 )
 
-// clang-format on
 
 namespace compiler::mir {
 

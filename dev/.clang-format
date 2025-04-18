@@ -267,6 +267,7 @@ StatementMacros:
   - QT_REQUIRE_VERSION
 WhitespaceSensitiveMacros:
   - MAKE_FLAG_TYPE
+  - MAKE_STRINGIFYABLE_ENUM
   
 
 
