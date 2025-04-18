@@ -72,7 +72,8 @@ namespace tokenizer {
 		/**
 		 * @brief Returns views of a [) range split by lines.
 		 */
-		std::vector<std::pair<usize, base::RawView>> viewSplitRange(usize begin_char, usize end_char);
+		std::vector<std::pair<usize, base::RawView>>
+			viewSplitRange(usize begin_char, usize end_char);
 
 		[[nodiscard]]
 		const fs::FileContent getContent() const;

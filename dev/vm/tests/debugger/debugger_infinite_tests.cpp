@@ -61,14 +61,20 @@ private:
 
 		auto line_number2 = stepAndGetLine(pid);
 		assertEqual(
-			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
+			expected_next_line(position.instr_number),
+			line_number2,
+			"Line number is not correct (2)"
 		);
 
 		auto line_number3 = stepAndGetLine(pid);
-		assertEqual(expected_next_line(line_number2), line_number3, "Line number is not correct (3)");
+		assertEqual(
+			expected_next_line(line_number2), line_number3, "Line number is not correct (3)"
+		);
 
 		auto line_number4 = stepAndGetLine(pid);
-		assertEqual(expected_next_line(line_number3), line_number4, "Line number is not correct (4)");
+		assertEqual(
+			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
+		);
 
 		vm::api::resume(pid).value();  // "Resume failed (1)"
 

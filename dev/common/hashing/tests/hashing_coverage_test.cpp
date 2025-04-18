@@ -165,7 +165,9 @@ private:
 		static_assert(std::integral<TypeCode<>::value_type>, "value_type should be integral");
 		TypeCode<u64> thcb1;
 		TypeCode<u64> thcb2;
-		assertTrue(std::is_same_v<TypeCode<u64>::value_type, u64>, "TypeCode should have value_type");
+		assertTrue(
+			std::is_same_v<TypeCode<u64>::value_type, u64>, "TypeCode should have value_type"
+		);
 		[[maybe_unused]] auto _ = static_cast<TypeCode<u64>::value_type>(thcb1);
 		assertTrue(thcb1 <= thcb2, "TypeCode should be comparable");
 	}
@@ -194,7 +196,9 @@ private:
 		);
 
 		assertTrue(detail::can_stdhash<int>, "int should be hashable with std::hash");
-		assertTrue(detail::can_stdhash<std::string>, "std::string should be hashable with std::hash");
+		assertTrue(
+			detail::can_stdhash<std::string>, "std::string should be hashable with std::hash"
+		);
 		assertFalse(detail::can_stdhash<Z>, "Z should not be hashable with std::hash");
 
 		assertTrue(
@@ -276,8 +280,12 @@ private:
 		Fnv1a_32                  h2;
 		[[maybe_unused]] Fnv1a_64 qwe{ 123 };
 		constexpr std::span       sp = "hello";
-		assertTrue(std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32");
-		assertTrue(std::is_same_v<Fnv1a_64::result_type, u64>, "Fnv1a_64::result_type should be u64");
+		assertTrue(
+			std::is_same_v<Fnv1a_32::result_type, u32>, "Fnv1a_32::result_type should be u32"
+		);
+		assertTrue(
+			std::is_same_v<Fnv1a_64::result_type, u64>, "Fnv1a_64::result_type should be u64"
+		);
 		assertTrue(
 			std::is_same_v<DebugHash::result_type, std::string>,
 			"DebugHash::result_type should be std::string"

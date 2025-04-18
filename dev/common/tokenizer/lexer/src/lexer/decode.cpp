@@ -12,9 +12,8 @@
 namespace lexer {
 
 	namespace detail {
-		std::string decodeError(
-			Ref<tokenizer::TokenFile> file, usize byte, const std::string& reason
-		) {
+		std::string
+			decodeError(Ref<tokenizer::TokenFile> file, usize byte, const std::string& reason) {
 			std::stringstream res;
 			res << "In file: " << file->getPath().strView() << "\nAt byte " << byte << ": "
 				<< reason;
@@ -186,7 +185,8 @@ namespace lexer {
 		while (pos < bytes.size()) {
 			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log.log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos]));
+				log.log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos])
+				);
 				pos++;
 				continue;
 			}

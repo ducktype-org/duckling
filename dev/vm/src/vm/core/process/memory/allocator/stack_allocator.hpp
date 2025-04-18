@@ -14,7 +14,9 @@ namespace vm {
 	public:
 		BlockData allocate(TypeCRef type, Ref<std::byte> data) {
 			auto size = type->getSize();
-			return BlockData{ type, base::ModRawView{ data.get(), size }, Ref<AllocatorABC>{ this } };
+			return BlockData{ type,
+				              base::ModRawView{ data.get(), size },
+				              Ref<AllocatorABC>{ this } };
 		}
 
 		void deallocate(Ref<BlockData>) final {

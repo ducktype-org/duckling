@@ -66,14 +66,14 @@ namespace clap::exceptions {
 	ParameterRequiresValue::ParameterRequiresValue(
 		const std::string& name, const std::string& value_type
 	):
-		  ClapException(
-			  base::strConcat("Parameter \"", name, "\" requires a value of type <", value_type, ">")
-		  ) {}
+		  ClapException(base::strConcat(
+			  "Parameter \"", name, "\" requires a value of type <", value_type, ">"
+		  )) {}
 
 	ExpectedParameterIdentifier::ExpectedParameterIdentifier(i32 at, std::string_view source):
-		  ClapException(
-			  base::strConcat(shorten(at, 20, 20, source), "_<- Here expected parameter identifier.")
-		  ) {}
+		  ClapException(base::strConcat(
+			  shorten(at, 20, 20, source), "_<- Here expected parameter identifier."
+		  )) {}
 
 	MissingRequiredParameter::MissingRequiredParameter(const std::string& name):
 		  ClapException(base::strConcat("Missing parameter: ", name)) {}

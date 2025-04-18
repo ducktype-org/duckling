@@ -41,7 +41,10 @@ namespace hashing {
 		 * @tparam I - type of the value of the type code
 		 * @tparam HashAlgorithm - type of the hashing algorithm to use to get the hash code
 		 */
-		template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
+		template<
+			typename T,
+			std::integral I        = u32,
+			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval StrToIntegral<I, HashAlgorithm> uniqueString() {
 			constexpr std::string_view       sv = base::typeName<T, false>();
 			std::array<std::byte, sv.size()> byte_arr;
@@ -56,7 +59,10 @@ namespace hashing {
 		 * @tparam I - type of the value of the type code
 		 * @tparam HashAlgorithm - type of the hashing algorithm to use to get the hash code
 		 */
-		template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
+		template<
+			typename T,
+			std::integral I        = u32,
+			typename HashAlgorithm = default_hash_algorithm_for<I>>
 		consteval auto getIDFromUniqueString() {
 			return static_cast<TypeCode<I, false>>(uniqueString<T, I, HashAlgorithm>());
 		}
@@ -70,7 +76,10 @@ namespace hashing {
 	 * @tparam I - type of the value of the type code
 	 * @tparam HashAlgorithm - type of the hashing algorithm to use to get the hash code
 	 */
-	template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
+	template<
+		typename T,
+		std::integral I        = u32,
+		typename HashAlgorithm = default_hash_algorithm_for<I>>
 	static constexpr TypeCode<I, false> TYPE_HASH_CODE
 		= detail::getIDFromUniqueString<T, I, HashAlgorithm>();
 

@@ -220,7 +220,9 @@ namespace vm {
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>
-		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition condition) {
+		void waitUntilNotPausedAndCondition(
+			std::unique_lock<std::mutex>& lock, Condition condition
+		) {
 			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
 

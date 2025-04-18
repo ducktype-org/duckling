@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -34,7 +35,9 @@ namespace vm::loader::compiler {
 		};
 
 		i64 getOpCodeArgValue(
-			CompilationContext& ctx, const usize instruction_index, const opargs::OpCodeArg& opcode_arg
+			CompilationContext&      ctx,
+			const usize              instruction_index,
+			const opargs::OpCodeArg& opcode_arg
 		) {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
@@ -74,10 +77,16 @@ namespace vm::loader::compiler {
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
-			func_data.name             = ctx.function->name;
-			func_data.arg_size         = ctx.function->arg_size;
+			func_data.name = ctx.function->name;
+			auto functional_type
+				= ctx.type_map.atMaybe(ctx.function->name)
+			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name);
+			func_data.arg_size
+				= functional_type->getParametersSize()
+			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name);
+			// Not expecting here because it's checked above
+			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.function->local_stack_size;
-			func_data.ret_size         = ctx.function->ret_size;
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
 				const auto& op    = ctx.function->body[op_idx];

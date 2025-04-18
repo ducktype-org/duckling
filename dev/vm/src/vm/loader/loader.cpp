@@ -184,7 +184,9 @@ namespace {
 	}
 }
 
-void Program::insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger) {
+void Program::insertFunctions(
+	const std::vector<code::Function>& new_functions, LoaderLogger& logger
+) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
 			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
@@ -207,9 +209,8 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<fs::FilePath>& files
-) {
+std::expected<vm::low::LowVMProgram, LoaderLogger>
+	Loader::getProgram(const std::vector<fs::FilePath>& files) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
@@ -229,10 +230,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
-
-						func_builder.setRetSize(func->ret_size
-						);  // @note: this is temporary, since function meta-parameters will be
-						    // removed
 
 						functions.emplace_back(func_builder.build());
 					}
@@ -254,9 +251,8 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const code::CodeCollection& code_collection
-) {
+std::expected<vm::low::LowVMProgram, LoaderLogger>
+	Loader::getProgram(const code::CodeCollection& code_collection) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();

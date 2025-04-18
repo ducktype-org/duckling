@@ -64,9 +64,8 @@ namespace dia {
 		}
 	}
 
-	printer::PrinterContentsSeq DiagnosticToUserConverter::toPrinterContents(
-		CRef<Message> message_ptr, bool detailed
-	) {
+	printer::PrinterContentsSeq
+		DiagnosticToUserConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
 		// Prepare the leading message.
 		const Message::Severity s = message_ptr->getSeverity();
 		const Message::Domain   d = message_ptr->getDomain();
@@ -192,9 +191,8 @@ namespace dia {
 		return o.str();
 	}
 
-	printer::PrinterContentsSeq DiagnosticToJSONConverter::toPrinterContents(
-		CRef<Message> message_ptr, bool detailed
-	) {
+	printer::PrinterContentsSeq
+		DiagnosticToJSONConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
 		// Prepare complex subJSONs.
 		auto range = sourcePositionToLspJson(message_ptr->getSourcePosition());
 		auto notes = notesToLspJson(message_ptr->getNotes(), message_ptr, detailed);
