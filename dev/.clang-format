@@ -236,7 +236,8 @@ SortIncludes:    CaseInsensitive
 
 # Penalties
 PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakScopeResolution: 2000
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0
