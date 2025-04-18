@@ -350,8 +350,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			.external_objects_files = {},
 			.external_libs          = {} } };
 
+		u64 i = 0;
 		for (const auto& module: modules) {
-			driver.compileHOUTUnit(&module, base::StrID("main_module"));
+			driver.compileHOUTUnit(
+				&module,
+				base::StrID(base::strConcat("main_module", i++).c_str())
+			);
 		}
 
 		driver.link();
