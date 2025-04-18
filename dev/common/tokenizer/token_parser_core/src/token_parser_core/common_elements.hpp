@@ -58,6 +58,6 @@ namespace tpc {
 		/**
 		 * @note This should probably do something more in the future
 		 */
-		inline bool operator==(StringValue& other) { return str() == other.str(); }
+		bool operator==(StringValue& other) { return str() == other.str(); }
 	};
 }
