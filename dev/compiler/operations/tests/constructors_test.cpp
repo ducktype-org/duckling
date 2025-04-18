@@ -52,8 +52,7 @@ private:
 		auto ctv_parent = exec::alloc_new(parent_class);
 
 		auto ctv_int = exec::alloc_new(int_desc.getType());
-		operation::getDefault(operation::Defaultable::ConstructEmpty, int_desc.getType())(
-			{ ctv_int }
+		operation::getDefault(operation::Defaultable::ConstructEmpty, int_desc.getType())({ ctv_int }
 		);
 		ctv_int.getData<int8_t>().front() = 14;
 

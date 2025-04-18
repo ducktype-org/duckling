@@ -1,5 +1,7 @@
 #include "queries.hpp"
 
+#include "module_tree.hpp"
+
 #include <query_framework/query_impl.hpp>
 
 #include <base/string_id.hpp>

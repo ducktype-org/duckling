@@ -2,7 +2,6 @@
 
 #include <base/flag.hpp>
 
-// clang-format off
 MAKE_FLAG_TYPE(test_flag_namespace, TestFlagOpts, TestFlag,
 	Opt1,
 	Opt2,
@@ -10,8 +9,6 @@ MAKE_FLAG_TYPE(test_flag_namespace, TestFlagOpts, TestFlag,
 	Opt4,
 	Opt5
 )
-
-// clang-format on
 
 class FlagTypeTest: public tester::TestSuite {
 #undef TESTER_CLASS

@@ -18,10 +18,10 @@
  */
 #pragma once
 
-#include "../lookup_result.hpp"
-#include "../scope_symbol_id.hpp"
-
-#include <frontend/module_tree/queries.hpp>  // @TODO: relax this dependency (we only need ModuleID in hpp) (#404)
+#include <frontend/module_tree/module_id.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/scopes/simple.hpp>
+#include <helios_private/lookup_utils/lookup_result.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <pst_parser/lang_parser_state.hpp>
@@ -31,20 +31,7 @@
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
-	/**
-	 * @brief Return parent scope or none for root-scopes.
-	 */
-	base::Optional<ScopeID> parent(ScopeID);
 
-	/**
-	 * @brief Return module the scope was defined in
-	 */
-	frontend::ModuleID module(ScopeID id);
-
-	/**
-	 * @brief Return depth of the scope in the scope tree.
-	 */
-	u64 scopeDepth(ScopeID);
 
 	/**
 	 * @brief Return all scopes currently stored by HELIOS.

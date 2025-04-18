@@ -66,8 +66,7 @@ namespace pst {
 				break;
 			}
 
-			if (lang_def::keywordFlags(as_keyword)
-			        .contains(lang_def::KeywordFlagsOptions::IsAction))
+			if (lang_def::keywordFlags(as_keyword).contains(lang_def::KeywordFlagsOptions::IsAction))
 				return detail::parseStmt<Action>(state);
 
 			if (as_special == Special::Semicolon) {

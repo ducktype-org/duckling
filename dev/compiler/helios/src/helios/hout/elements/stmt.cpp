@@ -2,6 +2,8 @@
 
 #include "../visitors.hpp"
 
+#include <helios/symbols/simple.hpp>
+
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \
 	void type::acceptVisitor(HoutStmtVisitor& visitor) const { visitor.visit##type(*this); }

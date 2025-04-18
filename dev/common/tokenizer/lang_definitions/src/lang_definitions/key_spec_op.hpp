@@ -150,13 +150,6 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
-		BCLocalSize,
-		BCRetSize,
-		BCArgSize,
-		BCDefine,
-		BCArg,
-		BCLocal,
-		BCCode,
 		BCType,
 		BCPrimitive,
 		BCPointer,

@@ -10,6 +10,7 @@
 #include <config/config.hpp>
 #include <driver/driver.hpp>
 #include <filesystem/file.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
