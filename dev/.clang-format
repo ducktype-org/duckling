@@ -258,7 +258,7 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IfMacros:
-  - KJ_IF_MAYBE
+  - KJ_IF_MAYBE # addint things like if_opt_some here is breaken, becouse clang removes the braces
 RemoveBracesLLVM: true  # This will soon be deprecated
 StatementAttributeLikeMacros:
   - Q_EMIT
