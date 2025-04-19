@@ -5,7 +5,9 @@
 #include <base/optional.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
+#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 #include <vm/core/process/memory/memory.hpp>
@@ -19,6 +21,7 @@
 
 #include <condition_variable>
 #include <deque>
+#include <expected>
 #include <shared_mutex>
 
 namespace vm::loader {
@@ -129,11 +132,18 @@ namespace vm {
 		std::expected<api::Response, api::CoreOperationError> output();
 
 		/**
-		 * @brief Gets the Status of the VCPU (memory-safe).
+		 * @brief Gets the status of the process (memory-safe).
 		 *
-		 * @return api::VCPUStatus
+		 * @return api::ProcStatus
 		 */
 		api::ProcStatus getStatus();
+
+		/**
+		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
+		 *
+		 * @return api::Response
+		 */
+		std::expected<api::Response, api::StateError> getExitCode();
 
 		/**
 		 * @brief Holds all services. When it's constructed, it initializes all services.
@@ -176,9 +186,7 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::CoreOperationError> doRequest(
-			const api::RequestVariant& request
-		);
+		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
 		VMProcess();
 

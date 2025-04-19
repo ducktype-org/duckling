@@ -118,9 +118,6 @@ function main {
 
 	output_l64      16;
 
-	# return i
-	mov_l64_l64		0, 24;
-
 	deinit; # tmp
 	deinit;	# i
 	deinit;	# max
