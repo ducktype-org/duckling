@@ -2,21 +2,17 @@
 # input = n
 # output = n
 
-type primitive: int32 4
-type primitive: int64 8
-type fun: main {} int64
-type fun: check {} int32
-
+type fun: main {} i64
+type fun: check {} i32
 
 function check {
 	input_l32       0;
 	ret;
 }
 
-
 function main {
 	# [0, 8) main ret_val
-	init_type 			int32; # [8, 12) check() ret_val
+	init_type 			i32; # [8, 12) check() ret_val
 	call_func          	check;
 	output_l32 			8;
 

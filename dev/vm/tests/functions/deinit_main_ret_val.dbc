@@ -2,14 +2,13 @@
 # input = ""
 # output = "42"
 
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 
 function main {
-    init_type       int64; # [0, 8) main ret_val
+    init_type       i64; # [0, 8) main ret_val
     deinit;
 
-    init_type       int64; # [0, 8)
+    init_type       i64; # [0, 8)
     mov_l64_imm     0, 42;
     output_l64      0;
 

@@ -1,15 +1,13 @@
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 
-type primitive: VT 8
 type pointer: pointer_parent Parent
 type pointer: pointer_I1 I1
 type pointer: pointer_I2 I2
-type fun: method_parent_int_int {pointer_parent, int64} int64
-type fun: method_I1_int {pointer_I1} int64
+type fun: method_parent_int_int {pointer_parent, i64} i64
+type fun: method_I1_int {pointer_I1} i64
 
 type data: POD {
-    abc: int64,
+    abc: i64,
 }
 
 inheritable I1: interface {
@@ -24,7 +22,7 @@ inheritable I2: interface {
 
 inheritable Parent: class {
     fields: {
-        foo: int64,
+        foo: i64,
     };
     virtual_methods: {
         lorem: method_parent_int_int,
@@ -35,8 +33,8 @@ inheritable Child: class {
     extends: Parent;
     implements: {I1, I2};
     fields: {
-        foo: int64,
-        bar: int64,
+        foo: i64,
+        bar: i64,
     };
 }
 

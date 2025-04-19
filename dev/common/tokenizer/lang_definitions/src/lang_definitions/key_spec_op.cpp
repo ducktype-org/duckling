@@ -132,7 +132,6 @@ namespace lang_def {
 			{ Keyword::BCFields, "fields", KeywordFlags() },
 		});
 
-
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */

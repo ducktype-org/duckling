@@ -70,8 +70,9 @@ namespace tsl {
 		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
-		virtual std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const
+		virtual std::string toStringDefinition(
+			query::Context& ctx, bool recursive = true, u32 indent = 0
+		) const
 			= 0;
 
 		/**
@@ -229,8 +230,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -278,8 +279,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -319,8 +320,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -431,8 +432,8 @@ namespace tsl {
 		 * @copydoc TypeLayoutABC::toStringDefinition
 		 */
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const;
+		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
+			const;
 
 		/**
 		 * @copydoc TypeLayoutABC::toStringIdentification
