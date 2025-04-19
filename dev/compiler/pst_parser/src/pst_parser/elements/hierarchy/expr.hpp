@@ -27,12 +27,12 @@ namespace pst {
 
 		CONDITION(isComparison) {
 			return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
-			).value_or(false);
+			).valueOr(false);
 		}
 
 		CONDITION(isAssignment) {
 			return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
-			).value_or(false);
+			).valueOr(false);
 		}
 
 		CONDITION(exprStmtEnd) { return state[fwd].is(Special::Semicolon); }

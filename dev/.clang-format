@@ -214,11 +214,11 @@ IncludeCategories:
   - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6
     SortPriority:    5
-  # all other files with "":  
+  # all other files with "":
   - Regex:           '^".*"$'
     Priority:        7
     SortPriority:    1
-  # all other files with <>:  
+  # all other files with <>:
   - Regex:           '^<.*>$'
     Priority:        8
     SortPriority:    2

@@ -18,9 +18,9 @@ namespace vm {
 	// @TODO: change to strongly typed int
 	using TypeSize = u64;
 
-	class Type {
+	class Type final {
 	public:
-		constexpr static TypeSize PointerSize = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
 
 		enum class Kind {
 			None,
@@ -41,7 +41,7 @@ namespace vm {
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
-		TypeID      id;
+		TypeID      id{};
 
 		std::variant<
 			std::monostate,
@@ -67,7 +67,7 @@ namespace vm {
 		void defineDynamicTable(TypeRef inner);
 		void defineData(
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			const base::Optional<VTable>&                       vtable
+			base::Optional<VTable>                              vtable
 		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
@@ -77,17 +77,17 @@ namespace vm {
 
 		// Type query:
 		[[nodiscard]]
-		inline TypeID getID() const {
+		TypeID getID() const {
 			return id;
 		}
 
 		[[nodiscard]]
-		inline base::StrID getName() const {
+		base::StrID getName() const {
 			return name;
 		}
 
 		[[nodiscard]]
-		inline TypeSize getSize() const {
+		TypeSize getSize() const {
 			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
 		}
@@ -99,12 +99,12 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		inline Kind getKind() const {
+		Kind getKind() const {
 			return kind_type;
 		}
 
 		[[nodiscard]]
-		inline bool isPrimitive(TypeSize qsize) const {
+		bool isPrimitive(TypeSize qsize) const {
 			return getKind() == Kind::Primitive and getSize() == qsize;
 		}
 
@@ -127,9 +127,9 @@ namespace vm {
 
 		// data
 		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID field_id) const;
 		[[nodiscard]]
-		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
+		base::Optional<Offset> getFieldOffset(kind::Data::FieldID field_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
 		[[nodiscard]]
@@ -143,13 +143,17 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<u64> getVariantCount() const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getNthVariantType(u64 variantID) const;
+		base::Optional<TypeCRef> getNthVariantType(u64 variant_id) const;
 
 		// function
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getNthParameterType(u64 parameterID) const;
+		base::Optional<const std::vector<TypeCRef>&> getParameters() const;
+		[[nodiscard]]
+		base::Optional<u64> getParametersSize() const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getResultType() const;
 

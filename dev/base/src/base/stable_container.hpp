@@ -5,8 +5,6 @@
 #pragma once
 
 #include "box.hpp"
-#include "ints.hpp"
-#include "optional.hpp"
 #include "ref.hpp"
 
 #include <vector>
@@ -14,17 +12,20 @@
 namespace base {
 
 	/**
-	 * @brief Expandable list with stable references (References are valid after the addition of new
-	 * elements).
+	 * @brief Expandable list (like std::vector), but with stable references (References never
+	 * become dangling, because actual data never moves).
 	 *
 	 * @tparam Key must be convertible to and from usize.
 	 *
 	 * @note Add stable range based iteration (Probably with indexes)
 	 */
-	template<typename Data, typename Key = usize>
-	requires std::constructible_from<Key, usize> && std::constructible_from<usize, Key>
+	template<typename Data>
 	class StableVector final {
 		std::vector<Box<Data>> data;
+		static_assert(
+			std::is_same_v<typename std::vector<Box<Data>>::size_type, usize>,
+			"When this fail, figure out what to do."
+		);
 
 	public:
 		using RefT  = Ref<Data>;
@@ -54,58 +55,62 @@ namespace base {
 		}
 
 		[[nodiscard]]
-		constexpr usize empty() const noexcept {
+		constexpr bool empty() const noexcept {
 			return data.empty();
 		}
 
 		[[nodiscard]]
-		constexpr usize notEmpty() const noexcept {
-			return !data.empty();
+		constexpr bool notEmpty() const noexcept {
+			return not data.empty();
 		}
 
-		constexpr Data& operator[](Key pos) { return *data.at(static_cast<usize>(pos)); }
-
-		constexpr const Data& operator[](Key pos) const {
-			return *data.at(static_cast<usize>(pos));
+		[[nodiscard]]
+		constexpr Ref<Data> operator[](usize pos) {
+			return data.at(pos).refMut();
 		}
 
-		Optional<RefT> getRef(Key pos) noexcept {
-			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].refMut();
+		[[nodiscard]]
+		constexpr CRef<Data> operator[](usize pos) const {
+			return data.at(pos).ref();
 		}
 
-		Optional<CRefT> getCRef(Key pos) const noexcept {
-			if (static_cast<usize>(pos) >= size()) return {};
-			return data[static_cast<usize>(pos)].ref();
-		}
-
-		constexpr Key pushBack(const Data& value) {
+		constexpr void pushBack(const Data& value) {
 			auto new_ptr = makeBox<Data>(value);
 			data.emplace_back(std::move(new_ptr));
-			return Key(data.size() - 1);
 		}
 
-		Key pushBack(Data&& value) {
+		void pushBack(Data&& value) {
 			auto new_ptr = makeBox<Data>(std::move(value));
 			data.emplace_back(std::move(new_ptr));
-			return Key(data.size() - 1);
 		}
 
-		RefT last() { return data.back().refMut(); }
+		[[nodiscard]]
+		RefT last() {
+			return data.back().refMut();
+		}
 
-		CRefT last() const { return data.back().ref(); }
+		[[nodiscard]]
+		CRefT last() const {
+			return data.back().ref();
+		}
+
+		/**
+		 * Returns index of the last element (i.e. size - 1).
+		 */
+		[[nodiscard]]
+		constexpr usize lastIndex() const {
+			CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty StableVector");
+			return size() - 1;
+		}
 
 		template<class... Args>
-		constexpr Key emplaceBack(Args&&... args) {
+		constexpr void emplaceBack(Args&&... args) {
 			auto new_ptr = makeBox<Data>(std::forward<Args>(args)...);
 			data.emplace_back(std::move(new_ptr));
-			return Key(data.size() - 1);
 		}
 
 		auto begin() const { return data.begin(); }
 
 		auto end() const { return data.end(); }
 	};
-
-
 }

@@ -6,6 +6,7 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
@@ -16,6 +17,8 @@
 #include <base/stable_hashmap.hpp>
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
+
+#include <set>
 
 namespace compiler::helios {
 
@@ -78,9 +81,9 @@ namespace compiler::helios {
 		base::StableVector<ScopeData> scope_table;
 
 		template<class... T>
-		auto putInScopeTable(T&&... args) {
-			auto key = scope_table.emplaceBack(std::forward<T>(args)...);
-			return scope_table.getRef(key).value();
+		Ref<ScopeData> putInScopeTable(T&&... args) {
+			scope_table.emplaceBack(std::forward<T>(args)...);
+			return scope_table.last();
 		}
 	}
 
@@ -128,7 +131,7 @@ namespace compiler::helios {
 
 		// code blocks:
 		case pst::ElementKind::CodeBlock: {
-			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::CodeBlockOrStmt)
 				return ElementScopeKind::Transparent;
 			else
@@ -140,7 +143,7 @@ namespace compiler::helios {
 		case pst::ElementKind::ClassBlock: {
 			// This is because AccessBlocks store a ClassBlock inside.
 			// Only the "top-class" ClassBlock has a scope.
-			auto parent_kind = element->getParent().unlock(ctx)->getElementKind();
+			auto parent_kind = element->getParent().value().unlock(ctx)->getElementKind();
 			if (parent_kind == pst::ElementKind::Class)
 				return ElementScopeKind::Standard;
 			else
@@ -236,8 +239,8 @@ namespace compiler::helios {
 				));
 			}
 
-			ScopeID parent = element->getParent().unlockOpt(ctx)
-			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent())
+			ScopeID parent = element->getParent().has_value()
+			                   ? ctx.query<QueryPrimaryCodeScopeFor>(element->getParent().value())
 			                   : ctx.query<QueryRootScopeOf>(
 									 { frontend::extendQueryModuleIDOfPST(ctx, element) }
 								 );
@@ -299,11 +302,59 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
-		static auto provide(Context&, QKey) -> PResult {
-			std::vector<ScopeID> out;
-			// @TODO
-			// write a proper visitor and traverse PST to get all scopes
-			return out;
+		/**
+		 * @brief Gets scopes in a module.
+		 */
+		struct ScopeGrabPseudoVisitor {
+			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
+
+			std::set<ScopeID> out;
+			Context&          ctx;
+
+			template<class T>
+			ScopeID scopeOf(pst::Access<T> element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(element);
+			}
+
+			// @todo
+			// handling lambdas, expand statements, templates, etc. might be much more tricky and
+			// require a different approach
+			template<class T>
+			void visit(pst::Access<T> element) {
+				// @todo
+				// some elements don't have a well defined scope yet leading to a panic
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out.insert(scopeOf(element));
+				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
+			}
+		};
+
+		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
+
+			ScopeGrabPseudoVisitor scope_grab(ctx);
+			scope_grab.visit(root);
+
+			return std::move(scope_grab.out);
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			// fetch scopes from main module file
+			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			std::set<ScopeID> output    = getScopes(ctx, main_file);
+
+			// fetch scopes from other module files
+			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
+			for (auto file: *source_files) {
+				auto scopes = getScopes(ctx, file);
+				output.merge(scopes);
+			}
+
+			// validate output:
+			for (auto scope: output)
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
+
+			return { output.begin(), output.end() };
 		}
 
 		QUERY_AUTO_CACHE_REF

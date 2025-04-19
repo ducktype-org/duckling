@@ -1,0 +1,24 @@
+# Checks verifying the types of arguments passed to a function.
+
+type primitive: int64 8
+type primitive: int32 4
+type primitive: void 0
+type fun: main {} int64
+type fun: check { int64 } void
+
+
+function check {
+	output_l64          0;
+	ret;
+}
+
+
+function main {
+	# [0, 8) main ret_val
+	init_type 			int32; # [8, 12) check() arg0
+	input_l64           8;
+	call_func          	check;
+
+	mov_l64_imm			0, 42;
+	ret;
+}

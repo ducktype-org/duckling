@@ -3,7 +3,7 @@
 #include <base/int_conv.hpp>
 #include <base/str_utils.hpp>
 
-#include <vm/preprocessor/stable_type_id_name_map.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <array>
 

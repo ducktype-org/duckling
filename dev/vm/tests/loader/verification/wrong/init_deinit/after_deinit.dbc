@@ -1,0 +1,15 @@
+type primitive: int64 8
+type fun: main {} int64
+
+function main {
+	# [0, 8) -> main ret_val
+	# [8, 16) -> x
+
+	init_type           int64; # x
+	output_l64          8;
+	deinit; # x
+
+	mov_l64_imm         8, 1;
+
+	ret;
+}

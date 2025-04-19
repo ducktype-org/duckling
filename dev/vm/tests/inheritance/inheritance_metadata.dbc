@@ -12,29 +12,6 @@ type data: POD {
     abc: int64,
 }
 
-type data: I1 {
-    vtable: VT,
-}
-
-type data: I2 {
-    vtable: VT,
-}
-
-type data: Parent {
-    vtable: VT,
-    foo: int64,
-}
-
-type data: Child {
-    vtable: VT,
-    foo: int64,
-    bar: int64,
-}
-
-type data: PietMondrian {
-    vtable: VT,
-}
-
 inheritable I1: interface {
     virtual_methods: {
         foo: method_I1_int,
@@ -46,6 +23,9 @@ inheritable I2: interface {
 }
 
 inheritable Parent: class {
+    fields: {
+        foo: int64,
+    };
     virtual_methods: {
         lorem: method_parent_int_int,
     };
@@ -54,18 +34,15 @@ inheritable Parent: class {
 inheritable Child: class {
     extends: Parent;
     implements: {I1, I2};
+    fields: {
+        foo: int64,
+        bar: int64,
+    };
 }
 
 inheritable PietMondrian: abstract class {
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    
-    local_size: 8;
-    
-    code: {
-        ret;
-    }
+    ret;
 }

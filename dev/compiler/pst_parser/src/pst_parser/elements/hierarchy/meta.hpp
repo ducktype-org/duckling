@@ -85,7 +85,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<Box<Attribute>>;
+		using AttrList = std::vector<AccessInternal<Attribute>>;
 
 		AttrList attributes;
 

@@ -1,0 +1,15 @@
+type primitive: int64 8
+type fun: main {} int64
+
+function main {
+	# [0, 8) -> main ret_val
+	# [8, 16) -> x
+
+	jmpRel_label  Inside;
+
+	init_type     int64; # x
+	label         Inside;
+	deinit; # x
+
+	ret;
+}

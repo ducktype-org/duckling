@@ -11,17 +11,51 @@
 namespace vm {
 	struct VTable {
 		struct Class {
-			bool                    is_abstract;
-			base::Optional<TypeRef> extends;
+			bool                     is_abstract;
+			base::Optional<TypeCRef> extends;
 		};
 
 		struct Interface {};
 
 		using Kind = std::variant<Interface, Class>;
 
-		TypeCRef                            type;
-		Kind                                kind;
-		std::vector<TypeRef>                implements;
-		base::HashMap<base::StrID, TypeRef> virtual_methods;
+		TypeCRef                             type;
+		Kind                                 kind;
+		std::vector<TypeCRef>                implements;
+		base::HashMap<base::StrID, TypeCRef> virtual_methods;
+
+		VTable(
+			TypeCRef                             type,
+			Kind                                 kind,
+			std::vector<TypeCRef>                implements,
+			base::HashMap<base::StrID, TypeCRef> virtual_methods
+		):
+			  type{ type },
+			  kind{ kind },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
+
+		static VTable forClass(
+			TypeCRef                             type,
+			bool                                 is_abstract,
+			base::Optional<TypeCRef>             extends,
+			std::vector<TypeCRef>                implements,
+			base::HashMap<base::StrID, TypeCRef> virtual_methods
+		) {
+			return VTable(
+				type,
+				Class{ .is_abstract = is_abstract, .extends = extends },
+				std::move(implements),
+				std::move(virtual_methods)
+			);
+		}
+
+		static VTable forInterface(
+			TypeCRef                             type,
+			std::vector<TypeCRef>                implements,
+			base::HashMap<base::StrID, TypeCRef> virtual_methods
+		) {
+			return VTable(type, Interface{}, std::move(implements), std::move(virtual_methods));
+		}
 	};
 }

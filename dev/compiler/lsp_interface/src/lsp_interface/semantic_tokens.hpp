@@ -10,6 +10,7 @@
 
 #include <base/ints.hpp>
 #include <base/ref.hpp>
+#include <base/stringifyable_enum.hpp>
 
 #include <string>
 
@@ -64,6 +65,6 @@ namespace lsp {
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
-	void        getSemanticTokens(MCRef<pst::LangElement>, std::vector<SemanticToken>&);
-	std::string getSemanticTokens(MCRef<pst::LangElement>);
+	void        getSemanticTokens(pst::AccessLocked<pst::LangElement>, std::vector<SemanticToken>&);
+	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement>);
 }

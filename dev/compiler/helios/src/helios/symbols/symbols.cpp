@@ -189,9 +189,9 @@ namespace compiler::helios {
 		base::StableVector<const SymbolData> symbol_table;
 
 		template<class... T>
-		auto putInSymtable(T&&... args) {
-			auto key = symbol_table.emplaceBack(std::forward<T>(args)...);
-			return symbol_table.getCRef(key).value();
+		CRef<SymbolData> putInSymtable(T&&... args) {
+			symbol_table.emplaceBack(std::forward<T>(args)...);
+			return symbol_table.last();
 		}
 	}
 
@@ -398,7 +398,7 @@ namespace compiler::helios {
 			query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 		) {
 			// note: this might become more complicated in the future:
-			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent());
+			return ctx.query<QueryPrimaryCodeScopeFor>(element.unlock(ctx)->getParent().value());
 		}
 
 		static auto provide(Context& ctx, QKey key) -> PResult {
@@ -453,8 +453,7 @@ namespace compiler::helios {
 								  },
 								  {
 									  base::StrID("builtin_output_i64"),
-									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, unit_type }
-						              ),
+									  ctx.query<tsh::QueryFunctionType>({ { i64_type }, i64_type }),
 								  },
 							  },
 						  };
