@@ -111,25 +111,17 @@ namespace lang_def {
 			{ Keyword::This, "this", KeywordFlags() },
 		} };
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 15> BC_KEYWORDS_ARRAY{
-		{
-			{ Keyword::BCFunction, "function", KeywordFlags() },
-			{ Keyword::BCLocalSize, "local_size", KeywordFlags() },
-			{ Keyword::BCRetSize, "ret_size", KeywordFlags() },
-			{ Keyword::BCArgSize, "arg_size", KeywordFlags() },
-			{ Keyword::BCDefine, "define", KeywordFlags() },
-			{ Keyword::BCArg, "arg", KeywordFlags() },
-			{ Keyword::BCCode, "code", KeywordFlags() },
-			{ Keyword::BCType, "type", KeywordFlags() },
-			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
-			{ Keyword::BCPointer, "pointer", KeywordFlags() },
-			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
-			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
-			{ Keyword::BCData, "data", KeywordFlags() },
-			{ Keyword::BCVariant, "variant", KeywordFlags() },
-			{ Keyword::BCFunType, "fun", KeywordFlags() },
-		}
-	};
+	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 9> BC_KEYWORDS_ARRAY{ {
+		{ Keyword::BCFunction, "function", KeywordFlags() },
+		{ Keyword::BCType, "type", KeywordFlags() },
+		{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
+		{ Keyword::BCPointer, "pointer", KeywordFlags() },
+		{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+		{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
+		{ Keyword::BCData, "data", KeywordFlags() },
+		{ Keyword::BCVariant, "variant", KeywordFlags() },
+		{ Keyword::BCFunType, "fun", KeywordFlags() },
+	} };
 
 
 	/**

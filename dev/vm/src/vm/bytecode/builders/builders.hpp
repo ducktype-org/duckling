@@ -154,7 +154,6 @@ namespace vm::code::builders {
 		std::vector<LocalStackEntry> local_stack;
 
 		usize max_stack_size = 0;
-		usize ret_size       = 0;
 
 		const TypeContext& type_context;
 
@@ -173,11 +172,6 @@ namespace vm::code::builders {
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
-
-		/**
-		 * @note This is temporary, look at impl of build().
-		 */
-		void setRetSize(usize ret_size);
 
 		/**
 		 * @brief Return variable's stack offset. Also pushes `init_type` instruction.

@@ -29,8 +29,7 @@ int main(int argc, const char** argv) {
 	          .add(clap::ParamBuilder::ofFlag()
 	                   .addShortName('d')
 	                   .addLongName("descending")
-	                   .addShortDesc("Whether or not numbers should be print in a descending order."
-	                   )
+	                   .addShortDesc("Whether or not numbers should be print in a descending order.")
 	                   .addLongDesc("This is a multiline,\nlong comment, that should\n"
 	                                "explain this parameter with more\ndetail...")
 	                   .build())

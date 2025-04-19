@@ -78,8 +78,9 @@ namespace vm {
 		 * @param request Request that performs action on the Execution Thread.
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::ExecutorRequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::ExecutorRequest& request
+		);
 
 		/**
 		 * @brief Performs external data request on the VCPU.
@@ -92,11 +93,12 @@ namespace vm {
 		 * @param request
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::DataRequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::DataRequest& request
+		);
 
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::IORequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		);
 
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
@@ -119,8 +121,8 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			input(const api::request::Input& request);
+		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
+		);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
@@ -155,8 +157,9 @@ namespace vm {
 		 * @brief Attaching means all IO is interactive, input is read from stdin, output
 		 * @brief is automatically forwarded to stdout.
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			attach(std::istream& istream = std::cin, std::ostream& ostream = std::cout);
+		std::expected<api::Response, api::CoreOperationError> attach(
+			std::istream& istream = std::cin, std::ostream& ostream = std::cout
+		);
 
 		std::expected<api::Response, api::CoreOperationError> detach();
 

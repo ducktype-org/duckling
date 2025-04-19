@@ -2,6 +2,8 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios_private/query_hout_of_expr.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <cmath>
@@ -14,8 +16,9 @@ namespace compiler::helios {
 
 			EvaluateHoutExprVisitor(Context& ctx): ctx(ctx) {}
 
-			static errors::HResult<i64, errors::Failed>
-				evaluateExpr(Context& ctx, const code::Expr& expr) {
+			static errors::HResult<i64, errors::Failed> evaluateExpr(
+				Context& ctx, const code::Expr& expr
+			) {
 				EvaluateHoutExprVisitor visitor(ctx);
 				expr.acceptVisitor(visitor);
 				return visitor.result;
@@ -26,8 +29,7 @@ namespace compiler::helios {
 			}
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
-				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet"
-				);
+				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
 			}
 
 			void visitCallExpr(const code::CallExpr&) final {
@@ -110,8 +112,7 @@ namespace compiler::helios {
 			void visitVariantTypeConstructorExpr(
 				[[maybe_unused]] const code::VariantTypeConstructorExpr& expr
 			) final {
-				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet"
-				);
+				throw base::NotYetImplemented("Evaluation of variant values is not implemented yet");
 			}
 
 			void visitLinkedIdentifierExpr(const code::LinkedIdentifierExpr& expr) final {

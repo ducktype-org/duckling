@@ -1,11 +1,13 @@
 #include "scopes.hpp"
 
-#include "../lookup_result.hpp"
-#include "../pst_walkers.hpp"
-#include "../symbols/symbols.hpp"
-
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/scopes/scope_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <helios_private/utils/pst_walkers.hpp>
+#include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
@@ -17,40 +19,10 @@
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
 
+#include <set>
+
 namespace compiler::helios {
 
-	struct ScopeData final {
-		// created on startup:
-		std::optional<ScopeID> parent;
-
-		// base::StrID name; ///< for debug
-		bool is_root = false;
-
-		/**
-		 * @brief PST element for which the scope was created.
-		 * Empty for root scope.
-		 */
-		base::Optional<pst::AccessLocked<pst::LangElement>> related_pst_element;
-
-		/**
-		 * @brief Module, the scope was defined in
-		 */
-		frontend::ModuleID parent_module;
-
-		// cache entry:
-		// in the future we might need separation for: direct symbols, expanded symbols
-		// in this system scope is no longer closed/open as we think of it as a pure-value object
-		// any lookup in the scope requires calculation of symbols witch itself is done only once!
-		base::Optional<query::CacheEntry<SymbolList>> symbols;
-
-		u64 depth;
-
-		// We would like the function bellow to be deleted to prevent any copy of scope data.
-		// Unfortunately that would break the aggregate initialization which is super cool.
-		// ScopeData is local to this file only, so we just need to be careful.
-		// ScopeData(const ScopeData&)            = delete;
-		// ScopeData& operator=(const ScopeData&) = delete;
-	};
 
 	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
@@ -299,11 +271,59 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryScopesInModule, std::vector<ScopeID>) {
-		static auto provide(Context&, QKey) -> PResult {
-			std::vector<ScopeID> out;
-			// @TODO
-			// write a proper visitor and traverse PST to get all scopes
-			return out;
+		/**
+		 * @brief Gets scopes in a module.
+		 */
+		struct ScopeGrabPseudoVisitor {
+			ScopeGrabPseudoVisitor(Context& ctx): ctx(ctx) {}
+
+			std::set<ScopeID> out;
+			Context&          ctx;
+
+			template<class T>
+			ScopeID scopeOf(pst::Access<T> element) {
+				return ctx.query<QueryPrimaryCodeScopeFor>(element);
+			}
+
+			// @todo
+			// handling lambdas, expand statements, templates, etc. might be much more tricky and
+			// require a different approach
+			template<class T>
+			void visit(pst::Access<T> element) {
+				// @todo
+				// some elements don't have a well defined scope yet leading to a panic
+				if (getScopeKind(ctx, element) == ElementScopeKind::Standard)
+					out.insert(scopeOf(element));
+				for (auto child: element->viewChildren()) this->visit(child.unlock(ctx));
+			}
+		};
+
+		static auto getScopes(Context& ctx, frontend::FileID file) -> std::set<ScopeID> {
+			auto root = ctx.query<frontend::QueryFilePST>(file)->getRootElement().unlock(ctx);
+
+			ScopeGrabPseudoVisitor scope_grab(ctx);
+			scope_grab.visit(root);
+
+			return std::move(scope_grab.out);
+		}
+
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			// fetch scopes from main module file
+			auto              main_file = ctx.query<frontend::QueryMainSourceFile>(key);
+			std::set<ScopeID> output    = getScopes(ctx, main_file);
+
+			// fetch scopes from other module files
+			auto source_files = ctx.query<frontend::QuerySourceFiles>(key);
+			for (auto file: *source_files) {
+				auto scopes = getScopes(ctx, file);
+				output.merge(scopes);
+			}
+
+			// validate output:
+			for (auto scope: output)
+				CORE_ASSERT(module(scope) == key, "Module mismatch in QueryScopesInModule\n");
+
+			return { output.begin(), output.end() };
 		}
 
 		QUERY_AUTO_CACHE_REF
@@ -316,8 +336,9 @@ namespace compiler::helios {
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
 		template<std::derived_from<pst::Stmt> Stmt = pst::Stmt>
-		static std::vector<SymID>
-			filterSymbolsFromStmtList(query::Context& ctx, const StmtList<Stmt>& list) {
+		static std::vector<SymID> filterSymbolsFromStmtList(
+			query::Context& ctx, const StmtList<Stmt>& list
+		) {
 			std::vector<SymID> symbols;
 			for (const auto& stmt: list) {
 				if (stmt.unlock(ctx)->isDeclaration()) {
