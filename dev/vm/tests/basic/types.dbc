@@ -1,6 +1,6 @@
 type primitive: int64 8
 type primitive: in64 8
-
+type pointer: ptr_int64 int64
 type fun: main {} i64
 
 function main {
