@@ -209,8 +209,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::ApiError>
-		VMProcess::doRequest(const api::RequestVariant& request) {
+	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
+		const api::RequestVariant& request
+	) {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
 			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }
