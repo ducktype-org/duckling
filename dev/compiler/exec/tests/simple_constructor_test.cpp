@@ -45,8 +45,7 @@ private:
 		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
 
 		assert(
-			p_ctv.getData<u32>().size() == 2,
-			"Pointer doesn't hold two values (block id and offset)"
+			p_ctv.getData<u32>().size() == 2, "Pointer doesn't hold two values (block id and offset)"
 		);
 
 

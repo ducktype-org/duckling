@@ -60,8 +60,7 @@ private:
 		int_ctv_exp.getData<int8_t>().front() = 36;
 		BuiltInOp mul_op                      = { Operator::Asterisk, { int_desc, int_desc } };
 		assert(
-			getBuiltInOps().contains(mul_op),
-			"Int8 multiplication not found in built in operations."
+			getBuiltInOps().contains(mul_op), "Int8 multiplication not found in built in operations."
 		);
 		auto mul_id = getBuiltInOps()[mul_op];
 		assert(operation::existsOperation(mul_id), "Int8 multiplication not found in operations.");

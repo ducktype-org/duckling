@@ -1,5 +1,8 @@
 #include "value_category.hpp"
 
+#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+
 namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol) {
 		compiler::helios::SymbolKind symbol_kind = kind(symbol);
