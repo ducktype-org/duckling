@@ -34,28 +34,5 @@ namespace vm {
 			  kind{ kind },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) } {}
-
-		static VTable forClass(
-			TypeCRef                             type,
-			bool                                 is_abstract,
-			base::Optional<TypeCRef>             extends,
-			std::vector<TypeCRef>                implements,
-			base::HashMap<base::StrID, TypeCRef> virtual_methods
-		) {
-			return VTable(
-				type,
-				Class{ .is_abstract = is_abstract, .extends = extends },
-				std::move(implements),
-				std::move(virtual_methods)
-			);
-		}
-
-		static VTable forInterface(
-			TypeCRef                             type,
-			std::vector<TypeCRef>                implements,
-			base::HashMap<base::StrID, TypeCRef> virtual_methods
-		) {
-			return VTable(type, Interface{}, std::move(implements), std::move(virtual_methods));
-		}
 	};
 }
