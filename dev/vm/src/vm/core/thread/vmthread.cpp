@@ -14,6 +14,8 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/instructions.hpp"
+#include "vm/core/process/memory/block.hpp"
 #include "vm/core/process/memory/memory.hpp"
 #include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <vm/api/data/response.hpp>
@@ -31,6 +33,16 @@
 #include <utility>
 
 namespace vm {
+#ifdef USE_TAIL_CALLS
+	#define DEFINE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+		Fix8Instruction { .opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
+#else
+	#define DEFINE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                                 \
+		Fix8Instruction {                                                                          \
+			.opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, .arg1 = ARG_1 \
+		}
+#endif
+
 	VMThread::VMThread(VMProcess& process):
 		  runtime_data(process.getMemory().initializeFrameStack()),
 		  process(process),
@@ -92,47 +104,85 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
-	void VMThread::initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args) {
-		std::byte* local_stack = runtime_data.local_stack_base;
-		
-		// Initialize the argc block.
-		auto i64_type = executing_program->types->atMaybe(base::StrID("i64")).expect("All programs are expected to have an existing i64 type!");
-		auto argc_block = process_memory.allocateStack(i64_type, local_stack + frame->local_stack_head);
-		derefStack<u64>(local_stack, base::safeIntConv<i64>(frame->local_stack_head)) = args.size();
-		frame->block_stack.push_back(argc_block);
-		// TODO: Make the numbers not hardcoded.
-		frame->block_idx_to_local_offset.put(1, frame->local_stack_head);
-		frame->local_offset_to_block_idx.put(frame->local_stack_head, 1);
-		frame->local_stack_head += i64_type->getSize();
+	VMThread::ByteCode VMThread::createStartFunction(
+		CRef<low::FuncData> func, const std::vector<std::string>& args
+	) {
+		// Just like in libc, the start function pushes the program arguments on to the stack and
+		// performs the call to the actual function. After the called function returns, it
+		// deinitializes the argv memory and exits, leaving one block on the block stack, which
+		// contains the return value of the program.
 
-		// Initialize the argv pointer.
-		auto argv_ptr_type = executing_program->types->atMaybe(base::StrID("ptr_argv")).expect("All programs are expected to have an existing argv pointer type!");
-		auto argv_ptr_block = process_memory.allocateStack(argv_ptr_type, local_stack + frame->local_stack_head);
-		u64 argv_ptr_offset = frame->local_stack_head;
-		frame->block_stack.push_back(argv_ptr_block);
-		// TODO: Make the numbers not hardcoded.
-		frame->block_idx_to_local_offset.put(2, frame->local_stack_head);
-		frame->local_offset_to_block_idx.put(frame->local_stack_head, 2);
-		frame->local_stack_head += argv_ptr_type->getSize();
+		// Types
+		auto called_func_type = executing_program->types->atMaybe(func->name)
+		                            .expect("Expected the called function to exist!");
+		auto called_return_type
+			= called_func_type->getResultType().expect("Expected main to have a return value!");
+		auto argv_type = executing_program->types->atMaybe(base::StrID("temp_arg_arr"))
+		                     .expect("All programs are expected to have an existing argv type!");
+		auto argv_ptr_type
+			= executing_program->types->atMaybe(base::StrID("ptr_argv"))
+		          .expect("All programs are expected to have an existing argv pointer type!");
+		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
+		                    .expect("Type i64 is expected to exist!");
 
-		// Alloc the argv table.
-		auto argv_type = executing_program->types->atMaybe(base::StrID("temp_arg_arr")).expect("All programs are expected to have an existing argv type!");
-		auto argv_block   = process_memory.allocateHeap(argv_type);
-		auto data_pointer = Memory::getPointer(argv_block);
-		derefStack<Pointer>(local_stack, base::safeIntConv<i64>(argv_ptr_offset)) = data_pointer;
+		// TypeIDs to pass to opcodes.
+		auto func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
+		auto argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
+		auto argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
+		auto called_function_id = base::safeIntConv<i32>(called_func_type->getID().asInt());
+		auto i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
 
-		// Populate the argv table
-		// @note: Since strings don't exist in the VM yet, the argument array is a static_table of i64 with size of 2.
-		// which were created from the strings. This should be changed to a dynamic_table of strings.
-		u64 idx = 0;
-		// TODO: Possibly view_size should be determined by the size of the type in the table.
-		constexpr const uint8_t view_size = 8;
+		ByteCode bytecode;
+		bytecode.reserve(5 + args.size() * 4 + 13);
+
+		bytecode = {
+			DEFINE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [0, 8) program ret_val
+			DEFINE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [8, 24) *argv
+			DEFINE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
+			DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
+			DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
+		};
+
 		for (const auto& arg: args) {
-			u64  converted_arg = base::safeIntConv<u64>(std::stoi(arg));
-			auto view          = Memory::getPointerData(data_pointer, view_size);
-			std::memcpy(view.getBegin() + idx * view_size, &converted_arg, view_size);
-			idx++;
+			// @note: Since strings don't exist in the VM yet, the passed arguments, are converted
+			// to ints.
+			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
+			bytecode.insert(
+				bytecode.end(),
+				{
+					DEFINE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
+					// @todo: This should be changed to 'store_lptr_l64_ofs' once it exists.
+					DEFINE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
+					DEFINE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
+					DEFINE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
+				}
+			);
 		}
+
+		bytecode.insert(
+			bytecode.end(),
+			{
+				DEFINE_BYTECODE_INSTRUCTION(
+					init_type, func_ret_type_id, 0
+				),                                                       // [40, 48) call ret_val
+				DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),  // [48, 56] argc
+				DEFINE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
+				DEFINE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
+				DEFINE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
+				DEFINE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				// @todo: For now we assume that the return values are always i64. It's true for
+		        // main, but won't be true once REPL arrives.
+				DEFINE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // move the ret_val to 0th block
+				DEFINE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),     // free *argv
+				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // temp
+				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // called func ret_val
+				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // ix
+				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // argv_ptr
+				// Here, only the return value remains on the stack.
+				DEFINE_BYTECODE_INSTRUCTION(exit, 0, 0),
+			}
+		);
+		return bytecode;
 	}
 
 #if defined(__clang__)
@@ -146,44 +196,20 @@ namespace vm {
 	u64 VMThread::internalCallFunction(
 		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
-		// We create one artificial "pre" frame, that when main function returns
-		// it will go to it and end execution.
-		Frame* pre_frame = runtime_data.frame_stack_base;
-
-#ifdef USE_TAIL_CALLS
-		Fix8Instruction exit_instr{ .opfun = OpFuns::op_exit, .arg0 = 0, .arg1 = 0 };
-#else
-		Fix8Instruction exit_instr{ .opcode = static_cast<u16>(low::OpcodeFix8::exit),
-			                        .arg0   = 0,
-			                        .arg1   = 0 };
-#endif
-		pre_frame->instr       = &exit_instr;
-		pre_frame->local_stack = runtime_data.local_stack_base;
-
 		// Frame of the called function.
-		Frame*     frame       = runtime_data.frame_stack_base + 1;
+		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 		if (local_stack + func->local_stack_size > runtime_data.local_stack_end)
 			CORE_PANIC("VM stack overflow.");
 
-		// Initialize the return value block. This happens for all called functions.
-		// TODO: What if a called function is a void.
-		auto func_type = executing_program->types->atMaybe(func->name).expect("Expected the called function to exist!");
-		auto func_return_type = func_type->getResultType().expect("Expected main to have a return value!");
-		pre_frame->called_func_ret_size = func_return_type->getSize();
-		auto block = process_memory.allocateStack(func_return_type, local_stack);
-		frame->block_stack.push_back(block);
-		frame->block_idx_to_local_offset.put(0, frame->local_stack_head);
-		frame->local_offset_to_block_idx.put(frame->local_stack_head, 0);
-		frame->local_stack_head += func_return_type->getSize();
-		// Command line arguments are passed only for main.
-		// TODO: Maybe we could use that to pass arguments in the REPL called functions.
-		if (func->name == base::StrID("main")) {
-			initializeMainLocalStack(frame, args);
-		}
+		auto called_func_type = executing_program->types->atMaybe(func->name)
+		                            .expect("Expected the called function to exist!");
+		auto called_return_type
+			= called_func_type->getResultType().expect("Expected main to have a return value!");
+		frame->called_func_ret_size = called_return_type->getSize();
 
-		u64   func_ret_val = 0;
-		auto* instr        = func->bc.data();
+		ByteCode    start_function = createStartFunction(func, args);
+		const auto* instr          = start_function.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
@@ -246,13 +272,11 @@ namespace vm {
 		}
 	End:
 #endif
-		// TODO: The return value may not be a i64.
-		func_ret_val = derefStack<u64>(local_stack, 0);
-		block        = pre_frame->block_stack.back();
-		pre_frame->block_stack.pop_back();
+		// The return value is the only block left on the block stack.
+		u64  func_ret_val = derefStack<u64>(local_stack, 0);
+		auto block        = frame->block_stack.back();
+		frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
-
-		// Free the argc table. Maybe this will be done in main bytecode.
 
 		return func_ret_val;
 	}

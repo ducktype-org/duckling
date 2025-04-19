@@ -1,6 +1,7 @@
 #include "memory.hpp"
 
 #include <base/exceptions.hpp>
+#include "vm/core/process/memory/block.hpp"
 
 #include <mutex>
 
@@ -65,6 +66,10 @@ namespace vm {
 		for (auto& block: blocks)
 			if (block.used) ids.push_back(block.id);
 		return ids;
+	}
+	
+	auto Memory::requestBlockID(Ref<Block> block) -> BlockID {
+		return block->id;
 	}
 
 	auto Memory::requestBlockData(BlockID id) -> base::RawView {

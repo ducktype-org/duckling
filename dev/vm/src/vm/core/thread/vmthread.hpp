@@ -87,6 +87,7 @@ namespace vm {
 	 */
 	class VMThread final {
 	private:
+		using ByteCode = std::vector<Fix8Instruction>;
 		base::Optional<std::thread> exec_thread;
 
 		RuntimeData runtime_data;
@@ -135,8 +136,10 @@ namespace vm {
 		void respondExecutionRequest(ExecutionResponse response);
 
 		void executeOneStep();
-		
-		void initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args);
+
+		Ref<Block> initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args);
+		ByteCode
+			createStartFunction(CRef<low::FuncData> func, const std::vector<std::string>& args);
 
 		/**
 		 * @brief @TODO:
