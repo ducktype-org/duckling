@@ -152,8 +152,7 @@ namespace vm::loader::parser {
 
 					return out;
 				} else if (!logged) {
-					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value)
-					);
+					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value));
 					logged = true;
 				}
 			} else {

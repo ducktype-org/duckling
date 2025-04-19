@@ -7,6 +7,9 @@
 
 #include "../visitors.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
@@ -262,8 +265,7 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType(
 				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
-	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee))
-	                                    )
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
 	                                    .getType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )

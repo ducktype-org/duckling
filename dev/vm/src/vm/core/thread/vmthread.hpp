@@ -26,13 +26,6 @@
 
 namespace vm {
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
-	enum class ExecutionResponse : std::uint8_t {
-		Running,
-		Paused,
-		ExecutionStopped,
-		ExecutionCompleted,
-		ExecutionPanicked
-	};
 
 	struct Frame;
 
@@ -91,18 +84,18 @@ namespace vm {
 
 		RuntimeData runtime_data;
 
-		/**
-		 * This is currently duplicated inside VCPUStatus
-		 */
 		api::ExecStatus status = api::NotStarted{};
 
 		/**
-		 * @brief Process link as well as some of it's resources.
+		 * @brief Link to parent process.
 		 */
 		VMProcess& process;
-		Memory&    process_memory;
 
-		// This might change:
+		/**
+		 * @brief Parent process'es memory.
+		 */
+		Memory& process_memory;
+
 		std::condition_variable pause_cv;
 
 		/**
@@ -114,7 +107,7 @@ namespace vm {
 		 *
 		 * As an optimization, when the VMThread is running and VMProcess want to break its
 		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
-		 * true, so the running VMThread can only check this flag first and not aquire the mutex.
+		 * true, so the running VMThread can only check this flag first and not acquire the mutex.
 		 */
 		std::mutex        execution_request_mutex;
 		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
@@ -124,15 +117,15 @@ namespace vm {
 		 * @brief Message queue to send responses to the VMProcess.
 		 * @todo rewrite this to C++ futures
 		 */
-		BlockingQueue<ExecutionResponse> execution_response_queue;
+		BlockingQueue<api::ExecStatus> execution_response_queue;
 
-		bool waitForBrakepointResponse();
+		bool waitForBreakpointResponse();
 
 		bool waitForStoppedResponse();
 
 		bool waitForRunningResponse();
 
-		void respondExecutionRequest(ExecutionResponse response);
+		void respondExecutionRequest(const api::ExecStatus& response);
 
 		void executeOneStep();
 
@@ -158,18 +151,18 @@ namespace vm {
 		 *
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<low::FuncData>);
+		i64 internalCallMain(CRef<low::FuncData>);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
+
+		void handleBreakpoint();
+
+		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
 	public:
 		VMThread(VMProcess& process);
 
 		void breakActiveExecution();
-
-		void handlePausedExecution(std::unique_lock<std::mutex>&);
-
-		void handleBreakpoint();
 
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
@@ -205,7 +198,7 @@ namespace vm {
 
 		/**
 		 * @brief End the execution of a program.
-		 * Waits for the execution thread to responde.
+		 * Waits for the execution thread to respond.
 		 * @return true if the program is in the end stopped.
 		 */
 		bool stop();
@@ -220,14 +213,11 @@ namespace vm {
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>
-		void waitUntilNotPausedAndCondition(
-			std::unique_lock<std::mutex>& lock, Condition condition
-		) {
+		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition condition) {
 			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
 
 		void notifyPaused();
-
 
 		bool isPauseRequested();
 		bool isTerminateRequested();

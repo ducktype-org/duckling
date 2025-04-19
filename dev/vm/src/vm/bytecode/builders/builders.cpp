@@ -177,8 +177,8 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 	}
 }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
-	vm::code::builders::TypeContextBuilder::getTypes() const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
+) const {
 	return types;
 }
 
@@ -200,8 +200,7 @@ TypeContext TypeContextBuilder::build() const {
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner)
-						.expect<MissingSubtypeError>(data, data.inner),
+					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
@@ -237,8 +236,7 @@ TypeContext TypeContextBuilder::build() const {
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result)
-						.expect<MissingSubtypeError>(data, data.result)
+					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
 				);
 			}
 			variant_default { CORE_PANIC("bad type"); }

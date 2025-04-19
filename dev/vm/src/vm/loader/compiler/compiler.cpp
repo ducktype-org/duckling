@@ -54,7 +54,8 @@ namespace vm::loader::compiler {
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
-						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str == func.function_name)
+						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str
+						    == func.function_name)
 							return i;
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;

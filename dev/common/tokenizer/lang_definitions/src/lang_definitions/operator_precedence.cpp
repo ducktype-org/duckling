@@ -49,8 +49,7 @@ namespace lang_def {
 		);
 
 		associativity.put(
-			{ NamedOperator::Exponentiate, OperatorType::Binary },
-			OperatorAssociativity::RightToLeft
+			{ NamedOperator::Exponentiate, OperatorType::Binary }, OperatorAssociativity::RightToLeft
 		);
 
 		associativity.put(

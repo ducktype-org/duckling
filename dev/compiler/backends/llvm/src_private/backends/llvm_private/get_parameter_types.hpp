@@ -1,6 +1,6 @@
 #pragma once
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/scope_symbol_id.hpp>
 #include <query_framework/context_fd.hpp>
 #include <typesystem/lower/queries.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -15,7 +15,8 @@ namespace compiler::backend_llvm {
 	/**
 	 * Helper function to get type layouts of parameters and return value from HELIOS Symbol ID.
 	 */
-	ParametersAndReturn
-		getParameterAndResultFromSymID(query::Context& ctx, helios::SymID helios_symbol);
+	ParametersAndReturn getParameterAndResultFromSymID(
+		query::Context& ctx, helios::SymID helios_symbol
+	);
 
 }

@@ -37,8 +37,7 @@ namespace vm::loader {
 		Program() = default;
 
 		void insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger);
-		void
-			insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
+		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
 		StableTypeIdNameMap<code::Function> functions;
@@ -67,14 +66,16 @@ namespace vm::loader {
 		 * @brief Parses a list of files, returns a
 		 * low-level program representation.
 		 */
-		static std::expected<low::LowVMProgram, LoaderLogger>
-			getProgram(const std::vector<fs::FilePath>& files);
+		static std::expected<low::LowVMProgram, LoaderLogger> getProgram(
+			const std::vector<fs::FilePath>& files
+		);
 
 		/**
 		 * @brief Builds LowVMProgram from high-level code representation, returns a
 		 * low-level program representation.
 		 */
-		static std::expected<low::LowVMProgram, LoaderLogger>
-			getProgram(const code::CodeCollection& code_collection);
+		static std::expected<low::LowVMProgram, LoaderLogger> getProgram(
+			const code::CodeCollection& code_collection
+		);
 	};
 }
