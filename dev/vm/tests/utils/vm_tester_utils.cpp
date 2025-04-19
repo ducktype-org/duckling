@@ -1,29 +1,39 @@
 #include "vm_tester_utils.hpp"
 
+#include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
+
+#include <variant>
+
 void VmTestSuite::runTestOnVm(
-	const std::string& rbc_filename, const std::string& input, const std::string& output
+	const std::string&                 rbc_filename,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	i64                                exit_code
 ) {
 	auto process_pid_response = vm::api::spawn();
-	assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-	auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
+	ASSERT_TRUE(process_pid_response.has_value());
+	auto pid = process_pid_response->pid;
 
-	fs::FilePath file(path(rbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
-	assertTrue(loaded_file_response.has_value(), "Load failed (1)");
+	auto file = fs::FilePath(path(rbc_filename));
+	ASSERT_TRUE(vm::api::loadFile(pid, file).has_value());
 
-	auto run_response = vm::api::run(pid);
-	assertTrue(run_response.has_value(), "Run failed (1)");
+	ASSERT_TRUE(vm::api::run(pid).has_value());
 
-	auto input_response = vm::api::input(pid, input);
-	assertTrue(input_response.has_value(), "Input failed (1)");
+	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
 
-	auto output_response = vm::api::output(pid);
-	assertTrue(output_response.has_value(), "Output failed (1)");
-	std::cerr << output_response.value().output << "\n";
-	ASSERT_EQUAL(output, output_response.value().output);
+	if_opt_some(optional_output, output) {
+		auto output_response = vm::api::output(pid);
+		ASSERT_TRUE(output_response.has_value());
+		std::cerr << output_response->output << "\n";
+		ASSERT_EQUAL(output, output_response->output);
+	}
 
-	auto join_response = vm::api::join(pid);
-	assertTrue(join_response.has_value(), "Join failed (1)");
+	ASSERT_TRUE(vm::api::join(pid).has_value());
+
+	auto exit_code_response = vm::api::getExitCode(pid);
+	ASSERT_TRUE(exit_code_response.has_value());
+	ASSERT_EQUAL_PRINT(exit_code, *exit_code_response);
 }
 
 void VmTestSuite::loadInvalidDbc(

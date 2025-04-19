@@ -13,10 +13,13 @@ public:
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(pointerToLocal);
 		TESTER_ADD_TEST(pointerCopy);
+		TESTER_ADD_TEST(return1337);
 	}
 
 private:
 	void jump() { runTestOnVm("jump.dbc", "", "5"); }
+
+	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, 1'337); }
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0"); }
 

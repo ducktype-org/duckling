@@ -59,5 +59,6 @@ namespace vm::api {
 		TypeCRef,
 		response::Empty,
 		response::BlockIDs,
-		response::CodePosition>;
+		response::CodePosition,
+		ExitCode>;
 }
