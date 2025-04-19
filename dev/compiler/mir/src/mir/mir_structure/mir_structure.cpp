@@ -1,6 +1,6 @@
 #include "mir_structure.hpp"
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/symbols/simple.hpp>
 
 #include <base/variant.hpp>
 

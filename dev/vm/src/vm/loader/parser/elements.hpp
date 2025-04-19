@@ -9,7 +9,7 @@
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/box.hpp>
-#include <base/for_each.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -78,9 +78,6 @@ namespace vm::loader::parser {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier name;
-		usize           arg_size   = SIZE_T_MAX;
-		usize           local_size = SIZE_T_MAX;
-		usize           ret_size   = SIZE_T_MAX;
 		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);

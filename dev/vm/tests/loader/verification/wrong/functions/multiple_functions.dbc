@@ -3,40 +3,21 @@ type fun: main {} int64
 type fun: inner_func {} int64
 
 function inner_func {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 8;
-
-    code: {
-        # [0, 8) -> inner_func ret_val
-        mov_l64_imm     0, 45;
-        ret;
-    }
+	# [0, 8) -> inner_func ret_val
+	mov_l64_imm     0, 45;
+	ret;
 }
 
 function inner_func {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 8;
-
-    code: {
-        # [0, 8) -> inner_func ret_val
-        mov_l64_imm     0, 42;
-        ret;
-    }
+	# [0, 8) -> inner_func ret_val
+	mov_l64_imm     0, 42;
+	ret;
 }
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 16;
-
-  code: {
-    # [0, 8) -> main ret_val
-    init_type           int64;
-    call_func           inner_func;
-    deinit;
-    ret;
-  }
-
+	# [0, 8) -> main ret_val
+	init_type           int64;
+	call_func           inner_func;
+	deinit;
+	ret;
 }

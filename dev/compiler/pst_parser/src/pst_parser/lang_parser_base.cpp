@@ -6,9 +6,7 @@
 #include <base/str_utils.hpp>
 
 namespace pst {
-	AccessLocked<LangElement> LangElement::getParent() const {
-		return { parent.map([](auto arg) -> MCRef<LangElement> { return arg; }).valueOr(nullptr) };
-	}
+	base::Optional<AccessLocked<LangElement>> LangElement::getParent() const { return parent; }
 
 	void LangParserState::addImport(const ImportType& import) { imports.push_back(import); }
 
@@ -23,10 +21,10 @@ namespace pst {
 
 	void LangElement::addToken(const tpc::Token& t) { addToken(&t); }
 
-	void LangElement::addChild(MRef<LangElement> el) {
+	void LangElement::addChild(MCRef<LangElement> el) {
 		auto opt = el.toOpt();
 		if (opt) {
-			sub_elements.emplace_back(opt.value());
+			sub_elements.emplace_back(AccessLocked{ el });
 			setLastToken(opt.value()->getSourcePosition());
 		}
 	}

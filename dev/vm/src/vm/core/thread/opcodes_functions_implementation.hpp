@@ -303,12 +303,8 @@ namespace vm {
 				if (non_void && callee_frame->block_stack.size() == 1) {
 					u64 callers_block_idx = frame->block_stack.size();
 					frame->block_stack.push_back(block);
-					frame->block_idx_to_local_offset.put(
-						callers_block_idx, frame->local_stack_head
-					);
-					frame->local_offset_to_block_idx.put(
-						frame->local_stack_head, callers_block_idx
-					);
+					frame->block_idx_to_local_offset.put(callers_block_idx, frame->local_stack_head);
+					frame->local_offset_to_block_idx.put(frame->local_stack_head, callers_block_idx);
 					frame->local_stack_head += frame->called_func_ret_size;
 				} else {
 					thread.process.getMemory().freeBlock(block);

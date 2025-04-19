@@ -2,7 +2,7 @@
 
 #include "mir_local_ref.hpp"
 
-#include <helios/scopes/scopes.hpp>
+#include <helios/scope_symbol_id.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
 
@@ -14,7 +14,6 @@
 #include <variant>
 #include <vector>
 
-// clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
@@ -59,8 +58,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	*/
 	FunctionEnd
 )
-
-// clang-format on
 
 namespace compiler::mir {
 	/**

@@ -146,6 +146,42 @@ namespace {
 			);
 		}
 	}
+
+	std::expected<void, LoaderLogger> validateMain(const Program& program) {
+		LoaderLogger log;
+
+		auto is_valid_main_return_type = [](const vm::code::TypeOfData& type) -> bool {
+			variant_match(type) {
+				variant_case(vm::code::PrimitiveType, primitive) { return primitive.size == 8; }
+				variant_default { return false; }
+			}
+			return false;
+		};
+
+		// Check if main function exists
+		auto opt_main = program.funcMap().atMaybe(base::StrID("main"));
+		if (!opt_main.has_value()) {
+			log.logSimple(NO_MAIN_ERR.data());
+			return std::unexpected(std::move(log));
+		}
+
+		// Check if main type exists and is a function type
+		// @note: We are guaranteed that a function type for each function exists. It's checked by
+		// builders.
+		auto main_type = *program.typeMap().atMaybe(base::StrID("main"));
+
+		variant_match(*main_type) {
+			variant_case(vm::code::FunctionType, func_type) {
+				auto opt_return_type = program.typeMap().atMaybe(func_type.result);
+				if (!opt_return_type || !is_valid_main_return_type(**opt_return_type)) {
+					log.logSimple(WRONG_MAIN_RET_VAL_ERR.data());
+					return std::unexpected(std::move(log));
+				}
+			}
+		}
+
+		return {};
+	}
 }
 
 void Program::insertFunctions(
@@ -153,9 +189,9 @@ void Program::insertFunctions(
 ) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
-			logger.logMap<DuplicateFunctionDefinitionError>(func, [&](auto& err) {
+			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
 				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicatedFunctionDefinitionNote>(err, *dup_func);
+				logger.addNote<DuplicatedFunctionNote>(err, *dup_func);
 			});
 		} else {
 			functions.insert(func, func_name);
@@ -173,8 +209,9 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const std::vector<fs::FilePath>& files) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const std::vector<fs::FilePath>& files
+) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
@@ -195,18 +232,14 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
 
-						func_builder.setRetSize(func->ret_size
-						);  // @note: this is temporary, since function meta-parameters will be
-						    // removed
-
 						functions.emplace_back(func_builder.build());
 					}
 				}
 				if (log.good())
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
 			} catch (code::builders::MissingSubtypeError& e) {
-				log.log<MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			}
+				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
+			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}
 	}
@@ -219,11 +252,16 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const code::CodeCollection& code_collection) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const code::CodeCollection& code_collection
+) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();
+
+		auto main_validation = validateMain(program);
+		if (!main_validation.has_value())
+			return std::unexpected(std::move(main_validation).error());
 
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
@@ -235,6 +273,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 }
 
 const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
+
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
+	return type_context_builder.getTypes();
+}
 
 void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
 	for (const auto& type: new_types) insertType(type, type_context_builder, logger);

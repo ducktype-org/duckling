@@ -1,0 +1,10 @@
+type primitive: int32 4
+type pointer: ptrint32 int32
+type fun: main {} ptrint32
+
+function main {
+	# [0, 4) -> main ret_val
+	init_type int32;
+	deinit;
+	ret;
+}

@@ -20,6 +20,8 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
+#include <base/variant.hpp>
+
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
@@ -168,11 +170,14 @@ namespace compiler::lir {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
-					auto pos      = locals.pushBack(std::move(lir_local));
-					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
+					locals.pushBack(std::move(lir_local));
+					auto local_index = locals.lastIndex();
 
-					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
-					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos).value());
+					locals.pushBack(std::move(lifetime_flag));
+					auto flag_index = locals.lastIndex();
+
+					mir_to_lir_local.put(mir_local.ref(), locals[local_index]);
+					mir_to_lifetime_flag.put(mir_local.ref(), locals[flag_index]);
 				}
 			}
 
@@ -183,8 +188,8 @@ namespace compiler::lir {
 				for (const auto& mir_block_id: key.function->block_order) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
-					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block_id, blocks.getRef(pos).value());
+					blocks.pushBack({});
+					mir_to_lir_block.put(mir_block_id, blocks.last());
 				}
 			}
 
@@ -274,8 +279,9 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef
-				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef lowerInstruction(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
 				// curr_block already in order
 
 				CORE_ASSERT(
@@ -339,8 +345,7 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block already in order
 				CORE_ASSERT(
-					mir::isTerminating(mir_terminator.operation),
-					"non-Terminator in lowerTerminator"
+					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
 				lowerFlags(curr_block, mir_terminator);
 

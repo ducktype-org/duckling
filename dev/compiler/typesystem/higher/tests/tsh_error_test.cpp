@@ -28,8 +28,7 @@ private:
 		query::Context::logger.dumpLog(false, dumped_logs);
 		const auto dumped_logs_str = dumped_logs.str();
 		assertTrue(
-			dumped_logs_str.find("Invalid size of integral type")
-				!= decltype(dumped_logs_str)::npos,
+			dumped_logs_str.find("Invalid size of integral type") != decltype(dumped_logs_str)::npos,
 			"Logs should contain mention of invalid integral size."
 		);
 	}

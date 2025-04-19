@@ -3,6 +3,7 @@
  */
 
 #include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
@@ -93,12 +94,12 @@ private:
 			auto i32_type = ctx.query<QueryIntegralType>(32);
 
 			{
-				auto a = foo_mir.local_list.getCRef(0).value();
+				auto a = foo_mir.local_list[0];
 				ASSERT_EQUAL(a->getName(), "a");
 				ASSERT_EQUAL(a->type.getType(), i32_type);
 			}
 			{
-				auto b = foo_mir.local_list.getCRef(1).value();
+				auto b = foo_mir.local_list[1];
 				ASSERT_EQUAL(b->getName(), "b");
 				ASSERT_EQUAL(b->type.getType(), i32_type);
 			}

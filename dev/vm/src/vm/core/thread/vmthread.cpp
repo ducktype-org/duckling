@@ -176,15 +176,14 @@ namespace vm {
 #elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                      \
-	case low::OpcodeFix8::opcode_name: {                                    \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
-		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
-		              opcode_str == "exit") {                               \
-			goto End;                                                       \
-		} else {                                                            \
-			break;                                                          \
-		}                                                                   \
+	#define HANDLE_OPCODE(opcode_name)                                                              \
+	case low::OpcodeFix8::opcode_name: {                                                            \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
+			goto End;                                                                               \
+		} else {                                                                                    \
+			break;                                                                                  \
+		}                                                                                           \
 	}
 	#include <vm/bytecode/opcode_definitions.hpp>
 	#undef HANDLE_OPCODE
@@ -343,7 +342,7 @@ namespace vm {
 		return false;
 	}
 
-	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
@@ -359,7 +358,7 @@ namespace vm {
 				}
 			}
 			variant_default {
-				return cpp::failure(api::CoreOperationError{
+				return std::unexpected(api::CoreOperationError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}

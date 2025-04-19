@@ -1,0 +1,6 @@
+type primitive: int64 8
+
+function main {
+    init_type       int64;
+    mov_l64_imm     0, 5;
+}
