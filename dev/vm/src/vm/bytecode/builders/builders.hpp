@@ -128,12 +128,14 @@ namespace vm::code::builders {
 		[[nodiscard]] std::vector<Instruction> build() const;
 	};
 
+	using GlobalDataMap = StableTypeIdNameMap<GlobalData>;
+
 	/**
 	 * @brief Helper to compose bytecode functions.
 	 */
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
-		base::StrID              name;
+		Identifier               name;
 
 		STRONG_TYPEDEF_ID(LocalStackEntryID)
 
@@ -155,7 +157,8 @@ namespace vm::code::builders {
 
 		usize max_stack_size = 0;
 
-		const TypeContext& type_context;
+		const TypeContext&   type_context;
+		const GlobalDataMap& globals;
 
 		base::HashMap<base::StrID, base::Optional<LocalStackEntry>> stack_top_at_label;
 		base::HashMap<base::StrID, std::vector<Instruction>>        label_users;
@@ -171,7 +174,7 @@ namespace vm::code::builders {
 		usize pushStackState(opargs::Type type);
 
 	public:
-		FunctionBuilder(base::StrID name, const TypeContext& types);
+		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
 
 		/**
 		 * @brief Return variable's stack offset. Also pushes `init_type` instruction.

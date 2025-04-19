@@ -8,6 +8,7 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
+#include "base/optional.hpp"
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
@@ -42,6 +43,17 @@ namespace vm::loader::parser {
 
 		code::TypeOfData  datatype;
 		static MBox<Type> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+	};
+
+	struct GlobalData final: AsmElement {
+		using AsmElement::AsmElement;
+
+		tpc::Identifier name;
+		tpc::Identifier type;
+
+		static Box<GlobalData> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override;
 	};
@@ -88,9 +100,10 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-		fs::FilePath           source_file;
+		std::vector<Box<Func>>       functions;
+		std::vector<Box<Type>>       types;
+		std::vector<Box<GlobalData>> global_data;
+		fs::FilePath                 source_file;
 
 		ParsedFile(fs::FilePath source_file);
 

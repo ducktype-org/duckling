@@ -54,7 +54,7 @@ namespace vm::loader::compiler {
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
-						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
+						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str == func.function_name)
 							return i;
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
@@ -77,13 +77,13 @@ namespace vm::loader::compiler {
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
-			func_data.name = ctx.function->name;
+			func_data.name = ctx.function->name.str;
 			auto functional_type
-				= ctx.type_map.atMaybe(ctx.function->name)
-			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name);
+				= ctx.type_map.atMaybe(ctx.function->name.str)
+			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name.str);
 			func_data.arg_size
 				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name);
+			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name.str);
 			// Not expecting here because it's checked above
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.function->local_stack_size;

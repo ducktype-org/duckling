@@ -5,6 +5,7 @@
 
 #include "instruction.hpp"
 
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
@@ -40,6 +41,7 @@ namespace vm::low {
 		}
 
 		StableTypeIdNameMap<FuncData, usize> functions;
+		StableTypeIdNameMap<TypeCRef, usize> global_data;
 		Box<TypeMetadata>                    types;
 	};
 }

@@ -1,6 +1,7 @@
 #include "elements.hpp"
 
 #include "errors.hpp"
+#include "lang_definitions/key_spec_op.hpp"
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
@@ -109,6 +110,19 @@ namespace vm::loader::parser {
 #undef HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_2ARGS
 #undef MAKE_LINK
+	}
+
+	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
+		using namespace vm::code;
+		auto out = makeBox<GlobalData>(state.getPosition());
+
+		state.parse().one(lang_def::Keyword::BCGlobalData);
+
+		/// @TODO: implement keywordToNumLiteral
+		state.parse().one(&out->name);
+		state.parse().one(&out->type);
+		state.parse().one(lang_def::Special::Semicolon);
+		return out;
 	}
 
 	MBox<OpCode> OpCode::parse(F8ParserState& state) {
@@ -377,6 +391,9 @@ namespace vm::loader::parser {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
 				if (type) out->types.emplace_back(std::move(*type));
+			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
+				auto global_data = GlobalData::parse(state);
+				out->global_data.emplace_back(std::move(global_data));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
@@ -428,6 +445,12 @@ namespace vm::loader::parser {
 
 	void ByteCode::dprint(std::ostream& out) const {
 		for (auto& opcode: opcodes) opcode->dprint(out);
+	}
+
+	void GlobalData::dprint(std::ostream& out) const {
+		out << "global_data ";
+		out << name.value.strView() << " " << type.value.strView();
+		out << ";";
 	}
 
 	void Func::dprint(std::ostream& out) const {

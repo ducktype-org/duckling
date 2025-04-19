@@ -112,7 +112,7 @@ namespace vm::code {
 			  function(function) {}
 
 		void write() {
-			out << "function " << function.name.strView() << " {\n";
+			out << "function " << function.name.str.strView() << " {\n";
 			// Needed by https://github.com/ducktype-org/duckling/issues/699
 			// bool first = true;
 			// for (const auto& param: function.parameter_types) {
@@ -203,4 +203,7 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serialize(const GlobalData& type, std::ostream& out) {
+		throw base::NotYetImplemented("serialize type");
+	}
 }
