@@ -78,9 +78,6 @@ namespace vm::loader::parser {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier name;
-		usize           arg_size   = SIZE_T_MAX;
-		usize           local_size = SIZE_T_MAX;
-		usize           ret_size   = SIZE_T_MAX;
 		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);

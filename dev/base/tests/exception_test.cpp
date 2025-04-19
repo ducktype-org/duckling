@@ -49,8 +49,7 @@ public:
 			throwPanic2();
 		} catch (base::Panic& panic) {
 			assertTrue(
-				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"),
-				"Bad panic reason"
+				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"), "Bad panic reason"
 			);
 			return;
 		}

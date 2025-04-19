@@ -44,12 +44,10 @@ namespace vm::loader::validator {
 			LoaderLogger   log;
 
 			void validateMainExistence();
-			void validateTailcallSignatures();
 		};
 
 		std::expected<void, LoaderLogger> Validator::validateProgram() {
 			validateMainExistence();
-			validateTailcallSignatures();
 
 			if (!log.good()) return std::unexpected(std::move(log));
 
@@ -58,27 +56,6 @@ namespace vm::loader::validator {
 
 		void Validator::validateMainExistence() {
 			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple(NO_MAIN_ERR.data());
-		}
-
-		void Validator::validateTailcallSignatures() {
-			for (const auto& func: program.funcMap()) {
-				for (const auto& op: func.body) {
-					variant_match(op) {
-						variant_case(code::instructions::Op_ret_tailcall_func, op_tailcall) {
-							auto maybe_called_func
-								= program.funcMap().atMaybe(op_tailcall.arg0.function_name);
-							if_opt_some(maybe_called_func, called_func) {
-								if (func.arg_size != called_func->arg_size)
-									log.log<CallerCalledArgSizeMismatch>(op_tailcall);
-								if (func.local_stack_size != called_func->local_stack_size)
-									log.log<CallerCalledStackSizeMismatch>(op_tailcall);
-								if (func.ret_size != called_func->ret_size)
-									log.log<CallerCalledRetSizeMismatch>(op_tailcall);
-							}
-						}
-					}
-				}
-			}
 		}
 	}
 

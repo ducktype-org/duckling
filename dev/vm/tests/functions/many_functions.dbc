@@ -9,83 +9,58 @@ type fun: add1100 { int64 } int64
 type fun: add1000 { int64 } int64
 
 function add1000 {
-	arg_size: 8;
-	ret_size: 8;
-	local_size: 16;
+	# [0, 8) -> ret_val
+	# [8, 16) -> arg0
 
-	code: {
-		# [0, 8) -> ret_val
-		# [8, 16) -> arg0
-
-        mov_l64_imm    0, 1000;
-		add_l64_l64    0, 8;
-		ret;
-	}
+	mov_l64_imm    0, 1000;
+	add_l64_l64    0, 8;
+	ret;
 }
 
 function add1100 {
-	arg_size: 8;
-	ret_size: 8;
-	local_size: 32;
+	# [0, 8) -> ret_val
+	# [8, 16) -> arg0
 
-	code: {
-		# [0, 8) -> ret_val
-		# [8, 16) -> arg0
+	mov_l64_imm    		0, 100;
 
-        mov_l64_imm    		0, 100;
+	init_type 			int64; # [16, 24) add1000 ret_val
+	init_type 			int64; # [24, 32) add1000 arg0
+	mov_l64_l64			24, 8;
+	call_func           add1000;
 
-		init_type 			int64; # [16, 24) add1000 ret_val
-		init_type 			int64; # [24, 32) add1000 arg0
-		mov_l64_l64			24, 8;
-        call_func           add1000;
-
-        add_l64_l64    0,   16;
-		ret;
-	}
+	add_l64_l64    0,   16;
+	ret;
 }
 
 function add1110 {
-	arg_size: 8;
-	ret_size: 8;
-	local_size: 32;
+	# [0, 8) -> ret_val
+	# [8, 16) -> arg0
 
-	code: {
-		# [0, 8) -> ret_val
-		# [8, 16) -> arg0
+	mov_l64_imm    		0, 10;
 
-        mov_l64_imm    		0, 10;
+	init_type 			int64; # [16, 24) add1100 ret_val
+	init_type 			int64; # [24, 32) add1100 arg0
+	mov_l64_l64			24, 8;
 
-		init_type 			int64; # [16, 24) add1100 ret_val
-		init_type 			int64; # [24, 32) add1100 arg0
-		mov_l64_l64			24, 8;
+	call_func           add1100;
 
-        call_func           add1100;
+	add_l64_l64    		0, 16; # += add1100()
 
-        add_l64_l64    		0, 16; # += add1100()
-
-		deinit; # add1100 ret_val
-		deinit; # arg0
-		ret;
-	}
+	deinit; # add1100 ret_val
+	deinit; # arg0
+	ret;
 }
 
 
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 24;
+	# [0, 8) main ret_val
+	init_type 			int64; # [8, 16) add1110 ret_val
+	init_type 			int64; # [16, 24) add1110 arg0
+	input_l64           16;
 
-	code: {
-		# [0, 8) main ret_val
-        init_type 			int64; # [8, 16) add1110 ret_val
-        init_type 			int64; # [16, 24) add1110 arg0
-		input_l64           16;
+	call_func          	add1110;
+	output_l64          8;
 
-        call_func          	add1110;
-        output_l64          8;
-
-		deinit; # add1110 ret_val, arg0 is deinitialized by the call.
-		ret;
-	}
-
+	deinit; # add1110 ret_val, arg0 is deinitialized by the call.
+	ret;
 }

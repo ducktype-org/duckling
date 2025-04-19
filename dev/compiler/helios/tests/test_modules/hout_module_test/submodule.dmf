@@ -1,3 +1,0 @@
-const x: i32 = 123;
-
-fun foo(a: i32) = {}

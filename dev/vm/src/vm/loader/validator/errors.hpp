@@ -30,15 +30,6 @@ namespace vm::loader::validator {
 		}                                                                  \
 	};
 
-	DEFINE_VALIDATOR_ERROR(
-		CallerCalledArgSizeMismatch, "Invalid Tailcall! Caller and called arg size unmatched"
-	);
-	DEFINE_VALIDATOR_ERROR(
-		CallerCalledStackSizeMismatch, "Invalid Tailcall! Caller and called stack size unmatched"
-	);
-	DEFINE_VALIDATOR_ERROR(
-		CallerCalledRetSizeMismatch, "Invalid Tailcall! Caller and called ret size unmatched"
-	);
 	constexpr const std::string_view NO_MAIN_ERR
 		= "Provided program does not have `main` function.";
 }

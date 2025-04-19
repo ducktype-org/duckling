@@ -28,6 +28,24 @@
 		)                                                                                 \
 	)
 
+#define ASSERT_EQUAL_PRINT(expected, actual)   \
+	assertEqual(                               \
+		expected,                              \
+		actual,                                \
+		base::strConcat(                       \
+			"Values not equal:\n\t\tIn line ", \
+			__LINE__,                          \
+			":\n\t\t\t",                       \
+			#expected,                         \
+			" != ",                            \
+			#actual,                           \
+			"\n\t\t\t",                        \
+			expected,                          \
+			" != ",                            \
+			actual                             \
+		)                                      \
+	)
+
 
 #define ASSERT_TRUE(actual) ASSERT_EQUAL(true, bool(actual))
 

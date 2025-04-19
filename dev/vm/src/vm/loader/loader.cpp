@@ -189,9 +189,9 @@ void Program::insertFunctions(
 ) {
 	for (const auto& func: new_functions) {
 		if (const auto func_name = func.name; functions.contains(func_name)) {
-			logger.logMap<DuplicateFunctionDefinitionError>(func, [&](auto& err) {
+			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
 				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicatedFunctionDefinitionNote>(err, *dup_func);
+				logger.addNote<DuplicatedFunctionNote>(err, *dup_func);
 			});
 		} else {
 			functions.insert(func, func_name);
@@ -209,8 +209,9 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const std::vector<fs::FilePath>& files) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const std::vector<fs::FilePath>& files
+) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
@@ -231,18 +232,14 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
 
-						func_builder.setRetSize(func->ret_size
-						);  // @note: this is temporary, since function meta-parameters will be
-						    // removed
-
 						functions.emplace_back(func_builder.build());
 					}
 				}
 				if (log.good())
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
 			} catch (code::builders::MissingSubtypeError& e) {
-				log.log<MissingSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			}
+				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
+			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}
 	}
@@ -255,8 +252,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const code::CodeCollection& code_collection) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const code::CodeCollection& code_collection
+) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();

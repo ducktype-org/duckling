@@ -19,9 +19,6 @@ namespace vm::code {
 	struct Function final: ElementBase {
 		base::StrID name;
 		usize       local_stack_size = 0;
-		usize       arg_size         = 0;
-		usize       next_arg_size    = 0;
-		usize       ret_size         = 0;
 
 		CodeBlock body;
 	};

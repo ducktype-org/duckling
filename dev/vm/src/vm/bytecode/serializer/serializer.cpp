@@ -95,17 +95,6 @@ namespace vm::code {
 
 		void indentDown() { current_indentation -= 4; }
 
-		void writeOption(const std::string_view name, usize value) {
-			withIdentWriteLine([&](std::ostream& out) { out << name << ": " << value << ";"; });
-		}
-
-		void writeOptions() {
-			writeOption("local_size", function.local_stack_size);
-			writeOption("arg_size", function.arg_size);
-			writeOption("next_arg_size", function.next_arg_size);
-			writeOption("ret_size", function.ret_size);
-		}
-
 		void writeCode() {
 			withIdentWriteLine("code: {");
 			indentUp();
@@ -124,9 +113,17 @@ namespace vm::code {
 
 		void write() {
 			out << "function " << function.name.strView() << " {\n";
+			// Needed by https://github.com/ducktype-org/duckling/issues/699
+			// bool first = true;
+			// for (const auto& param: function.parameter_types) {
+			// 	if (!first) out << ", ";
+			// 	out << param.strView();
+			// 	first = false;
+			// }
+			// out << "} " << function.result_type.strView() << "{\n";
+
 			indentUp();
 
-			writeOptions();
 			out << '\n';
 			writeCode();
 

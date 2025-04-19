@@ -112,8 +112,7 @@ namespace compiler::backend_vm {
 			}
 		};
 
-		void
-			insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+		void insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
 			auto param_types
 				= lir_function->parameter_layouts
 			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
@@ -194,21 +193,23 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		vm::opargs::OpCodeArg
-			lirOutputToOpArg(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
+		vm::opargs::OpCodeArg lirOutputToOpArg(
+			AddLirFuncContext& ctx, const lir::Instruction& lir_instruction
+		) {
 			const lir::LocalRef output   = lir_instruction.output.value();
 			auto&&              var_type = ctx.lir_local_types[output];
 			return outputToOpArg(var_type, i64(ctx.lir_local_to_stack[output]));
 		}
 
-		constexpr vm::opargs::OpCodeArg
-			lirValueToOpArg(AddLirFuncContext& ctx, const lir::LIRValue& lir_value) {
+		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
+			AddLirFuncContext& ctx, const lir::LIRValue& lir_value
+		) {
 			variant_match(lir_value.getVariant()) {
 				variant_case(i64, value) return vm::opargs::Immediate{ value };
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
-				variant_case(lir::LocalRef, local_ref) return vm::opargs::StackLocalI64{
-					i64(ctx.lir_local_to_stack[local_ref])
-				};
+				variant_case(
+					lir::LocalRef, local_ref
+				) return vm::opargs::StackLocalI64{ i64(ctx.lir_local_to_stack[local_ref]) };
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
@@ -220,8 +221,9 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		constexpr vm::opargs::OpCodeArg
-			modifyOffsetOpArg(const vm::opargs::OpCodeArg& op_arg, const i64 new_offset) {
+		constexpr vm::opargs::OpCodeArg modifyOffsetOpArg(
+			const vm::opargs::OpCodeArg& op_arg, const i64 new_offset
+		) {
 			variant_match(op_arg) {
 #define OFFSET_CASE(type)                         \
 	variant_case(vm::opargs::type, offset_type) { \
@@ -286,10 +288,7 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		void handleAddCall(
-			AddLirFuncContext&                ctx,
-			std::deque<vm::opargs::OpCodeArg> args
-		) {
+		void handleAddCall(AddLirFuncContext& ctx, std::deque<vm::opargs::OpCodeArg> args) {
 			auto lir_result_argument = args.front();
 			args.pop_front();
 			auto called_func_arg = args.front();
@@ -301,8 +300,9 @@ namespace compiler::backend_vm {
 
 			// Init result type
 
-			auto func_result_storage_offset
-				= ctx.func_builder.initType(instructions::Op_init_type(called_func->getResultType().value()->getName()));
+			auto func_result_storage_offset = ctx.func_builder.initType(
+				instructions::Op_init_type(called_func->getResultType().value()->getName())
+			);
 			auto func_result_argument = modifyOffsetOpArg(
 				lir_result_argument, base::safeIntConv<i64>(func_result_storage_offset)
 			);
@@ -423,12 +423,10 @@ namespace compiler::backend_vm {
 				for (auto& lir_instruction: lir_block->instructions)
 					addLirInstruction(ctx, lir_instruction);
 
-				ctx.func_builder.addInstruction(instructions::Comment(
-					base::StrID(base::strConcat(
-									"Terminator: ", base::enumToStr(lir_block->terminator.operation)
-					)
-				                    .data())
-				));
+				ctx.func_builder.addInstruction(instructions::Comment(base::StrID(
+					base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
+						.data()
+				)));
 
 				InstructionBuilder terminator_instr;
 				terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));

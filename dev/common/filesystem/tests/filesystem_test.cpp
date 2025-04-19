@@ -16,9 +16,7 @@ private:
 		auto a_content = fs::getSimpleFileContent(path("a_file.txt"));
 
 		assertTrue(a_content.view().size() == 12, "Wrong a_content file size");
-		assertTrue(
-			a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content"
-		);
+		assertTrue(a_content.view().stringView() == "abrakadabra\n", "Wrong a_content file content");
 	}
 
 	void filePathTest() {

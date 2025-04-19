@@ -128,4 +128,9 @@ namespace vm::api {
 		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
+	std::expected<i64, ApiError> getExitCode(PID pid) {
+		return Supervisor::get()
+		    .doRequest(api::makeExitCodeRequest(pid))
+		    .and_then(mapOrWrongResponse<ExitCode>);
+	}
 }

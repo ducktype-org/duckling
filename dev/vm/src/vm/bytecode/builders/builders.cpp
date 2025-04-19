@@ -28,15 +28,6 @@ vm::code::Function FunctionBuilder::build() const {
 
 	function.local_stack_size = max_stack_size;
 
-	// @TODO: ret_size will be fixed in this issue:
-	// https://github.com/ducktype-org/duckling/issues/539
-	auto expected_result_size = type_context.getMetadata().at(name)->getResultType().value()->getSize();
-	CORE_ASSERT(expected_result_size == ret_size, "Ret size not set");
-	function.ret_size         = expected_result_size;
-
-	function.arg_size         = type_context.getMetadata().at(name)->getParametersSize().value();
-	function.next_arg_size    = 0;
-
 	return function;
 }
 
@@ -182,10 +173,8 @@ void vm::code::builders::FunctionBuilder::handleRet() {
 	}
 }
 
-void vm::code::builders::FunctionBuilder::setRetSize(usize ret_size) { this->ret_size = ret_size; }
-
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>&
-	vm::code::builders::TypeContextBuilder::getTypes() const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
+) const {
 	return types;
 }
 
@@ -207,8 +196,7 @@ TypeContext TypeContextBuilder::build() const {
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner)
-						.expect<MissingSubtypeError>(data, data.inner),
+					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
@@ -244,8 +232,7 @@ TypeContext TypeContextBuilder::build() const {
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result)
-						.expect<MissingSubtypeError>(data, data.result)
+					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
 				);
 			}
 			variant_default { CORE_PANIC("bad type"); }

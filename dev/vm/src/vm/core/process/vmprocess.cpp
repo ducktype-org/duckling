@@ -9,6 +9,7 @@
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
+#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -29,8 +30,9 @@ namespace vm {
 		return status;
 	}
 
-	std::expected<api::Response, api::LoadProgramError>
-		VMProcess::loadProgram(const std::variant<fs::FilePath, code::CodeCollection>& source) {
+	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
+		const std::variant<fs::FilePath, code::CodeCollection>& source
+	) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
@@ -56,7 +58,7 @@ namespace vm {
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRun(Ref(&*loaded_program));
+		bool response = getMainVMThread().initThreadAndRun(&*loaded_program);
 		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
@@ -69,12 +71,13 @@ namespace vm {
 		if (thread && thread->joinable())
 			thread->join();
 		else
-			return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
+			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
 		return api::Response(api::response::Empty());
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::input(const api::request::Input& request) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::input(
+		const api::request::Input& request
+	) {
 		// @TODO: https://github.com/ducktype-org/duckling/pull/381#discussion_r1885688218
 		auto lock = io.lock();
 		io.inputStream() << request.input;
@@ -102,8 +105,9 @@ namespace vm {
 		return api::response::Empty{};
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::doRequest(const api::ExecutorRequest& request) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
+		const api::ExecutorRequest& request
+	) {
 		variant_match(request) {
 			variant_case_novalue(api::request::Run) { return run(); }
 			variant_case_novalue(api::request::Join) { return join(); }
@@ -165,8 +169,9 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::doRequest(const api::DataRequest& request) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
+		const api::DataRequest& request
+	) {
 		api::ProcStatus status = getStatus();
 
 		if (!std::holds_alternative<api::Executing>(status)) {
@@ -203,8 +208,9 @@ namespace vm {
 		return response;
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::doRequest(const api::IORequest& request) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::doRequest(
+		const api::IORequest& request
+	) {
 		variant_match(request) {
 			variant_case(api::request::Input, input_request) { return input(input_request); }
 			variant_case_novalue(api::request::Output) { return output(); }
@@ -217,13 +223,15 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::doRequest(const api::RequestVariant& request) {
+	std::expected<api::Response, api::ApiError> VMProcess::doRequest(
+		const api::RequestVariant& request
+	) {
 		variant_match(request) {
 			variant_case(api::ExecutorRequest, exec_request) { return doRequest(exec_request); }
 			variant_case(api::DataRequest, data_request) { return doRequest(data_request); }
 			variant_case(api::IORequest, io_request) { return doRequest(io_request); }
 			variant_case(api::StatusRequest, status_request) { return api::Response(getStatus()); }
+			variant_case(api::ExitCodeRequest, exit_code_request) { return getExitCode(); }
 			variant_default { return api::Response(api::response::Empty()); }
 		}
 		CORE_UNREACHABLE();
@@ -244,8 +252,9 @@ namespace vm {
 
 	VMThread& VMProcess::getMainVMThread() { return vm_threads.front(); }
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::attach(std::istream& istream, std::ostream& ostream) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::attach(
+		std::istream& istream, std::ostream& ostream
+	) {
 		// @TODO: Flush the ostream from ProcIO to new ostream.
 		if (io_redirecter)
 			return std::unexpected(api::CoreOperationError{ api::AttachDetachError{} });
@@ -270,4 +279,23 @@ namespace vm {
 		status_cv.notify_all();
 	}
 
+<<<<<<< HEAD
+=======
+
+	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
+		auto proc_status = getStatus();
+		variant_match(getStatus()) {
+			variant_case(api::Executing, exec_status) {
+				variant_match(exec_status.exec_status) {
+					variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
+					variant_default return std::unexpected(
+						api::StateError("Execution is did not complete")
+					);
+				}
+			}
+			variant_default return std::unexpected(api::StateError("Execution did not start"));
+		}
+		CORE_UNREACHABLE();
+	}
+>>>>>>> origin/main
 }
