@@ -85,6 +85,10 @@ function main {
 	# i - 24
 	# tmp - 32
 
+<<<<<<< HEAD
+=======
+	# [0, 8) main ret_val
+>>>>>>> origin/main
 	init_type 		i64; 	# [8, 16) x
 	init_type 		i64; 	# [16, 24) max
 	init_type 		i64; 	# [24, 32) i
@@ -120,9 +124,12 @@ function main {
 
 	output_l64      40;
 
+<<<<<<< HEAD
 	# return i
 	mov_l64_l64		0, 48;
 
+=======
+>>>>>>> origin/main
 	deinit; # tmp
 	deinit;	# i
 	deinit;	# max

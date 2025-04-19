@@ -2,7 +2,6 @@
 # input = ""
 # output = "42"
 
-
 function main {
     # [0, 8) ret_val
     # [8, 16) argc

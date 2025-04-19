@@ -210,12 +210,13 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const std::vector<fs::FilePath>& files) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const std::vector<fs::FilePath>& files
+) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			auto         type_context_builder = vm::code::builtin_types::getBuiltinTypes();
+			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
@@ -252,8 +253,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const code::CodeCollection& code_collection) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const code::CodeCollection& code_collection
+) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();

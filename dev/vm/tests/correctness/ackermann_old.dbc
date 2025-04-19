@@ -81,6 +81,7 @@ function ackermann {
 }
 
 function main {
+<<<<<<< HEAD
     # [0, 8) -> main ret_val
     # [8, 16) -> argc
     # [16, 32) -> *argv
@@ -94,6 +95,18 @@ function main {
     input_l64           32;          # temp := n
     alloc_lptr_type     56, i64;  # arg1 := alloc *int
     store_lptr_l64_ofs  56, 32;      # arg1 = &n
+=======
+    # [0, 8) main ret_val
+    init_type           i64;      # [8, 16) temp
+    init_type           i64;      # [16, 24) ackermann ret_val
+    init_type           i64;      # [24, 32) ackermann arg0 -> m
+    init_type           i64;      # [32, 40) ackermann arg2 -> nPtr
+
+    input_l64           24;         # arg0 := m
+    input_l64           8;          # temp := n
+    alloc_lptr_type     32, i64;  # arg1 := alloc *int
+    store_lptr_l64_ofs  32, 8;      # arg1 = &n
+>>>>>>> origin/main
 
     call_func           ackermann;  # A(m, n, nPtr)
 

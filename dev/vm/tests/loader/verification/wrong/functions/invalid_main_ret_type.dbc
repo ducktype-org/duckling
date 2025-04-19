@@ -1,0 +1,8 @@
+type fun: main {} ptr_i32
+
+function main {
+	# [0, 4) -> main ret_val
+	init_type i32;
+	deinit;
+	ret;
+}

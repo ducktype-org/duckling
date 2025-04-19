@@ -61,9 +61,7 @@ private:
 
 		auto line_number2 = stepAndGetLine(pid);
 		assertEqual(
-			expected_next_line(position.instr_number),
-			line_number2,
-			"Line number is not correct (2)"
+			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
 		);
 
 		auto line_number3 = stepAndGetLine(pid);

@@ -60,11 +60,16 @@ function foo {
 }
 
 function main {
+<<<<<<< HEAD
     # [0, 8) ret_val
     # [8, 16) argc
     # [16, 32) *argv
 
 	init_type 	i32; # [32, 40) foo() ret_val
+=======
+	# [0, 8) main ret_val
+	init_type 	i32; # [8, 12) foo() ret_val
+>>>>>>> origin/main
 
 	call_func 	foo;
 	output_l32 	32;

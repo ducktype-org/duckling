@@ -131,8 +131,7 @@ private:
 		func_builder.addInstruction(Op_deinit());  // b
 		func_builder.addInstruction(Op_deinit());  // ret val (int64)
 		assertThrows<EmptyStackDeinitError>(
-			[&] { func_builder.addInstruction(Op_deinit()); },
-			"Cannot pop from empty variable stack"
+			[&] { func_builder.addInstruction(Op_deinit()); }, "Cannot pop from empty variable stack"
 		);
 
 		func_builder.initType(Op_init_type{ int64 });  // reinit ret val (int64)

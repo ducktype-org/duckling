@@ -16,11 +16,15 @@ public:
 
 protected:
 	/**
-	 * @brief Runs a program from a given filepath with the specified input and command-line arguments.
-	 * Asserts that the actual output matches the expected one.
+	 * @brief Runs a program from a given filepath with the specified input and command-line
+	 * arguments. Asserts that the actual output matches the expected one.
 	 */
 	void runTestOnVm(
-		const std::string& dbc_filename, const std::string& input, const std::vector<std::string>& args, const std::string& output
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input,
+		const base::Optional<std::string>& optional_output,
+		const std::vector<std::string>&    args,
+		i64                                exit_code = 0
 	);
 
 	/**
