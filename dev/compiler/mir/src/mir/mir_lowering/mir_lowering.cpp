@@ -21,9 +21,10 @@
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
-
-#include <unordered_set>
 #include <base/variant.hpp>
+
+#include <stack>
+#include <unordered_set>
 
 namespace compiler::mir {
 
@@ -254,10 +255,23 @@ namespace compiler::mir {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
 			auto entry_block_id = entry_block.value()->getID();
 
-			std::vector<Block> blocks;
-			blocks.reserve(this->blocks.size());
-			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			std::vector<BlockID> block_order;
+			block_order.reserve(this->blocks.size());
+
+			base::StableHashMap<BlockID, Block> function_blocks;
+
+			// First element in block order is the entry block
+			block_order.push_back(entry_block_id);
+
+			// Count in "reverse order" to have more intuitive order
+			// since creation of blocks is done from the end of the function.
+			for (usize i = this->blocks.size(); i-- > 0;) {
+				Block block = this->blocks[i]->build();
+				function_blocks.put(block.id, std::move(block));
+
+				if (block.id != entry_block_id)  // entry block is already added to the block_order
+					block_order.emplace_back(block.id);
+			}
 
 			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
@@ -819,8 +833,9 @@ namespace compiler::mir {
 
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	helios::errors::HResult<Function, helios::errors::Failed>
-		finalizeFunctionEnd(query::Context& ctx, Function function) {
+	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+		query::Context& ctx, Function function
+	) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
