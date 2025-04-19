@@ -72,7 +72,7 @@ namespace compiler::mir {
 
 		for (auto& block_id: function.block_order) {
 			// each block is considered independently
-			const auto& block = function.blocks[block_id];
+			auto& block = function.blocks[block_id];
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -142,14 +142,7 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			function.blocks.put(
-				block.id,
-				{
-					.id           = block.id,
-					.instructions = std::move(new_instructions),
-					.terminator   = block.terminator,
-				}
-			);
+			block.instructions = std::move(new_instructions);
 		}
 
 		return function;

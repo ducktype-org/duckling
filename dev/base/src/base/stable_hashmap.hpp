@@ -84,6 +84,7 @@ namespace base {
 
 		/**
 		 * @brief Erases value at @p key position if it exists.
+		 * The references to the erased value are invalidated.
 		 * @returns Whether a value was erased.
 		 */
 		bool erase(const KEY_T& key) { return data.erase(key); }
@@ -109,6 +110,10 @@ namespace base {
 			return data.size();
 		}
 
+		/**
+		 * It currently compares pointers, not the underlying data.
+		 * @todo Implement a proper comparison.
+		 */
 		bool operator==(const StableHashMap& other) const { return data == other.data; }
 
 	private:

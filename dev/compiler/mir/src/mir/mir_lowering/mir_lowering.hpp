@@ -21,10 +21,7 @@ namespace compiler::mir {
 		}
 	};
 
-	using helios::errors::HResult;
-	using HFailed = helios::errors::Failed;
-
-	using LowerToMirFunctionResult = HResult<Function, HFailed>;
+	using LowerToMirFunctionResult = helios::errors::HResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction

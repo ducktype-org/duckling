@@ -808,6 +808,9 @@ namespace compiler::mir {
 				function.blocks.erase(block_id);
 		function.block_order = new_block_order;
 
+		// WEAK_ASSERT candidate
+		function.validateBlockIDs();
+
 		return function;
 	}
 
@@ -821,12 +824,14 @@ namespace compiler::mir {
 
 	 * @note It is assumed that the last block is the last in the block order.
 	 */
-	HResult<Function, HFailed> finalizeFunctionEnd(query::Context& ctx, Function function) {
+	helios::errors::HResult<Function, helios::errors::Failed>
+		finalizeFunctionEnd(query::Context& ctx, Function function) {
 		CORE_ASSERT(
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
-		auto last_block_id = BlockID(0);
+		auto last_block_id = BlockID(0
+		);  // It should be always zero because the last block is generated as the first one.
 		if (not function.blocks.contains(last_block_id)) return function;
 
 		CORE_ASSERT(
@@ -838,25 +843,29 @@ namespace compiler::mir {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {
-			// @todo log the query
+			// @todo there should be logging here of missing return value / control reaches the end
+			// of non-void function
 			return helios::errors::HError(helios::errors::Failed());
 		}
 	}
 
 	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
-		static auto provide(Context& ctx, QKey key)  // NOLINT(performance-unnecessary-value-param)
-			-> PResult {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
-			// eliminating unreachable blocks
-			auto function_reachable = eliminateUnreachable(std::move(function_no_lifetime));
 
-			UNPACK_RESULT(
+			// second step: lifetime stuff
+			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			// change FunctionEnd to proper return
+			UNPACK_RESULT_MOVE(
 				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
 			);
 
-			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_no_func_end));
+			return function_no_func_end;
 		}
 
 		QUERY_AUTO_CACHE_REF

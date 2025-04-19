@@ -327,11 +327,24 @@ namespace compiler::mir {
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
 
-		/// Block with ID "0" is the one with FunctionEnd
+		/**
+		 * @brief Map from BlockID to the Block.
+		 * The block's content is stored here.
+		 * @note Block with ID "0" should always be the one with FunctionEnd (@p
+		 * finalizeFunctionEnd)
+		 */
 		base::StableHashMap<BlockID, Block> blocks;
-		/// First block in the block order is the entry block.
+		/**
+		 * @brief The generated order of blocks in the function.
+		 * It serves as a list of all the blocks that are inside the function.
+		 * The order is not important but it is more human friendly.
+		 * First block in the block order is the entry block.
+		 */
 		std::vector<BlockID> block_order;
 
+		/**
+		 * @brief List of all local variables in the function.
+		 */
 		base::StableVector<MirLocal> local_list;
 		helios::ScopeID              top_lifetime_scope;
 
@@ -373,7 +386,7 @@ namespace compiler::mir {
 		 * if the jump targets exist.
 		 * Used for debugging.
 
-		 * @note If there is a block in hte HashMap but not in the block_order,
+		 * @note If there is a block in the HashMap but not in the block_order,
 		 * it is considered invalid.
 		 */
 		base::OkBad validateBlockIDs() const;
