@@ -1,0 +1,20 @@
+type primitive: int64 8
+type primitive: in64 8
+
+type fun: main {} i64
+
+function main {
+    # [0, 8) main ret_val
+
+    init_type int64; # x [8, 16)
+    init_type in64; # y [16, 24)
+    
+    input_l64 8;
+    input_l64 16;
+    add_l64_l64 8, 16;
+    output_l64 8;
+
+    deinit; # y
+    deinit; # x
+    ret;
+}
