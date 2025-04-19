@@ -1,9 +1,9 @@
 #include "query_hout_of_expr.hpp"
 
-#include "../../scopes/scopes.hpp"
-#include "../visitors.hpp"
-#include "expr.hpp"
-
+#include <helios/hout/visitors.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>
@@ -20,8 +20,9 @@ namespace compiler::helios::code {
 		 * QueryHoutOfExpr is mostly a wrapper for future cache.
 		 * @note This is a private function of this file.
 		 */
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element);
+		ExprConstructionResult fromPST(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		);
 
 		void getVariantSubExprsInPlace(
 			query::Context&                                   ctx,
@@ -501,8 +502,9 @@ namespace compiler::helios::code {
 			}
 		};
 
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
+		ExprConstructionResult fromPST(
+			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
+		) {
 			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
 
 			// std::cerr << "\nExpr: \n";

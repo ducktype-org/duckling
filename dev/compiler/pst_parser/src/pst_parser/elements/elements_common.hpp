@@ -147,8 +147,9 @@ namespace pst::detail {
 
 		ForwardBorrowIterator operator+(const difference_type diff) const { return it + diff; }
 
-		friend ForwardBorrowIterator
-			operator+(const difference_type diff, const ForwardBorrowIterator& iter) {
+		friend ForwardBorrowIterator operator+(
+			const difference_type diff, const ForwardBorrowIterator& iter
+		) {
 			return iter.it + diff;
 		}
 

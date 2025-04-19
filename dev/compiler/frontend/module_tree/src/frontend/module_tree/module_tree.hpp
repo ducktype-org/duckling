@@ -7,45 +7,20 @@
 
 #pragma once
 
+#include "file_id.hpp"
+#include "module_id.hpp"
+
 #include <filesystem/file.hpp>
 #include <filesystem/fs_tree.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
-#include <base/perfect_hash.hpp>
-#include <base/strongly_typed_id.hpp>
 
 #include <string>
 
 namespace compiler::frontend {
-	/**
-	 * @brief Structure holding FileID within SourceFile
-	 * @todo: change to STRONG_TYPEDEF_ID
-	 */
-	struct FileID final {
-		[[nodiscard]]
-		u64 asInt() const {
-			return id;
-		}
 
-		static FileID nextID();
-		bool          operator==(const FileID&) const = default;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return asInt();
-		}
-
-	private:
-		u64 id;
-		FileID() = default;
-	};
-
-	STRONG_TYPEDEF_ID(ModuleID);
-
-	// @TODO: move to STRONG_TYPEDEF_ID?
-	inline base::HashT customPerfectHash(ModuleID id) { return id.asInt(); }
 
 	/**
 	 * @brief Structure holding SourceFile within Module Tree

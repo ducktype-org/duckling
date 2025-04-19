@@ -49,8 +49,7 @@ namespace vm::loader {
 		requires std::is_base_of_v<dia::Error, ErrT>
 		void logMap(const code::ElementBase& elem, const Function& callback, Args&&... args) {
 			match_optional(elem.bytecode_pos) {
-				opt_none errors.push_back(
-					base::strConcat(ErrT::ERR_MSG, std::forward<Args>(args)...)
+				opt_none errors.push_back(base::strConcat(ErrT::ERR_MSG, std::forward<Args>(args)...)
 				);
 				opt_some(pos) {
 					auto t = makeBox<ErrT>(pos, std::forward<Args>(args)...);
