@@ -4,11 +4,9 @@
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
-#include <type_traits>
-
-namespace vm::code::builtin_types {
+namespace vm::code {
 	code::builders::TypeContextBuilder getBuiltinTypes() {
-		const std::array builtin_types = {
+		static const std::array builtin_types = {
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
 			TypeOfData(PrimitiveType(base::StrID("i32"), 4)),
 			TypeOfData(PrimitiveType(base::StrID("i64"), 8)),
