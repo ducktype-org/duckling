@@ -12,7 +12,7 @@ type fun: collatz { i64 } i64
 function collatz {
 	# ret_val - 0
 	# n - 8 (value for which the collatz sequence is calculated)
-	# max - 16 (maximum value in the caltulated collatz sequence)
+	# max - 16 (maximum value in the calculated collatz sequence)
 	# tmp - 24
 
 	# [0, 8) ret_val
@@ -85,10 +85,6 @@ function main {
 	# i - 24
 	# tmp - 32
 
-<<<<<<< HEAD
-=======
-	# [0, 8) main ret_val
->>>>>>> origin/main
 	init_type 		i64; 	# [8, 16) x
 	init_type 		i64; 	# [16, 24) max
 	init_type 		i64; 	# [24, 32) i
@@ -124,17 +120,11 @@ function main {
 
 	output_l64      40;
 
-<<<<<<< HEAD
-	# return i
-	mov_l64_l64		0, 48;
-
-=======
->>>>>>> origin/main
 	deinit; # tmp
 	deinit;	# i
 	deinit;	# max
 	deinit;	# x
-    deinit;       # *argv
-    deinit;       # argc
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

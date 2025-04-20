@@ -127,11 +127,14 @@ namespace vm {
 		                    .expect("Type i64 is expected to exist!");
 
 		// TypeIDs to pass to opcodes.
-		auto func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
-		auto argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
-		auto argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
-		auto called_function_id = base::safeIntConv<i32>(called_func_type->getID().asInt());
-		auto i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		i32  func_ret_type_id   = base::safeIntConv<i32>(called_return_type->getID().asInt());
+		i32  argv_type_id       = base::safeIntConv<i32>(argv_type->getID().asInt());
+		i32  argv_ptr_type_id   = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
+		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
+		auto funcs              = executing_program->functions;
+		i32  called_function_id = 0;
+		for (u64 i = 0; i < funcs.size(); i++)
+			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
 		ByteCode bytecode;
 		bytecode.reserve(5 + args.size() * 4 + 13);
@@ -365,7 +368,8 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 		executing_program = program;
 		try {
-			i64 exit_code = internalCallFunction(executing_program->functions.at(base::StrID("main")), args);
+			i64 exit_code
+				= internalCallFunction(executing_program->functions.at(base::StrID("main")), args);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (KillProcessException) { respondExecutionRequest(api::ExecutionStopped{}); }
 	}
