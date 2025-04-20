@@ -7,5 +7,5 @@
 
 #include <vm/core/supervisor/supervisor.hpp>
 
-void cli(const fs::FilePath& filepath, const std::vector<std::string>& args);
+void cli(const fs::FilePath& filepath);
 void cli();

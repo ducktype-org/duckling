@@ -1,5 +1,6 @@
-#include "base/str_utils.hpp"
 #include <vm_tester_utils.hpp>
+
+#include <base/str_utils.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>

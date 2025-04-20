@@ -44,8 +44,9 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::CoreOperationError>
-		VMProcess::run(const std::vector<std::string>& args) {
+	std::expected<api::Response, api::CoreOperationError> VMProcess::run(
+		const std::vector<std::string>& args
+	) {
 		std::unique_lock lock(rw_global);
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });

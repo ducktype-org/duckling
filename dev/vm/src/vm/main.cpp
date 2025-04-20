@@ -67,8 +67,7 @@ int main(int argc, const char** argv) {
 	else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
-		// TODO: This is just temporary, change that to take in real command line arguments.
-		cli(file.value(), { "1", "2" });
+		cli(file.value());
 	else
 		cli();
 }

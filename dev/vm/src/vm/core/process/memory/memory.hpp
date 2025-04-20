@@ -118,7 +118,7 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockID(Ref<Block> block) -> BlockID;
-		 
+
 		[[nodiscard]]
 		auto requestBlockData(BlockID id) -> base::RawView;
 

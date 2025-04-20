@@ -7,17 +7,13 @@
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
 
-#include "base/int_conv.hpp"
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
+#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/instructions.hpp"
-#include "vm/core/process/memory/block.hpp"
-#include "vm/core/process/memory/memory.hpp"
-#include "vm/core/thread/opcodes_functions_utils.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -26,7 +22,6 @@
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
-#include <cstdint>
 #include <cstring>
 #include <iostream>
 #include <mutex>

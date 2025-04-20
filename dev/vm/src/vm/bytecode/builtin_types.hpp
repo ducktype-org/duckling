@@ -19,9 +19,8 @@ namespace vm::code {
 			// https://github.com/ducktype-org/duckling/issues/656
 			TypeOfData(PrimitiveType(base::StrID("void"), 0)),
 
-			// TODO: This is temporary. Just to see if passing arguments work, since dynamic
-			// arrays don't work for now.
-			// TypeOfData(DynamicTableType(base::StrID("byte_array"), base::StrID("byte"))),
+			// @todo: The approach with a static table of size 10 is temporary.
+			// It should be changed to a dynamic_table of strings or bytes once those are implemented.
 			TypeOfData(StaticTableType(base::StrID("temp_arg_arr"), base::StrID("i64"), 10)),
 			TypeOfData(PointerType(base::StrID("ptr_argv"), base::StrID("temp_arg_arr"))),
 			TypeOfData(FunctionType(

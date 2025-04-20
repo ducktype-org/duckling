@@ -130,9 +130,7 @@ namespace vm {
 
 		void executeOneStep();
 
-		Ref<Block> initializeMainLocalStack(Frame* frame, const std::vector<std::string>& args);
-		ByteCode
-			createStartFunction(CRef<low::FuncData> func, const std::vector<std::string>& args);
+		ByteCode createStartFunction(CRef<low::FuncData> func, const std::vector<std::string>& args);
 
 		/**
 		 * @brief @TODO:
@@ -143,7 +141,7 @@ namespace vm {
 		/**
 		 * @TODO:
 		 * following modifications should be made in the future:
-		 * - Error handling done by throwing ()
+		 * - Error handling done by throwing (for efficiency)
 		 * - Setup for execution recovery
 		 * - This functions currently can deref only simple pointers, and always return
 		 * view to data pointed by pointer. This does not take into consideration possibility
@@ -175,8 +173,7 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool
-			initThreadAndRun(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
+		bool initThreadAndRun(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
 
 		/**
 		 * @brief Pauses the execution of a program.
