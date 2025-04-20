@@ -113,7 +113,7 @@ namespace vm {
 		                            .expect("Expected the called function to exist!");
 		auto called_return_type
 			= called_func_type->getResultType().expect("Expected main to have a return value!");
-		auto argv_type = executing_program->types->atMaybe(base::StrID("temp_arg_arr"))
+		auto argv_type = executing_program->types->atMaybe(base::StrID("argv"))
 		                     .expect("All programs are expected to have an existing argv type!");
 		auto argv_ptr_type
 			= executing_program->types->atMaybe(base::StrID("ptr_argv"))
