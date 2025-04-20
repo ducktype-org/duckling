@@ -23,7 +23,7 @@
 #include <shared_mutex>
 
 namespace vm {
-	class Memory {
+	class Memory final {
 	private:
 		mutable std::shared_mutex mutex;
 		HeapAllocator             heap_allocator;

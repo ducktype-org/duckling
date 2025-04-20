@@ -2,6 +2,8 @@
 
 #include "driver.hpp"
 
+#include <query_framework/context_fd.hpp>
+
 #include <base/string_id.hpp>
 
 namespace compiler::driver {
@@ -11,7 +13,7 @@ namespace compiler::driver {
 	public:
 		LLVMDriver(CRef<Options> options): BackendDriver(options) {}
 
-		void compileModule(const BackendModuleData& lir_module) final;
+		void compileModule(query::Context& ctx, const BackendModuleData& lir_module) final;
 
 		void link() final;
 	};

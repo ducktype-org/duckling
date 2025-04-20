@@ -12,7 +12,6 @@
 #include <init/init.hpp>  // IWYU pragma: export
 #include <printer/stream_printer.hpp>
 
-#include <base/define_helper.hpp>
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
 
@@ -27,6 +26,24 @@
 		base::strConcat(                                                                  \
 			"Values not equal:\n\t\tIn line ", __LINE__, ": ", #expected, " != ", #actual \
 		)                                                                                 \
+	)
+
+#define ASSERT_EQUAL_PRINT(expected, actual)   \
+	assertEqual(                               \
+		expected,                              \
+		actual,                                \
+		base::strConcat(                       \
+			"Values not equal:\n\t\tIn line ", \
+			__LINE__,                          \
+			":\n\t\t\t",                       \
+			#expected,                         \
+			" != ",                            \
+			#actual,                           \
+			"\n\t\t\t",                        \
+			expected,                          \
+			" != ",                            \
+			actual                             \
+		)                                      \
 	)
 
 

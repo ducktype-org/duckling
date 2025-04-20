@@ -28,6 +28,7 @@ private:
 
 	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			assertTrue(vtable.implements.empty(), "I1 should not implement anything");
 			assertTrue(vtable.virtual_methods.size() == 2, "I1 should have two virtual methods");
 			auto foo_type = vtable.virtual_methods[base::StrID("foo")];
@@ -49,6 +50,7 @@ private:
 
 	void checkI2(vm::TypeCRef type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			assertTrue(
 				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
 				"I2 should be an interface"
@@ -64,12 +66,10 @@ private:
 
 	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Open,
-						"Parent should be an open class"
-					);
+					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
 					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
 				}
 				variant_default { fail("Parent should be a class"); }
@@ -92,12 +92,10 @@ private:
 		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces
 	) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Final,
-						"Child should be a final class"
-					);
+					assertFalse(clazz.is_abstract, "Child should be a concrete class");
 					assertTrue(clazz.extends.has_value(), "Child has no superclass");
 					assertTrue(*clazz.extends == super_type, "Child is not Parent's child");
 				}
@@ -123,12 +121,10 @@ private:
 
 	void checkPietMondrian(vm::TypeCRef type) {
 		if_opt_some(type->getVTable(), vtable) {
+			assertTrue(vtable.type == type, "Invalid type in VTable");
 			variant_match(vtable.kind) {
 				variant_case(vm::VTable::Class, clazz) {
-					assertTrue(
-						clazz.modifier == vm::VTable::Class::Modifier::Abstract,
-						"Piet mondrian was an *abstract* art pioneer"
-					);
+					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
 					assertFalse(
 						clazz.extends.has_value(), "PietMondrian should not extend anything"
 					);
@@ -152,7 +148,7 @@ private:
 	void metadataLoading() {
 		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
+		auto pid = process_pid_response.value().pid;
 
 		fs::FilePath file(path("inheritance_metadata.dbc"));
 		auto         loaded_file_response = vm::api::loadFile(pid, file);

@@ -147,13 +147,6 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
-		BCLocalSize,
-		BCRetSize,
-		BCArgSize,
-		BCDefine,
-		BCArg,
-		BCLocal,
-		BCCode,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -164,13 +157,12 @@ namespace lang_def {
 		BCFunType,
 		BCInheritable,
 		BCClass,
-		BCOpen,
-		BCFinal,
 		BCAbstract,
 		BCInterface,
 		BCExtends,
 		BCImplements,
 		BCVirtualMethods,
+		BCFields,
 	};
 
 	enum class Special {

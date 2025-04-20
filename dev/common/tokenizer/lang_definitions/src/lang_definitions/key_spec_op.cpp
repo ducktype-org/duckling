@@ -114,12 +114,6 @@ namespace lang_def {
 	constexpr auto BC_KEYWORDS_ARRAY
 		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
-			{ Keyword::BCLocalSize, "local_size", KeywordFlags() },
-			{ Keyword::BCRetSize, "ret_size", KeywordFlags() },
-			{ Keyword::BCArgSize, "arg_size", KeywordFlags() },
-			{ Keyword::BCDefine, "define", KeywordFlags() },
-			{ Keyword::BCArg, "arg", KeywordFlags() },
-			{ Keyword::BCCode, "code", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
@@ -130,15 +124,13 @@ namespace lang_def {
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCInheritable, "inheritable", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
-			{ Keyword::BCOpen, "open", KeywordFlags() },
-			{ Keyword::BCFinal, "final", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
 			{ Keyword::BCInterface, "interface", KeywordFlags() },
 			{ Keyword::BCExtends, "extends", KeywordFlags() },
 			{ Keyword::BCImplements, "implements", KeywordFlags() },
 			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
+			{ Keyword::BCFields, "fields", KeywordFlags() },
 		});
-
 
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable

@@ -50,7 +50,7 @@ namespace tokenizer {
 		TokenFile(const TokenFile&) = delete;
 		TokenFile()                 = delete;
 
-		TokenFile(TokenFile&&) = default;
+		TokenFile(TokenFile&&) = delete;
 
 		/**
 		 * @brief Compute pair (line, column) from character index.
@@ -72,8 +72,7 @@ namespace tokenizer {
 		/**
 		 * @brief Returns views of a [) range split by lines.
 		 */
-		std::vector<std::pair<usize, base::RawView>>
-			viewSplitRange(usize begin_char, usize end_char);
+		std::vector<std::pair<usize, base::RawView>> viewSplitRange(usize begin_char, usize end_char);
 
 		[[nodiscard]]
 		const fs::FileContent getContent() const;

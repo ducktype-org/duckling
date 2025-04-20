@@ -1,5 +1,5 @@
 add_library(Base
-        src/base/impl/define_helper.cpp
+        src/base/impl/argument_splitter.cpp
         src/base/impl/exceptions.cpp
         src/base/impl/raw_view.cpp
         src/base/impl/string_id.cpp
@@ -12,7 +12,7 @@ set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
 
 # @TODO: unicode dependency might not be optional.
 # Think of a way to "break" it
-make_module(Base USES Result::Result unicode)
+make_module(Base USES unicode)
 
 duck_add_test(base strongly_typed_int tests/strongly_typed_int_test.cpp USES Base)
 

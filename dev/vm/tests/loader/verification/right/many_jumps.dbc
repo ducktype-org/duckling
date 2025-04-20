@@ -1,0 +1,28 @@
+type fun: main {} i64
+
+function main {
+	# [0, 8) -> main ret_val
+
+	jmpRel_label    A;
+
+	init_type     i64; # x
+
+	jmpRel_label    B;
+	label           B;
+
+	deinit; # x
+
+	jmpRel_label    A;
+	label           A;
+
+	init_type     i64; # x
+
+	label           C;
+	jmpRel_label    C;
+
+	deinit; # x
+
+	jmpRel_label    A;
+
+	ret;
+}

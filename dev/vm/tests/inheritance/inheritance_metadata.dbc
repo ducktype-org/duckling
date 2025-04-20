@@ -1,38 +1,13 @@
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 
-type primitive: VT 8
 type pointer: pointer_parent Parent
 type pointer: pointer_I1 I1
 type pointer: pointer_I2 I2
-type fun: method_parent_int_int {pointer_parent, int64} int64
-type fun: method_I1_int {pointer_I1} int64
+type fun: method_parent_int_int {pointer_parent, i64} i64
+type fun: method_I1_int {pointer_I1} i64
 
 type data: POD {
-    abc: int64,
-}
-
-type data: I1 {
-    vtable: VT,
-}
-
-type data: I2 {
-    vtable: VT,
-}
-
-type data: Parent {
-    vtable: VT,
-    foo: int64,
-}
-
-type data: Child {
-    vtable: VT,
-    foo: int64,
-    bar: int64,
-}
-
-type data: PietMondrian {
-    vtable: VT,
+    abc: i64,
 }
 
 inheritable I1: interface {
@@ -45,29 +20,27 @@ inheritable I1: interface {
 inheritable I2: interface {
 }
 
-inheritable Parent: open class {
+inheritable Parent: class {
+    fields: {
+        foo: i64,
+    };
     virtual_methods: {
         lorem: method_parent_int_int,
     };
 }
 
-inheritable Child: final class {
+inheritable Child: class {
     extends: Parent;
     implements: {I1, I2};
+    fields: {
+        foo: i64,
+        bar: i64,
+    };
 }
 
 inheritable PietMondrian: abstract class {
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    
-    local_size: 8;
-    
-    code: {
-        # Print anything, so that `runTestOnVm` doesn't get stuck
-        output_l64 0;
-        ret;
-    }
+    ret;
 }

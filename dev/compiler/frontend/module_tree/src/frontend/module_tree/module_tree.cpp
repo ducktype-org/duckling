@@ -233,8 +233,7 @@ std::string compiler::frontend::printModuleTree(ModuleID module) {
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
 		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); }
-		);
+		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); });
 	}
 
 	static auto load(QKey) -> LoadResult { return {}; }
@@ -325,8 +324,7 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 ) {
 	// get top-level:
-	while (element.unlock(ctx)->getParent().unlockOpt(ctx))
-		element = element.unlock(ctx)->getParent();
+	while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
 
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];

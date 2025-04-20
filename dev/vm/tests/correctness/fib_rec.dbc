@@ -1,70 +1,56 @@
-type primitive: int64 8
-
-type fun: main {} int64
-type fun: fib { int64 } int64
+type fun: main {} i64
+type fun: fib { i64 } i64
 
 function fib {
-    arg_size: 8;
-    ret_size: 8;
-    local_size: 32;
+    # n := argument
 
-    code: {
-        # n := argument
+    # [0, 8) ret_val
+    # [8, 16) arg0
 
-        # [0, 8) ret_val
-        # [8, 16) arg0
+    mov_l64_l64         0, 8;
 
-        mov_l64_l64         0, 8;
-        
-        # if !(n > 1): end
-        cmpG_l64_imm        8, 1;
-        jmpRelNotIf_label   End;
+    # if !(n > 1): end
+    cmpG_l64_imm        8, 1;
+    jmpRelNotIf_label   End;
 
-        # fib(n - 1)
-        init_type int64; # [16, 24) fib(n-1) ret_val
-        init_type int64; # [24, 32) fib(n-1) arg0
-        mov_l64_l64         24, 8;
-        sub_l64_imm         24, 1;
-        call_func           fib;
+    # fib(n - 1)
+    init_type i64; # [16, 24) fib(n-1) ret_val
+    init_type i64; # [24, 32) fib(n-1) arg0
+    mov_l64_l64         24, 8;
+    sub_l64_imm         24, 1;
+    call_func           fib;
 
-        mov_l64_l64         0, 16;
+    mov_l64_l64         0, 16;
 
-        # fib(n - 2)
-        init_type int64; # [24, 32) fib(n-2) arg0
-        mov_l64_imm         16, 0;
-        mov_l64_l64         24, 8;
-        sub_l64_imm         24, 2;
-        call_func           fib;
+    # fib(n - 2)
+    init_type i64; # [24, 32) fib(n-2) arg0
+    mov_l64_imm         16, 0;
+    mov_l64_l64         24, 8;
+    sub_l64_imm         24, 2;
+    call_func           fib;
 
 
-        # (fib(n - 1) + fib(n - 2)) % mod
-        add_l64_l64         0, 16;
-        mod_l64_imm         0, 8388449;
+    # (fib(n - 1) + fib(n - 2)) % mod
+    add_l64_l64         0, 16;
+    mod_l64_imm         0, 8388449;
 
-        deinit; # fib() ret_val
-        label               End;
+    deinit; # fib() ret_val
+    label               End;
 
-        deinit; # arg0
-        ret;
-    }
+    deinit; # arg0
+    ret;
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 24;
+    # n := argument
+    # [0, 8) main ret_val
+    init_type   i64; # [8, 16) fib() ret_val
+    init_type   i64; # [16, 24) fib() arg0
+    input_l64   16;
 
-    code: {
-        # n := argument
-        # [0, 8) main ret_val
-        init_type   int64; # [8, 16) fib() ret_val
-        init_type   int64; # [16, 24) fib() arg0
-        input_l64   16;
+    call_func   fib;
 
-        call_func   fib;
-
-        output_l64  8;
-        deinit; # fib() ret_val
-        ret;
-    }
+    output_l64  8;
+    deinit; # fib() ret_val
+    ret;
 }

@@ -214,11 +214,11 @@ IncludeCategories:
   - Regex:           '^("|<)(vm/.*)("|>)$'
     Priority:        6
     SortPriority:    5
-  # all other files with "":  
+  # all other files with "":
   - Regex:           '^".*"$'
     Priority:        7
     SortPriority:    1
-  # all other files with <>:  
+  # all other files with <>:
   - Regex:           '^<.*>$'
     Priority:        8
     SortPriority:    2
@@ -236,16 +236,16 @@ SortIncludes:    CaseInsensitive
 
 # Penalties
 PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakScopeResolution: 2000
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0
-PenaltyBreakString: 1000
+PenaltyBreakString: 650
 PenaltyBreakTemplateDeclaration: 10
-PenaltyExcessCharacter: 1000000
+PenaltyExcessCharacter: 50
 PenaltyIndentedWhitespace: 0
-PenaltyReturnTypeOnItsOwnLine: 60
-
+PenaltyReturnTypeOnItsOwnLine: 2000
 
 # Misc
 AttributeMacros:
@@ -258,7 +258,7 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IfMacros:
-  - KJ_IF_MAYBE
+  - KJ_IF_MAYBE # addint things like if_opt_some here is breaken, becouse clang removes the braces
 RemoveBracesLLVM: true  # This will soon be deprecated
 StatementAttributeLikeMacros:
   - Q_EMIT
@@ -266,12 +266,10 @@ StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
 WhitespaceSensitiveMacros:
-  - BOOST_PP_STRINGIZE
-  - CF_SWIFT_NAME
-  - NS_SWIFT_NAME
-  - PP_STRINGIZE
-  - STRINGIZE
-
+  - MAKE_FLAG_TYPE
+  - MAKE_STRINGIFYABLE_ENUM
+  - MAKE_VISITOR
+  
 
 # Other languages
 BreakAfterJavaFieldAnnotations: false

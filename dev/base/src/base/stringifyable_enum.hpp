@@ -30,7 +30,8 @@
  */
 #pragma once
 
-#include "int_conv.hpp"  // IWYU pragma: export
+#include "argument_splitter.hpp"  // IWYU pragma: export
+#include "int_conv.hpp"           // IWYU pragma: export
 #include "maps.hpp"
 #include "ok_bad.hpp"
 #include "simple_char_classifications.hpp"

@@ -1,47 +1,25 @@
-type primitive: int64 8
-type fun: main {} int64
-
-type primitive: VT 8
-
-type data: Animal {
-    vt: VT
-}
-
-type data: Dog {
-    vt: VT
-}
-
-type data: Cat {
-    vt: VT
-}
+type fun: main {} i64
 
 type pointer: DogPtr Dog
 type pointer: AnimalPtr Animal
 
 inheritable Animal: abstract class {}
-inheritable Dog: final class {
+inheritable Dog: class {
     extends: Animal;
 }
-inheritable Cat: final class {
+inheritable Cat: class {
     extends: Animal;
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
+    init_type DogPtr;  # 8
+    init_type AnimalPtr;  # 24
+    alloc_lptr_type 8, Dog;
+    setVTable_lptr_type 8, Dog;
+    upcast_lptr_lptr 24, 8;  # animal := static_cast<AnimalPtr>(dog)
     
-    local_size: 40;
-    
-    code: {
-        init_type DogPtr;  # 8
-        init_type AnimalPtr;  # 24
-        alloc_lptr_type 8, Dog;
-        setVTable_lptr_type 8, Dog;
-        upcast_lptr_lptr 24, 8;  # animal := static_cast<AnimalPtr>(dog)
-        
-        # Print anything, so that `runTestOnVm` doesn't get stuck
-        output_l64 0;
-        ret;
-    }
+    # Print anything, so that `runTestOnVm` doesn't get stuck
+    output_l64 0;
+    ret;
 }
 

@@ -12,25 +12,28 @@
 namespace vm {
 	struct VTable {
 		struct Class {
-			enum class Modifier { Open, Final, Abstract };
-
-			Modifier                modifier;
-			base::Optional<TypeRef> extends;
+			bool                     is_abstract;
+			base::Optional<TypeCRef> extends;
 		};
 
 		struct Interface {};
 
 		using Kind = std::variant<Interface, Class>;
 
-		Kind                                kind;
-		std::vector<TypeRef>                implements;
-		base::HashMap<base::StrID, TypeRef> virtual_methods;
+		TypeCRef                             type;
+		Kind                                 kind;
+		std::vector<TypeCRef>                implements;
+		base::HashMap<base::StrID, TypeCRef> virtual_methods;
 
-		base::Optional<const Class&> getClass() const {
-			variant_match(kind) {
-				variant_case(Class, clazz) { return clazz; }
-			}
-			return {};
-		}
+		VTable(
+			TypeCRef                             type,
+			Kind                                 kind,
+			std::vector<TypeCRef>                implements,
+			base::HashMap<base::StrID, TypeCRef> virtual_methods
+		):
+			  type{ type },
+			  kind{ kind },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
 	};
 }

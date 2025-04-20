@@ -13,15 +13,15 @@ public:
 		TESTER_ADD_TEST(testDoubleCall);
 		// @TODO should this be allowed or not?
 		TESTER_ADD_TEST(testDeinitializeReturnValue);
-		TESTER_ADD_TEST(testRecurence);
+		TESTER_ADD_TEST(testRecursion);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
 	}
 
 private:
 	void testSimpleFunctionCall() {
-		runTestOnVm("simple_function_call.dbc", "18", "18");
-		runTestOnVm("simple_function_call.dbc", "1234", "1234");
+		runTestOnVm("simple_function_call.dbc", "18", "18", 42);
+		runTestOnVm("simple_function_call.dbc", "1234", "1234", 42);
 	}
 
 	void testSimpleReturnValue() {
@@ -46,10 +46,10 @@ private:
 
 	void testDeinitializeReturnValue() {
 		runTestOnVm("deinit_ret_val.dbc", "", "42");
-		runTestOnVm("deinit_main_ret_val.dbc", "", "42");
+		runTestOnVm("deinit_main_ret_val.dbc", "", "42", 42);
 	}
 
-	void testRecurence() {
+	void testRecursion() {
 		runTestOnVm("rec_func_sum.dbc", "20", "210");
 		runTestOnVm("rec_func_sum.dbc", "100", "5050");
 	}
