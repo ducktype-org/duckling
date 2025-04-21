@@ -257,6 +257,9 @@ TypeContext TypeContextBuilder::build() const {
 					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
 				);
 			}
+			variant_case(vm::code::OpaqueType, opaque) {
+				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
+			}
 			variant_default { CORE_PANIC("bad type"); }
 		}
 	}

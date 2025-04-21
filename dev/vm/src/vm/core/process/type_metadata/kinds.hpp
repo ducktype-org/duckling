@@ -6,3 +6,4 @@
 #include "kinds/primitive.hpp"
 #include "kinds/static_table.hpp"
 #include "kinds/variant.hpp"
+#include "kinds/opaque.hpp"

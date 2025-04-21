@@ -155,6 +155,7 @@ namespace lang_def {
 		BCData,
 		BCVariant,
 		BCFunType,
+		BCOpaque,
 		BCInheritable,
 		BCClass,
 		BCAbstract,

@@ -122,6 +122,7 @@ namespace lang_def {
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
+			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
 			{ Keyword::BCInheritable, "inheritable", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },

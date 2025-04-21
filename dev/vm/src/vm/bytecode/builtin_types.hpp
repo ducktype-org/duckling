@@ -18,9 +18,7 @@ namespace vm::code {
 			// https://github.com/ducktype-org/duckling/issues/656
 			TypeOfData(PrimitiveType(base::StrID("void"), 0)),
 
-			// @TODO this is a placeholder until we add it as a proper type
-			// of a new kind.
-			TypeOfData(PrimitiveType(base::StrID("VT"), 8)),
+			TypeOfData(OpaqueType(base::StrID("VTablePtr"), 8)),
 		};
 		builders::TypeContextBuilder type_context_builder;
 

@@ -30,7 +30,8 @@ namespace vm {
 			DynamicTable,
 			Data,
 			Variant,
-			Function
+			Function,
+			Opaque,
 		};
 
 	private:
@@ -51,7 +52,8 @@ namespace vm {
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
-			kind::Function>
+			kind::Function,
+			kind::Opaque>
 			kind;
 
 		Type() = default;
@@ -71,6 +73,7 @@ namespace vm {
 		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void defineOpaque(TypeSize size);
 
 		// Type finalization:
 		void finalize();

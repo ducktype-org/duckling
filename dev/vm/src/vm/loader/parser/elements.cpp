@@ -367,6 +367,17 @@ namespace vm::loader::parser {
 			out->datatype   = std::move(tp);
 			break;
 		}
+		case lang_def::Keyword::BCOpaque: {
+			lexer::Token value = state.tokens().next();
+			if (!value.isNumLiteral()) {
+				state.err.failAndLog(state.getPosition(), "expected number");
+			} else {
+				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
+			}
+			break;
+		}
 		default: {
 			state.err.failAndLog(state.getPosition(), "expected variant of type");
 			break;
@@ -381,7 +392,7 @@ namespace vm::loader::parser {
 		tpc::Identifier name;
 		state.parse().all(lang_def::Keyword::BCInheritable, &name, lang_def::NamedOperator::Colon);
 		out->data.name = name.value;
-		out->data.fields.emplace_back(base::StrID("vt"), base::StrID("VT"));
+		out->data.fields.emplace_back(base::StrID("vtable_ptr"), base::StrID("VTablePtr"));
 		code::DataType::VTable& vtable = out->data.vtable.emplace();
 
 		switch (state.tokens().next().asKeyword()) {

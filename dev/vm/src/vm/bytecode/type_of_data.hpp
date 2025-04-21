@@ -178,6 +178,24 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents a type that is neither primitive nor composite.
+     * Values of this kind can offer some operations, but they are opaque
+     * to the bytecode program. Used for VTables.
+	 */
+	struct OpaqueType final: ElementBase {
+		OpaqueType() = default;
+
+		OpaqueType(const base::StrID name, const usize size): name(name), size(size) {}
+
+		base::StrID name;
+		usize       size{};
+
+		bool operator==(const OpaqueType& other) const {
+			return name == other.name && size == other.size;
+		}
+	};
+
+	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
 	using TypeOfData = std::variant<
@@ -187,7 +205,8 @@ namespace vm::code {
 		DynamicTableType,
 		DataType,
 		VariantType,
-		FunctionType>;
+		FunctionType,
+		OpaqueType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);
