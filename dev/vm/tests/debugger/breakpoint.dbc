@@ -1,12 +1,10 @@
-type primitive: int64 8
-type fun: main {} int64
-
+type fun: main {} i64
 
 function main {
 	# [0, 8) main ret_val
-	init_type 		int64; # [8, 16) a
-	init_type 		int64; # [16, 24) b
-	init_type 		int64; # [24, 32) c
+	init_type 		i64; # [8, 16) a
+	init_type 		i64; # [16, 24) b
+	init_type 		i64; # [24, 32) c
 	mov_l64_imm  	8, 0;
 	mov_l64_imm  	16, 0;
 	breakpoint;
