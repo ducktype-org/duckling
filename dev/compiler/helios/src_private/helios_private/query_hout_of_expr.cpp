@@ -504,16 +504,9 @@ namespace compiler::helios::code {
 			}
 		};
 
-<<<<<<< HEAD:dev/compiler/helios/src/helios/hout/elements/query_hout_of_expr.cpp
-		ExprConstructionResult
-			fromPST(query::Context& ctx, pst::AccessLocked<pst::ExprElement> element) {
-=======
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
->>>>>>> origin/main:dev/compiler/helios/src_private/helios_private/query_hout_of_expr.cpp
-
 			// std::cerr << "\nExpr: \n";
 			// root->debugPrint(std::cerr);
 			// std::cerr << '\n'
