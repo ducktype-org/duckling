@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package view;
 
-import "google/protobuf/empty.proto";
-
 enum TextDisplayType {
     PLAIN = 0;
     CODE = 1;
@@ -44,7 +42,9 @@ message ClickResponse {
     string status = 1;
 }
 
+message Empty {}
+
 service ViewService {
-    rpc GetView(google.protobuf.Empty) returns (ViewResponse);
+    rpc GetView(Empty) returns (ViewResponse);
     rpc Click(ClickRequest) returns (ClickResponse);
 }
