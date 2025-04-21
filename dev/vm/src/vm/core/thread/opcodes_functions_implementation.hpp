@@ -491,6 +491,22 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto type
+				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			auto vt_pointer = reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
+			*vt_pointer = type.get();
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;
