@@ -1,16 +1,13 @@
-type primitive: int32 4
-type primitive: int64 8
-type fun: main {} int64
-type fun: foo {} int32
-
+type fun: main {} i64
+type fun: foo {} i32
 
 function foo {
 	# [0, 4) -> ret_val
 	# [4, 8) -> a
 	# [8, 12) -> b
 
-	init_type			int32; # [4, 8) a
-	init_type			int32; # [8, 12) b
+	init_type			i32; # [4, 8) a
+	init_type			i32; # [8, 12) b
 
 	mov_l32_imm 		8, 3;
 	mov_l32_l32 		4, 8;
@@ -55,7 +52,7 @@ function foo {
 	ret;
 
 	label fail;
-	init_type		 	int64; # [12, 20) tmp
+	init_type		 	i64; # [12, 20) tmp
 	mov_l64_imm 		12, 2137;
 	output_l64  		12;
 	mov_l64_l64 		0, 4;
@@ -65,7 +62,7 @@ function foo {
 
 function main {
 	# [0, 8) main ret_val
-	init_type 	int32; # [8, 12) foo() ret_val
+	init_type 	i32; # [8, 12) foo() ret_val
 
 	call_func 	foo;
 	output_l32 	8;

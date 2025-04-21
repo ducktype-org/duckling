@@ -8,6 +8,8 @@
 
 #include "ints.hpp"  // IWYU pragma: export
 
+#include <compare>   // IWYU pragma: export
+
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:

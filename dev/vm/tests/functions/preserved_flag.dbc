@@ -3,25 +3,21 @@
 # output == 1 <- test passed
 # output == 0 <- test failed
 
-type primitive: int64 8
-type primitive: void 0
-
-type fun: main {} int64
+type fun: main {} i64
 type fun: check {} void
 
 function check {
-	init_type 			int64;
+	init_type 			i64;
 	mov_l64_imm         0,   15;
 	cmpEq_l64_imm       0,   14;
 	deinit;
 	ret;
 }
 
-
 function main {
 	# [0, 8) main ret_val
-	init_type           int64; # [8, 16) local_1
-	init_type           int64; # [16, 24) local_2
+	init_type           i64; # [8, 16) local_1
+	init_type           i64; # [16, 24) local_2
 
 	mov_l64_imm         8,  1;
 	cmpEq_l64_imm       8,  1;

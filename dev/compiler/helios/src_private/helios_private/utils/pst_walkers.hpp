@@ -1,14 +1,11 @@
 /**
  * @file pst_walkers.hpp
  * @brief Functions that perform some walks over PST
- * @TODO: decide if this should be in some separate module.
  */
 
 #pragma once
 
 #include <pst_parser/elements/elements.hpp>  // for pst::Stmt
-
-#include <base/ref.hpp>
 
 #include <vector>
 

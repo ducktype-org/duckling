@@ -20,9 +20,8 @@ namespace pst::expr {
 	MBox<ExprElement> Assignment::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto pos = dia::SourcePosition(
-			state.getPosition(), state.getPosition((i64) length - 1).getEnd()
-		);
+		auto pos
+			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
 
 		bool found = false;
 		i64  place = 0;

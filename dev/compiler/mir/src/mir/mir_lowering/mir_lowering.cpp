@@ -11,11 +11,15 @@
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
 
 namespace compiler::mir {
 
@@ -81,8 +85,9 @@ namespace compiler::mir {
 	 * @param parent_scope Scope of the parent of this Statement.
 	 * @return StmtLowerRes
 	 */
-	StmtLowerRes
-		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope);
+	StmtLowerRes lowerStmt(
+		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+	);
 
 	/**
 	 * @brief Lowers expression.
@@ -93,8 +98,9 @@ namespace compiler::mir {
 	 * @param expr_scope Lifetime Scope this expression should be in.
 	 * @return ExprLowerRes
 	 */
-	ExprLowerRes
-		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope);
+	ExprLowerRes lowerExpr(
+		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+	);
 
 	/**
 	 * @brief Lowers code-block, by lowering all statements in the block.
@@ -857,15 +863,17 @@ namespace compiler::mir {
 		}
 	};
 
-	StmtLowerRes
-		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope) {
-		StmtBlockVisitor visitor{ continuation, function, parent_scope};
+	StmtLowerRes lowerStmt(
+		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+	) {
+		StmtBlockVisitor visitor{ continuation, function, parent_scope };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes
-		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope) {
+	ExprLowerRes lowerExpr(
+		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+	) {
 		ExprBlockVisitor visitor{ continuation, function, expr_scope };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
