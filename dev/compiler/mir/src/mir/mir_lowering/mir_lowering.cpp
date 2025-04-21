@@ -788,7 +788,7 @@ namespace compiler::mir {
 	}
 
 	/**
-	 * @brief Deletes from mir Function from block_order and blocks unreachable blocks.
+	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
 	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
 	 */
 	Function eliminateUnreachable(Function function) {
@@ -818,7 +818,7 @@ namespace compiler::mir {
 		function.block_order = new_block_order;
 
 		// WEAK_ASSERT candidate
-		function.validateBlockIDs();
+		CORE_ASSERT(function.validateBlockIDs().isOk(), "Function has invalid block IDs");
 
 		return function;
 	}
@@ -840,8 +840,8 @@ namespace compiler::mir {
 			function.blocks.size() > 0, "Function should have at least one block after lowering"
 		);
 
-		auto last_block_id = BlockID(0
-		);  // It should be always zero because the last block is generated as the first one.
+		// It should be always zero because the last block is generated as the first one.
+		auto last_block_id = BlockID(0);
 		if (not function.blocks.contains(last_block_id)) return function;
 
 		CORE_ASSERT(
@@ -849,7 +849,7 @@ namespace compiler::mir {
 			"Last block doesn't have FunctionEnd terminator"
 		);
 
-		if (function.return_type.getType() == ctx.query<tsh::QueryUnitType>({})) {
+		if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
 			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
 			return function;
 		} else {

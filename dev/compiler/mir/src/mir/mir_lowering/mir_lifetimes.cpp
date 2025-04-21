@@ -72,6 +72,7 @@ namespace compiler::mir {
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
+		std::vector<std::vector<Instruction>> new_blocks_instructions;
 		for (auto& block_id: function.block_order) {
 			// each block is considered independently
 			auto& block = function.blocks[block_id];
@@ -144,7 +145,13 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			block.instructions = std::move(new_instructions);
+			new_blocks_instructions.push_back(std::move(block.instructions));
+		}
+
+		for (usize i = 0; i < function.block_order.size(); i++) {
+			auto block_id = function.block_order[i];
+			auto& block = function.blocks[block_id];
+			block.instructions = std::move(new_blocks_instructions[i]);
 		}
 
 		return function;
