@@ -46,7 +46,7 @@ int main(int argc, const char* argv[]) {
 
 	for (auto& fun: top_level->functions) {
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+			CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 			lir_fun->debugPrint(ctx, std::cerr);
 		});
