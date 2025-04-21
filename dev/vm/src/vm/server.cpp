@@ -59,7 +59,7 @@ void server(i32 port) {
 			return toResponse(vm::api::loadFile(pid, fs::FilePath(filepath)));
 		});
 	CROW_ROUTE(app, "/process/run/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
-		return toResponse(vm::api::run(pid, {}));
+		return toResponse(vm::api::run(pid));
 	});
 	CROW_ROUTE(app, "/process/join/<uint>").methods(crow::HTTPMethod::POST)([](vm::PID pid) {
 		return toResponse(vm::api::join(pid));

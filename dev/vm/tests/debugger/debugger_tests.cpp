@@ -40,7 +40,7 @@ private:
 	void stopTest() {
 		auto pid = loadProgram("vm_api_tests.dbc");
 
-		auto run_response = vm::api::run(pid, {});
+		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -55,7 +55,7 @@ private:
 	void killTest() {
 		auto pid = loadProgram("vm_api_tests.dbc");
 
-		auto run_response = vm::api::run(pid, {});
+		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -70,7 +70,7 @@ private:
 	 */
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
-		vm::api::run(pid, {}).value();  // "Run failed (1)"
+		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
@@ -93,7 +93,7 @@ private:
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
 
-		vm::api::run(pid, {}).value();  // "Run failed (1)"
+		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
 			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"

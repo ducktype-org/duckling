@@ -30,10 +30,10 @@
 
 namespace vm {
 #ifdef USE_TAIL_CALLS
-	#define DEFINE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
 		Fix8Instruction { .opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
 #else
-	#define DEFINE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                                 \
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                                   \
 		Fix8Instruction {                                                                          \
 			.opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, .arg1 = ARG_1 \
 		}
@@ -100,7 +100,7 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
-	VMThread::ByteCode VMThread::createStartFunction(
+	low::ByteCode VMThread::createStartFunction(
 		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
 		// Just like in libc, the start function pushes the program arguments on to the stack and
@@ -131,29 +131,35 @@ namespace vm {
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
-		ByteCode bytecode;
-		bytecode.reserve(5 + args.size() * 4 + 13);
+		low::ByteCode bytecode;
+		constexpr u64 initializing_instructions_count = 5;
+		constexpr u64 instructions_per_argument_count = 4;
+		constexpr u64 call_deinit_instruction_count   = 13;
+		bytecode.reserve(
+			initializing_instructions_count + args.size() * instructions_per_argument_count
+			+ call_deinit_instruction_count
+		);
 
 		bytecode = {
-			DEFINE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [0, 8) program ret_val
-			DEFINE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [8, 24) *argv
-			DEFINE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
-			DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
-			DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
+			MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),    // [0, 8) program ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
+			MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
+			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
+			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
 		};
 
 		for (const auto& arg: args) {
-			// @note: Since strings don't exist in the VM yet, the passed arguments, are converted
-			// to ints.
+			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
+			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
 			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
 			bytecode.insert(
 				bytecode.end(),
 				{
-					DEFINE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
+					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
 					// @todo: This should be changed to 'store_lptr_l64_ofs' once it exists.
-					DEFINE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
-					DEFINE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
-					DEFINE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
+					MAKE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
+					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
+					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
 				}
 			);
 		}
@@ -161,24 +167,22 @@ namespace vm {
 		bytecode.insert(
 			bytecode.end(),
 			{
-				DEFINE_BYTECODE_INSTRUCTION(
-					init_type, func_ret_type_id, 0
-				),                                                       // [40, 48) call ret_val
-				DEFINE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),  // [48, 56] argc
-				DEFINE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
-				DEFINE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
-				DEFINE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
-				DEFINE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
+				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [40, 48) call ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),       // [48, 56] argc
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
+				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
+				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
+				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @todo: For now we assume that the return values are always i64. It's true for
 		        // main, but won't be true once REPL arrives.
-				DEFINE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // move the ret_val to 0th block
-				DEFINE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),     // free *argv
-				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // temp
-				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // called func ret_val
-				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // ix
-				DEFINE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // argv_ptr
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // move the ret_val to 0th block
+				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),     // free *argv
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // temp
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // called func ret_val
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // ix
+				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // argv_ptr
 				// Here, only the return value remains on the stack.
-				DEFINE_BYTECODE_INSTRUCTION(exit, 0, 0),
+				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
 		return bytecode;
@@ -192,6 +196,8 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
+	// @todo: VM functions should should be able to return any VM type, not just i64.
+	// This should be changed in: https://github.com/ducktype-org/duckling/issues/721
 	i64 VMThread::internalCallFunction(
 		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
@@ -207,8 +213,8 @@ namespace vm {
 			= called_func_type->getResultType().expect("Expected main to have a return value!");
 		frame->called_func_ret_size = called_return_type->getSize();
 
-		ByteCode    start_function = createStartFunction(func, args);
-		const auto* instr          = start_function.data();
+		low::ByteCode start_function = createStartFunction(func, args);
+		const auto*   instr          = start_function.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);

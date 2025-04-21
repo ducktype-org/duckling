@@ -44,7 +44,7 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid, {}).value();  // "Run failed (1)"
+		vm::api::run(pid).value();  // "Run failed (1)"
 
 		// We want to assure that the start function already managed to call main for the test to
 		// work correctly.
