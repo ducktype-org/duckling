@@ -145,6 +145,10 @@ namespace {
 				},
 				name
 			);
+		} catch (code::builders::MissingVTablePtrError&) {
+			base::StrID name = VISIT(type, tp, return tp.name);
+			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
+			log.log<MissingVTablePtrError>(base, name);
 		}
 	}
 

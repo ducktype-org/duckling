@@ -273,7 +273,24 @@ const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
 Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
+void TypeContextBuilder::validateType(const TypeOfData& type) {
+	variant_match(type) {
+		variant_case(DataType, data) {
+			if (data.vtable.has_value()) {
+				// @TODOB do not use hardcoded strings here
+				bool has_vtable_ptr = !data.fields.empty() && data.fields[0].type == "VTablePtr";
+				if (!has_vtable_ptr) throw MissingVTablePtrError(data.name);
+			}
+		}
+	}
+}
+
+/*
+ * @throws DuplicatedTypeError
+ * @throws MissingVTablePtrError
+ */
 void TypeContextBuilder::addType(const TypeOfData& type) {
+	validateType(type);
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
