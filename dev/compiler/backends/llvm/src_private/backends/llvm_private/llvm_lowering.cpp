@@ -450,8 +450,6 @@ namespace compiler::backend_llvm {
 				lir2LLVMInstruction(block->terminator, builder);
 			}
 
-			llvm::EliminateUnreachableBlocks(*fun);
-
 			return fun.get();
 		}
 	};
