@@ -1,4 +1,5 @@
 #include <driver/driver.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
 #include <query_framework/query_entry_point.hpp>

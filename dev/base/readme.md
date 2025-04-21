@@ -6,7 +6,7 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - constexpr_cat.hpp
 - convert.hpp
 - defer.hpp
-- define_helper.hpp
+- argument_splitter.hpp
 - [exceptions.hpp](@ref base/exceptions.hpp)
 - flag.hpp
 - init_guard.hpp
@@ -24,5 +24,10 @@ Base is a top-level module dedicated for standard-library-like implementations. 
 - strongly_typed_int.hpp
 - type_traits.hpp
 - [variant.hpp](@ref base/variant.hpp)
+
+Macros that are used as helpers for other macros are defined in `macro` folder
+- utils.hpp - common simple utils macros like EXPAND, STRIGIFY_2, COMMA, IF
+- for_each.hpp
+- diagnostics.hpp
 
 @TODO Generate list of files automatically, currently it is hardcoded.

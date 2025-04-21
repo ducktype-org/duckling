@@ -324,8 +324,7 @@ private:
 		const auto fun_different_output
 			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_16) });
 		assertTrue(
-			fun_1 != fun_different_output,
-			"Functions of different output types should be different."
+			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
 			{ { st(int_16), st(int_32) }, st(int_32), true, true }

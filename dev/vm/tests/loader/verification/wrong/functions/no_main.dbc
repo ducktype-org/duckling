@@ -1,0 +1,6 @@
+type fun: foo {} void
+
+function foo {
+    init_type       i64;
+    mov_l64_imm     0, 5;
+}

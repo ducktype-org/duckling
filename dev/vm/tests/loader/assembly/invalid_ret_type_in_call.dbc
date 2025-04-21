@@ -1,0 +1,18 @@
+# Checks verifying the type of ret_val space initialized by the caller on call.
+type fun: main {} i64
+type fun: check { i64 } i32
+
+function check {
+	mov_l32_imm     0, 42;
+	ret;
+}
+
+function main {
+	# [0, 8) main ret_val
+	init_type 			i64; # [8, 16) check() arg0
+	mov_l64_imm         8, 30;
+	call_func          	check;
+
+	mov_l64_imm			0, 42;
+	ret;
+}

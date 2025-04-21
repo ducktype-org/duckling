@@ -1,92 +1,72 @@
-type primitive: int32 4
-type primitive: int64 8
-type fun: main {} int64
-type fun: foo {} int32
-
+type fun: main {} i64
+type fun: foo {} i32
 
 function foo {
-	arg_size: 0;
-	local_size: 20;
-	ret_size: 4;
+	# [0, 4) -> ret_val
+	# [4, 8) -> a
+	# [8, 12) -> b
 
-	code: {
-		# [0, 4) -> ret_val
-		# [4, 8) -> a
-		# [8, 12) -> b
+	init_type			i32; # [4, 8) a
+	init_type			i32; # [8, 12) b
 
-		init_type			int32; # [4, 8) a
-		init_type			int32; # [8, 12) b
+	mov_l32_imm 		8, 3;
+	mov_l32_l32 		4, 8;
+	# a = 3, b = 3
 
-		mov_l32_imm 		8, 3;
-		mov_l32_l32 		4, 8;
-		# a = 3, b = 3
+	cmov_l32_l32 		4, 4;
+	add_l32_l32 		4, 8;
+	add_l32_imm 		8, 1;
+	# a = 6, b = 4
 
-		cmov_l32_l32 		4, 4;
-		add_l32_l32 		4, 8;
-		add_l32_imm 		8, 1;
-		# a = 6, b = 4
+	sub_l32_l32 		4, 8;
+	sub_l32_imm 		8, 1;
+	# a = 2, b = 3
 
-		sub_l32_l32 		4, 8;
-		sub_l32_imm 		8, 1;
-		# a = 2, b = 3
+	mul_l32_l32 		4, 8;
+	mul_l32_imm 		8, 3;
+	# a = 6, b = 9
 
-		mul_l32_l32 		4, 8;
-		mul_l32_imm 		8, 3;
-		# a = 6, b = 9
+	mod_l32_l32 		4, 8;
+	mod_l32_imm 		8, 7;
+	# a = 6, b = 2;
 
-		mod_l32_l32 		4, 8;
-		mod_l32_imm 		8, 7;
-		# a = 6, b = 2;
+	div_l32_l32 		4, 8;
+	div_l32_imm 		8, 2;
+	# a = 3, b = 1
 
-		div_l32_l32 		4, 8;
-		div_l32_imm 		8, 2;
-		# a = 3, b = 1 
+	cmpEq_l32_l32 		4, 8;
+	jmpRelIf_label 		fail;
 
-		cmpEq_l32_l32 		4, 8;
-		jmpRelIf_label 		fail;
-		
-		cmpEq_l32_imm 		8, 1;
-		jmpRelNotIf_label 	fail;
+	cmpEq_l32_imm 		8, 1;
+	jmpRelNotIf_label 	fail;
 
-		cmpG_l32_l32 		4, 8;
-		jmpRelNotIf_label 	fail;
+	cmpG_l32_l32 		4, 8;
+	jmpRelNotIf_label 	fail;
 
-		cmpG_l32_imm 		8, 2;
-		jmpRelIf_label 		fail;
+	cmpG_l32_imm 		8, 2;
+	jmpRelIf_label 		fail;
 
-		add_l32_l32 		8, 4;
-		# b = 4
-		mov_l32_l32 		0, 8;
-		deinit; # b
-		deinit; # a
-		ret;
-		
-		label fail;
-		init_type		 	int64; # [12, 20) tmp
-		mov_l64_imm 		12, 2137;
-		output_l64  		12;
-		mov_l64_l64 		0, 4;
-		
-		deinit; # tmp
-		deinit; # b
-		deinit; # a
-		ret;
-	}
+	add_l32_l32 		8, 4;
+	# b = 4
+	mov_l32_l32 		0, 8;
+	ret;
+
+	label fail;
+	init_type		 	i64; # [12, 20) tmp
+	mov_l64_imm 		12, 2137;
+	output_l64  		12;
+	mov_l64_l64 		0, 4;
+
+	ret;
 }
 
 function main {
-	arg_size: 0;
-	local_size: 4;
-	ret_size: 8;
+	# [0, 8) main ret_val
+	init_type 	i32; # [8, 12) foo() ret_val
 
-	code: {
-		# [0, 8) main ret_val
-		init_type 	int32; # [8, 12) foo() ret_val
-		
-		call_func 	foo;
-		output_l32 	8;
-		
-		deinit;
-		ret;
-	}
+	call_func 	foo;
+	output_l32 	8;
+
+	deinit;
+	ret;
 }

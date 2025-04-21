@@ -1,6 +1,8 @@
 #include <clap/clap.hpp>
 #include <frontend/module_tree/module_tree.hpp>
 
+#include <base/int_conv.hpp>
+
 #include <iostream>
 
 int file_counter = 0;
@@ -41,15 +43,15 @@ int main(int argc, const char* argv[]) {
 
 	clap::ParsingResult res;
 	try {
-		res = clap.parse(argc, argv);
+		res = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::HelpException& e) {
 		std::cout << clap::HelpMessageGenerator::generate(clap, e.parsing_result) << '\n';
 	}
 
 	auto fs_tree = fs::FsTree::create(
-		res.getValue<fs::FilePath>('p').value_or(fs::FilePath(".")),
-		std::regex(res.getValue<std::string>("fileregex").value_or("\\.*")),
-		std::regex(res.getValue<std::string>("dirregex").value_or("\\..*"))
+		res.getValue<fs::FilePath>('p').valueOr(fs::FilePath(".")),
+		std::regex(res.getValue<std::string>("fileregex").valueOr("\\.*")),
+		std::regex(res.getValue<std::string>("dirregex").valueOr("\\..*"))
 	);
 	if (!res.isFlag("noprint")) std::cout << fs_tree->prettyPrint();
 	countFiles(*fs_tree);

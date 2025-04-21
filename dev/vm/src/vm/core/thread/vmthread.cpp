@@ -24,6 +24,7 @@
 #include <iostream>
 #include <mutex>
 #include <utility>
+#include <variant>
 
 namespace vm {
 	VMThread::VMThread(VMProcess& process):
@@ -96,7 +97,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	u64 VMThread::internalCallMain(CRef<low::FuncData> main_func) {
+	i64 VMThread::internalCallMain(CRef<low::FuncData> main_func) {
 		// We create one artificial "pre" frame, that when main function returns
 		// it will go to it and end execution.
 		Frame* pre_frame = runtime_data.frame_stack_base;
@@ -119,8 +120,8 @@ namespace vm {
 			CORE_PANIC("VM stack overflow.");
 
 		// Preinitialize the main ret_val block.
-		auto main_func_type = executing_program->type_metadata->getTypeByName(main_func->name)
-		                          .expect("Expected main!");
+		auto main_func_type
+			= executing_program->types->atMaybe(main_func->name).expect("Expected main!");
 		auto main_return_type
 			= main_func_type->getResultType().expect("Expected main to have a return value!");
 		auto block = process_memory.allocateStack(main_return_type, local_stack);
@@ -132,7 +133,7 @@ namespace vm {
 		pre_frame->called_func_ret_size = main_return_type->getSize();
 		frame->local_stack_head += main_return_type->getSize();
 
-		u64   main_ret_val = 0;
+		i64   main_ret_val = 0;
 		auto* instr        = main_func->bc.data();
 
 #ifdef USE_TAIL_CALLS
@@ -149,7 +150,8 @@ namespace vm {
 
 
 	#define HANDLE_OPCODE(opcode) (&&LABEL_##opcode),
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
+
 	#undef HANDLE_OPCODE
 			};
 
@@ -165,7 +167,8 @@ namespace vm {
 				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
 			}                                                                   \
 		}
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
+
 	#undef HANDLE_OPCODE
 
 	End:
@@ -174,17 +177,16 @@ namespace vm {
 #elif USE_SWITCH_CASE
 		while (true) {
 			switch (static_cast<low::OpcodeFix8>(instr->opcode)) {
-	#define HANDLE_OPCODE(opcode_name)                                      \
-	case low::OpcodeFix8::opcode_name: {                                    \
-		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);     \
-		if constexpr (constexpr std::string_view opcode_str = #opcode_name; \
-		              opcode_str == "exit") {                               \
-			goto End;                                                       \
-		} else {                                                            \
-			break;                                                          \
-		}                                                                   \
+	#define HANDLE_OPCODE(opcode_name)                                                              \
+	case low::OpcodeFix8::opcode_name: {                                                            \
+		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
+		if constexpr (constexpr std::string_view opcode_str = #opcode_name; opcode_str == "exit") { \
+			goto End;                                                                               \
+		} else {                                                                                    \
+			break;                                                                                  \
+		}                                                                                           \
 	}
-	#include <vm/program/opcodes_list.hpp>
+	#include <vm/bytecode/opcode_definitions.hpp>
 	#undef HANDLE_OPCODE
 
 			default: {
@@ -195,7 +197,7 @@ namespace vm {
 	End:
 #endif
 
-		main_ret_val = derefStack<u64>(local_stack, 0);
+		main_ret_val = derefStack<i64>(local_stack, 0);
 		block        = pre_frame->block_stack.back();
 		pre_frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
@@ -222,7 +224,7 @@ namespace vm {
 		std::unique_lock lock(execution_request_mutex);
 		switch (execution_request) {
 		case ExecutionRequest::Pause:
-			respondExecutionRequest(ExecutionResponse::Paused);
+			respondExecutionRequest(api::Paused{});
 			handlePausedExecution(lock);
 			execution_request_break = false;
 			break;
@@ -249,19 +251,19 @@ namespace vm {
 			switch (execution_request) {
 			case ExecutionRequest::Resume: {
 				execution_request = ExecutionRequest::NoRequest;
-				respondExecutionRequest(ExecutionResponse::Running);
+				respondExecutionRequest(api::Running{});
 				return;
 			}
 			case ExecutionRequest::Stop: {
 				throw KillProcessException{};
 			}
 			case ExecutionRequest::ExecuteOneStep: {
-				respondExecutionRequest(ExecutionResponse::Running);
+				respondExecutionRequest(api::Running{});
 
 				executeOneStep();
 
 				execution_request = ExecutionRequest::Pause;
-				respondExecutionRequest(ExecutionResponse::Paused);
+				respondExecutionRequest(api::Paused{});
 				break;
 			}
 			default:
@@ -284,16 +286,12 @@ namespace vm {
 	 * @brief Starts the execution of the program.
 	 */
 	void VMThread::run(CRef<low::LowVMProgram> program) {
-		respondExecutionRequest(ExecutionResponse::Running);
+		respondExecutionRequest(api::Running{});
 		executing_program = program;
 		try {
-			internalCallMain(
-				executing_program->getFuncByName(base::StrID("main")).expect("Expected main!")
-			);
-			respondExecutionRequest(ExecutionResponse::ExecutionCompleted);
-		} catch (KillProcessException) {
-			respondExecutionRequest(ExecutionResponse::ExecutionStopped);
-		}
+			i64 exit_code = internalCallMain(executing_program->functions.at(base::StrID("main")));
+			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
+		} catch (KillProcessException) { respondExecutionRequest(api::ExecutionStopped{}); }
 	}
 
 	bool VMThread::stop() {
@@ -327,7 +325,7 @@ namespace vm {
 			execution_request_break = true;
 		}
 
-		return waitForBrakepointResponse();
+		return waitForBreakpointResponse();
 	}
 
 	bool VMThread::step() {
@@ -338,18 +336,18 @@ namespace vm {
 			pause_cv.notify_all();
 		}
 		if (waitForRunningResponse()) {
-			if (waitForBrakepointResponse()) return true;
+			if (waitForBreakpointResponse()) return true;
 		}
 		return false;
 	}
 
-	cpp::result<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
+	std::expected<api::Response, api::CoreOperationError> VMThread::getCurrentPosition() {
 		variant_match(status) {
 			variant_case_novalue(api::Paused) {
 				auto frame = runtime_data.frame_stack_current;
 				auto instr = frame->instr;
 
-				for (size_t index = 0; index < executing_program->getNumberOfFunctions(); ++index) {
+				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
 						return api::Response(api::response::CodePosition{
@@ -359,7 +357,7 @@ namespace vm {
 				}
 			}
 			variant_default {
-				return cpp::failure(api::CoreOperationError{
+				return std::unexpected(api::CoreOperationError{
 					api::OtherError{ "wrong execution status while reading current position" } });
 			}
 		}
@@ -390,51 +388,32 @@ namespace vm {
 		exec_thread = std::thread([this, program] {
 			try {
 				run(program);
-
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
-				std::cerr << "VCPU PANICKED WITH: " << e.what() << "\n";
-				respondExecutionRequest(ExecutionResponse::ExecutionPanicked);
+				std::cerr << "VMThread has panicked: " << e.what() << "\n";
+				respondExecutionRequest(api::ExecutionPanicked{});
 			}
 		});
 		return waitForRunningResponse();
 	}
 
-	void VMThread::respondExecutionRequest(ExecutionResponse response) {
-		switch (response) {
-		case ExecutionResponse::Running:
-			setProcessStatus(api::Running{});
-			break;
-		case ExecutionResponse::Paused:
-			setProcessStatus(api::Paused{});
-			break;
-		case ExecutionResponse::ExecutionStopped:
-			setProcessStatus(api::ExecutionStopped{});
-			break;
-		case ExecutionResponse::ExecutionCompleted:
-			setProcessStatus(api::ExecutionCompleted{});
-			break;
-		case ExecutionResponse::ExecutionPanicked:
-			setProcessStatus(api::ExecutionPanicked{});
-			break;
-		default:
-			CORE_PANIC("unexpected execution response");
-		}
+	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
+		setProcessStatus(response);
 		execution_response_queue.push(response);
 	}
 
 	bool VMThread::waitForStoppedResponse() {
 		auto response = execution_response_queue.pop();
-		return ExecutionResponse::ExecutionStopped == response
-		    || ExecutionResponse::ExecutionCompleted == response
-		    || ExecutionResponse::ExecutionPanicked == response;
+		return std::holds_alternative<api::ExecutionStopped>(response)
+		    || std::holds_alternative<api::ExecutionCompleted>(response)
+		    || std::holds_alternative<api::ExecutionPanicked>(response);
 	}
 
-	bool VMThread::waitForBrakepointResponse() {
-		return execution_response_queue.pop() == ExecutionResponse::Paused;
+	bool VMThread::waitForBreakpointResponse() {
+		return std::holds_alternative<api::Paused>(execution_response_queue.pop());
 	}
 
 	bool VMThread::waitForRunningResponse() {
-		return execution_response_queue.pop() == ExecutionResponse::Running;
+		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 }  // namespace vm

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "module_tree.hpp"  // @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
+#include "file_id.hpp"
+#include "module_id.hpp"
 
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
@@ -74,6 +75,7 @@ namespace compiler::frontend {
 	 *
 	 * @return Found module, none if no matching module was found.
 	 */
-	base::Optional<ModuleID>
-		getRelativeModule(query::Context&, ModuleID from, const std::vector<base::StrID>& path);
+	base::Optional<ModuleID> getRelativeModule(
+		query::Context&, ModuleID from, const std::vector<base::StrID>& path
+	);
 }

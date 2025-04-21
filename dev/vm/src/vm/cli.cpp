@@ -11,7 +11,6 @@
 #include <vm/api/data/load_program_error.hpp>
 
 #include <iostream>
-#include <variant>
 
 std::string convertError(const vm::api::ApiError& api_error) {
 	variant_match(api_error) {
@@ -26,9 +25,9 @@ std::string convertError(const vm::api::ApiError& api_error) {
 }
 
 template<class T, class E>
-T expect(cpp::result<T, E> r) {
-	cpp::result<T, std::string> r1 = r.map_error(convertError);
-	if (r1.has_error()) {
+T expect(std::expected<T, E> r) {
+	std::expected<T, std::string> r1 = r.transform_error(convertError);
+	if (!r1.has_value()) {
 		std::cout << r1.error() << "\n";
 		std::exit(-1);  // NOLINT: Potential exit race condition
 	}
@@ -36,9 +35,9 @@ T expect(cpp::result<T, E> r) {
 }
 
 template<class E>
-void expect(cpp::result<void, E> r) {
-	cpp::result<void, std::string> r1 = r.map_error(convertError);
-	if (r1.has_error()) {
+void expect(std::expected<void, E> r) {
+	std::expected<void, std::string> r1 = r.transform_error(convertError);
+	if (!r1.has_value()) {
 		std::cout << r1.error() << "\n";
 		std::exit(-1);  // NOLINT: Potential exit race condition
 	}

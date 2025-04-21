@@ -8,6 +8,8 @@
 
 #include "ints.hpp"  // IWYU pragma: export
 
+#include <compare>   // IWYU pragma: export
+
 /**
  * @brief Macro used to create Strong ID types.
  * Usage:
@@ -59,11 +61,58 @@
 	};
 
 /**
+ * @brief Macro used to create Strong ID types that can be created
+ * directly from integers rather then with `Type::next()`
+ * Usage:
+ * 	STRONG_TYPEDEF_ID(TypeName)
+ *
+ *  Created type has following interface:
+ *
+ *  * Type() - default constructor creating bad ID
+ *  * Type::bad() - get bad id
+ *  * Type::fromU64(v), Type(v) - creates id from u64
+ *  * id.isBad(), id.idGood() - check if given ID is good/bad
+ *  * id.asInt() - get underlying integer
+ *  * <=>, <, ==, etc - all standard comparision operators
+ *  *
+ *
+ * @note it creates normal class, it can be used in namespace
+ */
+#define STRONG_TYPEDEF_ID_DIRECT_CREATION(NAME)                          \
+	class NAME final {                                                   \
+	private:                                                             \
+		constexpr static u64 BAD_ID = u64(-1);                           \
+		u64                  id     = BAD_ID;                            \
+                                                                         \
+	public:                                                              \
+		inline constexpr explicit NAME(u64 id): id{ id } {}              \
+		inline constexpr NAME()                               = default; \
+		inline constexpr NAME(const NAME& mX)                 = default; \
+		inline constexpr NAME(NAME&& mX) noexcept             = default; \
+		inline constexpr NAME& operator=(const NAME& rhs)     = default; \
+		inline constexpr NAME& operator=(NAME&& rhs) noexcept = default; \
+		static NAME            bad() { return NAME{ BAD_ID }; }          \
+		static NAME            fromU64(u64 v) { return NAME{ v }; }      \
+		[[nodiscard]]                                                    \
+		inline constexpr explicit operator u64() const noexcept {        \
+			return id;                                                   \
+		}                                                                \
+		[[nodiscard]]                                                    \
+		inline constexpr u64 asInt() const noexcept {                    \
+			return id;                                                   \
+		}                                                                \
+		auto        operator<=>(const NAME&) const = default;            \
+		inline bool isBad() const { return id == BAD_ID; }               \
+		inline bool isGood() const { return id != BAD_ID; }              \
+	};
+
+
+/**
  * @brief Add std::hash specialization to given ID type.
  * Usage: ID_STD_HASH(MY_ID)
  */
-#define ID_STD_HASH(TYPE)                                               \
-	template<>                                                          \
-	struct std::hash<TYPE> final {                                      \
-		usize operator()(const TYPE& key) const { return key.asInt(); } \
+#define ID_STD_HASH(TYPE)                                                                   \
+	template<>                                                                              \
+	struct std::hash<TYPE> final {                                                          \
+		usize operator()(const TYPE& key) const { return static_cast<usize>(key.asInt()); } \
 	};

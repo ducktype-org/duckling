@@ -1,0 +1,6 @@
+type fun: main {} i64
+
+function main {
+    label LB;
+    label LB;
+}

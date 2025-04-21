@@ -1,0 +1,24 @@
+type fun: main {} i64
+
+function main {
+	# [0, 8) -> main ret_val
+	# [8, 24) -> x
+	# [24, 32) -> y
+	# [32, 40) -> z
+
+	init_type ptr_i64;
+	init_type i64;
+	init_type i64;
+
+	mov_l64_imm         32, 1;
+	ref_lptr_any        8, 32;  # x = &z
+
+	deinit;
+
+	load_l64_lptr       24, 8;  # y = *x
+
+	deinit;
+	deinit;
+
+	ret;
+}

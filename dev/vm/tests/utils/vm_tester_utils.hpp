@@ -16,6 +16,22 @@ public:
 
 protected:
 	void runTestOnVm(
-		const std::string& rbc_filename, const std::string& input, const std::string& output
+		const std::string&                 rbc_filename,
+		const base::Optional<std::string>& optional_input,
+		const base::Optional<std::string>& optional_output,
+		i64                                exit_code = 0
 	);
+
+	/**
+	 * @brief Loads a file containing a program which violates syntactic or static verification
+	 * guidelines. Asserts what error keywords are present in the error message.
+	 */
+	void loadInvalidDbc(
+		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+	);
+
+	/**
+	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
+	 */
+	void loadValidDbc(const std::string& dbc_filename);
 };

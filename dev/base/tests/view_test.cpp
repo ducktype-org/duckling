@@ -42,9 +42,7 @@ public:
 				copy_view.view().getBegin() != reinterpret_cast<const byte*>(string_2),
 				"Owning view didn't make memory copy (1)"
 			);
-			assertTrue(
-				copy_view.view().stringView() == string_2, "Owning view has bad content (1)"
-			);
+			assertTrue(copy_view.view().stringView() == string_2, "Owning view has bad content (1)");
 
 			auto copy_view_2 = base::OwningView::copy(base::RawView(string_1, 20));
 			assertTrue(
