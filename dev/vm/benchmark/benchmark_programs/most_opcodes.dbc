@@ -1,12 +1,10 @@
-type primitive: void 0
-type primitive: int64 8
-type fun: main {} int64
+type fun: main {} i64
 type fun: run_every_opcode {} void
 
 function  {
-    init_type int64; # [0, 8) tmp1
-    init_type int64; # [8, 16) tmp2
-    init_type int64; # [16, 24) tmp3
+    init_type i64; # [0, 8) tmp1
+    init_type i64; # [8, 16) tmp2
+    init_type i64; # [16, 24) tmp3
 
     mov_l64_imm            0, 0;
     mov_l64_l64            8, 0;
@@ -42,7 +40,7 @@ function  {
 
 function main {
     # [0, 8) main ret_val
-    init_type       int64; # [8, 16) x
+    init_type       i64; # [8, 16) x
 
     input_l64       8;
     label Loop;

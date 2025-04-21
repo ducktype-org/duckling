@@ -1,5 +1,4 @@
-type primitive: int64 8
-type static_table: tableint64 int64 8000000
+type static_table: tablei64 i64 8000000
 
 function main {
   arg_size: 0;
@@ -13,16 +12,16 @@ function main {
   local_size: 40;
 
   code: {
-    init_type int64; # x [0,8)
-    init_type int64; # i [8,16)
-    init_type int64; # y [16,24)
-    init_type int64; # reps [24,32)
+    init_type i64; # x [0,8)
+    init_type i64; # i [8,16)
+    init_type i64; # y [16,24)
+    init_type i64; # reps [24,32)
 
     input_l64           24;
     div_l64_imm         24, 8000000;
 
     # alloc t[42]
-    alloc_lptr_type 32, tableint64;
+    alloc_lptr_type 32, tablei64;
     label LoopMain;
 
       # i := 8000000

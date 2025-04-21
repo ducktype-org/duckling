@@ -1,17 +1,16 @@
-type primitive: int64 8
-type static_table: tableint64 int64 4
-type fun: main {} int64
+type static_table: tablei64 i64 4
+type fun: main {} i64
 
 function main {
 	# x - 0
 	# i - 8
 
 	# [0, 8) main ret_val
-	init_type           int64;          # [8,16)  # x
-	init_type           int64;          # [16,24) # i
-	init_type           int64;          # [24,32) # arrPtr
+	init_type           i64;          # [8,16)  # x
+	init_type           i64;          # [16,24) # i
+	init_type           i64;          # [24,32) # arrPtr
 
-	alloc_lptr_type     24, tableint64; # arrPtr := alloc *int[]
+	alloc_lptr_type     24, tablei64; # arrPtr := alloc *int[]
 	mov_l64_imm         16, 0;          # i := 0
 	mov_l64_imm         8, 3;           # x := 3
 

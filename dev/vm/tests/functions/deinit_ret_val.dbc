@@ -2,9 +2,8 @@
 # input = ""
 # output = "42"
 
-type primitive: int64 8
-type fun: main {} int64
-type fun: foo { int64 } int64
+type fun: main {} i64
+type fun: foo { i64 } i64
 
 function foo {
     # [0, 8) -> ret_val
@@ -13,7 +12,7 @@ function foo {
     deinit; # arg0
     deinit; # ret_val
 
-    init_type       int64; # ret_val
+    init_type       i64; # ret_val
     mov_l64_imm     0, 42;
 
     ret;
@@ -21,8 +20,8 @@ function foo {
 
 function main {
     # [0, 8) main ret_val
-    init_type       int64; # [8, 16) foo ret_val
-    init_type       int64; # [16, 24) foo arg0
+    init_type       i64; # [8, 16) foo ret_val
+    init_type       i64; # [16, 24) foo arg0
 
     call_func       foo;
 

@@ -1,6 +1,4 @@
-type primitive: int64 8
-type pointer: p64 int64
-type fun: main {} int64
+type fun: main {} i64
 
 function main {
     # ret_val - 0
@@ -10,11 +8,11 @@ function main {
     # q - 40
     # r - 56
 
-    init_type int64;            # x
-    init_type int64;            # y
-    init_type p64;              # p
-    init_type p64;              # q
-    init_type p64;              # r
+    init_type i64;            # x
+    init_type i64;            # y
+    init_type ptr_i64;              # p
+    init_type ptr_i64;              # q
+    init_type ptr_i64;              # r
 
     ref_lptr_any 24, 8;         # p := &x
     # from null to non-null
