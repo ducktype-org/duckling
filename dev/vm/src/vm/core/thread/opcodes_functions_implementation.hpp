@@ -27,6 +27,7 @@
  * `opcodes_functions_utils.hpp`.
  */
 
+#include <variant>
 #include "low_program/instruction.hpp"
 #include "op_case.hpp"
 #include "opcodes_functions_utils.hpp"
@@ -34,9 +35,10 @@
 
 #include <base/exceptions.hpp>
 #include <base/ints.hpp>
+#include <base/variant.hpp>
 
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
-
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -264,6 +266,56 @@ namespace vm {
 		// call is saved on frame so that op_ret's have to move forward zero instructions after
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
+		{
+			auto                     builtin_id = static_cast<usize>(instr->arg0);
+			CRef<builtins::Function> function   = builtins::getBuiltinFunction(builtin_id);
+			auto                     arg_count  = function->type.parameters.size();
+
+			std::vector<builtins::Value> args;
+			u64                          first_arg_idx    = frame->block_stack.size() - arg_count;
+
+
+			// Converting from memory bytes on the local stack to the builtin::Value arguments.
+			for (u64 i = 0; i < arg_count; i++) {
+				const base::StrID arg_type = function->type.parameters[i];
+				// @TODO the conversion from local stack bytes to builtin::Value is done
+				// based on declaration type, but it should be done based on the Metadata Type in the future.
+				if (arg_type == "i64") {
+					args.emplace_back(derefStack<i64>(
+						local_stack,
+						static_cast<i64>(frame->block_idx_to_local_offset[first_arg_idx + i])
+					));
+				} else {
+					CORE_PANIC("Unsupported builtin function argument type: ", arg_type);
+				}
+			}
+
+			builtins::Value return_value = function->handler(thread, args);
+			variant_match(return_value) {
+				variant_case_novalue(builtins::NoValue) {}
+				variant_case(i64, value) {
+					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
+					derefStack<i64>(
+						local_stack,
+						static_cast<i64>(ret_val_offset)
+					) = value;
+				}
+				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
+			}
+
+			// Similliar as in func_call, but we deinit the arguments blocks as well, 
+			// but without the return value.
+			frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
+			for (u64 i = 0; i < arg_count; i++) {
+				auto block = frame->block_stack.back();
+				frame->block_stack.pop_back();
+				thread.process.getMemory().freeBlock(block);
+			}
+		}
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {

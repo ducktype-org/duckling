@@ -66,6 +66,11 @@ namespace vm::loader::parser {
 		}
 
 		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::BuiltinFunctionName {
+			return { parseStr(state) };
+		}
+
+		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
 			return { parseStr(state) };
 		}

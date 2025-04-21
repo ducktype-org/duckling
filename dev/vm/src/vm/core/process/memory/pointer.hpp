@@ -27,7 +27,8 @@ namespace vm {
 		friend class Memory;
 
 	public:
-		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {}
+		Pointer(Ref<Block> block, u64 offset): block(block.get()), offset(offset) {
+		}
 
 		void movePointer(i64 move_by) {
 			if (block == nullptr) CORE_PANIC("Accessing null pointer");
@@ -44,4 +45,6 @@ namespace vm {
 
 		static Pointer null() { return {}; }
 	};
+
+	static_assert(sizeof(Pointer) == 16);
 }

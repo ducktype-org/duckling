@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/builtin_functions.hpp"
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -56,6 +57,12 @@ namespace vm::loader::compiler {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
+					ctx.log.log<UnknownFunctionError>(func, func.function_name);
+					return 0;
+				}
+				variant_case(vm::opargs::BuiltinFunctionName, func) {
+					auto func_id = builtins::getBuiltinFunctionID(func.function_name);
+					if (func_id) return base::safeIntConv<i64>(*func_id);
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}

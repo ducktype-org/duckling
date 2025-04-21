@@ -38,6 +38,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 		variant_case(Op_deinit, instr) { handleDeinit(); }
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
+		variant_case(Op_call_builtin_func, func) { handleCall(func.arg0.function_name); }
 		variant_case(Op_jmpRel_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);

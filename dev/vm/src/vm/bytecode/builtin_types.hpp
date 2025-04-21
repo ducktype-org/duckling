@@ -3,8 +3,13 @@
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 
 namespace vm::code {
+	/**
+	 * @brief Create a TypeContextBuilder with builtin types.
+	 * @note The types defined here are used by the builtin functions.
+	 */
 	code::builders::TypeContextBuilder getBuiltinTypes() {
 		static const std::array builtin_types = {
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
@@ -21,6 +26,7 @@ namespace vm::code {
 		builders::TypeContextBuilder type_context_builder;
 
 		for (const auto& tp: builtin_types) type_context_builder.addType(tp);
+		for (const auto& func: builtins::getBuiltinFunctions()) type_context_builder.addType(func.type);
 
 		return type_context_builder;
 	}

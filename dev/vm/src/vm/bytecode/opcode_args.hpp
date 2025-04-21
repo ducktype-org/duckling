@@ -154,6 +154,18 @@ namespace vm::opargs {
 		}
 	};
 
+	struct BuiltinFunctionName final : code::ElementBase {
+		BuiltinFunctionName() = default;
+
+		BuiltinFunctionName(const base::StrID function_name): function_name(function_name) {}
+
+		base::StrID function_name = base::StrID("");
+
+		constexpr bool operator==(const BuiltinFunctionName& other) const noexcept {
+			return function_name == other.function_name;
+		}
+	};
+
 	/**
 	 * @brief Represents label name argument.
 	 */
@@ -172,5 +184,5 @@ namespace vm::opargs {
 	/**
 	 * @brief Storage class for any kind of opcode argument.
 	 */
-	using OpCodeArg = std::variant<VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, Label>;
+	using OpCodeArg = std::variant<VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, BuiltinFunctionName, Label>;
 }
