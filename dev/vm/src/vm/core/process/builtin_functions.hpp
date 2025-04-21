@@ -23,73 +23,69 @@
 
 namespace vm {
 	class VMThread;
+}
 
-	namespace builtins {
+namespace vm::builtins {
 
-		struct NoValue {};
+	struct NoValue {};
 
-		// Because VMThread stores values on the local stack as bytes,
-		// there was a question of where the conversion from bytes to
-		// value should be done. I decided that the conversion should be
-		// in the VMThread. So the handlers only see the converted values.
-		using Value           = std::variant<i64, NoValue>;
-		using FunctionHandler = std::function<Value(VMThread&, const std::vector<Value>&)>;
+	// Because VMThread stores values on the local stack as bytes,
+	// there was a question of where the conversion from bytes to
+	// value should be done. I decided that the conversion should be
+	// in the VMThread. So the handlers only see the converted values.
+	using Value           = std::variant<i64, NoValue>;
+	using FunctionHandler = std::function<Value(VMThread&, const std::vector<Value>&)>;
 
-		struct Function {
-			/**
-			 * Type declaration of the builtin that is always added to the program types.
-			 */
-			code::FunctionType type;
-
-			/**
-			 * You should call this function with arguments to call a builtin.
-			 */
-			FunctionHandler handler;
-		};
+	struct Function {
+		/**
+		 * Type declaration of the builtin that is always added to the program types.
+		 */
+		code::FunctionType type;
 
 		/**
-		 * @brief Class for FunctionHandlers.
-		 *
-		 * Each handler should be defined as static and have @p FunctionHandler type.
-		 * The only reason this class exists is to enable the VMThread class to
-		 * be a friend of the FunctionHandlers class, so the handlers can access
-		 * the VMThread private members.
+		 * You should call this function with arguments to call a builtin.
 		 */
-		class FunctionHandlers {
-		public:
-			static Value builtinInputI64Handler(
-				VMThread& process, const std::vector<Value>& arguments
-			);
-			static Value builtinOutputI64Handler(
-				VMThread& process, const std::vector<Value>& arguments
-			);
-		};
+		FunctionHandler handler;
+	};
 
-		/**
-		 * @brief Returns the list of builtin functions with lazy initialization.
-		 * @note Function types here should match HELIOS types.
-		 * The types used for the parameters and the return value are defined in the @file
-		 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
-		 */
-		const std::array<Function, 2>& getBuiltinFunctions();
+	/**
+	 * @brief Class for FunctionHandlers.
+	 *
+	 * Each handler should be defined as static and have @p FunctionHandler type.
+	 * The only reason this class exists is to enable the VMThread class to
+	 * be a friend of the FunctionHandlers class, so the handlers can access
+	 * the VMThread private members.
+	 */
+	class FunctionHandlers {
+	public:
+		static Value builtinInputI64Handler(VMThread& process, const std::vector<Value>& arguments);
+		static Value builtinOutputI64Handler(VMThread& process, const std::vector<Value>& arguments);
+	};
 
-		/**
-		 * @brief Get the ID of the builtin function given the name.
-		 * ID is the index in the BUILTIN_FUNCTIONS array.
-		 *
-		 * The ID is used in the LowVMProgram to store opcode
-		 * arguments as numerical values (not strings).
-		 */
-		base::Optional<usize> getBuiltinFunctionID(base::StrID name);
+	/**
+	 * @brief Returns the list of builtin functions with lazy initialization.
+	 * @note Function types here should match HELIOS types.
+	 * The types used for the parameters and the return value are defined in the @file
+	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
+	 */
+	const std::array<Function, 2>& getBuiltinFunctions();
 
-		/**
-		 * @brief Fast lookup of the builtin function by ID.
-		 *
-		 * Used by the VMThread opcode implementation.
-		 */
-		inline CRef<Function> getBuiltinFunction(usize id) {
-			if (id >= getBuiltinFunctions().size()) CORE_PANIC("Invalid builtin function ID: ", id);
-			return &getBuiltinFunctions().at(id);
-		}
+	/**
+	 * @brief Get the ID of the builtin function given the name.
+	 * ID is the index in the BUILTIN_FUNCTIONS array.
+	 *
+	 * The ID is used in the LowVMProgram to store opcode
+	 * arguments as numerical values (not strings).
+	 */
+	base::Optional<usize> getBuiltinFunctionID(base::StrID name);
+
+	/**
+	 * @brief Fast lookup of the builtin function by ID.
+	 *
+	 * Used by the VMThread opcode implementation.
+	 */
+	inline CRef<Function> getBuiltinFunction(usize id) {
+		if (id >= getBuiltinFunctions().size()) CORE_PANIC("Invalid builtin function ID: ", id);
+		return &getBuiltinFunctions().at(id);
 	}
 }
