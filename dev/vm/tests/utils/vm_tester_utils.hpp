@@ -3,6 +3,7 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 
 #define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                            \
@@ -14,12 +15,29 @@ public:
 	VmTestSuite(tester ::TestConfig&& config, std::string_view name):
 		  tester::TestSuite(std::move(config), name) {}
 
+private:
+	vm::PID initProcess();
+
+	void runTestImpl(
+		vm::PID                            pid,
+		const base::Optional<std::string>& optional_input,
+		const base::Optional<std::string>& optional_output,
+		i64                                exit_code
+	);
+
 protected:
 	void runTestOnVm(
 		const std::string&                 rbc_filename,
-		const base::Optional<std::string>& optional_input,
-		const base::Optional<std::string>& optional_output,
-		i64                                exit_code = 0
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		i64                                exit_code       = 0
+	);
+
+	void runTestOnVm(
+		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		i64                                exit_code       = 0
 	);
 
 	/**

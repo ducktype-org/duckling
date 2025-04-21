@@ -4,4 +4,4 @@ add_library(DVMBackend
 
 make_module(DVMBackend USES Base QueryFramework LIR LibVM)
 
-duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM)
+duck_add_test(compiler dvm_backend tests/dvm_backend_test.cpp USES DVMBackend LibVM VmTester_tc)

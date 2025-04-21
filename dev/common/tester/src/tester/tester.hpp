@@ -47,7 +47,7 @@
 	)
 
 
-#define ASSERT_TRUE(actual) ASSERT_EQUAL(true, bool(actual))
+#define ASSERT_TRUE(actual) ASSERT_EQUAL(true, actual)
 
 
 class SimpleTesterTest;

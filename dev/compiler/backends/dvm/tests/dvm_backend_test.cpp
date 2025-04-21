@@ -6,7 +6,7 @@
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <tester/tester.hpp>
+#include <vm_tester_utils.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
@@ -16,12 +16,12 @@
 
 #include <utility>
 
-class DVMBackendTest final: public tester::TestSuite {
+class DVMBackendTest final: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS DVMBackendTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(functionCallsTest);
 	}
@@ -34,8 +34,10 @@ private:
 		using namespace compiler;
 
 		std::vector<CRef<lir::Function>> funcs;
+		base::StrID                      module_name;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			module_name    = moduleName(module);
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
@@ -43,15 +45,14 @@ private:
 				funcs.emplace_back(lir_fun);
 			}
 		});
-		return backend_vm::Module(
-			base::StrID(base::strSplit(module_path, "/").back().data()), funcs
-		);
+		return backend_vm::Module(module_name, funcs);
 	}
 
 	void runTest(
 		std::string                        module_path,
-		const base::Optional<std::string>& input  = {},
-		const base::Optional<std::string>& output = {}
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		i64                                exit_code = 0
 	) {
 		using namespace compiler;
 		auto module = getModuleFromPath(std::move(module_path));
@@ -59,31 +60,10 @@ private:
 
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response);
-		auto pid = process_pid_response->pid;
-
-		ASSERT_TRUE(vm::api::loadCode(pid, code));
-		ASSERT_TRUE(vm::api::run(pid));
-
-		if_opt_some(input, in_str) {
-			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response);
-			ASSERT_EQUAL(in_str, output_response->output);
-		}
-
-		if_opt_some(output, out_str) {
-			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response);
-			ASSERT_EQUAL(out_str, output_response->output);
-		}
-
-		auto join_response = vm::api::join(pid);
-		ASSERT_TRUE(join_response);
+		runTestOnVm(code, input, output, exit_code);
 	}
 
-	void simpleTest() { runTest("modules/simple"); }
+	void simpleTest() { runTest("modules/simple", {}, {}, 42); }
 
 	void functionCallsTest() { runTest("modules/function_calls"); }
 };
