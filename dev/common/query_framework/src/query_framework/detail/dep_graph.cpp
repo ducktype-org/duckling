@@ -7,6 +7,7 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
+#include <ranges>
 
 using query::detail::NodeID;
 
@@ -86,7 +87,7 @@ namespace query::detail {
 			node_data.at(node).color = Color::Done;
 		}
 
-		void debugPrintNodeDeps(std::ostream& out, detail::NodeID node_id) {
+		std::vector<NodeID> getNodeDeps(detail::NodeID node_id) {
 			// some simple bfs for now:
 			std::set<NodeID> visited;
 			std::queue<NodeID> queue;
@@ -105,22 +106,17 @@ namespace query::detail {
 				}
 			}
 
+			// make issue for query types (side input/input/standard/etc):
 			// it would be cool to print only input ones, but for now we print all of them:
 
-			out << "Dependencies: \n";
-			for (auto& node: visited) {
-				// a temporary hack:
-				if (node.q_id.getName() != "PSTAccessSideInput") continue;
+			return {visited.begin(), visited.end()};
+		}
 
-				out << "    ";
-				out << "> Query - " << std::setw(5) << std::left;
-				out << node.q_id.asInt() << std::setw(15) << std::left << "\"" << node.q_id.getName()
-					<< "\"";
-				out << " Key " << node.hash.val << "\n";
-			}
-
-
-			
+		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) {
+			auto filtered =  getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
+				return id.q_id == dependency_id;
+			});
+			return {filtered.begin(), filtered.end()};
 		}
 
 		void debugPrint(std::ostream& out) {
