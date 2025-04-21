@@ -1,7 +1,7 @@
 import grpc
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
-from google.protobuf.empty_pb2 import Empty
+# from google.protobuf.empty_pb2 import Empty
 import view_pb2
 import view_pb2_grpc
 
@@ -113,7 +113,7 @@ class WebRequestHandler(BaseHTTPRequestHandler):
             else:
                 self.send_error(400, "Missing parameter: object_id")
         else:
-            view_response = view_stub.GetView(Empty())
+            view_response = view_stub.GetView(view_pb2.Empty())
             html = generate_html(view_response.component)
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
