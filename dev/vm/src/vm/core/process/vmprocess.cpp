@@ -31,7 +31,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const std::variant<fs::FilePath, code::CodeCollection>& source
+			const std::variant<fs::FilePath, code::CodeCollection>& source
 	) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
@@ -279,9 +279,6 @@ namespace vm {
 		status_cv.notify_all();
 	}
 
-<<<<<<< HEAD
-=======
-
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
 		auto proc_status = getStatus();
 		variant_match(getStatus()) {
@@ -297,5 +294,4 @@ namespace vm {
 		}
 		CORE_UNREACHABLE();
 	}
->>>>>>> origin/main
 }

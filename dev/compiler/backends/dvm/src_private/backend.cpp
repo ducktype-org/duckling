@@ -1,23 +1,22 @@
 #include <backends/dvm/backend.hpp>
+#include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
 
-#include "base/int_conv.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/type_metadata.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <algorithm>
 #include <ostream>
 #include <ranges>
-#include <unordered_map>
 
 #define INVALID_CASE(tp, reason)                                                    \
 	variant_case(tp, _) {                                                           \
@@ -450,13 +449,6 @@ namespace compiler::backend_vm {
 				}
 
 				ctx.func_builder.addInstruction(terminator_instr);
-				// @TODO: This will be removed by #539
-				// https://github.com/ducktype-org/duckling/issues/539
-				ctx.func_builder.setRetSize(type_context.getMetadata()
-				                                .at(lir_function->name)
-				                                ->getResultType()
-				                                .value()
-				                                ->getSize());
 			}
 
 			code.functions.emplace_back(ctx.func_builder.build());

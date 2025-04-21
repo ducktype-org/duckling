@@ -1,18 +1,18 @@
-#include "helios/queries.hpp"
-#include "lir/lir_lowering/lir_lowering.hpp"
-#include "lir/lir_structure/lir_structure.hpp"
-#include "mir/mir_lowering/mir_lowering.hpp"
-#include "query_framework/context.hpp"
-
 #include <backends/dvm/backend.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <helios/queries.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include "base/str_utils.hpp"
 #include <base/exceptions.hpp>
+#include <base/str_utils.hpp>
 
-#include "vm/api/vm.hpp"
-#include "vm/bytecode/serializer/serializer.hpp"
+#include <vm/api/vm.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 
 #include <utility>
 
