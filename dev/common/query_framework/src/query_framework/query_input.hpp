@@ -19,17 +19,17 @@ namespace query::detail {
  * @brief Macro used do delcare queries side-inputs.
  *
  * Query side-inputs are special queries that have non-empty keys,
- * but act as a query-input. The "input" is essentially a query-key,
+ * but act as a query-input. Their "input" is essentially a query-key,
  * rather then query output.
  * 
- * When the side-input is called, new node-id with key-hash is created
+ * When the side-input is called, new node-id (storing key-hash) is created
  * and added to the dependency graph.
  * It then allows other tools to detect it and read its NodeID to see
  * what input was used (based on its hash).
  * 
  * It is in a way dual to key-dependencies.
  *
- * It allows to easily set a query-input from non-query components like PST
+ * It allows to easily set query-input from non-query components like PST
  * without an additional query-layer in between. Data getters can simple use query-side-input
  * accordingly.
  * 

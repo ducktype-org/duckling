@@ -5,6 +5,7 @@
 #include <lexer/lexer.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
+#include <pst_parser/pst_access_side_input.hpp>
 
 #include <base/defer.hpp>
 
@@ -14,6 +15,13 @@ void printContextErrors() {
 	if (query::Context::logger.messageCount() > 0) {
 		std::cerr << "Compilation errors logged in context: \n";
 		query::Context::logger.dumpLog(true, std::cerr);
+	}
+}
+
+void printQueryDeps(const std::vector<query::detail::NodeID>& deps) {
+	std::cerr << "Dependencies:\n";
+	for (auto& i: deps) {
+		std::cerr << "    > query: " << i.q_id.asInt() << ",  key: " << i.hash.val << "\n";
 	}
 }
 
@@ -52,11 +60,15 @@ int notMain(int argc, const char* const* argv) {
 	std::cerr << top_level->debugPrint() << "\n\n"; 
 
 	std::cerr << "Inputs of entire hout:\n";
-	auto deps = query::getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, 1);
+
+	auto pst_access_id = pst::detail::PSTAccessSideInput::getID();
+	auto deps = query::getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, pst_access_id);
+	printQueryDeps(deps);
 
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
-		query::debugPrintQueryDeps<helios::QueryCodeOFFun>(std::cerr, i.original_symbol);
+		auto deps = query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
+		printQueryDeps(deps);
 	}
 
 	return 0;
