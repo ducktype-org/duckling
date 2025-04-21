@@ -145,13 +145,12 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			new_blocks_instructions.push_back(std::move(block.instructions));
+			new_blocks_instructions.push_back(std::move(new_instructions));
 		}
 
 		for (usize i = 0; i < function.block_order.size(); i++) {
 			auto block_id = function.block_order[i];
-			auto& block = function.blocks[block_id];
-			block.instructions = std::move(new_blocks_instructions[i]);
+			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
 		}
 
 		return function;
