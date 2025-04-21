@@ -167,7 +167,7 @@ namespace pst {
 		};
 
 		/**
-		 * @brief Element representing a number value in an expression
+		 * @brief Element representing a string value in an expression
 		 */
 		class ExprStrValue final: public ExprElement {
 			tpc::StringValue string;

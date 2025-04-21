@@ -101,9 +101,7 @@ namespace pst {
 	 * @brief Simple expand macro
 	 */
 	class Expand final: public Stmt {
-		tpc::StringValue string;
-
-		friend class Expander;
+		AccessInternal<CommaExprHolder> value;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Expand, ElementKind::Expand);
@@ -113,6 +111,11 @@ namespace pst {
 		void dprint(std::ostream& out) const final;
 
 		void acceptVisitor(PstVisitor& visitor) const override;
+
+		[[nodiscard]]
+		AccessLocked<CommaExprHolder> getValue() const {
+			return value.give();
+		}
 
 		[[nodiscard]]
 		std::string elementType() const override {

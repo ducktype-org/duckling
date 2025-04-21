@@ -7,7 +7,7 @@ namespace pst {
 
 		if (!assertStmtChoice<Expand>(state, state[0].is(Keyword::Expand))) return nullptr;
 
-		state.parse(out).all(Keyword::Expand, &out->string);
+		state.parse(out).all(Keyword::Expand, &out->value);
 
 		return out;
 	}
@@ -18,7 +18,9 @@ namespace pst {
 	void Expand::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("value": ")" << string.str() << R"(",)";
+		out << R"("value": ")";
+		nullAwareDprint(value, out);
+		out << R"(",)";
 
 		out << "}";
 	}
