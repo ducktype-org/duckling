@@ -41,7 +41,9 @@ private:
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (auto& fun: top_level->functions) {
 				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
-				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
+				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
+					{ &mir_fun->expect("Couldn\'t compile") }
+				);
 				funcs.emplace_back(lir_fun);
 			}
 		});
