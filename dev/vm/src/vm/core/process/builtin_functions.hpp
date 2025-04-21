@@ -6,19 +6,18 @@
  * The builtin functions have custom C++ implementation that can interact with the outside world
  * but also with the VM's thread and process (like set thread status to "waitingForInput").
  *
- * Builtin functions have type that doesn't need to be declared before usage
- * because their declarations are always added to the program types 
- *(but they can be redefined as long as the types are the same).
+ * Each builtin function have it's own function type that doesn't need to be declared before usage
+ * because their declarations are always added to the program types.
+ * While performing validation checks on the program they behave like usual functions.
  *
  * The goal of this implementation is to have one source file for the builtin functions -
- * this file. They have to be consistent with the HELIOS builtin list and LLVM bultins manually.
+ * this file. They have to be consistent with the HELIOS builtin list and LLVM builtins manually.
  */
 #pragma once
 
 
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
-#include <base/stringifyable_enum.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
 
@@ -29,17 +28,22 @@ namespace vm {
 
 		struct NoValue {};
 
-		using Value = std::variant<i64, NoValue>;
-		// I wanted to keep the parsing from byte array to value in the VMThread, because
-		// how values are stored is it's responsibility.
+		// Because VMThread stores values on the local stack as bytes,
+		// there was a question of where the conversion from bytes to
+		// value should be done. I decided that the conversion should be
+		// in the VMThread. So the handlers only see the converted values.
+		using Value           = std::variant<i64, NoValue>;
 		using FunctionHandler = std::function<Value(VMThread&, const std::vector<Value>&)>;
 
 		struct Function {
-			// If in the bytecode there is redefinition of this type
-			// then the
-			code::FunctionType type;  // Type can also be defined in "VM standard library" that
-			                          // would be a connection between the
-			// builtins and the VM.
+			/**
+			 * Type declaration of the builtin that is always added to the program types.
+			 */
+			code::FunctionType type;
+
+			/**
+			 * You should call this function with arguments to call a builtin.
+			 */
 			FunctionHandler handler;
 		};
 
@@ -53,24 +57,28 @@ namespace vm {
 		 */
 		class FunctionHandlers {
 		public:
-			static Value builtinInputI64Handler(VMThread& process, const std::vector<Value> &arguments);
-			static Value builtinOutputI64Handler(VMThread& process, const std::vector<Value> &arguments);
+			static Value builtinInputI64Handler(
+				VMThread& process, const std::vector<Value>& arguments
+			);
+			static Value builtinOutputI64Handler(
+				VMThread& process, const std::vector<Value>& arguments
+			);
 		};
 
 		/**
 		 * @brief Returns the list of builtin functions with lazy initialization.
-		 * @note Types here should match HELIOS types.
-		 * The types used for parameters and return value are defined in the @file
-		 * bytecode/builtin_types.hpp file.
+		 * @note Function types here should match HELIOS types.
+		 * The types used for the parameters and the return value are defined in the @file
+		 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 		 */
 		const std::array<Function, 2>& getBuiltinFunctions();
 
 		/**
-		 * @brief Get the ID of the builtin function by name.
-		 * It's ID is the index in the BUILTIN_FUNCTIONS array.
+		 * @brief Get the ID of the builtin function given the name.
+		 * ID is the index in the BUILTIN_FUNCTIONS array.
 		 *
 		 * The ID is used in the LowVMProgram to store opcode
-		 * arguments as numbers.
+		 * arguments as numerical values (not strings).
 		 */
 		base::Optional<usize> getBuiltinFunctionID(base::StrID name);
 

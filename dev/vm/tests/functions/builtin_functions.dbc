@@ -3,33 +3,25 @@
 # output = n
 
 type fun: main {} i64
-type fun: check {i64} i64
-
-function check {
-	# [0, 8) check() ret_val
-    # [8, 16) arg0
-	output_l64       8;
-    mov_l64_imm 0, 43;
-    deinit;
-	ret;
-}
 
 function main {
-	# [0, 8) main ret_val
-	init_type       i64; # [8, 16) builtin_input_i64() ret_val
-    init_type       i64; # [16, 24) arg
-    mov_l64_imm 16, 42;
+    # [0, 8) main ret_val
 
-    call_builtin_func builtin_output_i64;
-    
-    init_type       i64; # [16, 24) arg
-    mov_l64_imm 16, 42;
-    call_builtin_func builtin_output_i64;
-    
-    init_type       i64; # [16, 24) arg
-    mov_l64_imm 16, 42;
-    call_builtin_func builtin_output_i64;
+    init_type          i64; # [8, 16)
+    call_builtin_func  builtin_input_i64;
 
-    deinit; # [8, 16) builtin_input_i64() ret_val
-	ret;
+    init_type          i64; # [16, 24)
+    call_builtin_func  builtin_input_i64;
+
+    add_l64_l64        16,   8; # set return value as argument for the output call
+
+    call_builtin_func  builtin_output_i64; # should output 2*input
+
+    init_type          i64; # [16, 24)
+    mov_l64_l64        16,   8;
+
+    call_builtin_func  builtin_output_i64; # should output the size of outputed value
+
+    deinit; # [8, 16) ret_val
+    ret;
 }

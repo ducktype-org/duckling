@@ -27,7 +27,6 @@
  * `opcodes_functions_utils.hpp`.
  */
 
-#include <variant>
 #include "low_program/instruction.hpp"
 #include "op_case.hpp"
 #include "opcodes_functions_utils.hpp"
@@ -39,6 +38,8 @@
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
+
+#include <variant>
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -275,14 +276,15 @@ namespace vm {
 			auto                     arg_count  = function->type.parameters.size();
 
 			std::vector<builtins::Value> args;
-			u64                          first_arg_idx    = frame->block_stack.size() - arg_count;
+			u64                          first_arg_idx = frame->block_stack.size() - arg_count;
 
 
 			// Converting from memory bytes on the local stack to the builtin::Value arguments.
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type = function->type.parameters[i];
 				// @TODO the conversion from local stack bytes to builtin::Value is done
-				// based on declaration type, but it should be done based on the Metadata Type in the future.
+				// based on declaration type, but it should be done based on the Metadata Type in
+				// the future.
 				if (arg_type == "i64") {
 					args.emplace_back(derefStack<i64>(
 						local_stack,
@@ -298,22 +300,20 @@ namespace vm {
 				variant_case_novalue(builtins::NoValue) {}
 				variant_case(i64, value) {
 					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
-					derefStack<i64>(
-						local_stack,
-						static_cast<i64>(ret_val_offset)
-					) = value;
+					derefStack<i64>(local_stack, static_cast<i64>(ret_val_offset)) = value;
 				}
 				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
 			}
 
-			// Similliar as in func_call, but we deinit the arguments blocks as well, 
+			// Similliar as in func_call, but we deinit the arguments blocks as well,
 			// but without the return value.
-			frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
 				frame->block_stack.pop_back();
 				thread.process.getMemory().freeBlock(block);
 			}
+			if (arg_count > 0)
+				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
 		}
 		FUNCTION_CONT(1);
 	}

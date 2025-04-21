@@ -137,7 +137,7 @@ DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 DEF_OPCODE(call_builtin_func, vm::opargs::BuiltinFunctionName)
 
-// return while performing a tail call	
+// return while performing a tail call
 DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
 // return
 DEF_OPCODE(ret)

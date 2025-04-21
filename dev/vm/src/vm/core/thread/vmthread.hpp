@@ -33,7 +33,7 @@ namespace vm {
 	struct Frame;
 
 	class VMProcess;
-	
+
 	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
 
 

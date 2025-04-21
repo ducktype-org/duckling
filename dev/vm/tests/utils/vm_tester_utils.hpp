@@ -19,7 +19,8 @@ protected:
 		const std::string&                 rbc_filename,
 		const base::Optional<std::string>& optional_input,
 		const base::Optional<std::string>& optional_output,
-		i64                                exit_code = 0
+		i64                                exit_code     = 0,
+		bool                               single_output = true
 	);
 
 	/**
