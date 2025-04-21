@@ -9,8 +9,7 @@ void VmTestSuite::runTestOnVm(
 	const std::string&                 rbc_filename,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
-	i64                                exit_code,
-	bool                               single_output
+	i64                                exit_code
 ) {
 	auto process_pid_response = vm::api::spawn();
 	ASSERT_TRUE(process_pid_response.has_value());
@@ -23,33 +22,14 @@ void VmTestSuite::runTestOnVm(
 
 	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
 
-	if_opt_some(optional_output, output) {
-		if (single_output) {
-			auto output_response = vm::api::output(pid);
-			ASSERT_TRUE(output_response.has_value());
-			std::cerr << output_response->output << "\n";
-			ASSERT_EQUAL(output, output_response->output);
-		} else {
-			// In a loop, get output from VM and accumulate it it until all output is printed.
-			std::string accumulated_output;
-			auto        output_response = vm::api::output(pid);
-			while (output_response.has_value()) {
-				accumulated_output += output_response->output;
-				std::cerr << output_response->output;
-
-				if (accumulated_output.size() >= output.size()) {
-					ASSERT_EQUAL(accumulated_output, output);
-					break;
-				} else {
-					ASSERT_EQUAL(accumulated_output, output.substr(0, accumulated_output.size()));
-				}
-
-				output_response = vm::api::output(pid);
-			}
-		}
-	}
-
 	ASSERT_TRUE(vm::api::join(pid).has_value());
+
+	if_opt_some(optional_output, output) {
+		auto output_response = vm::api::output(pid);
+		ASSERT_TRUE(output_response.has_value());
+		std::cerr << output_response->output << "\n";
+		ASSERT_EQUAL(output, output_response->output);
+	}
 
 	auto exit_code_response = vm::api::getExitCode(pid);
 	ASSERT_TRUE(exit_code_response.has_value());

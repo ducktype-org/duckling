@@ -13,9 +13,9 @@ function main {
     init_type          i64; # [16, 24)
     call_builtin_func  builtin_input_i64;
 
-    add_l64_l64        16,   8; # set return value as argument for the output call
+    add_l64_l64        16,   8;
 
-    call_builtin_func  builtin_output_i64; # should output 2*input
+    call_builtin_func  builtin_output_i64; # should output "input1 + input2"
 
     init_type          i64; # [16, 24)
     mov_l64_l64        16,   8;
