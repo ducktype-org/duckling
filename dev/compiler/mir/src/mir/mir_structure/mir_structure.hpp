@@ -7,6 +7,7 @@
 #include <typesystem/higher/types.hpp>
 
 #include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 
@@ -59,13 +60,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 )
 
 namespace compiler::mir {
-
-	/**
-	 * @brief Whether given operation is an operation that can (and has to be)
-	 * the last operation in the block (i.e. be a terminator).
-	 */
-	bool isTerminating(Operation);
-
 	/**
 	 * @brief BlockID is a temporary solution that should be replaced by
 	 * proper BlockReference.
@@ -73,6 +67,17 @@ namespace compiler::mir {
 	 * transformation between that BlockRef to this "BlockRef".
 	 */
 	STRONG_TYPEDEF_INT(BlockID, u64);
+}
+
+STRONGLY_TYPED_INT_STD_HASH(::compiler::mir::BlockID);
+
+namespace compiler::mir {
+
+	/**
+	 * @brief Whether given operation is an operation that can (and has to be)
+	 * the last operation in the block (i.e. be a terminator).
+	 */
+	bool isTerminating(Operation);
 
 	struct MirIntegerConst final {
 		i64 value;
@@ -319,9 +324,25 @@ namespace compiler::mir {
 		tsh::SymbolType<>              return_type;
 		std::vector<tsh::SymbolType<>> parameter_types;
 
-		std::vector<Block>           blocks;
+		/**
+		 * @brief Map from BlockID to the Block.
+		 * The block's content is stored here.
+		 * @note Block with ID "0" should always be the one with FunctionEnd (@p
+		 * finalizeFunctionEnd)
+		 */
+		base::StableHashMap<BlockID, Block> blocks;
+		/**
+		 * @brief The generated order of blocks in the function.
+		 * It serves as a list of all the blocks that are inside the function.
+		 * The order is not important but it is more human friendly.
+		 * First block in the block order is the entry block.
+		 */
+		std::vector<BlockID> block_order;
+
+		/**
+		 * @brief List of all local variables in the function.
+		 */
 		base::StableVector<MirLocal> local_list;
-		BlockID                      entry_block;
 		helios::ScopeID              top_lifetime_scope;
 
 		// helios ID for hashes, ... this it temporary?
@@ -339,14 +360,14 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                    name,
-			tsh::SymbolType<>              return_type,
-			std::vector<tsh::SymbolType<>> parameter_types,
-			std::vector<Block>             blocks,
-			base::StableVector<MirLocal>   local_list,
-			BlockID                        entry_block,
-			helios::ScopeID                top_lifetime_scope,
-			helios::SymID                  helios_id
+			base::StrID                         name,
+			tsh::SymbolType<>                   return_type,
+			std::vector<tsh::SymbolType<>>      parameter_types,
+			base::StableHashMap<BlockID, Block> blocks,
+			std::vector<BlockID>                block_order,
+			base::StableVector<MirLocal>        local_list,
+			helios::ScopeID                     top_lifetime_scope,
+			helios::SymID                       helios_id
 		);
 
 		[[nodiscard]]
@@ -355,6 +376,17 @@ namespace compiler::mir {
 		bool operator==(const Function& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
+
+		/**
+		 * @brief Checks if the id's from the HashMap match the id's in the blocks,
+		 * if all block_order elements are present in the HashMap and
+		 * if the jump targets exist.
+		 * Used for debugging.
+
+		 * @note If there is a block in the HashMap but not in the block_order,
+		 * it is considered invalid.
+		 */
+		base::OkBad validateBlockIDs() const;
 	};
 
 }
