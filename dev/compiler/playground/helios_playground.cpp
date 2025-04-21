@@ -52,7 +52,7 @@ int notMain(int argc, const char* const* argv) {
 	std::cerr << top_level->debugPrint() << "\n\n"; 
 
 	std::cerr << "Inputs of entire hout:\n";
-	query::debugPrintQueryDeps<helios::QueryTopLevelEntities>(std::cerr, root);
+	auto deps = query::getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, 1);
 
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";

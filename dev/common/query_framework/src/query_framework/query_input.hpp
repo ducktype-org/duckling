@@ -5,37 +5,42 @@
 
 #pragma once
 
-#include "query_impl.hpp" // IWYU pragma: export
+#include "query_int.hpp" // IWYU pragma: export
 
 
 namespace query::detail {
-
+    /**
+     * @brief Dummy value used for side-inputs return values.
+     */
     struct SideInputMockValue { };
-
 }
 
 /**
  * @brief Macro used do delcare queries side-inputs.
- * This is different from standards query input, in a way that input
- * it sort of artificially added. 
- * PST currently use it to mark a query input of given PST node,
- * even tho PST creation is not query based.
+ *
+ * Query side-inputs are special queries that have non-empty keys,
+ * but act as a query-input. The "input" is essentially a query-key,
+ * rather then query output.
+ * 
+ * When the side-input is called, new node-id with key-hash is created
+ * and added to the dependency graph.
+ * It then allows other tools to detect it and read its NodeID to see
+ * what input was used (based on its hash).
+ * 
+ * It is in a way dual to key-dependencies.
+ *
+ * It allows to easily set a query-input from non-query components like PST
+ * without an additional query-layer in between. Data getters can simple use query-side-input
+ * accordingly.
+ * 
+ * @note PST currently use it to mark a query input when data from given PST element is used.
+ *
+ * @note Query side-inputs have to be called by hand, when given data is read.
+ * Special care should be taken to always do it, to prevent non registered input being used.
  */
 #define DECLARE_QUERY_SIDE_INPUT(query_type, key) \
     DECLARE_QUERY_AUX(query_type, key, query::detail::SideInputMockValue, true)
-
-#define IMPLEMENT_QUERY_SIDE_INPUT(query_type) \
-        auto query_type::internal_query(query_type::QKey key, ::query::detail::NodeID from)              \
-        -> query_type::QResult {                                                                          \
-            auto node_id = query::detail::makeNodeID(query_type::id, key); \
-            query::detail::dep_graph::addDependency(from, node_id); \
-            query::detail::dep_graph::setEntry(node_id, from); \
-            query::detail::dep_graph::setExit(node_id); \
-            return query::detail::SideInputMockValue{};\
-        }                                                                                   \
-        decltype(query_type::id)   query_type::id = ::query::detail::newQueryID(#query_type); \
-        decltype(query_type::name) query_type::name = #query_type;
-
+    
 // Some side notes:
 // * query input : query without key, of which value might change depending on outside world – pointer size, compilation options
 // * query output: query with key, of which value might change depending on outside world ? 

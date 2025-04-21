@@ -1,7 +1,7 @@
 #pragma once
 
 #include "pst_id.hpp"
-#include <query_framework/query_int.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <base/box.hpp>
 #include <base/optional.hpp>
