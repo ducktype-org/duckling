@@ -5,8 +5,6 @@
 
 #include <vm/bytecode/element_base.hpp>
 
-#include <ostream>
-
 namespace vm::code {
 	/**
 	 * @brief Represents a very simple primitive, like 8-byte integer, 4-byte float, etc.

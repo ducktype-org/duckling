@@ -7,6 +7,7 @@
 #include <base/variant.hpp>
 
 #include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -277,8 +278,9 @@ void TypeContextBuilder::validateType(const TypeOfData& type) {
 	variant_match(type) {
 		variant_case(DataType, data) {
 			if (data.vtable.has_value()) {
-				// @TODOB do not use hardcoded strings here
-				bool has_vtable_ptr = !data.fields.empty() && data.fields[0].type == "VTablePtr";
+				bool has_vtable_ptr
+					= !data.fields.empty()
+				   && *types.at(data.fields[0].type) == vm::code::SpecialTypes::get().vtable_ptr;
 				if (!has_vtable_ptr) throw MissingVTablePtrError(data.name);
 			}
 		}
