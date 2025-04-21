@@ -3,17 +3,17 @@
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/core/thread/low_program/low_program.hpp"
-#include "vm/loader/logger.hpp"
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
+#include <vm/loader/logger.hpp>
 
 #include <mutex>
 #include <shared_mutex>
@@ -31,7 +31,7 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-			const std::variant<fs::FilePath, code::CodeCollection>& source
+		const std::variant<fs::FilePath, code::CodeCollection>& source
 	) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings

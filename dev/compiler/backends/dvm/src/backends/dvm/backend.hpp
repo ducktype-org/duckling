@@ -4,8 +4,8 @@
 
 #include <base/ref.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
 #include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 namespace compiler::backend_vm {
 	/**

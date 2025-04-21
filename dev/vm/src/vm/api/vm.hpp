@@ -6,8 +6,8 @@
 
 #include <filesystem/file.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
 #include <vm/api/api.hpp>
+#include <vm/bytecode/bytecode.hpp>
 
 namespace vm::api {
 	/**
