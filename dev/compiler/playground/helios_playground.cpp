@@ -67,10 +67,9 @@ int notMain(int argc, const char* const* argv) {
 
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
-		auto deps = query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
-		printQueryDeps(deps);
+		auto i_deps = query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
+		printQueryDeps(i_deps);
 	}
-
 	return 0;
 }
 
