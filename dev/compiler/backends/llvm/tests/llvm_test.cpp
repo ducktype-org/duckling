@@ -38,7 +38,7 @@ private:
 			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
 
 			for (auto& fun: top_level->functions) {
-				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+				CRef mir_fun = &ctx.query<compiler::mir::LowerToMirFunction>({ fun })->value();
 				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 				llvm_module.addFunctionToModule(ctx, lir_fun);
@@ -57,8 +57,8 @@ private:
 
 			ASSERT_TRUE(top_level->functions.size() == 1);
 
-			auto mir_fun
-				= ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] });
+			CRef mir_fun
+				= &ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] })->value();
 			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
 
 			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));
