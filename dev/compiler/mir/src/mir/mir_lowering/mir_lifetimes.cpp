@@ -149,7 +149,7 @@ namespace compiler::mir {
 		}
 
 		for (usize i = 0; i < function.block_order.size(); i++) {
-			auto block_id = function.block_order[i];
+			auto block_id                          = function.block_order[i];
 			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
 		}
 
