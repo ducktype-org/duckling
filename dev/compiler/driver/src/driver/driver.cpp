@@ -30,7 +30,8 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
-			auto mir_function = query::entryPoint<mir::LowerToMirFunction>({ hout_function });
+			CRef mir_function
+				= &query::entryPoint<mir::LowerToMirFunction>({ hout_function })->value();
 			auto lir_function = query::entryPoint<lir::LowerToLirFunction>({ mir_function });
 			functions.push_back(lir_function);
 		}

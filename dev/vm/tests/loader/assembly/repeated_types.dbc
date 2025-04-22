@@ -1,14 +1,6 @@
-type fun: main {} int64
-type primitive: int64 8
-type static_table: int64 int64 4
-
+type fun: main {} i64
+type static_table: i64 i64 4
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 16;
-
-    code: {
-        mov_l64_imm 0, 5;
-    }
+    mov_l64_imm 0, 5;
 }

@@ -2,44 +2,31 @@
 # input = ""
 # output = "42"
 
-type primitive: int64 8
-type fun: main {} int64
-type fun: foo { int64 } int64
+type fun: main {} i64
+type fun: foo { i64 } i64
 
 function foo {
-    arg_size: 8;
-    ret_size: 8;
-    local_size:   24;
+    # [0, 8) -> ret_val
+    # [8, 16) -> arg0
 
-    code: {
-        # [0, 8) -> ret_val
-		# [8, 16) -> arg0
+    deinit; # arg0
+    deinit; # ret_val
 
-        deinit; # arg0
-        deinit; # ret_val
+    init_type       i64; # ret_val
+    mov_l64_imm     0, 42;
 
-        init_type       int64; # ret_val
-        mov_l64_imm     0, 42;
-
-        ret;
-    }
+    ret;
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    local_size: 24;
+    # [0, 8) main ret_val
+    init_type       i64; # [8, 16) foo ret_val
+    init_type       i64; # [16, 24) foo arg0
 
-    code: {
-        # [0, 8) main ret_val
-        init_type       int64; # [8, 16) foo ret_val
-        init_type       int64; # [16, 24) foo arg0
+    call_func       foo;
 
-        call_func       foo;
+    output_l64 8;
 
-        output_l64 8;
-        
-        deinit; # foo ret_val
-        ret;
-    }
+    deinit; # foo ret_val
+    ret;
 }

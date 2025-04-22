@@ -5,6 +5,7 @@
  */
 
 #include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
@@ -66,7 +67,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (const auto& hout_func: unit->functions) {
-				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
+				CRef mir_func = &ctx.query<mir::LowerToMirFunction>({ hout_func })->value();
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -90,15 +91,13 @@ private:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
 			for (auto& local: foo_lir->local_list) {
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "a") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 				}
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "b") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 32, true })

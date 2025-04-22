@@ -66,10 +66,7 @@ namespace hashing {
 		 * Adds to hash either a TYPE_UNIQUE_CODE or a TYPE_HASH_CODE
 		 * depending on the value of IS_UNIQUE constant in the provided TypeC
 		 */
-		template<
-			base::IsInstantiationOfTypeValue<TypeCode> TypeC,
-			typename HashAlgorithm,
-			typename T>
+		template<base::IsInstantiationOfTypeValue<TypeCode> TypeC, typename HashAlgorithm, typename T>
 		constexpr void addTypeCode(HashAlgorithm& h) noexcept {
 			if (TypeC::IS_UNIQUE)
 				addToHash(h, TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);

@@ -2,55 +2,38 @@
 # input = "a b c"
 # output = a * c
 
-type primitive: int32 4
-type primitive: int64 8
-type primitive: void 0
-type fun: main {} int64
-type fun: check { int64, int32, int64 } void
+type fun: main {} i64
+type fun: check { i64, i32, i64 } void
 
 function check {
-	arg_size: 20;
-	ret_size: 0;
-	local_size: 28;
+	# [0, 8) arg0
+	# [8, 12) arg1
+	# [12, 20) arg2
 
-	code: {
-		# [0, 8) arg0
-		# [8, 12) arg1
-		# [12, 20) arg2
+	init_type 			i64; 	# [20, 28) acc
+	mov_l64_imm			20, 1; 	# acc := 1
+	mul_l64_l64			20, 0; 	# acc *= a
+	mul_l64_l64			20, 12; # acc *= c
 
-		init_type 			int64; 	# [20, 28) acc
-		mov_l64_imm			20, 1; 	# acc := 1
-		mul_l64_l64			20, 0; 	# acc *= a
-		mul_l64_l64			20, 12; # acc *= c
+	output_l64			20;
 
-		output_l64			20;
-
-		deinit; # acc
-		deinit; # arg2
-		deinit; # arg1
-		deinit; # arg0
-		ret;
-	}
+	deinit; # acc
+	deinit; # arg2
+	deinit; # arg1
+	deinit; # arg0
+	ret;
 }
 
-
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 28;
+	# [0, 8) main ret_val
+	init_type i64; # [8, 16) check() arg0
+	init_type i32; # [16, 20) check() arg1
+	init_type i64; # [20, 28) check() arg2
 
-	code: {
-		# [0, 8) main ret_val
-		init_type int64; # [8, 16) check() arg0
-		init_type int32; # [16, 20) check() arg1
-		init_type int64; # [20, 28) check() arg2
+	input_l64	8;
+	input_l32	16;
+	input_l64	20;
+	call_func          	check;
 
-		input_l64	8;
-		input_l32	16;
-		input_l64	20;
-		call_func          	check;
-
-		ret;
-	}
-
+	ret;
 }

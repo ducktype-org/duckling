@@ -78,7 +78,10 @@ namespace vm::api {
 
 	struct StatusRequest {};
 
-	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest>;
+	struct ExitCodeRequest {};
+
+	using RequestVariant
+		= std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest, ExitCodeRequest>;
 
 	struct SupervisorRequest {
 		PID            pid;
@@ -88,5 +91,6 @@ namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
+	SupervisorRequest makeExitCodeRequest(PID pid);
 	SupervisorRequest makeIORequest(PID pid, IORequest&& data);
 }

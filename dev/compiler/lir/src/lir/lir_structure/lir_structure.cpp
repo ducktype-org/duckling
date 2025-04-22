@@ -1,6 +1,12 @@
 #include "lir_structure.hpp"
 
+#include <helios/symbols/simple.hpp>
+
 #include <base/maps.hpp>
+#include <base/variant.hpp>
+
+#include <iomanip>
+#include <set>
 
 namespace compiler::lir {
 
@@ -133,7 +139,7 @@ namespace compiler::lir {
 			local_id = function.getLocalVariableIDs();
 			block_id = function.getBlockIDs();
 
-			output << "Function \"" << function.name.strView() << "\":\n";
+			output << "[LIR] Function \"" << function.name.strView() << "\":\n";
 
 			for (const auto& local: function.local_list) {
 				printLocalDesc(local.ref());

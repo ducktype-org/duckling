@@ -105,8 +105,9 @@ namespace clap {
 		 * @param description Description of the condition.
 		 * @return A reference to self for the builder design pattern.
 		 */
-		ParamBuilder&
-			conditional(Conditional::Condition&& condition, const std::string& description = "");
+		ParamBuilder& conditional(
+			Conditional::Condition&& condition, const std::string& description = ""
+		);
 
 		/**
 		 * Builds the parameter. May throw exception if parameter wasn't provided with enough

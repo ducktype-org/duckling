@@ -21,6 +21,7 @@ LLVM_INCLUDE_END()
 #include "module_impl.hpp"
 
 #include <backends/llvm/llvm_backend.hpp>
+#include <helios/symbols/simple.hpp>
 #include <init/init.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <typesystem/lower/type_layout.hpp>
@@ -29,6 +30,9 @@ LLVM_INCLUDE_END()
 #include <base/int_conv.hpp>
 #include <base/maps.hpp>
 #include <base/ref.hpp>
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // useful: https://github.com/llvm/llvm-project/tree/main/llvm/exampless
 
@@ -108,8 +112,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_default {
-				CORE_PANIC(
-					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
 				);
 			}
 		}
@@ -126,9 +129,7 @@ namespace compiler::backend_llvm {
 		for (const auto& param: parameters)
 			llvm_parameters.push_back(typeFromLayout(context, param));
 
-		return llvm::FunctionType::get(
-			typeFromLayout(context, return_type), llvm_parameters, false
-		);
+		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
 	/**
@@ -397,9 +398,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Call: {
-				CORE_ASSERT(
-					lir_instruction.arguments.size() > 0, "call instruction without callee"
-				);
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
 				const auto output = lir_instruction.output.value();
 
@@ -450,8 +449,6 @@ namespace compiler::backend_llvm {
 					lir2LLVMInstruction(instruction, builder);
 				lir2LLVMInstruction(block->terminator, builder);
 			}
-
-			llvm::EliminateUnreachableBlocks(*fun);
 
 			return fun.get();
 		}

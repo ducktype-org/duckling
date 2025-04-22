@@ -13,6 +13,7 @@
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -209,13 +210,14 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	return program;
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const std::vector<fs::FilePath>& files) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const std::vector<fs::FilePath>& files
+) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some_move(parsed_files) {
-			code::builders::TypeContextBuilder type_context_builder;
-			LoaderLogger                       log;
+			auto         type_context_builder = vm::code::getBuiltinTypes();
+			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
@@ -230,10 +232,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger>
 
 						for (const auto& instr: func->code->opcodes)
 							insertInstruction(instr.ref(), func_builder, log);
-
-						func_builder.setRetSize(func->ret_size
-						);  // @note: this is temporary, since function meta-parameters will be
-						    // removed
 
 						functions.emplace_back(func_builder.build());
 					}
@@ -255,8 +253,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger>
-	Loader::getProgram(const code::CodeCollection& code_collection) {
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const code::CodeCollection& code_collection
+) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
 		const Program program = std::move(opt_program).value();

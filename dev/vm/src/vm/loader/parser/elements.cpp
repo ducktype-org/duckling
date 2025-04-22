@@ -4,6 +4,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/macros/for_each.hpp>
@@ -137,8 +138,7 @@ namespace vm::loader::parser {
 
 					return out;
 				} else if (!logged) {
-					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value)
-					);
+					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value));
 					logged = true;
 				}
 			} else {
@@ -176,107 +176,35 @@ namespace vm::loader::parser {
 			return nullptr;
 		}
 
+		/**
+		    // This code will be needed in the upcoming PR
+		    // https://github.com/ducktype-org/duckling/issues/699
+		    state.goDown();
+		    while (state.notEmpty()) {
+		        tpc::Identifier field_type;
+		        state.parse().one(&field_type);
+		        out->parameters.emplace_back(field_type);
+
+		        if (state.empty()) break;
+		        if (state[0].is(lang_def::Special::Comma)) {
+		            state.parse().one(lang_def::Special::Comma);
+		        } else {
+		            state.err.failAndLog(state.getPosition(), "expected comma or }");
+		            state.tokens().skip();
+		        }
+		    }
+		    state.goUpAndSkip();
+		    state.parse().one(&out->result_type);
+
+		    if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+		        state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+		        return nullptr;
+		    }
+		 */
+
 		state.goDown();
-
-		while (state.ctokens().peek().isKeyword()) {
-			auto next = state.tokens().next();
-
-			switch (next.asKeyword()) {
-			case lang_def::Keyword::BCArgSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->arg_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
-				auto value = state.tokens().next();
-
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
-				try {
-					out->arg_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
-				}
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCLocalSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->local_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "local_size duplicate");
-				auto value = state.tokens().next();
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "local_size argument is not num-literal"
-					);
-				try {
-					out->local_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "local_size argument is not num-literal"
-					);
-				}
-
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCRetSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->ret_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
-				auto value = state.tokens().next();
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
-				try {
-					out->ret_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
-				}
-
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCDefine: {
-				throw base::NotYetImplemented("BCDefine");
-			}
-
-			case lang_def::Keyword::BCCode: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly))
-					state.err.failAndLog(state.getPosition(), "no {} on code:");
-
-				state.goDown();
-				state.parse().one(&out->code);
-				state.goUpAndSkip();
-				break;
-			}
-
-			default:
-				state.err.failAndLog(state.getPosition(), "bad keyword in function");
-			}
-		}
-
-		if (state.notEmpty()) {
-			state.err.failAndLog(state.getPosition(-1), "Unexpected function content!");
-
-			state.goUpAndSkip();
-			return nullptr;
-		}
-
+		state.parse().one(&out->code);
 		state.goUpAndSkip();
-
-		if (out->local_size == SIZE_T_MAX) state.fail(0, "Local size not set");
-		if (out->arg_size == SIZE_T_MAX) state.fail(0, "Arg size not set");
-		if (out->ret_size == SIZE_T_MAX) state.fail(0, "Ret size not set");
 
 		return out;
 	}
@@ -498,19 +426,22 @@ namespace vm::loader::parser {
 	}
 
 	void ByteCode::dprint(std::ostream& out) const {
-		out << "    code {\n";
 		for (auto& opcode: opcodes) opcode->dprint(out);
-		out << "    }\n";
 	}
 
 	void Func::dprint(std::ostream& out) const {
-		out << "function {\n";
-		out << "    name: " << name.value.strView() << "\n";
-		out << "    arg_size: " << arg_size << "\n";
-		out << "    local_size: " << local_size << "\n";
-		out << "    ret_size: " << ret_size << "\n";
+		out << "function ";
+		out << name.value.strView() << "{\n";
+		// Needed by: https://github.com/ducktype-org/duckling/issues/699
+		// bool first = true;
+		// for (const auto& param: parameters) {
+		// 	if (!first) out << ", ";
+		// 	out << param.value.strView();
+		// 	first = false;
+		// }
+		// out << "} " << result_type.value.strView() << "{\n";
 		code->dprint(out);
-		out << "\n}";
+		out << "}\n";
 	}
 
 	void ParsedFile::dprint(std::ostream& out) const {

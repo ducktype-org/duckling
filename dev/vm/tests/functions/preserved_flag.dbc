@@ -3,58 +3,42 @@
 # output == 1 <- test passed
 # output == 0 <- test failed
 
-type primitive: int64 8
-type primitive: void 0
-
-type fun: main {} int64
+type fun: main {} i64
 type fun: check {} void
 
 function check {
-	arg_size: 0;
-	ret_size: 0;
-	local_size: 8;
-
-	code: {
-		init_type 			int64;
-		mov_l64_imm         0,   15;
-		cmpEq_l64_imm       0,   14;
-		deinit;
-		ret;
-	}
+	init_type 			i64;
+	mov_l64_imm         0,   15;
+	cmpEq_l64_imm       0,   14;
+	deinit;
+	ret;
 }
 
-
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 24;
+	# [0, 8) main ret_val
+	init_type           i64; # [8, 16) local_1
+	init_type           i64; # [16, 24) local_2
 
-	code: {
-		# [0, 8) main ret_val
-		init_type           int64; # [8, 16) local_1
-		init_type           int64; # [16, 24) local_2
+	mov_l64_imm         8,  1;
+	cmpEq_l64_imm       8,  1;
 
-		mov_l64_imm         8,  1;
-		cmpEq_l64_imm       8,  1;
+	call_func          	check;
 
-		call_func          	check;
+	mov_l64_imm         8,  1;
+	mov_l64_imm         16,  0;
 
-		mov_l64_imm         8,  1;
-		mov_l64_imm         16,  0;
+	# flag from cmpEq should be on
+	jmpRelIf_label      ok_label;
 
-		# flag from cmpEq should be on
-		jmpRelIf_label      ok_label;
+	# print "0" (failed)
+	output_l64          16;
+	ret;
 
-		# print "0" (failed)
-		output_l64          16;
-		ret;
+	label ok_label;
+	# print "1" (passed)
+	output_l64          8;
 
-		label ok_label;
-		# print "1" (passed)
-		output_l64          8;
-
-		deinit;
-		deinit;
-		ret;
-	}
+	deinit;
+	deinit;
+	ret;
 }

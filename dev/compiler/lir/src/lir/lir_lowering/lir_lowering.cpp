@@ -20,6 +20,8 @@
 #include <typesystem/higher/queries.hpp>
 #include <typesystem/lower/queries.hpp>
 
+#include <base/variant.hpp>
+
 // @opt: make switch-cases in this file "sorted"
 
 namespace compiler::lir {
@@ -183,25 +185,25 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function->blocks) {
+				for (const auto& mir_block_id: key.function->block_order) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
 					blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.last());
+					mir_to_lir_block.put(mir_block_id, blocks.last());
 				}
 			}
 
 			void lowerBlocks() {
-				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function->blocks | std::views::reverse) {
-					const auto lir_block = mir_to_lir_block[block.id];
+				for (const auto& mir_block_id: key.function->block_order) {
+					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
 
-					auto curr_block = lir_block;
-					for (const auto& mir_instruction: block.instructions)
+					auto        curr_block = lir_block;
+					const auto& mir_block  = key.function->blocks[mir_block_id];
+					for (const auto& mir_instruction: mir_block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
 
-					lowerTerminator(curr_block, block.terminator);
+					lowerTerminator(curr_block, mir_block.terminator);
 				}
 			}
 
@@ -277,8 +279,9 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef
-				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef lowerInstruction(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
 				// curr_block already in order
 
 				CORE_ASSERT(
@@ -342,8 +345,7 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block already in order
 				CORE_ASSERT(
-					mir::isTerminating(mir_terminator.operation),
-					"non-Terminator in lowerTerminator"
+					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
 				lowerFlags(curr_block, mir_terminator);
 
@@ -360,8 +362,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
-					// @TODO...
-					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+					CORE_PANIC("FunctionEnd is illegal outside of MirLowering phase");
 					break;
 				}
 				// @TODO: add more cases
