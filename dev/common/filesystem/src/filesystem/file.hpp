@@ -98,9 +98,10 @@ namespace fs {
 		 * Creates a FilePath object with the given type
 		 * @param path Path of new FilePath object.
 		 * @param type Type of the new FilePath object.
+		 * @param category Category of the new FilePath object.
 		 * @return A new FilePath object.
 		 */
-		static FilePath createFilePathObj(const std::filesystem::path& path, FileType type);
+		static FilePath createFilePathObj(const std::filesystem::path& path, FileType type, FileCategory category);
 
 		/**
 		 * A helper function creating a new unique path with a prefix of this object's path.
@@ -209,6 +210,9 @@ namespace fs {
 
 		[[nodiscard]]
 		std::filesystem::directory_iterator directoryIterator() const;
+
+		[[nodiscard]]
+		std::vector<std::string> listDirectory() const;
 
 		[[nodiscard]]
 		std::string stem() const;

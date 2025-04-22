@@ -42,13 +42,13 @@ namespace fs {
 
 	FilePath FilePath::getDefaultTempPath() {
 		static FilePath temp_directory_path
-			= createFilePathObj(std::filesystem::temp_directory_path(), FileType::Temporary);
+			= createFilePathObj(std::filesystem::temp_directory_path(), FileType::Temporary, FileCategory::Directory);
 		return temp_directory_path;
 	}
 
 	FilePath FilePath::getDefaultVirtualPath() {
 		static FilePath virtual_directory_path
-			= createFilePathObj(vfs.getRootPath(), FileType::Virtual);
+			= createFilePathObj(vfs.getRootPath(), FileType::Virtual, FileCategory::Directory);
 		return virtual_directory_path;
 	}
 
@@ -74,9 +74,10 @@ namespace fs {
 		return file_name;
 	}
 
-	FilePath FilePath::createFilePathObj(const std::filesystem::path& path, FileType type) {
+	FilePath FilePath::createFilePathObj(const std::filesystem::path& path, FileType type, FileCategory category) {
 		auto&& obj       = FilePath(path);
 		obj.type	   = type;
+		obj.category = category;
 		return obj;
 	}
 
@@ -107,7 +108,7 @@ namespace fs {
 			std::filesystem::create_directory(new_temp_dir);
 		else
 			vfs.createDirectory(new_temp_dir);
-		return createFilePathObj(new_temp_dir, type);
+		return createFilePathObj(new_temp_dir, type, FileCategory::Directory);
 	}
 
 	FilePath FilePath::createFileIn(
@@ -129,7 +130,7 @@ namespace fs {
 			vfs.writeFile(new_temp_file, std::string(new_file_content));
 		}
 
-		return createFilePathObj(new_temp_file, type);
+		return createFilePathObj(new_temp_file, type, FileCategory::File);
 	}
 
 	FileContent FilePath::getContent() const {
@@ -179,6 +180,9 @@ namespace fs {
 	}
 
 	std::chrono::file_clock::time_point FilePath::getModifyTime() const {
+		if (type == FileType::Virtual){
+			throw base::LogicError("Cannot get modify time of virtual file");
+		}
 		return last_write_time(path);
 	}
 
@@ -189,7 +193,24 @@ namespace fs {
 	std::string FilePath::extension() const { return path.extension(); }
 
 	std::filesystem::directory_iterator FilePath::directoryIterator() const {
+		if (type == FileType::Virtual) {
+			throw base::LogicError("Cannot get directory iterator of virtual file");
+		}
 		return std::filesystem::directory_iterator(path);
+	}
+
+	std::vector<std::string> FilePath::listDirectory() const {
+		if(category == FileCategory::File) 
+			throw base::LogicError("Path is not a directory");
+
+		if (type == FileType::Virtual) {
+			return vfs.listDirectory(path);
+		}
+		std::vector<std::string> files;
+		for (const auto& entry: std::filesystem::directory_iterator(path)) {
+			files.push_back(entry.path().filename().string());
+		}
+		return files;
 	}
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {
