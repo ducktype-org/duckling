@@ -9,7 +9,8 @@
 
 namespace compiler::backend_vm {
 	/**
-	 * @brief Represents a module which maps to a single VM file.
+	 * @brief A statefull collection of code lowered into VM bytecode.
+	 * @note Currently it does not support dynamic function insertion, but I will.
 	 */
 	class Module {
 		base::StrID module_id;
