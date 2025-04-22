@@ -163,6 +163,7 @@ namespace lang_def {
 		BCImplements,
 		BCVirtualMethods,
 		BCFields,
+		COUNT,
 	};
 
 	enum class Special {

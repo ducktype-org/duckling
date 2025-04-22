@@ -132,6 +132,9 @@ namespace lang_def {
 			{ Keyword::BCFields, "fields", KeywordFlags() },
 		});
 
+    // `- 1` because of `Keywords::NotAKeword`
+    static_assert(LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size() == static_cast<usize>(Keyword::COUNT) - 1);
+
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
