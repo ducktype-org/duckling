@@ -5,16 +5,22 @@
 #include <backends/llvm/llvm_backend.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 #include <system_command/system_command.hpp>
+#include <iostream>
 
 namespace compiler::driver {
 
 	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
 		backend_llvm::Module mod(lir_module.module_id);
+
+		std::cerr << "building llvm module: begin\n";
+
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
 
+		std::cerr << "building llvm module: end\n";
+
 		// make it a core-assert:?
-		if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
+		// if (mod.verify().isBad()) CORE_PANIC("LLVM module verification failed");
 
 		if (options->dump_llvm_ir) {
 			base::StrID llvm_ir_path

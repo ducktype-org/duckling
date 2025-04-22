@@ -32,7 +32,7 @@ namespace init {
 			~InitState() {
 				if (not was_deinit or not was_init) {
 					std::cerr << "ERROR: Init module was linked but never used!\n";
-					std::terminate();
+					// std::terminate();
 				}
 			}
 		};

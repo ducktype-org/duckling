@@ -12,6 +12,8 @@
 #include <base/str_utils.hpp>
 #include <base/string_id.hpp>
 
+#include <iostream>
+
 namespace compiler::driver {
 
 	Box<BackendDriver> createBackendDriver(CRef<Options> options) {
