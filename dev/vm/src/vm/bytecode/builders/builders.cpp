@@ -192,18 +192,18 @@ TypeContext TypeContextBuilder::build() const {
 			}
 			variant_case(vm::code::PointerType, data) {
 				tctx.metadata->at(data.name)->definePointer(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner),
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
 				tctx.metadata->at(data.name)->defineDynamicTable(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::DataType, data) {
@@ -213,38 +213,16 @@ TypeContext TypeContextBuilder::build() const {
 					fields.emplace_back(
 						field.name,
 						tctx.metadata->atMaybe(field.type)
-							.expect<MissingSubtypeError>(data, field.name)
+							.expect<UnknownSubtypeError>(data, field.name)
 					);
-				TypeRef tp       = tctx.metadata->at(data.name);
-				auto    get_type = [&](base::StrID name) -> TypeCRef {
-                    return tctx.getMetadata().atMaybe(name).expect<MissingSubtypeError>(data, name);
-				};
-				base::Optional<vm::VTable> vtable = data.vtable.map([&](const auto& vt) {
-					VTable::Kind kind = VTable::Interface{};
-					variant_match(vt.kind) {
-						variant_case(DataType::VTable::Class, clazz) {
-							kind = VTable::Class{
-								.is_abstract = clazz.is_abstract,
-								.extends     = clazz.extends.map(get_type),
-							};
-						}
-					}
-					auto implements = vt.implements | std::views::transform(get_type)
-					                | std::ranges::to<std::vector>();
-					base::HashMap<base::StrID, TypeCRef> virtual_methods;
-					for (auto& method: vt.virtual_methods)
-						virtual_methods.put(method.name, get_type(method.type));
-
-					return vm::VTable(tp, kind, std::move(implements), std::move(virtual_methods));
-				});
-				tp->defineData(fields, std::move(vtable));
+				tctx.metadata->at(data.name)->defineData(fields, {});
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(
-						tctx.metadata->atMaybe(variant).expect<MissingSubtypeError>(data, variant)
+						tctx.metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
 					);
 				tctx.metadata->at(data.name)->defineVariant(variants);
 			}
@@ -255,11 +233,67 @@ TypeContext TypeContextBuilder::build() const {
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
+					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
 			variant_case(vm::code::OpaqueType, opaque) {
 				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
+			}
+			variant_case(vm::code::ClassType, data) {
+				// @TODO this is a placeholder until we add it as a proper type
+				// of a new kind, see:
+				// https://github.com/ducktype-org/duckling/issues/702
+				std::vector<std::pair<base::StrID, TypeRef>> fields{
+					{ base::StrID("vt"), tctx.metadata->at(VISIT(SpecialTypes::get().vtable_ptr, tp, return tp.name)) }
+				};
+				fields.reserve(data.fields.size() + 1);
+				for (auto& field: data.fields)
+					fields.emplace_back(
+						field.name,
+						tctx.metadata->atMaybe(field.type)
+							.expect<UnknownSubtypeError>(data, field.name)
+					);
+				TypeRef tp       = tctx.metadata->at(data.name);
+				auto    get_type = [&](base::StrID name) -> TypeCRef {
+                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+				};
+				auto kind = InheritanceMetadata::Class{
+					.is_abstract = data.is_abstract,
+					.extends     = data.extends.map(get_type),
+				};
+				auto implements = data.implements | std::views::transform(get_type)
+				                | std::ranges::to<std::vector>();
+				base::HashMap<base::StrID, TypeCRef> virtual_methods;
+				for (auto& method: data.virtual_methods)
+					virtual_methods.put(method.name, get_type(method.type));
+				vm::InheritanceMetadata inheritance_metadata(
+					tp, kind, std::move(implements), std::move(virtual_methods)
+				);
+				tp->defineData(fields, std::move(inheritance_metadata));
+			}
+			variant_case(vm::code::InterfaceType, data) {
+				// @TODO this is a placeholder until we add it as a proper type
+				// of a new kind, see:
+				// https://github.com/ducktype-org/duckling/issues/702
+				std::vector<std::pair<base::StrID, TypeRef>> fields{
+					{ base::StrID("vt"), tctx.metadata->at(VISIT(SpecialTypes::get().vtable_ptr, tp, return tp.name)) }
+				};
+				TypeRef tp       = tctx.metadata->at(data.name);
+				auto    get_type = [&](base::StrID name) -> TypeCRef {
+                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+				};
+				auto implements = data.implements | std::views::transform(get_type)
+				                | std::ranges::to<std::vector>();
+				base::HashMap<base::StrID, TypeCRef> virtual_methods;
+				for (auto& method: data.virtual_methods)
+					virtual_methods.put(method.name, get_type(method.type));
+				vm::InheritanceMetadata inheritance_metadata(
+					tp,
+					InheritanceMetadata::Interface{},
+					std::move(implements),
+					std::move(virtual_methods)
+				);
+				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_default { CORE_PANIC("bad type"); }
 		}
@@ -274,25 +308,11 @@ const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
 Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
-void TypeContextBuilder::validateType(const TypeOfData& type) {
-	variant_match(type) {
-		variant_case(DataType, data) {
-			if (data.vtable.has_value()) {
-				bool has_vtable_ptr
-					= !data.fields.empty()
-				   && *types.at(data.fields[0].type) == vm::code::SpecialTypes::get().vtable_ptr;
-				if (!has_vtable_ptr) throw MissingVTablePtrError(data.name);
-			}
-		}
-	}
-}
-
 /*
  * @throws DuplicatedTypeError
  * @throws MissingVTablePtrError
  */
 void TypeContextBuilder::addType(const TypeOfData& type) {
-	validateType(type);
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {

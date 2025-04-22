@@ -123,7 +123,6 @@ namespace lang_def {
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
 			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
-			{ Keyword::BCInheritable, "inheritable", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
 			{ Keyword::BCInterface, "interface", KeywordFlags() },
@@ -131,6 +130,8 @@ namespace lang_def {
 			{ Keyword::BCImplements, "implements", KeywordFlags() },
 			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
 			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::True, "true", KeywordFlags() },
+			{ Keyword::False, "false", KeywordFlags() },
 		});
 
 	/**

@@ -210,8 +210,8 @@ namespace vm::loader::parser {
 	}
 
 	namespace {
-		std::vector<code::DataType::Field> parseFields(F8ParserState& state) {
-			std::vector<code::DataType::Field> out;
+		std::vector<code::Field> parseFields(F8ParserState& state) {
+			std::vector<code::Field> out;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
 				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
@@ -306,7 +306,7 @@ namespace vm::loader::parser {
 			break;
 		}
 		case lang_def::Keyword::BCData: {
-			auto tp         = DataType{ name, parseFields(state), {} };
+			auto tp         = DataType{ name, parseFields(state) };
 			tp.bytecode_pos = *out->position;
 			out->datatype   = std::move(tp);
 			break;
@@ -376,6 +376,128 @@ namespace vm::loader::parser {
 				tp.bytecode_pos = *out->position;
 				out->datatype   = tp;
 			}
+            break;
+		}
+		case lang_def::Keyword::BCClass:
+		case lang_def::Keyword::BCInterface: {
+			bool                        is_interface = type == lang_def::Keyword::BCInterface;
+			bool                        is_abstract  = false;
+			std::vector<Field>          fields;
+			std::vector<base::StrID>    implements;
+			std::vector<Field>          virtual_methods;
+			base::Optional<base::StrID> extends;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				return nullptr;
+			}
+
+			state.goDown();
+
+			while (state[0].isKeyword()) {
+				auto next = state.tokens().next();
+				switch (next.asKeyword()) {
+				case lang_def::Keyword::BCExtends: {
+					if (is_interface) {
+						state.err.failAndLog(
+							state.getPosition(), "interfaces cannot extend classes"
+						);
+					} else {
+						tpc::Identifier superclass;
+						state.parse().all(
+							lang_def::NamedOperator::Colon, &superclass, lang_def::Special::Semicolon
+						);
+						extends.emplace(superclass.value);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCAbstract: {
+					if (is_interface) {
+						state.err.failAndLog(state.getPosition(), "interfaces cannot be abstract");
+					} else {
+						state.parse().one(lang_def::NamedOperator::Colon);
+						switch (state.tokens().next().asKeyword()) {
+						case lang_def::Keyword::True:
+							is_abstract = true;
+							break;
+						case lang_def::Keyword::False:
+							is_abstract = false;
+							break;
+						default:
+							state.err.failAndLog(state.getPosition(), "bad keyword");
+							break;
+						}
+						state.parse().one(lang_def::Special::Semicolon);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCImplements: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+						state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+						return nullptr;
+					}
+
+					state.goDown();
+					while (state.notEmpty()) {
+						tpc::Identifier interface;
+						state.parse().one(&interface);
+						implements.push_back(interface.value);
+
+						if (state.empty()) break;
+						if (state[0].is(lang_def::Special::Comma)) {
+							state.parse().one(lang_def::Special::Comma);
+						} else {
+							state.err.failAndLog(state.getPosition(), "expected comma or }");
+							state.tokens().skip();
+						}
+					}
+					state.goUpAndSkip();
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCVirtualMethods: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					virtual_methods = parseFields(state);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCFields: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					// The first field is the VTable pointer
+					for (auto field: parseFields(state)) fields.push_back(field);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				default: {
+					state.err.failAndLog(state.getPosition(), "bad keyword");
+					return nullptr;
+				}
+				}
+			}
+
+			if (state.notEmpty()) {
+				state.err.failAndLog(state.getPosition(-1), "unexpected inheritable content");
+
+				state.goUpAndSkip();
+				return nullptr;
+			}
+
+			state.goUpAndSkip();
+
+			auto tp = is_interface ? TypeOfData(InterfaceType(
+										 name, std::move(implements), std::move(virtual_methods)
+									 ))
+			                       : TypeOfData(ClassType(
+										 name,
+										 fields,
+										 is_abstract,
+										 extends,
+										 std::move(implements),
+										 std::move(virtual_methods)
+									 ));
+			VISIT(tp, t, t.bytecode_pos = *out->position);
+			out->datatype = std::move(tp);
 			break;
 		}
 		default: {
@@ -383,124 +505,6 @@ namespace vm::loader::parser {
 			break;
 		}
 		}
-
-		return out;
-	}
-
-	MBox<Inheritable> Inheritable::parse(F8ParserState& state) {
-		auto            out = makeBox<Inheritable>(state.getPosition());
-		tpc::Identifier name;
-		state.parse().all(lang_def::Keyword::BCInheritable, &name, lang_def::NamedOperator::Colon);
-		out->data.name = name.value;
-		out->data.fields.emplace_back(base::StrID("vtable_ptr"), base::StrID("VTablePtr"));
-		code::DataType::VTable& vtable = out->data.vtable.emplace();
-
-		switch (state.tokens().next().asKeyword()) {
-		case lang_def::Keyword::BCClass: {
-			vtable.kind = code::DataType::VTable::Class{
-				.is_abstract = false,
-				.extends     = {},
-			};
-			break;
-		}
-		case lang_def::Keyword::BCAbstract: {
-			state.parse().one(lang_def::Keyword::BCClass);
-			vtable.kind = code::DataType::VTable::Class{
-				.is_abstract = true,
-				.extends     = {},
-			};
-			break;
-		}
-		case lang_def::Keyword::BCInterface: {
-			vtable.kind = code::DataType::VTable::Interface{};
-			break;
-		}
-		default: {
-			state.err.failAndLog(state.getPosition(), "bad keyword in inheritable");
-			return nullptr;
-		}
-		}
-
-		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
-			return nullptr;
-		}
-
-		state.goDown();
-
-		while (state[0].isKeyword()) {
-			auto next = state.tokens().next();
-			switch (next.asKeyword()) {
-			case lang_def::Keyword::BCExtends: {
-				variant_match(vtable.kind) {
-					variant_case(code::DataType::VTable::Class, clazz) {
-						tpc::Identifier extends;
-						state.parse().all(
-							lang_def::NamedOperator::Colon, &extends, lang_def::Special::Semicolon
-						);
-						clazz.extends.emplace(extends.value);
-					}
-					variant_case_novalue(code::DataType::VTable::Interface) {
-						state.err.failAndLog(
-							state.getPosition(), "interfaces cannot extend classes"
-						);
-					}
-				}
-				break;
-			}
-			case lang_def::Keyword::BCImplements: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-					state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
-					return nullptr;
-				}
-
-				state.goDown();
-				while (state.notEmpty()) {
-					tpc::Identifier interface;
-					state.parse().one(&interface);
-					vtable.implements.push_back(interface.value);
-
-					if (state.empty()) break;
-					if (state[0].is(lang_def::Special::Comma)) {
-						state.parse().one(lang_def::Special::Comma);
-					} else {
-						state.err.failAndLog(state.getPosition(), "expected comma or }");
-						state.tokens().skip();
-					}
-				}
-				state.goUpAndSkip();
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-			case lang_def::Keyword::BCVirtualMethods: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				vtable.virtual_methods = parseFields(state);
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-			case lang_def::Keyword::BCFields: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				// The first field is the VTable pointer
-				for (auto field: parseFields(state)) out->data.fields.push_back(field);
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-			default: {
-				state.err.failAndLog(state.getPosition(), "bad keyword in inheritable");
-				return nullptr;
-			}
-			}
-		}
-
-		if (state.notEmpty()) {
-			state.err.failAndLog(state.getPosition(-1), "unexpected inheritable content");
-
-			state.goUpAndSkip();
-			return nullptr;
-		}
-
-		state.goUpAndSkip();
 
 		return out;
 	}
@@ -514,9 +518,6 @@ namespace vm::loader::parser {
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
-			} else if (state[0].is(lang_def::Keyword::BCInheritable)) {
-				auto inheritable = Inheritable::parse(state).toOptBox();
-				if (inheritable) out->inheritables.emplace_back(std::move(*inheritable));
 			} else {
 				state.fail(0, "Unexpected keyword");
 				break;
@@ -580,40 +581,6 @@ namespace vm::loader::parser {
 		// out << "} " << result_type.value.strView() << "{\n";
 		code->dprint(out);
 		out << "}\n";
-	}
-
-	void Inheritable::dprint(std::ostream& out) const {
-		std::string_view str_kind;
-		auto&            vtable = data.vtable.expect("A properly parsed Inheritable has a VTable");
-		variant_match(vtable.kind) {
-			variant_case(code::DataType::VTable::Class, clazz) {
-				str_kind = clazz.is_abstract ? "abstract class" : "class";
-			}
-			variant_case_novalue(code::DataType::VTable::Interface) { str_kind = "interface"; }
-		}
-
-		out << "inheritable  {\n";
-		out << "    kind: " << str_kind;
-		out << "    name: " << data.name.strView() << "\n";
-		variant_match(vtable.kind) {
-			variant_case(code::DataType::VTable::Class, clazz) {
-				if_opt_some(clazz.extends, superclass) {
-					out << "    extends: " << superclass.strView() << "\n";
-				}
-			}
-		}
-		out << "    implements: [";
-		for (auto& interface: vtable.implements) out << interface.strView() << ", ";
-		out << "]\n";
-		out << "    virtual_methods: [";
-		for (auto method: vtable.virtual_methods)
-			out << method.name.strView() << ": " << method.name.strView() << ", ";
-		out << "]\n";
-		out << "    fields: [";
-		for (auto field: data.fields)
-			out << field.name.strView() << ": " << field.name.strView() << ", ";
-		out << "]\n";
-		out << "}";
 	}
 
 	void ParsedFile::dprint(std::ostream& out) const {

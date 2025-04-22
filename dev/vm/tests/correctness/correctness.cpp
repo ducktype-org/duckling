@@ -17,17 +17,17 @@ public:
 private:
 	// Note: these tests treat 16f17da CG as a reference
 	// TODO: add more inputs and some corner cases
-	void testAckermannOld() { runTestOnVm("ackermann_old.dbc", "3 3", "61"); }
+	void testAckermannOld() { runTestOnVm("ackermann_old.dbc", "3 3", "61", {}); }
 
-	void testAckermannNew() { runTestOnVm("ackermann_new.dbc", "3 3", "61"); }
+	void testAckermannNew() { runTestOnVm("ackermann_new.dbc", "3 3", "61", {}); }
 
-	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936"); }
+	void testCollatz() { runTestOnVm("collatz.dbc", "4242", "1276936", {}); }
 
-	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875"); }
+	void testFibIter() { runTestOnVm("fib_iter.dbc", "1000000 10000", "6875", {}); }
 
-	void testFibRec() { runTestOnVm("fib_rec.dbc", "28", "317811"); }
+	void testFibRec() { runTestOnVm("fib_rec.dbc", "28", "317811", {}); }
 
-	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0"); }
+	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0", {}); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/correctness/");

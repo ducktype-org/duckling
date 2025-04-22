@@ -1,4 +1,3 @@
-type fun: main {} i64
 type fun: dummy { i64 } i64
 
 function dummy {
@@ -23,14 +22,19 @@ function dummy {
 
 function main {
 	# [0, 8) main ret_val
-	init_type i64; # [8, 16) dummy ret_val
-	init_type i64; # [16, 24) dummy arg0
+	# [8, 16) -> argc
+    # [16, 32) -> *argv
 
-	input_l64          16; # arg0 := input
+	init_type i64; # [32, 40) dummy ret_val
+	init_type i64; # [48, 48) dummy arg0
+
+	input_l64          40; # arg0 := input
 	call_func          dummy;
 
-	output_l64         8;
+	output_l64         32;
 
 	deinit; # dummy ret_val
+    deinit;       # *argv
+    deinit;       # argc
 	ret;
 }

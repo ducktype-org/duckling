@@ -5,7 +5,7 @@
 
 namespace vm::code {
 	/*
-	 * @biref Types treated in a special way by the machine.
+	 * @brief Types treated in a special way by the machine.
 	 *
 	 * These types are singled out as there is custom logic for handling them.
 	 * For example, by declaring the VTablePtr as special,

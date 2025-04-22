@@ -156,7 +156,6 @@ namespace lang_def {
 		BCVariant,
 		BCFunType,
 		BCOpaque,
-		BCInheritable,
 		BCClass,
 		BCAbstract,
 		BCInterface,
@@ -164,6 +163,7 @@ namespace lang_def {
 		BCImplements,
 		BCVirtualMethods,
 		BCFields,
+		COUNT,
 	};
 
 	enum class Special {

@@ -67,7 +67,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (const auto& hout_func: unit->functions) {
-				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
+				CRef mir_func = &ctx.query<mir::LowerToMirFunction>({ hout_func })->value();
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
