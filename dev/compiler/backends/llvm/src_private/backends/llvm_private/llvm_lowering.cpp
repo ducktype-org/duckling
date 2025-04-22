@@ -209,14 +209,23 @@ namespace compiler::backend_llvm {
 		 */
 		base::Map<lir::BlockRef, Ref<llvm::BasicBlock>> block_mapping;
 
-		void generateMainBlocks(llvm::Function* fun) {
+		void generateMainBlocks(llvm::Function* fun, llvm::BasicBlock* first_block) {
 			auto block_ids = lir_function->getBlockIDs();
 			// llvm prints in reverse... eh:
+			bool first = true;
+			// this is a hack:
 			for (auto block: lir_function->block_order) {
-				llvm::BasicBlock* llvm_block = llvm::BasicBlock::Create(
-					context, base::strConcat("lir_block_", block_ids[block]), fun
-				);
-				block_mapping.put(block, llvm_block);
+				if (first) {
+					// first block is already created:
+					block_mapping.put(block, first_block);
+					first = false;
+				}
+				else {
+					llvm::BasicBlock* llvm_block = llvm::BasicBlock::Create(
+						context, base::strConcat("lir_block_", block_ids[block]), fun
+					);
+					block_mapping.put(block, llvm_block);
+				}
 			}
 		}
 
@@ -270,11 +279,11 @@ namespace compiler::backend_llvm {
 				local_register_map.put(var.ref(), reg);
 			}
 
-			generateMainBlocks(fun);
+			generateMainBlocks(fun, locals_block);
 
 			// here we assume that first block in block order is the entry block
 			// it might be wrong, but it's good enough for now
-			locals_builder.CreateBr(block_mapping[lir_function->block_order.at(0)].get());
+			// locals_builder.CreateBr(block_mapping[lir_function->block_order.at(0)].get());
 		}
 
 		/**
