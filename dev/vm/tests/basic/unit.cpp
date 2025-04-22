@@ -9,6 +9,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(jump);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
+		TESTER_ADD_TEST(types);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(pointerToLocal);
 		TESTER_ADD_TEST(pointerCopy);
@@ -21,6 +22,8 @@ private:
 	void return1337() { runTestOnVm("return_1337.dbc", {}, {}, 1'337); }
 
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0"); }
+
+	void types() { runTestOnVm("types.dbc", "3 4", "7"); }
 
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4"); }
 

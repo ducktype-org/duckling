@@ -1,9 +1,8 @@
-type primitive: int32 4
-type fun: main {} int32
+type fun: main {} i32
 
 function main {
 	# [0, 4) -> main ret_val
-	init_type int32;
+	init_type i32;
 	deinit;
 	ret;
 }
