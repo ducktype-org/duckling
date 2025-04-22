@@ -24,9 +24,6 @@ public:
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
 	}
 
-protected:
-	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
-
 private:
 	auto getLLVMModuleFromPath(std::string module_path) {
 		using namespace compiler;
