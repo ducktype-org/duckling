@@ -275,56 +275,43 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::
 	return getProgram(std::vector{ file });
 }
 
-<<<<<<< HEAD
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const code::CodeCollection& code_collection
 ) {
 	match_optional(Program::from(code_collection)) {
 		opt_some_move(program) return load(program);
 		opt_err_move(err) return std::unexpected(std::move(err));
-=======
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const code::CodeCollection& code_collection
+	}
+	CORE_UNREACHABLE();
+}
+
+const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
+
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
+	return type_context_builder.getTypes();
+}
+
+void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
+	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
+}
+
+Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
+	return std::move(type_context_builder.build()).moveMetadata();
+}
+
+void vm::loader::Program::insertGlobals(
+	const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger
 ) {
-	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
-	if (opt_program.has_value()) const Program program = std::move(opt_program).value();
+	for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
+}
 
->>>>>>> origin/main
-		CORE_UNREACHABLE();
-	}
+std::expected<vm::low::LowVMProgram, LoaderLogger> vm::loader::Loader::load(const Program& program) {
+	auto main_validation = validateMain(program);
+	if (!main_validation.has_value()) return std::unexpected(std::move(main_validation).error());
 
-	const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const {
-		return functions;
-	}
+	auto validation_result = validator::verify(program);
+	if (!validation_result.has_value())
+		return std::unexpected(std::move(validation_result).error());
 
-	const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
-		return type_context_builder.getTypes();
-	}
-
-	void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
-		for (const auto& type: new_types) insertType(type, type_context_builder, logger);
-	}
-
-	Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
-		return std::move(type_context_builder.build()).moveMetadata();
-	}
-
-	void vm::loader::Program::insertGlobals(
-		const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger
-	) {
-		for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
-	}
-
-	std::expected<vm::low::LowVMProgram, LoaderLogger> vm::loader::Loader::load(
-		const Program& program
-	) {
-		auto main_validation = validateMain(program);
-		if (!main_validation.has_value())
-			return std::unexpected(std::move(main_validation).error());
-
-		auto validation_result = validator::verify(program);
-		if (!validation_result.has_value())
-			return std::unexpected(std::move(validation_result).error());
-
-		return compiler::compile(program);
-	}
+	return compiler::compile(program);
+}
