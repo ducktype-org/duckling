@@ -5,9 +5,11 @@
 
 #include "instruction.hpp"
 
-#include "vm/bytecode/bytecode.hpp"
+#include "vm/bytecode/builders/builders.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
+
+#include <utility>
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -35,13 +37,18 @@ namespace vm::low {
 	 * the function in the function calls is the index in this vector
 	 */
 	struct LowVMProgram {
-		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> types):
-			  types(std::move(types)) {
+		LowVMProgram(
+			const std::vector<FuncData>&  functions,
+			Box<TypeMetadata>             types,
+			StableTypeIdNameMap<TypeCRef>&& global_data
+		):
+			  types(std::move(types)),
+			  global_data(std::move(global_data)) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 		}
 
 		StableTypeIdNameMap<FuncData, usize> functions;
-		StableTypeIdNameMap<TypeCRef, usize> global_data;
 		Box<TypeMetadata>                    types;
+		StableTypeIdNameMap<TypeCRef>        global_data;
 	};
 }

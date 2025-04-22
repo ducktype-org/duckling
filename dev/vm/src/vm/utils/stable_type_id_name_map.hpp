@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 
 #include <deque>
+#include <ranges>
 
 namespace vm {
 	/**
@@ -79,7 +80,7 @@ namespace vm {
 		}
 
 		constexpr base::Optional<base::StrID> nameOf(TID id) const {
-			return id_to_name.atMaybe(id);
+			return id_to_name.atMaybe(id).map([](auto&& ref) { return base::StrID(ref); });
 		}
 
 		[[nodiscard]] constexpr base::Optional<TID> idOf(base::StrID name) const {
@@ -118,6 +119,14 @@ namespace vm {
 		constexpr T& operator[](TID id) { return values[static_cast<usize>(id)]; }
 
 		constexpr const T& operator[](TID id) const { return values[static_cast<usize>(id)]; }
+
+		constexpr auto ids() const { return id_to_name | std::views::keys; }
+
+		std::vector<std::tuple<CRef<T>, TID, base::StrID>> allData() const {
+			std::vector<std::tuple<CRef<T>, TID, base::StrID>> data;
+			for (usize id = 0; id < size(); id++) data.emplace_back(at(id), TID(id), *nameOf(id));
+			return data;
+		}
 
 	private:
 		constexpr void createLink(TID id, base::StrID name) {

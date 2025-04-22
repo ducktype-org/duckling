@@ -127,6 +127,11 @@ namespace base {
 			return { begin, size };
 		}
 
+		[[nodiscard]]
+		const ModRawView modView() {
+			return { begin, size };
+		}
+
 		~OwningView() { delete[] begin; }
 	};
 }

@@ -15,6 +15,7 @@
 #include <base/ref.hpp>
 #include <base/stable_container.hpp>
 
+#include "vm/utils/stable_type_id_name_map.hpp"
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <cstring>
@@ -30,6 +31,8 @@ namespace vm {
 		StackAllocator            stack_allocator;
 
 		std::deque<ThreadStack> threads_frame_stacks;
+
+		base::HashMap<usize, base::OwningView> global_data;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -64,6 +67,13 @@ namespace vm {
 		auto allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
 		void freeBlock(Ref<Block> block);
+
+		void insertGlobalData(usize id, TypeCRef type);
+
+		[[nodiscard]]
+		__attribute__((always_inline)) auto getGlobalData(usize id) -> base::ModRawView {
+			return global_data.atMaybe(id).expect("Id not stored!").modView();
+		}
 
 		// =================== Block operations ===================
 

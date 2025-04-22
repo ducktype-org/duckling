@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/builders/builders.hpp"
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -29,6 +30,7 @@ namespace vm::loader::compiler {
 		struct CompilationContext final {
 			const StableTypeIdNameMap<code::Function>& func_map;
 			const TypeMetadata&                        type_map;
+			const StableTypeIdNameMap<TypeCRef>&       globals;
 			LoaderLogger                               log{};
 			base::Optional<code::Function>             function{};
 			base::HashMap<base::StrID, usize>          label_positions{};
@@ -159,7 +161,12 @@ namespace vm::loader::compiler {
 		converted_functions.reserve(program.funcMap().size());
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
-		auto              ctx   = CompilationContext(program.funcMap(), *types);
+
+		StableTypeIdNameMap<TypeCRef> globals;
+		for (const auto& global: program.globalMap())
+			globals.insert(types->at(global.type), global.name);
+
+		auto ctx = CompilationContext(program.funcMap(), *types, globals);
 
 		for (auto& func: program.funcMap()) {
 			ctx.function = func;
@@ -170,6 +177,6 @@ namespace vm::loader::compiler {
 		}
 
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
-		return low::LowVMProgram{ converted_functions, std::move(types) };
+		return low::LowVMProgram{ converted_functions, std::move(types), std::move(globals) };
 	}
 }

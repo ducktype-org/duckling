@@ -316,3 +316,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> vm::loader::Loader::load(cons
 
 	return compiler::compile(program);
 }
+
+const vm::StableTypeIdNameMap<vm::code::GlobalData>& vm::loader::Program::globalMap() const {
+	return globals_map;
+}
