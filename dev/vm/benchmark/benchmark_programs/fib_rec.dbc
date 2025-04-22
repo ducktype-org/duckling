@@ -1,7 +1,5 @@
-type primitive: int64 8
-
-type fun: main {} int64
-type fun: fib { int64 } int64
+type fun: main {} i64
+type fun: fib { i64 } i64
 
 function fib {
     arg_size: 8;
@@ -21,8 +19,8 @@ function fib {
         jmpRelNotIf_label   End;
 
         # fib(n - 1)
-        init_type int64; # [16, 24) fib(n-1) ret_val
-        init_type int64; # [24, 32) fib(n-1) arg0
+        init_type i64; # [16, 24) fib(n-1) ret_val
+        init_type i64; # [24, 32) fib(n-1) arg0
         mov_l64_l64         24, 8;
         sub_l64_imm         24, 1;
         call_func           fib;
@@ -30,7 +28,7 @@ function fib {
         mov_l64_l64         0, 16;
 
         # fib(n - 2)
-        init_type int64; # [24, 32) fib(n-2) arg0
+        init_type i64; # [24, 32) fib(n-2) arg0
         mov_l64_imm         16, 0;
         mov_l64_l64         24, 8;
         sub_l64_imm         24, 2;
@@ -57,8 +55,8 @@ function main {
     code: {
         # n := argument
         # [0, 8) main ret_val
-        init_type   int64; # [8, 16) fib() ret_val
-        init_type   int64; # [16, 24) fib() arg0
+        init_type   i64; # [8, 16) fib() ret_val
+        init_type   i64; # [16, 24) fib() arg0
         input_l64   16;
 
         call_func   fib;

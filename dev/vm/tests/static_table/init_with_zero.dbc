@@ -1,6 +1,5 @@
-type primitive: int64 8
-type static_table: tableint64 int64 2
-type fun: main {} int64
+type static_table: tablei64 i64 2
+type fun: main {} i64
 
 function main {
 	# x - 0
@@ -9,15 +8,15 @@ function main {
 	# t - 24
 
 	# [0, 8) main ret_val
-	init_type           int64; # [8, 16) x
-	init_type           int64; # [16, 24) i
-	init_type           int64; # [24, 32) y
-	init_type           int64; # [32, 40) t
+	init_type           i64; # [8, 16) x
+	init_type           i64; # [16, 24) i
+	init_type           i64; # [24, 32) y
+	init_type           i64; # [32, 40) t
 
 	mov_l64_imm         32, 42;
 	mov_l64_imm         40, 42;
 
-	alloc_lptr_type     32, tableint64;
+	alloc_lptr_type     32, tablei64;
 
 	# x := t[0]
 	mov_l64_imm         16, 0;
