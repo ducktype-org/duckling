@@ -1,26 +1,26 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # [0, 8) -> main ret_val
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
+    # [32, 40) -> x
 
-	init_type       int64; # x
-	input_l64       8;
+    init_type       i64; # x [32,40)
+    input_l64       32;
 
-	# if x == 0
-	cmpEq_l64_imm       8, 0;
-	jmpRelIf_label      OUT;
-			output_l64      8;
-			deinit; # x
-			jmpRel_label      EXIT;
+    # if x == 0
+    cmpEq_l64_imm   32, 0;
+    jmpRelIf_label  OUT;
+		output_l64  32;
+		deinit;     # x
+		jmpRel_label EXIT;
 
+    label OUT;
+		add_l64_imm 32, 10; # x += 10
+		output_l64 32;
+		deinit;     # x
 
-	label OUT;
-			add_l64_imm 8, 10; # x += 10
-			output_l64 8;
-			deinit; # x
-
-	label EXIT;
-	ret;
+    label EXIT;
+    deinit;     # *argv
+    deinit;     # argc
+    ret;
 }

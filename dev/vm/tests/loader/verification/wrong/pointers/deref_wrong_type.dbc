@@ -1,25 +1,26 @@
-type primitive: int64 8
-type primitive: uint64 8
-type pointer: ptrint64 int64
-type fun: main {} int64
+type primitive: ui64 8
 
 function main {
 	# [0, 8) -> main ret_val
-	# [8, 24) -> x
-	# [24, 32) -> y
-	# [32, 40) -> z
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
 
-	init_type ptrint64;
-	init_type uint64;
-	init_type int64;
+	# [32, 48) -> x
+	# [48, 56) -> y
+	# [56, 64) -> z
 
-	mov_l64_imm         32, 1;
-	ref_lptr_any        8, 32;  # x = &z
-	load_l64_lptr       24, 8;  # y = *x
+	init_type ptr_i64;
+	init_type ui64;
+	init_type i64;
 
-	deinit;
-	deinit;
-	deinit;
+	mov_l64_imm         56, 1;
+	ref_lptr_any        32, 56;  # x = &z
+	load_l64_lptr       48, 32;  # y = *x
 
+	deinit; # z
+	deinit; # y
+	deinit; # x
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

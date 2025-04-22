@@ -1,18 +1,19 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-	# [0, 8) main ret_val
-	init_type 	int64; # [8, 16)
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+	init_type 	i64; # [32, 40)
 
-	mov_l32_imm 8, 5;
+	mov_l32_imm 32, 5;
 
 	jmpRel_label end;
 
 	label end;
 
-	output_l32 	8;
+	output_l32 	32;
 
 	deinit;
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

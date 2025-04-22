@@ -112,8 +112,7 @@ namespace compiler::backend_llvm {
 				}
 			}
 			variant_default {
-				CORE_PANIC(
-					base::strConcat("Type not handled yet: ", layout.toStringIdentification())
+				CORE_PANIC(base::strConcat("Type not handled yet: ", layout.toStringIdentification())
 				);
 			}
 		}
@@ -130,9 +129,7 @@ namespace compiler::backend_llvm {
 		for (const auto& param: parameters)
 			llvm_parameters.push_back(typeFromLayout(context, param));
 
-		return llvm::FunctionType::get(
-			typeFromLayout(context, return_type), llvm_parameters, false
-		);
+		return llvm::FunctionType::get(typeFromLayout(context, return_type), llvm_parameters, false);
 	}
 
 	/**
@@ -401,9 +398,7 @@ namespace compiler::backend_llvm {
 				break;
 			}
 			case Call: {
-				CORE_ASSERT(
-					lir_instruction.arguments.size() > 0, "call instruction without callee"
-				);
+				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
 				const auto output = lir_instruction.output.value();
 
@@ -454,8 +449,6 @@ namespace compiler::backend_llvm {
 					lir2LLVMInstruction(instruction, builder);
 				lir2LLVMInstruction(block->terminator, builder);
 			}
-
-			llvm::EliminateUnreachableBlocks(*fun);
 
 			return fun.get();
 		}

@@ -1,12 +1,9 @@
-type primitive: void 0
-type primitive: int64 8
-type fun: main {} int64
 type fun: run_every_opcode {} void
 
-function  {
-    init_type int64; # [0, 8) tmp1
-    init_type int64; # [8, 16) tmp2
-    init_type int64; # [16, 24) tmp3
+function run_every_opcode {
+    init_type i64; # [0, 8) tmp1
+    init_type i64; # [8, 16) tmp2
+    init_type i64; # [16, 24) tmp3
 
     mov_l64_imm            0, 0;
     mov_l64_l64            8, 0;
@@ -42,9 +39,11 @@ function  {
 
 function main {
     # [0, 8) main ret_val
-    init_type       int64; # [8, 16) x
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type       i64; # [32, 40) x
 
-    input_l64       8;
+    input_l64       32;
     label Loop;
         call_func           run_every_opcode;
         call_func           run_every_opcode;
@@ -52,10 +51,12 @@ function main {
         call_func           run_every_opcode;
         call_func           run_every_opcode;
 
-        sub_l64_imm         8, 1;
-        cmpEq_l64_imm       8, 0;
+        sub_l64_imm         32, 1;
+        cmpEq_l64_imm       32, 0;
         jmpRelNotIf_label   Loop;
 
     deinit; # x
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

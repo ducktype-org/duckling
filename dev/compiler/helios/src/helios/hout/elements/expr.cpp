@@ -265,8 +265,7 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType(
 				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
-	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee))
-	                                    )
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
 	                                    .getType()),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )

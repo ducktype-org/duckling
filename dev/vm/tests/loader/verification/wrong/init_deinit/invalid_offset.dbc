@@ -1,13 +1,14 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # [0, 8) -> main ret_val
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
+    # [32, 40) -> x
 
-	init_type           int64; # x
+	init_type           i64; # x
 	output_l64          4;
 	deinit; # x
 
+    deinit;             # *argv
+    deinit;             # argc
 	ret;
 }

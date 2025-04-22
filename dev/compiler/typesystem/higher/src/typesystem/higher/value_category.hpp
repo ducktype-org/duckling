@@ -34,7 +34,6 @@ namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 }
 
-// clang-format off
 MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
@@ -42,8 +41,6 @@ MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	USE,
 	DESTROY
 )
-
-// clang-format on
 
 namespace tsh {
 	/**

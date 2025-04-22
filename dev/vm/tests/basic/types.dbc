@@ -1,0 +1,23 @@
+type primitive: int64 8
+type primitive: in64 8
+type pointer: ptr_int64 int64
+
+function main {
+    # [0, 8) main ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+    init_type int64; # x [32, 40)
+    init_type in64; # y [40, 48)
+    
+    input_l64 32;
+    input_l64 40;
+    add_l64_l64 32, 40;
+    output_l64 32;
+
+    deinit; # y
+    deinit; # x
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

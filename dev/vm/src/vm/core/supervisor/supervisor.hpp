@@ -27,9 +27,8 @@ namespace vm {
 		// Each of the following methods should synchronize access to the processTable, but should
 		// not synchronize usage of each of the processes. Each process synchronizes its resources
 		// by itself
-		std::expected<PID, api::ApiError>           newProcess();
-		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request
-		);
-		std::expected<void, api::ApiError>          killProcess(PID pid);
+		std::expected<PID, api::ApiError> newProcess();
+		std::expected<api::Response, api::ApiError> doRequest(const api::SupervisorRequest& request);
+		std::expected<void, api::ApiError> killProcess(PID pid);
 	};
 }

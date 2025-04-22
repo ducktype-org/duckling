@@ -44,9 +44,8 @@ namespace compiler::helios::errors {
 			 */
 			template<class... VTs, class... Ts>
 			struct FlattenVariant<std::variant<VTs...>, Ts...> {
-				using type = Cat<
-					typename FlattenVariant<VTs...>::type,
-					typename FlattenVariant<Ts...>::type>;
+				using type
+					= Cat<typename FlattenVariant<VTs...>::type, typename FlattenVariant<Ts...>::type>;
 			};
 
 			/**
@@ -129,8 +128,8 @@ namespace compiler::helios::errors {
 		using VariantToUniqueTypes_t = VariantToUniqueTypes<Types...>::types;
 
 		template<class... Types>
-		using UniqueTypesVariant_t = UniqueTypesToVariant_t<
-			VariantToUniqueTypes_t<FlattenVariant_t<std::variant<Types...>>>>;
+		using UniqueTypesVariant_t
+			= UniqueTypesToVariant_t<VariantToUniqueTypes_t<FlattenVariant_t<std::variant<Types...>>>>;
 
 		/**
 		 * @brief For T and std::variant<Ts...>, check if T is in [Ts...].
@@ -233,9 +232,7 @@ namespace compiler::helios::errors {
 			if (oth.hasValue()) value_storage = oth.value();
 			if (oth.hasError()) {
 				if constexpr (HResult<T, Ts...>::ErrorIsVariant::value)
-					std::visit(
-						[&](auto&& erTp) { error_storage = ErrorType{ erTp }; }, oth.error()
-					);
+					std::visit([&](auto&& erTp) { error_storage = ErrorType{ erTp }; }, oth.error());
 				else
 					error_storage = oth.error();
 			}
@@ -376,8 +373,7 @@ namespace compiler::helios::errors {
 
 		void _throwOnInvalidStateAccess() const {
 			CORE_ASSERT(
-				error_storage.has_value() ^ value_storage.has_value(),
-				"HResult has an invalid state"
+				error_storage.has_value() ^ value_storage.has_value(), "HResult has an invalid state"
 			);
 		}
 	};
@@ -401,3 +397,8 @@ namespace compiler::helios::errors {
 	auto&& RES_VAR_NAME = new_value;                                                             \
 	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
 	var RES_VAR_NAME.value()
+
+#define UNPACK_RESULT_MOVE(var, new_value)                                                       \
+	auto&& RES_VAR_NAME = new_value;                                                             \
+	if (!RES_VAR_NAME.hasValue()) return compiler::helios::errors::HError(RES_VAR_NAME.error()); \
+	var std::move(RES_VAR_NAME).value()

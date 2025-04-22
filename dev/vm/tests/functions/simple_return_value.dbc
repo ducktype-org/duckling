@@ -2,9 +2,7 @@
 # input = n
 # output = n
 
-type primitive: int64 8
-type fun: main {} int64
-type fun: check {} int64
+type fun: check {} i64
 
 function check {
 	# [0, 8) check() ret_val
@@ -13,11 +11,16 @@ function check {
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type       int64; # [8, 16) check() ret_val
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+	
+	init_type       i64; # [32, 40) check() ret_val
 	call_func       check;
-	output_l64      8;
+	output_l64      32;
 
 	deinit;
+	deinit; # *argv
+	deinit; # argc 
 	ret;
 }

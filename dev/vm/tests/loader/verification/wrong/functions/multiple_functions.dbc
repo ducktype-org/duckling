@@ -1,6 +1,4 @@
-type primitive: int64 8
-type fun: main {} int64
-type fun: inner_func {} int64
+type fun: inner_func {} i64
 
 function inner_func {
 	# [0, 8) -> inner_func ret_val
@@ -16,7 +14,7 @@ function inner_func {
 
 function main {
 	# [0, 8) -> main ret_val
-	init_type           int64;
+	init_type           i64;
 	call_func           inner_func;
 	deinit;
 	ret;

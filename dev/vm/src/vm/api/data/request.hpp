@@ -8,6 +8,7 @@
 #include <vm/core/process/memory/pointer.hpp>
 
 #include <variant>
+#include <vector>
 
 namespace vm::api {
 	namespace request {
@@ -21,7 +22,9 @@ namespace vm::api {
 
 		struct Stop {};
 
-		struct Run {};
+		struct Run {
+			std::vector<std::string> args;
+		};
 
 		struct Input {
 			std::string input;
@@ -78,7 +81,10 @@ namespace vm::api {
 
 	struct StatusRequest {};
 
-	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest>;
+	struct ExitCodeRequest {};
+
+	using RequestVariant
+		= std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest, ExitCodeRequest>;
 
 	struct SupervisorRequest {
 		PID            pid;
@@ -88,5 +94,6 @@ namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
+	SupervisorRequest makeExitCodeRequest(PID pid);
 	SupervisorRequest makeIORequest(PID pid, IORequest&& data);
 }

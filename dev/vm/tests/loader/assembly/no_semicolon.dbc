@@ -1,6 +1,3 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
     label LB;
     mov_l64_imm 5, 10

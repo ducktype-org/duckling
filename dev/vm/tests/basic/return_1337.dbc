@@ -1,0 +1,14 @@
+type primitive: int64 8
+
+function main {
+	# [0, 8) main ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+	mov_l64_imm 0, 1337;
+
+	deinit;
+	deinit;
+
+	ret;
+}
