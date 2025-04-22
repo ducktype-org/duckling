@@ -185,6 +185,8 @@ TypeContext TypeContextBuilder::build() const {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
+	auto to_low_type
+		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {
 		variant_match(type) {
 			variant_case(vm::code::PrimitiveType, data) {
@@ -244,7 +246,7 @@ TypeContext TypeContextBuilder::build() const {
 				// of a new kind, see:
 				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
-					{ base::StrID("vt"), tctx.metadata->at(VISIT(SpecialTypes::get().vtable_ptr, tp, return tp.name)) }
+					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
 				fields.reserve(data.fields.size() + 1);
 				for (auto& field: data.fields)
@@ -276,7 +278,7 @@ TypeContext TypeContextBuilder::build() const {
 				// of a new kind, see:
 				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
-					{ base::StrID("vt"), tctx.metadata->at(VISIT(SpecialTypes::get().vtable_ptr, tp, return tp.name)) }
+					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
 				TypeRef tp       = tctx.metadata->at(data.name);
 				auto    get_type = [&](base::StrID name) -> TypeCRef {
