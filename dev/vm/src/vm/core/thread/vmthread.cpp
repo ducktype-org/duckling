@@ -131,16 +131,7 @@ namespace vm {
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
-		low::ByteCode bytecode;
-		constexpr u64 initializing_instructions_count = 5;
-		constexpr u64 instructions_per_argument_count = 4;
-		constexpr u64 call_deinit_instruction_count   = 13;
-		bytecode.reserve(
-			initializing_instructions_count + args.size() * instructions_per_argument_count
-			+ call_deinit_instruction_count
-		);
-
-		bytecode = {
+		low::ByteCode bytecode = {
 			MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),    // [0, 8) program ret_val
 			MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
 			MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
