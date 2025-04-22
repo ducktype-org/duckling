@@ -100,8 +100,7 @@ private:
 		assertTrue(virtualFileContent == "Hello, Virtual VFS!", "Virtual file content incorrect");
 
 		assertTrue(
-			vfs.isFile("vfs:/virtualDir/virtualFile.txt"),
-			"Virtual path is not recognized as a file"
+			vfs.isFile("vfs:/virtualDir/virtualFile.txt"), "Virtual path is not recognized as a file"
 		);
 		assertTrue(
 			vfs.isDirectory("vfs:/virtualDir"), "Virtual path is not recognized as a directory"
