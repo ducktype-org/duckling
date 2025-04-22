@@ -2,7 +2,6 @@
 # input = ""
 # output = "42"
 
-type fun: main {} i64
 type fun: foo { i64 } i64
 
 function foo {
@@ -19,14 +18,19 @@ function foo {
 }
 
 function main {
-    # [0, 8) main ret_val
-    init_type       i64; # [8, 16) foo ret_val
-    init_type       i64; # [16, 24) foo arg0
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+    init_type       i64; # [32, 40) foo ret_val
+    init_type       i64; # [40, 48) foo arg0
 
     call_func       foo;
 
-    output_l64 8;
+    output_l64 32;
 
     deinit; # foo ret_val
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

@@ -55,9 +55,9 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> run(PID pid) {
+	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Run{}))
+		    .doRequest(api::makeExecutorRequest(pid, request::Run{ args }))
 		    .transform(ignoreResponse);
 	}
 

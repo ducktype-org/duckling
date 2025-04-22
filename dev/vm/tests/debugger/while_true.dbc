@@ -1,13 +1,16 @@
-type fun: main {} i64
-
 function main {
 	# [0, 8) main ret_val
-	init_type			i64; # [8, 16) tmp
-	mov_l64_imm         8, 0;
+	# [8, 16) -> argc
+	# [16, 32) -> *argv
+	breakpoint;
+	init_type			i64; # [32, 40) tmp
+	mov_l64_imm         32, 0;
 	label Loop;
-		cmpEq_l64_imm		8, 0;
+		cmpEq_l64_imm		32, 0;
 		jmpRelIf_label 	  	Loop;
 
 	deinit; # temp
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }
