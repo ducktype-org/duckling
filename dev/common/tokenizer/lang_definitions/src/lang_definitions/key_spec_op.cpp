@@ -122,7 +122,6 @@ namespace lang_def {
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
-			{ Keyword::BCInheritable, "inheritable", KeywordFlags() },
 			{ Keyword::BCClass, "class", KeywordFlags() },
 			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
 			{ Keyword::BCInterface, "interface", KeywordFlags() },
@@ -130,10 +129,9 @@ namespace lang_def {
 			{ Keyword::BCImplements, "implements", KeywordFlags() },
 			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
 			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::True, "true", KeywordFlags() },
+			{ Keyword::False, "false", KeywordFlags() },
 		});
-
-    // `- 1` because of `Keywords::NotAKeword`
-    static_assert(LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size() == static_cast<usize>(Keyword::COUNT) - 1);
 
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable

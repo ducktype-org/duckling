@@ -46,18 +46,6 @@ namespace vm::loader::parser {
 		void dprint(std::ostream& out) const override;
 	};
 
-	struct Inheritable: AsmElement {
-		using AsmElement::AsmElement;
-
-		code::DataType data;
-
-		static MBox<Inheritable> parse(F8ParserState& state);
-
-		void dprint(std::ostream& out) const override;
-
-		~Inheritable() override = default;
-	};
-
 	struct OpCode final: AsmElement {
 		using AsmElement::AsmElement;
 
@@ -102,7 +90,6 @@ namespace vm::loader::parser {
 	struct ParsedFile final {
 		std::vector<Box<Func>>        functions;
 		std::vector<Box<Type>>        types;
-		std::vector<Box<Inheritable>> inheritables;
 		fs::FilePath                  source_file;
 
 		ParsedFile(fs::FilePath source_file);

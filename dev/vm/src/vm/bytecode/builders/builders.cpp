@@ -214,29 +214,7 @@ TypeContext TypeContextBuilder::build() const {
 						tctx.metadata->atMaybe(field.type)
 							.expect<UnknownSubtypeError>(data, field.name)
 					);
-				TypeRef tp       = tctx.metadata->at(data.name);
-				auto    get_type = [&](base::StrID name) -> TypeCRef {
-                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
-				};
-				base::Optional<vm::VTable> vtable = data.vtable.map([&](const auto& vt) {
-					VTable::Kind kind = VTable::Interface{};
-					variant_match(vt.kind) {
-						variant_case(DataType::VTable::Class, clazz) {
-							kind = VTable::Class{
-								.is_abstract = clazz.is_abstract,
-								.extends     = clazz.extends.map(get_type),
-							};
-						}
-					}
-					auto implements = vt.implements | std::views::transform(get_type)
-					                | std::ranges::to<std::vector>();
-					base::HashMap<base::StrID, TypeCRef> virtual_methods;
-					for (auto& method: vt.virtual_methods)
-						virtual_methods.put(method.name, get_type(method.type));
-
-					return vm::VTable(tp, kind, std::move(implements), std::move(virtual_methods));
-				});
-				tp->defineData(fields, std::move(vtable));
+				tctx.metadata->at(data.name)->defineData(fields, {});
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
@@ -256,6 +234,57 @@ TypeContext TypeContextBuilder::build() const {
 					parameters,
 					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
+			}
+			variant_case(vm::code::ClassType, data) {
+				// @TODO this is a placeholder until we add it as a proper type
+				// of a new kind, see:
+				// https://github.com/ducktype-org/duckling/issues/702
+				std::vector<std::pair<base::StrID, TypeRef>> fields{
+					{ base::StrID("vt"), tctx.metadata->at(base::StrID("VT")) }
+				};
+				fields.reserve(data.fields.size() + 1);
+				for (auto& field: data.fields)
+					fields.emplace_back(
+						field.name,
+						tctx.metadata->atMaybe(field.type)
+							.expect<UnknownSubtypeError>(data, field.name)
+					);
+				TypeRef tp       = tctx.metadata->at(data.name);
+				auto    get_type = [&](base::StrID name) -> TypeCRef {
+                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+				};
+				auto kind = VTable::Class{
+					.is_abstract = data.is_abstract,
+					.extends     = data.extends.map(get_type),
+				};
+				auto implements = data.implements | std::views::transform(get_type)
+				                | std::ranges::to<std::vector>();
+				base::HashMap<base::StrID, TypeCRef> virtual_methods;
+				for (auto& method: data.virtual_methods)
+					virtual_methods.put(method.name, get_type(method.type));
+				vm::VTable vtable(tp, kind, std::move(implements), std::move(virtual_methods));
+				tp->defineData(fields, std::move(vtable));
+			}
+			variant_case(vm::code::InterfaceType, data) {
+				// @TODO this is a placeholder until we add it as a proper type
+				// of a new kind, see:
+				// https://github.com/ducktype-org/duckling/issues/702
+				std::vector<std::pair<base::StrID, TypeRef>> fields{
+					{ base::StrID("vt"), tctx.metadata->at(base::StrID("VT")) }
+				};
+				TypeRef tp       = tctx.metadata->at(data.name);
+				auto    get_type = [&](base::StrID name) -> TypeCRef {
+                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+				};
+				auto implements = data.implements | std::views::transform(get_type)
+				                | std::ranges::to<std::vector>();
+				base::HashMap<base::StrID, TypeCRef> virtual_methods;
+				for (auto& method: data.virtual_methods)
+					virtual_methods.put(method.name, get_type(method.type));
+				vm::VTable vtable(
+					tp, VTable::Interface{}, std::move(implements), std::move(virtual_methods)
+				);
+				tp->defineData(fields, std::move(vtable));
 			}
 			variant_default { CORE_PANIC("bad type"); }
 		}

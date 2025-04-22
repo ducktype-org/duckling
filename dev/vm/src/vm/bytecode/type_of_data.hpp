@@ -5,7 +5,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 
-#include <ostream>
+#include <utility>
 
 namespace vm::code {
 	/**
@@ -77,64 +77,37 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Field is a building block of a datatype. It represents a storage
+	 * for value of some type.
+	 */
+	struct Field final: ElementBase {
+		Field() = default;
+
+		Field(base::StrID name, base::StrID type): name(name), type(type) {}
+
+		base::StrID name;
+		base::StrID type;
+
+		bool operator==(const Field& other) const {
+			return name == other.name && type == other.type;
+		}
+	};
+
+	/**
 	 * @brief Represents a structure with arbitrary types of fields.
 	 */
 	struct DataType final: ElementBase {
-		/**
-		 * @brief Field is a building block of a datatype. It represents a storage
-		 * for value of some type.
-		 */
-		struct Field final: ElementBase {
-			Field() = default;
-
-			Field(base::StrID name, base::StrID type): name(name), type(type) {}
-
-			base::StrID name;
-			base::StrID type;
-
-			bool operator==(const Field& other) const {
-				return name == other.name && type == other.type;
-			}
-		};
-
-		/**
-		 * @brief Represents the VTable classes and interfaces use for
-		 * dynamic dispatch. Plain datatypes don't have one.
-		 */
-		struct VTable {
-			struct Class {
-				bool                        is_abstract;
-				base::Optional<base::StrID> extends;
-
-				bool operator==(const Class& other) const = default;
-			};
-
-			struct Interface {
-				bool operator==(const Interface& other) const = default;
-			};
-
-			using Kind = std::variant<Interface, Class>;
-
-			Kind                     kind;
-			std::vector<base::StrID> implements;
-			std::vector<Field>       virtual_methods;
-
-			bool operator==(const VTable& other) const = default;
-		};
-
 		DataType() = default;
 
-		DataType(base::StrID name, std::vector<Field> fields, base::Optional<VTable> vtable):
+		DataType(base::StrID name, std::vector<Field> fields):
 			  name(name),
-			  fields(std::move(fields)),
-			  vtable(std::move(vtable)) {}
+			  fields(std::move(fields)) {}
 
-		base::StrID            name;
-		std::vector<Field>     fields;
-		base::Optional<VTable> vtable;
+		base::StrID        name;
+		std::vector<Field> fields;
 
 		bool operator==(const DataType& other) const {
-			return name == other.name && fields == other.fields && vtable == other.vtable;
+			return name == other.name && fields == other.fields;
 		}
 	};
 
@@ -178,6 +151,64 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents a class --- a data with virtual methods and inheritance.
+	 */
+	struct ClassType final: ElementBase {
+		ClassType() = default;
+
+		ClassType(
+			base::StrID                 name,
+			std::vector<Field>          fields,
+			bool                        is_abstract,
+			base::Optional<base::StrID> extends,
+			std::vector<base::StrID>    implements,
+			std::vector<Field>          virtual_methods
+		):
+			  name{ name },
+			  fields{ std::move(fields) },
+			  is_abstract{ is_abstract },
+			  extends{ extends },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
+
+		base::StrID                 name;
+		std::vector<Field>          fields;
+		bool                        is_abstract{};
+		base::Optional<base::StrID> extends;
+		std::vector<base::StrID>    implements;
+		std::vector<Field>          virtual_methods;
+
+		bool operator==(const ClassType& other) const {
+			return name == other.name && fields == other.fields && is_abstract == other.is_abstract
+			    && extends == other.extends && implements == other.implements
+			    && virtual_methods == other.virtual_methods;
+		}
+	};
+
+	/**
+	 * @brief Represents an interface. Interfaces do not hold any data.
+	 */
+	struct InterfaceType final: ElementBase {
+		InterfaceType() = default;
+
+		InterfaceType(
+			base::StrID name, std::vector<base::StrID> implements, std::vector<Field> virtual_methods
+		):
+			  name{ name },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
+
+		base::StrID              name;
+		std::vector<base::StrID> implements;
+		std::vector<Field>       virtual_methods;
+
+		bool operator==(const InterfaceType& other) const {
+			return name == other.name && implements == other.implements
+			    && virtual_methods == other.virtual_methods;
+		}
+	};
+
+	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
 	using TypeOfData = std::variant<
@@ -187,7 +218,9 @@ namespace vm::code {
 		DynamicTableType,
 		DataType,
 		VariantType,
-		FunctionType>;
+		FunctionType,
+		ClassType,
+		InterfaceType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);

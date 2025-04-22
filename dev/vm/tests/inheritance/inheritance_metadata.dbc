@@ -10,17 +10,17 @@ type data: POD {
     abc: i64,
 }
 
-inheritable I1: interface {
+type interface: I1 {
     virtual_methods: {
         foo: method_I1_int,
         bar: method_I1_int,
     };
 }
 
-inheritable I2: interface {
+type interface: I2 {
 }
 
-inheritable Parent: class {
+type class: Parent {
     fields: {
         foo: i64,
     };
@@ -29,8 +29,9 @@ inheritable Parent: class {
     };
 }
 
-inheritable Child: class {
+type class: Child {
     extends: Parent;
+    abstract: false;  # This is the case by default.
     implements: {I1, I2};
     fields: {
         foo: i64,
@@ -38,7 +39,8 @@ inheritable Child: class {
     };
 }
 
-inheritable PietMondrian: abstract class {
+type class: PietMondrian {
+    abstract: true;
 }
 
 function main {

@@ -221,8 +221,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
-				for (const auto& inh: parsed_file.inheritables)
-					insertType(inh->data, type_context_builder, log);
 			}
 
 			try {
