@@ -64,10 +64,7 @@ namespace fs {
 		Temporary,
 	};
 
-	enum class FileCategory {
-		File,
-		Directory
-	};
+	enum class FileCategory { File, Directory };
 
 	class FilePath {
 		using WeakContent = std::weak_ptr<base::OwningView>;
@@ -101,7 +98,9 @@ namespace fs {
 		 * @param category Category of the new FilePath object.
 		 * @return A new FilePath object.
 		 */
-		static FilePath createFilePathObj(const std::filesystem::path& path, FileType type, FileCategory category);
+		static FilePath createFilePathObj(
+			const std::filesystem::path& path, FileType type, FileCategory category
+		);
 
 		/**
 		 * A helper function creating a new unique path with a prefix of this object's path.
@@ -158,9 +157,8 @@ namespace fs {
 		 * @return A path to the newly created file.
 		 */
 		[[nodiscard]]
-		FilePath createFileIn(
-			std::string_view new_file_content, std::string_view custom_name = ""
-		) const;
+		FilePath createFileIn(std::string_view new_file_content, std::string_view custom_name = "")
+			const;
 
 		/**
 		 * Creates a temporary file with a given content. The file is managed by the system and has
@@ -170,13 +168,13 @@ namespace fs {
 		 */
 		static FilePath createTempFile(std::string_view content);
 
-		 /**
-		  * Creates a virtual file with a given content. The file is managed by the system and has
-		  * a random name.
-		  * @param content The content, that will be inserted into the a file.
-		  * @return A FilePath with the new virtual file.
-		  */
-		 static FilePath createVirtualFile(std::string_view content);
+		/**
+		 * Creates a virtual file with a given content. The file is managed by the system and has
+		 * a random name.
+		 * @param content The content, that will be inserted into the a file.
+		 * @return A FilePath with the new virtual file.
+		 */
+		static FilePath createVirtualFile(std::string_view content);
 
 
 		[[nodiscard]]

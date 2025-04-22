@@ -1,6 +1,6 @@
 #include <filesystem/file.hpp>
-#include <tester/tester.hpp>
 #include <filesystem/vfs.hpp>
+#include <tester/tester.hpp>
 
 class SimpleFileSystemTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -62,34 +62,39 @@ private:
 	}
 
 	void vfsTest() {
-        VFS vfs;
+		VFS vfs;
 
-        // Test createDirectory and listDirectory
-        assertTrue(vfs.createDirectory("/testDir"), "Failed to create directory");
-        assertTrue(vfs.createDirectory("/testDir/subDir"), "Failed to create subdirectory");
-        auto dirContents = vfs.listDirectory("/testDir");
-        assertTrue(dirContents.size() == 1 && dirContents[0] == "subDir", "Directory contents incorrect");
+		// Test createDirectory and listDirectory
+		assertTrue(vfs.createDirectory("/testDir"), "Failed to create directory");
+		assertTrue(vfs.createDirectory("/testDir/subDir"), "Failed to create subdirectory");
+		auto dirContents = vfs.listDirectory("/testDir");
+		assertTrue(
+			dirContents.size() == 1 && dirContents[0] == "subDir", "Directory contents incorrect"
+		);
 
-        // Test createFile and exists
-        assertTrue(vfs.createFile("/testDir/file.txt"), "Failed to create file");
-        assertTrue(vfs.exists("/testDir/file.txt"), "File does not exist");
+		// Test createFile and exists
+		assertTrue(vfs.createFile("/testDir/file.txt"), "Failed to create file");
+		assertTrue(vfs.exists("/testDir/file.txt"), "File does not exist");
 
-        // Test writeFile and readFile
-        assertTrue(vfs.writeFile("/testDir/file.txt", "Hello, VFS!"), "Failed to write to file");
-        auto fileContent = vfs.readFile("/testDir/file.txt");
-        assertTrue(fileContent == "Hello, VFS!", "File content incorrect");
+		// Test writeFile and readFile
+		assertTrue(vfs.writeFile("/testDir/file.txt", "Hello, VFS!"), "Failed to write to file");
+		auto fileContent = vfs.readFile("/testDir/file.txt");
+		assertTrue(fileContent == "Hello, VFS!", "File content incorrect");
 
-        // Test isFile and isDirectory
-        assertTrue(vfs.isFile("/testDir/file.txt"), "Path is not recognized as a file");
-        assertTrue(vfs.isDirectory("/testDir"), "Path is not recognized as a directory");
+		// Test isFile and isDirectory
+		assertTrue(vfs.isFile("/testDir/file.txt"), "Path is not recognized as a file");
+		assertTrue(vfs.isDirectory("/testDir"), "Path is not recognized as a directory");
 
-        // Test getRootPath
-        assertTrue(vfs.getRootPath() == "vroot", "Root path incorrect");
+		// Test getRootPath
+		assertTrue(vfs.getRootPath() == "vroot", "Root path incorrect");
 
-        // Test edge cases
-        assertTrue(!vfs.createFile("/"), "Should not allow file creation at root");
-        assertTrue(!vfs.createDirectory("/testDir/file.txt"), "Should not allow directory creation at file path");
-    }
+		// Test edge cases
+		assertTrue(!vfs.createFile("/"), "Should not allow file creation at root");
+		assertTrue(
+			!vfs.createDirectory("/testDir/file.txt"),
+			"Should not allow directory creation at file path"
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/common/filesystem/tests/");

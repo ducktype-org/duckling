@@ -5,16 +5,16 @@
 
 #include "file.hpp"
 
+#include "vfs.hpp"
+
 #include "base/raw_view.hpp"
-#include <algorithm>
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/perfect_hash.hpp>
 
+#include <algorithm>
 #include <fstream>
 #include <random>
-
-#include "vfs.hpp"
 
 namespace {
 	std::filesystem::path
@@ -41,8 +41,9 @@ namespace fs {
 	FilePath::ContentMap FilePath::to_content;
 
 	FilePath FilePath::getDefaultTempPath() {
-		static FilePath temp_directory_path
-			= createFilePathObj(std::filesystem::temp_directory_path(), FileType::Temporary, FileCategory::Directory);
+		static FilePath temp_directory_path = createFilePathObj(
+			std::filesystem::temp_directory_path(), FileType::Temporary, FileCategory::Directory
+		);
 		return temp_directory_path;
 	}
 
@@ -53,7 +54,8 @@ namespace fs {
 	}
 
 	std::filesystem::path FilePath::genPathInMe(std::string_view custom_name) const {
-		if (!(category == FileCategory::Directory)) throw base::LogicError("Parent is not a directory");
+		if (!(category == FileCategory::Directory))
+			throw base::LogicError("Parent is not a directory");
 		if (!(type == FileType::Temporary || type == FileType::Virtual))
 			throw base::LogicError("Parent is not temporary or virtual");
 
@@ -63,8 +65,8 @@ namespace fs {
 		else {
 			file_name = path / custom_name;
 
-			if ((type == FileType::Virtual && vfs.exists(file_name)) ||
-				(type != FileType::Virtual && exists(file_name)))
+			if ((type == FileType::Virtual && vfs.exists(file_name))
+			    || (type != FileType::Virtual && exists(file_name)))
 				throw base::LogicError(base::strConcat(
 					"Cannot create a file/dir with name \"",
 					custom_name,
@@ -74,9 +76,11 @@ namespace fs {
 		return file_name;
 	}
 
-	FilePath FilePath::createFilePathObj(const std::filesystem::path& path, FileType type, FileCategory category) {
-		auto&& obj       = FilePath(path);
-		obj.type	   = type;
+	FilePath FilePath::createFilePathObj(
+		const std::filesystem::path& path, FileType type, FileCategory category
+	) {
+		auto&& obj   = FilePath(path);
+		obj.type     = type;
 		obj.category = category;
 		return obj;
 	}
@@ -89,9 +93,7 @@ namespace fs {
 		return getDefaultVirtualPath().createFileIn(content);
 	}
 
-	FilePath FilePath::createTempDirectory() {
-		return getDefaultTempPath().createDirectoryIn();
-	}
+	FilePath FilePath::createTempDirectory() { return getDefaultTempPath().createDirectoryIn(); }
 
 	FilePath FilePath::createVirtualDirectory() {
 		return getDefaultVirtualPath().createDirectoryIn();
@@ -111,9 +113,8 @@ namespace fs {
 		return createFilePathObj(new_temp_dir, type, FileCategory::Directory);
 	}
 
-	FilePath FilePath::createFileIn(
-		std::string_view new_file_content, std::string_view custom_name
-	) const {
+	FilePath FilePath::createFileIn(std::string_view new_file_content, std::string_view custom_name)
+		const {
 		if (!(type == FileType::Temporary || type == FileType::Virtual))
 			throw base::LogicError("Parent is not temporary or virtual");
 		if (!(category == FileCategory::Directory))
@@ -121,7 +122,7 @@ namespace fs {
 
 		auto&& new_temp_file = genPathInMe(custom_name);
 
-		if(type != FileType::Virtual){
+		if (type != FileType::Virtual) {
 			std::ofstream temp_file(new_temp_file);
 			temp_file << new_file_content;
 			temp_file.close();
@@ -142,9 +143,10 @@ namespace fs {
 				return FileContent(weak_content.lock());
 		}
 
-		FileContent file_content(
-			std::make_shared<base::OwningView>(type != FileType::Virtual ? getSimpleFileContent(path.c_str()) : getSimpleVirtualFileContent(path.c_str()))
-		);
+		FileContent file_content(std::make_shared<base::OwningView>(
+			type != FileType::Virtual ? getSimpleFileContent(path.c_str())
+									  : getSimpleVirtualFileContent(path.c_str())
+		));
 
 		to_content.put(path, file_content.content);
 
@@ -152,8 +154,8 @@ namespace fs {
 	}
 
 	std::expected<FileContent, std::string> FilePath::getContentSafe() const {
-		if ((type != FileType::Virtual && !exists(path)) 
-				|| (type == FileType::Virtual && vfs.exists(path))) {
+		if ((type != FileType::Virtual && !exists(path))
+		    || (type == FileType::Virtual && vfs.exists(path))) {
 			return std::unexpected(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));
@@ -174,15 +176,14 @@ namespace fs {
 		return path.filename();
 	}
 
-	bool FilePath::isDirectory() const noexcept { 
+	bool FilePath::isDirectory() const noexcept {
 		if (type == FileType::Virtual) return vfs.isDirectory(path);
-		return is_directory(path); 
+		return is_directory(path);
 	}
 
 	std::chrono::file_clock::time_point FilePath::getModifyTime() const {
-		if (type == FileType::Virtual){
+		if (type == FileType::Virtual)
 			throw base::LogicError("Cannot get modify time of virtual file");
-		}
 		return last_write_time(path);
 	}
 
@@ -193,23 +194,18 @@ namespace fs {
 	std::string FilePath::extension() const { return path.extension(); }
 
 	std::filesystem::directory_iterator FilePath::directoryIterator() const {
-		if (type == FileType::Virtual) {
+		if (type == FileType::Virtual)
 			throw base::LogicError("Cannot get directory iterator of virtual file");
-		}
 		return std::filesystem::directory_iterator(path);
 	}
 
 	std::vector<std::string> FilePath::listDirectory() const {
-		if(category == FileCategory::File) 
-			throw base::LogicError("Path is not a directory");
+		if (category == FileCategory::File) throw base::LogicError("Path is not a directory");
 
-		if (type == FileType::Virtual) {
-			return vfs.listDirectory(path);
-		}
+		if (type == FileType::Virtual) return vfs.listDirectory(path);
 		std::vector<std::string> files;
-		for (const auto& entry: std::filesystem::directory_iterator(path)) {
+		for (const auto& entry: std::filesystem::directory_iterator(path))
 			files.push_back(entry.path().filename().string());
-		}
 		return files;
 	}
 
@@ -222,7 +218,7 @@ namespace fs {
 		auto fpos = file.tellg();
 		file.seekg(0, std::ios::end);
 		std::streamoff fsize     = file.tellg() - fpos;
-		auto          file_size = static_cast<usize>(fsize);
+		auto           file_size = static_cast<usize>(fsize);
 		file.seekg(0, std::ios::beg);
 
 		// should read full file:
@@ -234,7 +230,8 @@ namespace fs {
 
 	base::OwningView getSimpleVirtualFileContent(const std::string& file_name) {
 		auto content = vfs.readFile(file_name);
-		if (content.empty()) throw base::LogicError(std::string("virtual file does not exist: ") + file_name);
+		if (content.empty())
+			throw base::LogicError(std::string("virtual file does not exist: ") + file_name);
 
 		auto r_array = new byte[content.size()];
 		std::ranges::copy(content, reinterpret_cast<char*>(r_array));
