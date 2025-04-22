@@ -1,3 +1,6 @@
+function foo {
+    init_type i64;
+}
 
 function main {
     init_type       i64;
