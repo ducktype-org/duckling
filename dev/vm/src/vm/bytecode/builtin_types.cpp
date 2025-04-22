@@ -39,7 +39,7 @@ namespace vm::code {
 				base::StrID("i64")
 			)),
 
-            SpecialTypes::get().vtable_ptr,
+			SpecialTypes::get().vtable_ptr,
 		};
 		builders::TypeContextBuilder type_context_builder;
 

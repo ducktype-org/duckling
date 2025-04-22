@@ -152,8 +152,8 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents a type that is neither primitive nor composite.
-     * Values of this kind can offer some operations, but they are opaque
-     * to the bytecode program. Used for VTables.
+	 * Values of this kind can offer some operations, but they are opaque
+	 * to the bytecode program. Used for VTables.
 	 */
 	struct OpaqueType final: ElementBase {
 		OpaqueType() = default;
@@ -165,8 +165,8 @@ namespace vm::code {
 
 		bool operator==(const OpaqueType& other) const {
 			return name == other.name && size == other.size;
-        }
-    };
+		}
+	};
 
 	/**
 	 * @brief Represents a class --- a data with virtual methods and inheritance.

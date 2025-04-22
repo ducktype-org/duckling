@@ -376,7 +376,7 @@ namespace vm::loader::parser {
 				tp.bytecode_pos = *out->position;
 				out->datatype   = tp;
 			}
-            break;
+			break;
 		}
 		case lang_def::Keyword::BCClass:
 		case lang_def::Keyword::BCInterface: {

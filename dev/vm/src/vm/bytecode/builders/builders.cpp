@@ -185,6 +185,7 @@ TypeContext TypeContextBuilder::build() const {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
+	// @TODOB this is silly
 	auto to_low_type
 		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {
@@ -242,9 +243,6 @@ TypeContext TypeContextBuilder::build() const {
 				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
 			}
 			variant_case(vm::code::ClassType, data) {
-				// @TODO this is a placeholder until we add it as a proper type
-				// of a new kind, see:
-				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
 					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
@@ -274,9 +272,6 @@ TypeContext TypeContextBuilder::build() const {
 				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_case(vm::code::InterfaceType, data) {
-				// @TODO this is a placeholder until we add it as a proper type
-				// of a new kind, see:
-				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
 					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};

@@ -10,7 +10,7 @@ namespace vm::code {
 	 * These types are singled out as there is custom logic for handling them.
 	 * For example, by declaring the VTablePtr as special,
 	 * we can check that each class has the VTable pointer
-     * as its first member without relying on type names.
+	 * as its first member without relying on type names.
 	 */
 	struct SpecialTypes {
 		TypeOfData vtable_ptr;
