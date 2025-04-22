@@ -7,7 +7,7 @@ VFS::VFSNode::VFSNode(std::string name, bool isDir):
 	  content("") {}
 
 // VFS implementation
-VFS::VFS() { root = std::make_unique<VFSNode>("vroot", true); }
+VFS::VFS() { root = std::make_unique<VFSNode>("vfs:", true); }
 
 std::vector<std::string> VFS::splitPath(const std::filesystem::path& path) {
 	std::vector<std::string> parts;
@@ -53,6 +53,8 @@ VFS::VFSNode* VFS::getParentNode(const std::filesystem::path& path, bool createP
 }
 
 bool VFS::createFile(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return false;
+	// Check if path is valid
 	if (path.empty() || path == getRootPath()) return false;
 
 	std::filesystem::path filename = path.filename();
@@ -71,6 +73,7 @@ bool VFS::createFile(const std::filesystem::path& path) {
 }
 
 bool VFS::writeFile(const std::filesystem::path& path, const std::string& content) {
+	if (!isVirtualPath(path)) return false;
 	VFSNode* node = findNode(path);
 
 	if (!node || node->is_directory) return false;
@@ -80,6 +83,7 @@ bool VFS::writeFile(const std::filesystem::path& path, const std::string& conten
 }
 
 std::string VFS::readFile(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return "";
 	VFSNode* node = findNode(path);
 
 	if (!node || node->is_directory) return "";
@@ -88,7 +92,8 @@ std::string VFS::readFile(const std::filesystem::path& path) {
 }
 
 bool VFS::createDirectory(const std::filesystem::path& path) {
-	if (path.empty() || path == getRootPath()) return false;
+	if (!isVirtualPath(path)) return false;
+	if (path == getRootPath()) return false;
 
 	std::filesystem::path dirName = path.filename();
 
@@ -105,6 +110,7 @@ bool VFS::createDirectory(const std::filesystem::path& path) {
 }
 
 std::vector<std::string> VFS::listDirectory(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return {};
 	VFSNode* node = findNode(path);
 
 	if (!node || !node->is_directory) return {};
@@ -116,14 +122,24 @@ std::vector<std::string> VFS::listDirectory(const std::filesystem::path& path) {
 	return contents;
 }
 
-bool VFS::exists(const std::filesystem::path& path) { return findNode(path) != nullptr; }
+bool VFS::exists(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return false;
+	return findNode(path) != nullptr;
+}
 
 bool VFS::isFile(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return false;
 	VFSNode* node = findNode(path);
 	return node && !node->is_directory;
 }
 
 bool VFS::isDirectory(const std::filesystem::path& path) {
+	if (!isVirtualPath(path)) return false;
 	VFSNode* node = findNode(path);
 	return node && node->is_directory;
+}
+
+bool VFS::isVirtualPath(const std::filesystem::path& path) {
+	if (path.empty()) return false;
+	return *path.begin() == "vfs:";
 }

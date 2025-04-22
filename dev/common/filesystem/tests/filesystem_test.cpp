@@ -65,35 +65,55 @@ private:
 	void vfsTest() {
 		VFS vfs;
 
-		// Test createDirectory and listDirectory
-		assertTrue(vfs.createDirectory("/testDir"), "Failed to create directory");
-		assertTrue(vfs.createDirectory("/testDir/subDir"), "Failed to create subdirectory");
-		auto dirContents = vfs.listDirectory("/testDir");
+		// Test createDirectory and listDirectory with real paths
+		assertTrue(!vfs.createDirectory("/testDir"), "Not a virtual path");
+		// Test getRootPath
+		assertTrue(vfs.getRootPath() == "vfs:", "Root path incorrect");
+
+		// Test edge cases with real paths
+		assertTrue(!vfs.createFile("vfs:"), "Should not allow file creation at root");
+
+		// Test virtual paths
+		assertTrue(vfs.createDirectory("vfs:/virtualDir"), "Failed to create virtual directory");
 		assertTrue(
-			dirContents.size() == 1 && dirContents[0] == "subDir", "Directory contents incorrect"
+			vfs.createDirectory("vfs:/virtualDir/virtualSubDir"),
+			"Failed to create virtual subdirectory"
+		);
+		assertTrue(
+			vfs.createDirectory("vfs:/test/random/long/path"),
+			"Failed to create virtual subdirectory"
+		);
+		auto virtualDirContents = vfs.listDirectory("vfs:/virtualDir");
+		assertTrue(
+			virtualDirContents.size() == 1 && virtualDirContents[0] == "virtualSubDir",
+			"Virtual directory contents incorrect"
 		);
 
-		// Test createFile and exists
-		assertTrue(vfs.createFile("/testDir/file.txt"), "Failed to create file");
-		assertTrue(vfs.exists("/testDir/file.txt"), "File does not exist");
-
-		// Test writeFile and readFile
-		assertTrue(vfs.writeFile("/testDir/file.txt", "Hello, VFS!"), "Failed to write to file");
-		auto fileContent = vfs.readFile("/testDir/file.txt");
-		assertTrue(fileContent == "Hello, VFS!", "File content incorrect");
-
-		// Test isFile and isDirectory
-		assertTrue(vfs.isFile("/testDir/file.txt"), "Path is not recognized as a file");
-		assertTrue(vfs.isDirectory("/testDir"), "Path is not recognized as a directory");
-
-		// Test getRootPath
-		assertTrue(vfs.getRootPath() == "vroot", "Root path incorrect");
-
-		// Test edge cases
-		assertTrue(!vfs.createFile("/"), "Should not allow file creation at root");
 		assertTrue(
-			!vfs.createDirectory("/testDir/file.txt"),
-			"Should not allow directory creation at file path"
+			vfs.createFile("vfs:/virtualDir/virtualFile.txt"), "Failed to create virtual file"
+		);
+		assertTrue(vfs.exists("vfs:/virtualDir/virtualFile.txt"), "Virtual file does not exist");
+
+		assertTrue(
+			vfs.writeFile("vfs:/virtualDir/virtualFile.txt", "Hello, Virtual VFS!"),
+			"Failed to write to virtual file"
+		);
+		auto virtualFileContent = vfs.readFile("vfs:/virtualDir/virtualFile.txt");
+		assertTrue(virtualFileContent == "Hello, Virtual VFS!", "Virtual file content incorrect");
+
+		assertTrue(
+			vfs.isFile("vfs:/virtualDir/virtualFile.txt"),
+			"Virtual path is not recognized as a file"
+		);
+		assertTrue(
+			vfs.isDirectory("vfs:/virtualDir"), "Virtual path is not recognized as a directory"
+		);
+
+		// Test edge cases with virtual paths
+		assertTrue(!vfs.createFile("vfs:/"), "Should not allow file creation at virtual root");
+		assertTrue(
+			!vfs.createDirectory("vfs:/virtualDir/virtualFile.txt"),
+			"Should not allow directory creation at virtual file path"
 		);
 	}
 
@@ -102,7 +122,7 @@ private:
 		auto virtualDir = fs::FilePath::createVirtualDirectory();
 		assertTrue(virtualDir.isDirectory(), "Virtual directory was not created correctly");
 		assertTrue(
-			virtualDir.strView().find("vroot") != std::string::npos,
+			virtualDir.strView().find("vfs:") != std::string::npos,
 			"Virtual directory path is incorrect"
 		);
 

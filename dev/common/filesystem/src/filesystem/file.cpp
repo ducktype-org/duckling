@@ -39,11 +39,10 @@ namespace {
 
 namespace fs {
 	FilePath::FilePath(const std::filesystem::path& path) {
-		if (!path.empty() && *path.begin() == "vroot") {
-			// Handle virtual paths
-			this->path = path;  // Do not canonicalize virtual paths
+		if (VFS::isVirtualPath(path)) {
+			this->path = path;
+			this->type = FileType::Virtual;
 		} else {
-			// Handle real filesystem paths
 			this->path = canonical(absolute(path));
 		}
 	}

@@ -29,6 +29,13 @@ public:
 	bool isFile(const std::filesystem::path& path);
 	bool isDirectory(const std::filesystem::path& path);
 
+	/**
+	 * Checks if the path is a virtual path.
+	 * @param path The path to check.
+	 * @return True if the path is a virtual path, false otherwise.
+	 */
+	static bool isVirtualPath(const std::filesystem::path& path);
+
 	[[nodiscard]]
 	std::filesystem::path getRootPath() const {
 		return root->name;

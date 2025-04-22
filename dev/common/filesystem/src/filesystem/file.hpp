@@ -176,7 +176,6 @@ namespace fs {
 		 */
 		static FilePath createVirtualFile(std::string_view content);
 
-
 		[[nodiscard]]
 		FileContent getContent() const;
 		[[nodiscard]]
