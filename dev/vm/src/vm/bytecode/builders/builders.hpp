@@ -167,6 +167,7 @@ namespace vm::code::builders {
 		void handleLabel(instructions::Op_label label);
 		void handleDeinit();
 		void handleRet();
+		void checkInstruction(const Instruction& instruction);
 
 		usize pushStackState(opargs::Type type);
 

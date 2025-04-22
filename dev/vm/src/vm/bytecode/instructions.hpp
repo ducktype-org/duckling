@@ -21,6 +21,20 @@ namespace vm::code {
 	 * @brief `instructions` namespace encapsulates available VM instructions.
 	 */
 	namespace instructions {
+		template <typename T>
+		concept TwoArgumentOpcode = requires(T t) {
+			t.arg0;
+			t.arg1;
+		};
+	
+		template <typename T>
+		concept OneArgumentOpcode = requires(T t) {
+			t.arg0;
+		} && !TwoArgumentOpcode<T>;
+	
+		template <typename T>
+		concept ZeroArgumentOpcode = !OneArgumentOpcode<T> and !TwoArgumentOpcode<T>;	
+
 #define HANDLE_OPCODE_0ARGS(opcode)                                                   \
 	struct Op_##opcode final: ElementBase {                                           \
 		constexpr bool operator==(const Op_##opcode&) const noexcept { return true; } \

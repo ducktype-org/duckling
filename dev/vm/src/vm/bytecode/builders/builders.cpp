@@ -1,4 +1,7 @@
 #include "builders.hpp"
+#include <algorithm>
+#include <iostream>
+#include <optional>
 
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
@@ -31,6 +34,61 @@ vm::code::Function FunctionBuilder::build() const {
 	return function;
 }
 
+void FunctionBuilder::checkInstruction(const Instruction& instruction) {
+    // Włuskuj spowrotem do warianta
+    auto args = std::visit(
+        []<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+            if constexpr (instructions::TwoArgumentOpcode<T>)
+                return { instr.arg0, instr.arg1 };
+            else if constexpr (instructions::OneArgumentOpcode<T>)
+                return { instr.arg0 };
+            else
+                return {};
+        },
+        instruction
+    );
+
+	auto find_in_stack = [this](usize target_position) {
+
+		auto it = std::ranges::find_if(local_stack,
+			[target_position](const LocalStackEntry& entry) {
+				return entry.local_stack_position == target_position;
+			});
+
+		if (it != local_stack.end()) {
+			return base::Optional<LocalStackEntry>(*it);
+		} else {
+			return base::Optional<LocalStackEntry>();
+		}
+	};
+
+    // Tutaj już możemy po ludzku matchować jak chcemy.
+    for (auto arg: args) {
+        variant_match(arg) {
+			variant_case(opargs::StackLocalI8, local) {
+				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
+				if (entry.type_size != 1) throw InvalidInstructionArgumentSize();
+			}
+			variant_case(opargs::StackLocalI16, local) {
+				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
+				if (entry.type_size != 2) throw InvalidInstructionArgumentSize();
+			}
+			variant_case(opargs::StackLocalI32, local) {
+				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
+				if (entry.type_size != 4) throw InvalidInstructionArgumentSize();
+			}
+			variant_case(opargs::StackLocalI64, local) {
+				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
+				if (entry.type_size != 8) throw InvalidInstructionArgumentSize();
+			}
+			variant_case(opargs::StackLocalAny, local) {
+				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
+				(void) entry;
+			}
+        }
+    }
+}
+
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
 	variant_match(instruction) {
@@ -56,6 +114,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			handleRet();
 		}
 	}
+	checkInstruction(instruction);
 	instructions.push_back(instruction);
 }
 

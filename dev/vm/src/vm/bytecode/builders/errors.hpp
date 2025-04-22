@@ -95,4 +95,12 @@ namespace vm::code::builders {
 
 		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
+
+	class InvalidInstructionArgumentSize: public BuilderError {
+		public:
+			constexpr const static std ::string_view ERR_MSG
+				= "Invalid instruction argument size.";
+	
+				InvalidInstructionArgumentSize(): BuilderError(base ::strConcat(ERR_MSG)) {}
+		};
 }
