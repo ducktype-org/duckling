@@ -191,18 +191,18 @@ TypeContext TypeContextBuilder::build() const {
 			}
 			variant_case(vm::code::PointerType, data) {
 				tctx.metadata->at(data.name)->definePointer(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::StaticTableType, data) {
 				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner),
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
 				tctx.metadata->at(data.name)->defineDynamicTable(
-					tctx.metadata->atMaybe(data.inner).expect<MissingSubtypeError>(data, data.inner)
+					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::DataType, data) {
@@ -212,11 +212,11 @@ TypeContext TypeContextBuilder::build() const {
 					fields.emplace_back(
 						field.name,
 						tctx.metadata->atMaybe(field.type)
-							.expect<MissingSubtypeError>(data, field.name)
+							.expect<UnknownSubtypeError>(data, field.name)
 					);
 				TypeRef tp       = tctx.metadata->at(data.name);
 				auto    get_type = [&](base::StrID name) -> TypeCRef {
-                    return tctx.getMetadata().atMaybe(name).expect<MissingSubtypeError>(data, name);
+                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
 				};
 				base::Optional<vm::VTable> vtable = data.vtable.map([&](const auto& vt) {
 					VTable::Kind kind = VTable::Interface{};
@@ -243,7 +243,7 @@ TypeContext TypeContextBuilder::build() const {
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(
-						tctx.metadata->atMaybe(variant).expect<MissingSubtypeError>(data, variant)
+						tctx.metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
 					);
 				tctx.metadata->at(data.name)->defineVariant(variants);
 			}
@@ -254,7 +254,7 @@ TypeContext TypeContextBuilder::build() const {
 					parameters.emplace_back(tctx.metadata->at(param));
 				tctx.metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result).expect<MissingSubtypeError>(data, data.result)
+					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
 			variant_default { CORE_PANIC("bad type"); }
