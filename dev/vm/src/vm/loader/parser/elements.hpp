@@ -88,9 +88,9 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>>        functions;
-		std::vector<Box<Type>>        types;
-		fs::FilePath                  source_file;
+		std::vector<Box<Func>> functions;
+		std::vector<Box<Type>> types;
+		fs::FilePath           source_file;
 
 		ParsedFile(fs::FilePath source_file);
 

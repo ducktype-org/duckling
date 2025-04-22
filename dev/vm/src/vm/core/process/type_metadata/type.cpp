@@ -58,7 +58,7 @@ namespace vm {
 
 	void Type::defineData(
 		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		base::Optional<VTable>                              vtable
+		base::Optional<InheritanceMetadata>                 inheritance_metadata
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
@@ -70,8 +70,8 @@ namespace vm {
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		data.vtable = std::move(vtable);
-		kind        = data;
+		data.inheritance_metadata = std::move(inheritance_metadata);
+		kind                      = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -255,10 +255,10 @@ namespace vm {
 	}
 
 	// inheritance
-	base::Optional<const VTable&> Type::getVTable() const {
+	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
-				if (data.vtable.has_value()) return data.vtable.value();
+				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
 			}
 		}
 		return {};

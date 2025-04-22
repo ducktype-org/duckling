@@ -67,7 +67,7 @@ namespace vm {
 		void defineDynamicTable(TypeRef inner);
 		void defineData(
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			base::Optional<VTable>                              vtable
+			base::Optional<InheritanceMetadata>                 inheritance_metadata
 		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
@@ -137,7 +137,7 @@ namespace vm {
 
 		// inheritance
 		[[nodiscard]]
-		base::Optional<const VTable&> getVTable() const;
+		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
 
 		// variant
 		[[nodiscard]]

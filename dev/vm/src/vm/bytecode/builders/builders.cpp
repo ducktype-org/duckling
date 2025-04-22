@@ -253,7 +253,7 @@ TypeContext TypeContextBuilder::build() const {
 				auto    get_type = [&](base::StrID name) -> TypeCRef {
                     return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
 				};
-				auto kind = VTable::Class{
+				auto kind = InheritanceMetadata::Class{
 					.is_abstract = data.is_abstract,
 					.extends     = data.extends.map(get_type),
 				};
@@ -262,8 +262,10 @@ TypeContext TypeContextBuilder::build() const {
 				base::HashMap<base::StrID, TypeCRef> virtual_methods;
 				for (auto& method: data.virtual_methods)
 					virtual_methods.put(method.name, get_type(method.type));
-				vm::VTable vtable(tp, kind, std::move(implements), std::move(virtual_methods));
-				tp->defineData(fields, std::move(vtable));
+				vm::InheritanceMetadata inheritance_metadata(
+					tp, kind, std::move(implements), std::move(virtual_methods)
+				);
+				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_case(vm::code::InterfaceType, data) {
 				// @TODO this is a placeholder until we add it as a proper type
@@ -281,10 +283,13 @@ TypeContext TypeContextBuilder::build() const {
 				base::HashMap<base::StrID, TypeCRef> virtual_methods;
 				for (auto& method: data.virtual_methods)
 					virtual_methods.put(method.name, get_type(method.type));
-				vm::VTable vtable(
-					tp, VTable::Interface{}, std::move(implements), std::move(virtual_methods)
+				vm::InheritanceMetadata inheritance_metadata(
+					tp,
+					InheritanceMetadata::Interface{},
+					std::move(implements),
+					std::move(virtual_methods)
 				);
-				tp->defineData(fields, std::move(vtable));
+				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_default { CORE_PANIC("bad type"); }
 		}

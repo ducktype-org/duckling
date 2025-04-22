@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../definitions.hpp"
-#include "../vtable.hpp"
+#include "../inheritance_metadata.hpp"
 
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
@@ -24,6 +24,6 @@ namespace vm::kind {
 		std::unordered_map<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>                   fields;
 
-		base::Optional<VTable> vtable;
+		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};
 }

@@ -218,10 +218,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		opt_some_move(parsed_files) {
 			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
-			for (const auto& parsed_file: parsed_files) {
+			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
-			}
 
 			try {
 				auto                        type_context = type_context_builder.build();
