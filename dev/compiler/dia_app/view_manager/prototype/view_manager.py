@@ -1,7 +1,6 @@
 import threading
 import grpc
 from concurrent import futures
-from google.protobuf.empty_pb2 import Empty
 import view_pb2
 import view_pb2_grpc
 
