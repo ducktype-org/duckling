@@ -8,39 +8,25 @@
 
 #include "mir_lifetimes.hpp"
 
+#include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/symbols/symbol_kind.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
 
+#include <stack>
+#include <unordered_set>
+
 namespace compiler::mir {
-
-	Function::Function(
-		base::StrID                    name,
-		tsh::SymbolType<>              return_type,
-		std::vector<tsh::SymbolType<>> parameter_types,
-		std::vector<Block>             blocks,
-		base::StableVector<MirLocal>   local_list,
-		BlockID                        entry_block,
-		helios::ScopeID                top_lifetime_scope,
-		helios::SymID                  helios_id
-	):
-		  name(name),
-		  return_type(return_type),
-		  parameter_types(std::move(parameter_types)),
-		  blocks(std::move(blocks)),
-		  local_list(std::move(local_list)),
-		  entry_block(entry_block),
-		  top_lifetime_scope(top_lifetime_scope),
-		  helios_id(helios_id) {}
-
 
 	namespace hc = helios::code;
 
@@ -267,10 +253,25 @@ namespace compiler::mir {
 		[[nodiscard]]
 		Function build() {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
+			auto entry_block_id = entry_block.value()->getID();
 
-			std::vector<Block> blocks;
-			blocks.reserve(this->blocks.size());
-			for (auto& block_builder: this->blocks) blocks.emplace_back(block_builder->build());
+			std::vector<BlockID> block_order;
+			block_order.reserve(this->blocks.size());
+
+			base::StableHashMap<BlockID, Block> function_blocks;
+
+			// First element in block order is the entry block
+			block_order.push_back(entry_block_id);
+
+			// Count in "reverse order" to have more intuitive order
+			// since creation of blocks is done from the end of the function.
+			for (usize i = this->blocks.size(); i-- > 0;) {
+				Block block = this->blocks[i]->build();
+				function_blocks.put(block.id, std::move(block));
+
+				if (block.id != entry_block_id)  // entry block is already added to the block_order
+					block_order.emplace_back(block.id);
+			}
 
 			const auto function_type
 				= tsh::SymbolType<tsh::FunctionAbstractType>(
@@ -283,9 +284,9 @@ namespace compiler::mir {
 				name.value(),
 				function_type.getResultType(),
 				function_type.getParameterTypes(),
-				std::move(blocks),
+				std::move(function_blocks),
+				std::move(block_order),
 				std::move(local_list),
-				entry_block.value()->getID(),
 				top_lifetime_scope.value(),
 				helios_symbol,
 			};
@@ -786,13 +787,95 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
-	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+	/**
+	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
+	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
+	 */
+	Function eliminateUnreachable(Function function) {
+		std::unordered_set<BlockID> reachable;
+		std::stack<BlockID>         stack;
+
+		stack.push(function.block_order[0]);
+		while (!stack.empty()) {
+			BlockID block_id = stack.top();
+			stack.pop();
+
+			if (reachable.contains(block_id)) continue;
+
+			auto successors = getTerminatorSuccessors(function.blocks[block_id].terminator);
+
+			reachable.insert(block_id);
+			for (auto successor: successors) stack.push(successor);
+		}
+
+		std::vector<BlockID> new_block_order;
+
+		for (auto block_id: function.block_order)
+			if (reachable.contains(block_id))
+				new_block_order.push_back(block_id);
+			else
+				function.blocks.erase(block_id);
+		function.block_order = new_block_order;
+
+		// WEAK_ASSERT candidate
+		CORE_ASSERT(function.validateBlockIDs().isOk(), "Function has invalid block IDs");
+
+		return function;
+	}
+
+	/**
+	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a mock-up.
+	 *
+	 * This function deals with this terminator:
+	 * * if block doesn't exists it means that it was unreachable, we do nothing
+	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
+	 * * if block is reachable and function returns value, throws missing return error
+
+	 * @note It is assumed that the last block is the last in the block order.
+	 */
+	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+		query::Context&, Function function
+	) {
+		CORE_ASSERT(
+			function.blocks.size() > 0, "Function should have at least one block after lowering"
+		);
+
+		// It should be always zero because the last block is generated as the first one.
+		auto last_block_id = BlockID(0);
+		if (not function.blocks.contains(last_block_id)) return function;
+
+		CORE_ASSERT(
+			function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
+			"Last block doesn't have FunctionEnd terminator"
+		);
+
+		if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
+			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
+			return function;
+		} else {
+			// @todo there should be logging here of missing return value / control reaches the end
+			// of non-void function
+			return helios::errors::HError(helios::errors::Failed());
+		}
+	}
+
+	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			// change FunctionEnd to proper return
+			UNPACK_RESULT_MOVE(
+				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
+			);
+
+			return function_no_func_end;
 		}
 
 		QUERY_AUTO_CACHE_REF

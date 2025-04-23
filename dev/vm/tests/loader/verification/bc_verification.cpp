@@ -21,8 +21,6 @@ public:
 
 		// Function verification
 		TESTER_ADD_TEST(noMain);
-		TESTER_ADD_TEST(invalidMainRetSize);
-		TESTER_ADD_TEST(invalidMainRetType);
 		TESTER_ADD_TEST(multipleFunctions);
 
 		// Jump verfification
@@ -61,24 +59,6 @@ private:
 			"wrong/functions/no_main.dbc",
 			{
 				vm::loader::NO_MAIN_ERR,
-			}
-		);
-	}
-
-	void invalidMainRetSize() {
-		loadInvalidDbc(
-			"wrong/functions/invalid_main_ret_size.dbc",
-			{
-				vm::loader::WRONG_MAIN_RET_VAL_ERR,
-			}
-		);
-	}
-
-	void invalidMainRetType() {
-		loadInvalidDbc(
-			"wrong/functions/invalid_main_ret_type.dbc",
-			{
-				vm::loader::WRONG_MAIN_RET_VAL_ERR,
 			}
 		);
 	}

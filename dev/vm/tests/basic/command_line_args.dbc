@@ -1,0 +1,29 @@
+# Should output a sum of numerical arguments passed to a program.
+
+function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+    init_type i64; # [32, 40) sum
+    init_type i64; # [40, 48) temp
+
+    label Loop; 
+        # temp := argv[i]
+        load_l64_lptr_ofs   40, 16;
+        ext_l64             0;
+
+        add_l64_l64         32, 40; # sum += temp
+        add_l64_imm         0, 1;   # i++
+        cmpEq_l64_l64       0, 8;   # i < argc
+        jmpRelNotIf_label   Loop;
+
+    output_l64 32;
+    mov_l64_imm 0, 0;
+
+    deinit; # temp
+    deinit; # sum
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

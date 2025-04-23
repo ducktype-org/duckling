@@ -48,7 +48,7 @@ int notMain(int argc, const char* const* argv) {
 
 
 	for (auto& fun: top_level->functions) {
-		auto mir_fun = query::entryPoint<compiler::mir::LowerToMirFunction>({ fun });
+		CRef mir_fun = &query::entryPoint<compiler::mir::LowerToMirFunction>({ fun })->value();
 
 		mir_fun->debugPrint(std::cerr);
 		std::cerr << "\n";
