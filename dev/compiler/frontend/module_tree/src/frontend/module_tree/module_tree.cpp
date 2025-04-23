@@ -44,20 +44,11 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::FilePath, ModuleID> modulePaths{};
-
-FileID FileID::nextID() {
-	// @OPT: move to global variable
-	static u64 nextID = 0;
-
-	FileID out{};
-	out.id = nextID++;
-	return out;
-}
+inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
 
 SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	  path(std::move(path)),
-	  id(FileID::nextID()),
+	  id(FileID::next()),
 	  linked_module(module_id) {
 	lang_file_name = base::StrID(this->path.stem().c_str());
 }
@@ -79,7 +70,7 @@ std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root)
 	buildModuleTree(ptr, std::move(root));
 
 	modules.put(ptr->getID(), ptr);
-	if (ptr->hasMainSourceFile()) modulePaths.put(ptr->getMainSourceFile().path, ptr->getID());
+	if (ptr->hasMainSourceFile()) module_paths.put(ptr->getMainSourceFile().path, ptr->getID());
 
 	// at this point references inside module tree are stable, so we can fill "files" map:
 	if (ptr->hasMainSourceFile()) {
@@ -232,7 +223,7 @@ std::string compiler::frontend::printModuleTree(ModuleID module) {
  *********************/
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); });
 	}
 
@@ -248,7 +239,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
  ***********************/
 struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
 	}
 
@@ -264,7 +255,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
  ********************/
 struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 
 		std::vector<FileID> out{};
 		for (const auto& file: module_tree->getSourceFiles()) out.push_back(file.id);
@@ -281,7 +272,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
  *******************/
 struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 
 		PResult out{};
 		for (const auto& [name, module]: module_tree->getSubmodules())

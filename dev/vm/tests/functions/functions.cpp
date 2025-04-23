@@ -21,47 +21,47 @@ public:
 
 private:
 	void testSimpleFunctionCall() {
-		runTestOnVm("simple_function_call.dbc", "18", "18", 42);
-		runTestOnVm("simple_function_call.dbc", "1234", "1234", 42);
+		runTestOnVm("simple_function_call.dbc", "18", "18", {}, 42);
+		runTestOnVm("simple_function_call.dbc", "1234", "1234", {}, 42);
 	}
 
 	void testSimpleReturnValue() {
-		runTestOnVm("simple_return_value.dbc", "18", "18");
-		runTestOnVm("simple_return_value.dbc", "1234", "1234");
+		runTestOnVm("simple_return_value.dbc", "18", "18", {});
+		runTestOnVm("simple_return_value.dbc", "1234", "1234", {});
 	}
 
 	void testReturnL32() {
-		runTestOnVm("return_l32.dbc", "18", "18");
-		runTestOnVm("return_l32.dbc", "1234", "1234");
+		runTestOnVm("return_l32.dbc", "18", "18", {});
+		runTestOnVm("return_l32.dbc", "1234", "1234", {});
 	}
 
 	void testDifferentSizedParams() {
-		runTestOnVm("different_sized_params.dbc", "5 1 5", "25");
-		runTestOnVm("different_sized_params.dbc", "42 1 31", "1302");
+		runTestOnVm("different_sized_params.dbc", "5 1 5", "25", {});
+		runTestOnVm("different_sized_params.dbc", "42 1 31", "1302", {});
 	}
 
 	void testDoubleCall() {
-		runTestOnVm("double_call.dbc", "1 2 3 4", "10");
-		runTestOnVm("double_call.dbc", "123 456 789 100", "1468");
+		runTestOnVm("double_call.dbc", "1 2 3 4", "10", {});
+		runTestOnVm("double_call.dbc", "123 456 789 100", "1468", {});
 	}
 
 	void testDeinitializeReturnValue() {
-		runTestOnVm("deinit_ret_val.dbc", "", "42");
-		runTestOnVm("deinit_main_ret_val.dbc", "", "42", 42);
+		runTestOnVm("deinit_ret_val.dbc", "", "42", {});
+		runTestOnVm("deinit_main_ret_val.dbc", "", "42", {}, 42);
 	}
 
 	void testRecursion() {
-		runTestOnVm("rec_func_sum.dbc", "20", "210");
-		runTestOnVm("rec_func_sum.dbc", "100", "5050");
+		runTestOnVm("rec_func_sum.dbc", "20", "210", {});
+		runTestOnVm("rec_func_sum.dbc", "100", "5050", {});
 	}
 
 	void testManyFunctions() {
-		runTestOnVm("many_functions.dbc", "5", "1115");
-		runTestOnVm("many_functions.dbc", "21", "1131");
+		runTestOnVm("many_functions.dbc", "5", "1115", {});
+		runTestOnVm("many_functions.dbc", "21", "1131", {});
 	}
 
-	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1"); }
-
+	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1", {}); }
+	
 	void testBuiltinFunctions() {
 		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n");
 		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n");
