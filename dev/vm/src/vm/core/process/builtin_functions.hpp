@@ -8,7 +8,8 @@
  *
  * Each builtin function have it's own function type that doesn't need to be declared before usage
  * because their declarations are always added to the program types.
- * While performing validation checks on the program they behave like usual functions.
+ * While performing different validation checks on the program (like stack validations) the builtins
+ * behave like usual functions.
  *
  * The goal of this implementation is to have one source file for the builtin functions -
  * this file. They have to be consistent with the HELIOS builtin list and LLVM builtins manually.
@@ -33,20 +34,7 @@ namespace vm::builtins {
 	// there was a question of where the conversion from bytes to
 	// value should be done. I decided that the conversion should be
 	// in the VMThread. So the handlers only see the converted values.
-	using Value           = std::variant<i64, NoValue>;
-	using FunctionHandler = std::function<Value(VMThread&, const std::vector<Value>&)>;
-
-	struct Function {
-		/**
-		 * Type declaration of the builtin that is always added to the program types.
-		 */
-		code::FunctionType type;
-
-		/**
-		 * You should call this function with arguments to call a builtin.
-		 */
-		FunctionHandler handler;
-	};
+	using Value = std::variant<i64, NoValue>;
 
 	/**
 	 * @brief Class for FunctionHandlers.
@@ -58,17 +46,21 @@ namespace vm::builtins {
 	 */
 	class FunctionHandlers {
 	public:
-		static Value builtinInputI64Handler(VMThread& process, const std::vector<Value>& arguments);
-		static Value builtinOutputI64Handler(VMThread& process, const std::vector<Value>& arguments);
+		static i64 builtinInputI64(VMThread& process);
+		static i64 builtinOutputI64(VMThread& process, i64 arg);
 	};
 
 	/**
-	 * @brief Returns the list of builtin functions with lazy initialization.
+	 * @brief Returns the list of builtin functions types with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 	 */
-	const std::array<Function, 2>& getBuiltinFunctions();
+	const std::array<code::FunctionType, 2>& getBuiltinFunctionTypes();
+
+	inline CRef<code::FunctionType> getBuiltinFunctionType(usize id) {
+		return &getBuiltinFunctionTypes().at(id);
+	}
 
 	/**
 	 * @brief Get the ID of the builtin function given the name.
@@ -79,13 +71,6 @@ namespace vm::builtins {
 	 */
 	base::Optional<usize> getBuiltinFunctionID(base::StrID name);
 
-	/**
-	 * @brief Fast lookup of the builtin function by ID.
-	 *
-	 * Used by the VMThread opcode implementation.
-	 */
-	inline CRef<Function> getBuiltinFunction(usize id) {
-		if (id >= getBuiltinFunctions().size()) CORE_PANIC("Invalid builtin function ID: ", id);
-		return &getBuiltinFunctions().at(id);
-	}
+
+	Value callBuiltinFunction(usize id, VMThread& thread, const std::vector<Value>& arguments);
 }

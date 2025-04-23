@@ -2,26 +2,28 @@
 # input = n
 # output = n
 
-type fun: main {} i64
-
 function main {
     # [0, 8) main ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-    init_type          i64; # [8, 16)
+    init_type          i64; # [32, 40)
     call_builtin_func  builtin_input_i64;
 
-    init_type          i64; # [16, 24)
+    init_type          i64; # [40, 48)
     call_builtin_func  builtin_input_i64;
 
-    add_l64_l64        16,   8;
+    add_l64_l64        40,   32;
 
     call_builtin_func  builtin_output_i64; # should output "input1 + input2"
 
     init_type          i64; # [16, 24)
-    mov_l64_l64        16,   8;
+    mov_l64_l64        40,   32;
 
     call_builtin_func  builtin_output_i64; # should output the size of outputed value
 
     deinit; # [8, 16) ret_val
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

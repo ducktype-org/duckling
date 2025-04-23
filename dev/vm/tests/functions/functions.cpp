@@ -61,10 +61,10 @@ private:
 	}
 
 	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1", {}); }
-	
+
 	void testBuiltinFunctions() {
-		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n");
-		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n");
+		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {});
+		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {});
 	}
 };
 

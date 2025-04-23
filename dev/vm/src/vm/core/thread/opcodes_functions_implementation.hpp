@@ -271,9 +271,9 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
-			auto                     builtin_id = static_cast<usize>(instr->arg0);
-			CRef<builtins::Function> function   = builtins::getBuiltinFunction(builtin_id);
-			auto                     arg_count  = function->type.parameters.size();
+			auto builtin_id    = static_cast<usize>(instr->arg0);
+			auto function_type = builtins::getBuiltinFunctionType(builtin_id);
+			auto arg_count     = function_type->parameters.size();
 
 			std::vector<builtins::Value> args;
 			u64                          first_arg_idx = frame->block_stack.size() - arg_count;
@@ -281,7 +281,7 @@ namespace vm {
 
 			// Converting from memory bytes on the local stack to the builtin::Value arguments.
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type = function->type.parameters[i];
+				const base::StrID arg_type = function_type->parameters[i];
 				// @TODO the conversion from local stack bytes to builtin::Value is done
 				// based on declaration type, but it should be done based on the Metadata Type in
 				// the future.
@@ -295,7 +295,7 @@ namespace vm {
 				}
 			}
 
-			builtins::Value return_value = function->handler(thread, args);
+			builtins::Value return_value = builtins::callBuiltinFunction(builtin_id, thread, args);
 			variant_match(return_value) {
 				variant_case_novalue(builtins::NoValue) {}
 				variant_case(i64, value) {
@@ -305,7 +305,7 @@ namespace vm {
 				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
 			}
 
-			// Similliar as in func_call, but we deinit the arguments blocks as well,
+			// Similiar as in func_call, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
