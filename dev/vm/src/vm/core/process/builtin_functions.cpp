@@ -37,7 +37,7 @@ namespace vm::builtins {
 		 */
 		template<class Ret, class... FunArgs>
 		Value callUnpackArgs(
-			Ret (*function)(VMThread&, FunArgs...), VMThread& thread, const std::vector<Value> &args
+			Ret (*function)(VMThread&, FunArgs...), VMThread& thread, const std::vector<Value>& args
 		) {
 			if (sizeof...(FunArgs) != args.size()) CORE_PANIC("Argument number mismatch!");
 			return callUnpackArgsImpl(function, thread, args, std::index_sequence_for<FunArgs...>{});
