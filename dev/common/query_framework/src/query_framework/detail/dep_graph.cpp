@@ -1,13 +1,14 @@
 #include "dep_graph.hpp"
 
 #include <base/maps.hpp>
-#include <set>
-#include <queue>
+
 #include <iomanip>
 #include <iostream>
 #include <ostream>
-#include <vector>
+#include <queue>
 #include <ranges>
+#include <set>
+#include <vector>
 
 using query::detail::NodeID;
 
@@ -70,7 +71,9 @@ namespace query::detail {
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
-			node_data.insert_or_assign(node, NodeData{ .color = Color::Visiting, .dependencies = {}, .parent = from });
+			node_data.insert_or_assign(
+				node, NodeData{ .color = Color::Visiting, .dependencies = {}, .parent = from }
+			);
 		}
 
 		DependencyStatus addDependency(NodeID from, NodeID to) {
@@ -89,34 +92,34 @@ namespace query::detail {
 
 		std::vector<NodeID> getNodeDeps(detail::NodeID node_id) {
 			// some simple bfs for now:
-			std::set<NodeID> visited;
+			std::set<NodeID>   visited;
 			std::queue<NodeID> queue;
 			queue.push(node_id);
 
 			while (!queue.empty()) {
 				auto visited_node_id = queue.front();
 				queue.pop();
-				
+
 				if (visited.contains(visited_node_id)) continue;
 				visited.insert(visited_node_id);
 
 				const auto& node = node_data.at(visited_node_id);
-				for (auto& dep: node.dependencies) {
+				for (auto& dep: node.dependencies)
 					if (!visited.contains(dep)) queue.push(dep);
-				}
 			}
 
 			// make issue for query types (side input/input/standard/etc):
 			// it would be cool to print only input ones, but for now we print all of them:
 
-			return {visited.begin(), visited.end()};
+			return { visited.begin(), visited.end() };
 		}
 
 		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) {
-			auto filtered =  getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
-				return id.q_id == dependency_id;
-			});
-			return {filtered.begin(), filtered.end()};
+			auto filtered
+				= getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
+					  return id.q_id == dependency_id;
+				  });
+			return { filtered.begin(), filtered.end() };
 		}
 
 		void debugPrint(std::ostream& out) {

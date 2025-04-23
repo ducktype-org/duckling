@@ -23,8 +23,9 @@ namespace query::detail {
 	std::string_view QueryID::getName() const { return nameMap().at(val); }
 
 	void QueryID::setName(QueryID query, std::string_view name) {
-		CORE_ASSERT(not nameMap().contains(query.val),
-			"Query name already set for query id: ", query.val);
+		CORE_ASSERT(
+			not nameMap().contains(query.val), "Query name already set for query id: ", query.val
+		);
 		nameMap().put(query.val, name);
 	}
 }

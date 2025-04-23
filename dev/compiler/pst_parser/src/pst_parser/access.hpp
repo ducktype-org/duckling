@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pst_id.hpp"
+
 #include <query_framework/context_fd.hpp>
 
 #include <base/box.hpp>
@@ -61,7 +62,8 @@ namespace pst {
 	namespace detail {
 		/**
 		 * @brief Notification to context About the access to an element.
-		 * @note For now we keep PstID as the key, but in the future it will likely be changed to hash based on hash-framework.
+		 * @note For now we keep PstID as the key, but in the future it will likely be changed to
+		 * hash based on hash-framework.
 		 */
 		void notifyContext(query::Context& ctx, PstID id);
 		/**
@@ -125,9 +127,7 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			if (ref.toOpt().has_value()) {
-				detail::notifyContext(ctx, this->ref->getID() );
-			}
+			if (ref.toOpt().has_value()) detail::notifyContext(ctx, this->ref->getID());
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 

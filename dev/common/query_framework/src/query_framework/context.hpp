@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "context_fd.hpp"  // IWYU pragma: keep
+#include "context_fd.hpp"          // IWYU pragma: keep
 #include "detail/dep_graph.hpp"
-#include "node_id.hpp"
 #include "detail/node_making.hpp"  // IWYU pragma: export
+#include "node_id.hpp"
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>

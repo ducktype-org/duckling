@@ -159,11 +159,11 @@ namespace query::detail {
 			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,           \
 			type::PResult>,                                                                         \
 		"Bad provide result."                                                                       \
-	); \
+	);                                                                                              \
 	static_assert(                                                                                  \
-		not std::is_reference_v<type::QKey>,                                                     \
-		"Query key type should not be a reference (use custom struct instead)"                         \
-	);    
+		not std::is_reference_v<type::QKey>,                                                        \
+		"Query key type should not be a reference (use custom struct instead)"                      \
+	);
 
 
 /**

@@ -3,9 +3,9 @@
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
+#include <pst_parser/pst_access_side_input.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
-#include <pst_parser/pst_access_side_input.hpp>
 
 #include <base/defer.hpp>
 
@@ -20,9 +20,8 @@ void printContextErrors() {
 
 void printQueryDeps(const std::vector<query::detail::NodeID>& deps) {
 	std::cerr << "Dependencies:\n";
-	for (auto& i: deps) {
+	for (auto& i: deps)
 		std::cerr << "    > query: " << i.q_id.asInt() << ",  key: " << i.hash.val << "\n";
-	}
 }
 
 int notMain(int argc, const char* const* argv) {
@@ -57,7 +56,7 @@ int notMain(int argc, const char* const* argv) {
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level->debugPrint() << "\n\n"; 
+	std::cerr << top_level->debugPrint() << "\n\n";
 
 	std::cerr << "Inputs of entire hout:\n";
 
@@ -67,7 +66,8 @@ int notMain(int argc, const char* const* argv) {
 
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
-		auto i_deps = query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
+		auto i_deps
+			= query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
 		printQueryDeps(i_deps);
 	}
 	return 0;

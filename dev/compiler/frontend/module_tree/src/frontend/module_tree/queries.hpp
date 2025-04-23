@@ -38,7 +38,7 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>)
 
 
-	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID , ModuleID>>;
+	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
