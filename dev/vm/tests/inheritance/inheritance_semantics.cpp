@@ -17,8 +17,8 @@ public:
 
 private:
 	void semantics() {
-		runTestOnVm("downcast.dbc", "", "10");
-		runTestOnVm("valid_upcast.dbc", "", "0");
+		runTestOnVm("downcast.dbc", "", "10", {}, 0);
+		runTestOnVm("valid_upcast.dbc", "", "0", {}, 0);
 
         // @TODOB
 		// // Invalid

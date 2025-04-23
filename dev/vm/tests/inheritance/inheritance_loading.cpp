@@ -23,22 +23,22 @@ private:
 	}
 
 	void checkPod(vm::TypeCRef type) {
-		assertFalse(type->getVTable().has_value(), "Plain data should be plain");
+		assertFalse(type->getInheritanceMetadata().has_value(), "Plain data should be plain");
 	}
 
 	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type) {
-		if_opt_some(type->getVTable(), vtable) {
-			assertTrue(vtable.type == type, "Invalid type in VTable");
-			assertTrue(vtable.implements.empty(), "I1 should not implement anything");
-			assertTrue(vtable.virtual_methods.size() == 2, "I1 should have two virtual methods");
-			auto foo_type = vtable.virtual_methods[base::StrID("foo")];
-			auto bar_type = vtable.virtual_methods[base::StrID("bar")];
+		if_opt_some(type->getInheritanceMetadata(), imd) {
+			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
+			assertTrue(imd.implements.empty(), "I1 should not implement anything");
+			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
+			auto foo_type = imd.virtual_methods[base::StrID("foo")];
+			auto bar_type = imd.virtual_methods[base::StrID("bar")];
 
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == method_type, "I1's method have the wrong type");
 
 			assertTrue(
-				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
+				std::holds_alternative<vm::InheritanceMetadata::Interface>(imd.kind),
 				"I2 should be an interface"
 			);
 
@@ -49,14 +49,14 @@ private:
 	}
 
 	void checkI2(vm::TypeCRef type) {
-		if_opt_some(type->getVTable(), vtable) {
-			assertTrue(vtable.type == type, "Invalid type in VTable");
+		if_opt_some(type->getInheritanceMetadata(), imd) {
+			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
 			assertTrue(
-				std::holds_alternative<vm::VTable::Interface>(vtable.kind),
+				std::holds_alternative<vm::InheritanceMetadata::Interface>(imd.kind),
 				"I2 should be an interface"
 			);
-			assertTrue(vtable.implements.empty(), "I2 should not implement anything");
-			assertTrue(vtable.virtual_methods.empty(), "I2 should not have any virtual methods");
+			assertTrue(imd.implements.empty(), "I2 should not implement anything");
+			assertTrue(imd.virtual_methods.empty(), "I2 should not have any virtual methods");
 
 			return;
 		}
@@ -65,21 +65,21 @@ private:
 	}
 
 	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type) {
-		if_opt_some(type->getVTable(), vtable) {
-			assertTrue(vtable.type == type, "Invalid type in VTable");
-			variant_match(vtable.kind) {
-				variant_case(vm::VTable::Class, clazz) {
+		if_opt_some(type->getInheritanceMetadata(), imd) {
+			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
+			variant_match(imd.kind) {
+				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Parent should be a concrete class");
 					assertFalse(clazz.extends.has_value(), "Parent should not extend anything");
 				}
 				variant_default { fail("Parent should be a class"); }
 			}
-			assertTrue(vtable.implements.empty(), "Parent should not implement anything");
+			assertTrue(imd.implements.empty(), "Parent should not implement anything");
 			assertTrue(
-				vtable.virtual_methods.size() == 1, "Parent should implement one virtual method"
+				imd.virtual_methods.size() == 1, "Parent should implement one virtual method"
 			);
 
-			auto lorem = vtable.virtual_methods[base::StrID("lorem")];
+			auto lorem = imd.virtual_methods[base::StrID("lorem")];
 			assertTrue(lorem == method_type, "Invalid Parent method type");
 
 			return;
@@ -91,10 +91,10 @@ private:
 	void checkChild(
 		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces
 	) {
-		if_opt_some(type->getVTable(), vtable) {
-			assertTrue(vtable.type == type, "Invalid type in VTable");
-			variant_match(vtable.kind) {
-				variant_case(vm::VTable::Class, clazz) {
+		if_opt_some(type->getInheritanceMetadata(), imd) {
+			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
+			variant_match(imd.kind) {
+				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Child should be a concrete class");
 					assertTrue(clazz.extends.has_value(), "Child has no superclass");
 					assertTrue(*clazz.extends == super_type, "Child is not Parent's child");
@@ -103,7 +103,7 @@ private:
 			}
 			assertTrue(
 				std::ranges::equal(
-					vtable.implements,
+					imd.implements,
 					interfaces,
 					// Custom comparison needed since one is nonconst.
 					[](vm::TypeCRef a, vm::TypeCRef b) { return a == b; }
@@ -111,7 +111,7 @@ private:
 				"Child implements wrong interfaces"
 			);
 
-			assertTrue(vtable.virtual_methods.empty(), "Child should have no virtual methods");
+			assertTrue(imd.virtual_methods.empty(), "Child should have no virtual methods");
 
 			return;
 		}
@@ -120,10 +120,10 @@ private:
 	}
 
 	void checkPietMondrian(vm::TypeCRef type) {
-		if_opt_some(type->getVTable(), vtable) {
-			assertTrue(vtable.type == type, "Invalid type in VTable");
-			variant_match(vtable.kind) {
-				variant_case(vm::VTable::Class, clazz) {
+		if_opt_some(type->getInheritanceMetadata(), imd) {
+			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
+			variant_match(imd.kind) {
+				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertTrue(clazz.is_abstract, "Piet mondrian was an *abstract* art pioneer");
 					assertFalse(
 						clazz.extends.has_value(), "PietMondrian should not extend anything"
@@ -132,12 +132,8 @@ private:
 				variant_default { fail("PietMondrian should be a class"); }
 			}
 
-			assertTrue(
-				vtable.virtual_methods.empty(), "PietMondrian should implement no interfaces"
-			);
-			assertTrue(
-				vtable.virtual_methods.empty(), "PietMondrian should have no virtual methods"
-			);
+			assertTrue(imd.virtual_methods.empty(), "PietMondrian should implement no interfaces");
+			assertTrue(imd.virtual_methods.empty(), "PietMondrian should have no virtual methods");
 
 			return;
 		}

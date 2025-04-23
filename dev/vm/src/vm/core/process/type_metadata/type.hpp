@@ -30,7 +30,8 @@ namespace vm {
 			DynamicTable,
 			Data,
 			Variant,
-			Function
+			Function,
+			Opaque,
 		};
 
 	private:
@@ -51,7 +52,8 @@ namespace vm {
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
-			kind::Function>
+			kind::Function,
+			kind::Opaque>
 			kind;
 
 		Type() = default;
@@ -67,10 +69,11 @@ namespace vm {
 		void defineDynamicTable(TypeRef inner);
 		void defineData(
 			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-			base::Optional<VTable>                              vtable
+			base::Optional<InheritanceMetadata>                 inheritance_metadata
 		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void defineOpaque(TypeSize size);
 
 		// Type finalization:
 		void finalize();
@@ -139,18 +142,11 @@ namespace vm {
 
 		// inheritance
 		[[nodiscard]]
-		base::Optional<const VTable&> getVTable() const;
+		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
 		[[nodiscard]]
 		bool inheritsFrom(TypeCRef other) const;
 		[[nodiscard]]
 		bool isInstantiable() const;
-		[[nodiscard]]
-		bool isClass() const;
-		[[nodiscard]]
-		bool isInterface() const;
-		[[nodiscard]]
-		bool isPlain() const;
-
 
 		// variant
 		[[nodiscard]]

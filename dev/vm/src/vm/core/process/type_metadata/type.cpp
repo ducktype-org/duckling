@@ -58,7 +58,7 @@ namespace vm {
 
 	void Type::defineData(
 		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
-		base::Optional<VTable>                              vtable
+		base::Optional<InheritanceMetadata>                 inheritance_metadata
 	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
@@ -70,8 +70,8 @@ namespace vm {
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		data.vtable = std::move(vtable);
-		kind        = data;
+		data.inheritance_metadata = std::move(inheritance_metadata);
+		kind                      = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -91,6 +91,15 @@ namespace vm {
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+	}
+
+	void Type::defineOpaque(TypeSize pass_size) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		kind_type = Kind::Opaque;
+		size      = pass_size;
+		kind      = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -169,6 +178,12 @@ namespace vm {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2)
+					return TypeCRef(this);
+				else
+					return {};
+			}
+			variant_case_novalue(kind::Opaque) {
+				if (pos == 0)
 					return TypeCRef(this);
 				else
 					return {};
@@ -259,10 +274,10 @@ namespace vm {
 	}
 
 	// inheritance
-	base::Optional<const VTable&> Type::getVTable() const {
+	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
-				if (data.vtable.has_value()) return data.vtable.value();
+				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
 			}
 		}
 		return {};
@@ -275,24 +290,22 @@ namespace vm {
 			stack.pop_back();
 			if (t == other) return true;
 
-			if_opt_some(t->getVTable(), vtable) {
-				variant_match(vtable.kind) {
-					variant_case(VTable::Class, clazz) {
+			if_opt_some(t->getInheritanceMetadata(), imd) {
+				variant_match(imd.kind) {
+					variant_case(InheritanceMetadata::Class, clazz) {
 						if_opt_some(clazz.extends, super) stack.emplace_back(super);
 					}
 				}
-				for (auto i: vtable.implements) stack.emplace_back(i);
+				for (auto i: imd.implements) stack.emplace_back(i);
 			}
 		}
 		return false;
 	}
 
 	bool Type::isInstantiable() const {
-		auto is_concrete_class = [](const VTable& vtable) {
-			variant_match(vtable.kind) {
-				variant_case(VTable::Class, clazz) {
-					return !clazz.is_abstract;
-				}
+		auto is_concrete_class = [](const InheritanceMetadata& imd) {
+			variant_match(imd.kind) {
+				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
 			}
 			return false;
 		};
@@ -301,8 +314,8 @@ namespace vm {
 		// so its depth is bounded by type size, there cannot be a cycle.
 		variant_match(kind) {
 			variant_case(kind::Data, data) {
-				if_opt_some(data.vtable, vtable) {
-					if (!is_concrete_class(vtable)) return false;
+				if_opt_some(data.inheritance_metadata, imd) {
+					if (!is_concrete_class(imd)) return false;
 				}
 
 				for (auto& field: data.fields)
@@ -315,21 +328,6 @@ namespace vm {
 		}
 		return true;
 	}
-
-    // @TODOB are those needed?
-	bool Type::isClass() const {
-		return getVTable()
-		    .map([](auto& vt) { return std::holds_alternative<VTable::Class>(vt.kind); })
-		    .valueOr(false);
-	}
-
-	bool Type::isInterface() const {
-		return getVTable()
-		    .map([](auto& vt) { return std::holds_alternative<VTable::Interface>(vt.kind); })
-		    .valueOr(false);
-	}
-
-	bool Type::isPlain() const { return !getVTable().has_value(); }
 
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {

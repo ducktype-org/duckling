@@ -50,6 +50,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	free,
 	load,
 	store,
+	setVTable,
 
 	/**
 	 *  Do not use directly. If an instruction supports `ext` opcodes,

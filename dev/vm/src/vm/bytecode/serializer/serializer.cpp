@@ -183,6 +183,43 @@ namespace vm::code {
 				}
 				out << "} " << fun.result.strView();
 			}
+
+			void operator()(const OpaqueType& type) const {
+				out << "type opaque: ";
+				out << type.name.strView() << " ";
+				out << type.size;
+			}
+
+			void operator()(const ClassType& clazz) const {
+				out << "type class:  " << clazz.name.strView() << "{\n";
+				out << "    fields: [";
+				for (auto field: clazz.fields)
+					out << field.name.strView() << ": " << field.name.strView() << ", ";
+				out << "]\n";
+				out << "    abstract: " << clazz.is_abstract << ";\n";
+				if (clazz.extends.has_value())
+					out << "    extends: " << clazz.extends.value().strView() << ";\n";
+				out << "    implements: [";
+				for (auto& iface: clazz.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: clazz.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
+			}
+
+			void operator()(const InterfaceType& interface) const {
+				out << "type interface:  " << interface.name.strView() << "{\n";
+				out << "    implements: [";
+				for (auto& iface: interface.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: interface.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
+			}
 		};
 
 	public:

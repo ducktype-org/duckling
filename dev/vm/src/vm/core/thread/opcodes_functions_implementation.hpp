@@ -503,7 +503,7 @@ namespace vm {
 		{
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
+				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
 
 			// Objects are guaranteed to hold vtable pointer as their first field
 			// by static verification.
@@ -534,8 +534,7 @@ namespace vm {
 				= getLocalType(static_cast<u32>(instr->arg0), frame, thread.process_memory);
 			auto dst_type = dst_pointer_type->getInnerType().value();
 
-			// Objects are guaranteed to hold vtable pointer as their first field
-			// by static verification.
+			// Classes are guaranteed to hold vtable pointer as their first field.
 			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
 				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
 			);

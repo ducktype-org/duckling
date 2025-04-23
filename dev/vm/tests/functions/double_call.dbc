@@ -2,7 +2,6 @@
 # input = "a b c d"
 # output = a + b + c + d
 
-type fun: main {} i64
 type fun: foo { i64, i64 } i64
 
 function foo {
@@ -18,32 +17,37 @@ function foo {
 }
 
 function main {
-    # [0, 8) main ret_val
-    init_type       i64; # [8, 16) accumulator
-    init_type       i64; # [16, 24) foo ret_val
-    init_type       i64; # [24, 32) foo arg0
-    init_type       i64; # [32, 40) foo arg1
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-    input_l64       24;
-    input_l64       32;
+    init_type       i64; # [32, 40) accumulator
+    init_type       i64; # [40, 48) foo ret_val
+    init_type       i64; # [48, 56) foo arg0
+    init_type       i64; # [56, 64) foo arg1
+
+    input_l64       48;
+    input_l64       56;
     call_func       foo;
 
-    # Here [24, 32) and [32, 40) are deinitialized
-    add_l64_l64     8, 16; # acc := a + b
+    # Here [48, 56) and [56, 64) are deinitialized
+    add_l64_l64     32, 40; # acc := a + b
 
-    init_type       i64; # [24, 32) foo arg0
-    init_type       i64; # [32, 40) foo arg1
+    init_type       i64; # [48, 56) foo arg0
+    init_type       i64; # [56, 64) foo arg1
 
-    input_l64       24;
-    input_l64       32;
+    input_l64       48;
+    input_l64       56;
     call_func       foo;
-    # Here [24, 32) and [32, 40) are deinitialized
+    # Here [48, 56) and [56, 64) are deinitialized
 
-    add_l64_l64     8, 16; # acc += c + d
+    add_l64_l64     32, 40; # acc += c + d
 
-    output_l64      8;
+    output_l64      32;
 
     deinit; # foo ret_val
     deinit; # accumulator
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

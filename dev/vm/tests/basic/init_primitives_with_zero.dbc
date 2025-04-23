@@ -1,14 +1,15 @@
-type fun: main {} i64
-
 function main {
-	# [0, 8) main ret_val
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
 
-	mov_l64_imm     8, 1;
-	init_type       i64; # [8, 16)
+	mov_l64_imm     32, 1;
+	init_type       i64; # [32, 40)
 
-	output_l64      8;
+	output_l64      32;
 
 	deinit;
-
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

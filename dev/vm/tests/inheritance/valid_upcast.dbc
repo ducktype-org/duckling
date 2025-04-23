@@ -1,22 +1,25 @@
-type fun: main {} i64
+type class: Animal {
+    abstract: true;
+}
+type class: Dog {
+    extends: Animal;
+}
+type class: Cat {
+    extends: Animal;
+}
 
-type pointer: DogPtr Dog
 type pointer: AnimalPtr Animal
-
-inheritable Animal: abstract class {}
-inheritable Dog: class {
-    extends: Animal;
-}
-inheritable Cat: class {
-    extends: Animal;
-}
+type pointer: DogPtr Dog
 
 function main {
-    init_type DogPtr;  # 8
-    init_type AnimalPtr;  # 24
-    alloc_lptr_type 8, Dog;
-    setVTable_lptr_type 8, Dog;
-    upcast_lptr_lptr 24, 8;  # animal := static_cast<AnimalPtr>(dog)
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type DogPtr;     # 32
+    init_type AnimalPtr;  # 48
+    alloc_lptr_type 32, Dog;
+    setVTable_lptr_type 32, Dog;
+    upcast_lptr_lptr 48, 32;  # animal := static_cast<AnimalPtr>(dog)
     
     # Print anything, so that `runTestOnVm` doesn't get stuck
     output_l64 0;

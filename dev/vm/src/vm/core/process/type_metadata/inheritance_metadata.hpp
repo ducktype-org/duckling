@@ -10,7 +10,7 @@
 #include <variant>
 
 namespace vm {
-	struct VTable {
+	struct InheritanceMetadata {
 		struct Class {
 			bool                     is_abstract;
 			base::Optional<TypeCRef> extends;
@@ -25,7 +25,7 @@ namespace vm {
 		std::vector<TypeCRef>                implements;
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
 
-		VTable(
+		InheritanceMetadata(
 			TypeCRef                             type,
 			Kind                                 kind,
 			std::vector<TypeCRef>                implements,

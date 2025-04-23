@@ -145,6 +145,10 @@ namespace {
 				},
 				name
 			);
+		} catch (code::builders::MissingVTablePtrError&) {
+			base::StrID name = VISIT(type, tp, return tp.name);
+			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
+			log.log<MissingVTablePtrError>(base, name);
 		}
 	}
 
@@ -218,12 +222,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		opt_some_move(parsed_files) {
 			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
-			for (const auto& parsed_file: parsed_files) {
+			for (const auto& parsed_file: parsed_files)
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
-				for (const auto& inh: parsed_file.inheritables)
-					insertType(inh->data, type_context_builder, log);
-			}
 
 			try {
 				auto                        type_context = type_context_builder.build();
@@ -241,7 +242,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 				}
 				if (log.good())
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
-			} catch (code::builders::MissingSubtypeError& e) {
+			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));

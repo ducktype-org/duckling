@@ -1,11 +1,10 @@
-type fun: main {} i64
-type fun: print_flag {} void
-
-inheritable Animal: abstract class {}
-inheritable Dog: class {
+type class: Animal {
+    abstract: true;
+}
+type class: Dog {
     extends: Animal;
 }
-inheritable Cat: class {
+type class: Cat {
     extends: Animal;
 }
 
@@ -14,31 +13,34 @@ type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
 function main {
-    init_type AnimalPtr;  # 8
-    init_type CatPtr;     # 24
-    init_type DogPtr;     # 40
-    init_type i64;      # 56
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type AnimalPtr;  # 32
+    init_type CatPtr;     # 48
+    init_type DogPtr;     # 64
+    init_type i64;        # 80
 
-    alloc_lptr_type 8, Dog;
-    setVTable_lptr_type 8, Dog;
+    alloc_lptr_type 32, Dog;
+    setVTable_lptr_type 32, Dog;
 
-    downcast_lptr_lptr 24, 8;  # cat := static_cast<CatPtr>(animal)
-    cmpNull_lptr 24;  # flag := cat != nullptr
+    downcast_lptr_lptr 48, 32;  # cat := static_cast<CatPtr>(animal)
+    cmpNull_lptr 48;  # flag := cat != nullptr
 
     # Check if succeeded
     jmpRelNotIf_label notCat;
-        add_l64_imm 56, 10;
+        add_l64_imm 80, 10;
     label notCat;
 
-    downcast_lptr_lptr 40, 8;  # dog := static_cast<DogPtr>(animal)
-    cmpNull_lptr 40;  # flag := cat != nullptr
+    downcast_lptr_lptr 64, 32;  # dog := static_cast<DogPtr>(animal)
+    cmpNull_lptr 64;  # flag := cat != nullptr
 
     # Check if succeeded
     jmpRelNotIf_label notDog;
-        add_l64_imm 56, 1;
+        add_l64_imm 80, 1;
     label notDog;
 
-    output_l64 56;
+    output_l64 80;
 
     ret;
 }
