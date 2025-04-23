@@ -120,8 +120,8 @@
 
 
 /**
- * @brief Add std::hash specialization to given ID type.
- * Usage: ID_STD_HASH(MY_ID)
+ * @brief Add customPerfectHash specialization to given ID type.
+ * Usage: ID_PERFECT_HASH(MY_ID)
  */
 #define ID_PERFECT_HASH(TYPE) \
 	inline base::HashT customPerfectHash(TYPE id) { return id.asInt(); }
