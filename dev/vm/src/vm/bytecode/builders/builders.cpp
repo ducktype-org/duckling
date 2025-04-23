@@ -185,7 +185,6 @@ TypeContext TypeContextBuilder::build() const {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
-	// @TODOB this is silly
 	auto to_low_type
 		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {
