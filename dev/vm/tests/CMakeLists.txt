@@ -51,6 +51,9 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_verification_test loader/verification/bc_verification.cpp
                 USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
+            USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")
