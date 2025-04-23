@@ -5,7 +5,5 @@
 
 namespace compiler::frontend {
 	STRONG_TYPEDEF_ID(ModuleID);
-
-	// @TODO: move to STRONG_TYPEDEF_ID?
-	inline base::HashT customPerfectHash(ModuleID id) { return id.asInt(); }
+	ID_PERFECT_HASH(ModuleID);
 }

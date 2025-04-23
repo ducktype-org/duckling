@@ -16,6 +16,11 @@ namespace vm::code {
 
 	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
 
+#define GLOBAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
+
+	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
+
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
@@ -204,6 +209,6 @@ namespace vm::code {
 	}
 
 	void serialize(const GlobalData& type, std::ostream& out) {
-		throw base::NotYetImplemented("serialize type");
+		throw base::NotYetImplemented("serialize global");
 	}
 }

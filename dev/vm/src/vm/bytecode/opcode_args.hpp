@@ -125,6 +125,71 @@ namespace vm::opargs {
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr
 
 	/**
+	 * @brief Represents `g64` - global i64 argument.
+	 */
+	struct GlobalI64 final: code::ElementBase {
+		GlobalI64() = default;
+
+		GlobalI64(const base::StrID global_data_name): global_data_name(global_data_name) {}
+
+		base::StrID global_data_name;
+
+		constexpr bool operator==(const GlobalI64& other) const noexcept {
+			return global_data_name == other.global_data_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `g32` - global i32 argument.
+	 */
+	struct GlobalI32 final: code::ElementBase {
+		GlobalI32() = default;
+
+		GlobalI32(const base::StrID global_data_name): global_data_name(global_data_name) {}
+
+		base::StrID global_data_name;
+
+		constexpr bool operator==(const GlobalI32& other) const noexcept {
+			return global_data_name == other.global_data_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `g16` - global i16 argument.
+	 */
+	struct GlobalI16 final: code::ElementBase {
+		GlobalI16() = default;
+
+		GlobalI16(const base::StrID global_data_name): global_data_name(global_data_name) {}
+
+		base::StrID global_data_name;
+
+		constexpr bool operator==(const GlobalI16& other) const noexcept {
+			return global_data_name == other.global_data_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `g8` - global i8 argument.
+	 */
+	struct GlobalI8 final: code::ElementBase {
+		GlobalI8() = default;
+
+		GlobalI8(const base::StrID global_data_name): global_data_name(global_data_name) {}
+
+		base::StrID global_data_name;
+
+		constexpr bool operator==(const GlobalI8& other) const noexcept {
+			return global_data_name == other.global_data_name;
+		}
+	};
+
+	/**
+	 * @brief List of all argument types that target global data.
+	 */
+#define VM_OPARG_GLOBAL_TYPES GlobalI64, GlobalI32, GlobalI16, GlobalI8
+
+	/**
 	 * @brief Represents type name argument.
 	 */
 	struct Type final: code::ElementBase {
@@ -172,5 +237,6 @@ namespace vm::opargs {
 	/**
 	 * @brief Storage class for any kind of opcode argument.
 	 */
-	using OpCodeArg = std::variant<VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, Label>;
+	using OpCodeArg
+		= std::variant<VM_OPARG_OFFSET_TYPES, VM_OPARG_GLOBAL_TYPES, Immediate, Type, FunctionName, Label>;
 }

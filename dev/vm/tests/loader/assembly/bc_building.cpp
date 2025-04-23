@@ -1,5 +1,7 @@
 #include <vm_tester_utils.hpp>
 
+#include <base/str_utils.hpp>
+
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
 #include <vm/bytecode/builders/errors.hpp>
@@ -76,7 +78,7 @@ private:
 		loadInvalidDbc(
 			"no_func_type.dbc",
 			{
-				base::strConcat(vm::code::builders::MissingFunctionalTypeError::ERR_MSG, "main"),
+				base::strConcat(vm::code::builders::MissingFunctionalTypeError::ERR_MSG, "foo"),
 			}
 		);
 	}

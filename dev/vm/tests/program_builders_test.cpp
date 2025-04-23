@@ -72,7 +72,7 @@ private:
 		type_context_builder.addType(vm::code::FunctionType{ test, {}, { void_t } });
 
 		TypeContext     available_types = type_context_builder.build();
-		FunctionBuilder func_builder(test, available_types);
+		FunctionBuilder func_builder(test, {}, available_types);
 
 		auto a = func_builder.initType(Op_init_type{ int32 });
 		ASSERT_EQUAL(0, a);
@@ -94,7 +94,7 @@ private:
 		ASSERT_EQUAL(4, d);
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::code::Function func = func_builder.build();
-		ASSERT_EQUAL(base::StrID("test"), func.name);
+		ASSERT_EQUAL(base::StrID("test"), func.name.str);
 		ASSERT_EQUAL(20, func.local_stack_size);
 
 		assertInstructionsEqual(func.body[0], Op_init_type{ int32 });
@@ -117,7 +117,7 @@ private:
 
 		TypeContext finalized = type_context_builder.build();
 
-		FunctionBuilder func_builder(main, finalized);
+		FunctionBuilder func_builder(main, {}, finalized);
 		auto            a = func_builder.initType(Op_init_type{ int64 });  // a
 		func_builder.initType(Op_init_type{ int32 });                      // b
 

@@ -44,17 +44,23 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid).value();                    // "Run failed (1)"
+		vm::api::run(pid).value();  // "Run failed (1)"
 
+		// We want to assure that the start function already managed to call main for the test to
+		// work correctly.
+		auto execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
+		assertEqual(1, execution_position.instr_number, "Line number is not correct");
+
+		vm::api::resume(pid).value();                 // "Resume failed (1)"
 		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
-		std::cout << position.instr_number << '\n';
 		assertTrue(
-			2 <= position.instr_number && position.instr_number <= 3, "Line number is not correct"
+			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 2) return 3;
-			if (x == 3) return 2;
+			if (x == 3) return 4;
+			if (x == 4) return 3;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};

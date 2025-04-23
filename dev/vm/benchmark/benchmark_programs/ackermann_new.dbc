@@ -1,4 +1,3 @@
-type fun: main {} i64
 type fun: ackermann { i64, i64 } i64
 
 function ackermann {
@@ -38,8 +37,6 @@ function ackermann {
 
     mov_l64_l64         0, 24;
     deinit; # A() ret_val
-    deinit; # arg1
-    deinit; # arg0
     ret;
 
     label N0;
@@ -54,8 +51,6 @@ function ackermann {
 
     mov_l64_l64         0, 24;
     deinit; # A() ret_val
-    deinit; # arg1
-    deinit; # arg0
     ret;
 
     label M0;
@@ -70,16 +65,21 @@ function ackermann {
 
 function main {
     # [0, 8) main ret_val
-    init_type           i64; # [8, 16) ackermann ret_val
-    init_type           i64; # [16, 24) ackermann arg0
-    init_type           i64; # [24, 32) ackermann arg1
+    # [8, 16) -> argc
+    # [16, 32) -> *argv
 
-    input_l64           16;
-    input_l64           24;
+    init_type           i64; # [32, 40) ackermann ret_val
+    init_type           i64; # [40, 48) ackermann arg0
+    init_type           i64; # [48, 56) ackermann arg1
+
+    input_l64           40;
+    input_l64           48;
     call_func           ackermann;
 
-    output_l64          8;
+    output_l64          32;
 
-    deinit; # A() ret_val
+    deinit;         # ackermann ret_val
+    deinit;         # *argv
+    deinit;         # argc
     ret;
 }

@@ -5,7 +5,6 @@
 
 #include "instruction.hpp"
 
-#include "vm/bytecode/builders/builders.hpp"
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
