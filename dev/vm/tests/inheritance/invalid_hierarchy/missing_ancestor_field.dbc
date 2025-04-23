@@ -1,31 +1,18 @@
-type primitive: int64 8
-type fun: main {} int64
-
-type primitive: VT 8
-
-type data: Widget {
-    vtable: VT,
-    pos_x: int64,
-    pos_y: int64,
+type class: Widget {
+    abstract: true;
+    fields: {
+        pos_x: i64,
+        pos_y: i64,
+    };
 }
 
-type data: Button {
-    vtable: VT,
-    n_clicked: int64,
-}
-
-inheritable Widget: abstract class {}
-inheritable Button: open class {
+type class: Button {
     extends: Widget;
+    fields: {
+        n_clicked: i64,
+    };
 }
 
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    
-    local_size: 8;
-    
-    code: {
-        ret;
-    }
+    ret;
 }

@@ -91,6 +91,11 @@ namespace vm::code::builders {
 	class TypeContextBuilder {
 		StableTypeIdNameMap<TypeOfData> types;
 
+        /*
+         * @brief Throws a builder error if a type is invalid.
+         */
+		void validateType(const TypeOfData& type) const;
+
 	public:
 		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;

@@ -4,7 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/preprocessor/validator/errors.hpp>
+#include <vm/loader/errors.hpp>
 
 class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -16,18 +16,14 @@ public:
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("inheritance_metadata.dbc", "", "0");
+		runTestOnVm("inheritance_metadata.dbc", "", "0", {}, 0);
 
 		// Invalid
-		using namespace vm::validator;
+		using namespace vm::loader;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-			{ "invalid_hierarchy/instance_data_in_interface.dbc",
-		      InstanceDataInInterface::ERR_MSG },
 			{ "invalid_hierarchy/missing_ancestor_field.dbc", MissingAncestorField::ERR_MSG },
-			{ "invalid_hierarchy/missing_vt_pointer.dbc", MissingVtablePointer::ERR_MSG },
 			{ "invalid_hierarchy/extends_plain.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/extends_interface.dbc", InvalidExtends::ERR_MSG },
-			{ "invalid_hierarchy/extends_final.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/implements_plain.dbc", InvalidImplements::ERR_MSG },
 			{ "invalid_hierarchy/implements_class.dbc", InvalidImplements::ERR_MSG },
 		});

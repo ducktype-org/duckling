@@ -13,6 +13,8 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
+#include <ranges>
+
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \
 		throw base::NotYetImplemented(                                                   \
@@ -304,11 +306,39 @@ const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
 Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
-/*
- * @throws DuplicatedTypeError
- * @throws MissingVTablePtrError
- */
+void TypeContextBuilder::validateType(const TypeOfData& type) const {
+	auto get_type = [&](base::StrID name) {
+		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
+	};
+	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
+		for (const auto& impl: implements) {
+			auto impl_type = get_type(impl);
+			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
+				throw InvalidImplements(type);
+		}
+	};
+
+	variant_match(type) {
+		variant_case(InterfaceType, interface) { validate_implements(interface.implements); }
+		variant_case(ClassType, clazz) {
+			validate_implements(clazz.implements);
+			if_opt_some(clazz.extends, extends) {
+				auto super_type = get_type(extends);
+				if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
+					throw InvalidExtends(type);
+
+				const auto& superclass = std::get<ClassType>(*super_type);
+				if (clazz.fields.size() < superclass.fields.size())
+					throw MissingAncestorField(type);
+				for (auto [field, super_field]: std::views::zip(clazz.fields, superclass.fields))
+					if (field != super_field) throw MissingAncestorField(type);
+			}
+		}
+	}
+}
+
 void TypeContextBuilder::addType(const TypeOfData& type) {
+	validateType(type);
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {

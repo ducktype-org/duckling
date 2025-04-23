@@ -103,25 +103,25 @@ namespace vm::code::builders {
 		MissingVTablePtrError(base::StrID name): BuilderError(base::strConcat(ERR_MSG, name)) {}
 	};
 
-#define DEFINE_VERIFICATION_BUILDER_ERROR(name, msg)                  \
-	class name: public BuilderError {                                 \
-	public:                                                           \
-		constexpr static const std::string_view ERR_MSG = (msg);      \
-		const vm::opargs::Type                  TYPE;                 \
-                                                                      \
-		name(vm::opargs::Type type):                                  \
-			  BuilderError(base::strConcat(ERR_MSG, type.type_name)), \
-			  TYPE(type) {}                                           \
+#define DEFINE_VERIFICATION_BUILDER_ERROR(error_name, msg)                             \
+	class error_name: public BuilderError {                                            \
+	public:                                                                            \
+		constexpr static const std::string_view ERR_MSG = (msg);                       \
+		const TypeOfData                        TYPE;                                  \
+                                                                                       \
+		error_name(TypeOfData type):                                                   \
+			  BuilderError(base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name))), \
+			  TYPE(type) {}                                                            \
 	};
 
 	DEFINE_VERIFICATION_BUILDER_ERROR(
-		InvalidImplements, "This interface/class must implement only interfaces: "
+		InvalidImplements, "This interface/class can implement only other interfaces: "
 	);
 	DEFINE_VERIFICATION_BUILDER_ERROR(InvalidExtends, "This class can extend only other classes: ");
 	DEFINE_VERIFICATION_BUILDER_ERROR(
 		MissingAncestorField, "This class does not contain all of its ancestors' fields: "
 	);
-	// @TODOB detect cycles?
+	// @TODOB detect cycles
 	DEFINE_VERIFICATION_BUILDER_ERROR(UninstantiableValue, "This type cannot be instantiated: ");
 	DEFINE_VERIFICATION_BUILDER_ERROR(
 		InvalidUpcast, "The destination type is not an ancestor of source type: "

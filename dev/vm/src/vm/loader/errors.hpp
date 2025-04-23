@@ -383,27 +383,27 @@ namespace vm::loader {
 	constexpr const std::string_view WRONG_MAIN_RET_VAL_ERR
 		= "Main function has to return an 8 byte primitive type.";
 
-#define DEFINE_VERIFICATION_DIA_ERROR(name, msg)                 \
-	class name final: public dia::Error {                        \
-		base::StrID type_name;                                   \
-                                                                 \
-	public:                                                      \
-		constexpr static const std::string_view ERR_MSG = (msg); \
-                                                                 \
-	protected:                                                   \
-		[[nodiscard]]                                            \
-		std::string toStringBrief() const override {             \
-			return base::strConcat(ERR_MSG.data(), type_name);   \
-		}                                                        \
-                                                                 \
-	public:                                                      \
-		[[nodiscard]]                                            \
-		Domain getDomain() const override {                      \
-			return Domain::StaticVerification;                   \
-		}                                                        \
-		name(dia::SourcePosition pos, base::StrID type_name):    \
-			  dia::Error(pos),                                   \
-			  type_name(type_name) {}                            \
+#define DEFINE_VERIFICATION_DIA_ERROR(error_name, msg)              \
+	class error_name final: public dia::Error {                     \
+		base::StrID type_name;                                      \
+                                                                    \
+	public:                                                         \
+		constexpr static const std::string_view ERR_MSG = (msg);    \
+                                                                    \
+	protected:                                                      \
+		[[nodiscard]]                                               \
+		std::string toStringBrief() const override {                \
+			return base::strConcat(ERR_MSG.data(), type_name);      \
+		}                                                           \
+                                                                    \
+	public:                                                         \
+		[[nodiscard]]                                               \
+		Domain getDomain() const override {                         \
+			return Domain::StaticVerification;                      \
+		}                                                           \
+		error_name(dia::SourcePosition pos, base::StrID type_name): \
+			  dia::Error(pos),                                      \
+			  type_name(type_name) {}                               \
 	};
 
 	DEFINE_VERIFICATION_DIA_ERROR(
@@ -413,7 +413,7 @@ namespace vm::loader {
 	DEFINE_VERIFICATION_DIA_ERROR(
 		MissingAncestorField, "This class does not contain all of its ancestors' fields: "
 	);
-	// @TODOB detect cycles?
+	// @TODOB detect cycles
 	DEFINE_VERIFICATION_DIA_ERROR(UninstantiableValue, "This type cannot be instantiated: ");
 	DEFINE_VERIFICATION_DIA_ERROR(
 		InvalidUpcast, "The destination type is not an ancestor of source type: "

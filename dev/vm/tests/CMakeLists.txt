@@ -56,25 +56,9 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
                 USES ${libvm} Tester ${vmtester})
-# @TODOB
-# <<<<<<< HEAD
-#         duck_add_test_custom(vm ${test_set}_parsing_test parsing/bc_parsing.cpp
-#             USES ${libvm} Tester ${vmtester})
-#         # @TODO verification (for now) happens before loading the parsed code,
-#         # so we got the wrong errors in these tests, this will probably change with loaders,
-#         # so im just lazily disabling them
-#         set_property(TEST ${test_set}_parsing_test PROPERTY DISABLED TRUE)
-# 
-#         duck_add_test_custom(vm ${test_set}_validation_test validation/bc_validation.cpp
-#                 USES ${libvm} Tester ${vmtester})
-# 
-#         duck_add_test_custom(vm ${test_set}_inheritance_loading_test inheritance/inheritance_loading.cpp
-#             USES ${libvm} Tester ${vmtester})
-#         duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
-#             inheritance/inheritance_hierarchy_correctness.cpp
-#             USES ${libvm} Tester ${vmtester})
-#         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
-# =======
+        duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
+            inheritance/inheritance_hierarchy_correctness.cpp
+            USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")
