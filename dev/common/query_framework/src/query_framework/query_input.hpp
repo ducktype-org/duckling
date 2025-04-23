@@ -7,7 +7,6 @@
 
 #include "query_int.hpp" // IWYU pragma: export
 
-
 namespace query::detail {
     /**
      * @brief Dummy value used for side-inputs return values.
@@ -41,9 +40,3 @@ namespace query::detail {
 #define DECLARE_QUERY_SIDE_INPUT(query_type, key) \
     DECLARE_QUERY_AUX(query_type, key, query::detail::SideInputMockValue, true)
     
-// Some side notes:
-// * query input : query without key, of which value might change depending on outside world – pointer size, compilation options
-// * query output: query with key, of which value might change depending on outside world ? 
-// * query side input: query with key, without output – or with some dummy output?
-
-// There is still an idea of key-dependencies

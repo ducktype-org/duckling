@@ -125,7 +125,6 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			// hmm:...
 			if (ref.toOpt().has_value()) {
 				detail::notifyContext(ctx, this->ref->getID() );
 			}

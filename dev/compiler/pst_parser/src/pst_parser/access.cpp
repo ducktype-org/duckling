@@ -8,5 +8,5 @@ namespace pst::detail {
 
 	void notifyContext(query::Context& ctx, PstID id) { ctx.query<PSTAccessSideInput>({id}); }
 
-	void notifyBadAccess(query::Context&) { CORE_PANIC("BAD ACCESS"); }
+	void notifyBadAccess(query::Context&) { CORE_PANIC("PST-Access to a nullptr."); }
 }
