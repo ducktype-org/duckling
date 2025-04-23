@@ -3,6 +3,7 @@
 #include <iostream>
 #include <optional>
 
+#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
@@ -62,31 +63,42 @@ void FunctionBuilder::checkInstruction(const Instruction& instruction) {
 		}
 	};
 
+	std::vector<base::StrID> arg_types;
+
     // Tutaj już możemy po ludzku matchować jak chcemy.
     for (auto arg: args) {
         variant_match(arg) {
 			variant_case(opargs::StackLocalI8, local) {
 				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
 				if (entry.type_size != 1) throw InvalidInstructionArgumentSize();
+				arg_types.push_back(entry.type_name);
 			}
 			variant_case(opargs::StackLocalI16, local) {
 				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
 				if (entry.type_size != 2) throw InvalidInstructionArgumentSize();
+				arg_types.push_back(entry.type_name);
 			}
 			variant_case(opargs::StackLocalI32, local) {
 				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
 				if (entry.type_size != 4) throw InvalidInstructionArgumentSize();
+				arg_types.push_back(entry.type_name);
 			}
 			variant_case(opargs::StackLocalI64, local) {
 				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
 				if (entry.type_size != 8) throw InvalidInstructionArgumentSize();
+				arg_types.push_back(entry.type_name);
 			}
 			variant_case(opargs::StackLocalAny, local) {
 				LocalStackEntry entry = find_in_stack(usize(local.offset)).expect("Invalid offset!");
-				(void) entry;
+				arg_types.push_back(entry.type_name);
 			}
         }
     }
+
+	if (arg_types.size() == 2) {
+		if (arg_types.at(0) != arg_types.at(1))
+			throw ArgumentMismatch();
+	}
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {

@@ -101,6 +101,14 @@ namespace vm::code::builders {
 			constexpr const static std ::string_view ERR_MSG
 				= "Invalid instruction argument size.";
 	
-				InvalidInstructionArgumentSize(): BuilderError(base ::strConcat(ERR_MSG)) {}
-		};
+		InvalidInstructionArgumentSize(): BuilderError(base ::strConcat(ERR_MSG)) {}
+	};
+
+	class ArgumentMismatch: public BuilderError {
+		public:
+			constexpr const static std ::string_view ERR_MSG
+				= "Instruction arguments have different types.";
+	
+		ArgumentMismatch(): BuilderError(base ::strConcat(ERR_MSG)) {}
+	};
 }
