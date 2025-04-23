@@ -54,6 +54,7 @@ private:
 		std::string                        module_path,
 		const base::Optional<std::string>& input     = {},
 		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
 		i64                                exit_code = 0
 	) {
 		using namespace compiler;
@@ -62,12 +63,12 @@ private:
 
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-		runTestOnVm(code, input, output, exit_code);
+		runTestOnVm(code, input, output, args, exit_code);
 	}
 
-	void simpleTest() { runTest("modules/simple", {}, {}, 42); }
+	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }
 
-	void functionCallsTest() { runTest("modules/function_calls"); }
+	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
 };
 
 

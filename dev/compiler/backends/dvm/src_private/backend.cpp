@@ -8,7 +8,9 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -17,6 +19,7 @@
 #include <algorithm>
 #include <ostream>
 #include <ranges>
+#include <variant>
 
 #define INVALID_CASE(tp, reason)                                                    \
 	variant_case(tp, _) {                                                           \
@@ -95,21 +98,60 @@ namespace compiler::backend_vm {
 				  }()) {
 				variable_to_id = lir_function->getLocalVariableIDs();
 				block_to_id    = lir_function->getBlockIDs();
-
-				// init all variables
-				for (auto&& var: lir_function->local_list) {
-					// This is most likely redundant
-					CORE_ASSERT(!lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
-
-					auto vm_type = getTypeFromLayout(var->layout);
-					lir_local_types.put(var.ref(), vm_type);
-
-					auto tp_name = VISIT(vm_type, tp, return tp.name);
-					auto offset  = func_builder.initType(instructions::Op_init_type(tp_name));
-					lir_local_to_stack.put(var.ref(), offset);
-				}
 			}
 		};
+
+		usize initType(AddLirFuncContext& ctx, base::StrID type_name) {
+			auto offset = ctx.func_builder.initType(instructions::Op_init_type(type_name));
+			ctx.func_builder.addInstruction(
+				instructions::Comment(base::StrID(base::strConcat("Variable\t\t\t", offset).data()))
+			);
+			return offset;
+		}
+
+		void initLocals(AddLirFuncContext& ctx) {
+			auto func_type = ctx.types.at(ctx.lir_function->name);
+			CORE_ASSERT(
+				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name)),
+				"Type not functional"
+			);
+			auto func_type_tod
+				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name));
+			base::HashMap<usize, usize> param_offsets;
+			const auto                  param_count = *func_type->getParameterCount();
+
+			usize prev_param_offset = func_type->getResultType().value()->getSize(); // at 0th index is the result storage
+			for (usize idx = 0; idx < param_count; idx++) {
+				param_offsets.put(idx, prev_param_offset);
+				prev_param_offset += func_type->getNthParameterType(idx).value()->getSize();
+			}
+
+			// Save locals offset
+			for (const auto& var: ctx.lir_function->local_list) {
+				// This is most likely redundant
+				CORE_ASSERT(!ctx.lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
+
+				auto vm_type = getTypeFromLayout(var->layout);
+				ctx.lir_local_types.put(var.ref(), vm_type);
+				match_optional(var->parameter_index) {
+					opt_some(param_idx) {
+						// In this case we are handling a parameter
+						CORE_ASSERT(
+							vm_type == ctx.TYPE_OF_DATA.at(func_type_tod.parameters.at(param_idx)),
+							"getTypeFromLayout created an invalid type..."
+						);
+
+						ctx.lir_local_to_stack.put(var.ref(), param_offsets[param_idx]);
+					}
+					opt_none {
+						// In this case we are handling a regular variable
+						auto tp_name = VISIT(vm_type, tp, return tp.name);
+						auto offset  = initType(ctx, tp_name);
+						ctx.lir_local_to_stack.put(var.ref(), offset);
+					}
+				}
+			}
+		}
 
 		void insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
 			auto param_types
@@ -128,16 +170,7 @@ namespace compiler::backend_vm {
 
 			auto result_type_name = VISIT(result_type, type, return type.name);
 
-			// @TODO: This is temporary. Look #692
-			// https://github.com/ducktype-org/duckling/issues/692
-			if (lir_function->name == "main") {
-				type_context.addType(PrimitiveType{ base::StrID("int64"), 8 });
-				type_context.addType(FunctionType{
-					lir_function->name,
-					{},
-					base::StrID("int64"),
-				});
-			} else {
+			if (lir_function->name != "main") {
 				type_context.addType(FunctionType{
 					lir_function->name, param_names, result_type_name });
 			}
@@ -154,12 +187,15 @@ namespace compiler::backend_vm {
 			for (const auto& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
 		}
 
-		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
-			auto id = ctx.block_to_id.atMaybe(block).expect("id of block not found");
+		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
+			auto id         = ctx.block_to_id.at(block);
+			auto label_name = base::strConcat("label_", id);
+			ctx.block_id_to_label.put(id, base::StrID(label_name.data()));
+		}
 
-			auto label_name       = base::strConcat(ctx.lir_function->name, "_label_", id);
-			auto [block_entry, _] = ctx.block_id_to_label.put(id, base::StrID(label_name.data()));
-			ctx.func_builder.addInstruction(instructions::Op_label{ block_entry->second });
+		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
+			auto id = ctx.block_to_id.at(block);
+			ctx.func_builder.addInstruction(instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
 		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, const i64 offset) {
@@ -299,9 +335,8 @@ namespace compiler::backend_vm {
 
 			// Init result type
 
-			auto func_result_storage_offset = ctx.func_builder.initType(
-				instructions::Op_init_type(called_func->getResultType().value()->getName())
-			);
+			auto func_result_storage_offset
+				= initType(ctx, called_func->getResultType().value()->getName());
 			auto func_result_argument = modifyOffsetOpArg(
 				lir_result_argument, base::safeIntConv<i64>(func_result_storage_offset)
 			);
@@ -313,7 +348,7 @@ namespace compiler::backend_vm {
 				auto        type_of_argument = param_type;
 				base::StrID type_name        = type_of_argument->getName();
 				std::cerr << "Initializing: " << type_name.str() << '\n';
-				auto offset = ctx.func_builder.initType(instructions::Op_init_type{ type_name });
+				auto offset = initType(ctx, type_name);
 
 				InstructionBuilder mov_arg(OpKind::mov);
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], i64(offset)));
@@ -321,12 +356,13 @@ namespace compiler::backend_vm {
 				ctx.func_builder.addInstruction(mov_arg);
 			}
 
-			InstructionBuilder call(OpKind::call);
-			call.pushArg(called_func_arg);
-			ctx.func_builder.addInstruction(call);
+			ctx.func_builder.addInstruction({ OpKind::call, called_func_arg });
 
-			InstructionBuilder mov_to_output(OpKind::mov);
-			mov_to_output.pushArgs(lir_result_argument, func_result_argument);
+			ctx.func_builder.addInstruction({
+				OpKind::mov,
+				lir_result_argument,
+				func_result_argument,
+			});
 			ctx.func_builder.addInstruction(instructions::Op_deinit());  // Deinit func result
 		}
 
@@ -360,12 +396,7 @@ namespace compiler::backend_vm {
 					// by splitting it into two instructions:
 					// a = b;
 					// a += c;
-					InstructionBuilder instr_mov;
-
-					instr_mov.setKind(OpKind::mov);
-					instr_mov.pushArg(args[0]);
-					instr_mov.pushArg(args[1]);
-					ctx.func_builder.addInstruction(instr_mov);
+					ctx.func_builder.addInstruction({ OpKind::mov, args[0], args[1] });
 
 					args.pop_front();
 					args.pop_front();
@@ -383,13 +414,7 @@ namespace compiler::backend_vm {
 					// a = -a;
 
 					// a = b;
-					InstructionBuilder instr_mov(OpKind::mov);
-					instr_mov.pushArg(args[0]);
-					instr_mov.pushArg(args[1]);
-
-					auto built = instr_mov.build();
-					ctx.func_builder.addInstruction(instr_mov);
-
+					ctx.func_builder.addInstruction({ OpKind::mov, args[0], args[1] });
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
@@ -405,8 +430,61 @@ namespace compiler::backend_vm {
 		}
 	}
 
+	void addTerminator(AddLirFuncContext& ctx, const lir::BlockRef lir_block) {
+		const auto& terminator = lir_block->terminator;
+
+		ctx.func_builder.addInstruction(instructions::Comment(base::StrID(
+			base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+		)));
+
+		if (terminator.operation == lir::Operation::Branch) {
+			auto bool_arg    = lirValueToOpArg(ctx, terminator.arguments.at(0));
+			auto true_block  = lirValueToOpArg(ctx, terminator.arguments.at(1));
+			auto false_block = lirValueToOpArg(ctx, terminator.arguments.at(2));
+
+			variant_match(terminator.arguments.at(0).getVariant()) {
+				variant_case(bool, value) {
+					if (value)
+						ctx.func_builder.addInstruction({ OpKind::jmp, true_block });
+					else
+						ctx.func_builder.addInstruction({ OpKind::jmp, false_block });
+				}
+				variant_default {
+					ctx.func_builder.addInstruction(
+						{ OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } }
+					);
+					ctx.func_builder.addInstruction({ OpKind::jmpIf, true_block });
+					ctx.func_builder.addInstruction({ OpKind::jmpIfNot, false_block });
+				}
+			}
+
+		} else {
+			InstructionBuilder terminator_instr;
+			terminator_instr.setKind(lirTerminatorToOpKind(terminator.operation));
+
+			// Since VM does not support `return X;` operation, we must move the value to
+			// 0th index and then return.
+			if (terminator.operation == lir::Operation::ReturnValue) {
+				CORE_ASSERT(
+					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
+				);
+				ctx.func_builder.addInstruction({
+					OpKind::mov,
+					vm::opargs::StackLocalI64(0),
+					lirValueToOpArg(ctx, terminator.arguments.at(0)),
+				});
+			} else {
+				for (auto&& lir_location: terminator.arguments)
+					terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
+			}
+
+			ctx.func_builder.addInstruction(terminator_instr);
+		}
+	}
+
 	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
-		  module_id(module_id) {
+		  module_id(module_id),
+		  type_context_builder(vm::code::getBuiltinTypes()) {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
 		TypeContext type_context = type_context_builder.build();
@@ -416,40 +494,18 @@ namespace compiler::backend_vm {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
 
 			AddLirFuncContext ctx(lir_function, type_context);
+			initLocals(ctx);
+
+			for (auto&& lir_block: lir_function->block_order) registerBlock(ctx, lir_block);
 
 			for (auto&& lir_block: lir_function->block_order) {
 				addBlockLabel(ctx, lir_block);
 				for (auto& lir_instruction: lir_block->instructions)
 					addLirInstruction(ctx, lir_instruction);
 
-				ctx.func_builder.addInstruction(instructions::Comment(base::StrID(
-					base::strConcat("Terminator: ", base::enumToStr(lir_block->terminator.operation))
-						.data()
-				)));
-
-				InstructionBuilder terminator_instr;
-				terminator_instr.setKind(lirTerminatorToOpKind(lir_block->terminator.operation));
-
-				// Since VM does not support `return X;` operation, we must move the value to
-				// 0th index and then return.
-				if (lir_block->terminator.operation == lir::Operation::ReturnValue) {
-					InstructionBuilder move_ret(OpKind::mov);
-					CORE_ASSERT(
-						lir_block->terminator.arguments.size() == 1,
-						"Invalid number of arguments for value-return."
-					);
-					move_ret.pushArgs(
-						vm::opargs::StackLocalI64(0),
-						lirValueToOpArg(ctx, lir_block->terminator.arguments.at(0))
-					);
-					ctx.func_builder.addInstruction(move_ret);
-				} else {
-					for (auto&& lir_location: lir_block->terminator.arguments)
-						terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
-				}
-
-				ctx.func_builder.addInstruction(terminator_instr);
+				addTerminator(ctx, lir_block);
 			}
+
 
 			code.functions.emplace_back(ctx.func_builder.build());
 		}

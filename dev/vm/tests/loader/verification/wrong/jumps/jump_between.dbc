@@ -3,9 +3,9 @@ function main {
     # [8, 16) -> argc
     # [16, 32) -> *argv
     # [32, 40) -> x
-	
+
 	init_type     i64; # x
-	jmpRel_label  Other;
+	jmp_label  Other;
 	deinit; # x
 
 	init_type     i64; # x
