@@ -6,9 +6,10 @@
  */
 #pragma once
 
-#include "ints.hpp"  // IWYU pragma: export
+#include "ints.hpp"          // IWYU pragma: export
+#include "perfect_hash.hpp"  // IWYU pragma: export
 
-#include <compare>   // IWYU pragma: export
+#include <compare>           // IWYU pragma: export
 
 /**
  * @brief Macro used to create Strong ID types.
@@ -116,3 +117,11 @@
 	struct std::hash<TYPE> final {                                                          \
 		usize operator()(const TYPE& key) const { return static_cast<usize>(key.asInt()); } \
 	};
+
+
+/**
+ * @brief Add customPerfectHash specialization to given ID type.
+ * Usage: ID_PERFECT_HASH(MY_ID)
+ */
+#define ID_PERFECT_HASH(TYPE) \
+	inline base::HashT customPerfectHash(TYPE id) { return id.asInt(); }
