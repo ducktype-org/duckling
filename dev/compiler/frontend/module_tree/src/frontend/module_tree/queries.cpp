@@ -6,7 +6,6 @@
 
 #include <base/string_id.hpp>
 
-
 namespace compiler::frontend {
 
 	/*******************
@@ -29,7 +28,7 @@ namespace compiler::frontend {
 		}
 
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { .data=res,.acd= acd });
+			cache.put(key, { .data = res, .acd = acd });
 			return res;
 		}
 	};
@@ -82,4 +81,3 @@ namespace compiler::frontend {
 	}
 
 }
-
