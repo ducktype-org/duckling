@@ -34,8 +34,19 @@ vm::code::Function FunctionBuilder::build() const {
 	return function;
 }
 
+void FunctionBuilder::validateInstruction(const Instruction& instruction) {
+	using namespace instructions;
+    variant_match(instruction) {
+        variant_case(Op_init_type, instr) {
+            // @TODOB
+        }
+    }
+}
+
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
+    validateInstruction(instruction);
+
 	variant_match(instruction) {
 		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
 		variant_case(Op_deinit, instr) { handleDeinit(); }

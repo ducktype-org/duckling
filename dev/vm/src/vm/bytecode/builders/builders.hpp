@@ -91,9 +91,9 @@ namespace vm::code::builders {
 	class TypeContextBuilder {
 		StableTypeIdNameMap<TypeOfData> types;
 
-        /*
-         * @brief Throws a builder error if a type is invalid.
-         */
+		/*
+		 * @brief Throws a builder error if a type is invalid.
+		 */
 		void validateType(const TypeOfData& type) const;
 
 	public:
@@ -175,6 +175,11 @@ namespace vm::code::builders {
 		void handleRet();
 
 		usize pushStackState(opargs::Type type);
+
+		/*
+		 * @brief Throws a builder error if a type is invalid.
+		 */
+		void validateInstruction(const Instruction& instruction);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
