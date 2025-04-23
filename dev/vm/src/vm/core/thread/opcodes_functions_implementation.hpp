@@ -271,7 +271,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
-			auto builtin_id    = static_cast<usize>(instr->arg0);
+			auto builtin_id    = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
 			auto function_type = builtins::getBuiltinFunctionType(builtin_id);
 			auto arg_count     = function_type->parameters.size();
 

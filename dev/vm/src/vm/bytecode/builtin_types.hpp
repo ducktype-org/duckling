@@ -38,8 +38,8 @@ namespace vm::code {
 		builders::TypeContextBuilder type_context_builder;
 
 		for (const auto& tp: builtin_types) type_context_builder.addType(tp);
-		for (const auto& func_tp: builtins::getBuiltinFunctionTypes())
-			type_context_builder.addType(func_tp);
+		for (const auto& func_tp: *builtins::getBuiltinFunctionTypes())
+			type_context_builder.addType(func_tp.second);
 
 		return type_context_builder;
 	}

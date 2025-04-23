@@ -62,7 +62,11 @@ namespace vm::loader::compiler {
 				}
 				variant_case(vm::opargs::BuiltinFunctionName, func) {
 					auto func_id = builtins::getBuiltinFunctionID(func.function_name);
-					if (func_id) return base::safeIntConv<i64>(*func_id);
+					if (func_id)
+						return base::safeIntConv<i64>(
+							static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(*func_id
+						    )
+						);
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}

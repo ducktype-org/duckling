@@ -17,6 +17,7 @@
 #pragma once
 
 
+#include "base/stringifyable_enum.hpp"
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 
@@ -36,6 +37,9 @@ namespace vm::builtins {
 	// in the VMThread. So the handlers only see the converted values.
 	using Value = std::variant<i64, NoValue>;
 
+
+	enum class BuiltinFunctionID : usize { InputI64, OutputI64 };
+
 	/**
 	 * @brief Class for FunctionHandlers.
 	 *
@@ -51,16 +55,24 @@ namespace vm::builtins {
 	};
 
 	/**
-	 * @brief Returns the list of builtin functions types with lazy initialization.
+	 * @brief Returns the map of builtin functions types with lazy initialization.
 	 * @note Function types here should match HELIOS types.
 	 * The types used for the parameters and the return value are defined in the @file
 	 * bytecode/builtin_types.hpp file (like "i64", "i32", "void").
 	 */
-	const std::array<code::FunctionType, 2>& getBuiltinFunctionTypes();
+	auto getBuiltinFunctionTypes()
+		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>>;
 
-	inline CRef<code::FunctionType> getBuiltinFunctionType(usize id) {
-		return &getBuiltinFunctionTypes().at(id);
+	inline CRef<code::FunctionType> getBuiltinFunctionType(BuiltinFunctionID id) {
+		return &getBuiltinFunctionTypes()->at(id);
 	}
+
+	/**
+	 * @brief Calls a builtin function with the given ID and arguments.
+	 */
+	Value callBuiltinFunction(
+		BuiltinFunctionID id, VMThread& thread, const std::vector<Value>& arguments
+	);
 
 	/**
 	 * @brief Get the ID of the builtin function given the name.
@@ -69,8 +81,7 @@ namespace vm::builtins {
 	 * The ID is used in the LowVMProgram to store opcode
 	 * arguments as numerical values (not strings).
 	 */
-	base::Optional<usize> getBuiltinFunctionID(base::StrID name);
+	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name);
 
 
-	Value callBuiltinFunction(usize id, VMThread& thread, const std::vector<Value>& arguments);
 }

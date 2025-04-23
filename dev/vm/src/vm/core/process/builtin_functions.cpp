@@ -1,5 +1,6 @@
 #include "builtin_functions.hpp"
 
+#include "base/stable_hashmap.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
@@ -64,24 +65,30 @@ namespace vm::builtins {
 
 	// ============================== BUILTIN DECLARATIONS AND ROUTER ==============================
 
-	const std::array<code::FunctionType, 2>& getBuiltinFunctionTypes() {
-		static const std::array<code::FunctionType, 2> function_types
-			= { code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")),
-			    code::FunctionType(
-					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
-				) };
+	auto getBuiltinFunctionTypes()
+		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
+		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
+			{ BuiltinFunctionID::InputI64,
+			  code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")) },
+			{ BuiltinFunctionID::OutputI64,
+			  code::FunctionType(
+				  base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
+			  ) }
+		};
 
-		return function_types;
+		return &map;
 	}
 
 	/**
 	 * @note The order and id should match the order in the getBuiltinFunctionTypes() array.
 	 */
-	Value callBuiltinFunction(usize id, VMThread& thread, const std::vector<Value>& arguments) {
+	Value callBuiltinFunction(
+		BuiltinFunctionID id, VMThread& thread, const std::vector<Value>& arguments
+	) {
 		switch (id) {
-		case 0:
+		case BuiltinFunctionID::InputI64:
 			return callUnpackArgs(FunctionHandlers::builtinInputI64, thread, arguments);
-		case 1:
+		case BuiltinFunctionID::OutputI64:
 			return callUnpackArgs(FunctionHandlers::builtinOutputI64, thread, arguments);
 		default:
 			CORE_PANIC("Invalid builtin function ID");
@@ -90,16 +97,16 @@ namespace vm::builtins {
 
 	// ============================== OTHER ==============================
 
-	base::Optional<usize> getBuiltinFunctionID(base::StrID name) {
+	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name) {
 		// Lazy initialization of the "builtin name -> id" map.
-		static const std::unordered_map<base::StrID, usize> builtin_function_indices = []() {
-			std::unordered_map<base::StrID, usize> indices;
+		static const std::unordered_map<base::StrID, BuiltinFunctionID> builtin_function_indices
+			= []() {
+				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
-			usize index = 0;
-			for (const auto& func_tp: getBuiltinFunctionTypes())
-				indices.emplace(func_tp.name, index++);
-			return indices;
-		}();
+				  for (const auto& func_tp: *getBuiltinFunctionTypes())
+					  indices.emplace(func_tp.second.name, func_tp.first);
+				  return indices;
+			  }();
 
 		auto it = builtin_function_indices.find(name);
 		if (it != builtin_function_indices.end()) return it->second;
