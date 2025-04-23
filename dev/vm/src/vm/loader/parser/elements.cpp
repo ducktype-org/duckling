@@ -417,10 +417,10 @@ namespace vm::loader::parser {
 					} else {
 						state.parse().one(lang_def::NamedOperator::Colon);
 						switch (state.tokens().next().asKeyword()) {
-						case lang_def::Keyword::True:
+						case lang_def::Keyword::BCTrue:
 							is_abstract = true;
 							break;
-						case lang_def::Keyword::False:
+						case lang_def::Keyword::BCFalse:
 							is_abstract = false;
 							break;
 						default:
@@ -477,7 +477,7 @@ namespace vm::loader::parser {
 			}
 
 			if (state.notEmpty()) {
-				state.err.failAndLog(state.getPosition(-1), "unexpected inheritable content");
+				state.err.failAndLog(state.getPosition(-1), "unexpected class/interface content");
 
 				state.goUpAndSkip();
 				return nullptr;

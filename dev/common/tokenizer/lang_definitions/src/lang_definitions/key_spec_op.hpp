@@ -163,6 +163,8 @@ namespace lang_def {
 		BCImplements,
 		BCVirtualMethods,
 		BCFields,
+		BCTrue,
+		BCFalse,
 		COUNT,
 	};
 
