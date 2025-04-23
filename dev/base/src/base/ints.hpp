@@ -32,5 +32,3 @@ using usize = std::size_t;
 static_assert(sizeof(byte) == sizeof(char));
 static_assert(sizeof(byte) == sizeof(u8));
 
-
-// @TODO: undefine cstdint
