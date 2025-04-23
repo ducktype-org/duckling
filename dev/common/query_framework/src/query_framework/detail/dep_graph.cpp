@@ -95,7 +95,7 @@ namespace query::detail {
 				node_data.contains(node_id),
 				"Node not found in dep graph, call the given query first."
 			);
-			
+
 			// some simple bfs for now:
 			std::set<NodeID>   visited;
 			std::queue<NodeID> queue;

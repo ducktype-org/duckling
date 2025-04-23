@@ -1,10 +1,10 @@
 #include <query_framework/detail/dep_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
-#include <query_framework/query_int.hpp>
-#include <query_framework/utils/with_context_do.hpp>
 #include <query_framework/query_input.hpp>
 #include <query_framework/query_input_impl.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
 #include <base/anycast.hpp>
@@ -276,30 +276,39 @@ DECLARE_QUERY_SIDE_INPUT(SideInput, u64);
 IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
 
 DECLARE_QUERY(EmptyQuery, u64, u64);
+
 struct IMPLEMENT_QUERY(EmptyQuery, u64) {
 	static auto provide(Context&, QKey key) -> PResult { return key; }
+
 	QUERY_AUTO_NO_CACHE
 };
+
 QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
 
 DECLARE_QUERY(CallEmptyQueryNTimes, u64, u64);
+
 struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		for (u64 i = 0; i < key; i++) ctx.query<EmptyQuery>(i);
 		return key;
 	}
+
 	QUERY_AUTO_NO_CACHE
 };
+
 QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
 
 DECLARE_QUERY(CallSideInputNTimes, u64, u64);
+
 struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		for (u64 i = 0; i < key; i++) ctx.query<SideInput>(i);
 		return key;
 	}
+
 	QUERY_AUTO_NO_CACHE
 };
+
 QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
 
 DECLARE_QUERY(CallEmptyQueryNTimesSideInput, u64, u64);
@@ -350,32 +359,36 @@ private:
 	}
 
 	void testDeps() {
-		assertThrows<base::Panic>([&]() {
-			query::getNodeDeps<EmptyQuery>(1);
-		}, "Query deps present before query call.");
+		assertThrows<base::Panic>(
+			[&]() { query::getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
+		);
 
 		query::entryPoint<EmptyQuery>(1);
 		auto deps = query::getNodeDeps<EmptyQuery>(1);
 		ASSERT_EQUAL(deps.size(), 1);
 
-		assertThrows<base::Panic>([&]() {
-			query::getNodeDeps<EmptyQuery>(2);
-		}, "Query deps present before query call.");
+		assertThrows<base::Panic>(
+			[&]() { query::getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
+		);
 
 		query::entryPoint<CallEmptyQueryNTimes>(10);
 		auto deps2 = query::getNodeDeps<CallEmptyQueryNTimes>(10);
 		// 10 + 1 for the query itself:
 		ASSERT_EQUAL(deps2.size(), 11);
 		{
-			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
+			auto deps2_filtered
+				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
-			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, CallEmptyQueryNTimes::getID());
+			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(
+				10, CallEmptyQueryNTimes::getID()
+			);
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{
-			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
+			auto deps2_filtered
+				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
 	}
