@@ -8,8 +8,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -120,7 +120,8 @@ namespace compiler::backend_vm {
 			base::HashMap<usize, usize> param_offsets;
 			const auto                  param_count = *func_type->getParameterCount();
 
-			usize prev_param_offset = func_type->getResultType().value()->getSize(); // at 0th index is the result storage
+			usize prev_param_offset = func_type->getResultType().value()->getSize(
+			);  // at 0th index is the result storage
 			for (usize idx = 0; idx < param_count; idx++) {
 				param_offsets.put(idx, prev_param_offset);
 				prev_param_offset += func_type->getNthParameterType(idx).value()->getSize();
