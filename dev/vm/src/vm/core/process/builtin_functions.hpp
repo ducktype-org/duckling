@@ -17,10 +17,7 @@
 #pragma once
 
 
-#include "base/stringifyable_enum.hpp"
-#include <base/raw_view.hpp>
 #include <base/string_id.hpp>
-
 #include <vm/bytecode/type_of_data.hpp>
 
 namespace vm {

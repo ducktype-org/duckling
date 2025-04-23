@@ -1,6 +1,5 @@
 #include "builtin_functions.hpp"
 
-#include "base/stable_hashmap.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
