@@ -1,20 +1,23 @@
-type fun: main {} i64
-
 function main {
 	# [0, 8) main ret_val
-	init_type 		i64; # [8, 16) a
-	init_type 		i64; # [16, 24) b
-	init_type 		i64; # [24, 32) c
-	mov_l64_imm  	8, 0;
-	mov_l64_imm  	16, 0;
+	# [8, 16) -> argc
+    # [16, 32) -> *argv
+
+	init_type 		i64; # [32, 40) a
+	init_type 		i64; # [40, 48) b
+	init_type 		i64; # [48, 56) c
+	mov_l64_imm  	32, 0;
+	mov_l64_imm  	40, 0;
 	breakpoint;
-	mov_l64_imm  	8, 0;
-	mov_l64_imm  	16, 0;
-	mov_l64_imm 	24, 0;
+	mov_l64_imm  	32, 0;
+	mov_l64_imm  	40, 0;
+	mov_l64_imm 	48, 0;
 	breakpoint;
 
 	deinit; # c
 	deinit; # b
 	deinit; # a
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }
