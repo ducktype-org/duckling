@@ -2,11 +2,14 @@
 # input = ""
 # output = "42"
 
-type fun: main {} i64
-
 function main {
-    init_type       i64; # [0, 8) main ret_val
-    deinit;
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+
+    deinit; # argv_ptr
+    deinit; # argc
+    deinit; # main ret_val
 
     init_type       i64; # [0, 8)
     mov_l64_imm     0, 42;

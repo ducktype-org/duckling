@@ -12,36 +12,39 @@ vm::PID VmTestSuite::initProcess() {
 }
 
 void VmTestSuite::runTestOnVm(
-	const std::string&                 rbc_filename,
+	const std::string&                 dbc_filename,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
 	i64                                exit_code
 ) {
 	auto pid  = initProcess();
-	auto file = fs::FilePath(path(rbc_filename));
+	auto file = fs::FilePath(path(dbc_filename));
 	ASSERT_TRUE(vm::api::loadFile(pid, file).has_value());
-	runTestImpl(pid, optional_input, optional_output, exit_code);
+	runTestImpl(pid, optional_input, optional_output, args, exit_code);
 }
 
 void VmTestSuite::runTestOnVm(
 	const vm::code::CodeCollection&    code,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
 	i64                                exit_code
 ) {
 	auto pid = initProcess();
 
 	ASSERT_TRUE(vm::api::loadCode(pid, code).has_value());
-	runTestImpl(pid, optional_input, optional_output, exit_code);
+	runTestImpl(pid, optional_input, optional_output, args, exit_code);
 }
 
 void VmTestSuite::runTestImpl(
 	vm::PID                            pid,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
 	i64                                exit_code
 ) {
-	ASSERT_TRUE(vm::api::run(pid).has_value());
+	ASSERT_TRUE(vm::api::run(pid, args).has_value());
 
 	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
 

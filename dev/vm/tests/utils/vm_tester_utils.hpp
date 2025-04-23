@@ -22,14 +22,20 @@ private:
 		vm::PID                            pid,
 		const base::Optional<std::string>& optional_input,
 		const base::Optional<std::string>& optional_output,
+		const std::vector<std::string>&    args,
 		i64                                exit_code
 	);
 
 protected:
+	/**
+	 * @brief Runs a program from a given filepath with the specified input and command-line
+	 * arguments. Asserts that the actual output matches the expected one.
+	 */
 	void runTestOnVm(
-		const std::string&                 rbc_filename,
+		const std::string&                 dbc_filename,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
 		i64                                exit_code       = 0
 	);
 
@@ -37,6 +43,7 @@ protected:
 		const vm::code::CodeCollection&    code,
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
 		i64                                exit_code       = 0
 	);
 
