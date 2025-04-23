@@ -12,5 +12,5 @@ DVM backend translation layer currently supports:
 DVM backend translation layer currently does **not** support:
 
 * Unsigned arithmetic operations
-* Function calls and tail calls
+* Tail calls
 * Other types (besides primitives)
