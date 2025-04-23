@@ -10,6 +10,7 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
+#include <query_framework/context.hpp>
 
 #include <base/anycast.hpp>
 
@@ -103,5 +104,13 @@ namespace compiler::helios::test_utils {
 		pst_stmt->acceptVisitor(visitor);
 
 		return std::move(visitor.expr_tree).value();
+	}
+
+	helios::ScopeID getFunctionBodyScope(SymID sym) {
+		return base::anyCast<helios::ScopeID>(query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
+			auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
+			auto fun_body = func_pst->getBody().unlock(ctx);
+			return ctx.query<helios::QueryPrimaryCodeScopeFor>(fun_body);
+		}));
 	}
 }

@@ -627,15 +627,8 @@ private:
 		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
 
 		// a simple way to get function scope through hout:
-		// @todo maybe we want to put in in helios_test_utils.hpp?
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout->functions.size());
-
-		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
-
-		auto foo            = hout->functions.at(0);
-		auto foo_body_scope = foo.content.body->lifetime_scope;
+		auto foo = getChain("foo", top_scope).back();
+		auto foo_body_scope = getFunctionBodyScope(foo);
 
 		// variable types:
 
