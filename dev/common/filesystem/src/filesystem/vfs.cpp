@@ -1,13 +1,18 @@
 #include "vfs.hpp"
 
+#include "base/box.hpp"
+
 // VFSNode implementation
-VFS::VFSNode::VFSNode(std::string name, bool isDir):
+VFS::VFSNode::VFSNode(std::string name, std::variant<FileData, DirectoryData> data):
 	  name(std::move(name)),
-	  is_directory(isDir),
-	  content("") {}
+	  data(std::move(data)) {}
+
+bool VFS::VFSNode::isDirectory() const { return std::holds_alternative<DirectoryData>(data); }
+
+bool VFS::VFSNode::isFile() const { return std::holds_alternative<FileData>(data); }
 
 // VFS implementation
-VFS::VFS() { root = std::make_unique<VFSNode>("vfs:", true); }
+VFS::VFS(): root(makeBox<VFSNode>("vfs:", DirectoryData{ {} })) {}
 
 std::vector<std::string> VFS::splitPath(const std::filesystem::path& path) {
 	std::vector<std::string> parts;
@@ -16,79 +21,72 @@ std::vector<std::string> VFS::splitPath(const std::filesystem::path& path) {
 	return parts;
 }
 
-VFS::VFSNode* VFS::findNode(const std::filesystem::path& path, bool createPath) {
-	if (path.empty()) return nullptr;
-	if (path == getRootPath()) return root.get();
+MRef<VFS::VFSNode> VFS::findNode(const std::filesystem::path& path, bool createPath) {
+	if (path.empty()) return {};
+	if (path == getRootPath()) return root.refMut();
 
-	auto     parts   = splitPath(path);
-	VFSNode* current = root.get();
+	auto         parts   = splitPath(path);
+	Ref<VFSNode> current = root.refMut();
 
 	for (size_t i = 1; i < parts.size(); ++i) {
-		const auto& part = parts[i];
-		auto        it   = current->children.find(part);
+		const auto& part     = parts[i];
+		auto&       children = std::get<DirectoryData>(current->data).children;
+		auto        it       = children.find(part);
 
-		if (it == current->children.end()) {
+		if (it == children.end()) {
 			if (createPath) {
-				// Create intermediate directory
-				auto     newNode        = std::make_unique<VFSNode>(part, true);
-				VFSNode* nodePtr        = newNode.get();
-				current->children[part] = std::move(newNode);
-				current                 = nodePtr;
+				auto result = children.emplace(part, makeBox<VFSNode>(part, DirectoryData{ {} }));
+				current     = result.first->second.refMut();
 			} else {
-				return nullptr;  // Node doesn't exist and we're not creating
+				return {};  // Node doesn't exist and we're not creating
 			}
 		} else {
-			current = it->second.get();
+			current = it->second.refMut();
 
 			// Can't navigate through a file
-			if (!current->is_directory && i < parts.size() - 1) return nullptr;
+			if (!current->isDirectory() && i < parts.size() - 1) return {};
 		}
 	}
 
 	return current;
 }
 
-VFS::VFSNode* VFS::getParentNode(const std::filesystem::path& path, bool createPath) {
+MRef<VFS::VFSNode> VFS::getParentNode(const std::filesystem::path& path, bool createPath) {
 	return findNode(path.parent_path(), createPath);
 }
 
 bool VFS::createFile(const std::filesystem::path& path) {
 	if (!isVirtualPath(path)) return false;
-	// Check if path is valid
 	if (path.empty() || path == getRootPath()) return false;
 
 	std::filesystem::path filename = path.filename();
 	if (filename.empty()) return false;
 
-	// Get or create parent directory
-	VFSNode* parent = getParentNode(path, true);
-	if (!parent || !parent->is_directory) return false;
+	MRef<VFSNode> parentRef = getParentNode(path, true);
+	if (!parentRef || !parentRef->isDirectory()) return false;
 
-	// Check if file already exists
-	if (parent->children.find(filename.string()) != parent->children.end()) return false;
+	auto& children = std::get<DirectoryData>(parentRef->data).children;
+	if (children.find(filename.string()) != children.end()) return false;
 
-	// Create the file
-	parent->children[filename.string()] = std::make_unique<VFSNode>(filename.string(), false);
+	children.emplace(filename.string(), makeBox<VFSNode>(filename.string(), FileData{ "" }));
 	return true;
 }
 
 bool VFS::writeFile(const std::filesystem::path& path, const std::string& content) {
 	if (!isVirtualPath(path)) return false;
-	VFSNode* node = findNode(path);
+	MRef<VFSNode> node = findNode(path);
+	if (!node || !node->isFile()) return false;
 
-	if (!node || node->is_directory) return false;
-
-	node->content = content;
+	std::get<FileData>(node->data).content = content;
 	return true;
 }
 
 std::string VFS::readFile(const std::filesystem::path& path) {
 	if (!isVirtualPath(path)) return "";
-	VFSNode* node = findNode(path);
+	MRef<VFSNode> node = findNode(path);
+	if (!node || !node->isFile()) return "";
 
-	if (!node || node->is_directory) return "";
-
-	return node->content;
+	return std::get<FileData>(node->data).content;
 }
 
 bool VFS::createDirectory(const std::filesystem::path& path) {
@@ -96,28 +94,26 @@ bool VFS::createDirectory(const std::filesystem::path& path) {
 	if (path == getRootPath()) return false;
 
 	std::filesystem::path dirName = path.filename();
+	MRef<VFSNode>         parent  = getParentNode(path, true);
+	if (!parent || !parent->isDirectory()) return false;
 
-	// Get or create parent directory
-	VFSNode* parent = getParentNode(path, true);
-	if (!parent || !parent->is_directory) return false;
+	auto& children = std::get<DirectoryData>(parent->data).children;
+	if (children.find(dirName.string()) != children.end()) return false;
 
-	// Check if directory already exists
-	if (parent->children.find(dirName) != parent->children.end()) return false;
+	children.emplace(dirName.string(), makeBox<VFSNode>(dirName.string(), DirectoryData{ {} }));
 
-	// Create the directory
-	parent->children[dirName.string()] = std::make_unique<VFSNode>(dirName.string(), true);
 	return true;
 }
 
 std::vector<std::string> VFS::listDirectory(const std::filesystem::path& path) {
 	if (!isVirtualPath(path)) return {};
-	VFSNode* node = findNode(path);
+	MRef<VFSNode> node = findNode(path);
+	if (!node || !node->isDirectory()) return {};
 
-	if (!node || !node->is_directory) return {};
-
+	const auto&              children = std::get<DirectoryData>(node->data).children;
 	std::vector<std::string> contents;
-	contents.reserve(node->children.size());
-	for (const auto& pair: node->children) contents.push_back(pair.first);
+	contents.reserve(children.size());
+	for (const auto& pair: children) contents.push_back(pair.first);
 
 	return contents;
 }
@@ -129,14 +125,14 @@ bool VFS::exists(const std::filesystem::path& path) {
 
 bool VFS::isFile(const std::filesystem::path& path) {
 	if (!isVirtualPath(path)) return false;
-	VFSNode* node = findNode(path);
-	return node && !node->is_directory;
+	MRef<VFSNode> node = findNode(path);
+	return node && node->isFile();
 }
 
 bool VFS::isDirectory(const std::filesystem::path& path) {
 	if (!isVirtualPath(path)) return false;
-	VFSNode* node = findNode(path);
-	return node && node->is_directory;
+	MRef<VFSNode> node = findNode(path);
+	return node && node->isDirectory();
 }
 
 bool VFS::isVirtualPath(const std::filesystem::path& path) {
