@@ -179,6 +179,12 @@ namespace vm::code {
 				out << " } " << fun.result.strView();
 			}
 
+			void operator()(const OpaqueType& type) const {
+				out << "type opaque: ";
+				out << type.name.strView() << " ";
+				out << type.size;
+			}
+
 			void operator()(const ClassType& clazz) const {
 				out << "type class:  " << clazz.name.strView() << "{\n";
 				out << "    fields: [";
