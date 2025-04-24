@@ -155,6 +155,16 @@ namespace lang_def {
 		BCData,
 		BCVariant,
 		BCFunType,
+		BCClass,
+		BCAbstract,
+		BCInterface,
+		BCExtends,
+		BCImplements,
+		BCVirtualMethods,
+		BCFields,
+		BCTrue,
+		BCFalse,
+		COUNT,
 	};
 
 	enum class Special {

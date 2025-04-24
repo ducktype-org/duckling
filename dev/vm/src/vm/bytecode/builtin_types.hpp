@@ -34,6 +34,11 @@ namespace vm::code {
 				{ base::StrID("i64"), base::StrID("ptr_argv") },
 				base::StrID("i64")
 			)),
+
+			// @TODO this is a placeholder until we add it as a proper type
+			// of a new kind, see:
+			// https://github.com/ducktype-org/duckling/issues/702
+			TypeOfData(PrimitiveType(base::StrID("VT"), 8)),
 		};
 		builders::TypeContextBuilder type_context_builder;
 
