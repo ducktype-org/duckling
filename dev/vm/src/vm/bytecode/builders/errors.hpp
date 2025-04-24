@@ -51,13 +51,13 @@ namespace vm::code::builders {
 			  BuilderError(base::strConcat(ERR_MSG, type_name)) {}
 	};
 
-	class MissingSubtypeError: public BuilderError {
+	class UnknownSubtypeError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
 		const TypeOfData                        BASE_TYPE;
 		const base::StrID                       MISSING_NAME;
 
-		MissingSubtypeError(TypeOfData base_type, base::StrID missing_name):
+		UnknownSubtypeError(TypeOfData base_type, base::StrID missing_name):
 			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
 			  BASE_TYPE(std::move(base_type)),
 			  MISSING_NAME(missing_name) {}
