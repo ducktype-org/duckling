@@ -81,9 +81,9 @@ private:
 			vfs.createDirectory("vfs:/test/random/long/path"),
 			"Failed to create virtual subdirectory"
 		);
-		auto virtualDirContents = vfs.listDirectory("vfs:/virtualDir");
+		auto virtual_dir_contents = vfs.listDirectory("vfs:/virtualDir");
 		assertTrue(
-			virtualDirContents.size() == 1 && virtualDirContents[0] == "virtualSubDir",
+			virtual_dir_contents.size() == 1 && virtual_dir_contents[0] == "virtualSubDir",
 			"Virtual directory contents incorrect"
 		);
 
@@ -96,8 +96,8 @@ private:
 			vfs.writeFile("vfs:/virtualDir/virtualFile.txt", "Hello, Virtual VFS!"),
 			"Failed to write to virtual file"
 		);
-		auto virtualFileContent = vfs.readFile("vfs:/virtualDir/virtualFile.txt");
-		assertTrue(virtualFileContent == "Hello, Virtual VFS!", "Virtual file content incorrect");
+		auto virtual_file_content = vfs.readFile("vfs:/virtualDir/virtualFile.txt");
+		assertTrue(virtual_file_content == "Hello, Virtual VFS!", "Virtual file content incorrect");
 
 		assertTrue(
 			vfs.isFile("vfs:/virtualDir/virtualFile.txt"), "Virtual path is not recognized as a file"
@@ -116,47 +116,47 @@ private:
 
 	void virtualFileTest() {
 		// Create a virtual directory
-		auto virtualDir = fs::FilePath::createVirtualDirectory();
-		assertTrue(virtualDir.isDirectory(), "Virtual directory was not created correctly");
+		auto virtual_dir = fs::FilePath::createVirtualDirectory();
+		assertTrue(virtual_dir.isDirectory(), "Virtual directory was not created correctly");
 		assertTrue(
-			virtualDir.strView().find("vfs:") != std::string::npos,
+			virtual_dir.strView().find("vfs:") != std::string::npos,
 			"Virtual directory path is incorrect"
 		);
 
 		// Create a virtual file inside the directory
-		auto virtualFile = virtualDir.createFileIn("Hello, Virtual File!", "testFile.txt");
-		assertTrue(virtualFile.isFile(), "Virtual file was not created correctly");
-		assertTrue(virtualFile.name() == "testFile.txt", "Virtual file name is incorrect");
+		auto virtual_file = virtual_dir.createFileIn("Hello, Virtual File!", "testFile.txt");
+		assertTrue(virtual_file.isFile(), "Virtual file was not created correctly");
+		assertTrue(virtual_file.name() == "testFile.txt", "Virtual file name is incorrect");
 
 		// List directory contents
-		auto dirContents = virtualDir.listFilePaths();
-		assertTrue(dirContents.size() == 1, "Virtual directory should contain one file");
-		assertTrue(dirContents[0].name() == "testFile.txt", "Directory listing is incorrect");
+		auto dir_contents = virtual_dir.listFilePaths();
+		assertTrue(dir_contents.size() == 1, "Virtual directory should contain one file");
+		assertTrue(dir_contents[0].name() == "testFile.txt", "Directory listing is incorrect");
 
 		// Create a subdirectory
-		auto subDir = virtualDir.createDirectoryIn("subDir");
-		assertTrue(subDir.isDirectory(), "Subdirectory was not created correctly");
-		assertTrue(subDir.name() == "subDir", "Subdirectory name is incorrect");
+		auto sub_dir = virtual_dir.createDirectoryIn("subDir");
+		assertTrue(sub_dir.isDirectory(), "Subdirectory was not created correctly");
+		assertTrue(sub_dir.name() == "subDir", "Subdirectory name is incorrect");
 
 		// List directory contents again
-		dirContents = virtualDir.listFilePaths();
-		assertTrue(dirContents.size() == 2, "Virtual directory should contain two entries");
+		dir_contents = virtual_dir.listFilePaths();
+		assertTrue(dir_contents.size() == 2, "Virtual directory should contain two entries");
 		assertTrue(
 			std::ranges::find_if(
-				dirContents, [](const auto& entry) { return entry.name() == "subDir"; }
-			) != dirContents.end(),
+				dir_contents, [](const auto& entry) { return entry.name() == "subDir"; }
+			) != dir_contents.end(),
 			"Subdirectory is missing in directory listing"
 		);
 
 		// Test parent path
 		assertTrue(
-			subDir.parentPath().absolutePath() == virtualDir.absolutePath(),
+			sub_dir.parentPath().absolutePath() == virtual_dir.absolutePath(),
 			"Parent path is incorrect"
 		);
 
 		// Test file modification time (should throw for virtual files)
 		try {
-			(void) virtualFile.getModifyTime();
+			(void) virtual_file.getModifyTime();
 			assertTrue(false, "getModifyTime should throw for virtual files");
 		} catch (const base::LogicError&) {
 			// Expected behavior
@@ -164,7 +164,7 @@ private:
 
 		// Test creating a file with duplicate name (should throw)
 		try {
-			(void) virtualDir.createFileIn("Duplicate content", "testFile.txt");
+			(void) virtual_dir.createFileIn("Duplicate content", "testFile.txt");
 			assertTrue(false, "Creating a file with duplicate name should throw");
 		} catch (const base::LogicError&) {
 			// Expected behavior

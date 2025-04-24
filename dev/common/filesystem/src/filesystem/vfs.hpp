@@ -162,17 +162,17 @@ private:
 	/**
 	 * @brief Finds a node in the virtual file system.
 	 * @param path The virtual path of the node.
-	 * @param createPath If true, creates intermediate directories if they do not exist.
+	 * @param create_path If true, creates intermediate directories if they do not exist.
 	 * @return MRef<VFSNode> A nullable reference to the node, or null if the node does not exist.
 	 */
-	MRef<VFSNode> findNode(const std::filesystem::path& path, bool createPath = false);
+	MRef<VFSNode> findNode(const std::filesystem::path& path, bool create_path = false);
 
 	/**
 	 * @brief Gets the parent node of a given virtual path.
 	 * @param path The virtual path of the node.
-	 * @param createPath If true, creates intermediate directories if they do not exist.
+	 * @param create_path If true, creates intermediate directories if they do not exist.
 	 * @return MRef<VFSNode> A nullable reference to the parent node, or null if the parent node
 	 * does not exist.
 	 */
-	MRef<VFSNode> getParentNode(const std::filesystem::path& path, bool createPath = false);
+	MRef<VFSNode> getParentNode(const std::filesystem::path& path, bool create_path = false);
 };
