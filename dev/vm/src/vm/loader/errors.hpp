@@ -354,29 +354,6 @@ namespace vm::loader {
 			  subtype_name(subtype_name) {}
 	};
 
-	class MissingVTablePtrError final: public dia::Error {
-		base::StrID type_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "Missing VTable pointer in: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG.data(), type_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		MissingVTablePtrError(dia::SourcePosition pos, base::StrID type_name):
-			  dia::Error(pos),
-			  type_name(type_name) {}
-	};
-
 	class SomeBuilderError final: public dia::Error {
 		std::string error_message;
 

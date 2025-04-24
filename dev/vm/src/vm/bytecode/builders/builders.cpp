@@ -304,10 +304,6 @@ const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
 Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
-/*
- * @throws DuplicatedTypeError
- * @throws MissingVTablePtrError
- */
 void TypeContextBuilder::addType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
