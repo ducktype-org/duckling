@@ -5,7 +5,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 
-#include <ostream>
+#include <utility>
 
 namespace vm::code {
 	/**
@@ -77,26 +77,26 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Field is a building block of a datatype. It represents a storage
+	 * for value of some type.
+	 */
+	struct Field final: ElementBase {
+		Field() = default;
+
+		Field(base::StrID name, base::StrID type): name(name), type(type) {}
+
+		base::StrID name;
+		base::StrID type;
+
+		bool operator==(const Field& other) const {
+			return name == other.name && type == other.type;
+		}
+	};
+
+	/**
 	 * @brief Represents a structure with arbitrary types of fields.
 	 */
 	struct DataType final: ElementBase {
-		/**
-		 * @brief Field is a building block of a datatype. It represents a storage
-		 * for value of some type.
-		 */
-		struct Field final: ElementBase {
-			Field() = default;
-
-			Field(base::StrID name, base::StrID type): name(name), type(type) {}
-
-			base::StrID name;
-			base::StrID type;
-
-			bool operator==(const Field& other) const {
-				return name == other.name && type == other.type;
-			}
-		};
-
 		DataType() = default;
 
 		DataType(base::StrID name, std::vector<Field> fields):
@@ -151,6 +151,82 @@ namespace vm::code {
 	};
 
 	/**
+	 * @brief Represents a type that is neither primitive nor composite.
+	 * Values of this kind can offer some operations, but they are opaque
+	 * to the bytecode program. Used for VTables.
+	 */
+	struct OpaqueType final: ElementBase {
+		OpaqueType() = default;
+
+		OpaqueType(const base::StrID name, const usize size): name(name), size(size) {}
+
+		base::StrID name;
+		usize       size{};
+
+		bool operator==(const OpaqueType& other) const {
+			return name == other.name && size == other.size;
+		}
+	};
+
+	/**
+	 * @brief Represents a class --- a data with virtual methods and inheritance.
+	 */
+	struct ClassType final: ElementBase {
+		ClassType() = default;
+
+		ClassType(
+			base::StrID                 name,
+			std::vector<Field>          fields,
+			bool                        is_abstract,
+			base::Optional<base::StrID> extends,
+			std::vector<base::StrID>    implements,
+			std::vector<Field>          virtual_methods
+		):
+			  name{ name },
+			  fields{ std::move(fields) },
+			  is_abstract{ is_abstract },
+			  extends{ extends },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
+
+		base::StrID                 name;
+		std::vector<Field>          fields;
+		bool                        is_abstract{};
+		base::Optional<base::StrID> extends;
+		std::vector<base::StrID>    implements;
+		std::vector<Field>          virtual_methods;
+
+		bool operator==(const ClassType& other) const {
+			return name == other.name && fields == other.fields && is_abstract == other.is_abstract
+			    && extends == other.extends && implements == other.implements
+			    && virtual_methods == other.virtual_methods;
+		}
+	};
+
+	/**
+	 * @brief Represents an interface. Interfaces do not hold any data.
+	 */
+	struct InterfaceType final: ElementBase {
+		InterfaceType() = default;
+
+		InterfaceType(
+			base::StrID name, std::vector<base::StrID> implements, std::vector<Field> virtual_methods
+		):
+			  name{ name },
+			  implements{ std::move(implements) },
+			  virtual_methods{ std::move(virtual_methods) } {}
+
+		base::StrID              name;
+		std::vector<base::StrID> implements;
+		std::vector<Field>       virtual_methods;
+
+		bool operator==(const InterfaceType& other) const {
+			return name == other.name && implements == other.implements
+			    && virtual_methods == other.virtual_methods;
+		}
+	};
+
+	/**
 	 * @brief Storage for any type of bytecode data.
 	 */
 	using TypeOfData = std::variant<
@@ -160,7 +236,10 @@ namespace vm::code {
 		DynamicTableType,
 		DataType,
 		VariantType,
-		FunctionType>;
+		FunctionType,
+		OpaqueType,
+		ClassType,
+		InterfaceType>;
 
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);

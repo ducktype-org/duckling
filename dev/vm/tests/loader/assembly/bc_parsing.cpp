@@ -40,7 +40,7 @@ private:
 					);
 				}
 			}
-			opt_some_move(_) { CORE_PANIC("Expected error, but correctly parsed."); }
+			opt_some(_) { CORE_PANIC("Expected error, but correctly parsed."); }
 		}
 	}
 

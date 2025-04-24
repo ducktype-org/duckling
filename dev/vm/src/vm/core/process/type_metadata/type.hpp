@@ -30,7 +30,8 @@ namespace vm {
 			DynamicTable,
 			Data,
 			Variant,
-			Function
+			Function,
+			Opaque,
 		};
 
 	private:
@@ -51,7 +52,8 @@ namespace vm {
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
-			kind::Function>
+			kind::Function,
+			kind::Opaque>
 			kind;
 
 		Type() = default;
@@ -65,9 +67,13 @@ namespace vm {
 		void definePointer(TypeCRef inner);
 		void defineStaticTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
-		void defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions);
+		void defineData(
+			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+			base::Optional<InheritanceMetadata>                 inheritance_metadata
+		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void defineOpaque(TypeSize size);
 
 		// Type finalization:
 		void finalize();
@@ -131,6 +137,10 @@ namespace vm {
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
+
+		// inheritance
+		[[nodiscard]]
+		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
 
 		// variant
 		[[nodiscard]]

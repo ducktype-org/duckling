@@ -4,6 +4,7 @@
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
@@ -55,7 +56,10 @@ namespace vm {
 		kind      = kind::DynamicTable{ inner };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
+	void Type::defineData(
+		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+		base::Optional<InheritanceMetadata>                 inheritance_metadata
+	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -66,7 +70,8 @@ namespace vm {
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		kind = data;
+		data.inheritance_metadata = std::move(inheritance_metadata);
+		kind                      = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -86,6 +91,15 @@ namespace vm {
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+	}
+
+	void Type::defineOpaque(TypeSize pass_size) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		kind_type = Kind::Opaque;
+		size      = pass_size;
+		kind      = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -164,6 +178,12 @@ namespace vm {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2)
+					return TypeCRef(this);
+				else
+					return {};
+			}
+			variant_case_novalue(kind::Opaque) {
+				if (pos == 0)
 					return TypeCRef(this);
 				else
 					return {};
@@ -247,6 +267,16 @@ namespace vm {
 		// 		);
 		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
 		// });
+	}
+
+	// inheritance
+	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
+			}
+		}
+		return {};
 	}
 
 	// variant
