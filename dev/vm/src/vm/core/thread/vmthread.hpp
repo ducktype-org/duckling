@@ -25,11 +25,17 @@
  */
 
 namespace vm {
-	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+	// Forward declarations
+	namespace builtins {
+		class FunctionHandlers;
+	}
 
 	struct Frame;
 
 	class VMProcess;
+
+	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -228,5 +234,6 @@ namespace vm {
 
 		friend class VMProcess;
 		friend class OpFuns;
+		friend class builtins::FunctionHandlers;
 	};
 }

@@ -20,6 +20,8 @@ namespace vm::code {
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
+	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
 	void writeComment(const std::string_view comment_content, std::ostream& out) {

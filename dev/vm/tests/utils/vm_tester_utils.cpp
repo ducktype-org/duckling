@@ -23,14 +23,14 @@ void VmTestSuite::runTestOnVm(
 
 	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
 
+	ASSERT_TRUE(vm::api::join(pid).has_value());
+
 	if_opt_some(optional_output, output) {
 		auto output_response = vm::api::output(pid);
 		ASSERT_TRUE(output_response.has_value());
 		std::cerr << output_response->output << "\n";
 		ASSERT_EQUAL(output, output_response->output);
 	}
-
-	ASSERT_TRUE(vm::api::join(pid).has_value());
 
 	auto exit_code_response = vm::api::getExitCode(pid);
 	ASSERT_TRUE(exit_code_response.has_value());
