@@ -68,7 +68,7 @@ namespace pst {
 		// others:
 		FunParam,
 		ParamList,
-
+		DottedName,
 
 		// for detecting when kind was not set:
 		KindNotSet,
