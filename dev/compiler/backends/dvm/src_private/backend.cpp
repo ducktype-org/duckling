@@ -100,6 +100,7 @@ namespace compiler::backend_vm {
 				block_to_id    = lir_function->getBlockIDs();
 			}
 		};
+
 		/**
 		 * @brief Generate `init_type` instruction and return the offset on the stack of the variable.
 		 */
