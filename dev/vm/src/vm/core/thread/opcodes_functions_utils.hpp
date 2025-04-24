@@ -11,11 +11,3 @@ template<typename T>
 inline static T& derefStack(std::byte* stack, i64 position) {
 	return *(reinterpret_cast<T*>(&stack[position]));
 }
-
-[[gnu::always_inline]]
-inline static vm::TypeCRef
-	getLocalType(u64 offset, const vm::Frame* frame, const vm::Memory& memory) {
-	auto block_idx = frame->local_offset_to_block_idx[offset];
-	auto block     = frame->block_stack[block_idx];
-	return memory.getBlockType(block);
-}

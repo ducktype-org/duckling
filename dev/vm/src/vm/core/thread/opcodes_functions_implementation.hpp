@@ -405,6 +405,9 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type not consumed by previous instruction");
+	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
@@ -530,9 +533,9 @@ namespace vm {
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 
-			auto dst_pointer_type
-				= getLocalType(static_cast<u32>(instr->arg0), frame, thread.process_memory);
-			auto dst_type = dst_pointer_type->getInnerType().value();
+            // @TODOB verify ext_type is always the next instruction
+			auto dst_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
 			// Classes are guaranteed to hold vtable pointer as their first field.
 			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
@@ -542,7 +545,7 @@ namespace vm {
 
 			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}
-		FUNCTION_CONT(1);
+		FUNCTION_CONT(2);  // skip ext_type
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
