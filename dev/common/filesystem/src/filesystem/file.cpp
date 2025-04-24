@@ -41,25 +41,27 @@ namespace {
 namespace fs {
 	FilePath::FilePath(const std::filesystem::path& path) {
 		if (VFS::isVirtualPath(path)) {
-			this->path = path;
-			this->type = FileType::Virtual;
+			this->path     = path;
+			this->type     = FileType::Virtual;
+			this->category = vfs.isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
 			this->path = canonical(absolute(path));
+			this->category
+				= is_directory(this->path) ? FileCategory::Directory : FileCategory::File;
 		}
 	}
 
 	FilePath::ContentMap FilePath::to_content;
 
 	FilePath FilePath::getDefaultTempPath() {
-		static FilePath temp_directory_path = createFilePathObj(
-			std::filesystem::temp_directory_path(), FileType::Temporary, FileCategory::Directory
-		);
+		static FilePath temp_directory_path
+			= createFilePathObj(std::filesystem::temp_directory_path(), FileType::Temporary);
 		return temp_directory_path;
 	}
 
 	FilePath FilePath::getDefaultVirtualPath() {
 		static FilePath virtual_directory_path
-			= createFilePathObj(vfs.getRootPath(), FileType::Virtual, FileCategory::Directory);
+			= createFilePathObj(vfs.getRootPath(), FileType::Virtual);
 		return virtual_directory_path;
 	}
 
@@ -86,12 +88,9 @@ namespace fs {
 		return file_name;
 	}
 
-	FilePath FilePath::createFilePathObj(
-		const std::filesystem::path& path, FileType type, FileCategory category
-	) {
-		auto&& obj   = FilePath(path);
-		obj.type     = type;
-		obj.category = category;
+	FilePath FilePath::createFilePathObj(const std::filesystem::path& path, FileType type) {
+		auto&& obj = FilePath(path);
+		obj.type   = type;
 		return obj;
 	}
 
@@ -120,7 +119,7 @@ namespace fs {
 			std::filesystem::create_directory(new_temp_dir);
 		else
 			vfs.createDirectory(new_temp_dir);
-		return createFilePathObj(new_temp_dir, type, FileCategory::Directory);
+		return createFilePathObj(new_temp_dir, type);
 	}
 
 	FilePath FilePath::createFileIn(std::string_view new_file_content, std::string_view custom_name)
@@ -141,7 +140,7 @@ namespace fs {
 			vfs.writeFile(new_temp_file, std::string(new_file_content));
 		}
 
-		return createFilePathObj(new_temp_file, type, FileCategory::File);
+		return createFilePathObj(new_temp_file, type);
 	}
 
 	FileContent FilePath::getContent() const {
@@ -203,20 +202,22 @@ namespace fs {
 
 	std::string FilePath::extension() const { return path.extension(); }
 
-	std::filesystem::directory_iterator FilePath::directoryIterator() const {
-		if (type == FileType::Virtual)
-			throw base::LogicError("Cannot get directory iterator of virtual file");
-		return std::filesystem::directory_iterator(path);
-	}
-
-	std::vector<std::string> FilePath::listDirectory() const {
+	std::vector<FilePath> FilePath::listFilePaths() const {
 		if (category == FileCategory::File) throw base::LogicError("Path is not a directory");
 
-		if (type == FileType::Virtual) return vfs.listDirectory(path);
-		std::vector<std::string> files;
-		for (const auto& entry: std::filesystem::directory_iterator(path))
-			files.push_back(entry.path().filename().string());
-		return files;
+		std::vector<FilePath> file_paths;
+		if (type == FileType::Virtual)
+			for (const auto& name: vfs.listDirectory(path))
+				file_paths.emplace_back(createFilePathObj(path / name, type));
+		else
+			for (const auto& entry: std::filesystem::directory_iterator(path))
+				file_paths.emplace_back(createFilePathObj(entry.path(), type));
+		return file_paths;
+	}
+
+	bool FilePath::isSymlink() const noexcept {
+		if (type == FileType::Virtual) return false;
+		return std::filesystem::is_symlink(path);
 	}
 
 	base::OwningView getSimpleFileContent(const std::string& file_name) {

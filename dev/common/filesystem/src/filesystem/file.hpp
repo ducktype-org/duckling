@@ -58,12 +58,25 @@ namespace fs {
 		}
 	};
 
+	/**
+	 * @brief Represents the type of a file.
+	 *
+	 * Physical: A file that exists on the physical filesystem.
+	 * Virtual: A file that exists in the virtual filesystem.
+	 * Temporary: A file that is temporary and managed by the system.
+	 */
 	enum class FileType {
 		Physical,
 		Virtual,
 		Temporary,
 	};
 
+	/**
+	 * @brief Represents the category of a file.
+	 *
+	 * File: A regular file.
+	 * Directory: A directory.
+	 */
 	enum class FileCategory { File, Directory };
 
 	class FilePath {
@@ -98,9 +111,7 @@ namespace fs {
 		 * @param category Category of the new FilePath object.
 		 * @return A new FilePath object.
 		 */
-		static FilePath createFilePathObj(
-			const std::filesystem::path& path, FileType type, FileCategory category
-		);
+		static FilePath createFilePathObj(const std::filesystem::path& path, FileType type);
 
 		/**
 		 * A helper function creating a new unique path with a prefix of this object's path.
@@ -169,9 +180,11 @@ namespace fs {
 		static FilePath createTempFile(std::string_view content);
 
 		/**
-		 * Creates a virtual file with a given content. The file is managed by the system and has
-		 * a random name.
-		 * @param content The content, that will be inserted into the a file.
+		 * @brief Creates a virtual file with a given content.
+		 *
+		 * The file is managed by the virtual filesystem and has a random name.
+		 *
+		 * @param content The content that will be inserted into the file.
 		 * @return A FilePath with the new virtual file.
 		 */
 		static FilePath createVirtualFile(std::string_view content);
@@ -205,11 +218,25 @@ namespace fs {
 		[[nodiscard]]
 		bool isDirectory() const noexcept;
 
+		/**
+		 * @brief Returns the contents of a directory as a vector of FilePath objects.
+		 *
+		 * This method works for both physical and virtual directories.
+		 *
+		 * @return A vector of FilePath objects representing the contents of the directory.
+		 */
 		[[nodiscard]]
-		std::filesystem::directory_iterator directoryIterator() const;
+		std::vector<FilePath> listFilePaths() const;
 
+		/**
+		 * @brief Checks if the file path is a symbolic link.
+		 *
+		 * For virtual files, this will always return false.
+		 *
+		 * @return True if the file path is a symbolic link, false otherwise.
+		 */
 		[[nodiscard]]
-		std::vector<std::string> listDirectory() const;
+		bool isSymlink() const noexcept;
 
 		[[nodiscard]]
 		std::string stem() const;

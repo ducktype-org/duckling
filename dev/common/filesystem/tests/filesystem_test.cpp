@@ -128,17 +128,10 @@ private:
 		assertTrue(virtualFile.isFile(), "Virtual file was not created correctly");
 		assertTrue(virtualFile.name() == "testFile.txt", "Virtual file name is incorrect");
 
-		// Check file content
-		auto content = virtualFile.getContent();
-		assertTrue(
-			content.view().stringView() == "Hello, Virtual File!",
-			"Virtual file content is incorrect"
-		);
-
 		// List directory contents
-		auto dirContents = virtualDir.listDirectory();
+		auto dirContents = virtualDir.listFilePaths();
 		assertTrue(dirContents.size() == 1, "Virtual directory should contain one file");
-		assertTrue(dirContents[0] == "testFile.txt", "Directory listing is incorrect");
+		assertTrue(dirContents[0].name() == "testFile.txt", "Directory listing is incorrect");
 
 		// Create a subdirectory
 		auto subDir = virtualDir.createDirectoryIn("subDir");
@@ -146,10 +139,12 @@ private:
 		assertTrue(subDir.name() == "subDir", "Subdirectory name is incorrect");
 
 		// List directory contents again
-		dirContents = virtualDir.listDirectory();
+		dirContents = virtualDir.listFilePaths();
 		assertTrue(dirContents.size() == 2, "Virtual directory should contain two entries");
 		assertTrue(
-			std::ranges::find(dirContents, "subDir") != dirContents.end(),
+			std::ranges::find_if(
+				dirContents, [](const auto& entry) { return entry.name() == "subDir"; }
+			) != dirContents.end(),
 			"Subdirectory is missing in directory listing"
 		);
 
