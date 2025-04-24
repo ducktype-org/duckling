@@ -7,7 +7,7 @@ function main {
 	mov_l64_imm         32, 0;
 	label Loop;
 		cmpEq_l64_imm		32, 0;
-		jmpRelIf_label 	  	Loop;
+		jmpIf_label 	  	Loop;
 
 	deinit; # temp
 	deinit; # *argv
