@@ -1,7 +1,5 @@
 #include "vfs.hpp"
 
-#include "base/box.hpp"
-
 // VFSNode implementation
 VFS::VFSNode::VFSNode(std::string name, std::variant<FileData, DirectoryData> data):
 	  name(std::move(name)),
