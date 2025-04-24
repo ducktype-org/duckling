@@ -13,6 +13,7 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
+#include <algorithm>
 #include <ranges>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
@@ -36,9 +37,19 @@ vm::code::Function FunctionBuilder::build() const {
 
 void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	using namespace instructions;
+	// @TODO remove these atMaybe's after #732
 	variant_match(instruction) {
 		variant_case(Op_init_type, instr) {
-			// @TODOB
+			auto type = type_context.getMetadata()
+			                .atMaybe(instr.arg0.type_name)
+			                .expect<UnknownTypeError>(instr.arg0);
+			if (!type->isInstantiable()) throw UninstantiableValue();
+		}
+		variant_case(Op_alloc_lptr_type, instr) {
+			auto type = type_context.getMetadata()
+			                .atMaybe(instr.arg1.type_name)
+			                .expect<UnknownTypeError>(instr.arg1);
+			if (!type->isInstantiable()) throw UninstantiableValue();
 		}
 	}
 }

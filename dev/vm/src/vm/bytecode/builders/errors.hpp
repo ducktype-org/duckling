@@ -105,6 +105,11 @@ namespace vm::code::builders {
 			  TYPE(std::move(type)) {}
 	};
 
+	class InstructionValidationError: public BuilderError {
+	public:
+		InstructionValidationError(std::string_view msg): BuilderError(std::string(msg)) {}
+	};
+
 #define DEFINE_TYPE_VALIDATION_ERROR(error_name, msg)                                        \
 	class error_name: public TypeValidationError {                                           \
 	public:                                                                                  \
@@ -116,6 +121,14 @@ namespace vm::code::builders {
 			  ) {}                                                                           \
 	};
 
+#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)     \
+	class error_name: public InstructionValidationError {        \
+	public:                                                      \
+		constexpr static const std::string_view ERR_MSG = (msg); \
+                                                                 \
+		error_name(): InstructionValidationError(ERR_MSG) {}     \
+	};
+
 	DEFINE_TYPE_VALIDATION_ERROR(
 		InvalidImplements, "This interface/class can implement only other interfaces: "
 	);
@@ -124,8 +137,11 @@ namespace vm::code::builders {
 		MissingAncestorField, "This class does not contain all of its ancestors' fields: "
 	);
 	// @TODOB detect cycles
-	DEFINE_TYPE_VALIDATION_ERROR(UninstantiableValue, "This type cannot be instantiated: ");
-	DEFINE_TYPE_VALIDATION_ERROR(
-		InvalidUpcast, "The destination type is not an ancestor of source type: "
+
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		UninstantiableValue, "Cannot intiantiate a value of this type."
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidUpcast, "The source type does not inherit from the destination type"
 	);
 }

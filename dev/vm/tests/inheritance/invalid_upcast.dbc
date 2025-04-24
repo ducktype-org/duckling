@@ -1,43 +1,24 @@
-type primitive: int64 8
-type fun: main {} int64
-
-type primitive: VT 8
-
-type data: Animal {
-    vt: VT
+type class: Animal {
+    abstract: true;
 }
-
-type data: Dog {
-    vt: VT
+type class: Dog {
+    extends: Animal;
 }
-
-type data: Cat {
-    vt: VT
+type class: Cat {
+    extends: Animal;
 }
 
 type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
-inheritable Animal: abstract class {}
-inheritable Dog: final class {
-    extends: Animal;
-}
-inheritable Cat: final class {
-    extends: Animal;
-}
-
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    
-    local_size: 40;
-    
-    code: {
-        init_type DogPtr;  # 8
-        init_type CatPtr;  # 24
-        alloc_lptr_type 8, Dog;
-        setVTable_lptr_type 8, Dog;
-        upcast_lptr_lptr 24, 8;  # cat := static_cast<CatPtr>(dog)
-        ret;
-    }
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type DogPtr;  # 32
+    init_type CatPtr;  # 48
+    alloc_lptr_type 32, Dog;
+    setVTable_lptr_type 32, Dog;
+    upcast_lptr_lptr 48, 32;  # cat := static_cast<CatPtr>(dog)
+    ret;
 }
