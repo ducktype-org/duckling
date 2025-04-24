@@ -21,8 +21,8 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 76>
-		LANG_KEYWORDS_ARRAY{ {
+	constexpr auto LANG_KEYWORDS_ARRAY
+		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
@@ -109,34 +109,50 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
-		} };
+		});
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 10> BC_KEYWORDS_ARRAY{ {
-		{ Keyword::BCFunction, "function", KeywordFlags() },
-		{ Keyword::BCType, "type", KeywordFlags() },
-		{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
-		{ Keyword::BCPointer, "pointer", KeywordFlags() },
-		{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
-		{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
-		{ Keyword::BCData, "data", KeywordFlags() },
-		{ Keyword::BCVariant, "variant", KeywordFlags() },
-		{ Keyword::BCFunType, "fun", KeywordFlags() },
-		{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
-	} };
+	constexpr auto BC_KEYWORDS_ARRAY
+		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
+			{ Keyword::BCFunction, "function", KeywordFlags() },
+			{ Keyword::BCType, "type", KeywordFlags() },
+			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
+			{ Keyword::BCPointer, "pointer", KeywordFlags() },
+			{ Keyword::BCStaticTable, "static_table", KeywordFlags() },
+			{ Keyword::BCDynamicTable, "dynamic_table", KeywordFlags() },
+			{ Keyword::BCData, "data", KeywordFlags() },
+			{ Keyword::BCVariant, "variant", KeywordFlags() },
+			{ Keyword::BCFunType, "fun", KeywordFlags() },
+			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
+			{ Keyword::BCClass, "class", KeywordFlags() },
+			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
+			{ Keyword::BCInterface, "interface", KeywordFlags() },
+			{ Keyword::BCExtends, "extends", KeywordFlags() },
+			{ Keyword::BCImplements, "implements", KeywordFlags() },
+			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
+			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::BCTrue, "true", KeywordFlags() },
+			{ Keyword::BCFalse, "false", KeywordFlags() },
+		});
+
+	// `- 1` because of `Keyword::NotAKeword`
+	static_assert(
+		static_cast<usize>(Keyword::COUNT) - 1
+		== LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size()
+	);
 
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
-	constexpr std::array<std::pair<Special, std::string_view>, 6> SPECIAL_ARRAY{ {
+	constexpr auto SPECIAL_ARRAY = std::to_array<std::pair<Special, std::string_view>>({
 		{ Special::NotASpecial, "NotASpecial" },
 		{ Special::Semicolon, ";" },
 		{ Special::Comma, "," },
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
 		{ Special::DolarSign, "$" },
-	} };
+	});
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 27> OPERATOR_ARRAY{ {
+	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
 
 		{ NamedOperator::Period, "." },
@@ -169,7 +185,7 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
-	} };
+	});
 
 	// Distinct for all keyword modes:
 	base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;

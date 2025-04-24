@@ -8,7 +8,7 @@ function main {
 
 	mov_l32_imm 32, 5;
 
-	jmpRel_label end;
+	jmp_label end;
 
 	label end;
 

@@ -67,6 +67,11 @@ namespace vm::loader::parser {
 		}
 
 		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::BuiltinFunctionName {
+			return { parseStr(state) };
+		}
+
+		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
 			return { parseStr(state) };
 		}
@@ -223,6 +228,37 @@ namespace vm::loader::parser {
 		return out;
 	}
 
+	namespace {
+		std::vector<code::Field> parseFields(F8ParserState& state) {
+			std::vector<code::Field> out;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				return {};
+			}
+
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_name;
+				tpc::Identifier field_type;
+				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
+				auto& field        = out.emplace_back(field_name.value, field_type.value);
+				field.bytecode_pos = field_name.position;
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+
+			return out;
+		}
+	}
+
 	MBox<Type> Type::parse(F8ParserState& state) {
 		using namespace vm::code;
 
@@ -289,34 +325,9 @@ namespace vm::loader::parser {
 			break;
 		}
 		case lang_def::Keyword::BCData: {
-			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
-				return nullptr;
-			}
-
-			state.goDown();
-			std::vector<DataType::Field> fields;
-			while (state.notEmpty()) {
-				tpc::Identifier field_name;
-				tpc::Identifier field_type;
-				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				fields.emplace_back(field_name.value, field_type.value);
-				fields.back().bytecode_pos = field_name.position;
-
-
-				if (state.empty()) break;
-
-				if (state.ctokens().peek().is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
-					state.tokens().skip();
-				}
-			}
-			state.goUpAndSkip();
-			auto tp         = DataType{ name, fields };
+			auto tp         = DataType{ name, parseFields(state) };
 			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
@@ -343,7 +354,7 @@ namespace vm::loader::parser {
 			state.goUpAndSkip();
 			auto tp         = VariantType{ name, alternatives };
 			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
@@ -372,7 +383,129 @@ namespace vm::loader::parser {
 			state.parse().one(&result);
 			auto tp         = FunctionType{ name, arguments, result };
 			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			out->datatype   = std::move(tp);
+			break;
+		}
+		case lang_def::Keyword::BCClass:
+		case lang_def::Keyword::BCInterface: {
+			bool                        is_interface = type == lang_def::Keyword::BCInterface;
+			bool                        is_abstract  = false;
+			std::vector<Field>          fields;
+			std::vector<base::StrID>    implements;
+			std::vector<Field>          virtual_methods;
+			base::Optional<base::StrID> extends;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				return nullptr;
+			}
+
+			state.goDown();
+
+			while (state[0].isKeyword()) {
+				auto next = state.tokens().next();
+				switch (next.asKeyword()) {
+				case lang_def::Keyword::BCExtends: {
+					if (is_interface) {
+						state.err.failAndLog(
+							state.getPosition(), "interfaces cannot extend classes"
+						);
+					} else {
+						tpc::Identifier superclass;
+						state.parse().all(
+							lang_def::NamedOperator::Colon, &superclass, lang_def::Special::Semicolon
+						);
+						extends.emplace(superclass.value);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCAbstract: {
+					if (is_interface) {
+						state.err.failAndLog(state.getPosition(), "interfaces cannot be abstract");
+					} else {
+						state.parse().one(lang_def::NamedOperator::Colon);
+						switch (state.tokens().next().asKeyword()) {
+						case lang_def::Keyword::BCTrue:
+							is_abstract = true;
+							break;
+						case lang_def::Keyword::BCFalse:
+							is_abstract = false;
+							break;
+						default:
+							state.err.failAndLog(state.getPosition(), "bad keyword");
+							break;
+						}
+						state.parse().one(lang_def::Special::Semicolon);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCImplements: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+						state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+						return nullptr;
+					}
+
+					state.goDown();
+					while (state.notEmpty()) {
+						tpc::Identifier interface;
+						state.parse().one(&interface);
+						implements.push_back(interface.value);
+
+						if (state.empty()) break;
+						if (state[0].is(lang_def::Special::Comma)) {
+							state.parse().one(lang_def::Special::Comma);
+						} else {
+							state.err.failAndLog(state.getPosition(), "expected comma or }");
+							state.tokens().skip();
+						}
+					}
+					state.goUpAndSkip();
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCVirtualMethods: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					virtual_methods = parseFields(state);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCFields: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					// The first field is the VTable pointer
+					for (auto field: parseFields(state)) fields.push_back(field);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				default: {
+					state.err.failAndLog(state.getPosition(), "bad keyword");
+					return nullptr;
+				}
+				}
+			}
+
+			if (state.notEmpty()) {
+				state.err.failAndLog(state.getPosition(-1), "unexpected class/interface content");
+
+				state.goUpAndSkip();
+				return nullptr;
+			}
+
+			state.goUpAndSkip();
+
+			auto tp = is_interface ? TypeOfData(InterfaceType(
+										 name, std::move(implements), std::move(virtual_methods)
+									 ))
+			                       : TypeOfData(ClassType(
+										 name,
+										 fields,
+										 is_abstract,
+										 extends,
+										 std::move(implements),
+										 std::move(virtual_methods)
+									 ));
+			VISIT(tp, t, t.bytecode_pos = *out->position);
+			out->datatype = std::move(tp);
 			break;
 		}
 		default: {

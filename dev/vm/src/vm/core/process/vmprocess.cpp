@@ -8,9 +8,12 @@
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
+#include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/loader/loader.hpp>
+#include <vm/loader/logger.hpp>
 
 #include <mutex>
 #include <shared_mutex>
@@ -28,11 +31,17 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const fs::FilePath& path
+		const std::variant<fs::FilePath, code::CodeCollection>& source
 	) {
 		std::unique_lock lock(rw_global);
 		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = loader->getProgram(path);
+		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
+			variant_match(source) {
+				variant_case(fs::FilePath, file) { return loader->getProgram(file); }
+				variant_case(code::CodeCollection, code) { return loader->getProgram(code); }
+			}
+			CORE_UNREACHABLE();
+		}();
 
 		if (code_result.has_value()) {
 			loaded_program.emplace(std::move(code_result).value());
@@ -84,6 +93,8 @@ namespace vm {
 		std::string content;
 		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
 		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
+		io.outputStream().str("");
+		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
 	}
 
@@ -124,8 +135,13 @@ namespace vm {
 					});
 				return getMainVMThread().getCurrentPosition();
 			}
-			variant_case(api::request::Load, load_request) {
+			variant_case(api::request::LoadFile, load_request) {
 				return loadProgram(load_request.filename).transform_error([](auto err) {
+					return api::CoreOperationError{ err };
+				});
+			}
+			variant_case(api::request::LoadCode, load_request) {
+				return loadProgram(load_request.code_collection).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}

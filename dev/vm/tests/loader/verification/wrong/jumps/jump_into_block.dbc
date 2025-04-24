@@ -4,7 +4,7 @@ function main {
     # [16, 32) -> *argv
     # [32, 40) -> x
 
-	jmpRel_label  Inside;
+	jmp_label  Inside;
 
 	init_type     i64; # x
 	label         Inside;

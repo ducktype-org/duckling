@@ -10,7 +10,7 @@ function fib {
 
     # if !(n > 1): end
     cmpG_l64_imm        8, 1;
-    jmpRelNotIf_label   End;
+    jmpIfNot_label   End;
 
     # fib(n - 1)
     init_type i64; # [16, 24) fib(n-1) ret_val
@@ -44,7 +44,7 @@ function main {
     # [0, 8) main ret_val
     # [8, 16) -> argc
     # [16, 32) -> *argv
-    
+
     # n := argument
     init_type   i64; # [32, 40) fib() ret_val
     init_type   i64; # [40, 48) fib() arg0
@@ -53,7 +53,7 @@ function main {
     call_func   fib;
 
     output_l64  32;
-    
+
     deinit; # fib() ret_val
     deinit;       # *argv
     deinit;       # argc

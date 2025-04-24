@@ -40,7 +40,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	cmpG,
 	jmp,
 	jmpIf,
-	jmpNotIf,
+	jmpIfNot,
 	call,
 	ret,
 	ret_tailcall,
@@ -115,6 +115,11 @@ namespace vm::code::builders {
 	public:
 		InstructionBuilder() = default;
 		InstructionBuilder(OpKind kind);
+
+		template<class... Args>
+		InstructionBuilder(OpKind kind, Args&&... args): InstructionBuilder(kind) {
+			pushArgs(std::forward<Args>(args)...);
+		}
 
 		void setKind(OpKind kind);
 
