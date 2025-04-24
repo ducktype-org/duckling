@@ -108,7 +108,6 @@ namespace fs {
 		 * Creates a FilePath object with the given type
 		 * @param path Path of new FilePath object.
 		 * @param type Type of the new FilePath object.
-		 * @param category Category of the new FilePath object.
 		 * @return A new FilePath object.
 		 */
 		static FilePath createFilePathObj(const std::filesystem::path& path, FileType type);
@@ -209,6 +208,14 @@ namespace fs {
 		[[nodiscard]]
 		std::string name() const;
 
+
+		/**
+		 * @brief Gets the last modification time of the file.
+		 *
+		 * Note: This function does not work for virtual files.
+		 *
+		 * @return The last modification time as a std::chrono::file_clock::time_point.
+		 */
 		[[nodiscard]]
 		std::chrono::file_clock::time_point getModifyTime() const;
 
