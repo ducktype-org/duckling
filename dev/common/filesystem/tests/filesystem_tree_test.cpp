@@ -12,6 +12,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(parseDirectory);
 		TESTER_ADD_TEST(testOtherFeatures);
+		TESTER_ADD_TEST(testVirtualFiles);
 	}
 
 private:
@@ -44,6 +45,50 @@ private:
 			true,
 			fst->getDirs()["another_directory"]->getParentTree().value().getRoot() == fst->getRoot()
 		);
+	}
+
+	void testVirtualFiles() {
+		// Create a virtual root directory
+		auto root = fs::FilePath::createVirtualDirectory();
+
+		// Create subdirectories and files
+		auto subDir1 = root.createDirectoryIn("subDir1");
+		auto subDir2 = root.createDirectoryIn("subDir2");
+		auto file1   = root.createFileIn("File1 content", "file1.txt");
+		auto file2   = subDir1.createFileIn("File2 content", "file2.txt");
+
+		// Create FsTree from the virtual root directory
+		auto fst = fs::FsTree::create(root);
+
+		// Test getRoot()
+		ASSERT_EQUAL(true, fst->getRoot() == root);
+
+		// Test isEmpty()
+		ASSERT_EQUAL(false, fst->isEmpty());
+
+		// Test getDirs()
+		const auto& dirs = fst->getDirs();
+		ASSERT_EQUAL(2, dirs.size());
+		ASSERT_EQUAL(true, dirs.contains("subDir1"));
+		ASSERT_EQUAL(true, dirs.contains("subDir2"));
+
+		// Test getFiles()
+		const auto& files = fst->getFiles();
+		ASSERT_EQUAL(1, files.size());
+		ASSERT_EQUAL(true, files.contains("file1.txt"));
+		ASSERT_EQUAL("File1 content", files.at("file1.txt").getContent().view());
+
+		// Test subdirectory tree
+		auto        subTree  = dirs.at("subDir1");
+		const auto& subFiles = subTree->getFiles();
+		ASSERT_EQUAL(1, subFiles.size());
+		ASSERT_EQUAL(true, subFiles.contains("file2.txt"));
+		ASSERT_EQUAL("File2 content", subFiles.at("file2.txt").getContent().view());
+
+		// Test prettyPrint()
+		auto treeRepresentation = fst->prettyPrint();
+		ASSERT_EQUAL(true, treeRepresentation.find("subDir1") != std::string::npos);
+		ASSERT_EQUAL(true, treeRepresentation.find("file1.txt") != std::string::npos);
 	}
 };
 
