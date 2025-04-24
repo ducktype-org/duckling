@@ -96,13 +96,6 @@ namespace vm::code::builders {
 		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
 
-	class MissingVTablePtrError: public BuilderError {
-	public:
-		constexpr const static std ::string_view ERR_MSG = "Missing VTable pointer in: ";
-
-		MissingVTablePtrError(base::StrID name): BuilderError(base::strConcat(ERR_MSG, name)) {}
-	};
-
 #define DEFINE_VERIFICATION_BUILDER_ERROR(error_name, msg)                             \
 	class error_name: public BuilderError {                                            \
 	public:                                                                            \
