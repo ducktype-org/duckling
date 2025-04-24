@@ -83,6 +83,8 @@ namespace vm {
 		std::string content;
 		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
 		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
+		io.outputStream().str("");
+		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
 	}
 

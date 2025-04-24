@@ -64,6 +64,10 @@ namespace pst {
 		bool                         star = false;
 
 	public:
+		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::DottedName;
+		}
+
 		[[nodiscard]]
 		auto begin() const {
 			return names.cbegin();
@@ -78,8 +82,6 @@ namespace pst {
 		std::string elementType() const override {
 			return "Dotted Name";
 		}
-
-		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static MBox<DottedName> parse(LangParserState& state);
 

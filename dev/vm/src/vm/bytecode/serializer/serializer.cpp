@@ -20,6 +20,8 @@ namespace vm::code {
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
+	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
 	void writeComment(const std::string_view comment_content, std::ostream& out) {
@@ -182,6 +184,37 @@ namespace vm::code {
 					first = false;
 				}
 				out << "} " << fun.result.strView();
+			}
+
+			void operator()(const ClassType& clazz) const {
+				out << "type class:  " << clazz.name.strView() << "{\n";
+				out << "    fields: [";
+				for (auto field: clazz.fields)
+					out << field.name.strView() << ": " << field.name.strView() << ", ";
+				out << "]\n";
+				out << "    abstract: " << clazz.is_abstract << ";\n";
+				if (clazz.extends.has_value())
+					out << "    extends: " << clazz.extends.value().strView() << ";\n";
+				out << "    implements: [";
+				for (auto& iface: clazz.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: clazz.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
+			}
+
+			void operator()(const InterfaceType& interface) const {
+				out << "type interface:  " << interface.name.strView() << "{\n";
+				out << "    implements: [";
+				for (auto& iface: interface.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: interface.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
 			}
 		};
 
