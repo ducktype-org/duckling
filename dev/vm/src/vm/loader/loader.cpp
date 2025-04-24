@@ -123,13 +123,6 @@ namespace {
 		}
 	}
 
-#define TRANSLATE_VALIDATOR_ERROR(error_name)                                                    \
-	catch (code::builders::error_name&) {                                                        \
-		base::StrID name = VISIT(type, tp, return tp.name);                                      \
-		auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value)); \
-		log.log<error_name>(base, name);                                                         \
-	}
-
 	void insertType(
 		const vm::code::TypeOfData&             type,
 		vm::code::builders::TypeContextBuilder& types,
@@ -153,9 +146,6 @@ namespace {
 				name
 			);
 		}
-		TRANSLATE_VALIDATOR_ERROR(InvalidImplements)
-		TRANSLATE_VALIDATOR_ERROR(InvalidExtends)
-		TRANSLATE_VALIDATOR_ERROR(MissingAncestorField)
 	}
 
 	std::expected<void, LoaderLogger> validateMain(const Program& program) {
@@ -251,6 +241,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
+			// @TODOB add SomeBuilderError for type validation errors
 			return std::unexpected(std::move(log));
 		}
 	}

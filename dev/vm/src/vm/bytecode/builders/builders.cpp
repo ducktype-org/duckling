@@ -36,16 +36,16 @@ vm::code::Function FunctionBuilder::build() const {
 
 void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	using namespace instructions;
-    variant_match(instruction) {
-        variant_case(Op_init_type, instr) {
-            // @TODOB
-        }
-    }
+	variant_match(instruction) {
+		variant_case(Op_init_type, instr) {
+			// @TODOB
+		}
+	}
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
-    validateInstruction(instruction);
+	validateInstruction(instruction);
 
 	variant_match(instruction) {
 		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
@@ -192,9 +192,41 @@ const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeCon
 	return types;
 }
 
+void TypeContextBuilder::validateType(const TypeOfData& type) const {
+	auto get_type = [&](base::StrID name) {
+		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
+	};
+	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
+		for (const auto& impl: implements) {
+			auto impl_type = get_type(impl);
+			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
+				throw InvalidImplements(type);
+		}
+	};
+
+	variant_match(type) {
+		variant_case(InterfaceType, interface) { validate_implements(interface.implements); }
+		variant_case(ClassType, clazz) {
+			validate_implements(clazz.implements);
+			if_opt_some(clazz.extends, extends) {
+				auto super_type = get_type(extends);
+				if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
+					throw InvalidExtends(type);
+
+				const auto& superclass = std::get<ClassType>(*super_type);
+				if (clazz.fields.size() < superclass.fields.size())
+					throw MissingAncestorField(type);
+				for (auto [field, super_field]: std::views::zip(clazz.fields, superclass.fields))
+					if (field != super_field) throw MissingAncestorField(type);
+			}
+		}
+	}
+}
+
 TypeContext TypeContextBuilder::build() const {
 	TypeContext tctx;
 	for (const auto& type: types) {
+		validateType(type);
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
@@ -317,39 +349,7 @@ const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
 
 Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
 
-void TypeContextBuilder::validateType(const TypeOfData& type) const {
-	auto get_type = [&](base::StrID name) {
-		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
-	};
-	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
-		for (const auto& impl: implements) {
-			auto impl_type = get_type(impl);
-			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
-				throw InvalidImplements(type);
-		}
-	};
-
-	variant_match(type) {
-		variant_case(InterfaceType, interface) { validate_implements(interface.implements); }
-		variant_case(ClassType, clazz) {
-			validate_implements(clazz.implements);
-			if_opt_some(clazz.extends, extends) {
-				auto super_type = get_type(extends);
-				if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
-					throw InvalidExtends(type);
-
-				const auto& superclass = std::get<ClassType>(*super_type);
-				if (clazz.fields.size() < superclass.fields.size())
-					throw MissingAncestorField(type);
-				for (auto [field, super_field]: std::views::zip(clazz.fields, superclass.fields))
-					if (field != super_field) throw MissingAncestorField(type);
-			}
-		}
-	}
-}
-
 void TypeContextBuilder::addType(const TypeOfData& type) {
-	validateType(type);
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
