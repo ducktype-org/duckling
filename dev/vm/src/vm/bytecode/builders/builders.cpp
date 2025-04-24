@@ -39,15 +39,15 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
 		variant_case(Op_call_builtin_func, func) { handleCall(func.arg0.function_name); }
-		variant_case(Op_jmpRel_label, jmp) {
+		variant_case(Op_jmp_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelIf_label, jmp) {
+		variant_case(Op_jmpIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelNotIf_label, jmp) {
+		variant_case(Op_jmpIfNot_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}

@@ -215,7 +215,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
-		opt_some_move(parsed_files) {
+		opt_some(parsed_files) {
 			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)

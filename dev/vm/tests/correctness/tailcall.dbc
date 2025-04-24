@@ -6,7 +6,7 @@ function dummy {
 
 	# if arg0 == 0: end
 	cmpEq_l64_imm     8, 0;
-	jmpRelIf_label    End;
+	jmpIf_label    End;
 
 	sub_l64_imm       8, 1;
 	ret_tailcall_func      dummy;

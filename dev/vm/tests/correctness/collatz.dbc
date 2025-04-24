@@ -25,7 +25,7 @@ function collatz {
 
 	# if n == 1: end
 	cmpEq_l64_imm         8, 1;
-	jmpRelIf_label        End;
+	jmpIf_label        End;
 
 	# do-while (n != 1):
 	label WhileNneq0;
@@ -35,13 +35,13 @@ function collatz {
 			mov_l64_l64         24, 8; # tmp := n
 			mod_l64_imm         24, 2; # tmp %= 2
 			cmpEq_l64_imm       24, 0;
-			jmpRelIf_label      else;
+			jmpIf_label      else;
 
 		# if code:
 			# n = 3n + 1;
 			mul_l64_imm		    8, 3;
 			add_l64_imm         8, 1;
-			jmpRel_label        afterIf;
+			jmp_label        afterIf;
 
 		# else
 			label else;
@@ -58,10 +58,10 @@ function collatz {
 
 		# if n == 1
 		cmpEq_l64_imm       8, 1;
-		jmpRelNotIf_label   WhileNneq0;
+		jmpIfNot_label   WhileNneq0;
 
 		# cmpG_l64_imm       8, 1;
-		# jmpRelIf_label   WhileNneq0;
+		# jmpIf_label   WhileNneq0;
 
 	label End;
 
@@ -107,7 +107,7 @@ function main {
 
 		# if tmp > max:
 		cmpG_l64_l64       	56, 40;
-		jmpRelNotIf_label  	EndIF;
+		jmpIfNot_label  	EndIF;
 			mov_l64_l64    	40, 56; 	# max := tmp
 
 		label EndIF;
@@ -116,7 +116,7 @@ function main {
 
 		# if x > i : end
 		cmpG_l64_l64     	32, 48;
-		jmpRelIf_label   	Loop;
+		jmpIf_label   	Loop;
 
 	output_l64      40;
 

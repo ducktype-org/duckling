@@ -8,7 +8,7 @@ function main {
     init_type i64; # [32, 40) sum
     init_type i64; # [40, 48) temp
 
-    label Loop; 
+    label Loop;
         # temp := argv[i]
         load_l64_lptr_ofs   40, 16;
         ext_l64             0;
@@ -16,7 +16,7 @@ function main {
         add_l64_l64         32, 40; # sum += temp
         add_l64_imm         0, 1;   # i++
         cmpEq_l64_l64       0, 8;   # i < argc
-        jmpRelNotIf_label   Loop;
+        jmpIfNot_label   Loop;
 
     output_l64 32;
     mov_l64_imm 0, 0;

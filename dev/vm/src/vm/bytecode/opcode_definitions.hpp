@@ -130,9 +130,9 @@ DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 
 DEF_OPCODE(label, vm::opargs::Label)
 
-DEF_OPCODE(jmpRel_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
+DEF_OPCODE(jmp_label, vm::opargs::Label)
+DEF_OPCODE(jmpIf_label, vm::opargs::Label)
+DEF_OPCODE(jmpIfNot_label, vm::opargs::Label)
 
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 DEF_OPCODE(call_builtin_func, vm::opargs::BuiltinFunctionName)
