@@ -301,14 +301,17 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
-		driver::Driver driver{ driver::Options{
-			.backend_type = driver::BackendType::LLVM,
-			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly    = options.isFlag("compile-to-assembly"),
-			.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
-			.add_builtin_library    = options.isFlag("add-builtin-library"),
-			.external_objects_files = {},
-			.external_libs          = {} } };
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
+				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+				.add_builtin_library    = options.isFlag("add-builtin-library"),
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
 
 		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
 		driver.link();
@@ -341,14 +344,17 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
 
-		driver::Driver driver{ driver::Options{
-			.backend_type = driver::BackendType::LLVM,
-			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly    = false,
-			.dump_llvm_ir           = false,
-			.add_builtin_library    = true,
-			.external_objects_files = {},
-			.external_libs          = {} } };
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = false,
+				.dump_llvm_ir           = false,
+				.add_builtin_library    = true,
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
 
 		u64 i = 0;
 		for (const auto& module: modules) {
