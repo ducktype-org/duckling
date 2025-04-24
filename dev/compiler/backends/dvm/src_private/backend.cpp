@@ -100,7 +100,9 @@ namespace compiler::backend_vm {
 				block_to_id    = lir_function->getBlockIDs();
 			}
 		};
-
+		/**
+		 * @brief Generate `init_type` instruction and return the offset on the stack of the variable.
+		 */
 		usize initType(AddLirFuncContext& ctx, base::StrID type_name) {
 			auto offset = ctx.func_builder.initType(instructions::Op_init_type(type_name));
 			ctx.func_builder.addInstruction(

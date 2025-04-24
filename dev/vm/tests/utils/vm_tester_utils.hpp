@@ -38,7 +38,9 @@ protected:
 		const std::vector<std::string>&    args            = {},
 		i64                                exit_code       = 0
 	);
-
+	/**
+	 * @brief Same as above, but the program is given as an argument
+	 */
 	void runTestOnVm(
 		const vm::code::CodeCollection&    code,
 		const base::Optional<std::string>& optional_input  = {},
