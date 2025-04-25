@@ -39,6 +39,13 @@ namespace lsp {
 		);
 	}
 
+	Definition::Definition(CRef<pst::LangElement> element) {
+		auto source_position = element->getSourcePosition();
+		this->uri            = source_position.getSource()->getPath().uri();
+		this->start          = source_position.getStartLineColumn();
+		this->end            = source_position.getEndLineColumn();
+	}
+
 	base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> element, usize offset) {
 		for (auto sub: element->viewChildren()) {
 			auto curr_position = sub->getSourcePosition();
@@ -49,8 +56,11 @@ namespace lsp {
 	}
 
 	Definition findDefinition(MCRef<pst::LangElement> element) {
-		auto expr    = query::entryPoint<compiler::helios::QueryHoutOfExpr>({ element }).value();
-		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr>(expr);
-		return compiler::helios::stmt(id_expr.symbol);
+		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>(
+						{ dynamic_cast<const pst::ExprElement*>(&*element.toOpt().value()) }
+		)
+		                .value();
+		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr*>(&*expr);
+		return { compiler::helios::stmt(id_expr->symbol) };
 	}
 }
