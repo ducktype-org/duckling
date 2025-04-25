@@ -92,10 +92,16 @@ namespace vm::code::builders {
 		StableTypeIdNameMap<TypeOfData> types;
 
 		/*
-		 * @brief Throws a builder error if a type is invalid.
+		 * @brief Throws a builder error if type is invalid.
 		 */
 		void validateType(const TypeOfData& type) const;
 
+		/*
+		 * @brief Throws a builder error if types are invalid.
+         * Checks each type individually and inheritance
+         * hierarchy soundness.
+		 */
+        void validateTypes() const;
 	public:
 		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;

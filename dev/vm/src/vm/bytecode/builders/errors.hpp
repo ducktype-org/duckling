@@ -136,7 +136,9 @@ namespace vm::code::builders {
 	DEFINE_TYPE_VALIDATION_ERROR(
 		MissingAncestorField, "This class does not contain all of its ancestors' fields: "
 	);
-	// @TODOB detect cycles
+	DEFINE_TYPE_VALIDATION_ERROR(
+		CycleInHierarchy, "This inerface/class is a part of an inheritance cycle: "
+	);
 
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
 		UninstantiableValue, "Cannot intiantiate a value of this type."

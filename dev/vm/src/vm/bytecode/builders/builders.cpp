@@ -37,7 +37,7 @@ vm::code::Function FunctionBuilder::build() const {
 
 void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	using namespace instructions;
-	// @TODO remove these atMaybe's after #732
+	// @TODOB remove these atMaybe's and get this finished after #732
 	variant_match(instruction) {
 		variant_case(Op_init_type, instr) {
 			auto type = type_context.getMetadata()
@@ -234,13 +234,19 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	}
 }
 
+void TypeContextBuilder::validateTypes() const {
+	for (const auto& type: types) validateType(type);
+    // @TODOB check for inheritance cycles
+}
+
 TypeContext TypeContextBuilder::build() const {
+	validateTypes();
 	TypeContext tctx;
 	for (const auto& type: types) {
-		validateType(type);
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
+
 	auto to_low_type
 		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {

@@ -4,8 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-// @TODOB
-// #include <vm/preprocessor/validator/errors.hpp>
+#include <vm/bytecode/builders/errors.hpp>
 
 class VmInheritanceSemanticsTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -20,15 +19,14 @@ private:
 		runTestOnVm("downcast.dbc", "", "10", {}, 0);
 		runTestOnVm("valid_upcast.dbc", "", "0", {}, 0);
 
-        // @TODOB
-		// // Invalid
-		// using namespace vm::validator;
-		// auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-		// 	{ "invalid_instantiation.dbc", UninstantiableValue::ERR_MSG },
-		// 	{ "invalid_upcast.dbc", InvalidUpcast::ERR_MSG },
-		// });
+		// Invalid
+		using namespace vm::code::builders;
+		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
+			{ "invalid_instantiation.dbc", UninstantiableValue::ERR_MSG },
+			// { "invalid_upcast.dbc", InvalidUpcast::ERR_MSG }, // @TODOB
+		});
 
-		// for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });
+		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });
 	}
 };
 
