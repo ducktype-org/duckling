@@ -237,7 +237,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 void TypeContextBuilder::validateTypes() const {
 	for (const auto& type: types) validateType(type);
-    // @TODOB check for inheritance cycles
+	// @TODOB check for inheritance cycles
 }
 
 TypeContext TypeContextBuilder::build() const {
