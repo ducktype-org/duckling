@@ -49,4 +49,6 @@ namespace vm {
 
 		static Pointer null() { return {}; }
 	};
+
+	static_assert(sizeof(Pointer) == 16);
 }

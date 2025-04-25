@@ -29,7 +29,7 @@ function main {
     cmpNull_lptr 48;  # flag := cat != nullptr
 
     # Check if succeeded
-    jmpRelNotIf_label notCat;
+    jmpIfNot_label notCat;
         add_l64_imm 80, 10;
     label notCat;
 
@@ -38,7 +38,7 @@ function main {
     cmpNull_lptr 64;  # flag := cat != nullptr
 
     # Check if succeeded
-    jmpRelNotIf_label notDog;
+    jmpIfNot_label notDog;
         add_l64_imm 80, 1;
     label notDog;
 

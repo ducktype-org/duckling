@@ -1,0 +1,75 @@
+#include <backends/dvm/backend.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <helios/queries.hpp>
+#include <lir/lir_lowering/lir_lowering.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <vm_tester_utils.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/str_utils.hpp>
+
+#include <vm/api/vm.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
+
+#include <utility>
+
+class DVMBackendTest final: public VmTestSuite {
+#undef TESTER_CLASS
+#define TESTER_CLASS DVMBackendTest
+
+public:
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleTest);
+		TESTER_ADD_TEST(functionCallsTest);
+	}
+
+protected:
+	void testWithLir(query::Context& ctx, CRef<compiler::lir::Function> lir_function);
+
+private:
+	auto getModuleFromPath(std::string module_path) {
+		using namespace compiler;
+
+		std::vector<CRef<lir::Function>> funcs;
+		base::StrID                      module_name;
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
+			module_name    = moduleName(module);
+			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
+			for (auto& fun: top_level->functions) {
+				auto mir_fun = ctx.query<compiler::mir::LowerToMirFunction>({ fun });
+				auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>(
+					{ &mir_fun->expect("Couldn\'t compile") }
+				);
+				funcs.emplace_back(lir_fun);
+			}
+		});
+		return backend_vm::Module(module_name, funcs);
+	}
+
+	void runTest(
+		std::string                        module_path,
+		const base::Optional<std::string>& input     = {},
+		const base::Optional<std::string>& output    = {},
+		const std::vector<std::string>&    args      = {},
+		i64                                exit_code = 0
+	) {
+		using namespace compiler;
+		auto module = getModuleFromPath(std::move(module_path));
+		auto code   = module.build();
+
+		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
+		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
+		runTestOnVm(code, input, output, args, exit_code);
+	}
+
+	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }
+
+	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
+};
+
+
+TESTER_COMMON_MAIN("/compiler/backends/dvm/tests/")

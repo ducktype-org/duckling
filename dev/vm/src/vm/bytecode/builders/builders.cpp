@@ -63,15 +63,16 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 		variant_case(Op_deinit, instr) { handleDeinit(); }
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
-		variant_case(Op_jmpRel_label, jmp) {
+		variant_case(Op_call_builtin_func, func) { handleCall(func.arg0.function_name); }
+		variant_case(Op_jmp_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelIf_label, jmp) {
+		variant_case(Op_jmpIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelNotIf_label, jmp) {
+		variant_case(Op_jmpIfNot_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
@@ -246,7 +247,6 @@ TypeContext TypeContextBuilder::build() const {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
-
 	auto to_low_type
 		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {

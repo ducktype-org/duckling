@@ -10,7 +10,7 @@ function main {
     init_type i64; # [48, 56) y
     init_type i64; # [56, 64) reps
     init_type i64; # [64, 72) t
-  
+
     input_l64           56; # reps := input
     div_l64_imm         56, 8000000;
 
@@ -39,7 +39,7 @@ function main {
 
         # if i > 0 : end
         cmpG_l64_imm        40, 0;
-        jmpRelIf_label      Loop1;
+        jmpIf_label      Loop1;
 
       # sum the sequence
 
@@ -61,11 +61,11 @@ function main {
 
         # if i > 0 : end
         cmpG_l64_imm        40, 0;
-        jmpRelIf_label      Loop2;
+        jmpIf_label      Loop2;
 
       sub_l64_imm     56, 1;
       cmpEq_l64_imm   56, 0;
-      jmpRelNotIf_label LoopMain;
+      jmpIfNot_label LoopMain;
 
     # should return 42*(42+1)/2=903
     output_l64          48;

@@ -299,19 +299,71 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		using namespace compiler;
 		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-		// @TODO: change to hout of entire module, when available
-		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
-		driver::Driver driver{ driver::Options{
-			.backend_type = driver::BackendType::LLVM,
-			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly    = options.isFlag("compile-to-assembly"),
-			.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
-			.add_builtin_library    = options.isFlag("add-builtin-library"),
-			.external_objects_files = {},
-			.external_libs          = {} } };
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
+				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+				.add_builtin_library    = options.isFlag("add-builtin-library"),
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
 
-		driver.compileHOUTUnit(top_level, base::StrID("main_module"));
+		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		driver.link();
+
+		return 0;
+	});
+	commands.add("compile_package", "compile given package into a binary.", [&]() {
+		// modify clap as needed:
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the top-level source module of the package")
+		             .required()
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		             .addShortName('o')
+		             .addLongName("output")
+		             .addShortDesc("Path to the output file")
+		             .required()
+		             .build());
+
+		auto options = configureDuckMainWith(clap, command_args);
+
+		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		// @TODO: error handling
+		using namespace compiler;
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = false,
+				.dump_llvm_ir           = false,
+				.add_builtin_library    = true,
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
+
+		u64 i = 0;
+		for (const auto& module: modules) {
+			driver.compileHOUTUnit(
+				&module, base::StrID(base::strConcat("main_module", i++).c_str())
+			);
+		}
+
+		driver.link();
 
 		return 0;
 	});

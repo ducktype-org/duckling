@@ -1,3 +1,4 @@
+#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
 class VmFunctionsTests: public VmTestSuite {
@@ -16,6 +17,7 @@ public:
 		TESTER_ADD_TEST(testRecursion);
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
+		TESTER_ADD_TEST(testBuiltinFunctions);
 	}
 
 private:
@@ -60,6 +62,11 @@ private:
 	}
 
 	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1", {}); }
+
+	void testBuiltinFunctions() {
+		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {});
+		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {});
+	}
 };
 
 TESTER_COMMON_MAIN("/vm/tests/functions/");

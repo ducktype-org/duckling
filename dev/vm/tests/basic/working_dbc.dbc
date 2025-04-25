@@ -17,7 +17,7 @@ function main {
 	add_l64_l64      40, 48;
 
 	cmpEq_l64_l64    40, 32;
-	jmpRelNotIf_label Loop;
+	jmpIfNot_label Loop;
 
 	deinit;
 	deinit;

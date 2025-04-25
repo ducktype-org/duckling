@@ -132,11 +132,12 @@ DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 
 DEF_OPCODE(label, vm::opargs::Label)
 
-DEF_OPCODE(jmpRel_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
+DEF_OPCODE(jmp_label, vm::opargs::Label)
+DEF_OPCODE(jmpIf_label, vm::opargs::Label)
+DEF_OPCODE(jmpIfNot_label, vm::opargs::Label)
 
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
+DEF_OPCODE(call_builtin_func, vm::opargs::BuiltinFunctionName)
 
 // return while performing a tail call
 DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
@@ -174,13 +175,12 @@ DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
-// initialises vtable pointer in pointed object
+// initialises vtable pointer
 DEF_OPCODE(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 // casts pointed object to its superclass
 DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
-
 
 // terminates execution
 DEF_OPCODE(exit)

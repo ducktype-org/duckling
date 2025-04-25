@@ -11,6 +11,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -56,6 +57,16 @@ namespace vm::loader::compiler {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
+					ctx.log.log<UnknownFunctionError>(func, func.function_name);
+					return 0;
+				}
+				variant_case(vm::opargs::BuiltinFunctionName, func) {
+					auto func_id = builtins::getBuiltinFunctionID(func.function_name);
+					if (func_id)
+						return base::safeIntConv<i64>(
+							static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(*func_id
+						    )
+						);
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}
