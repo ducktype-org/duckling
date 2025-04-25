@@ -1,0 +1,6 @@
+type fun: check { i64 } void
+
+function check {
+	output_l64          0;
+	ret;
+}

@@ -60,7 +60,9 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		std::expected<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::vector<fs::FilePath>& path
+		);
 
 		Memory memory;
 
@@ -103,7 +105,10 @@ namespace vm {
 		/**
 		 * @brief Creates new thread that runs the code in the Executor service.
 		 */
-		std::expected<api::Response, api::CoreOperationError> run(const std::vector<std::string>& args
+		std::expected<api::Response, api::CoreOperationError> runFunction(
+			const std::string&              func_name,
+			const std::vector<i64>&          func_args,
+			const std::vector<std::string>& args
 		);
 
 		/**

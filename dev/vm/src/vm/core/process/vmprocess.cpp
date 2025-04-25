@@ -15,6 +15,7 @@
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
+#include <string>
 #include <variant>
 
 namespace vm {
@@ -28,11 +29,10 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const fs::FilePath& path
+		const std::vector<fs::FilePath>& paths
 	) {
 		std::unique_lock lock(rw_global);
-		// @TODO: this code should be improved in the future to not just return plain strings
-		auto code_result = loader->getProgram(path);
+		auto code_result = loader->getProgram(paths);
 
 		if (code_result.has_value()) {
 			loaded_program.emplace(std::move(code_result).value());
@@ -44,19 +44,21 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::run(
-		const std::vector<std::string>& args
+	std::expected<api::Response, api::CoreOperationError> VMProcess::runFunction(
+		const std::string& func_name,
+		const std::vector<i64>& func_args,
+		const std::vector<std::string>& program_args
 	) {
 		std::unique_lock lock(rw_global);
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRun(&*loaded_program, args);
+		bool response = getMainVMThread().initThreadAndRunFunction(&*loaded_program, func_name, func_args, program_args);
 		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
 	}
-
+	
 	std::expected<api::Response, api::CoreOperationError> VMProcess::join() {
 		// @TODO: more verbose errors
 		// @TODO: check status
@@ -104,7 +106,8 @@ namespace vm {
 		const api::ExecutorRequest& request
 	) {
 		variant_match(request) {
-			variant_case(api::request::Run, run_request) { return run(run_request.args); }
+			variant_case(api::request::Run, run_request) { return runFunction("main", {},  run_request.program_args); }
+			variant_case(api::request::RunFunction, run_func_request) { return runFunction(run_func_request.func_name, run_func_request.func_args, {}); }
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
 				auto response = getMainVMThread().pause();
@@ -126,7 +129,7 @@ namespace vm {
 				return getMainVMThread().getCurrentPosition();
 			}
 			variant_case(api::request::Load, load_request) {
-				return loadProgram(load_request.filename).transform_error([](auto err) {
+				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}

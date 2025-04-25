@@ -17,7 +17,7 @@ void VmTestSuite::runTestOnVm(
 	auto pid = process_pid_response->pid;
 
 	auto file = fs::FilePath(path(dbc_filename));
-	ASSERT_TRUE(vm::api::loadFile(pid, file).has_value());
+	ASSERT_TRUE(vm::api::loadFiles(pid, {file}).has_value());
 
 	ASSERT_TRUE(vm::api::run(pid, args).has_value());
 
@@ -43,7 +43,7 @@ void VmTestSuite::loadInvalidDbc(
 	auto pid = vm::api::spawn()->pid;
 
 	fs::FilePath file(path(dbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
@@ -60,6 +60,6 @@ void VmTestSuite::loadInvalidDbc(
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	ASSERT_TRUE(
-		vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))).has_value()
+		vm::api::loadFiles(vm::api::spawn()->pid, {fs::FilePath(path(dbc_filename))}).has_value()
 	);
 }

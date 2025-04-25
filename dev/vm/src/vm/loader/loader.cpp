@@ -1,5 +1,6 @@
 #include "loader.hpp"
 
+#include "filesystem/file.hpp"
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
@@ -11,6 +12,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/loader/logger.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
@@ -200,17 +202,19 @@ void Program::insertFunctions(
 	}
 }
 
-std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& code_collection) {
-	Program      program;
+std::expected<Program, LoaderLogger> Program::injectCode(
+	Program& program, const code::CodeCollection& code_collection
+) {
 	LoaderLogger log;
-
 	program.insertTypes(code_collection.types, log);
 	program.insertFunctions(code_collection.functions, log);
 	if (!log.good()) return std::unexpected(std::move(log));
-	return program;
+	return std::move(program);
 }
 
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+Loader::Loader(const bool validate_program): validate_program(validate_program) {}
+
+std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	const std::vector<fs::FilePath>& files
 ) {
 	match_optional(parser::parse(files)) {
@@ -236,8 +240,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 						functions.emplace_back(func_builder.build());
 					}
 				}
-				if (log.good())
-					return getProgram({ .functions = functions, .types = type_context.getTypes() });
+				if (log.good()) return code::CodeCollection(functions, type_context.getTypes());
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
@@ -247,30 +250,32 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	CORE_UNREACHABLE();
 }
 
-Loader::Loader(const bool validate_program): validate_program(validate_program) {}
-
-std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(const fs::FilePath& file) {
-	return getProgram(std::vector{ file });
-}
-
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const code::CodeCollection& code_collection
+	const std::vector<fs::FilePath>& file_paths
 ) {
-	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
-	if (opt_program.has_value()) {
-		const Program program = std::move(opt_program).value();
+	auto opt_code_collection = loadFiles(file_paths);
+	if (opt_code_collection.has_value()) {
+		code::CodeCollection code_collection = std::move(opt_code_collection).value();
+		auto                 opt_program     = Program::injectCode(program, code_collection);
+		if (opt_program.has_value()) {
+			// TODO: This should be checked only if we run a program, not during code injection
+			auto main_validation = validateMain(program);
+			if (!main_validation.has_value())
+				return std::unexpected(std::move(main_validation).error());
 
-		auto main_validation = validateMain(program);
-		if (!main_validation.has_value())
-			return std::unexpected(std::move(main_validation).error());
+			// TODO: This should only verify the unverified functions, although they need the whole
+			// context to be verified.
+			auto validation_result = validator::verify(program);
+			if (!validation_result.has_value())
+				return std::unexpected(std::move(validation_result).error());
+			// 	TODO: One thing to thins about are the globals initialized during the run. If we
+			// inject another piece of code will they still be there?
 
-		auto validation_result = validator::verify(program);
-		if (!validation_result.has_value())
-			return std::unexpected(std::move(validation_result).error());
-
-		return compiler::compile(program);
+			return compiler::compile(program);
+		}
+		return std::unexpected(std::move(opt_program).error());
 	}
-	return std::unexpected(std::move(opt_program).error());
+	return std::unexpected(std::move(opt_code_collection).error());
 }
 
 const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }

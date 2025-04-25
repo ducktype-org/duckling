@@ -1,0 +1,16 @@
+# input = n
+# output = n
+
+function main {
+	# [0, 8) main ret_val
+	# [8, 16) argc
+	# [16, 32) *argv
+
+	init_type 			i64; # [32, 40) check() arg0
+	input_l64           32;
+	call_func          	check;
+
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

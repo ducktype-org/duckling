@@ -13,6 +13,7 @@
 #include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <expected>
+#include <vector>
 
 namespace vm::loader {
 	/**
@@ -25,14 +26,19 @@ namespace vm::loader {
 		Program& operator=(const Program&) = delete;
 		Program& operator=(Program&&)      = default;
 
-		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
+		/**
+		 * @brief Injects new code represented as code collection to a given program.
+		 */
+		static std::expected<Program, LoaderLogger> injectCode(
+			Program& program, const code::CodeCollection& code_collection
 		);
-		const StableTypeIdNameMap<code::Function>&  funcMap() const;
+		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 
 	private:
+		friend class Loader;
 		Program() = default;
 
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
@@ -47,30 +53,32 @@ namespace vm::loader {
 	 */
 	class Loader final {
 		bool validate_program;
+		Program program;
+
+		/**
+		 * @brief Parses a list of files, returns an intermediate loader-only program representation.
+		 */
+		std::expected<code::CodeCollection, LoaderLogger> loadFiles(
+			const std::vector<fs::FilePath>& files
+		);
+
+		/**
+		 * @brief Injects new code represented as code collection to a current program state and
+		 * returns a low-level program representation.
+		 */
+		std::expected<low::LowVMProgram, LoaderLogger> injectCode(
+			const code::CodeCollection& code_collection
+		);
 
 	public:
 		explicit Loader(bool validate_program);
 
 		/**
-		 * @brief Parses the file, returns a
-		 * low-level program representation.
+		 * @brief Injects new code from given file paths to the current program state and
+		 * returns a low-level program representation of the whole state.
 		 */
-		static std::expected<low::LowVMProgram, LoaderLogger> getProgram(const fs::FilePath& file);
-
-		/**
-		 * @brief Parses a list of files, returns a
-		 * low-level program representation.
-		 */
-		static std::expected<low::LowVMProgram, LoaderLogger> getProgram(
-			const std::vector<fs::FilePath>& files
-		);
-
-		/**
-		 * @brief Builds LowVMProgram from high-level code representation, returns a
-		 * low-level program representation.
-		 */
-		static std::expected<low::LowVMProgram, LoaderLogger> getProgram(
-			const code::CodeCollection& code_collection
+		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
+			const std::vector<fs::FilePath>& file_path
 		);
 	};
 }

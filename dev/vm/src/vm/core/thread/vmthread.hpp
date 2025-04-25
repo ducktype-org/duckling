@@ -3,6 +3,7 @@
 #include "blocking_queue.hpp"
 #include "low_program/instruction.hpp"
 
+#include "base/ref.hpp"
 #include <base/box.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
@@ -135,10 +136,23 @@ namespace vm {
 
 		void executeOneStep();
 
-		low::ByteCode createStartFunction(
+		/**
+		 * @brief Creates a list of instructions, which initialize the argv table and populate it
+		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
+		 * perform the call and deinitialize the argv table when main returns.
+		 */
+		low::ByteCode createMainStartFunction(
 			CRef<low::FuncData> func, const std::vector<std::string>& args
 		);
 
+		/**
+		 * @brief Creates a list of instructions, which push the passed i`func_args` on to the local
+		 * stack and perform a call to `func`.
+		 * @note `func_args` should be changed to a vector of arguments of any VM type.
+		 */
+		low::ByteCode createNormalStartFunction(
+			CRef<low::FuncData> func, const std::vector<i64>& func_args
+		);
 		/**
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
@@ -157,11 +171,12 @@ namespace vm {
 		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
+		 * TODO: Update this comment
 		 * @brief This is the main function to call when starting the execution of a program.
 		 *
 		 * @return value returned by the program
 		 */
-		i64 internalCallFunction(CRef<low::FuncData> program, const std::vector<std::string>& args);
+		i64 execute(CRef<low::FuncData> func, low::ByteCode bytecode);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -180,7 +195,12 @@ namespace vm {
 		 * @param code
 		 * @return true if the thread was successfully created and the program is running
 		 */
-		bool initThreadAndRun(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
+		bool initThreadAndRunFunction(
+			CRef<vm::low::LowVMProgram>     program,
+			const std::string&              func_name,
+			const std::vector<i64>&         func_args,
+			const std::vector<std::string>& program_args
+		);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -194,7 +214,8 @@ namespace vm {
 		 * @brief Resumes the execution of a program.
 		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 * @return true if and only if program was in the paused state and was successfully resumed
+		 * @return true if and only if program was in the paused state and was successfully
+		 * resumed
 		 */
 		bool resume();
 
@@ -214,9 +235,15 @@ namespace vm {
 		bool stop();
 
 		/**
-		 * @brief Run the program.
+		 * @brief Run a single function with given parameters.
+		 * @todo `func_args` should be a vector of any VM types, not just i64.
 		 */
-		void run(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
+		void run(
+			CRef<low::LowVMProgram>         program,
+			const std::string&              func_name,
+			const std::vector<i64>&         func_args,
+			const std::vector<std::string>& program_args
+		);
 
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 
