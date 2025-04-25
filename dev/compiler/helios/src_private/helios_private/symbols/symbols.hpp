@@ -8,7 +8,7 @@
 #include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
