@@ -26,6 +26,8 @@ private:
 			{ "invalid_hierarchy/extends_interface.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/implements_plain.dbc", InvalidImplements::ERR_MSG },
 			{ "invalid_hierarchy/implements_class.dbc", InvalidImplements::ERR_MSG },
+			{ "invalid_hierarchy/extends_cycle.dbc", CycleInHierarchy::ERR_MSG },
+			{ "invalid_hierarchy/implements_cycle.dbc", CycleInHierarchy::ERR_MSG },
 		});
 
 		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });

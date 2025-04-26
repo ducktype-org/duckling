@@ -586,7 +586,6 @@ namespace vm {
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 
-			// @TODOB verify ext_type is always the next instruction
 			auto dst_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 

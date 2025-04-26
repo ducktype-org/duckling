@@ -284,7 +284,34 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 void TypeContextBuilder::validateTypes() const {
 	for (const auto& type: types) validateType(type);
-	// @TODOB check for inheritance cycles
+
+    // Check for cycles in hierarchy.
+	enum Status { Waiting, Visited, Done };
+
+	base::HashMap<base::StrID, Status> status;
+	for (const auto& type: types) status.put(typeName(type), Waiting);
+
+	std::function<void(const TypeOfData&)> helper = [&](const auto& type) {
+		auto name = typeName(type);
+		if (status[name] == Visited)
+			throw CycleInHierarchy(type);
+		else if (status[name] == Done)
+			return;
+
+		status[name] = Visited;
+		variant_match(type) {
+			variant_case(ClassType, clazz) {
+				if_opt_some(clazz.extends, superclass) helper(*types.at(superclass));
+				for (auto iface: clazz.implements) helper(*types.at(iface));
+			}
+			variant_case(InterfaceType, interface) {
+				for (auto iface: interface.implements) helper(*types.at(iface));
+			}
+		}
+		status[name] = Done;
+	};
+
+	for (const auto& type: types) helper(type);
 }
 
 TypeContext TypeContextBuilder::build() const {
