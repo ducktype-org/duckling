@@ -189,9 +189,10 @@ namespace vm::code::builders {
 		usize pushStackState(opargs::Type type);
 
 		/*
-		 * @brief Throws a builder error if a type is invalid.
+		 * @brief Throws a builder error if the instruction is invalid.
 		 */
 		void validateInstruction(const Instruction& instruction);
+		void validateArgInstantiable(const opargs::Type& arg);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);

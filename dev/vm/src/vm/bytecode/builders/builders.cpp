@@ -65,22 +65,17 @@ namespace {
 	}
 }
 
+void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) {
+	// @TODO remove `atMaybe` after #732
+	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	if (!type->isInstantiable()) throw UninstantiableValue();
+}
+
 void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	using namespace instructions;
-	// @TODO remove these atMaybe's #732
 	variant_match(instruction) {
-		variant_case(Op_init_type, instr) {
-			auto type = type_context.getMetadata()
-			                .atMaybe(instr.arg0.type_name)
-			                .expect<UnknownTypeError>(instr.arg0);
-			if (!type->isInstantiable()) throw UninstantiableValue();
-		}
-		variant_case(Op_alloc_lptr_type, instr) {
-			auto type = type_context.getMetadata()
-			                .atMaybe(instr.arg1.type_name)
-			                .expect<UnknownTypeError>(instr.arg1);
-			if (!type->isInstantiable()) throw UninstantiableValue();
-		}
+		variant_case(Op_init_type, instr) { validateArgInstantiable(instr.arg0); }
+		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_upcast_lptr_lptr, isntr) {
 			// @TODO implement checking if the cast is valid after #732
 		}
