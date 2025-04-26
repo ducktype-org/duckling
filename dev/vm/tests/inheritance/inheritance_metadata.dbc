@@ -42,11 +42,5 @@ type class: PietMondrian {
 }
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
-
-    # Print anything, so that `runTestOnVm` doesn't get stuck
-    output_l64 0;
     ret;
 }

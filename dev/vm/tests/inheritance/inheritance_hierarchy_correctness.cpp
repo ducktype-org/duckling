@@ -16,7 +16,7 @@ public:
 
 private:
 	void hierarchyCorrectness() {
-		runTestOnVm("inheritance_metadata.dbc", "", "0", {}, 0);
+		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
 
 		// Invalid
 		using namespace vm::code::builders;

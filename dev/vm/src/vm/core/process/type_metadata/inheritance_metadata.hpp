@@ -3,7 +3,6 @@
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
-#include <base/variant.hpp>
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 

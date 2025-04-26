@@ -21,8 +21,6 @@ function main {
     setVTable_lptr_type 32, Dog;
     upcast_lptr_lptr 48, 32;  # animal := static_cast<AnimalPtr>(dog)
     
-    # Print anything, so that `runTestOnVm` doesn't get stuck
-    output_l64 0;
     ret;
 }
 

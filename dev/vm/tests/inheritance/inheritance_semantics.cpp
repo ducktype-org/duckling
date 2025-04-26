@@ -16,8 +16,8 @@ public:
 
 private:
 	void semantics() {
+		runTestOnVm("valid_upcast.dbc", {}, {}, {}, 0);
 		runTestOnVm("downcast.dbc", "", "10", {}, 0);
-		runTestOnVm("valid_upcast.dbc", "", "0", {}, 0);
 
 		// Invalid
 		using namespace vm::code::builders;

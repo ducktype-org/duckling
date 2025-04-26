@@ -43,24 +43,24 @@ namespace {
 	concept Extension = std::same_as<Op_ext_l64, T> || std::same_as<Op_ext_type, T>;
 
 	template<typename... Ts>
-	bool isOneOf(const vm::code::Instruction& instr) {
+	constexpr bool isOneOf(const vm::code::Instruction& instr) {
 		return (std::holds_alternative<Ts>(instr) || ...);
 	}
 
 	template<Extension E>
-	bool acceptsExtension(const vm::code::Instruction& instr);
+	constexpr bool acceptsExtension(const vm::code::Instruction& instr);
 
 	template<>
-	bool acceptsExtension<Op_ext_l64>(const vm::code::Instruction& instr) {
+	constexpr bool acceptsExtension<Op_ext_l64>(const vm::code::Instruction& instr) {
 		return isOneOf<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>(instr);
 	}
 
 	template<>
-	bool acceptsExtension<Op_ext_type>(const vm::code::Instruction& instr) {
+	constexpr bool acceptsExtension<Op_ext_type>(const vm::code::Instruction& instr) {
 		return isOneOf<Op_downcast_lptr_lptr>(instr);
 	}
 
-	bool requiresExtension(const vm::code::Instruction& instr) {
+	constexpr bool requiresExtension(const vm::code::Instruction& instr) {
 		return isOneOf<Op_downcast_lptr_lptr>(instr);
 	}
 }

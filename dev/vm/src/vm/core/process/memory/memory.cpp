@@ -3,7 +3,6 @@
 #include "block.hpp"
 
 #include <base/exceptions.hpp>
-#include <base/optional.hpp>
 
 #include <mutex>
 

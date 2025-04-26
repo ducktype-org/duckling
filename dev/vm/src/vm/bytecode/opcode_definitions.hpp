@@ -127,6 +127,7 @@ DEF_OPCODE(cmpEq_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 
+// sets the flag if pointer is null
 DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 
 
