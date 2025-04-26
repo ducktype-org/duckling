@@ -82,13 +82,21 @@ void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	}
 
 	// Check `ext_*` instructions.
+	// This check assumes that the last instruction in a function is non-extendable,
+	// this is the case for `ret`.
 	auto predecessor
 		= instructions.empty() ? base::Optional<const Instruction&>{} : instructions.back();
 	bool valid_extension = std::visit(
 		[&]<typename T>(const T&) {
 			if constexpr (Extension<T>)
+				// If the current instruction is an extension, the situation is valid
+			    // if the previous instruction can take this extension.
+			    // Extensions must always come after some instruction, so it's invalid for it to be
+			    // the first instruction in a function (to not have a predecessor).
 				return predecessor.map(acceptsExtension<T>).valueOr(false);
 			else
+				// It is invalid if the current instruction is not an extension, but the previous
+			    // instruction *requires* one. If there was no previous instruction, it's not invalid.
 				return !predecessor.map(requiresExtension).valueOr(false);
 		},
 		instruction
