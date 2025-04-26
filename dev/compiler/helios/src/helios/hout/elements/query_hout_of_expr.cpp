@@ -232,34 +232,23 @@ namespace compiler::helios::code {
 				// * make function call
 				// For now we support just builtins
 
-				dia::InteractiveLogger logger;
-				logger.log(base::makeBox<dia::OperatorNotFound>(
-					stmt->getSourcePosition(), stmt->getOperator(), std::move(lhs), std::move(rhs)
-				));
-
-				// This code is temporarly commented out.
-				// TODO: Refactor this code so lhs and rhs are not moved.
 				// if no function call is found, we try to use builtin operators:
-				// auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs),
-				// std::move(rhs));
-				/* if (builtin.has_value()) {
-				    node = std::move(builtin).value();
-				    return;
+				auto builtin = binaryBuiltin(stmt->getOperator(), std::move(lhs), std::move(rhs));
+
+				if (builtin.has_value()) {
+					node = std::move(builtin).value();
+					return;
 				} else {
-				    dia::InteractiveLogger logger;
-				    logger.log(base::makeBox<dia::OperatorNotFound>(
-				        stmt->getSourcePosition(),
-				        stmt->getOperator(),
-				        std::move(lhs),
-				        std::move(rhs)
-				    ));
-				    ctx.log(
-				        makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-				            stmt->getSourcePosition(), "No builtin operator found"
-				        )
-				    );
-				    // failed
-				} */
+					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
+					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
+					LOG_ERROR(
+						dia::OperatorNotFound,
+						stmt->getSourcePosition(),
+						stmt->getOperator(),
+						std::move(lhs),
+						std::move(rhs)
+					);  // failed
+				}
 			}
 
 			void visitChainExpr(pst::Access<pst::expr::ChainExpr> stmt) override {

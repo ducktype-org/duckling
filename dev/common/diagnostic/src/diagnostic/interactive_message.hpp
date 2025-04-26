@@ -4,10 +4,8 @@
 #include <base/box.hpp>
 #include <helios/hout/elements/expr.hpp>
 #include "base/string_id.hpp"
-#include "serializable.hpp"
 #include "interactive_content.hpp"
 #include <vector>
-#include <concepts>
 
 namespace dia {
 	using nlohmann::json;
@@ -26,22 +24,7 @@ namespace dia {
 
 		friend void to_json(json& j, const InteractiveMessage& message) { j = message.tojson(); }
 
-		json tojson() const {
-			auto content_symbols = content->get_symbols();
-			for (auto& note: notes) {
-				auto note_symbols = note->get_symbols();
-				content_symbols.insert(note_symbols.begin(), note_symbols.end());
-			}
-			auto content_types = content->get_types();
-			for (auto& note: notes) {
-				auto note_types = note->get_types();
-				content_types.insert(note_types.begin(), note_types.end());
-			}
-			return json{ { "content", content },
-				         { "notes", notes },
-				         { "symbols", content_symbols },
-				         { "types", content_types } };
-		}
+		json tojson() const;
 	};
 
 	class ExampleMessage: public InteractiveMessage {
@@ -72,16 +55,7 @@ namespace dia {
 				types.insert(rhs_type.getType());
 			}
 
-			json tojson() override {
-				json lhs_type, rhs_type;
-				lhs_type["type"]
-					= std::to_string(lhs->expression_type.getType().customPerfectHash());
-				rhs_type["type"]
-					= std::to_string(rhs->expression_type.getType().customPerfectHash());
-				return json{ { "operator", op.strView() },
-					         { "left_type", lhs_type },
-					         { "right_type", rhs_type } };
-			}
+			json tojson() override;
 		};
 
 		class Content: public InteractiveContent {

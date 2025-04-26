@@ -1,0 +1,10 @@
+#pragma once
+
+namespace dia {
+	struct SerializationParams {
+		bool include_code = true;  // This just an example flag. I don't know if it makes sense. It
+		                           // was just the first thing that came to my mind.
+		bool include_symbols = true;
+		bool include_types   = true;
+	};
+}
