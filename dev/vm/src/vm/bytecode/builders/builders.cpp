@@ -35,9 +35,39 @@ vm::code::Function FunctionBuilder::build() const {
 	return function;
 }
 
+namespace {
+	// Helpers for validation `ext_*` instructions
+	using namespace vm::code::instructions;
+
+	template<typename T>
+	concept Extension = std::same_as<Op_ext_l64, T> || std::same_as<Op_ext_type, T>;
+
+	template<typename... Ts>
+	bool isOneOf(const vm::code::Instruction& instr) {
+		return (std::holds_alternative<Ts>(instr) || ...);
+	}
+
+	template<Extension E>
+	bool acceptsExtension(const vm::code::Instruction& instr);
+
+	template<>
+	bool acceptsExtension<Op_ext_l64>(const vm::code::Instruction& instr) {
+		return isOneOf<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>(instr);
+	}
+
+	template<>
+	bool acceptsExtension<Op_ext_type>(const vm::code::Instruction& instr) {
+		return isOneOf<Op_downcast_lptr_lptr>(instr);
+	}
+
+	bool requiresExtension(const vm::code::Instruction& instr) {
+		return isOneOf<Op_downcast_lptr_lptr>(instr);
+	}
+}
+
 void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 	using namespace instructions;
-	// @TODOB remove these atMaybe's and get this finished after #732
+	// @TODO remove these atMaybe's #732
 	variant_match(instruction) {
 		variant_case(Op_init_type, instr) {
 			auto type = type_context.getMetadata()
@@ -51,7 +81,24 @@ void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 			                .expect<UnknownTypeError>(instr.arg1);
 			if (!type->isInstantiable()) throw UninstantiableValue();
 		}
+		variant_case(Op_upcast_lptr_lptr, isntr) {
+			// @TODO implement checking if the cast is valid after #732
+		}
 	}
+
+	// Check `ext_*` instructions.
+	auto predecessor
+		= instructions.empty() ? base::Optional<const Instruction&>{} : instructions.back();
+	bool valid_extension = std::visit(
+		[&]<typename T>(const T&) {
+			if constexpr (Extension<T>)
+				return predecessor.map(acceptsExtension<T>).valueOr(false);
+			else
+				return !predecessor.map(requiresExtension).valueOr(false);
+		},
+		instruction
+	);
+	if (!valid_extension) throw InvalidInstructionExtension();
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {

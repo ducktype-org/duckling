@@ -146,4 +146,7 @@ namespace vm::code::builders {
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
 		InvalidUpcast, "The source type does not inherit from the destination type"
 	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidInstructionExtension, "The preceding instruction cannot be extended this way"
+	);
 }

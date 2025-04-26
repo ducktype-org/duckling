@@ -23,7 +23,8 @@ private:
 		using namespace vm::code::builders;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "invalid_instantiation.dbc", UninstantiableValue::ERR_MSG },
-			// { "invalid_upcast.dbc", InvalidUpcast::ERR_MSG }, // @TODOB
+			{ "missing_ext.dbc", InvalidInstructionExtension::ERR_MSG },
+			// { "invalid_upcast.dbc", InvalidUpcast::ERR_MSG }, // @TODO after #732
 		});
 
 		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });
