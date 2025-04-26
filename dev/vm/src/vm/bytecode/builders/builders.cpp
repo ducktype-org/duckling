@@ -285,7 +285,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 void TypeContextBuilder::validateTypes() const {
 	for (const auto& type: types) validateType(type);
 
-    // Check for cycles in hierarchy.
+	// Check for cycles in hierarchy.
 	enum Status { Waiting, Visited, Done };
 
 	base::HashMap<base::StrID, Status> status;
