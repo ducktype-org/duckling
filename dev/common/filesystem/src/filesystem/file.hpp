@@ -152,7 +152,7 @@ namespace fs {
 		static FilePath createTempDirectory();
 
 		/**
-		 * Creates a virtual directory. The directory is managed by the system and has a random
+		 * Creates a virtual directory inside the root folder of virtual file system. The directory has a random
 		 * name.
 		 * @return A FilePath with the new virtual directory.
 		 */
