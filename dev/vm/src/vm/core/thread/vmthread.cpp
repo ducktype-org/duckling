@@ -7,7 +7,6 @@
 #include "opcodes_functions.hpp"
 #include "opcodes_functions_debug.hpp"
 
-#include "base/ref.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
@@ -15,7 +14,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/thread/low_program/low_program.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -104,7 +102,7 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
-	low::ByteCode VMThread::createNormalStartFunction(
+	low::ByteCode VMThread::createFunctionStartFunc(
 		CRef<low::FuncData> func, const std::vector<i64>& func_args
 	) {
 		low::ByteCode bytecode;
@@ -122,24 +120,15 @@ namespace vm {
 
 		i32 stack_top = 0;
 
-		// Initialize an optional return value spot.
-		i32  func_ret_type_id       = 0;
-		auto opt_called_return_type = called_func_type->getResultType();
-		match_optional(opt_called_return_type) {
-			opt_some(called_return_type) {
-				func_ret_type_id = base::safeIntConv<i32>(called_return_type->getID().asInt());
-				bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0));
-				stack_top += base::safeIntConv<i32>(called_return_type->getSize());
-			}
-			opt_none {
-				// We assume, that after 'op_exit' theres exactly one block left on the stack which
-				// contains the return value/exit_code. If a called function is void we still
-				// include a mock i64 block.
-				bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
-				stack_top += base::safeIntConv<i32>(i64_type->getSize());
-			}
-		}
+		// Initialize an exit code/return value spot.
+		// @note: All functions have an exit code. In case of void functions the exit code is always
+		// 0. In other functions the exit_code stores the return value of a function, which
+		// currently can only be a i64.
+		bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
+		stack_top += base::safeIntConv<i32>(i64_type->getSize());
 
+		// TODO: Verify if the argument count is matching the definition
+		// TODO: fix this comments. Make then one comment.
 		// @todo: VM functions should should be able to return and take in any VM type, not just
 		// i64. This following code should be changed in:
 		// https://github.com/ducktype-org/duckling/issues/721
@@ -167,7 +156,7 @@ namespace vm {
 		return bytecode;
 	}
 
-	low::ByteCode VMThread::createMainStartFunction(
+	low::ByteCode VMThread::createProgramStartFunc(
 		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
 		// Just like in libc, the start function pushes the program arguments on to the stack and
@@ -246,114 +235,6 @@ namespace vm {
 		);
 		return bytecode;
 	}
-
-	// low::ByteCode VMThread::createMainStartFunction(
-	// 	CRef<low::FuncData> func, const std::vector<std::string>& args
-	// ) {
-	// 	// Just like in libc, the start function pushes the program arguments on to the stack and
-	// 	// performs the call to the actual function. After the called function returns, it
-	// 	// deinitializes the argv memory and exits, leaving one block on the block stack, which
-	// 	// contains the return value of the program.
-	// 	// TODO: Better comment
-	// 	// TODO: Maybe this functoin should push the functoin arguments on to it's stack.
-	// 	// If a is_main flag is passed, the functoin wil initialize the main function stack with
-	// 	// argc and an argv table.
-	// 	low::ByteCode bytecode;
-	// 	// Get function information.
-	// 	auto called_func_type = executing_program->types->atMaybe(func->name)
-	// 	                            .expect("Expected the called function to exist!");
-	// 	// If function is main, then we initialize the argv.
-	// 	bool is_main            = called_func_type->getName() == base::StrID("main");
-	// 	auto funcs              = executing_program->functions;
-	// 	i32  called_function_id = 0;
-	// 	for (u64 i = 0; i < funcs.size(); i++)
-	// 		if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
-	// 	u64  stack_top = 0;
-	// 	auto i64_type  = executing_program->types->atMaybe(base::StrID("i64"))
-	// 	                    .expect("Type i64 is expected to exist!");
-	// 	i32 i64_type_id = base::safeIntConv<i32>(i64_type->getID().asInt());
-	// 	// Initialize an optional return value spot.
-	// 	bool has_return_type        = false;
-	// 	i32  func_ret_type_id       = 0;
-	// 	auto opt_called_return_type = called_func_type->getResultType();
-	// 	if (opt_called_return_type.has_value()) {  // Called function has a return type.
-	// 		has_return_type = true;
-	// 		func_ret_type_id
-	// 			= base::safeIntConv<i32>(opt_called_return_type.value()->getID().asInt());
-	// 		bytecode.insert(
-	// 			bytecode.end(),
-	// 			{
-	// 				MAKE_BYTECODE_INSTRUCTION(
-	// 					init_type, func_ret_type_id, 0
-	// 				),  // [0, 8) return value
-	// 			}
-	// 		);
-	// 	}
-	// 		// Argc and argv types.
-	// 		auto argv_type
-	// 			= executing_program->types->atMaybe(base::StrID("argv"))
-	// 		          .expect("All programs are expected to have an existing argv type!");
-	// 		auto argv_ptr_type
-	// 			= executing_program->types->atMaybe(base::StrID("ptr_argv"))
-	// 		          .expect("All programs are expected to have an existing argv pointer type!");
-	// 		// TypeIDs to pass to opcodes.
-	// 		i32 argv_type_id     = base::safeIntConv<i32>(argv_type->getID().asInt());
-	// 		i32 argv_ptr_type_id = base::safeIntConv<i32>(argv_ptr_type->getID().asInt());
-	// 		bytecode.insert(
-	// 			bytecode.end(),
-	// 			{
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
-	// 				MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),  // [32, 40) temp_store
-	// 			}
-	// 		);
-	// 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are
-	// 			// converted to ints. This should change after:
-	// 			// https://github.com/ducktype-org/duckling/issues/722
-	// 			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
-	// 			bytecode.insert(
-	// 				bytecode.end(),
-	// 				{
-	// 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
-	// 					// @todo: This should be changed to 'store_lptr_imm_ofs' once it exists and
-	// 			        // temp_store should be removed.
-	// 					MAKE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
-	// 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
-	// 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
-	// 				}
-	// 			);
-	// 		}
-	// 			bytecode.end(),
-	// 			{
-	// 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit temp
-	// 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),  // deinit ix
-	// 				// Call setup.
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [40, 48) ret_val
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),       // [48, 56] argc
-	// 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
-	// 				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
-	// 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
-	// 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
-	// 				// @todo: For now we assume that the return values are always i64. It's true for
-	// 		        // main, but won't be true once REPL arrives.
-	// 				MAKE_BYTECODE_INSTRUCTION(mov_l64_l64, 0, 40),  // move the ret_val to 0th block
-	// 				MAKE_BYTECODE_INSTRUCTION(free_lptr, 8, 0),     // free *argv
-	// 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // called func ret_val
-	// 				MAKE_BYTECODE_INSTRUCTION(deinit, 0, 0),        // argv_ptr
-	// 				// Here, only the return value remains on the stack.
-	// 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
-	// 			}
-	// 		);
-	// 	} else {
-	// 		bytecode.insert(
-	// 			bytecode.end(),
-	// 			{
-	// 			}
-	// 		);
-	// 	}
-	// 	return bytecode;
-	// }
 
 #if defined(__clang__)
 // @TODO: suppress code deduplication in Clang
@@ -446,7 +327,7 @@ namespace vm {
 		return func_ret_val;
 	}
 
-	// internalCallFunction end
+	// execute end
 
 	// NOLINTEND(cppcoreguidelines-pro-bounds-constant-array-index)
 	// NOLINTEND(cppcoreguidelines-avoid-goto)
@@ -536,12 +417,13 @@ namespace vm {
 		executing_program = program;
 		try {
 			CRef<low::FuncData> func
-				= executing_program->functions.at(base::StrID(func_name.data()));
+				= executing_program->functions.atMaybe(base::StrID(func_name.data()))
+			          .expect("Called function does not exist!");
 
 			low::ByteCode start_function = func_name.data() == base::StrID("main")
-			                                 ? createMainStartFunction(func, program_args)
-			                                 : createNormalStartFunction(func, func_args);
-			i64           exit_code      = execute(func,  start_function);
+			                                 ? createProgramStartFunc(func, program_args)
+			                                 : createFunctionStartFunc(func, func_args);
+			i64           exit_code      = execute(func, start_function);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (KillProcessException) { respondExecutionRequest(api::ExecutionStopped{}); }
 	}
@@ -643,7 +525,6 @@ namespace vm {
 			return false;
 		exec_thread = std::thread([this, program, func_args, func_name, program_args] {
 			try {
-				// TODO: This is strange.
 				run(program, func_name, func_args, program_args);
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {

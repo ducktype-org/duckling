@@ -42,7 +42,7 @@ namespace vm::api {
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& path);
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
 	std::expected<void, ApiError> runFunction(
-		PID pid, const std::string& func_name, const std::vector<i64>& args
+		PID pid, const std::string& func_name, const std::vector<i64>& args = {}
 	);
 	std::expected<void, ApiError> join(PID pid);
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);

@@ -15,7 +15,7 @@
  * This file has **two versions**. One is for the OpFuns implementation and the other is
  * for the debug version of the OpFuns (DebugOpFun), which is a copy of the OpFuns but
  * with different `FUNCTION_CONT` and `ARGS`. This file **should not be included**.
- * If you want to inclue the OpFuns, include `opcodes_functions.hpp` or
+ * If you want to include the OpFuns, include `opcodes_functions.hpp` or
  * `opcodes_functions_debug.hpp`.
  *
  * If `DEBUG_OPCODES` is defined, the debug version will be included, otherwise the regular
@@ -64,7 +64,7 @@ namespace vm {
 	//  FUNCTION_CONT(<step>);
 	// }
 	//
-	// Function body must be seperated from the scope of FUNCTION_CONT to make sure
+	// Function body must be separated from the scope of FUNCTION_CONT to make sure
 	// that all its destructors have been called before invoking next tail call.
 	// Otherwise, the compiler may get confused and may schedule destructors from
 	// the body after the next tail call, which then becomes a regular function
@@ -77,7 +77,7 @@ namespace vm {
 	// computed goto's and switch case, because in those approaches we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
-	// inside interpeter loop.
+	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
 #define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                 \
@@ -305,7 +305,7 @@ namespace vm {
 				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
 			}
 
-			// Similiar as in func_call, but we deinit the arguments blocks as well,
+			// Similar as in func_call, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
@@ -373,7 +373,7 @@ namespace vm {
 			frame->called_func_arg_size = 0;
 			frame->called_func_ret_size = 0;
 		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 

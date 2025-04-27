@@ -4,6 +4,7 @@
 
 #include <diagnostic/logger.hpp>
 
+#include <base/string_id.hpp>
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
@@ -16,13 +17,14 @@
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/validator/detail/stack_state.hpp>
 
+#include <unordered_set>
+
 namespace vm::loader::validator {
 	namespace {
 		/**
 		 * @brief Performs static validation of the program.
 		 *
 		 * Validates:
-		 * - Main function existence
 		 * - Valid ret_tailcall signatures
 		 * - No duplicate function declarations
 		 * @todo Update that list when next checks are added
@@ -40,22 +42,19 @@ namespace vm::loader::validator {
 			std::expected<void, LoaderLogger> validateProgram();
 
 		private:
-			const Program& program;
-			LoaderLogger   log;
-
-			void validateMainExistence();
+			const Program&                  program;
+			LoaderLogger                    log;
+			std::unordered_set<base::StrID> is_function_verified;
 		};
 
 		std::expected<void, LoaderLogger> Validator::validateProgram() {
-			validateMainExistence();
-
-			if (!log.good()) return std::unexpected(std::move(log));
-
+			for (const auto& func: program.funcMap()) {
+				if (is_function_verified.contains(func.name)) {
+					// Here the verification for each function will appear.
+					is_function_verified.insert(func.name);
+				}
+			}
 			return {};
-		}
-
-		void Validator::validateMainExistence() {
-			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple(NO_MAIN_ERR.data());
 		}
 	}
 

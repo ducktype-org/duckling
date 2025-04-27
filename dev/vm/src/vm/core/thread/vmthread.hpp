@@ -3,7 +3,6 @@
 #include "blocking_queue.hpp"
 #include "low_program/instruction.hpp"
 
-#include "base/ref.hpp"
 #include <base/box.hpp>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
@@ -141,7 +140,7 @@ namespace vm {
 		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		low::ByteCode createMainStartFunction(
+		low::ByteCode createProgramStartFunc(
 			CRef<low::FuncData> func, const std::vector<std::string>& args
 		);
 
@@ -150,7 +149,7 @@ namespace vm {
 		 * stack and perform a call to `func`.
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 */
-		low::ByteCode createNormalStartFunction(
+		low::ByteCode createFunctionStartFunc(
 			CRef<low::FuncData> func, const std::vector<i64>& func_args
 		);
 		/**

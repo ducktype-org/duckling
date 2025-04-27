@@ -1,6 +1,5 @@
 #include "loader.hpp"
 
-#include "filesystem/file.hpp"
 #include "parser/elements.hpp"
 #include "parser/parser.hpp"
 
@@ -12,7 +11,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/loader/logger.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
@@ -149,42 +147,6 @@ namespace {
 			);
 		}
 	}
-
-	std::expected<void, LoaderLogger> validateMain(const Program& program) {
-		LoaderLogger log;
-
-		auto is_valid_main_return_type = [](const vm::code::TypeOfData& type) -> bool {
-			variant_match(type) {
-				variant_case(vm::code::PrimitiveType, primitive) { return primitive.size == 8; }
-				variant_default { return false; }
-			}
-			return false;
-		};
-
-		// Check if main function exists
-		auto opt_main = program.funcMap().atMaybe(base::StrID("main"));
-		if (!opt_main.has_value()) {
-			log.logSimple(NO_MAIN_ERR.data());
-			return std::unexpected(std::move(log));
-		}
-
-		// Check if main type exists and is a function type
-		// @note: We are guaranteed that a function type for each function exists. It's checked by
-		// builders.
-		auto main_type = *program.typeMap().atMaybe(base::StrID("main"));
-
-		variant_match(*main_type) {
-			variant_case(vm::code::FunctionType, func_type) {
-				auto opt_return_type = program.typeMap().atMaybe(func_type.result);
-				if (!opt_return_type || !is_valid_main_return_type(**opt_return_type)) {
-					log.logSimple(WRONG_MAIN_RET_VAL_ERR.data());
-					return std::unexpected(std::move(log));
-				}
-			}
-		}
-
-		return {};
-	}
 }
 
 void Program::insertFunctions(
@@ -257,11 +219,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		code::CodeCollection code_collection = std::move(opt_code_collection).value();
 		auto                 inject_error     = program.injectCode(code_collection);
 		if (inject_error.has_value()) {
-			// TODO: This should be checked only if we run a program, not during code injection
-			auto main_validation = validateMain(program);
-			if (!main_validation.has_value())
-				return std::unexpected(std::move(main_validation).error());
-
 			// TODO: This should only verify the unverified functions, although they need the whole
 			// context to be verified.
 			auto validation_result = validator::verify(program);
