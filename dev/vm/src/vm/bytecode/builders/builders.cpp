@@ -71,17 +71,7 @@ void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) {
 	if (!type->isInstantiable()) throw UninstantiableValue();
 }
 
-void FunctionBuilder::validateInstruction(const Instruction& instruction) {
-	using namespace instructions;
-	variant_match(instruction) {
-		variant_case(Op_init_type, instr) { validateArgInstantiable(instr.arg0); }
-		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_upcast_lptr_lptr, isntr) {
-			// @TODO implement checking if the cast is valid after #732
-		}
-	}
-
-	// Check `ext_*` instructions.
+void FunctionBuilder::validateExtension(const Instruction& instruction) {
 	// This check assumes that the last instruction in a function is non-extendable,
 	// this is the case for `ret`.
 	auto predecessor
@@ -106,10 +96,17 @@ void FunctionBuilder::validateInstruction(const Instruction& instruction) {
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
-	validateInstruction(instruction);
+	validateExtension(instruction);
 
 	variant_match(instruction) {
-		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
+		variant_case(Op_init_type, instr) {
+			validateArgInstantiable(instr.arg0);
+			pushStackState(instr.arg0);
+		}
+		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_upcast_lptr_lptr, isntr) {
+			// @TODO implement checking if the cast is valid after #732
+		}
 		variant_case(Op_deinit, instr) { handleDeinit(); }
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
@@ -162,10 +159,12 @@ usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type)
 		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
 	}
 
-	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
-	                                          .type_name            = type.type_name,
-	                                          .local_stack_position = offset,
-	                                          .type_size            = type_size });
+	local_stack.emplace_back(
+		LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
+	                     .type_name            = type.type_name,
+	                     .local_stack_position = offset,
+	                     .type_size            = type_size }
+	);
 
 	max_stack_size = std::max(max_stack_size, offset + type_size);
 
