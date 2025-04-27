@@ -1,4 +1,4 @@
-global_data counter int64;
+global_data counter i64;
 
 function main {
     mov_g64_imm counter, 5;

@@ -50,8 +50,13 @@ namespace vm::loader::compiler {
 				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
 #undef HANDLE_OFFSET
 
-#define HANDLE_GLOBAL(TYPE) \
-	variant_case(vm::opargs::TYPE, global_type) { throw base::NotYetImplemented("Global to ID: " #TYPE); }
+#define HANDLE_GLOBAL(TYPE)                                                  \
+	variant_case(vm::opargs::TYPE, global_data) {                            \
+		auto name = global_data.global_data_name;                            \
+		if (ctx.globals.contains(name)) return i64(*ctx.globals.idOf(name)); \
+		ctx.log.log<UnknownGlobalError>(global_data, name);                  \
+		return 0;                                                            \
+	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_OFFSET
 
@@ -92,6 +97,7 @@ namespace vm::loader::compiler {
 					return 0;
 				}
 			}
+
 			CORE_UNREACHABLE();
 		}
 
@@ -180,10 +186,19 @@ namespace vm::loader::compiler {
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
 		StableTypeIdNameMap<TypeCRef> globals;
-		for (const auto& global: program.globalMap())
-			globals.insert(types->at(global.type), global.name);
-
 		auto ctx = CompilationContext(program.funcMap(), *types, globals);
+
+		for (const auto& global: program.globalMap()) {
+			match_optional(types->atMaybe(global.type)) {
+				opt_some(type) {
+					globals.insert(type, global.name);
+				}
+				opt_none {
+					ctx.log.log<UnknownTypeError>(global.type, global.type.str);
+				}
+			}
+		}
+
 
 		for (auto& func: program.funcMap()) {
 			ctx.function = func;

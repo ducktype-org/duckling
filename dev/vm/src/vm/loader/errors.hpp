@@ -405,4 +405,27 @@ namespace vm::loader {
 			  dia::Error(pos),
 			  global_data_name(global_data_name) {}
 	};
+
+	class UnknownGlobalError final: public dia::Error {
+		base::StrID global_name;
+
+	public:
+		constexpr static const std::string_view ERR_MSG = "Unknown global data: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, global_name);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		UnknownGlobalError(dia::SourcePosition pos, base::StrID type_name):
+			  dia::Error(pos),
+			  global_name(type_name) {}
+	};
 }

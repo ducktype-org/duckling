@@ -84,7 +84,8 @@ namespace vm {
 		}
 
 		[[nodiscard]] constexpr base::Optional<TID> idOf(base::StrID name) const {
-			return name_to_id.atMaybe(name);
+			// Mapping to copy
+			return name_to_id.atMaybe(name).map([](TID t) { return t; });
 		}
 
 		[[nodiscard]]
