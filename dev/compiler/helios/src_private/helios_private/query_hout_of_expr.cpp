@@ -324,6 +324,7 @@ namespace compiler::helios::code {
 					}
 				}
 
+				// this pr: remove this dealiasing:
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
 					if (call_arguments)
 						node = makeBox<CallExpr>(
