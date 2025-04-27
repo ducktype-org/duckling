@@ -69,6 +69,11 @@ namespace pst {
 		}
 
 		[[nodiscard]]
+		const std::vector<tpc::Identifier>& getNames() const {
+			return names;
+		}
+
+		[[nodiscard]]
 		auto begin() const {
 			return names.cbegin();
 		}
@@ -85,8 +90,6 @@ namespace pst {
 
 		static MBox<DottedName> parse(LangParserState& state);
 
-		[[nodiscard]]
-		std::vector<base::StrID> getNames() const;
 		[[nodiscard]]
 		bool getStar() const;
 

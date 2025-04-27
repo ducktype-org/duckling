@@ -523,7 +523,7 @@ namespace compiler::helios {
 					{ parent, key.name, key.with_wildcards }
 				);
 
-				parent_result.insert(*result);
+				parent_result.merge(*result);
 
 				return parent_result;
 			} else {
