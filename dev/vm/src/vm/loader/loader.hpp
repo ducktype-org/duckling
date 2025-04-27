@@ -42,8 +42,8 @@ namespace vm::loader {
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
-		StableTypeIdNameMap<code::Function> functions            = {};
-		code::builders::TypeContextBuilder  type_context_builder = {};
+		StableTypeIdNameMap<code::Function> functions;
+		code::builders::TypeContextBuilder  type_context_builder;
 	};
 
 	/**
@@ -73,10 +73,18 @@ namespace vm::loader {
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state and
-		 * returns a low-level program representation of the whole state.
+		 * returns a low-level program representation of the current loader state.
 		 */
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
 			const std::vector<fs::FilePath>& file_path
+		);
+
+		/**
+		 * @brief Injects new code from a given high-level code representation, returns a
+		 * low-level program representation of the current loader state.
+		 */
+		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
+			const code::CodeCollection& code_collection
 		);
 	};
 }

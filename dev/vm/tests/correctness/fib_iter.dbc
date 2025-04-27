@@ -2,13 +2,13 @@ function main {
     # [0, 8) main ret_val
     # [8, 16) -> argc
     # [16, 32) -> *argv
-    
+
     # n - 32
     # m - 40
     # a - 48
     # b - 56
     # c - 64
-    
+
     init_type       i64; # [32, 40)
     init_type       i64; # [40, 48)
 
@@ -41,7 +41,7 @@ function main {
 
         # if n > 0 : end
         cmpG_l64_imm    32, 0;
-        jmpRelIf_label  Loop;
+        jmpIf_label  Loop;
 
     output_l64      48;
 

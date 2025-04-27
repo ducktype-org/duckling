@@ -7,6 +7,7 @@
 #include <base/variant.hpp>
 
 #include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -39,15 +40,15 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
 		variant_case(Op_call_builtin_func, func) { handleCall(func.arg0.function_name); }
-		variant_case(Op_jmpRel_label, jmp) {
+		variant_case(Op_jmp_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelIf_label, jmp) {
+		variant_case(Op_jmpIf_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
-		variant_case(Op_jmpRelNotIf_label, jmp) {
+		variant_case(Op_jmpIfNot_label, jmp) {
 			saveStackState(jmp.arg0.label_name);
 			label_users[jmp.arg0.label_name].emplace_back(jmp);
 		}
@@ -185,6 +186,8 @@ TypeContext TypeContextBuilder::build() const {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
 		tctx.types.push_back(type);
 	}
+	auto to_low_type
+		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
 	for (const auto& type: tctx.types) {
 		variant_match(type) {
 			variant_case(vm::code::PrimitiveType, data) {
@@ -236,12 +239,12 @@ TypeContext TypeContextBuilder::build() const {
 					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
+			variant_case(vm::code::OpaqueType, opaque) {
+				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
+			}
 			variant_case(vm::code::ClassType, data) {
-				// @TODO this is a placeholder until we add it as a proper type
-				// of a new kind, see:
-				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
-					{ base::StrID("vt"), tctx.metadata->at(base::StrID("VT")) }
+					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
 				fields.reserve(data.fields.size() + 1);
 				for (auto& field: data.fields)
@@ -269,11 +272,8 @@ TypeContext TypeContextBuilder::build() const {
 				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_case(vm::code::InterfaceType, data) {
-				// @TODO this is a placeholder until we add it as a proper type
-				// of a new kind, see:
-				// https://github.com/ducktype-org/duckling/issues/702
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
-					{ base::StrID("vt"), tctx.metadata->at(base::StrID("VT")) }
+					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
 				TypeRef tp       = tctx.metadata->at(data.name);
 				auto    get_type = [&](base::StrID name) -> TypeCRef {

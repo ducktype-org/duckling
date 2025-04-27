@@ -30,7 +30,7 @@ function main {
 	mov_l64_imm         40,  0;
 
 	# flag from cmpEq should be on
-	jmpRelIf_label      ok_label;
+	jmpIf_label      ok_label;
 
 	# print "0" (failed)
 	output_l64          40;

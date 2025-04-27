@@ -179,7 +179,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
-		opt_some_move(parsed_files) {
+		opt_some(parsed_files) {
 			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
@@ -211,23 +211,26 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
+	const code::CodeCollection& code_collection
+) {
+	auto inject_error = program.injectCode(code_collection);
+	if (inject_error.has_value()) {
+		auto validation_result = validator::verify(program);
+		if (!validation_result.has_value())
+			return std::unexpected(std::move(validation_result).error());
+		// TODO: One thing to think about are the globals initialized during the run. If we
+		// inject another piece of code will they still be there?
+
+		return compiler::compile(program);
+	}
+	return std::unexpected(std::move(inject_error).error());
+}
+
+std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<fs::FilePath>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value()) {
-		code::CodeCollection code_collection = std::move(opt_code_collection).value();
-		auto                 inject_error    = program.injectCode(code_collection);
-		if (inject_error.has_value()) {
-			auto validation_result = validator::verify(program);
-			if (!validation_result.has_value())
-				return std::unexpected(std::move(validation_result).error());
-			// TODO: One thing to thins about are the globals initialized during the run. If we
-			// inject another piece of code will they still be there?
-
-			return compiler::compile(program);
-		}
-		return std::unexpected(std::move(inject_error).error());
-	}
+	if (opt_code_collection.has_value()) return getProgram(std::move(opt_code_collection).value());
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 

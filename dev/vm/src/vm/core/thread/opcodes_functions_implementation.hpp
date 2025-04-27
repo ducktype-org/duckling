@@ -163,19 +163,19 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRel_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelIf_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIf_label)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelNotIf_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIfNot_label)(FUNCTION_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
@@ -539,6 +539,22 @@ namespace vm {
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
 			thread.process.getMemory().setPointer(dst, src);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto type
+				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			auto vt_pointer = reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
+			*vt_pointer = type.get();
 		}
 		FUNCTION_CONT(1);
 	}

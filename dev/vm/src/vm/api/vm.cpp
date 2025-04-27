@@ -51,7 +51,13 @@ namespace vm::api {
 
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& paths) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Load{ paths }))
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadFiles{ paths }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
 	}
 
@@ -116,7 +122,9 @@ namespace vm::api {
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
-		    .doRequest(api::makeIORequest(pid, request::Attach{ input, output }))
+		    .doRequest(
+				api::makeIORequest(pid, request::Attach{ .istream = input, .ostream = output })
+			)
 		    .transform(ignoreResponse);
 	}
 

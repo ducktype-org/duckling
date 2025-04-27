@@ -372,6 +372,17 @@ namespace vm::loader::parser {
 			out->datatype   = std::move(tp);
 			break;
 		}
+		case lang_def::Keyword::BCOpaque: {
+			lexer::Token value = state.tokens().next();
+			if (!value.isNumLiteral()) {
+				state.err.failAndLog(state.getPosition(), "expected number");
+			} else {
+				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
+			}
+			break;
+		}
 		case lang_def::Keyword::BCClass:
 		case lang_def::Keyword::BCInterface: {
 			bool                        is_interface = type == lang_def::Keyword::BCInterface;

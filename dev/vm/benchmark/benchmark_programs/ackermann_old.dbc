@@ -10,11 +10,11 @@ function ackermann {
 
     # if m == 0
     cmpEq_l64_imm       8, 0;
-    jmpRelIf_label      M0;
+    jmpIf_label      M0;
 
     # if n == 0
     cmpEq_l64_imm       24, 0;
-    jmpRelIf_label      N0;
+    jmpIf_label      N0;
 
     # m, n > 0
     # return A(m-1, A(m, n-1))

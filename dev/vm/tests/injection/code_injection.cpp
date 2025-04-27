@@ -17,11 +17,14 @@ public:
 	}
 
 private:
-	void multipleFiles() {
+	vm::PID initProcess() {
 		auto process_pid_response = vm::api::spawn();
 		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		return process_pid_response->pid;
+	}
 
+	void multipleFiles() {
+		vm::PID      pid = initProcess();
 		fs::FilePath file1(path("multiple_files_1.dbc"));
 		fs::FilePath file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
@@ -40,9 +43,7 @@ private:
 	}
 
 	void injectCode() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		vm::PID pid = initProcess();
 
 		fs::FilePath file1(path("inject_code_1.dbc"));
 		fs::FilePath file2(path("inject_code_2.dbc"));
@@ -63,9 +64,7 @@ private:
 	}
 
 	void callNoArgFunction() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		vm::PID pid = initProcess();
 
 		fs::FilePath file(path("call_no_arg_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
@@ -83,9 +82,7 @@ private:
 	}
 
 	void callVoidFunction() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		vm::PID pid = initProcess();
 
 		fs::FilePath file(path("call_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
@@ -103,9 +100,7 @@ private:
 	}
 
 	void callNonVoidFunction() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		vm::PID pid = initProcess();
 
 		fs::FilePath file(path("call_non_void_function.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
@@ -119,9 +114,7 @@ private:
 	}
 
 	void injectExistingFunction() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		auto pid = process_pid_response->pid;
+		vm::PID pid = initProcess();
 
 		fs::FilePath file(path("inject_code_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());

@@ -6,6 +6,8 @@
 #include <vm/bytecode/opcode_args.hpp>
 
 #include <sstream>
+#include <stdexcept>
+#include <unordered_map>
 
 namespace vm::code::builders {
 	namespace {
@@ -150,14 +152,14 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 
 	std::string opcode_name = name_stream.str();
 
-	if (arg_count == 0)
-		result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
-	else if (arg_count == 1)
-		result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
-	else if (arg_count == 2)
-		result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
-	else
-		CORE_PANIC("Opcode: ", opcode_name, " does not exist!");
+	try {
+		if (arg_count == 0)
+			result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
+		else if (arg_count == 1)
+			result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
+		else
+			result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
+	} catch (std::out_of_range&) { CORE_PANIC("Opcode: ", opcode_name, " does not exist!"); }
 
 	CORE_ASSERT(!result.empty(), "No instructions were created.");
 	return { result.begin(), result.end() };

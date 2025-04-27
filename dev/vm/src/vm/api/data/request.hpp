@@ -4,6 +4,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 
@@ -12,8 +13,12 @@
 
 namespace vm::api {
 	namespace request {
-		struct Load {
+		struct LoadFiles {
 			std::vector<fs::FilePath> filenames;
+		};
+
+		struct LoadCode {
+			code::CodeCollection code_collection;
 		};
 
 		struct Pause {};
@@ -71,7 +76,8 @@ namespace vm::api {
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
 	using ExecutorRequest = std::variant<
-		request::Load,
+		request::LoadFiles,
+		request::LoadCode,
 		request::Resume,
 		request::Pause,
 		request::Stop,

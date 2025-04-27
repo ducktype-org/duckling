@@ -10,7 +10,7 @@ function sum {
     # [8, 16) -> arg0
 
     cmpEq_l64_imm       8,  0;
-    jmpRelIf_label      ret_label;
+    jmpIf_label      ret_label;
     # if arg != 0:
         init_type           i64; # [16, 24) init a return value spot for sum()
         init_type           i64; # [24, 32) init an arg0 spot for sum()
