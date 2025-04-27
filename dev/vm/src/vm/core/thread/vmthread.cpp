@@ -319,8 +319,8 @@ namespace vm {
 		// @todo: VM functions should should be able to return any VM type, not just i64.
 		// This should be changed in: https://github.com/ducktype-org/duckling/issues/721
 		// @note: The return value is the only block left on the block stack.
-		i64  func_ret_val = func_ret_val = derefStack<i64>(local_stack, 0);
-		auto block                       = frame->block_stack.back();
+		i64  func_ret_val = derefStack<i64>(local_stack, 0);
+		auto block        = frame->block_stack.back();
 		frame->block_stack.pop_back();
 		process_memory.freeBlock(block);
 

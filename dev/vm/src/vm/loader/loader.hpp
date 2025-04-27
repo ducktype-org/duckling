@@ -29,9 +29,7 @@ namespace vm::loader {
 		/**
 		 * @brief Injects new code represented as code collection to a current program state.
 		 */
-		std::expected<void, LoaderLogger> injectCode(
-			const code::CodeCollection& code_collection
-		);
+		std::expected<void, LoaderLogger> injectCode(const code::CodeCollection& code_collection);
 		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 

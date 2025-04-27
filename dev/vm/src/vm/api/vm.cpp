@@ -61,9 +61,13 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> runFunction(PID pid, const std::string& function_name, const std::vector<i64>& args) {
+	std::expected<void, ApiError> runFunction(
+		PID pid, const std::string& function_name, const std::vector<i64>& args
+	) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::RunFunction{ .func_name=function_name, .func_args=args }))
+		    .doRequest(api::makeExecutorRequest(
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+			))
 		    .transform(ignoreResponse);
 	}
 

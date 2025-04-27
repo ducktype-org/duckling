@@ -107,7 +107,7 @@ namespace vm {
 		 */
 		std::expected<api::Response, api::CoreOperationError> runFunction(
 			const std::string&              func_name,
-			const std::vector<i64>&          func_args,
+			const std::vector<i64>&         func_args,
 			const std::vector<std::string>& args
 		);
 

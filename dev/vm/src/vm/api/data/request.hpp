@@ -27,7 +27,7 @@ namespace vm::api {
 		};
 
 		struct RunFunction {
-			std::string      func_name;
+			std::string func_name;
 			// @todo: This should be a vector of any VM type, not just u64.
 			// This should change after: https://github.com/ducktype-org/duckling/issues/721
 			std::vector<i64> func_args;
