@@ -119,23 +119,20 @@ namespace vm {
 			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
 		i32 stack_top = 0;
+		// @todo: VM functions should be able to return and take as parameters any VM type.
+		// For now we assume we can only pass and return arguments od i64 type.
+		// This should be changed in:
+		// https://github.com/ducktype-org/duckling/issues/721
 
-		// Initialize an exit code/return value spot.
-		// @note: All functions have an exit code. In case of void functions the exit code is always
-		// 0. In other functions the exit_code stores the return value of a function, which
-		// currently can only be a i64.
+		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
+		// the return value of the function. Void functions always return with the exit_code = 0.
 		bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
 		stack_top += base::safeIntConv<i32>(i64_type->getSize());
 
-		// TODO: Verify if the argument count is matching the definition
-		// TODO: fix this comments. Make then one comment.
-		// @todo: VM functions should should be able to return and take in any VM type, not just
-		// i64. This following code should be changed in:
-		// https://github.com/ducktype-org/duckling/issues/721
 		for (u64 i = 0; i < func_args.size(); i++) {
 			i32  converted_arg = base::safeIntConv<i32>(func_args[i]);
 			auto arg_type      = called_func_type->getNthParameterType(i).expect(
-                "Wrong number of passed parameters"
+                "Wrong number of passed arguments!"
             );
 			i32 arg_type_id = base::safeIntConv<i32>(arg_type->getID().asInt());
 			bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, arg_type_id, 0));
@@ -149,7 +146,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
 		        // any deinits. It's being deinitialized by the thread after obtaining the return
-		        // value/ exit_code.
+		        // value/exit_code.
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);

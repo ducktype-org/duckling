@@ -218,12 +218,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		code::CodeCollection code_collection = std::move(opt_code_collection).value();
 		auto                 inject_error    = program.injectCode(code_collection);
 		if (inject_error.has_value()) {
-			// TODO: This should only verify the unverified functions, although they need the whole
-			// context to be verified.
 			auto validation_result = validator::verify(program);
 			if (!validation_result.has_value())
 				return std::unexpected(std::move(validation_result).error());
-			// 	TODO: One thing to thins about are the globals initialized during the run. If we
+			// TODO: One thing to thins about are the globals initialized during the run. If we
 			// inject another piece of code will they still be there?
 
 			return compiler::compile(program);

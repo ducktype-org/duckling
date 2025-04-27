@@ -170,12 +170,12 @@ namespace vm {
 		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
-		 * TODO: Update this comment
-		 * @brief This is the main function to call when starting the execution of a program.
-		 *
+		 * @brief This is the main function to call to start execution on the VM.
+		 * @param func - the function to execute.
+		 * @param start_func_code - the code of the start function.
 		 * @return value returned by the program
 		 */
-		i64 execute(CRef<low::FuncData> func, low::ByteCode bytecode);
+		i64 execute(CRef<low::FuncData> func, low::ByteCode start_func_code);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -235,7 +235,6 @@ namespace vm {
 
 		/**
 		 * @brief Run a single function with given parameters.
-		 * @todo `func_args` should be a vector of any VM types, not just i64.
 		 */
 		void run(
 			CRef<low::LowVMProgram>         program,
