@@ -5,6 +5,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 
+#include <string_view>
 #include <variant>
 
 /**
@@ -17,6 +18,8 @@ namespace vm::opargs {
 	 * @brief Represents `imm` argument.
 	 */
 	struct Immediate final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "imm";
+
 		Immediate() = default;
 
 		Immediate(const i64 value): value(value) {}
@@ -32,6 +35,8 @@ namespace vm::opargs {
 	 * @brief Represents `l8` argument.
 	 */
 	struct StackLocalI8 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "l8";
+
 		StackLocalI8() = default;
 
 		StackLocalI8(const i64 offset): offset(offset) {}
@@ -47,6 +52,8 @@ namespace vm::opargs {
 	 * @brief Represents `l16` argument.
 	 */
 	struct StackLocalI16 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "l16";
+
 		StackLocalI16() = default;
 
 		StackLocalI16(const i64 offset): offset(offset) {}
@@ -62,6 +69,8 @@ namespace vm::opargs {
 	 * @brief Represents `l32` argument.
 	 */
 	struct StackLocalI32 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "l32";
+
 		StackLocalI32() = default;
 
 		StackLocalI32(const i64 offset): offset(offset) {}
@@ -77,6 +86,8 @@ namespace vm::opargs {
 	 * @brief Represents `l64` argument.
 	 */
 	struct StackLocalI64 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "l64";
+
 		StackLocalI64() = default;
 
 		StackLocalI64(const i64 offset): offset(offset) {}
@@ -92,6 +103,8 @@ namespace vm::opargs {
 	 * @brief Represents `any` argument.
 	 */
 	struct StackLocalAny final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "lany";
+
 		StackLocalAny() = default;
 
 		StackLocalAny(const i64 offset): offset(offset) {}
@@ -107,6 +120,7 @@ namespace vm::opargs {
 	 * @brief Represents `lptr` argument.
 	 */
 	struct StackLocalPtr final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "lptr";
 		StackLocalPtr() = default;
 
 		StackLocalPtr(const i64 offset): offset(offset) {}
@@ -128,6 +142,8 @@ namespace vm::opargs {
 	 * @brief Represents `g64` - global i64 argument.
 	 */
 	struct GlobalI64 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "g64";
+
 		GlobalI64() = default;
 
 		GlobalI64(const base::StrID global_data_name): global_data_name(global_data_name) {}
@@ -143,6 +159,8 @@ namespace vm::opargs {
 	 * @brief Represents `g32` - global i32 argument.
 	 */
 	struct GlobalI32 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "g32";
+
 		GlobalI32() = default;
 
 		GlobalI32(const base::StrID global_data_name): global_data_name(global_data_name) {}
@@ -158,6 +176,8 @@ namespace vm::opargs {
 	 * @brief Represents `g16` - global i16 argument.
 	 */
 	struct GlobalI16 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "g16";
+
 		GlobalI16() = default;
 
 		GlobalI16(const base::StrID global_data_name): global_data_name(global_data_name) {}
@@ -173,6 +193,8 @@ namespace vm::opargs {
 	 * @brief Represents `g8` - global i8 argument.
 	 */
 	struct GlobalI8 final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "g8";
+
 		GlobalI8() = default;
 
 		GlobalI8(const base::StrID global_data_name): global_data_name(global_data_name) {}
@@ -188,6 +210,8 @@ namespace vm::opargs {
 	 * @brief Represents `gptr` - global ptr argument.
 	 */
 	struct GlobalPtr final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "gptr";
+
 		GlobalPtr() = default;
 
 		GlobalPtr(const base::StrID global_data_name): global_data_name(global_data_name) {}
@@ -208,6 +232,8 @@ namespace vm::opargs {
 	 * @brief Represents type name argument.
 	 */
 	struct Type final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "type";
+
 		Type() = default;
 
 		Type(const base::StrID type_name): type_name(type_name) {}
@@ -223,6 +249,8 @@ namespace vm::opargs {
 	 * @brief Represents function name argument.
 	 */
 	struct FunctionName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "func";
+
 		FunctionName() = default;
 
 		FunctionName(const base::StrID function_name): function_name(function_name) {}
@@ -235,6 +263,8 @@ namespace vm::opargs {
 	};
 
 	struct BuiltinFunctionName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "builtin_func";
+
 		BuiltinFunctionName() = default;
 
 		BuiltinFunctionName(const base::StrID function_name): function_name(function_name) {}
@@ -250,6 +280,8 @@ namespace vm::opargs {
 	 * @brief Represents label name argument.
 	 */
 	struct Label final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "label";
+
 		Label() = default;
 
 		Label(base::StrID label_name): label_name(label_name) {}

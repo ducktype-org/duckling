@@ -46,35 +46,27 @@ namespace vm::loader::parser {
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
-#define HANDLE_OFFSET(Type)                                   \
+#define HANDLE_OFFSET(TYPE)                                   \
 	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::Type { \
-		return { parseInt<i64, vm::opargs::Type>(state) };    \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
+		return { parseInt<i64, vm::opargs::TYPE>(state) };    \
 	}
 
 		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPARG_OFFSET_TYPES);
 
 #undef HANDLE_OFFSET
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
-			return { parseStr(state) };
-		}
+#define HANDLE_STR_ARG(TYPE)                                  \
+	template<>                                                \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
+		return { parseStr(state) };                           \
+	}
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::FunctionName {
-			return { parseStr(state) };
-		}
+		FOR_EACH(
+			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+		)
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::BuiltinFunctionName {
-			return { parseStr(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
-			return { parseStr(state) };
-		}
+#undef HANDLE_STR_ARG
 
 		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
 
@@ -384,6 +376,17 @@ namespace vm::loader::parser {
 			auto tp         = FunctionType{ name, arguments, result };
 			tp.bytecode_pos = *out->position;
 			out->datatype   = std::move(tp);
+			break;
+		}
+		case lang_def::Keyword::BCOpaque: {
+			lexer::Token value = state.tokens().next();
+			if (!value.isNumLiteral()) {
+				state.err.failAndLog(state.getPosition(), "expected number");
+			} else {
+				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				tp.bytecode_pos = *out->position;
+				out->datatype   = tp;
+			}
 			break;
 		}
 		case lang_def::Keyword::BCClass:
