@@ -1,14 +1,18 @@
-type fun: summer {} void
+type fun: summer { i64, i64 } void
 
 function summer {
-    init_type i64; # [0, 8)
+    # [0, 8) arg0
+    # [8, 16) arg1
+    
+    init_type i64; # [16, 24)
 
-    mov_l64_imm 0, 700;
-    add_l64_imm 0, 30;
-    add_l64_imm 0, 5;
-
-    output_l64 0;
+    add_l64_l64 16, 0;
+    add_l64_l64 16, 8;
+    output_l64 16;
 
     deinit;
     ret;
 }
+
+# TODO: We have to think about main verification.
+function main {}

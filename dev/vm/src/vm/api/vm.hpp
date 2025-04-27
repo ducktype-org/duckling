@@ -4,10 +4,11 @@
  */
 #pragma once
 
-#include <vector>
 #include <filesystem/file.hpp>
 
 #include <vm/api/api.hpp>
+
+#include <vector>
 
 namespace vm::api {
 	/**
@@ -40,7 +41,9 @@ namespace vm::api {
 
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& path);
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
-	std::expected<void, ApiError> runFunction(PID pid, const std::string& func_name);
+	std::expected<void, ApiError> runFunction(
+		PID pid, const std::string& func_name, const std::vector<i64>& args
+	);
 	std::expected<void, ApiError> join(PID pid);
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);
 	std::expected<void, ApiError> detach(PID pid);

@@ -27,10 +27,10 @@ namespace vm::loader {
 		Program& operator=(Program&&)      = default;
 
 		/**
-		 * @brief Injects new code represented as code collection to a given program.
+		 * @brief Injects new code represented as code collection to a current program state.
 		 */
-		static std::expected<Program, LoaderLogger> injectCode(
-			Program& program, const code::CodeCollection& code_collection
+		std::expected<void, LoaderLogger> injectCode(
+			const code::CodeCollection& code_collection
 		);
 		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
@@ -44,15 +44,15 @@ namespace vm::loader {
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
-		StableTypeIdNameMap<code::Function> functions;
-		code::builders::TypeContextBuilder  type_context_builder;
+		StableTypeIdNameMap<code::Function> functions            = {};
+		code::builders::TypeContextBuilder  type_context_builder = {};
 	};
 
 	/**
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		bool validate_program;
+		bool    validate_program;
 		Program program;
 
 		/**
