@@ -218,9 +218,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
 			return std::unexpected(std::move(validation_result).error());
-		// TODO: One thing to think about are the globals initialized during the run. If we
-		// inject another piece of code will they still be there?
-
 		return compiler::compile(program);
 	}
 	return std::unexpected(std::move(inject_error).error());
