@@ -80,54 +80,41 @@ namespace vm {
 	// inside interpeter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                      \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }      \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                  \
-		{                                                                                     \
-			auto view             = thread.process_memory.getGlobalData(usize(instr->arg0));  \
-			derefView<TYPE>(view) = static_cast<TYPE>(instr->arg1);                           \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                                     \
-			derefStack<TYPE>(local_stack, instr->arg0)                                        \
-				= derefStack<TYPE>(local_stack, instr->arg1);                                 \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                                     \
-			auto view0             = thread.process_memory.getGlobalData(usize(instr->arg0)); \
-			auto view1             = thread.process_memory.getGlobalData(usize(instr->arg1)); \
-			derefView<TYPE>(view0) = derefView<TYPE>(view1);                                  \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                                     \
-			auto view             = thread.process_memory.getGlobalData(usize(instr->arg0));  \
-			derefView<TYPE>(view) = derefStack<TYPE>(local_stack, instr->arg1);               \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {         \
-		{                                                                                     \
-			auto view = thread.process_memory.getGlobalData(usize(instr->arg1));              \
-			derefStack<TYPE>(local_stack, instr->arg0) = derefView<TYPE>(view);               \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
-	}                                                                                         \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                     \
-			if (frame->flags.flag)                                                            \
-				derefStack<TYPE>(local_stack, instr->arg0)                                    \
-					= derefStack<TYPE>(local_stack, instr->arg1);                             \
-		}                                                                                     \
-		FUNCTION_CONT(1);                                                                     \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); }            \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = derefStack<TYPE>(local_stack, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			if (frame->flags.flag)                                                        \
+				derefStack<TYPE>(local_stack, instr->arg0)                                \
+					= derefStack<TYPE>(local_stack, instr->arg1);                         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
@@ -145,62 +132,27 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g64_r0)(FUNCTION_ARGS) {
-		{
-			auto view            = thread.process_memory.getGlobalData(usize(instr->arg0));
-			derefView<i64>(view) = frame->regs.p64_reg_0;
-		}
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = DEREF_GLOBAL(Pointer, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_g64)(FUNCTION_ARGS) {
-		{
-			auto view             = thread.process_memory.getGlobalData(usize(instr->arg1));
-			frame->regs.p64_reg_0 = derefView<i64>(view);
-		}
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
+		{ DEREF_GLOBAL(Pointer, instr->arg0) = derefStack<Pointer>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
-#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                              \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                            \
-			derefStack<TYPE>(local_stack, instr->arg0)                                               \
-				OP derefStack<TYPE>(local_stack, instr->arg1);                                       \
-		}                                                                                            \
-		FUNCTION_CONT(1);                                                                            \
-	}                                                                                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                            \
-			auto                     view = thread.process_memory.getGlobalData(usize(instr->arg0)); \
-			derefView<TYPE>(view) OP derefStack<TYPE>(local_stack, instr->arg1);                     \
-		}                                                                                            \
-		FUNCTION_CONT(1);                                                                            \
-	}                                                                                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                            \
-			auto view = thread.process_memory.getGlobalData(usize(instr->arg1));                     \
-			derefStack<TYPE>(local_stack, instr->arg0) OP derefView<TYPE>(view);                     \
-		}                                                                                            \
-		FUNCTION_CONT(1);                                                                            \
-	}                                                                                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {             \
-		{                                                                                            \
-			auto view0 = thread.process_memory.getGlobalData(usize(instr->arg0));                    \
-			auto view1 = thread.process_memory.getGlobalData(usize(instr->arg1));                    \
-			derefView<TYPE>(view0) OP derefView<TYPE>(view1);                                        \
-		}                                                                                            \
-		FUNCTION_CONT(1);                                                                            \
-	}                                                                                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; }                               \
-		FUNCTION_CONT(1);                                                                            \
-	}                                                                                                \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                      \
-		{                                                                                            \
-			auto                     view = thread.process_memory.getGlobalData(usize(instr->arg1)); \
-			derefView<TYPE>(view) OP instr->arg1;                                                    \
-		}                                                                                            \
-		FUNCTION_CONT(1);                                                                            \
+#define DEFINE_ARITHMETIC_OP(NAME, BITS_SIZE, TYPE, OP)                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) { \
+		{                                                                                \
+			derefStack<TYPE>(local_stack, instr->arg0)                                   \
+				OP derefStack<TYPE>(local_stack, instr->arg1);                           \
+		}                                                                                \
+		FUNCTION_CONT(1);                                                                \
+	}                                                                                    \
+	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {          \
+		{ derefStack<TYPE>(local_stack, instr->arg0) OP instr->arg1; }                   \
+		FUNCTION_CONT(1);                                                                \
 	}
 
 	DEFINE_ARITHMETIC_OP(add, 64, i64, +=)
@@ -222,41 +174,10 @@ namespace vm {
 		}                                                                                       \
 		FUNCTION_CONT(1);                                                                       \
 	}                                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                       \
-			auto view0        = thread.process_memory.getGlobalData(usize(instr->arg0));        \
-			auto view1        = thread.process_memory.getGlobalData(usize(instr->arg1));        \
-			frame->flags.flag = derefView<TYPE>(view0) OP derefView<TYPE>(view1);               \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
-	}                                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                       \
-			auto view = thread.process_memory.getGlobalData(usize(instr->arg0));                \
-			frame->flags.flag                                                                   \
-				= derefView<TYPE>(view) OP derefStack<TYPE>(local_stack, instr->arg1);          \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
-	}                                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {        \
-		{                                                                                       \
-			auto view = thread.process_memory.getGlobalData(usize(instr->arg1));                \
-			frame->flags.flag                                                                   \
-				= derefStack<TYPE>(local_stack, instr->arg0) OP derefView<TYPE>(view);          \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
-	}                                                                                           \
 	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {                 \
 		{                                                                                       \
 			frame->flags.flag                                                                   \
 				= derefStack<TYPE>(local_stack, instr->arg0) OP static_cast<TYPE>(instr->arg1); \
-		}                                                                                       \
-		FUNCTION_CONT(1);                                                                       \
-	}                                                                                           \
-	RETURN_TYPE OpFuns::OPCODE_NAME(NAME##_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {                 \
-		{                                                                                       \
-			auto view         = thread.process_memory.getGlobalData(usize(instr->arg0));        \
-			frame->flags.flag = derefView<TYPE>(view) OP static_cast<TYPE>(instr->arg1);        \
 		}                                                                                       \
 		FUNCTION_CONT(1);                                                                       \
 	}
@@ -285,14 +206,6 @@ namespace vm {
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(1);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(neg_g64)(FUNCTION_ARGS) {
-		{
-			auto view = thread.process_memory.getGlobalData(usize(instr->arg0));
-			derefView<i64>(view) *= -1;
-		}
-		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(neg_l64)(FUNCTION_ARGS) {

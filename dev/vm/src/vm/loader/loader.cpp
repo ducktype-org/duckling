@@ -227,20 +227,13 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
-<<<<<<< HEAD
-		opt_some_move(parsed_files) {
+		opt_some(parsed_files) {
 			auto                          type_context_builder = vm::code::getBuiltinTypes();
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data)
 					insertGlobalData({ .name = global->name, .type = global->type }, globals, log);
-=======
-		opt_some(parsed_files) {
-			auto         type_context_builder = vm::code::getBuiltinTypes();
-			LoaderLogger log;
-			for (const auto& parsed_file: parsed_files)
->>>>>>> origin/main
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
 			}

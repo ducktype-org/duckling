@@ -10,6 +10,8 @@ inline static T& derefStack(std::byte* stack, i64 position) {
 }
 
 template<typename T>
-inline static T& derefView(base::ModRawView& view) {
+inline static T& derefView(base::ModRawView view) {
 	return *(reinterpret_cast<T*>(view.getBegin()));
 }
+
+#define DEREF_GLOBAL(TYPE, ID) derefView<TYPE>(thread.process_memory.getGlobalData(usize(ID)))

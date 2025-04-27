@@ -132,7 +132,7 @@ namespace vm::opargs {
 
 		GlobalI64(const base::StrID global_data_name): global_data_name(global_data_name) {}
 
-		base::StrID global_data_name;
+		base::StrID global_data_name = base::StrID("");
 
 		constexpr bool operator==(const GlobalI64& other) const noexcept {
 			return global_data_name == other.global_data_name;
@@ -147,7 +147,7 @@ namespace vm::opargs {
 
 		GlobalI32(const base::StrID global_data_name): global_data_name(global_data_name) {}
 
-		base::StrID global_data_name;
+		base::StrID global_data_name = base::StrID("");
 
 		constexpr bool operator==(const GlobalI32& other) const noexcept {
 			return global_data_name == other.global_data_name;
@@ -162,7 +162,7 @@ namespace vm::opargs {
 
 		GlobalI16(const base::StrID global_data_name): global_data_name(global_data_name) {}
 
-		base::StrID global_data_name;
+		base::StrID global_data_name = base::StrID("");
 
 		constexpr bool operator==(const GlobalI16& other) const noexcept {
 			return global_data_name == other.global_data_name;
@@ -177,7 +177,7 @@ namespace vm::opargs {
 
 		GlobalI8(const base::StrID global_data_name): global_data_name(global_data_name) {}
 
-		base::StrID global_data_name;
+		base::StrID global_data_name = base::StrID("");
 
 		constexpr bool operator==(const GlobalI8& other) const noexcept {
 			return global_data_name == other.global_data_name;
@@ -185,9 +185,24 @@ namespace vm::opargs {
 	};
 
 	/**
+	 * @brief Represents `gptr` - global ptr argument.
+	 */
+	struct GlobalPtr final: code::ElementBase {
+		GlobalPtr() = default;
+
+		GlobalPtr(const base::StrID global_data_name): global_data_name(global_data_name) {}
+
+		base::StrID global_data_name = base::StrID("");
+
+		constexpr bool operator==(const GlobalPtr& other) const noexcept {
+			return global_data_name == other.global_data_name;
+		}
+	};
+
+	/**
 	 * @brief List of all argument types that target global data.
 	 */
-#define VM_OPARG_GLOBAL_TYPES GlobalI64, GlobalI32, GlobalI16, GlobalI8
+#define VM_OPARG_GLOBAL_TYPES GlobalI64, GlobalI32, GlobalI16, GlobalI8, GlobalPtr
 
 	/**
 	 * @brief Represents type name argument.
