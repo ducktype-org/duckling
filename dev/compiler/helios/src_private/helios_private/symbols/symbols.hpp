@@ -53,8 +53,9 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
 	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
+	
 	/**
-	 * A query that returns an "absolute path" to the symbol without aliases.
+	 * A query that returns deliased symbol list of a given alias symbol.
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>);
 

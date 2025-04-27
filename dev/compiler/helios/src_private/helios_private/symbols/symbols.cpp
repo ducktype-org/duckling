@@ -507,22 +507,17 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: this does not handle usings.
-			if (kind(key) == SymbolKind::Using)
-				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
-
-			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
-
-			auto alias_definition
+			if (kind(key) == SymbolKind::Alias) {				
+				auto alias_definition
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Alias>().value(
 				);
 
-			bool       first_symbol = true;
-			SymbolList result;
-			for (auto pointed: alias_definition->getPointed()) {
+				bool       first_symbol = true;
+				SymbolList result;
+				for (auto pointed: alias_definition->getPointed()) {
 				auto pointed_symbol_lookup
-					= first_symbol
-				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
+				= first_symbol
+				? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
 				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
 				auto path = pointed_symbol_lookup->getAsSingle();
 				if (path.hasError()) {
@@ -555,11 +550,19 @@ namespace compiler::helios {
 					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
 					result.insert(result.end(), dealiased.begin(), dealiased.end());
 				}
-
+				
 				first_symbol = false;
 			}
-
+			
 			return result;
+			}
+			else if (kind(key) == SymbolKind::Using) {
+				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
+				return SymbolList{ key };
+			}
+			else {
+				return SymbolList{ key };
+			}
 		}
 
 		QUERY_AUTO_CACHE_REF

@@ -10,7 +10,7 @@
 
 #include "kind.hpp"
 
-#include <query_framework/query_int.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <base/ints.hpp>
 

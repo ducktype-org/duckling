@@ -50,7 +50,7 @@ namespace compiler::helios {
 		return res;
 	}
 
-	void LookupResult::insert(LookupResult other) {
+	void LookupResult::merge(LookupResult other) {
 		leaves.insert(
 			leaves.end(),
 			std::make_move_iterator(other.leaves.begin()),
