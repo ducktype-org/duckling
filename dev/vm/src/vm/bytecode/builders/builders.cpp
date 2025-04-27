@@ -37,31 +37,71 @@ vm::code::Function FunctionBuilder::build() const {
 
 namespace {
 	// Helpers for validation `ext_*` instructions
+	using namespace vm::code;
 	using namespace vm::code::instructions;
 
-	template<typename T>
-	concept Extension = std::same_as<Op_ext_l64, T> || std::same_as<Op_ext_type, T>;
+	template<typename T, typename Tup>
+	struct IsIn;
+
+	template<typename T, typename... Ts>
+	struct IsIn<T, std::tuple<Ts...>> {
+		static constexpr bool VALUE = (std::same_as<T, Ts> || ...);
+	};
+
+	template<typename... Tups>
+	using Cat = decltype(std::tuple_cat(std::declval<Tups>()...));
+
+	template<typename Tup>
+	struct HoldsOneOfImpl;
 
 	template<typename... Ts>
-	constexpr bool isOneOf(const vm::code::Instruction& instr) {
-		return (std::holds_alternative<Ts>(instr) || ...);
+	struct HoldsOneOfImpl<std::tuple<Ts...>> {
+		constexpr bool operator()(const Instruction& instr) {
+			return (std::holds_alternative<Ts>(instr) || ...);
+		}
+	};
+
+	template<typename Tup>
+	constexpr bool holdsOneOf(const Instruction& instr) {
+		return HoldsOneOfImpl<Tup>{}(instr);
 	}
+
+	using ExtensionTypes = std::tuple<Op_ext_l64, Op_ext_type>;
+	template<typename T>
+	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 
 	template<Extension E>
-	constexpr bool acceptsExtension(const vm::code::Instruction& instr);
+	struct ExtensionMetadata;
 
 	template<>
-	constexpr bool acceptsExtension<Op_ext_l64>(const vm::code::Instruction& instr) {
-		return isOneOf<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>(instr);
-	}
+	struct ExtensionMetadata<Op_ext_l64> {
+		using RequiredAfter = std::tuple<>;
+		using OptionalAfter = std::tuple<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>;
+	};
 
 	template<>
-	constexpr bool acceptsExtension<Op_ext_type>(const vm::code::Instruction& instr) {
-		return isOneOf<Op_downcast_lptr_lptr>(instr);
+	struct ExtensionMetadata<Op_ext_type> {
+		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<typename Tup>
+	struct CatRequired;
+
+	template<typename... Ts>
+	struct CatRequired<std::tuple<Ts...>> {
+		using Value = Cat<typename ExtensionMetadata<Ts>::RequiredAfter...>;
+	};
+
+	template<Extension E>
+	bool acceptsExtension(const Instruction& instr) {
+		return holdsOneOf<
+			Cat<typename ExtensionMetadata<E>::RequiredAfter,
+		        typename ExtensionMetadata<E>::OptionalAfter>>(instr);
 	}
 
-	constexpr bool requiresExtension(const vm::code::Instruction& instr) {
-		return isOneOf<Op_downcast_lptr_lptr>(instr);
+	bool requiresSomeExtension(const Instruction& instr) {
+		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
 	}
 }
 
@@ -87,7 +127,7 @@ void FunctionBuilder::validateExtension(const Instruction& instruction) {
 			else
 				// It is invalid if the current instruction is not an extension, but the previous
 			    // instruction *requires* one. If there was no previous instruction, it's not invalid.
-				return !predecessor.map(requiresExtension).valueOr(false);
+				return !predecessor.map(requiresSomeExtension).valueOr(false);
 		},
 		instruction
 	);
