@@ -264,7 +264,7 @@ namespace compiler::helios::errors {
 		/**
 		 * @brief Checks if HResult contains a value.
 		 */
-		explicit constexpr operator bool() { return hasValue(); }
+		explicit constexpr operator bool() const { return hasValue(); }
 
 		/**
 		 * @brief Access the value, throw on no value.
