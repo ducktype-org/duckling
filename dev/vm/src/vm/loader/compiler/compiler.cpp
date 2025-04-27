@@ -2,11 +2,12 @@
 
 #include <diagnostic/logger.hpp>
 
+#include "base/exceptions.hpp"
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/builders/builders.hpp"
+#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -45,8 +46,13 @@ namespace vm::loader::compiler {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
-#define HANDLE_OFFSET(Type) variant_case(vm::opargs::Type, offset_type) return offset_type.offset;
+#define HANDLE_OFFSET(TYPE) variant_case(vm::opargs::TYPE, offset_type) return offset_type.offset;
 				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
+#undef HANDLE_OFFSET
+
+#define HANDLE_GLOBAL(TYPE) \
+	variant_case(vm::opargs::TYPE, global_type) { throw base::NotYetImplemented("Global to ID: " #TYPE); }
+				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {

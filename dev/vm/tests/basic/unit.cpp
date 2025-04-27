@@ -15,6 +15,7 @@ public:
 		TESTER_ADD_TEST(pointerToLocal);
 		TESTER_ADD_TEST(pointerCopy);
 		TESTER_ADD_TEST(commandLineArguments);
+		TESTER_ADD_TEST(globalsTest);
 	}
 
 private:
@@ -35,6 +36,8 @@ private:
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" });
 	}
+
+	void globalsTest() { runTestOnVm("globals.dbc", "42", "42", {}, 5); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/basic/");
