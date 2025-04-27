@@ -293,24 +293,26 @@ void TypeContextBuilder::validateTypes() const {
 	base::HashMap<base::StrID, Status> status;
 	for (const auto& type: types) status.put(typeName(type), Waiting);
 
-	std::function<void(const TypeOfData&)> helper = [&](const auto& type) {
-		auto name = typeName(type);
-		if (status[name] == Visited)
-			throw CycleInHierarchy(type);
-		else if (status[name] == Done)
-			return;
+	// explicit object parameter lambdas don't seem to work with class members, hence the reference
+	auto& types_ref = types;
+	auto  helper    = [&](this auto self, const auto& type) {
+        auto name = typeName(type);
+        if (status[name] == Visited)
+            throw CycleInHierarchy(type);
+        else if (status[name] == Done)
+            return;
 
-		status[name] = Visited;
-		variant_match(type) {
-			variant_case(ClassType, clazz) {
-				if_opt_some(clazz.extends, superclass) helper(*types.at(superclass));
-				for (auto iface: clazz.implements) helper(*types.at(iface));
-			}
-			variant_case(InterfaceType, interface) {
-				for (auto iface: interface.implements) helper(*types.at(iface));
-			}
-		}
-		status[name] = Done;
+        status[name] = Visited;
+        variant_match(type) {
+            variant_case(ClassType, clazz) {
+                if_opt_some(clazz.extends, superclass) self(*types_ref.at(superclass));
+                for (auto iface: clazz.implements) self(*types_ref.at(iface));
+            }
+            variant_case(InterfaceType, interface) {
+                for (auto iface: interface.implements) self(*types_ref.at(iface));
+            }
+        }
+        status[name] = Done;
 	};
 
 	for (const auto& type: types) helper(type);
