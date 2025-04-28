@@ -333,23 +333,19 @@ namespace compiler::backend_vm {
 
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-			auto called_func = ctx.types.at(called_func_name);
+			auto called_func = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(called_func_name));
 
 			// Init result type
 
 			usize call_id     = ctx.next_call_id++;
 			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
 			auto  func_result_argument = modifyVarNameOpArg(lir_result_argument, result_name);
-			initType(ctx, result_name, called_func->getResultType().value()->getName());
+			initType(ctx, result_name, called_func.result);
 
 			// Instantiate function parameters on the stack.
 
-			// @TODOB switch to TOD?
-			auto func_params = called_func->getParameters().value();
-			for (const auto& [arg_id, op_arg, param_type]:
-			     std::views::zip(std::views::iota(0), args, func_params)) {
-				auto        type_of_argument = param_type;
-				base::StrID type_name        = type_of_argument->getName();
+			for (const auto& [arg_id, op_arg, type_name]:
+			     std::views::zip(std::views::iota(0), args, called_func.parameters)) {
 				std::cerr << "Initializing: " << type_name.str() << '\n';
 				auto arg_name
 					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
