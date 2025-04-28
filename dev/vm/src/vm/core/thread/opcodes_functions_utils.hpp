@@ -1,7 +1,7 @@
 #pragma once
 
-#include "base/raw_view.hpp"
 #include <base/ints.hpp>
+#include <base/raw_view.hpp>
 
 template<typename T>
 [[gnu::always_inline]]

@@ -2,7 +2,6 @@
 
 #include <diagnostic/logger.hpp>
 
-#include "base/exceptions.hpp"
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -186,16 +185,12 @@ namespace vm::loader::compiler {
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
 		StableTypeIdNameMap<TypeCRef> globals;
-		auto ctx = CompilationContext(program.funcMap(), *types, globals);
+		auto                          ctx = CompilationContext(program.funcMap(), *types, globals);
 
 		for (const auto& global: program.globalMap()) {
 			match_optional(types->atMaybe(global.type)) {
-				opt_some(type) {
-					globals.insert(type, global.name);
-				}
-				opt_none {
-					ctx.log.log<UnknownTypeError>(global.type, global.type.str);
-				}
+				opt_some(type) { globals.insert(type, global.name); }
+				opt_none { ctx.log.log<UnknownTypeError>(global.type, global.type.str); }
 			}
 		}
 

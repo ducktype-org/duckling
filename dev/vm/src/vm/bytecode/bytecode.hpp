@@ -1,7 +1,8 @@
 #pragma once
 
 #include "instructions.hpp"
-#include "token_parser_core/common_elements.hpp"
+
+#include <token_parser_core/common_elements.hpp>
 
 #include <base/string_id.hpp>
 

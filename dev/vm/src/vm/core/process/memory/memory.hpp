@@ -15,7 +15,6 @@
 #include <base/ref.hpp>
 #include <base/stable_container.hpp>
 
-#include "vm/utils/stable_type_id_name_map.hpp"
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 #include <cstring>

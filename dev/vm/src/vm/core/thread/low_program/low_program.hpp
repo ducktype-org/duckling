@@ -37,8 +37,8 @@ namespace vm::low {
 	 */
 	struct LowVMProgram {
 		LowVMProgram(
-			const std::vector<FuncData>&  functions,
-			Box<TypeMetadata>             types,
+			const std::vector<FuncData>&    functions,
+			Box<TypeMetadata>               types,
 			StableTypeIdNameMap<TypeCRef>&& global_data
 		):
 			  types(std::move(types)),

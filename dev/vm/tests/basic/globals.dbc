@@ -5,4 +5,5 @@ function main {
     mov_l64_g64 0, counter;
 
     init_type ptr_i64;
+    ret;
 }

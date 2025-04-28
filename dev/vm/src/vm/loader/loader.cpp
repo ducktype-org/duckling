@@ -229,7 +229,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
 			auto                          type_context_builder = vm::code::getBuiltinTypes();
-			std::vector<code::GlobalData> globals_list;
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
 			for (const auto& parsed_file: parsed_files) {
@@ -237,7 +236,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					auto code_global
 						= code::GlobalData{ .name = global->name, .type = global->type };
 					insertGlobalData(code_global, globals, log);
-					globals_list.push_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
@@ -265,7 +263,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 				if (log.good())
 					return getProgram({ .functions   = functions,
 					                    .types       = type_context.getTypes(),
-					                    .global_data = globals_list });
+					                    .global_data = { globals.begin(), globals.end() } });
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }

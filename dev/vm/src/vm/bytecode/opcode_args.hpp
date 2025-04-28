@@ -121,7 +121,7 @@ namespace vm::opargs {
 	 */
 	struct StackLocalPtr final: code::ElementBase {
 		static constexpr std::string_view OP_SHORT = "lptr";
-		StackLocalPtr() = default;
+		StackLocalPtr()                            = default;
 
 		StackLocalPtr(const i64 offset): offset(offset) {}
 
@@ -296,6 +296,12 @@ namespace vm::opargs {
 	/**
 	 * @brief Storage class for any kind of opcode argument.
 	 */
-	using OpCodeArg
-		= std::variant<VM_OPARG_OFFSET_TYPES, VM_OPARG_GLOBAL_TYPES, Immediate, Type, FunctionName, BuiltinFunctionName, Label>;
+	using OpCodeArg = std::variant<
+		VM_OPARG_OFFSET_TYPES,
+		VM_OPARG_GLOBAL_TYPES,
+		Immediate,
+		Type,
+		FunctionName,
+		BuiltinFunctionName,
+		Label>;
 }

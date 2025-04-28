@@ -8,7 +8,6 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
-#include "base/optional.hpp"
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/maps.hpp>
