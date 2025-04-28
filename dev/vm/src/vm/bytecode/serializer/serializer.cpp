@@ -98,14 +98,8 @@ namespace vm::code {
 		void indentDown() { current_indentation -= 4; }
 
 		void writeCode() {
-			withIdentWriteLine("code: {");
-			indentUp();
-
 			for (const auto& instruction: function.body)
 				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
-
-			indentDown();
-			withIdentWriteLine("}");
 		}
 
 	public:
@@ -125,10 +119,7 @@ namespace vm::code {
 			// out << "} " << function.result_type.strView() << "{\n";
 
 			indentUp();
-
-			out << '\n';
 			writeCode();
-
 			indentDown();
 			out << "}\n";
 		}
@@ -147,8 +138,10 @@ namespace vm::code {
 				out << type.size;
 			}
 
-			void operator()(const PointerType&) const {
-				throw base::NotYetImplemented("PointerType serialization");
+			void operator()(const PointerType& type) const {
+				out << "type pointer: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView();
 			}
 
 			void operator()(const StaticTableType& type) const {
@@ -179,11 +172,17 @@ namespace vm::code {
 					if (first)
 						out << " ";
 					else
-						out << ",";
-					out << param.strView() << " ";
+						out << ", ";
+					out << param.strView();
 					first = false;
 				}
-				out << "} " << fun.result.strView();
+				out << " } " << fun.result.strView();
+			}
+
+			void operator()(const OpaqueType& type) const {
+				out << "type opaque: ";
+				out << type.name.strView() << " ";
+				out << type.size;
 			}
 
 			void operator()(const ClassType& clazz) const {

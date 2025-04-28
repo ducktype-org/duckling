@@ -10,6 +10,7 @@
 #include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -60,7 +61,9 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		std::expected<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<fs::FilePath, code::CodeCollection>& source
+		);
 
 		Memory memory;
 

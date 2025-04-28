@@ -9,10 +9,10 @@ function main {
 
     # if x == 0
     cmpEq_l64_imm   32, 0;
-    jmpRelIf_label  OUT;
+    jmpIf_label  OUT;
 		output_l64  32;
 		deinit;     # x
-		jmpRel_label EXIT;
+		jmp_label EXIT;
 
     label OUT;
 		add_l64_imm 32, 10; # x += 10

@@ -93,6 +93,15 @@ namespace vm {
 		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
 	}
 
+	void Type::defineOpaque(TypeSize pass_size) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		kind_type = Kind::Opaque;
+		size      = pass_size;
+		kind      = kind::Opaque{};
+	}
+
 	void Type::finalize() {
 		if (state == State::Finalizing) {
 			// @TODO: better errors
@@ -169,6 +178,12 @@ namespace vm {
 				// @TODO: is pos == 0 then return some special TypeRef to variant index
 				// @TODO: is pos == 1 then return error
 				if (pos == 2)
+					return TypeCRef(this);
+				else
+					return {};
+			}
+			variant_case_novalue(kind::Opaque) {
+				if (pos == 0)
 					return TypeCRef(this);
 				else
 					return {};

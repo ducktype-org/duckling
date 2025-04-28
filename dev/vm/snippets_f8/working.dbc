@@ -11,7 +11,7 @@ function main {
 		init_type int64;
 
 		input_l64        0;
-		
+
 		mov_l64_imm   8,  0;
 
 		label Loop;
@@ -20,11 +20,11 @@ function main {
 		add_l64_imm      8, 1;
 		cmpEq_l64_l64    8, 0;
 
-		jmpRelNotIf_label Loop;
-		
+		jmpIfNot_label Loop;
+
 		deinit;
 		deinit;
-		
+
 		ret_l64          0;
 	}
 }

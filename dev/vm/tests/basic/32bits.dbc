@@ -34,16 +34,16 @@ function foo {
 	# a = 3, b = 1
 
 	cmpEq_l32_l32 		4, 8;
-	jmpRelIf_label 		fail;
+	jmpIf_label 		fail;
 
 	cmpEq_l32_imm 		8, 1;
-	jmpRelNotIf_label 	fail;
+	jmpIfNot_label 	fail;
 
 	cmpG_l32_l32 		4, 8;
-	jmpRelNotIf_label 	fail;
+	jmpIfNot_label 	fail;
 
 	cmpG_l32_imm 		8, 2;
-	jmpRelIf_label 		fail;
+	jmpIf_label 		fail;
 
 	add_l32_l32 		8, 4;
 	# b = 4
