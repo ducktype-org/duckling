@@ -2,25 +2,23 @@
 
 #include "lookup_result.hpp"
 
+#include <helios/helios_result.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
-#include <helios/helios_result.hpp>
 #include <base/box.hpp>
 
 #include <variant>
 
-
 namespace dia {
-    // Forward declaration of SourcePosition
-    class SourcePosition;
+	// Forward declaration of SourcePosition
+	class SourcePosition;
 }
-
 
 namespace compiler::helios {
 
 	struct AdditionalLookupParameters final {
-		bool with_wildcards = true; // this PR: check it
-		// @TODO: public/private/protected
+		bool with_wildcards = true;  // this PR: check it
+									 // @TODO: public/private/protected
 	};
 
 	/**
@@ -106,26 +104,24 @@ namespace compiler::helios {
 			query::Context& ctx, base::StrID name, AdditionalLookupParameters = {}
 		);
 
-        /**
-         * A lookup function that performs a typical simple lookup, that is:
-         * 1. It looks-ups the interface
-         * 2. It reports error if more then one symbol is found
-         * 3. It performs deliasing if needed
-         * 4. Return dealiased symbol list
-         * 
-         * It some error occures, it will report it in @p error_position.
-         * 
-         * @note This function is intended to be used as a quick placeholder
-         * that we migth oneday change to custom code for better compilation errors.
-         */
-        errors::HResult<SymbolList, errors::Failed> typicalSimpleLookup(
-            dia::SourcePosition error_position,
-            query::Context& ctx,
-            base::StrID name,
-            AdditionalLookupParameters = {}
-        );
-
-
+		/**
+		 * A lookup function that performs a typical simple lookup, that is:
+		 * 1. It looks-ups the interface
+		 * 2. It reports error if more then one symbol is found
+		 * 3. It performs deliasing if needed
+		 * 4. Return dealiased symbol list
+		 *
+		 * It some error occures, it will report it in @p error_position.
+		 *
+		 * @note This function is intended to be used as a quick placeholder
+		 * that we migth oneday change to custom code for better compilation errors.
+		 */
+		errors::HResult<SymbolList, errors::Failed> typicalSimpleLookup(
+			dia::SourcePosition error_position,
+			query::Context&     ctx,
+			base::StrID         name,
+			AdditionalLookupParameters = {}
+		);
 
 		static HInterface ofScope(ScopeID scope) { return HInterface{ ScopeInterface{ scope } }; }
 

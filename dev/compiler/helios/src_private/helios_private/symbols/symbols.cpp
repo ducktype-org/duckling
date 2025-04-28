@@ -3,10 +3,10 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
-#include <helios_private/scopes/scopes.hpp>
-#include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_chain.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -150,9 +150,7 @@ namespace compiler::helios {
 			// auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name = base::StrID(
-						"<USING> "
-					),
+					.name        = base::StrID("<USING> "),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -382,7 +380,7 @@ namespace compiler::helios {
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
 				return *HInterface::ofScope(linked_scope)
-					.lookup(ctx, key.name, { key.follow_wildcards });
+				            .lookup(ctx, key.name, { key.follow_wildcards });
 			}
 
 			// @note: here case for variables will be calling TS
@@ -395,7 +393,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
-
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
 		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
@@ -472,17 +469,23 @@ namespace compiler::helios {
 	}
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
-		static auto provide(Context& ctx, QKey key) -> PResult {			
+		static auto provide(Context& ctx, QKey key) -> PResult {
 			std::vector<tpc::Identifier> pointed_chain;
 			if (kind(key) == SymbolKind::Using) {
-				auto using_stmt = getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Using>().value();
+				auto using_stmt = getSymRef(key)
+				                      ->getPSTData()
+				                      ->pst_element.unlock(ctx)
+				                      .dynamicCast<pst::Using>()
+				                      .value();
 				pointed_chain = using_stmt->getPointed().unlock(ctx)->getNames();
-			}
-			else if (kind(key) == SymbolKind::Alias) {
-				auto alias_stmt = getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Alias>().value();
+			} else if (kind(key) == SymbolKind::Alias) {
+				auto alias_stmt = getSymRef(key)
+				                      ->getPSTData()
+				                      ->pst_element.unlock(ctx)
+				                      .dynamicCast<pst::Alias>()
+				                      .value();
 				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
-			}
-			else {
+			} else {
 				return SymbolList{ key };
 			}
 

@@ -5,7 +5,7 @@
 #include <helios_private/lookup/interface.hpp>
 
 namespace compiler::helios {
-    
+
 
 	errors::HResult<SymbolList, errors::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
@@ -16,19 +16,14 @@ namespace compiler::helios {
 		SymbolList result;
 		for (auto pointed: key.names) {
 			if (first_symbol) {
-				UNPACK_RESULT_MOVE(
-					auto lookup =,
-					HInterface::ofScopeWithParents(key.begin_scope).typicalSimpleLookup(
-						pointed.position, ctx, pointed.value );
-				);
+				UNPACK_RESULT_MOVE(auto lookup =,
+				                   HInterface::ofScopeWithParents(key.begin_scope)
+				                       .typicalSimpleLookup(pointed.position, ctx, pointed.value););
 				result.insert(result.end(), lookup.begin(), lookup.end());
-			}
-			else {
-				UNPACK_RESULT_MOVE(
-					auto lookup =,
-					HInterface::ofSymbol(result.back()).typicalSimpleLookup(
-						pointed.position, ctx, pointed.value );
-				);
+			} else {
+				UNPACK_RESULT_MOVE(auto lookup =,
+				                   HInterface::ofSymbol(result.back())
+				                       .typicalSimpleLookup(pointed.position, ctx, pointed.value););
 				result.insert(result.end(), lookup.begin(), lookup.end());
 			}
 			first_symbol = false;

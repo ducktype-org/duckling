@@ -1,12 +1,11 @@
 #include "interface.hpp"
 
+#include <diagnostic/source_position.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
 
 #include <base/variant.hpp>
-
-#include <diagnostic/source_position.hpp>
 
 namespace compiler::helios {
 
@@ -37,9 +36,9 @@ namespace compiler::helios {
 	}
 
 	errors::HResult<SymbolList, errors::Failed> HInterface::typicalSimpleLookup(
-		dia::SourcePosition error_position,
-		query::Context& ctx,
-		base::StrID name,
+		dia::SourcePosition        error_position,
+		query::Context&            ctx,
+		base::StrID                name,
 		AdditionalLookupParameters params
 	) {
 		auto lookup_result = lookup(ctx, name, params);
@@ -48,18 +47,14 @@ namespace compiler::helios {
 		if (get_as_single.hasError()) {
 			variant_match(get_as_single.error()) {
 				variant_case(errors::Ambiguity, _) {
-					ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							error_position, "Ambiguity in lookup"
-						)
-					);
+					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+						error_position, "Ambiguity in lookup"
+					));
 				}
 				variant_case(errors::SymbolNotFound, _) {
-					ctx.log(
-						dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-							error_position, "Symbol not found in lookup"
-						)
-					);
+					ctx.log(dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
+						error_position, "Symbol not found in lookup"
+					));
 				}
 				variant_default { CORE_PANIC("Invalid state"); }
 			}

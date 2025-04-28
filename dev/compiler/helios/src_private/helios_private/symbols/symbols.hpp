@@ -53,7 +53,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
 	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
-	
+
 	/**
 	 * A query that returns deliased symbol list of a given alias symbol.
 	 */

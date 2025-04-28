@@ -2,9 +2,9 @@
 
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios_private/lookup/interface.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>
@@ -283,17 +283,14 @@ namespace compiler::helios::code {
 						std::cerr << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
 								  << pst_access->getName().value.strView() << "\n";
 
-						auto new_symbols = HInterface::ofSymbol(
-							looked_up_symbol.back()
-						).typicalSimpleLookup(
-							pst_access->getName().position,
-							ctx,
-							pst_access->getName().value
-						);
-						
-						if (!new_symbols) {
-							return; // failed
-						}
+						auto new_symbols = HInterface::ofSymbol(looked_up_symbol.back())
+						                       .typicalSimpleLookup(
+												   pst_access->getName().position,
+												   ctx,
+												   pst_access->getName().value
+											   );
+
+						if (!new_symbols) return;  // failed
 
 						looked_up_symbol.insert(
 							looked_up_symbol.end(),
@@ -349,7 +346,7 @@ namespace compiler::helios::code {
 					// failed
 					return;
 				}
-				
+
 				node = makeBox<IdentifierExpr>(ctx, scope, sym_list.value().back());
 			}
 
