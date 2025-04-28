@@ -26,10 +26,12 @@ namespace vm::loader::parser {
 				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
 
-			state.log(makeBox<InvalidLiteral>(
-				token.getPosition(),
-				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
-			));
+			state.log(
+				makeBox<InvalidLiteral>(
+					token.getPosition(),
+					base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+				)
+			);
 			return T{ 0 };
 		}
 
@@ -45,15 +47,20 @@ namespace vm::loader::parser {
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
-#define HANDLE_OFFSET(Type)                                   \
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
+			return { parseInt<i64, vm::opargs::Immediate>(state) };
+		}
+
+#define HANDLE_LOCAL(Type)                                    \
 	template<>                                                \
 	auto parseArg(F8ParserState& state) -> vm::opargs::Type { \
-		return { parseInt<i64, vm::opargs::Type>(state) };    \
+		return { parseStr(state) };                           \
 	}
 
-		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPARG_OFFSET_TYPES);
+		FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 
-#undef HANDLE_OFFSET
+#undef HANDLE_LOCAL
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
@@ -548,12 +555,12 @@ namespace vm::loader::parser {
 			variant_match(arg) {
 				variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
 
-#define HANDLE_OFFSET(Type) \
-	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
+#define HANDLE_LOCAL(Type) \
+	variant_case(vm::opargs::Type, local_type) { out << local_type.var_name.strView() << " "; }
 
-				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 
-#undef HANDLE_OFFSET
+#undef HANDLE_LOCAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					out << type_arg.type_name.strView() << " ";

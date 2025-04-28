@@ -132,11 +132,13 @@ namespace vm {
 			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
 		low::ByteCode bytecode = {
-			MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),    // [0, 8) program ret_val
-			MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
-			MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
-			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
-			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
+			MAKE_BYTECODE_INSTRUCTION(
+				init_lany_type, 0, func_ret_type_id
+			),  // [0, 8) program ret_val
+			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 8, argv_ptr_type_id),  // [8, 24) *argv
+			MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),     // alloc argv
+			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 24, i64_type_id),      // [24, 32) ix
+			MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),      // [32, 40) temp_store
 		};
 
 		for (const auto& arg: args) {
@@ -158,10 +160,12 @@ namespace vm {
 		bytecode.insert(
 			bytecode.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [40, 48) call ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),       // [48, 56] argc
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 40, func_ret_type_id
+				),  // [40, 48) call ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56] argc
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
-				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @todo: For now we assume that the return values are always i64. It's true for
@@ -215,7 +219,8 @@ namespace vm {
 		// so we turn off pedantic warnings
 		// for this case
 		PUSH_DIAGNOSTIC
-		_Pragma("GCC diagnostic ignored \"-Wpedantic\""
+		_Pragma(
+			"GCC diagnostic ignored \"-Wpedantic\""
 		) constexpr static std::array<void*, OP_CASES_COUNT>
 			opcode_label = {
 
@@ -422,15 +427,20 @@ namespace vm {
 				for (size_t index = 0; index < executing_program->functions.size(); ++index) {
 					const auto& func = executing_program->functions[index];
 					if (func.bc.data() <= instr && instr < func.bc.data() + func.bc.size()) {
-						return api::Response(api::response::CodePosition{
-							.function_id  = static_cast<u64>(index),  // Assuming function_id is int
-							.instr_number = static_cast<u64>(instr - func.bc.data()) });
+						return api::Response(
+							api::response::CodePosition{
+								.function_id
+								= static_cast<u64>(index),  // Assuming function_id is int
+								.instr_number = static_cast<u64>(instr - func.bc.data()) }
+						);
 					}
 				}
 			}
 			variant_default {
-				return std::unexpected(api::CoreOperationError{
-					api::OtherError{ "wrong execution status while reading current position" } });
+				return std::unexpected(
+					api::CoreOperationError{
+						api::OtherError{ "wrong execution status while reading current position" } }
+				);
 			}
 		}
 		CORE_UNREACHABLE();

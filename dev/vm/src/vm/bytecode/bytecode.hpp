@@ -17,8 +17,9 @@ namespace vm::code {
 	 * @brief Represents bytecode a function.
 	 */
 	struct Function final: ElementBase {
-		base::StrID name;
-		usize       local_stack_size = 0;
+		base::StrID                     name;
+		usize                           local_stack_size = 0;
+		base::HashMap<base::StrID, i64> local_offset_map;
 
 		CodeBlock body;
 	};

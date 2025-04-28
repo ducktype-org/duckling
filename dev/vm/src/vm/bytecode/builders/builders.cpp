@@ -1,6 +1,7 @@
 #include "builders.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
 #include <base/str_utils.hpp>
@@ -24,18 +25,55 @@ using namespace vm::code::builders;
 
 vm::code::Function FunctionBuilder::build() const {
 	Function function;
-	function.body = instructions;
-	function.name = name;
+	function.body             = instructions;
+	function.name             = name;
+	function.local_offset_map = local_offset_map;
 
 	function.local_stack_size = max_stack_size;
 
 	return function;
 }
 
+void FunctionBuilder::validateLocalArgs(const Instruction& instruction) const {
+	// @TODO this check is temporary (and therefore kinda unpolished),
+	// will get done redone in graph jumps.
+
+	// Wrap the arguments in a variant in order to ease manipulation.
+	auto args = std::visit(
+		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+			if constexpr (TwoArgumentOpcode<T>)
+				return { instr.arg0, instr.arg1 };
+			else if constexpr (OneArgumentOpcode<T>)
+				return { instr.arg0 };
+			else
+				return {};
+		},
+		instruction
+	);
+
+    // The check whether a variable is initialised exactly once
+    // happens in `pushStackState` (to make sure manual variable definition is checked as well),
+    // so we skip the `init` instructions here.
+	if (!std::holds_alternative<instructions::Op_init_lany_type>(instruction)) {
+		for (auto arg: args) {
+			variant_match(arg) {
+#define HANDLE_LOCAL(Type)                                                                  \
+	variant_case(vm::opargs::Type, local) {                                                 \
+		if (!local_offset_map.contains(local.var_name)) throw InvalidLocalNameError(local); \
+	}
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
+#undef HANDLE_LOCAL
+			}
+		}
+	}
+}
+
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
+	validateLocalArgs(instruction);
+
 	variant_match(instruction) {
-		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
+		variant_case(Op_init_lany_type, instr) { pushStackState(instr.arg0, instr.arg1); }
 		variant_case(Op_deinit, instr) { handleDeinit(); }
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
@@ -69,17 +107,21 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	                                .expect<MissingFunctionalTypeError>(name)
 	                                ->getResultType()
 	                                .expect<TypeIsNotFunctionalError>(name);
-	initType(instructions::Op_init_type{ func_result_type->getName() });
-	instructions.pop_back();
-	auto params = type_context.getMetadata().at(name)->getParameters().value();
-	for (TypeCRef param: params) pushStackState({ param->getName() });
+	pushStackState(base::StrID("ret_val"), func_result_type->getName());
+	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
+	for (auto [index, type]: std::views::zip(std::views::iota(0), param_types))
+		pushStackState(base::StrID(base::strConcat("arg", index).c_str()), type->getName());
 }
 
-usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
+usize vm::code::builders::FunctionBuilder::pushStackState(
+	vm::opargs::StackLocalAny name, vm::opargs::Type type
+) {
 	const usize type_size = type_context.getMetadata()
 	                            .atMaybe(type.type_name)
 	                            .expect<UnknownTypeError>(type)
 	                            ->getSize();
+
+	if (local_offset_map.contains(name.var_name)) throw DuplicateLocalNameError(name);
 
 	usize offset = 0;
 
@@ -88,19 +130,22 @@ usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type)
 		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
 	}
 
-	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
-	                                          .type_name            = type.type_name,
-	                                          .local_stack_position = offset,
-	                                          .type_size            = type_size });
+	local_offset_map.put(name.var_name, offset);
+	local_stack.emplace_back(
+		LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
+	                     .type_name            = type.type_name,
+	                     .local_stack_position = offset,
+	                     .type_size            = type_size }
+	);
 
 	max_stack_size = std::max(max_stack_size, offset + type_size);
 
 	return offset;
 }
 
-usize FunctionBuilder::initType(instructions::Op_init_type init) {
+usize FunctionBuilder::initType(instructions::Op_init_lany_type init) {
 	instructions.emplace_back(init);
-	return pushStackState(init.arg0);
+	return pushStackState(init.arg0, init.arg1);
 }
 
 void FunctionBuilder::handleDeinit() {

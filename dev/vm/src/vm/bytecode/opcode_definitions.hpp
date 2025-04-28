@@ -143,7 +143,7 @@ DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
 DEF_OPCODE(ret)
 
 // initialize local variable on local stack with given type
-DEF_OPCODE(init_type, vm::opargs::Type)
+DEF_OPCODE(init_lany_type, vm::opargs::StackLocalAny, vm::opargs::Type)
 // pop variable from local stack
 DEF_OPCODE(deinit)
 
