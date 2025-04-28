@@ -51,9 +51,9 @@ void FunctionBuilder::validateLocalArgs(const Instruction& instruction) const {
 		instruction
 	);
 
-    // The check whether a variable is initialised exactly once
-    // happens in `pushStackState` (to make sure manual variable definition is checked as well),
-    // so we skip the `init` instructions here.
+	// The check whether a variable is initialised exactly once
+	// happens in `pushStackState` (to make sure manual variable definition is checked as well),
+	// so we skip the `init` instructions here.
 	if (!std::holds_alternative<instructions::Op_init_lany_type>(instruction)) {
 		for (auto arg: args) {
 			variant_match(arg) {
@@ -110,13 +110,6 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
 	for (auto [index, type]: std::views::enumerate(param_types))
-        // @TODO Is this the right way to build the name? It seems a bit too contrived.
-        // Also, suppose you build a bunch of functions. For each of them
-        // this realocates stuff on the heap to do the concatenation even though
-        // the result already has a string id. Perhaps it would make sense
-        // to memoize it, but i don't know where to put such a string id store.
-        // But then again, this might not be that big of a deal,
-        // leaving this for the reviewer to decide.
 		pushStackState(base::StrID(base::strConcat("arg", index).c_str()), type->getName());
 }
 
@@ -138,12 +131,10 @@ usize vm::code::builders::FunctionBuilder::pushStackState(
 	}
 
 	local_offset_map.put(name.var_name, offset);
-	local_stack.emplace_back(
-		LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
-	                     .type_name            = type.type_name,
-	                     .local_stack_position = offset,
-	                     .type_size            = type_size }
-	);
+	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
+	                                          .type_name            = type.type_name,
+	                                          .local_stack_position = offset,
+	                                          .type_size            = type_size });
 
 	max_stack_size = std::max(max_stack_size, offset + type_size);
 

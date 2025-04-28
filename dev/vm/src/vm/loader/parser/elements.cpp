@@ -26,12 +26,10 @@ namespace vm::loader::parser {
 				if (pos == str.length()) return result;
 			} catch (std::logic_error&) {}
 
-			state.log(
-				makeBox<InvalidLiteral>(
-					token.getPosition(),
-					base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
-				)
-			);
+			state.log(makeBox<InvalidLiteral>(
+				token.getPosition(),
+				base::strConcat("Not a valid number for `", base::typeName<K>(), "`.")
+			));
 			return T{ 0 };
 		}
 

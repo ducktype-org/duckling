@@ -178,7 +178,7 @@ namespace vm::code::builders {
 
 		usize pushStackState(opargs::StackLocalAny name, opargs::Type type);
 
-		void validateLocalArgs(const Instruction &instruction) const;
+		void validateLocalArgs(const Instruction& instruction) const;
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);

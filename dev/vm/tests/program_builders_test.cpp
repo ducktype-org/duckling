@@ -138,8 +138,7 @@ private:
 			[&] { func_builder.addInstruction(Op_deinit()); }, "Cannot pop from empty variable stack"
 		);
 
-		func_builder.initType(
-			Op_init_lany_type{ base::StrID("ret_val2"), int64 }
+		func_builder.initType(Op_init_lany_type{ base::StrID("ret_val2"), int64 }
 		);  // reinit ret val (int64)
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 

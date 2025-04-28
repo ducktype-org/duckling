@@ -1,11 +1,11 @@
 #pragma once
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <base/variant.hpp>
 
 #include <string_view>
 #include <utility>
@@ -87,7 +87,7 @@ namespace vm::code::builders {
 	class InvalidLocalNameError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "This local does not exist: ";
-		const vm::opargs::OpCodeLocalArg         NAME;
+		const vm::opargs::OpCodeLocalArg        NAME;
 
 		InvalidLocalNameError(vm::opargs::OpCodeLocalArg name):
 			  BuilderError(base::strConcat(ERR_MSG, VISIT(name, n, return n.var_name))),
