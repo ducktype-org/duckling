@@ -199,12 +199,10 @@ usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type)
 		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
 	}
 
-	local_stack.emplace_back(
-		LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
-	                     .type_name            = type.type_name,
-	                     .local_stack_position = offset,
-	                     .type_size            = type_size }
-	);
+	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
+	                                          .type_name            = type.type_name,
+	                                          .local_stack_position = offset,
+	                                          .type_size            = type_size });
 
 	max_stack_size = std::max(max_stack_size, offset + type_size);
 
