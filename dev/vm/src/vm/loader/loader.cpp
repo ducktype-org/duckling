@@ -217,14 +217,14 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const code::CodeCollection& code_collection
 ) {
-	auto inject_error = program.injectCode(code_collection);
-	if (inject_error.has_value()) {
+	auto injection_result = program.injectCode(code_collection);
+	if (injection_result.has_value()) {
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
 			return std::unexpected(std::move(validation_result).error());
 		return compiler::compile(program);
 	}
-	return std::unexpected(std::move(inject_error).error());
+	return std::unexpected(std::move(injection_result).error());
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(

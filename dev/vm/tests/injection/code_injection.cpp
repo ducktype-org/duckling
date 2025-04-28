@@ -1,28 +1,23 @@
-#include <tester/tester.hpp>
+#include <vm_tester_utils.hpp>
 
 #include <vm/api/api.hpp>
 
-class VmCodeInjectionTest: public tester::TestSuite {
+class VmCodeInjectionTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmCodeInjectionTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(multipleFiles);
 		TESTER_ADD_TEST(injectCode);
 		TESTER_ADD_TEST(callNoArgFunction);
 		TESTER_ADD_TEST(callVoidFunction);
 		TESTER_ADD_TEST(callNonVoidFunction);
 		TESTER_ADD_TEST(injectExistingFunction);
+		// TESTER_ADD_TEST(repl);
 	}
 
 private:
-	vm::PID initProcess() {
-		auto process_pid_response = vm::api::spawn();
-		ASSERT_TRUE(process_pid_response.has_value());
-		return process_pid_response->pid;
-	}
-
 	void multipleFiles() {
 		vm::PID      pid = initProcess();
 		fs::FilePath file1(path("multiple_files_1.dbc"));
@@ -61,6 +56,27 @@ private:
 		auto exit_code_response = vm::api::getExitCode(pid);
 		ASSERT_TRUE(exit_code_response.has_value());
 		ASSERT_EQUAL_PRINT(0, *exit_code_response);
+	}
+
+	void repl() {
+		vm::PID pid = initProcess();
+
+		fs::FilePath file1(path("repl_1.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		ASSERT_TRUE(vm::api::runFunction(pid, "spring", { 4, 8 }).has_value());
+		ASSERT_TRUE(vm::api::join(pid).has_value());
+		auto exit_code_response = vm::api::getExitCode(pid);
+		ASSERT_TRUE(exit_code_response.has_value());
+		ASSERT_EQUAL_PRINT(32, *exit_code_response);
+
+		fs::FilePath file2(path("repl_2.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		ASSERT_TRUE(vm::api::runFunction(pid, "summer", { 1, 2 }).has_value());
+		ASSERT_TRUE(vm::api::join(pid).has_value());
+
+		exit_code_response = vm::api::getExitCode(pid);
+		ASSERT_TRUE(exit_code_response.has_value());
+		ASSERT_EQUAL_PRINT(3, *exit_code_response);
 	}
 
 	void callNoArgFunction() {

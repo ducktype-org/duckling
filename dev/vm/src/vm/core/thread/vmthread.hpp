@@ -137,10 +137,10 @@ namespace vm {
 
 		/**
 		 * @brief Creates a list of instructions, which initialize the argv table and populate it
-		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
+		 * with given command line `args`, push the argc and *argv blocks on to mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
-		low::ByteCode createProgramStartFunc(
+		low::FuncData createProgramStartFunction(
 			CRef<low::FuncData> func, const std::vector<std::string>& args
 		);
 
@@ -149,7 +149,7 @@ namespace vm {
 		 * stack and perform a call to `func`.
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 */
-		low::ByteCode createFunctionStartFunc(
+		low::FuncData createFunctionStartFor(
 			CRef<low::FuncData> func, const std::vector<i64>& func_args
 		);
 		/**
@@ -171,11 +171,14 @@ namespace vm {
 
 		/**
 		 * @brief This is the main function to call to start execution on the VM.
+		 * It calls both the main function when running the program and single functions called by
+		 * the 'runFunction' endpoint. It starts the execution begining with the first instruction
+		 * in the start_function bytecode vector.
+		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
-		 * @param start_func_code - the code of the start function.
 		 * @return value returned by the program
 		 */
-		i64 execute(CRef<low::FuncData> func, low::ByteCode start_func_code);
+		i64 executeFunction(const low::FuncData& start_function, CRef<low::FuncData> func);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 

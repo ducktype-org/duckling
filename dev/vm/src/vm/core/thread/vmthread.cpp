@@ -102,10 +102,13 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
-	low::ByteCode VMThread::createFunctionStartFunc(
+	low::FuncData VMThread::createFunctionStartFor(
 		CRef<low::FuncData> func, const std::vector<i64>& func_args
 	) {
-		low::ByteCode bytecode;
+		low::FuncData start_function;
+		start_function.name     = base::StrID("vm_start_function");
+		start_function.arg_size = 0;
+		start_function.ret_size = 0;
 
 		auto called_func_type = executing_program->types->atMaybe(func->name)
 		                            .expect("Expected the called function to exist!");
@@ -126,7 +129,7 @@ namespace vm {
 
 		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
 		stack_top += base::safeIntConv<i32>(i64_type->getSize());
 
 		for (u64 i = 0; i < func_args.size(); i++) {
@@ -135,13 +138,15 @@ namespace vm {
                 "Wrong number of passed arguments!"
             );
 			i32 arg_type_id = base::safeIntConv<i32>(arg_type->getID().asInt());
-			bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, arg_type_id, 0));
-			bytecode.push_back(MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, stack_top, converted_arg));
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, arg_type_id, 0));
+			start_function.bc.push_back(
+				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, stack_top, converted_arg)
+			);
 			stack_top += base::safeIntConv<i32>(arg_type->getSize());
 		}
 
-		bytecode.insert(
-			bytecode.end(),
+		start_function.bc.insert(
+			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @note: Only one block is left on the stack in this place, so there is no need for
@@ -150,16 +155,21 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
-		return bytecode;
+		return start_function;
 	}
 
-	low::ByteCode VMThread::createProgramStartFunc(
+	low::FuncData VMThread::createProgramStartFunction(
 		CRef<low::FuncData> func, const std::vector<std::string>& args
 	) {
 		// Just like in libc, the start function pushes the program arguments on to the stack and
 		// performs the call to the actual function. After the called function returns, it
 		// deinitializes the argv memory and exits, leaving one block on the block stack, which
 		// contains the return value of the program.
+
+		low::FuncData start_function;
+		start_function.name     = base::StrID("vm_start_function");
+		start_function.arg_size = 0;
+		start_function.ret_size = 0;
 
 		// Types
 		auto called_func_type = executing_program->types->atMaybe(func->name)
@@ -184,20 +194,23 @@ namespace vm {
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
-		low::ByteCode bytecode = {
-			MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),    // [0, 8) program ret_val
-			MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
-			MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
-			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
-			MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
-		};
+		start_function.bc.insert(
+			start_function.bc.end(),
+			{
+				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [0, 8) program ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
+				MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
+				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
+				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
+			}
+		);
 
 		for (const auto& arg: args) {
 			// @todo: Since strings don't exist in the VM yet, the passed arguments, are converted
 			// to ints. This should change after: https://github.com/ducktype-org/duckling/issues/722
 			i32 converted_arg = base::safeIntConv<i32>(std::stoi(arg));
-			bytecode.insert(
-				bytecode.end(),
+			start_function.bc.insert(
+				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
 					// @todo: This should be changed to 'store_lptr_imm_ofs' and temp_store should
@@ -209,8 +222,8 @@ namespace vm {
 			);
 		}
 
-		bytecode.insert(
-			bytecode.end(),
+		start_function.bc.insert(
+			start_function.bc.end(),
 			{
 				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [40, 48) call ret_val
 				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),       // [48, 56] argc
@@ -230,7 +243,7 @@ namespace vm {
 				MAKE_BYTECODE_INSTRUCTION(exit, 0, 0),
 			}
 		);
-		return bytecode;
+		return start_function;
 	}
 
 #if defined(__clang__)
@@ -241,7 +254,7 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	i64 VMThread::execute(CRef<low::FuncData> func, low::ByteCode start_function) {
+	i64 VMThread::executeFunction(const low::FuncData& start_function, CRef<low::FuncData> func) {
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
@@ -251,7 +264,7 @@ namespace vm {
 		if (called_return_type.has_value())
 			frame->called_func_ret_size = called_return_type.value()->getSize();
 
-		const auto* instr = start_function.data();
+		const auto* instr = start_function.bc.data();
 
 #ifdef USE_TAIL_CALLS
 		instr->opfun(instr, local_stack, frame, *this);
@@ -417,10 +430,10 @@ namespace vm {
 				= executing_program->functions.atMaybe(base::StrID(func_name.data()))
 			          .expect("Called function does not exist!");
 
-			low::ByteCode start_function = func_name.data() == base::StrID("main")
-			                                 ? createProgramStartFunc(func, program_args)
-			                                 : createFunctionStartFunc(func, func_args);
-			i64           exit_code      = execute(func, start_function);
+			low::FuncData start_function = func_name.data() == base::StrID("main")
+			                                 ? createProgramStartFunction(func, program_args)
+			                                 : createFunctionStartFor(func, func_args);
+			i64           exit_code      = executeFunction(start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (KillProcessException) { respondExecutionRequest(api::ExecutionStopped{}); }
 	}

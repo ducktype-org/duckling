@@ -47,15 +47,7 @@ namespace vm::loader::validator {
 			std::unordered_set<base::StrID> is_function_verified;
 		};
 
-		std::expected<void, LoaderLogger> Validator::validateProgram() {
-			for (const auto& func: program.funcMap()) {
-				if (is_function_verified.contains(func.name)) {
-					// Here the verification for each function will appear.
-					is_function_verified.insert(func.name);
-				}
-			}
-			return {};
-		}
+		std::expected<void, LoaderLogger> Validator::validateProgram() { return {}; }
 	}
 
 	std::expected<void, LoaderLogger> verify(const Program& program) {
