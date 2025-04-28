@@ -25,7 +25,10 @@ namespace compiler::helios {
 				return ctx.query<QueryLookupInSymbol>({ symbol.symbol, name, params.with_wildcards }
 				);
 			}
-			variant_case(TypeInterface, type) {
+			variant_case(TypeInstanceInterface, type) {
+				throw base::NotYetImplemented("HInterface::lookup for type instance");
+			}
+			variant_case(TypeMetaInterface, type) {
 				throw base::NotYetImplemented("HInterface::lookup for type");
 			}
 			variant_case(CucstomInterface, custom) {

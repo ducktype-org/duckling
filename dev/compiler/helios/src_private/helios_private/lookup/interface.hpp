@@ -47,30 +47,45 @@ namespace compiler::helios {
 	 */
 	class HInterface final {
 		/**
-		 * @brief The interface of the scope
+		 * @brief The interface of the scope.
+		 * It lookups from the set of all the symbols in the scope.
 		 */
 		struct ScopeInterface {
 			helios::ScopeID scope;
 		};
 
 		/**
-		 * @brief The interface of the scope and all its parents
+		 * @brief The interface of the scope and all its parents.
+		 * It lookups from the set of all the symbols in the scope and all the scopes parents.
 		 */
 		struct ScopeWithParentsInterface {
 			helios::ScopeID scope;
 		};
 
 		/**
-		 * @brief The interface of the symbol
+		 * @brief The interface of the symbol.
+		 * The behavior depends on the symbol type, but usually it
+		 * represents what `symbol.abc` would do.
 		 */
 		struct SymbolInterface {
 			helios::SymID symbol;
 		};
 
 		/**
-		 * @brief The interface of the type
+		 * @brief The interface of the type instance.
+		 * The behavior depends on the type, but in generall it
+		 * represents what `symbol-of-given-type.abc` would do.
 		 */
-		struct TypeInterface {
+		struct TypeInstanceInterface {
+			tsh::AbstractType type;
+		};
+
+		/**
+		 * @brief The interface of the type.
+		 * The behavior depends on the type, but in generall it
+		 * represents what `given-type.abc` would do.
+		 */
+		 struct TypeMetaInterface {
 			tsh::AbstractType type;
 		};
 
@@ -85,7 +100,8 @@ namespace compiler::helios {
 			ScopeInterface,
 			ScopeWithParentsInterface,
 			SymbolInterface,
-			TypeInterface,
+			TypeInstanceInterface,
+			TypeMetaInterface,
 			CucstomInterface>;
 
 		VariantT data;
@@ -131,8 +147,12 @@ namespace compiler::helios {
 
 		static HInterface ofSymbol(SymID symbol) { return HInterface{ SymbolInterface{ symbol } }; }
 
-		static HInterface ofType(tsh::AbstractType type) {
-			return HInterface{ TypeInterface{ type } };
+		static HInterface ofTypeInstance(tsh::AbstractType type) {
+			return HInterface{ TypeInstanceInterface{ type } };
+		}
+
+		static HInterface ofTypeMeta(tsh::AbstractType type) {
+			return HInterface{ TypeMetaInterface{ type } };
 		}
 
 		static HInterface ofCustom(Box<CustomInterface> custom) {
