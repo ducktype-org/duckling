@@ -1,73 +1,69 @@
 type fun: foo {} i32
 
 function foo {
-	# [0, 4) -> ret_val
-	# [4, 8) -> a
-	# [8, 12) -> b
+	init_lany_type		a, i32;
+	init_lany_type		b, i32;
 
-	init_type			i32; # [4, 8) a
-	init_type			i32; # [8, 12) b
-
-	mov_l32_imm 		8, 3;
-	mov_l32_l32 		4, 8;
+	mov_l32_imm 		b, 3;
+	mov_l32_l32 		a, b;
 	# a = 3, b = 3
 
-	cmov_l32_l32 		4, 4;
-	add_l32_l32 		4, 8;
-	add_l32_imm 		8, 1;
+	cmov_l32_l32 		a, a;
+	add_l32_l32 		a, b;
+	add_l32_imm 		b, 1;
 	# a = 6, b = 4
 
-	sub_l32_l32 		4, 8;
-	sub_l32_imm 		8, 1;
+	sub_l32_l32 		a, b;
+	sub_l32_imm 		b, 1;
 	# a = 2, b = 3
 
-	mul_l32_l32 		4, 8;
-	mul_l32_imm 		8, 3;
+	mul_l32_l32 		a, b;
+	mul_l32_imm 		b, 3;
 	# a = 6, b = 9
 
-	mod_l32_l32 		4, 8;
-	mod_l32_imm 		8, 7;
+	mod_l32_l32 		a, b;
+	mod_l32_imm 		b, 7;
 	# a = 6, b = 2;
 
-	div_l32_l32 		4, 8;
-	div_l32_imm 		8, 2;
+	div_l32_l32 		a, b;
+	div_l32_imm 		b, 2;
 	# a = 3, b = 1
 
-	cmpEq_l32_l32 		4, 8;
+	cmpEq_l32_l32 		a, b;
 	jmpIf_label 		fail;
 
-	cmpEq_l32_imm 		8, 1;
+	cmpEq_l32_imm 		b, 1;
 	jmpIfNot_label 	fail;
 
-	cmpG_l32_l32 		4, 8;
+	cmpG_l32_l32 		a, b;
 	jmpIfNot_label 	fail;
 
-	cmpG_l32_imm 		8, 2;
+	cmpG_l32_imm 		b, 2;
 	jmpIf_label 		fail;
 
-	add_l32_l32 		8, 4;
+	add_l32_l32 		b, a;
 	# b = 4
-	mov_l32_l32 		0, 8;
+	mov_l32_l32 		ret_val, b;
 	ret;
 
 	label fail;
-	init_type		 	i64; # [12, 20) tmp
-	mov_l64_imm 		12, 2137;
-	output_l64  		12;
-	mov_l64_l64 		0, 4;
+	init_lany_type		tmp, i64;
+	mov_l64_imm 		tmp, 2137;
+	output_l64  		tmp;
+	mov_l64_l64 		ret_val, a;
 
 	ret;
 }
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type 	i32; # [32, 40) foo() ret_val
+	init_lany_type 	foo_ret_val, i32;
 
 	call_func 	foo;
-	output_l32 	32;
+	output_l32 	foo_ret_val;
 
 	deinit;
     deinit; # *argv

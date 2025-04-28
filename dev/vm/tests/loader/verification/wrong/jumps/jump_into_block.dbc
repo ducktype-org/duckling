@@ -1,16 +1,15 @@
 function main {
-    # [0, 8) -> main ret_val
-    # [8, 16) -> argc
-    # [16, 32) -> *argv
-    # [32, 40) -> x
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	jmp_label  Inside;
+	jmp_label           Inside;
 
-	init_type     i64; # x
-	label         Inside;
+	init_lany_type      x, i64;
+	label               Inside;
 	deinit; # x
 
-    deinit;       # *argv
-    deinit;       # argc
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }
