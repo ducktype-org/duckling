@@ -25,10 +25,10 @@ using namespace vm::code::builders;
 
 vm::code::Function FunctionBuilder::build() const {
 	Function function;
-	function.body             = instructions;
-	function.name             = name;
+	function.body = instructions;
+	function.name = name;
+	// @TODO this should be the compiler's responsibility, move it there
 	function.local_offset_map = local_offset_map;
-
 	function.local_stack_size = max_stack_size;
 
 	return function;

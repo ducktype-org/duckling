@@ -119,9 +119,6 @@ namespace compiler::backend_vm {
 			auto func_type_tod
 				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name));
 
-			// The return value is only used in `lir::Operation::ReturnValue` handling
-			// and does not have a corresponding `LirLocal`.
-
 			// Save locals offset
 			for (const auto& var: ctx.lir_function->local_list) {
 				// This is most likely redundant
@@ -267,7 +264,7 @@ namespace compiler::backend_vm {
 	}
 				FOR_EACH(LOCAL_CASE, VM_OPARG_LOCAL_TYPES);
 #undef LOCAL_CASE
-				variant_default { CORE_PANIC("Given op_arg is not a local variable"); }
+				variant_default { CORE_PANIC("Given op_arg is not a local argument"); }
 			}
 
 			CORE_UNREACHABLE();

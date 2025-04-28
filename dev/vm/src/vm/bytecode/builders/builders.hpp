@@ -184,7 +184,7 @@ namespace vm::code::builders {
 		FunctionBuilder(base::StrID name, const TypeContext& types);
 
 		/**
-		 * @brief Initialises type and pushes `init_lany_type` instruction.
+		 * @brief Pushes `init_lany_type` instruction.
 		 */
 		void initType(instructions::Op_init_lany_type init);
 
