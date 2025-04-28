@@ -1,4 +1,3 @@
-#pragma once
 
 #include "lookup_chain.hpp"
 
