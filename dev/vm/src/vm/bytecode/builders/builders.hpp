@@ -2,6 +2,8 @@
 
 #include "../instructions.hpp"
 
+#include <token_parser_core/common_elements.hpp>
+
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
@@ -139,7 +141,7 @@ namespace vm::code::builders {
 	 */
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
-		base::StrID              name;
+		tpc::Identifier          name;
 
 		STRONG_TYPEDEF_ID(LocalStackEntryID)
 

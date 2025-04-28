@@ -203,7 +203,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 				if (log.good()) return code::CodeCollection(functions, type_context.getTypes());
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
+			} catch (code::builders::MissingFunctionalTypeError& e) {
+				log.log<SomeBuilderError>(e.FUNC, e.what());
+			} catch (code::builders::TypeIsNotFunctionalError& e) {
+				log.log<SomeBuilderError>(e.FUNC, e.what());
+			}
 			return std::unexpected(std::move(log));
 		}
 	}
