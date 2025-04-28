@@ -550,7 +550,7 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
