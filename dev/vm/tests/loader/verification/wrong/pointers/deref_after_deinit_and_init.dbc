@@ -7,7 +7,7 @@ function main {
 	init_type i64; 		# [48, 56) -> y
 
 	mov_l64_imm         48, 1;
-	ref_lptr_any        32, 48;  # x = &y
+	ref_lptr_lany        32, 48;  # x = &y
 
 	deinit; # y
 

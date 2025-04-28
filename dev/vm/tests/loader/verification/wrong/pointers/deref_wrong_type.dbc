@@ -14,7 +14,7 @@ function main {
 	init_type i64;
 
 	mov_l64_imm         56, 1;
-	ref_lptr_any        32, 56;  # x = &z
+	ref_lptr_lany        32, 56;  # x = &z
 	load_l64_lptr       48, 32;  # y = *x
 
 	deinit; # z

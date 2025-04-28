@@ -8,7 +8,7 @@ function main {
 	init_type i64; # [56, 64) -> z
 
 	mov_l64_imm         56, 1;
-	ref_lptr_any        32, 56;  # x = &z
+	ref_lptr_lany        32, 56;  # x = &z
 
 	deinit;
 

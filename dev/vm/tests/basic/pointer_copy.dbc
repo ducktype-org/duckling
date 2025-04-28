@@ -9,7 +9,7 @@ function main {
     init_type           ptr_i64;    # [64, 80) q
     init_type           ptr_i64;    # [80, 96) r
 
-    ref_lptr_any        48, 32;     # p := &x
+    ref_lptr_lany        48, 32;     # p := &x
 
     # from null to non-null
     mov_lptr_lptr       64, 48;     # q = p
