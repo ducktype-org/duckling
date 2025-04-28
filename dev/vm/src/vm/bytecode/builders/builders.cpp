@@ -109,7 +109,7 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	                                .expect<TypeIsNotFunctionalError>(name);
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
-	for (auto [index, type]: std::views::zip(std::views::iota(0), param_types))
+	for (auto [index, type]: std::views::enumerate(param_types))
 		pushStackState(base::StrID(base::strConcat("arg", index).c_str()), type->getName());
 }
 
