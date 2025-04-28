@@ -108,7 +108,7 @@ namespace {
 void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) {
 	// @TODO remove `atMaybe` after #732
 	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
-	if (!type->isInstantiable()) throw UninstantiableValue();
+	if (!type->isInstantiable()) throw UninstantiableValueError();
 }
 
 void FunctionBuilder::validateExtension(const Instruction& instruction) {
@@ -131,7 +131,7 @@ void FunctionBuilder::validateExtension(const Instruction& instruction) {
 		},
 		instruction
 	);
-	if (!valid_extension) throw InvalidInstructionExtension();
+	if (!valid_extension) throw InvalidInstructionExtensionError();
 }
 
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
@@ -301,7 +301,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		for (const auto& impl: implements) {
 			auto impl_type = get_type(impl);
 			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
-				throw InvalidImplements(type);
+				throw InvalidImplementsError(type);
 		}
 	};
 
@@ -316,9 +316,9 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 				const auto& superclass = std::get<ClassType>(*super_type);
 				if (clazz.fields.size() < superclass.fields.size())
-					throw MissingAncestorField(type);
+					throw MissingAncestorFieldError(type);
 				for (auto [field, super_field]: std::views::zip(clazz.fields, superclass.fields))
-					if (field != super_field) throw MissingAncestorField(type);
+					if (field != super_field) throw MissingAncestorFieldError(type);
 			}
 		}
 	}
@@ -338,7 +338,7 @@ void TypeContextBuilder::validateTypes() const {
 	auto  helper    = [&](this auto self, const auto& type) {
         auto name = typeName(type);
         if (status[name] == Visited)
-            throw CycleInHierarchy(type);
+            throw CycleInHierarchyError(type);
         else if (status[name] == Done)
             return;
 

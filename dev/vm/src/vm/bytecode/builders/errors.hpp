@@ -130,23 +130,23 @@ namespace vm::code::builders {
 	};
 
 	DEFINE_TYPE_VALIDATION_ERROR(
-		InvalidImplements, "This interface/class can implement only other interfaces: "
+		InvalidImplementsError, "This interface/class can implement only other interfaces: "
 	);
 	DEFINE_TYPE_VALIDATION_ERROR(InvalidExtends, "This class can extend only other classes: ");
 	DEFINE_TYPE_VALIDATION_ERROR(
-		MissingAncestorField, "This class does not contain all of its ancestors' fields: "
+		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
 	);
 	DEFINE_TYPE_VALIDATION_ERROR(
-		CycleInHierarchy, "This inerface/class is a part of an inheritance cycle: "
+		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
 	);
 
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
-		UninstantiableValue, "Cannot intiantiate a value of this type."
+		UninstantiableValueError, "Cannot intiantiate a value of this type."
 	);
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
-		InvalidUpcast, "The source type does not inherit from the destination type"
+		InvalidUpcastError, "The source type does not inherit from the destination type"
 	);
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
-		InvalidInstructionExtension, "The preceding instruction cannot be extended this way"
+		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
 }

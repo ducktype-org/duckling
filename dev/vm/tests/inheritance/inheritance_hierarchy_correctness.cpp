@@ -21,13 +21,13 @@ private:
 		// Invalid
 		using namespace vm::code::builders;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-			{ "invalid_hierarchy/missing_ancestor_field.dbc", MissingAncestorField::ERR_MSG },
+			{ "invalid_hierarchy/missing_ancestor_field.dbc", MissingAncestorFieldError::ERR_MSG },
 			{ "invalid_hierarchy/extends_plain.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/extends_interface.dbc", InvalidExtends::ERR_MSG },
-			{ "invalid_hierarchy/implements_plain.dbc", InvalidImplements::ERR_MSG },
-			{ "invalid_hierarchy/implements_class.dbc", InvalidImplements::ERR_MSG },
-			{ "invalid_hierarchy/extends_cycle.dbc", CycleInHierarchy::ERR_MSG },
-			{ "invalid_hierarchy/implements_cycle.dbc", CycleInHierarchy::ERR_MSG },
+			{ "invalid_hierarchy/implements_plain.dbc", InvalidImplementsError::ERR_MSG },
+			{ "invalid_hierarchy/implements_class.dbc", InvalidImplementsError::ERR_MSG },
+			{ "invalid_hierarchy/extends_cycle.dbc", CycleInHierarchyError::ERR_MSG },
+			{ "invalid_hierarchy/implements_cycle.dbc", CycleInHierarchyError::ERR_MSG },
 		});
 
 		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });
