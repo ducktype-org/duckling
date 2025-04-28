@@ -37,7 +37,7 @@ private:
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" });
 	}
 
-	void globalsTest() { runTestOnVm("globals.dbc", "42", {}, {}, 5); }
+	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/basic/");

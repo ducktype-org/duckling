@@ -1,8 +1,37 @@
+type fun: for_coverage {} void
+
 global_data counter i64;
 
+global_data global_ptr ptr_i64;
+
+function for_coverage {
+    init_type ptr_i64;  # [0, 16)
+    alloc_lptr_type 0, i64;
+    mov_gptr_lptr global_ptr, 0;
+
+    init_type ptr_i64;  # [16, 32)
+    mov_lptr_lptr 0, 16;  # clear
+    deinit;
+
+    mov_lptr_gptr 0, global_ptr;
+    init_type i64;  # [16, 24)
+    mov_l64_imm 16, 5;
+    store_lptr_l64_ofs 0, 16;
+    ret;
+}
+
 function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
     mov_g64_imm counter, 5;
     mov_l64_g64 0, counter;
+    output_l64 0;
+
+    call_func for_coverage;
+    init_type ptr_i64;  # [32, 48) ptr
+    mov_lptr_gptr 32, global_ptr;
+    load_l64_lptr_ofs 0, 32;
 
     init_type ptr_i64;
     ret;
