@@ -1,0 +1,24 @@
+type class: Animal {
+    abstract: true;
+}
+type class: Dog {
+    extends: Animal;
+}
+type class: Cat {
+    extends: Animal;
+}
+
+type pointer: DogPtr Dog
+type pointer: CatPtr Cat
+
+function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type DogPtr;  # 32
+    init_type CatPtr;  # 48
+    alloc_lptr_type 32, Dog;
+    setVTable_lptr_type 32, Dog;
+    upcast_lptr_lptr 48, 32;  # cat := static_cast<CatPtr>(dog)
+    ret;
+}

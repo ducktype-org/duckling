@@ -23,11 +23,15 @@ namespace tester {
 		return result;
 	}
 
-	constexpr usize HEADER_LINE_LENGTH = 40;
+	constexpr usize HEADER_LINE_LENGTH = 80;
 
-	usize beginEqualSignL(usize name_l) { return HEADER_LINE_LENGTH / 2 - (name_l / 2); }
+	usize beginEqualSignL(usize name_l) {
+		CORE_ASSERT(name_l <= HEADER_LINE_LENGTH, "Too long test name");
+		return HEADER_LINE_LENGTH / 2 - (name_l / 2);
+	}
 
 	usize endEqualSignL(usize name_l) {
+		CORE_ASSERT(name_l <= HEADER_LINE_LENGTH, "Too long test name");
 		return HEADER_LINE_LENGTH / 2 - (name_l / 2) - (name_l % 2);
 	}
 

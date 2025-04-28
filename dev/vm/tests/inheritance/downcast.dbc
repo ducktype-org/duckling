@@ -1,0 +1,48 @@
+type class: Animal {
+    abstract: true;
+}
+type class: Dog {
+    extends: Animal;
+}
+type class: Cat {
+    extends: Animal;
+}
+
+type pointer: AnimalPtr Animal
+type pointer: DogPtr Dog
+type pointer: CatPtr Cat
+
+function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type AnimalPtr;  # 32
+    init_type CatPtr;     # 48
+    init_type DogPtr;     # 64
+    init_type i64;        # 80
+
+    alloc_lptr_type 32, Dog;
+    setVTable_lptr_type 32, Dog;
+
+    downcast_lptr_lptr 48, 32;  # cat := static_cast<CatPtr>(animal)
+    ext_type Cat;
+    cmpNull_lptr 48;  # flag := cat != nullptr
+
+    # Check if succeeded
+    jmpIfNot_label notCat;
+        add_l64_imm 80, 10;
+    label notCat;
+
+    downcast_lptr_lptr 64, 32;  # dog := static_cast<DogPtr>(animal)
+    ext_type Dog;
+    cmpNull_lptr 64;  # flag := cat != nullptr
+
+    # Check if succeeded
+    jmpIfNot_label notDog;
+        add_l64_imm 80, 1;
+    label notDog;
+
+    output_l64 80;
+
+    ret;
+}
