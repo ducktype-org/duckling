@@ -5,7 +5,7 @@
 
 #include "file.hpp"
 
-#include "vfs.hpp"
+#include "../../src_private/filesystem_private/vfs.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -220,9 +220,10 @@ namespace fs {
 		return std::filesystem::is_symlink(path);
 	}
 
-	base::OwningView getSimpleFileContent(const std::string& file_name) {
-		std::ifstream file(file_name, std::ios::in | std::ios::binary);
-		if (file.fail()) throw base::LogicError(std::string("file does not exist: ") + file_name);
+	base::OwningView getSimpleFileContent(const std::filesystem::path& path) {
+		std::ifstream file(path, std::ios::in | std::ios::binary);
+		if (file.fail())
+			throw base::LogicError(std::string("file does not exist: ") + path.string());
 
 		file.unsetf(std::ios::skipws);
 
@@ -239,10 +240,10 @@ namespace fs {
 		return { r_array, file_size };
 	}
 
-	base::OwningView getSimpleVirtualFileContent(const std::string& file_name) {
-		auto content = vfs.readFile(file_name);
+	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path) {
+		auto content = vfs.readFile(path);
 		if (content.empty())
-			throw base::LogicError(std::string("virtual file does not exist: ") + file_name);
+			throw base::LogicError(std::string("virtual file does not exist: ") + path.string());
 
 		auto r_array = new byte[content.size()];
 		std::ranges::copy(content, reinterpret_cast<char*>(r_array));

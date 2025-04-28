@@ -152,8 +152,8 @@ namespace fs {
 		static FilePath createTempDirectory();
 
 		/**
-		 * Creates a virtual directory inside the root folder of virtual file system. The directory has a random
-		 * name.
+		 * Creates a virtual directory inside the root folder of virtual file system. The directory
+		 * has a random name.
 		 * @return A FilePath with the new virtual directory.
 		 */
 		static FilePath createVirtualDirectory();
@@ -256,9 +256,29 @@ namespace fs {
 		base::HashT customPerfectHash() const;
 	};
 
-	base::OwningView getSimpleFileContent(const std::string& file_name);
+	/**
+	 * @brief Reads the content of a virtual file.
+	 *
+	 * This function retrieves the content of a virtual file specified by its path.
+	 * If the file does not exist, it throws a base::LogicError.
+	 *
+	 * @param path The path of the virtual file to read.
+	 * @return A base::OwningView containing the content of the virtual file.
+	 * @throws base::LogicError if the virtual file does not exist.
+	 */
+	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path);
 
-	base::OwningView getSimpleVirtualFileContent(const std::string& file_name);
+	/**
+	 * @brief Reads the content of a non-virtual file.
+	 *
+	 * This function retrieves the content of a non-virtual file specified by its path.
+	 * If the file does not exist, it throws a base::LogicError.
+	 *
+	 * @param path The path to the non-virtual file to read.
+	 * @return A base::OwningView containing the content of the non-virtual file.
+	 * @throws base::LogicError if the file does not exist.
+	 */
+	base::OwningView getSimpleFileContent(const std::filesystem::path& path);
 }
 
 template<>

@@ -1,5 +1,6 @@
+#include "../src_private/filesystem_private/vfs.hpp"
+
 #include <filesystem/file.hpp>
-#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
 class SimpleFileSystemTest: public tester::TestSuite {
