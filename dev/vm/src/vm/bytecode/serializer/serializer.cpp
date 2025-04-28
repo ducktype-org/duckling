@@ -1,5 +1,7 @@
 #include "serializer.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
@@ -228,6 +230,22 @@ namespace vm::code {
 		void write() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
+	class GlobalDataSerializer final {
+		std::ostream&     out;
+		const GlobalData& global_data;
+
+	public:
+		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
+			  out(out),
+			  global_data(global_data) {}
+
+		void write() {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
+			out << global_data.name.str.strView() << " " << global_data.type.str.strView();
+			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+		}
+	};
+
 	void serialize(const Function& function, std::ostream& out) {
 		FunctionSerializer serializer(out, function);
 		serializer.write();
@@ -240,7 +258,9 @@ namespace vm::code {
 		out << '\n';
 	}
 
-	void serialize(const GlobalData& type, std::ostream& out) {
-		throw base::NotYetImplemented("serialize global");
+	void serialize(const GlobalData& global_data, std::ostream& out) {
+		GlobalDataSerializer serializer(out, global_data);
+		serializer.write();
+		out << '\n';
 	}
 }
