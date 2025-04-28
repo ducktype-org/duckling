@@ -184,9 +184,9 @@ namespace vm::code::builders {
 		FunctionBuilder(base::StrID name, const TypeContext& types);
 
 		/**
-		 * @brief Return variable's stack offset. Also pushes `init_lany_type` instruction.
+		 * @brief Initialises type and pushes `init_lany_type` instruction.
 		 */
-		usize initType(instructions::Op_init_lany_type init);
+		void initType(instructions::Op_init_lany_type init);
 
 		/**
 		 * @brief Adds instruction to the function.

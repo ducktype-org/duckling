@@ -150,9 +150,9 @@ usize vm::code::builders::FunctionBuilder::pushStackState(
 	return offset;
 }
 
-usize FunctionBuilder::initType(instructions::Op_init_lany_type init) {
+void FunctionBuilder::initType(instructions::Op_init_lany_type init) {
 	instructions.emplace_back(init);
-	return pushStackState(init.arg0, init.arg1);
+	pushStackState(init.arg0, init.arg1);
 }
 
 void FunctionBuilder::handleDeinit() {
