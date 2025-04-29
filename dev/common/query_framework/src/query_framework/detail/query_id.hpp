@@ -22,5 +22,10 @@ namespace query::detail {
 
 		[[nodiscard]]
 		std::string_view getName() const;
+
+		[[nodiscard]]
+		constexpr bool operator==(const QueryID& other) const {
+			return val == other.val;
+		}
 	};
 }
