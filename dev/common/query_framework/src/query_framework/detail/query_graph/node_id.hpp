@@ -4,7 +4,7 @@
  */
 #pragma once
 
-#include "detail/query_id.hpp"
+#include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
 
 namespace query::detail {
 
