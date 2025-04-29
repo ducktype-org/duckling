@@ -2,49 +2,225 @@ syntax = "proto3";
 
 package view;
 
-enum TextDisplayType {
-    PLAIN = 0;
-    CODE = 1;
+message SideEntryComponent {
+    /* Position in the side_notes array in the ViewResponse. */
+    int32 side_entry_id = 1;
 }
 
-message TextEntry {
-    string text = 1;
-    TextDisplayType type = 2;
-    int32 group_id = 3;
+message NoHlTextComponent {
+    string content = 1;
 }
 
-message TextComponent {
-    repeated TextEntry entries = 1;
+message NoHlCodeComponent {
+    string content = 1;
 }
 
-message ListComponent {
-    repeated Component components = 1;
+message NoHlConcatComponent {
+    repeated NoHlComponent components = 1;
 }
 
-message Component {
-    // Object can be clicked iff id is not equal to zero.
-    int32 id = 3;
+message NoHlInteractiveComponent {
+    int32 component_id = 1;
+    NoHlComponent primary_component = 2;
+    NoHlComponent alt_component = 3;
+}
+
+message NoHlComponent {
     oneof component {
-        TextComponent text_component = 1;
-        ListComponent list_component = 2;
+        NoHlTextComponent text_component = 1;
+        NoHlCodeComponent code_component = 2;
+        NoHlConcatComponent concat_component = 3;
+        NoHlInteractiveComponent interactive_component = 4;
+        SideEntryComponent side_entry_component = 5;
     }
 }
 
+message NoHlTextSection {
+    NoHlComponent root = 1;
+}
+
+message TextComponent {
+    string content = 1;
+    repeated int32 hl_tags = 2;
+}
+
+message CodeComponent {
+    string content = 1;
+    repeated int32 hl_tags = 2;
+}
+
+message ConcatComponent {
+    repeated Component components = 1;
+    repeated int32 hl_tags = 2;
+}
+
+message InteractiveComponent {
+    int32 component_id = 1;
+    Component primary_component = 2;
+    Component alt_component = 3;
+}
+
+message Component {
+    oneof component {
+        TextComponent text_component = 1;
+        CodeComponent code_component = 2;
+        ConcatComponent concat_component = 3;
+        InteractiveComponent interactive_component = 4;
+        SideEntryComponent side_entry_component = 5;
+    }
+}
+
+message TextSection {
+    Component root = 1;
+}
+
+message CodeLine {
+    optional int32 line_number = 1;
+    TextSection content = 2;
+}
+
+message CodeSection {
+    repeated CodeLine lines = 1;
+}
+
+message Section {
+    oneof section {
+        CodeSection code_section = 1;
+        NoHlTextSection no_hl_text_section = 2;
+        TextSection text_section = 3;
+    }
+}
+
+/* This is to be adjusted. */
+message Metadata {
+    optional string error_code = 1;
+    optional string file_info = 2;
+}
+
+message Diagnostic {
+    Metadata metadata = 1;
+    repeated Section sections = 2;
+}
+
+
+
+message SideNoHlConcatComponent {
+    repeated SideNoHlComponent components = 1;
+}
+
+message SideNoHlInteractiveComponent {
+    int32 component_id = 1;
+    SideNoHlComponent primary_component = 2;
+    SideNoHlComponent alt_component = 3;
+}
+
+message SideNoHlComponent {
+    oneof component {
+        NoHlTextComponent text_component = 1;
+        NoHlCodeComponent code_component = 2;
+        SideNoHlConcatComponent concat_component = 3;
+        SideNoHlInteractiveComponent interactive_component = 4;
+    }
+}
+
+message SideNoHlTextSection {
+    SideNoHlComponent root = 1;
+}
+
+message SideConcatComponent {
+    repeated SideComponent components = 1;
+    repeated int32 hl_tags = 2;
+}
+
+message SideInteractiveComponent {
+    int32 component_id = 1;
+    SideComponent primary_component = 2;
+    SideComponent alt_component = 3;
+}
+
+message SideComponent {
+    oneof component {
+        TextComponent text_component = 1;
+        CodeComponent code_component = 2;
+        SideConcatComponent concat_component = 3;
+        SideInteractiveComponent interactive_component = 4;
+    }
+}
+
+message SideTextSection {
+    SideComponent root = 1;
+}
+
+message SideCodeLine {
+    optional int32 line_number = 1;
+    SideTextSection content = 2;
+}
+
+message SideCodeSection {
+    repeated SideCodeLine lines = 1;
+}
+
+message SideSection {
+    oneof section {
+        SideCodeSection code_section = 1;
+        SideNoHlTextSection no_hl_text_section = 2;
+        SideTextSection text_section = 3;
+    }
+}
+
+/* This is to be adjusted. */
+message SideMetadata {
+    optional string note_code = 1;
+}
+
+message SideEdge {
+    int32 side_note_id = 1;
+    string description = 2;
+}
+
+message SideDiagnostic {
+    SideMetadata metadata = 1;
+    repeated SideSection sections = 2;
+    repeated SideEdge edges = 3;
+}
+
+message SideNote {
+    repeated SideDiagnostic diagnostics = 1;
+}
+
 message ViewResponse {
-    Component component = 1;
+    repeated Diagnostic diagnostics = 1;
+    repeated SideNote side_notes = 2;
+}
+
+/* This is to be adjusted. */
+enum ClickType {
+    CLICK = 0;
+    CTRL_CLICK = 1;
+    SHIFT_CLICK = 2;
 }
 
 message ClickRequest {
-    int32 object_id = 1;
+    int32 component_id = 1;
+    ClickType click_type = 2;
 }
 
 message ClickResponse {
     string status = 1;
 }
 
-message Empty {}
+message ViewRequest {}
+
+message CloseSideNoteRequest {
+    int32 side_note_id = 1;
+}
+
+message CloseSideNoteResponse {
+    string status = 1;
+}
 
 service ViewService {
-    rpc GetView(Empty) returns (ViewResponse);
+    rpc GetView(ViewRequest) returns (ViewResponse);
     rpc Click(ClickRequest) returns (ClickResponse);
+    rpc CloseSideNote(CloseSideNoteRequest) returns (CloseSideNoteResponse);
 }

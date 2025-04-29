@@ -36,11 +36,11 @@ class ViewService final {
   class StubInterface {
    public:
     virtual ~StubInterface() {}
-    virtual ::grpc::Status GetView(::grpc::ClientContext* context, const ::view::Empty& request, ::view::ViewResponse* response) = 0;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>> AsyncGetView(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) {
+    virtual ::grpc::Status GetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::view::ViewResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>> AsyncGetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>>(AsyncGetViewRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>> PrepareAsyncGetView(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) {
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>> PrepareAsyncGetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>>(PrepareAsyncGetViewRaw(context, request, cq));
     }
     virtual ::grpc::Status Click(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::view::ClickResponse* response) = 0;
@@ -50,31 +50,42 @@ class ViewService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>> PrepareAsyncClick(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>>(PrepareAsyncClickRaw(context, request, cq));
     }
+    virtual ::grpc::Status CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::view::CloseSideNoteResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>> AsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>>(AsyncCloseSideNoteRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>> PrepareAsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>>(PrepareAsyncCloseSideNoteRaw(context, request, cq));
+    }
     class async_interface {
      public:
       virtual ~async_interface() {}
-      virtual void GetView(::grpc::ClientContext* context, const ::view::Empty* request, ::view::ViewResponse* response, std::function<void(::grpc::Status)>) = 0;
-      virtual void GetView(::grpc::ClientContext* context, const ::view::Empty* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
     class async_interface* experimental_async() { return async(); }
    private:
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>* AsyncGetViewRaw(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>* AsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>* AsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>* PrepareAsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>* AsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>* PrepareAsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
     Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
-    ::grpc::Status GetView(::grpc::ClientContext* context, const ::view::Empty& request, ::view::ViewResponse* response) override;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>> AsyncGetView(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) {
+    ::grpc::Status GetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::view::ViewResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>> AsyncGetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>>(AsyncGetViewRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>> PrepareAsyncGetView(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) {
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>> PrepareAsyncGetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>>(PrepareAsyncGetViewRaw(context, request, cq));
     }
     ::grpc::Status Click(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::view::ClickResponse* response) override;
@@ -84,13 +95,22 @@ class ViewService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>> PrepareAsyncClick(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>>(PrepareAsyncClickRaw(context, request, cq));
     }
+    ::grpc::Status CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::view::CloseSideNoteResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>> AsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>>(AsyncCloseSideNoteRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>> PrepareAsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>>(PrepareAsyncCloseSideNoteRaw(context, request, cq));
+    }
     class async final :
       public StubInterface::async_interface {
      public:
-      void GetView(::grpc::ClientContext* context, const ::view::Empty* request, ::view::ViewResponse* response, std::function<void(::grpc::Status)>) override;
-      void GetView(::grpc::ClientContext* context, const ::view::Empty* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, std::function<void(::grpc::Status)>) override;
       void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, std::function<void(::grpc::Status)>) override;
+      void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -102,12 +122,15 @@ class ViewService final {
    private:
     std::shared_ptr< ::grpc::ChannelInterface> channel_;
     class async async_stub_{this};
-    ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>* AsyncGetViewRaw(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::Empty& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>* AsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>* AsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>* PrepareAsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* AsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* PrepareAsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetView_;
     const ::grpc::internal::RpcMethod rpcmethod_Click_;
+    const ::grpc::internal::RpcMethod rpcmethod_CloseSideNote_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -115,8 +138,9 @@ class ViewService final {
    public:
     Service();
     virtual ~Service();
-    virtual ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::Empty* request, ::view::ViewResponse* response);
+    virtual ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response);
     virtual ::grpc::Status Click(::grpc::ServerContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response);
+    virtual ::grpc::Status CloseSideNote(::grpc::ServerContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetView : public BaseClass {
@@ -130,11 +154,11 @@ class ViewService final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestGetView(::grpc::ServerContext* context, ::view::Empty* request, ::grpc::ServerAsyncResponseWriter< ::view::ViewResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestGetView(::grpc::ServerContext* context, ::view::ViewRequest* request, ::grpc::ServerAsyncResponseWriter< ::view::ViewResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(0, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
@@ -158,7 +182,27 @@ class ViewService final {
       ::grpc::Service::RequestAsyncUnary(1, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetView<WithAsyncMethod_Click<Service > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodAsync(2);
+    }
+    ~WithAsyncMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCloseSideNote(::grpc::ServerContext* context, ::view::CloseSideNoteRequest* request, ::grpc::ServerAsyncResponseWriter< ::view::CloseSideNoteResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_GetView<WithAsyncMethod_Click<WithAsyncMethod_CloseSideNote<Service > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_GetView : public BaseClass {
    private:
@@ -166,25 +210,25 @@ class ViewService final {
    public:
     WithCallbackMethod_GetView() {
       ::grpc::Service::MarkMethodCallback(0,
-          new ::grpc::internal::CallbackUnaryHandler< ::view::Empty, ::view::ViewResponse>(
+          new ::grpc::internal::CallbackUnaryHandler< ::view::ViewRequest, ::view::ViewResponse>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::view::Empty* request, ::view::ViewResponse* response) { return this->GetView(context, request, response); }));}
+                   ::grpc::CallbackServerContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response) { return this->GetView(context, request, response); }));}
     void SetMessageAllocatorFor_GetView(
-        ::grpc::MessageAllocator< ::view::Empty, ::view::ViewResponse>* allocator) {
+        ::grpc::MessageAllocator< ::view::ViewRequest, ::view::ViewResponse>* allocator) {
       ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(0);
-      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::Empty, ::view::ViewResponse>*>(handler)
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::ViewRequest, ::view::ViewResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
     ~WithCallbackMethod_GetView() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     virtual ::grpc::ServerUnaryReactor* GetView(
-      ::grpc::CallbackServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/)  { return nullptr; }
+      ::grpc::CallbackServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
   class WithCallbackMethod_Click : public BaseClass {
@@ -213,7 +257,34 @@ class ViewService final {
     virtual ::grpc::ServerUnaryReactor* Click(
       ::grpc::CallbackServerContext* /*context*/, const ::view::ClickRequest* /*request*/, ::view::ClickResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_GetView<WithCallbackMethod_Click<Service > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodCallback(2,
+          new ::grpc::internal::CallbackUnaryHandler< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response) { return this->CloseSideNote(context, request, response); }));}
+    void SetMessageAllocatorFor_CloseSideNote(
+        ::grpc::MessageAllocator< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CloseSideNote(
+      ::grpc::CallbackServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_GetView<WithCallbackMethod_Click<WithCallbackMethod_CloseSideNote<Service > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetView : public BaseClass {
@@ -227,7 +298,7 @@ class ViewService final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -250,6 +321,23 @@ class ViewService final {
     }
   };
   template <class BaseClass>
+  class WithGenericMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodGeneric(2);
+    }
+    ~WithGenericMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
   class WithRawMethod_GetView : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -261,7 +349,7 @@ class ViewService final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -290,6 +378,26 @@ class ViewService final {
     }
   };
   template <class BaseClass>
+  class WithRawMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodRaw(2);
+    }
+    ~WithRawMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestCloseSideNote(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
   class WithRawCallbackMethod_GetView : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -304,7 +412,7 @@ class ViewService final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -334,6 +442,28 @@ class ViewService final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
+  class WithRawCallbackMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodRawCallback(2,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->CloseSideNote(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* CloseSideNote(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
   class WithStreamedUnaryMethod_GetView : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
@@ -341,10 +471,10 @@ class ViewService final {
     WithStreamedUnaryMethod_GetView() {
       ::grpc::Service::MarkMethodStreamed(0,
         new ::grpc::internal::StreamedUnaryHandler<
-          ::view::Empty, ::view::ViewResponse>(
+          ::view::ViewRequest, ::view::ViewResponse>(
             [this](::grpc::ServerContext* context,
                    ::grpc::ServerUnaryStreamer<
-                     ::view::Empty, ::view::ViewResponse>* streamer) {
+                     ::view::ViewRequest, ::view::ViewResponse>* streamer) {
                        return this->StreamedGetView(context,
                          streamer);
                   }));
@@ -353,12 +483,12 @@ class ViewService final {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::Empty* /*request*/, ::view::ViewResponse* /*response*/) override {
+    ::grpc::Status GetView(::grpc::ServerContext* /*context*/, const ::view::ViewRequest* /*request*/, ::view::ViewResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     // replace default version of method with streamed unary
-    virtual ::grpc::Status StreamedGetView(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::Empty,::view::ViewResponse>* server_unary_streamer) = 0;
+    virtual ::grpc::Status StreamedGetView(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::ViewRequest,::view::ViewResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
   class WithStreamedUnaryMethod_Click : public BaseClass {
@@ -387,9 +517,36 @@ class ViewService final {
     // replace default version of method with streamed unary
     virtual ::grpc::Status StreamedClick(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::ClickRequest,::view::ClickResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<Service > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_CloseSideNote : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_CloseSideNote() {
+      ::grpc::Service::MarkMethodStreamed(2,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>* streamer) {
+                       return this->StreamedCloseSideNote(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_CloseSideNote() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedCloseSideNote(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::CloseSideNoteRequest,::view::CloseSideNoteResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideNote<Service > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<Service > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideNote<Service > > > StreamedService;
 };
 
 }  // namespace view
