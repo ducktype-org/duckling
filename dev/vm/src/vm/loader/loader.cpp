@@ -266,6 +266,8 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					                    .global_data = { globals.begin(), globals.end() } });
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
+			} catch (code::builders::TypeValidationError& e) {
+				log.log<SomeBuilderError>(e.TYPE, e.what());
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}
