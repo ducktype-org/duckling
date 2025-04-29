@@ -63,12 +63,7 @@ private:
 	}
 
 	void invalidLocalName() {
-		parseInvalidDbc(
-			"invalid_local_name.dbc",
-			{
-                tpc::NoIdentifierError::ERR_MSG
-			}
-		);
+		parseInvalidDbc("invalid_local_name.dbc", { tpc::NoIdentifierError::ERR_MSG });
 	}
 };
 
