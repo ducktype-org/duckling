@@ -6,8 +6,8 @@ function main {
     jmp_label           A;
 
     init_lany_type      x, i64;
-    jmp_label           B;
     label               B;
+    jmp_label           B;
     deinit; # x
     jmp_label           A;
 
@@ -15,12 +15,10 @@ function main {
 
     init_lany_type      y, i64;
 
-	label               C;
     jmp_label           C;
+	label               C;
 
     deinit; # y
-
-    jmp_label           A;
 
     deinit; # *argv
     deinit; # argc

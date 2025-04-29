@@ -5,10 +5,10 @@ function main {
     # arg0 -> argc
     # arg1 -> *argv
 
-	init_lany_type           i64;
-	init_lany_type           i64;
-	init_lany_type           i64;
-	init_lany_type           i64;
+	init_lany_type           x, i64;
+	init_lany_type           i, i64;
+	init_lany_type           y, i64;
+	init_lany_type           t, i64;
 
 	mov_l64_imm         t, 42;
 

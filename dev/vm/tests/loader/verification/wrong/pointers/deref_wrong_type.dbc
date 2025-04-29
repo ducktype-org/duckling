@@ -11,7 +11,7 @@ function main {
 
 	mov_l64_imm         z, 1;
 	ref_lptr_any        x, z;  # x = &z
-	load_l64_lptr       y, z;  # y = *x
+	load_l64_lptr_ofs       y, z;  # y = *x
 
 	deinit; # z
 	deinit; # y

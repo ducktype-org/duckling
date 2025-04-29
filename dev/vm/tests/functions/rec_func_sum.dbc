@@ -11,7 +11,7 @@ function sum {
     # if arg != 0:
         init_lany_type           total, i64; # [16, 24) init a return value spot for sum()
         init_lany_type           a, i64; # [24, 32) init an arg0 spot for sum()
-        mov_l64_l64         a,  8;
+        mov_l64_l64         a,  arg0;
         sub_l64_imm         a,  1;
 
         call_func           sum;

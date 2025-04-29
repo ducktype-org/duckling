@@ -7,9 +7,9 @@ function main {
 	jmp_label  			Other;
 	deinit; # x
 
-	init_lany_type     	x, i64;
+	init_lany_type     	y, i64;
 	label         		Other;
-	deinit; # x
+	deinit; # y
 
     deinit; # *argv
     deinit; # argc

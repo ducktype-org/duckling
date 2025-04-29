@@ -8,8 +8,8 @@ function check {
 
 	init_lany_type 		acc, i64;
 	mov_l64_imm			acc, 1; 	# acc := 1
-	mul_l64_l64			acc, ret_val; 	# acc *= a
-	mul_l64_l64			acc, arg1; # acc *= c
+	mul_l64_l64			acc, arg0; 	# acc *= a
+	mul_l64_l64			acc, arg2;  # acc *= c
 
 	output_l64			acc;
 
@@ -34,9 +34,6 @@ function main {
 	input_l64	c;
 	call_func          	check;
 
-	deinit; # c
-	deinit; # b
-	deinit; # a
 	deinit; # *argv
 	deinit; # argc
 	ret;
