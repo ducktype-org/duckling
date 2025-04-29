@@ -53,7 +53,7 @@ namespace vm::loader::compiler {
 	variant_case(vm::opargs::TYPE, global_data) {                            \
 		auto name = global_data.global_data_name;                            \
 		if (ctx.globals.contains(name)) return i64(*ctx.globals.idOf(name)); \
-		ctx.log.log<UnknownGlobalError>(global_data, name);                  \
+		ctx.log.log<UnknownGlobalDataError>(global_data, name);              \
 		return 0;                                                            \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);

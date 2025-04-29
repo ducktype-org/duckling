@@ -383,6 +383,29 @@ namespace vm::loader {
 	constexpr const std::string_view WRONG_MAIN_RET_VAL_ERR
 		= "Main function has to return an 8 byte primitive type.";
 
+	class DuplicatedGlobalDataError final: public dia::Error {
+		base::StrID global_data_name;
+
+	public:
+		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, global_data_name);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		DuplicatedGlobalDataError(dia::SourcePosition pos, base::StrID global_data_name):
+			  dia::Error(pos),
+			  global_data_name(global_data_name) {}
+	};
+
 	class UnknownGlobalDataError final: public dia::Error {
 		base::StrID global_name;
 
@@ -401,8 +424,8 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		UnknownGlobalDataError(dia::SourcePosition pos, base::StrID type_name):
+		UnknownGlobalDataError(dia::SourcePosition pos, base::StrID global_name):
 			  dia::Error(pos),
-			  global_name(type_name) {}
+			  global_name(global_name) {}
 	};
 }
