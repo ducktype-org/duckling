@@ -42,6 +42,11 @@ namespace vm {
 			return block.toOpt()->get();
 		}
 
+		[[nodiscard]]
+		auto isNull() -> bool {
+			return block == nullptr;
+		}
+
 		static Pointer null() { return {}; }
 	};
 

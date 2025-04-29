@@ -91,6 +91,18 @@ namespace vm::code::builders {
 	class TypeContextBuilder {
 		StableTypeIdNameMap<TypeOfData> types;
 
+		/*
+		 * @brief Throws a builder error if type is invalid.
+		 */
+		void validateType(const TypeOfData& type) const;
+
+		/*
+		 * @brief Throws a builder error if types are invalid.
+		 * Checks each type individually and inheritance
+		 * hierarchy soundness.
+		 */
+		void validateTypes() const;
+
 	public:
 		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
@@ -180,11 +192,14 @@ namespace vm::code::builders {
 
 		void validateLocalArgs(const Instruction& instruction) const;
 
+		void validateExtension(const Instruction& instruction);
+		void validateArgInstantiable(const opargs::Type& arg);
+
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
 
 		/**
-		 * @brief Initialises type and pushes `init_lany_type` instruction.
+		 * @brief Pushes `init_lany_type` instruction.
 		 */
 		void initType(instructions::Op_init_lany_type init);
 

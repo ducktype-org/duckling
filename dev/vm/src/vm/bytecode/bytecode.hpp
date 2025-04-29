@@ -17,7 +17,8 @@ namespace vm::code {
 	 * @brief Represents bytecode a function.
 	 */
 	struct Function final: ElementBase {
-		base::StrID                     name;
+		base::StrID name;
+		// @TODO this should be the compiler's responsibility, move it there
 		usize                           local_stack_size = 0;
 		base::HashMap<base::StrID, i64> local_offset_map;
 
