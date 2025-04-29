@@ -18,8 +18,8 @@ function ackermann {
     # m, n > 0
     # return A(m-1, A(m, n-1))
     init_lany_type          new_ret_val, i64;       # A(m, n-1) ret_val
-    init_lany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
     init_lany_type          n1_arg1, ptr_i64;       # A(m, n-1) arg1 -> nPtr
+    init_lany_type          n1_arg0, i64;           # A(m, n-1) arg0 -> m
 
     mov_l64_l64             n1_arg0, arg0;          # arg0 := m
     sub_l64_imm             n, 1;                   # n := n-1
@@ -32,8 +32,8 @@ function ackermann {
 
     mov_l64_l64             n, new_ret_val;         # n := A(m, n-1) (n used as a temp store)
 
-    init_lany_type          m1_arg0, i64;           # A(m-1, A(m, n-1)) arg0 -> m
     init_lany_type          m1_arg1, ptr_i64;       # A(m-1, A(m, n-1)) arg1 -> nPtr
+    init_lany_type          m1_arg0, i64;           # A(m-1, A(m, n-1)) arg0 -> m
     sub_l64_imm             arg0, 1;                # m := m-1
     mov_l64_l64             m1_arg0, arg0;          # arg0 := m
     alloc_lptr_type         m1_arg1, i64;           # arg1 := alloc *i64
@@ -50,8 +50,8 @@ function ackermann {
     label N0;
     # return A(m-1, 1)
     init_lany_type          n0_ret_val, i64;        # A(m-1, 1) ret_val
-    init_lany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
     init_lany_type          n0_arg1, ptr_i64;       # A(m-1, 1) arg1 -> nPtr
+    init_lany_type          n0_arg0, i64;           # A(m-1, 1) arg0 -> m
 
     sub_l64_imm             arg0, 1;                # m := m-1
     mov_l64_l64             n0_arg0, arg0;          # arg0 := m
@@ -87,8 +87,8 @@ function main {
 
     init_lany_type          n, i64;
     init_lany_type          ack_ret_val, i64;
-    init_lany_type          ack_arg0, i64;
     init_lany_type          ack_arg1, ptr_i64;
+    init_lany_type          ack_arg0, i64;
 
     input_l64               ack_arg0;
     input_l64               n;
