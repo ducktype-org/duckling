@@ -16,7 +16,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(invalidOpcode);
 		TESTER_ADD_TEST(noSemicolon);
-		TESTER_ADD_TEST(invalidLiteral);
+		TESTER_ADD_TEST(invalidLocalName);
 	}
 
 private:
@@ -62,14 +62,11 @@ private:
 		);
 	}
 
-	void invalidLiteral() {
+	void invalidLocalName() {
 		parseInvalidDbc(
-			"invalid_literal.dbc",
+			"invalid_local_name.dbc",
 			{
-				base::strConcat(
-					parser::InvalidLiteral::ERR_MSG,
-					"Not a valid number for `vm::opargs::StackLocalI64`"
-				),
+                tpc::NoIdentifierError::ERR_MSG
 			}
 		);
 	}
