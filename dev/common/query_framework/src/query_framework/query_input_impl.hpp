@@ -18,5 +18,4 @@
 		not std::is_reference_v<query_type::QKey>,                                      \
 		"Query key type should not be a reference (use custom struct instead)"          \
 	);                                                                                  \
-	decltype(query_type::id) query_type::id                                             \
-		= ::query::detail::registerQuery(query_type::getData());
+	decltype(query_type::id) query_type::id = ::query::detail::registerQuery(query_type::getData());
