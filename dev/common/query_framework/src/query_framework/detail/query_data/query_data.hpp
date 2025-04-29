@@ -14,7 +14,7 @@ namespace query::detail {
 	};
 
 	/**
-	 * Struct holding meta universal data of each query type.
+	 * Struct holding universal meta data of each query type.
 	 */
 	struct QueryData {
 		QueryType        type;
