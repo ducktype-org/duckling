@@ -4,7 +4,7 @@ function main {
     # [16, 32) -> *argv
     # [32, 40) -> x
 
-    jmpRel_label  After;
+    jmp_label  After;
 
     init_type     i64; # x [32,40)
     deinit;      # x

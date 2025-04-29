@@ -5,7 +5,7 @@ function main {
     # [32, 40) -> x
 
 	init_type     i64; # x
-	jmpRel_label  Outside;
+	jmp_label  Outside;
 	deinit; # x
 
 	label         Outside;

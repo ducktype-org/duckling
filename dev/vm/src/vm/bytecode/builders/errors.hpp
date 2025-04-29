@@ -51,13 +51,13 @@ namespace vm::code::builders {
 			  BuilderError(base::strConcat(ERR_MSG, type_name)) {}
 	};
 
-	class MissingSubtypeError: public BuilderError {
+	class UnknownSubtypeError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
 		const TypeOfData                        BASE_TYPE;
 		const base::StrID                       MISSING_NAME;
 
-		MissingSubtypeError(TypeOfData base_type, base::StrID missing_name):
+		UnknownSubtypeError(TypeOfData base_type, base::StrID missing_name):
 			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
 			  BASE_TYPE(std::move(base_type)),
 			  MISSING_NAME(missing_name) {}
@@ -95,4 +95,58 @@ namespace vm::code::builders {
 
 		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
+
+	class TypeValidationError: public BuilderError {
+	public:
+		const TypeOfData TYPE;
+
+		TypeValidationError(std::string msg, TypeOfData type):
+			  BuilderError(std::move(msg)),
+			  TYPE(std::move(type)) {}
+	};
+
+	class InstructionValidationError: public BuilderError {
+	public:
+		InstructionValidationError(std::string_view msg): BuilderError(std::string(msg)) {}
+	};
+
+#define DEFINE_TYPE_VALIDATION_ERROR(error_name, msg)                                        \
+	class error_name: public TypeValidationError {                                           \
+	public:                                                                                  \
+		constexpr static const std::string_view ERR_MSG = (msg);                             \
+                                                                                             \
+		error_name(TypeOfData type):                                                         \
+			  TypeValidationError(                                                           \
+				  base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name)), std::move(type) \
+			  ) {}                                                                           \
+	};
+
+#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)     \
+	class error_name: public InstructionValidationError {        \
+	public:                                                      \
+		constexpr static const std::string_view ERR_MSG = (msg); \
+                                                                 \
+		error_name(): InstructionValidationError(ERR_MSG) {}     \
+	};
+
+	DEFINE_TYPE_VALIDATION_ERROR(
+		InvalidImplementsError, "This interface/class can implement only other interfaces: "
+	);
+	DEFINE_TYPE_VALIDATION_ERROR(InvalidExtends, "This class can extend only other classes: ");
+	DEFINE_TYPE_VALIDATION_ERROR(
+		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
+	);
+	DEFINE_TYPE_VALIDATION_ERROR(
+		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
+	);
+
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		UninstantiableValueError, "Cannot intiantiate a value of this type."
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidUpcastError, "The source type does not inherit from the destination type"
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
+	);
 }

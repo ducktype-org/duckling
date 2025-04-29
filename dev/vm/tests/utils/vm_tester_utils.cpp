@@ -5,6 +5,12 @@
 
 #include <variant>
 
+vm::PID VmTestSuite::initProcess() {
+	auto process_pid_response = vm::api::spawn();
+	ASSERT_TRUE(process_pid_response.has_value());
+	return process_pid_response->pid;
+}
+
 void VmTestSuite::runTestOnVm(
 	const std::string&                 dbc_filename,
 	const base::Optional<std::string>& optional_input,
@@ -12,25 +18,43 @@ void VmTestSuite::runTestOnVm(
 	const std::vector<std::string>&    args,
 	i64                                exit_code
 ) {
-	auto process_pid_response = vm::api::spawn();
-	ASSERT_TRUE(process_pid_response.has_value());
-	auto pid = process_pid_response->pid;
-
+	auto pid  = initProcess();
 	auto file = fs::FilePath(path(dbc_filename));
 	ASSERT_TRUE(vm::api::loadFile(pid, file).has_value());
+	runTestImpl(pid, optional_input, optional_output, args, exit_code);
+}
 
+void VmTestSuite::runTestOnVm(
+	const vm::code::CodeCollection&    code,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	i64                                exit_code
+) {
+	auto pid = initProcess();
+
+	ASSERT_TRUE(vm::api::loadCode(pid, code).has_value());
+	runTestImpl(pid, optional_input, optional_output, args, exit_code);
+}
+
+void VmTestSuite::runTestImpl(
+	vm::PID                            pid,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	i64                                exit_code
+) {
 	ASSERT_TRUE(vm::api::run(pid, args).has_value());
 
 	if_opt_some(optional_input, input) { ASSERT_TRUE(vm::api::input(pid, input).has_value()); }
 
+	ASSERT_TRUE(vm::api::join(pid).has_value());
+
 	if_opt_some(optional_output, output) {
 		auto output_response = vm::api::output(pid);
 		ASSERT_TRUE(output_response.has_value());
-		std::cerr << output_response->output << "\n";
 		ASSERT_EQUAL(output, output_response->output);
 	}
-
-	ASSERT_TRUE(vm::api::join(pid).has_value());
 
 	auto exit_code_response = vm::api::getExitCode(pid);
 	ASSERT_TRUE(exit_code_response.has_value());
@@ -40,10 +64,8 @@ void VmTestSuite::runTestOnVm(
 void VmTestSuite::loadInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
-	auto pid = vm::api::spawn()->pid;
-
 	fs::FilePath file(path(dbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	auto         loaded_file_response = vm::api::loadFile(initProcess(), file);
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));

@@ -1,0 +1,25 @@
+type class: Widget {
+    abstract: true;
+}
+type class: Button {
+    extends: Widget;
+}
+type pointer: WidgetPtr Widget
+type pointer: ButtonPtr Button
+
+function main {
+    # [0, 8) ret_val
+    # [8, 16) argc
+    # [16, 32) *argv
+    init_type WidgetPtr;  # 32
+    init_type ButtonPtr;  # 48
+
+    alloc_lptr_type 32, Button;
+    setVTable_lptr_type 32, Button;
+
+    downcast_lptr_lptr 48, 32;
+    # Whoops, I forgot about:
+    # ext_type Button;
+
+    ret;
+}

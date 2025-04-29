@@ -40,7 +40,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	cmpG,
 	jmp,
 	jmpIf,
-	jmpNotIf,
+	jmpIfNot,
 	call,
 	ret,
 	ret_tailcall,
@@ -50,6 +50,7 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 	free,
 	load,
 	store,
+	setVTable,
 
 	/**
 	 *  Do not use directly. If an instruction supports `ext` opcodes,
@@ -90,6 +91,18 @@ namespace vm::code::builders {
 	class TypeContextBuilder {
 		StableTypeIdNameMap<TypeOfData> types;
 
+		/*
+		 * @brief Throws a builder error if type is invalid.
+		 */
+		void validateType(const TypeOfData& type) const;
+
+		/*
+		 * @brief Throws a builder error if types are invalid.
+		 * Checks each type individually and inheritance
+		 * hierarchy soundness.
+		 */
+		void validateTypes() const;
+
 	public:
 		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
@@ -115,6 +128,11 @@ namespace vm::code::builders {
 	public:
 		InstructionBuilder() = default;
 		InstructionBuilder(OpKind kind);
+
+		template<class... Args>
+		InstructionBuilder(OpKind kind, Args&&... args): InstructionBuilder(kind) {
+			pushArgs(std::forward<Args>(args)...);
+		}
 
 		void setKind(OpKind kind);
 
@@ -169,6 +187,9 @@ namespace vm::code::builders {
 		void handleRet();
 
 		usize pushStackState(opargs::Type type);
+
+		void validateExtension(const Instruction& instruction);
+		void validateArgInstantiable(const opargs::Type& arg);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
