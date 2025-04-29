@@ -2,13 +2,18 @@
 
 namespace query::detail {
 	namespace {
+		/**
+		 * Query ID used in entry point. See also: outsideWorldQueryID, query::entryPoint.
+		 */
 		constexpr QueryID OUTSIDE_WORLD_QUERY = { 0 };
+
+		/**
+		 * @note It will be used before main, constinit is important.
+		 */
+		constinit QueryID next = { 1 };
 	}
 
 	QueryID newQueryID(const std::string_view pretty_name) {
-		// note: this is static, to allow pre-main use
-		static QueryID next = { 1 };
-
 		const QueryID ret = next;
 		QueryID::setName(ret, pretty_name);
 

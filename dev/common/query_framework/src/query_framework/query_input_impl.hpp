@@ -14,5 +14,9 @@
 		query::detail::dep_graph::setExit(node_id);                                         \
 		return query::detail::SideInputMockValue{};                                         \
 	}                                                                                       \
+	static_assert(                                                                          \
+		not std::is_reference_v<query_type::QKey>,                                          \
+		"Query key type should not be a reference (use custom struct instead)"              \
+	);                                                                                      \
 	decltype(query_type::id)   query_type::id   = ::query::detail::newQueryID(#query_type); \
 	decltype(query_type::name) query_type::name = #query_type;

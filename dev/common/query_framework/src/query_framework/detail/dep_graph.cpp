@@ -120,11 +120,10 @@ namespace query::detail {
 		}
 
 		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) {
-			auto filtered
-				= getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
-					  return id.q_id == dependency_id;
-				  });
-			return { filtered.begin(), filtered.end() };
+			return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
+					   return id.q_id == dependency_id;
+				   })
+			     | std::ranges::to<std::vector<NodeID>>();
 		}
 
 		void debugPrint(std::ostream& out) {
