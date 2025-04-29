@@ -40,6 +40,10 @@ namespace query::detail {
 
 		using DataMap = base::HashMap<QueryID, QueryData>;
 
+		/**
+		 * @note Access to data is done this way, to make it safe to use before main.
+		 * @note data is not stored directly in QueryID, to keep QueryID light.
+		 */
 		DataMap& dataMap() {
 			static DataMap data_map{};
 			return data_map;

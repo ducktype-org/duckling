@@ -9,6 +9,9 @@
 #include <base/ints.hpp>
 
 namespace query::detail {
+	/**
+	 * Unique identifier of query type.
+	 */
 	struct QueryID final {
 	private:
 		u64 val;

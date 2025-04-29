@@ -4,6 +4,9 @@
 
 namespace query::detail {
 
+	/**
+	 * General type of the query.
+	 */
 	enum class QueryType {
 		Normal,
 		SideInput,
@@ -11,7 +14,7 @@ namespace query::detail {
 	};
 
 	/**
-	 * Struct holding some meta data of each query.
+	 * Struct holding meta universal data of each query type.
 	 */
 	struct QueryData {
 		QueryType        type;
