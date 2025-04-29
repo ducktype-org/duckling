@@ -9,14 +9,16 @@ function main {
     init_lany_type temp, i64;
 
     label Loop;
+        cmpEq_l64_l64       ret_val, arg0;  # i == argc
+        jmpIf_label         End;
         # temp := argv[i]
         load_l64_lptr_ofs   temp, arg1;
         ext_l64             ret_val;
 
-        add_l64_l64         sum, temp; # sum += temp
-        add_l64_imm         ret_val, 1;   # i++
-        cmpEq_l64_l64       ret_val, arg0;   # i < argc
-        jmpIfNot_label   Loop;
+        add_l64_l64         sum, temp;      # sum += temp
+        add_l64_imm         ret_val, 1;     # i++
+        jmp_label           Loop;
+    label End;
 
     output_l64 sum;
     mov_l64_imm ret_val, 0;
