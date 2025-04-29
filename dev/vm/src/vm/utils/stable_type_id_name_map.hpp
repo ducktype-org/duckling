@@ -125,7 +125,10 @@ namespace vm {
 
 		std::vector<std::tuple<CRef<T>, TID, base::StrID>> allData() const {
 			std::vector<std::tuple<CRef<T>, TID, base::StrID>> data;
-			for (usize id = 0; id < size(); id++) data.emplace_back(at(id), TID(id), *nameOf(id));
+			for (usize id = 0; id < size(); id++) {
+				TID tid = TID(id);
+				data.emplace_back(at(tid), tid, *nameOf(tid));
+			}
 			return data;
 		}
 

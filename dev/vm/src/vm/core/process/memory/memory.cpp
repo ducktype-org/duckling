@@ -82,7 +82,7 @@ namespace vm {
 		return getBlock(id)->data.element_type;
 	}
 
-	void Memory::insertGlobalData(usize id, TypeCRef type) {
+	void Memory::insertGlobalData(GlobalDataID id, TypeCRef type) {
 		CORE_ASSERT(!global_data.contains(id), "Duplicated global data id!");
 
 		auto             type_size = type->getSize();

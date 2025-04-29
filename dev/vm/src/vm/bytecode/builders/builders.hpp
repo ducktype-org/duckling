@@ -8,6 +8,7 @@
 #include <base/stringifyable_enum.hpp>
 #include <base/strongly_typed_id.hpp>
 
+#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -146,7 +147,7 @@ namespace vm::code::builders {
 		[[nodiscard]] std::vector<Instruction> build() const;
 	};
 
-	using GlobalDataMap = StableTypeIdNameMap<GlobalData>;
+	using GlobalDataMap = StableTypeIdNameMap<GlobalData, GlobalDataID>;
 
 	/**
 	 * @brief Helper to compose bytecode functions.

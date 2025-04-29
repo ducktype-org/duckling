@@ -14,4 +14,8 @@ inline static T& derefView(base::ModRawView view) {
 	return *(reinterpret_cast<T*>(view.getBegin()));
 }
 
-#define DEREF_GLOBAL(TYPE, ID) derefView<TYPE>(thread.process_memory.getGlobalData(usize(ID)))
+/**
+ * Returns a reference of type TYPE (eg. int, i64, usize. etc) to a global data with id ID.
+ */
+#define DEREF_GLOBAL(TYPE, ID) \
+	derefView<TYPE>(thread.process_memory.getGlobalData(GlobalDataID(usize(ID))))

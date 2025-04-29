@@ -30,7 +30,7 @@ namespace vm::loader {
 		const StableTypeIdNameMap<code::Function>&  funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
-		const StableTypeIdNameMap<code::GlobalData>& globalMap() const;
+		const code::builders::GlobalDataMap& globalMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 

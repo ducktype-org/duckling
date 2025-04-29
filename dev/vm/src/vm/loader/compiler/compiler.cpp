@@ -6,6 +6,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -29,12 +30,12 @@
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableTypeIdNameMap<code::Function>& func_map;
-			const TypeMetadata&                        type_map;
-			const StableTypeIdNameMap<TypeCRef>&       globals;
-			LoaderLogger                               log{};
-			base::Optional<code::Function>             function{};
-			base::HashMap<base::StrID, usize>          label_positions{};
+			const StableTypeIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                                type_map;
+			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
+			LoaderLogger                                       log{};
+			base::Optional<code::Function>                     function{};
+			base::HashMap<base::StrID, usize>                  label_positions{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -49,12 +50,12 @@ namespace vm::loader::compiler {
 				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
 #undef HANDLE_OFFSET
 
-#define HANDLE_GLOBAL(TYPE)                                                  \
-	variant_case(vm::opargs::TYPE, global_data) {                            \
-		auto name = global_data.global_data_name;                            \
-		if (ctx.globals.contains(name)) return i64(*ctx.globals.idOf(name)); \
-		ctx.log.log<UnknownGlobalDataError>(global_data, name);              \
-		return 0;                                                            \
+#define HANDLE_GLOBAL(TYPE)                                                         \
+	variant_case(vm::opargs::TYPE, global_data) {                                   \
+		auto name = global_data.global_data_name;                                   \
+		if (ctx.globals.contains(name)) return i64(usize(*ctx.globals.idOf(name))); \
+		ctx.log.log<UnknownGlobalDataError>(global_data, name);                     \
+		return 0;                                                                   \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_OFFSET
@@ -184,8 +185,8 @@ namespace vm::loader::compiler {
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
-		StableTypeIdNameMap<TypeCRef> globals;
-		auto                          ctx = CompilationContext(program.funcMap(), *types, globals);
+		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto ctx = CompilationContext(program.funcMap(), *types, globals);
 
 		for (const auto& global: program.globalMap()) {
 			match_optional(types->atMaybe(global.type)) {
@@ -204,6 +205,8 @@ namespace vm::loader::compiler {
 		}
 
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
-		return low::LowVMProgram{ converted_functions, std::move(types), std::move(globals) };
+		return low::LowVMProgram{ converted_functions,
+			                      std::move(types),
+			                      { program.globalMap().begin(), program.globalMap().end() } };
 	}
 }
