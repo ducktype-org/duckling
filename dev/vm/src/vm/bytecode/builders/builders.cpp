@@ -294,7 +294,7 @@ void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName functi
 	for (usize i = 0; i < param_count; i++) {
 		// Invalid arguments
 		auto tp = func_type->getNthParameterType(i).value();
-		if (tp->getName() != local_stack.at(local_stack.size() - 1 - i).type_name)
+		if (tp->getName() != local_stack.at(local_stack.size() - param_count + i).type_name)
 			throw InvalidFunctionCallArguments();
 	}
 }
