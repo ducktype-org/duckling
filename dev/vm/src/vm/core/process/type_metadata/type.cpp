@@ -217,6 +217,10 @@ namespace vm {
 	}
 
 	// struct
+	base::Optional<usize> Type::getFieldCount() const {
+		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
+	}
+
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
@@ -277,6 +281,52 @@ namespace vm {
 			}
 		}
 		return {};
+	}
+
+	bool Type::inheritsFrom(TypeCRef other) const {
+		std::vector<TypeCRef> stack{ this };
+		while (!stack.empty()) {
+			auto t = stack.back();
+			stack.pop_back();
+			if (t == other) return true;
+
+			if_opt_some(t->getInheritanceMetadata(), imd) {
+				variant_match(imd.kind) {
+					variant_case(InheritanceMetadata::Class, clazz) {
+						if_opt_some(clazz.extends, super) stack.emplace_back(super);
+					}
+				}
+				for (auto i: imd.implements) stack.emplace_back(i);
+			}
+		}
+		return false;
+	}
+
+	bool Type::isInstantiable() const {
+		auto is_concrete_class = [](const InheritanceMetadata& imd) {
+			variant_match(imd.kind) {
+				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
+			}
+			return false;
+		};
+
+		// This recursion follows only data and variants (not pointers),
+		// so its depth is bounded by type size, there cannot be a cycle.
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if_opt_some(data.inheritance_metadata, imd) {
+					if (!is_concrete_class(imd)) return false;
+				}
+
+				for (auto& field: data.fields)
+					if (!field.type->isInstantiable()) return false;
+			}
+			variant_case(kind::Variant, variant) {
+				for (auto& alt: variant.alternatives)
+					if (!alt->isInstantiable()) return false;
+			}
+		}
+		return true;
 	}
 
 	// variant
