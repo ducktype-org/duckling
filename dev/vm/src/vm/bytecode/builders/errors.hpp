@@ -1,6 +1,7 @@
 #pragma once
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -71,6 +72,26 @@ namespace vm::code::builders {
 		UnknownTypeError(vm::opargs::Type type):
 			  BuilderError(base::strConcat(ERR_MSG, type.type_name)),
 			  TYPE(type) {}
+	};
+
+	class DuplicateLocalNameError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Duplicate local name: ";
+		const vm::opargs::StackLocalAny         NAME;
+
+		DuplicateLocalNameError(vm::opargs::StackLocalAny name):
+			  BuilderError(base::strConcat(ERR_MSG, name.var_name)),
+			  NAME(name) {}
+	};
+
+	class InvalidLocalNameError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "This local does not exist: ";
+		const vm::opargs::OpCodeLocalArg        NAME;
+
+		InvalidLocalNameError(vm::opargs::OpCodeLocalArg name):
+			  BuilderError(base::strConcat(ERR_MSG, VISIT(name, n, return n.var_name))),
+			  NAME(name) {}
 	};
 
 	class EmptyStackDeinitError: public BuilderError {

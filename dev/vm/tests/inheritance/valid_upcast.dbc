@@ -12,14 +12,14 @@ type pointer: AnimalPtr Animal
 type pointer: DogPtr Dog
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
-    init_type DogPtr;     # 32
-    init_type AnimalPtr;  # 48
-    alloc_lptr_type 32, Dog;
-    setVTable_lptr_type 32, Dog;
-    upcast_lptr_lptr 48, 32;  # animal := static_cast<AnimalPtr>(dog)
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+    init_lany_type dog, DogPtr;
+    init_lany_type animal, AnimalPtr;
+    alloc_lptr_type dog, Dog;
+    setVTable_lptr_type dog, Dog;
+    upcast_lptr_lptr animal, dog;  # animal := static_cast<AnimalPtr>(dog)
     
     ret;
 }

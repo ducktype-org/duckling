@@ -43,9 +43,13 @@ namespace vm::loader::compiler {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
-#define HANDLE_OFFSET(Type) variant_case(vm::opargs::Type, offset_type) return offset_type.offset;
-				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
-#undef HANDLE_OFFSET
+				// Every used local variable is guaranteed to exist by static verification.
+#define HANDLE_LOCAL(Type)                                             \
+	variant_case(vm::opargs::Type, local_type) {                       \
+		return ctx.function->local_offset_map.at(local_type.var_name); \
+	}
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
+#undef HANDLE_LOCAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
