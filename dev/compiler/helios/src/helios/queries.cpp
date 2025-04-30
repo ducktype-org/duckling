@@ -1,10 +1,11 @@
 #include "queries.hpp"
 
+#include "query_hout_of_expr.hpp"
+
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
-#include "query_hout_of_expr.hpp"
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/pst_visitor.hpp>

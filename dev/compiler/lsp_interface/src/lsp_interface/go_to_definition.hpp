@@ -5,8 +5,7 @@
 
 #pragma once
 
-#include "pst_parser/access.hpp"
-
+#include <pst_parser/access.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst.hpp>
 
@@ -23,7 +22,7 @@ namespace lsp {
 
 		std::string toJSON();
 
-		Definition(const pst::LangElement *);
+		Definition(const pst::LangElement*);
 	};
 
 	pst::AccessLocked<pst::LangElement> findElement(pst::AccessLocked<pst::LangElement>, usize);

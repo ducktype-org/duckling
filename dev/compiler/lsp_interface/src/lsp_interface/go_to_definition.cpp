@@ -13,7 +13,6 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
-#include "base/ref.hpp"
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
 
@@ -45,7 +44,7 @@ namespace lsp {
 		);
 	}
 
-	Definition::Definition(const pst::LangElement * element) {
+	Definition::Definition(const pst::LangElement* element) {
 		auto source_position = element->getSourcePosition();
 		this->uri            = source_position.getSource()->getPath().uri();
 		this->start          = source_position.getStartLineColumn();
@@ -78,9 +77,9 @@ namespace lsp {
 
 		query::utils::withContextDo([&](query::Context& context) {
 			auto stmt = compiler::helios::stmt(context, id_expr->symbol);
-			result = Definition(dynamic_cast<const pst::LangElement*>(&*stmt.value()));
+			result    = Definition(dynamic_cast<const pst::LangElement*>(&*stmt.value()));
 		});
 
-		return result;
+		return { result };
 	}
 }

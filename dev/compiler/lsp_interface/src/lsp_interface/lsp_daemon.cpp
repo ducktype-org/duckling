@@ -3,10 +3,10 @@
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
 
-#include <iostream>
 #include <base64.hpp>
-
 #include <clap/clap.hpp>
+
+#include <iostream>
 
 PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
@@ -14,21 +14,22 @@ PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst wa
 #include <crow/http_response.h>
 POP_DIAGNOSTIC;
 
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
+#include "export_keywords.hpp"
+#include "go_to_definition.hpp"
+#include "semantic_tokens.hpp"
+#include "utils.hpp"
+
 #include <filesystem/file.hpp>
-#include <base/variant.hpp>
+#include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
+
 #include <base/int_conv.hpp>
 #include <base/macros/diagnostics.hpp>
+#include <base/variant.hpp>
 
-#include <vm/server.hpp>
 #include <vm/cli.hpp>
 #include <vm/config.hpp>
-
-#include "utils.hpp"
-#include "export_keywords.hpp"
-#include "semantic_tokens.hpp"
-#include "go_to_definition.hpp"
+#include <vm/server.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -214,9 +215,7 @@ void server(i32 port) {
 
 			auto definition = lsp::findDefinition(element);
 
-			if (!definition.has_value()) {
-				return crow::response(200, "[]");
-			}
+			if (!definition.has_value()) return crow::response(200, "[]");
 
 			std::vector<std::string> out = { definition.value().toJSON() };
 
