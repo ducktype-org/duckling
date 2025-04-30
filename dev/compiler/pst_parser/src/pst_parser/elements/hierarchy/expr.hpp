@@ -592,6 +592,13 @@ namespace pst {
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			AccessLocked<ExprElement> getCondition() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfTrue() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfFalse() const;
 		};
 
 		/**

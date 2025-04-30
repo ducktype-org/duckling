@@ -23,6 +23,7 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
+	EXPR_VISITOR(TernaryOperatorExpr)
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
@@ -98,6 +99,28 @@ namespace compiler::helios::code {
 		out << strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
+	tsh::AbstractType builtinOperationToReturnType(
+		query::Context& ctx, BuiltinBinary operation, tsh::AbstractType argument_type
+	) {
+		using enum BuiltinBinary;
+		switch (operation) {
+		case IntegerAdd:
+		case IntegerSub:
+		case IntegerMul:
+		case IntegerDiv:
+		case IntegerMod:
+		case IntegerPow:
+			return argument_type;
+		case IntegerLt:
+			return ctx.query<tsh::QueryBoolType>({});
+		case BooleanAnd:
+		case BooleanOr:
+			return argument_type;
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
 	BinaryOperatorExpr::BinaryOperatorExpr(
 		query::Context& ctx, ScopeID scope, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
 	):
@@ -106,7 +129,7 @@ namespace compiler::helios::code {
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
 				  tsh::SymbolType{
-					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  builtinOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
 					  tsh::ReferenceKind::Direct,
 					  tsh::Mutability::Mutable,
 				  },
@@ -143,6 +166,12 @@ namespace compiler::helios::code {
 		case BuiltinBinary::IntegerLt:
 			out << "<";
 			break;
+		case BuiltinBinary::BooleanAnd:
+			out << " and ";
+			break;
+		case BuiltinBinary::BooleanOr:
+			out << " or ";
+			break;
 		}
 		rhs->debugPrint(out);
 	}
@@ -156,6 +185,27 @@ namespace compiler::helios::code {
 	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, Box<Expr> inner):
 		  Expr(scope, inner->expression_type),
 		  inner(std::move(inner)) {}
+
+	TernaryOperatorExpr::TernaryOperatorExpr(
+		query::Context&,
+		ScopeID         scope,
+		Box<Expr>       condition,
+		Box<Expr>       if_true,
+		Box<Expr>       if_false
+	):
+		  Expr(scope, if_true->expression_type),
+		  condition(std::move(condition)),
+		  if_true(std::move(if_true)),
+		  if_false(std::move(if_false)) {}
+
+	void TernaryOperatorExpr::debugPrint(std::ostream& out) const {
+		out << "if ";
+		condition->debugPrint(out);
+		out << " then ";
+		if_true->debugPrint(out);
+		out << " else ";
+		if_false->debugPrint(out);
+	}
 
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
 		query::Context& ctx, ScopeID scope, std::vector<Box<Expr>> elements
@@ -239,6 +289,10 @@ namespace compiler::helios::code {
 		switch (operation) {
 		case BuiltinUnary::IntegerNegation:
 			out << "-";
+			expr->debugPrint(out);
+			break;
+		case BuiltinUnary::BooleanNot:
+			out << "not ";
 			expr->debugPrint(out);
 			break;
 		}

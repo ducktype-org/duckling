@@ -87,6 +87,7 @@ namespace compiler::helios::code {
 	 */
 	struct IdentifierExpr final: public Expr {
 		// @note: this is a mock
+		// Review: Is it???
 		SymID symbol;
 
 		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
@@ -131,6 +132,9 @@ namespace compiler::helios::code {
 		IntegerPow,
 
 		IntegerLt,  //< Less than
+
+		BooleanAnd,
+		BooleanOr,
 	};
 
 	/**
@@ -162,6 +166,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		BooleanNot,
 	};
 
 	/**
@@ -173,6 +178,26 @@ namespace compiler::helios::code {
 		base::Box<Expr> expr;
 
 		UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief A ternary operator.
+	 */
+	struct TernaryOperatorExpr: public Expr {
+		Box<Expr> condition;
+		Box<Expr> if_true;
+		Box<Expr> if_false;
+
+		TernaryOperatorExpr(
+			query::Context& ctx,
+			ScopeID         scope,
+			Box<Expr> condition,
+			Box<Expr> if_true,
+			Box<Expr> if_false
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
