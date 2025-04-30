@@ -259,7 +259,7 @@ namespace compiler::helios::code {
 					// Report an error?
 					return;
 				}
-				
+
 				// usage of HoutResultingSymbolListVisitor here is temporary:
 				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
 				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
