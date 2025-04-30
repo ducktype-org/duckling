@@ -259,7 +259,8 @@ namespace compiler::helios::code {
 					// Report an error?
 					return;
 				}
-
+				
+				// usage of HoutResultingSymbolListVisitor here is temporary:
 				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
 				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
 
@@ -321,15 +322,12 @@ namespace compiler::helios::code {
 					}
 				}
 
-				// this pr: remove this dealiasing:
-				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
-					if (call_arguments)
-						node = makeBox<CallExpr>(
-							ctx, scope, dealiased.back(), std::move(*call_arguments)
-						);
-					else
-						node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
-				}
+				if (call_arguments)
+					node = makeBox<CallExpr>(
+						ctx, scope, looked_up_symbol.back(), std::move(*call_arguments)
+					);
+				else
+					node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(looked_up_symbol));
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {

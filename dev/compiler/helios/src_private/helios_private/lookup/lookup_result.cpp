@@ -68,14 +68,4 @@ namespace compiler::helios {
 		return { node, { .leaves = leaves, .children = children } };
 	}
 
-	errors::HResult<SymbolList, errors::Failed> dealiasSymbolList(
-		query::Context& ctx, const SymbolList& symbol_list
-	) {
-		SymbolList dealiased;
-		for (auto sym: symbol_list) {
-			UNPACK_RESULT(auto res =, *ctx.query<QueryDealias>(sym));
-			dealiased.insert(dealiased.end(), res.begin(), res.end());
-		}
-		return dealiased;
-	}
 }
