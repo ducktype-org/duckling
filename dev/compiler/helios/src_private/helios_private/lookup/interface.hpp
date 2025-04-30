@@ -17,8 +17,8 @@ namespace dia {
 namespace compiler::helios {
 
 	struct AdditionalLookupParameters final {
-		bool with_wildcards = true;  // this PR: check it
-		                             // @TODO: public/private/protected
+		bool with_wildcards = true;
+		// @TODO: public/private/protected?
 	};
 
 	/**
