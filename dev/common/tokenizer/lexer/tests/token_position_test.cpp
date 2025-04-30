@@ -1,8 +1,9 @@
 #include <filesystem/file.hpp>
-#include <token_file/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+#include <token_file/file.hpp>
+
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -40,10 +41,7 @@ class LexerPositionTest: public tester::TestSuite {
 	MBox<tokenizer::TokenFile> td;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		lexer::init();
-		TESTER_ADD_TEST(simplePositionTest);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simplePositionTest); }
 
 private:
 	void simplePositionTest() {

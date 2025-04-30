@@ -1,5 +1,7 @@
 #include <tester/tester.hpp>
+
 #include <base/str_utils.hpp>
+
 #include <cstring>
 
 bool compareCstr(const char* const c1, const char* const c2) {
@@ -47,8 +49,7 @@ public:
 			throwPanic2();
 		} catch (base::Panic& panic) {
 			assertTrue(
-				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"),
-				"Bad panic reason"
+				containsCstr(panic.what(), "    Panic thrown:\n    panic test 2"), "Bad panic reason"
 			);
 			return;
 		}
@@ -84,7 +85,7 @@ public:
 		} catch (base::NotYetImplemented& nyi) {
 			assertTrue(
 				compareCstr(
-					nyi.what(), "The feature is not implemented yet.\nNotYetImplemented test"
+					nyi.what(), "The feature is not implemented yet: NotYetImplemented test"
 				),
 				"Bad NotYetImplemented reason"
 			);

@@ -1,9 +1,9 @@
-#include <base/unique_pointer.hpp>
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
+#include "lexer_class.hpp"
 
 #include "classifications.hpp"
-#include "lexer_class.hpp"
+
+#include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
 
 namespace lexer {
 	bool Lexer::token_messages = false;
@@ -306,8 +306,7 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 		std::string         message;
-		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), source_position)
-		);
+		output.push_back(Token::makeIdentifier(file->getCharRange(begin, end + 1), source_position));
 		if (output.back().getType() == Token::Type::Identifier)
 			addTokenMsg(begin, end, "identifier");
 		else if (output.back().getType() == Token::Type::Keyword)
@@ -338,8 +337,7 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
-		);
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 	}
 
 	void Lexer::hexLiteralHandler(Tokens& output) {
@@ -385,8 +383,7 @@ namespace lexer {
 		dia::SourcePosition source_position(sourceStart, end);
 
 		addTokenMsg(begin, end, "numLiteral");
-		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position)
-		);
+		output.push_back(Token::makeNumLiteral(file->getCharRange(begin, end + 1), source_position));
 	}
 
 	void Lexer::stringHandler(Tokens& output) {

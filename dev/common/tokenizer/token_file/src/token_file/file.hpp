@@ -1,18 +1,19 @@
 #pragma once
 
-#include <set>
-#include <span>
+#include "forward.hpp"
 
-#include <base/raw_view.hpp>
-#include <lexer/char.hpp>
 #include <diagnostic/logger.hpp>
-#include <filesystem/file.hpp>
 #include <filesystem/encoding.hpp>
-#include <lexer/token.hpp>
+#include <filesystem/file.hpp>
+#include <lexer/char.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
+#include <lexer/token.hpp>
 
-#include "forward.hpp"
+#include <base/raw_view.hpp>
+
+#include <set>
+#include <span>
 
 namespace tokenizer {
 	/**
@@ -49,7 +50,7 @@ namespace tokenizer {
 		TokenFile(const TokenFile&) = delete;
 		TokenFile()                 = delete;
 
-		TokenFile(TokenFile&&) = default;
+		TokenFile(TokenFile&&) = delete;
 
 		/**
 		 * @brief Get the path of underlying file.
@@ -79,8 +80,7 @@ namespace tokenizer {
 		/**
 		 * @brief Returns views of a [) range split by lines.
 		 */
-		std::vector<std::pair<usize, base::RawView>>
-			viewSplitRange(usize begin_char, usize end_char);
+		std::vector<std::pair<usize, base::RawView>> viewSplitRange(usize begin_char, usize end_char);
 
 		[[nodiscard]]
 		const fs::FileContent getContent() const;
@@ -108,7 +108,6 @@ namespace tokenizer {
 		 */
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		bool tokenize() {
-			lexer::init();
 			decode<encoding>();
 			if (log.bad()) return false;
 			countLines();

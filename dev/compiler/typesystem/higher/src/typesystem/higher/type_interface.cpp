@@ -2,14 +2,16 @@
 
 #include "queries.hpp"
 
-#include <helios/symbols/symbols.hpp>
-#include <query_framework/query_impl.hpp>
+#include <helios/symbols/simple.hpp>
+#include <query_framework/context.hpp>
+
 #include <base/optional.hpp>
 
 namespace tsh {
 	namespace {
-		base::Map<base::StrID, std::set<InterfaceElement>>
-			groupElementsByName(const std::set<InterfaceElement>& elements) {
+		base::Map<base::StrID, std::set<InterfaceElement>> groupElementsByName(
+			const std::set<InterfaceElement>& elements
+		) {
 			base::Map<base::StrID, std::set<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrID name = compiler::helios::name(element.getSymbol());
@@ -23,23 +25,26 @@ namespace tsh {
 	TypeInterface::TypeInterface(const std::set<InterfaceElement>& elements):
 		  elements(groupElementsByName(elements)) {}
 
-	AbstractType InterfaceElement::getType(query::Context& ctx) const {
+	SymbolType<> InterfaceElement::getType(query::Context& ctx) const {
 		if (isField())
 			return getResultType();
 		else {
 			// @TODO: Add .is_mutable and .pure when additional method specifiers are supported.
-			std::vector<AbstractType> all_parameter_types{};
-			all_parameter_types.push_back(ctx.query<QueryPointerType>({
-				.type       = source,
-				.is_mutable = false,
-			}));
+			std::vector<SymbolType<>> all_parameter_types{};
+			// @note: The first parameter is the implicit self parameter. It might change to
+			// being specified in the method declaration.
+			all_parameter_types.emplace_back(source, ReferenceKind::Ref, Mutability::Mutable);
 			for (const auto& par: parameters.value()) all_parameter_types.push_back(par.type);
-			return ctx.query<QueryFunctionType>({
-				.parameter_types = all_parameter_types,
-				.result_type     = result_type,
-				.pure            = false,
-				.free            = false,
-			});
+			return SymbolType{
+				ctx.query<QueryFunctionType>({
+					.parameter_types = all_parameter_types,
+					.result_type     = result_type,
+					.pure            = false,
+					.free            = false,
+				}),
+				ReferenceKind::Direct,
+				Mutability::Immutable,
+			};
 		}
 	}
 
@@ -90,7 +95,7 @@ namespace tsh {
 		// Go over positional arguments.
 		for (usize i = 0; i < positional_arg_types.size(); i++) {
 			AbstractType provided_type = positional_arg_types[i];
-			AbstractType expected_type = parameters[i].type;
+			AbstractType expected_type = parameters[i].type.getType();
 			if (provided_type != expected_type) {
 				// Type mismatch case.
 				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,
@@ -116,7 +121,8 @@ namespace tsh {
 			// Name mismatch case.
 			if (param_with_matching_name_idx.empty()) return non_matches;
 			AbstractType provided_type = named_arg.type;
-			AbstractType expected_type = parameters[param_with_matching_name_idx.value()].type;
+			AbstractType expected_type
+				= parameters[param_with_matching_name_idx.value()].type.getType();
 			if (provided_type != expected_type) {
 				// Type mismatch case.
 				if (!ctx.query<QueryImplicitCoercibilityOnAbstractType>({ provided_type,

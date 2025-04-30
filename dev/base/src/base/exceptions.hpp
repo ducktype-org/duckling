@@ -11,10 +11,11 @@
 
 #pragma once
 
+#include "macros/utils.hpp"
+#include "str_utils.hpp"  // IWYU pragma: export
+
 #include <exception>
 #include <string>
-#include "str_utils.hpp"
-#include "define_helper.hpp"
 
 namespace base {
 	/**

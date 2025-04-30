@@ -4,9 +4,13 @@
  */
 
 #include "expr.hpp"
+
 #include "../visitors.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios::code {
 
@@ -23,13 +27,18 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
+	EXPR_VISITOR(CallExpr)
 
 	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -41,7 +50,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryBoolType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -53,11 +66,19 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType<>(
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value_type(type) {}
+		  value_type(tsh::SymbolType{
+			  type,
+			  tsh::ReferenceKind::Direct,
+			  tsh::Mutability::Mutable,
+		  }) {}
 
 	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
@@ -84,7 +105,11 @@ namespace compiler::helios::code {
 			  scope,
 			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
@@ -138,7 +163,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -170,7 +199,11 @@ namespace compiler::helios::code {
 		  Expr(
 			  scope,
 			  tsh::ExpressionType{
-				  ctx.query<tsh::QueryMetaType>({}),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -209,5 +242,45 @@ namespace compiler::helios::code {
 			expr->debugPrint(out);
 			break;
 		}
+	}
+
+	namespace {
+		/**
+		 * @brief Infers a resulting type from a call operation.
+		 * @note This will be here until we have a proper overload resolution.
+		 */
+		tsh::SymbolType<> getCallResultType(tsh::AbstractType tp) {
+			if (tp.getKind() == tsh::Kind::Function) {
+				auto func = tsh::FunctionAbstractType(tp);
+				return func.getResultType();
+			}
+			CORE_PANIC("Invalid kind to call: ", base::enumToStr(tp.getKind()));
+		}
+	}
+
+	CallExpr::CallExpr(
+		query::Context& ctx, ScopeID scope, SymID callee, std::vector<Box<Expr>> arguments
+	):
+		  Expr(
+			  scope,
+			  tsh::ExpressionType(
+				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
+	                                    .getType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  callee(callee),
+		  arguments(std::move(arguments)) {}
+
+	void CallExpr::debugPrint(std::ostream& out) const {
+		out << name(callee).strView() << "(";
+		bool add_comma = false;
+		for (auto&& arg: arguments) {
+			if (add_comma) out << ", ";
+			arg->debugPrint(out);
+			add_comma = true;
+		}
+		out << ")";
 	}
 }

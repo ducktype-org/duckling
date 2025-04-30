@@ -5,17 +5,14 @@
 
 #pragma once
 
-#include <token_file/forward.hpp>
-#include <filesystem/file.hpp>
 #include "token.hpp"
+
+#include <filesystem/file.hpp>
+#include <token_file/forward.hpp>
+
 #include <base/box.hpp>
 
 namespace lexer {
-	/**
-	 * @brief Initializes the whole module
-	 */
-	void init();
-
 	/**
 	 * @brief Decodes and splits the input file into Tokens.
 	 *

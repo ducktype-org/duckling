@@ -34,7 +34,7 @@ Inside the function all you have to do is to tell which bases/fields are part of
 For example, `string` type should pass its `data` and `size` but not `capacity` as it is not visible in the comparisons.
 
 To list all subfields simply return `std::tie` of all of them in order in which you would like them to be added to hash.
-To pass base subobjects you can use `getBase<Base>(t)` which casts `t` to the `Base` class and additionally checks if what you are casting to is actually a base class.
+To pass base subobjects you can use `getBase<Base>(t)` (defined in `<hashing/hash_algorithm_utils.hpp>`) which casts `t` to the `Base` class and additionally checks if what you are casting to is actually a base class.
 
 ~~~~~cpp
 class C : public Base1, public Base2 {

@@ -5,32 +5,28 @@
  */
 
 #include "mir_lowering.hpp"
+
 #include "mir_lifetimes.hpp"
-#include <query_framework/query_impl.hpp>
+
+#include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+#include <mir/mir_structure/mir_structure.hpp>
+#include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries/types.hpp>
+
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
+#include <base/variant.hpp>
+
+#include <stack>
+#include <unordered_set>
 
 namespace compiler::mir {
-
-	Function::Function(
-		base::StrID                  name,
-		tsh::AbstractType            return_type,
-		std::vector<Block>           blocks,
-		base::StableVector<MirLocal> local_list,
-		BlockID                      entry_block,
-		helios::ScopeID              top_lifetime_scope,
-		helios::SymID                helios_id
-	):
-		  name(name),
-		  return_type(return_type),
-		  blocks(std::move(blocks)),
-		  local_list(std::move(local_list)),
-		  entry_block(entry_block),
-		  top_lifetime_scope(top_lifetime_scope),
-		  helios_id(helios_id) {}
-
 
 	namespace hc = helios::code;
 
@@ -49,12 +45,12 @@ namespace compiler::mir {
 
 	/**
 	 * @brief Represents result of expression lowering, which is
-	 * a BlockBuilderRef that is the beginning of the lowered expression and MirLocation
+	 * a BlockBuilderRef that is the beginning of the lowered expression and MIRValue
 	 * that holds the result of the expression.
 	 */
 	struct ExprLowerRes final {
 		BlockBuilderRef begin;
-		MirLocation     value;
+		MIRValue        value;
 	};
 
 	/**
@@ -73,8 +69,9 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this statement in.
 	 * @return StmtLowerRes
 	 */
-	StmtLowerRes
-		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function);
+	StmtLowerRes lowerStmt(
+		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function
+	);
 
 	/**
 	 * @brief Lowers expression.
@@ -84,8 +81,9 @@ namespace compiler::mir {
 	 * @param function Function that we are lowering this expression in.
 	 * @return ExprLowerRes
 	 */
-	ExprLowerRes
-		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function);
+	ExprLowerRes lowerExpr(
+		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function
+	);
 
 	/**
 	 * @brief Lowers code-block, by lowering all statements in the block.
@@ -106,7 +104,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagConstruct(LocalRef local) {
-		return { OperationFlag::Flag::Construct, local };
+		return { .flag = OperationFlag::Flag::Construct, .local = local };
 	}
 
 	/**
@@ -116,7 +114,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagDestruct(LocalRef local) {
-		return { OperationFlag::Flag::Destruct, local };
+		return { .flag = OperationFlag::Flag::Destruct, .local = local };
 	}
 
 	/**
@@ -126,7 +124,7 @@ namespace compiler::mir {
 	 * @return constexpr OperationFlag
 	 */
 	constexpr OperationFlag flagMove(LocalRef local) {
-		return { OperationFlag::Flag::Move, local };
+		return { .flag = OperationFlag::Flag::Move, .local = local };
 	}
 
 	/**
@@ -183,7 +181,11 @@ namespace compiler::mir {
 				CORE_ASSERT(instruction.has_value(), "Empty instruction left in the block");
 				instructions.emplace_back(instruction.value());
 			}
-			return { id, std::move(instructions), terminator.value() };
+			return {
+				.id           = id,
+				.instructions = std::move(instructions),
+				.terminator   = terminator.value(),
+			};
 		}
 
 		/**
@@ -251,21 +253,41 @@ namespace compiler::mir {
 		[[nodiscard]]
 		Function build() {
 			CORE_ASSERT(entry_block.has_value(), "Entry block not set");
+			auto entry_block_id = entry_block.value()->getID();
 
-			std::vector<Block> blocks;
-			for (usize i = 0; i < this->blocks.size(); i++)
-				blocks.emplace_back(this->blocks.getRef(i).value()->build());
+			std::vector<BlockID> block_order;
+			block_order.reserve(this->blocks.size());
 
-			const auto function_return_type
-				= tsh::FunctionAbstractType(
+			base::StableHashMap<BlockID, Block> function_blocks;
+
+			// First element in block order is the entry block
+			block_order.push_back(entry_block_id);
+
+			// Count in "reverse order" to have more intuitive order
+			// since creation of blocks is done from the end of the function.
+			for (usize i = this->blocks.size(); i-- > 0;) {
+				Block block = this->blocks[i]->build();
+				function_blocks.put(block.id, std::move(block));
+
+				if (block.id != entry_block_id)  // entry block is already added to the block_order
+					block_order.emplace_back(block.id);
+			}
+
+			const auto function_type
+				= tsh::SymbolType<tsh::FunctionAbstractType>(
 					  ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)
 						  ->expect("Handling errors in HOUT is not supported yet")
 				)
-			          .getResultType();
+			          .getType();
 
 			return Function{
-				name.value(),          function_return_type,         std::move(blocks),
-				std::move(local_list), entry_block.value()->getID(), top_lifetime_scope.value(),
+				name.value(),
+				function_type.getResultType(),
+				function_type.getParameterTypes(),
+				std::move(function_blocks),
+				std::move(block_order),
+				std::move(local_list),
+				top_lifetime_scope.value(),
 				helios_symbol,
 			};
 		}
@@ -280,22 +302,40 @@ namespace compiler::mir {
 			top_lifetime_scope.emplace(scope);
 		}
 
+		/**
+		 * Adds a local variable to MIR function, from helios_id representing it.
+		 */
 		LocalRef addLocal(const helios::SymID helios_id) {
-			const auto key = local_list.emplaceBack(MirLocal{
+			local_list.emplaceBack(MirLocal{
 				helios_id,
-				tsh::ComponentType{ .type = ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
-										"Handling ERRORS in MIR is not supported yet..."
-									) },
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
 				scope(helios_id),
 			});
-			return local_list.getRef(key).value();
+			return local_list.last();
+		}
+
+		/**
+		 * Adds a local parameter variable to MIR function from helios_id representing it.
+		 */
+		LocalRef addParameter(const helios::SymID helios_id, u64 parameter_index) {
+			CORE_ASSERT(kind(helios_id) == helios::SymbolKind::Parameter, "Not a parameter");
+			local_list.emplaceBack(MirLocal{
+				helios_id,
+				ctx.query<helios::QueryTypeOfSymbol>(helios_id)->expect(
+					"Handling ERRORS in MIR is not supported yet..."
+				),
+				scope(helios_id),
+				parameter_index,
+			});
+			return local_list.last();
 		}
 
 		[[nodiscard]]
-		LocalRef addTmp(const tsh::AbstractType type, const helios::ScopeID scope) {
-			const auto key
-				= local_list.emplaceBack(MirLocal{ tsh::ComponentType{ .type = type }, scope });
-			return local_list.getRef(key).value();
+		LocalRef addTmp(const tsh::SymbolType<> type, const helios::ScopeID scope) {
+			local_list.emplaceBack(MirLocal{ type, scope });
+			return local_list.last();
 		}
 
 		/**
@@ -313,10 +353,10 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		BlockBuilderRef newBlock() {
-			auto index = blocks.size();
-			auto res   = blocks.getRef(blocks.emplaceBack(BlockBuilder{ index })).value();
-			CORE_ASSERT(u64(res->getID()) == blocks.size() - 1, "Bad block id");
-			return res;
+			auto vector_index = blocks.size();
+			blocks.emplaceBack(BlockBuilder{ vector_index });
+			CORE_ASSERT(u64(blocks.last()->getID()) == blocks.lastIndex(), "Bad block id");
+			return blocks.last();
 		}
 
 		void setEntry(BlockBuilderRef block) {
@@ -325,6 +365,14 @@ namespace compiler::mir {
 		}
 
 		query::Context& getContext() { return ctx; }
+
+		/**
+		 * This is needed only for some assertins.
+		 */
+		[[nodiscard]]
+		helios::SymID getHeliosSymbol() const {
+			return helios_symbol;
+		}
 	};
 
 	/**
@@ -336,13 +384,37 @@ namespace compiler::mir {
 
 		LocalVarCollectionVisitor(FunctionBuilder& function): function(function) {}
 
+		/**
+		 * Helper function that recursively goes over the code block and collects all local
+		 * variables.
+		 */
+		void goOverCodeBlock(const hc::CodeBlock& code_block) {
+			for (const auto& stmt: code_block.statements) stmt->acceptVisitor(*this);
+		}
+
+		/**
+		 * @brief Collects all local variables in the function and adds them directly to the
+		 * FunctionBuilder.
+		 */
+		void collect(const helios::HOUTFunction& hout_function) {
+			CORE_ASSERT(
+				hout_function.original_symbol == function.getHeliosSymbol(),
+				"Bad function passed to LocalVarCollectionVisitor"
+			);
+
+			u64 parameter_index = 0;
+			for (const auto& parameter: *hout_function.content.parameters) {
+				function.addParameter(parameter.helios_symbol, parameter_index);
+				parameter_index++;
+			}
+			goOverCodeBlock(*hout_function.content.body);
+		}
+
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const helios::code::IfStmt& stmt) override {
-			for (const auto& body_stmt: stmt.body.statements) body_stmt->acceptVisitor(*this);
-		}
+		void visitIfStmt(const helios::code::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
@@ -495,11 +567,11 @@ namespace compiler::mir {
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
-			output({ continuation, MirLocation{ MirIntegerConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirIntegerConst{ expr.value } } });
 		}
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
-			output({ continuation, MirLocation{ MirBoolConst{ expr.value } } });
+			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {
@@ -507,7 +579,8 @@ namespace compiler::mir {
 		}
 
 		void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-			output({ continuation, MirLocation{ function.findLocal(expr.symbol).get() } });
+			output({ .begin = continuation,
+			         .value = MIRValue{ function.findLocal(expr.symbol).get() } });
 		}
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
@@ -519,9 +592,10 @@ namespace compiler::mir {
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
 			// and the result is of the same type as the arguments.
-			const auto argument_type = locationType(right_res, function.getContext());
+			const auto argument_type       = locationType(right_res, function.getContext());
+			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
-				argument_type == locationType(left_res, function.getContext()),
+				argument_type.getType() == other_argument_type.getType(),
 				"Binary operator with different types"
 			);
 			const auto      target_location = function.addTmp(argument_type, expr.lifetime_scope);
@@ -553,7 +627,7 @@ namespace compiler::mir {
 				expr.lifetime_scope,
 			});
 
-			output({ sub_continuation, target_location });
+			output({ .begin = sub_continuation, .value = target_location });
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -570,6 +644,35 @@ namespace compiler::mir {
 
 		void visitLinkedIdentifierExpr(const hc::LinkedIdentifierExpr&) override {
 			throw base::NotYetImplemented("linked identifier expr");
+		}
+
+		void visitCallExpr(const hc::CallExpr& expr) override {
+			auto       call = continuation->addHole();
+			const auto call_result
+				= function.addTmp(expr.expression_type.getSymbolType(), expr.lifetime_scope);
+
+			auto                  sub_continuation = continuation;
+			std::vector<MIRValue> args;
+			args.emplace_back(MirFunctionLiteral{ expr.callee });
+			for (const auto& arg: expr.arguments) {
+				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function);
+				args.push_back(sub_res);
+				sub_continuation = expr_continuation;
+			}
+
+			// @TODO: #505 here in the future we (probably) will have to handle
+			// move operations related to the passing of the arguments to the function
+
+			call.fill(Instruction{
+				Operation::Call,
+				{ call_result },
+				args,
+				{ flagConstruct(call_result) },
+				expr.lifetime_scope,
+			});
+
+
+			return output({ .begin = sub_continuation, .value = call_result });
 		}
 
 	private:
@@ -612,28 +715,40 @@ namespace compiler::mir {
 		 * @param ctx The query context for AbstractType generation.
 		 * @return The type of the local value.
 		 */
-		static tsh::AbstractType locationType(const MirLocation location, query::Context& ctx) {
+		static tsh::SymbolType<> locationType(const MIRValue location, query::Context& ctx) {
 			variant_match(location.getVariant()) {
 				variant_case_novalue(MirIntegerConst) {
-					return ctx.query<tsh::QueryIntegralType>({ 64 });
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryIntegralType>({ 64 }),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
 				}
-				variant_case_novalue(MirBoolConst) { return ctx.query<tsh::QueryBoolType>({}); }
-				variant_case(LocalRef, local) { return local->type.type; }
+				variant_case_novalue(MirBoolConst) {
+					return tsh::SymbolType<>{
+						ctx.query<tsh::QueryBoolType>({}),
+						tsh::ReferenceKind::Direct,
+						tsh::Mutability::Immutable,
+					};
+				}
+				variant_case(LocalRef, local) { return local->type; }
 				variant_default { CORE_UNREACHABLE(); }
 			}
 			CORE_UNREACHABLE();
 		}
 	};
 
-	StmtLowerRes
-		lowerStmt(const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function) {
+	StmtLowerRes lowerStmt(
+		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function
+	) {
 		StmtBlockVisitor visitor{ continuation, function };
 		stmt.acceptVisitor(visitor);
 		return visitor.out.value();
 	}
 
-	ExprLowerRes
-		lowerExpr(const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function) {
+	ExprLowerRes lowerExpr(
+		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function
+	) {
 		ExprBlockVisitor visitor{ continuation, function };
 		expr.acceptVisitor(visitor);
 		return visitor.out.value();
@@ -657,9 +772,8 @@ namespace compiler::mir {
 		function_builder.setName(function.original_name);
 		function_builder.setTopLifetimeScope(function.top_lifetime_scope);
 
-		// @TODO: add parameters to list of locals
 		LocalVarCollectionVisitor visitor{ function_builder };
-		for (const auto& stmt: function.content.body->statements) stmt->acceptVisitor(visitor);
+		visitor.collect(function);
 
 		auto fun_body_scope = function.content.body->lifetime_scope;
 		auto last_block     = function_builder.newBlock();
@@ -673,13 +787,95 @@ namespace compiler::mir {
 		return function_builder.build();
 	}
 
-	struct IMPLEMENT_QUERY(LowerToMirFunction, Function) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+	/**
+	 * @brief Deletes from mir Function (from block_order and blocks) unreachable blocks.
+	 * Performs DFS on the CFG and marks every reachable block, then deletes the unreachable ones.
+	 */
+	Function eliminateUnreachable(Function function) {
+		std::unordered_set<BlockID> reachable;
+		std::stack<BlockID>         stack;
+
+		stack.push(function.block_order[0]);
+		while (!stack.empty()) {
+			BlockID block_id = stack.top();
+			stack.pop();
+
+			if (reachable.contains(block_id)) continue;
+
+			auto successors = getTerminatorSuccessors(function.blocks[block_id].terminator);
+
+			reachable.insert(block_id);
+			for (auto successor: successors) stack.push(successor);
+		}
+
+		std::vector<BlockID> new_block_order;
+
+		for (auto block_id: function.block_order)
+			if (reachable.contains(block_id))
+				new_block_order.push_back(block_id);
+			else
+				function.blocks.erase(block_id);
+		function.block_order = new_block_order;
+
+		// WEAK_ASSERT candidate
+		CORE_ASSERT(function.validateBlockIDs().isOk(), "Function has invalid block IDs");
+
+		return function;
+	}
+
+	/**
+	 * @brief Block with idx 0 of the MIR function has "FunctionEnd" terminator which is a mock-up.
+	 *
+	 * This function deals with this terminator:
+	 * * if block doesn't exists it means that it was unreachable, we do nothing
+	 * * if block is reachable, but function returns void it is replaced with ReturnVoid
+	 * * if block is reachable and function returns value, throws missing return error
+
+	 * @note It is assumed that the last block is the last in the block order.
+	 */
+	helios::errors::HResult<Function, helios::errors::Failed> finalizeFunctionEnd(
+		query::Context&, Function function
+	) {
+		CORE_ASSERT(
+			function.blocks.size() > 0, "Function should have at least one block after lowering"
+		);
+
+		// It should be always zero because the last block is generated as the first one.
+		auto last_block_id = BlockID(0);
+		if (not function.blocks.contains(last_block_id)) return function;
+
+		CORE_ASSERT(
+			function.blocks[last_block_id].terminator.operation == Operation::FunctionEnd,
+			"Last block doesn't have FunctionEnd terminator"
+		);
+
+		if (function.return_type.getType().getKind() == tsh::Kind::Unit) {
+			function.blocks[last_block_id].terminator.operation = Operation::ReturnVoid;
+			return function;
+		} else {
+			// @todo there should be logging here of missing return value / control reaches the end
+			// of non-void function
+			return helios::errors::HError(helios::errors::Failed());
+		}
+	}
+
+	struct IMPLEMENT_QUERY(LowerToMirFunction, LowerToMirFunctionResult) {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			// first step: lowering to pre-mir (cfg+quad)
 			auto function_no_lifetime = lowerToPreMirFunction(ctx, key.function);
 
 			// second step: lifetime stuff
-			return addDestructors(ctx, std::move(function_no_lifetime));
+			auto function_with_destructors = addDestructors(ctx, std::move(function_no_lifetime));
+
+			// eliminating unreachable blocks
+			auto function_reachable = eliminateUnreachable(std::move(function_with_destructors));
+
+			// change FunctionEnd to proper return
+			UNPACK_RESULT_MOVE(
+				auto function_no_func_end =, finalizeFunctionEnd(ctx, std::move(function_reachable))
+			);
+
+			return function_no_func_end;
 		}
 
 		QUERY_AUTO_CACHE_REF

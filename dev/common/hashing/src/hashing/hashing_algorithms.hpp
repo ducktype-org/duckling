@@ -1,21 +1,21 @@
 #pragma once
 
-#include <string_view>
-#include <type_traits>
-#include <concepts>
-#include <ranges>
-#include <vector>
-#include <string>
-#include <tuple>
-#include <array>
-#include <span>
-#include <bit>
-
-#include <base/type_traits.hpp>
-#include <base/ints.hpp>
-
 #include "hash_algorithm_utils.hpp"
 #include "type_code.hpp"
+
+#include <base/ints.hpp>
+#include <base/type_traits.hpp>
+
+#include <array>
+#include <bit>
+#include <concepts>
+#include <ranges>
+#include <span>
+#include <string>
+#include <string_view>
+#include <tuple>
+#include <type_traits>
+#include <vector>
 
 namespace hashing {
 
@@ -93,8 +93,7 @@ namespace hashing {
 
 	public:
 		// Spans of bytes
-		constexpr void
-			operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
+		constexpr void operator()(detail::span_of_bytes auto span, Type type = Type::Other) noexcept {
 			std::vector<char> vec;
 			vec.reserve(span.size());
 			for (auto&& c: span) vec.push_back(static_cast<char>(c));

@@ -1,13 +1,14 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
+#include "file_id.hpp"
+#include "module_id.hpp"
+
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
+#include <query_framework/query_int.hpp>
+
 #include <base/maps.hpp>
 #include <base/ref.hpp>
-
-// @TODO: this dependency can be relaxed by separating ModuleID and FileID
-#include "module_tree.hpp"
 
 namespace compiler::frontend {
 
@@ -36,11 +37,13 @@ namespace compiler::frontend {
 	 */
 	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>)
 
+
+	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleID, CRef<base::HashMap<base::StrID COMMA ModuleID>>)
+	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result)
 
 
 	/**
@@ -53,7 +56,7 @@ namespace compiler::frontend {
 	 * Assumes that @p element is a TopLevel element of some File parsed with interface of Frontend
 	 * module.
 	 */
-	ModuleID extendQueryModuleIDOfPST(query::Context&, MCRef<pst::LangElement> element);
+	ModuleID extendQueryModuleIDOfPST(query::Context&, pst::AccessLocked<pst::LangElement> element);
 
 	/**
 	 * @brief Query extension used to
@@ -72,6 +75,7 @@ namespace compiler::frontend {
 	 *
 	 * @return Found module, none if no matching module was found.
 	 */
-	base::Optional<ModuleID>
-		getRelativeModule(query::Context&, ModuleID from, const std::vector<base::StrID>& path);
+	base::Optional<ModuleID> getRelativeModule(
+		query::Context&, ModuleID from, const std::vector<base::StrID>& path
+	);
 }

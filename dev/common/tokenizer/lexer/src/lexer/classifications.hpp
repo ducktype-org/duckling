@@ -1,7 +1,8 @@
 #pragma once
 
-#include <array>
 #include <unicode/uniset.h>
+
+#include <array>
 
 namespace lexer {
 
@@ -67,7 +68,8 @@ namespace lexer {
 			    &open_bracket, &close_bracket, &end_of_file };
 
 		/**
-		 * @brief Populates the data members of this class
+		 * @brief Populates the data members of this class.
+		 * It will be called automagically when InitObject is used.
 		 */
 		static void init();
 		Classifications() = delete;

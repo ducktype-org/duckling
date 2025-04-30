@@ -12,12 +12,15 @@
  */
 
 #include "lir_lowering.hpp"
+
 #include "../lir_structure/lir_structure.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <typesystem/lower/queries.hpp>
+
+#include <base/variant.hpp>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -42,14 +45,14 @@ namespace compiler::lir {
 	 * @return LirLocal
 	 */
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
-		auto type_layout = ctx.query<tsl::QueryTypeLayout>(mir_local->type.type);
+		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
-		return LirLocal{ mir_local->helios_id, type_layout };
+		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
 		auto bool_type   = ctx.query<tsh::QueryBoolType>({});
-		auto bool_layout = ctx.query<tsl::QueryTypeLayout>(bool_type);
+		auto bool_layout = ctx.query<tsl::QueryAbstractTypeLayout>(bool_type);
 
 		return LirLocal{ bool_layout };
 	}
@@ -136,19 +139,20 @@ namespace compiler::lir {
 			 * @brief Converts MIR location to LIR location.
 			 *
 			 * @param loc
-			 * @return LirLocation
+			 * @return LIRValue
 			 */
-			LirLocation getLocation(const mir::MirLocation& loc) {
+			LIRValue getLocation(const mir::MIRValue& loc) {
 				variant_match(loc.getVariant()) {
 					variant_case(mir::MirIntegerConst, integer) {
-						return LirLocation{ integer.value };
+						return LIRValue{ integer.value };
 					}
-					variant_case(mir::MirBoolConst, boolean) {
-						return LirLocation{ boolean.value };
-					}
-					variant_case(mir::LocalRef, local) { return LirLocation{ getLocal(local) }; }
+					variant_case(mir::MirBoolConst, boolean) { return LIRValue{ boolean.value }; }
+					variant_case(mir::LocalRef, local) { return LIRValue{ getLocal(local) }; }
 					variant_case(mir::BlockID, block) {
-						return LirLocation{ BlockRef(mir_to_lir_block.at(block)) };
+						return LIRValue{ BlockRef(mir_to_lir_block.at(block)) };
+					}
+					variant_case(mir::MirFunctionLiteral, func) {
+						return LIRValue{ FunctionLiteral{ func.helios_id } };
 					}
 				}
 				CORE_PANIC("Unhandled variant in getLocation");
@@ -166,11 +170,14 @@ namespace compiler::lir {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
-					auto pos      = locals.pushBack(std::move(lir_local));
-					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
+					locals.pushBack(std::move(lir_local));
+					auto local_index = locals.lastIndex();
 
-					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
-					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos).value());
+					locals.pushBack(std::move(lifetime_flag));
+					auto flag_index = locals.lastIndex();
+
+					mir_to_lir_local.put(mir_local.ref(), locals[local_index]);
+					mir_to_lifetime_flag.put(mir_local.ref(), locals[flag_index]);
 				}
 			}
 
@@ -178,25 +185,25 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function->blocks) {
+				for (const auto& mir_block_id: key.function->block_order) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
-					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
+					blocks.pushBack({});
+					mir_to_lir_block.put(mir_block_id, blocks.last());
 				}
 			}
 
 			void lowerBlocks() {
-				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function->blocks | std::views::reverse) {
-					const auto lir_block = mir_to_lir_block[block.id];
+				for (const auto& mir_block_id: key.function->block_order) {
+					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
 
-					auto curr_block = lir_block;
-					for (const auto& mir_instruction: block.instructions)
+					auto        curr_block = lir_block;
+					const auto& mir_block  = key.function->blocks[mir_block_id];
+					for (const auto& mir_instruction: mir_block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
 
-					lowerTerminator(curr_block, block.terminator);
+					lowerTerminator(curr_block, mir_block.terminator);
 				}
 			}
 
@@ -206,10 +213,10 @@ namespace compiler::lir {
 			 * @brief Maps list of MIR locations to LIR locations.
 			 *
 			 * @param locs
-			 * @return std::vector<LirLocation>
+			 * @return std::vector<LIRValue>
 			 */
-			std::vector<LirLocation> getLocations(const std::vector<mir::MirLocation>& locs) {
-				std::vector<LirLocation> result;
+			std::vector<LIRValue> getLocations(const std::vector<mir::MIRValue>& locs) {
+				std::vector<LIRValue> result;
 				result.reserve(locs.size());
 				for (const auto& loc: locs) result.push_back(getLocation(loc));
 				return result;
@@ -252,11 +259,11 @@ namespace compiler::lir {
 				}
 			}
 
-			static bool isArgSigned(const mir::MirLocation location) {
+			static bool isArgSigned(const mir::MIRValue location) {
 				variant_match(location.getVariant()) {
 					variant_case_novalue(mir::MirIntegerConst) { return true; }
 					variant_case(mir::LocalRef, local) {
-						const auto arg_type = local->type.type;
+						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
 						   and tsh::IntegralAbstractType(arg_type).getSignedness();
 					}
@@ -272,8 +279,9 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef
-				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef lowerInstruction(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
 				// curr_block already in order
 
 				CORE_ASSERT(
@@ -313,6 +321,14 @@ namespace compiler::lir {
 					// @TODO implement it, once we know how to call destructors
 					std::cerr << "DestructIf not implemented in LIR, skipping" << "\n";
 					return curr_block;
+				case mir::Operation::Call: {
+					auto output = getLocal(mir_instruction.output.value());
+					auto args   = getLocations(mir_instruction.arguments);
+					curr_block->instructions.emplace_back(
+						lir::Operation::Call, output, std::move(args)
+					);
+					return curr_block;
+				}
 				default:
 					throw base::NotYetImplemented("instruction in LowerToLirFunction");
 				}
@@ -329,8 +345,7 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block already in order
 				CORE_ASSERT(
-					mir::isTerminating(mir_terminator.operation),
-					"non-Terminator in lowerTerminator"
+					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
 				lowerFlags(curr_block, mir_terminator);
 
@@ -347,8 +362,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
-					// @TODO...
-					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+					CORE_PANIC("FunctionEnd is illegal outside of MirLowering phase");
 					break;
 				}
 				// @TODO: add more cases
@@ -363,12 +377,19 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
+				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				std::vector<tsl::TypeLayout> parameter_types;
+				parameter_types.reserve(key.function->parameter_types.size());
+				for (const auto& param: key.function->parameter_types)
+					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
 				return Function{
-					key.function->name,
-					ctx.query<tsl::QueryTypeLayout>(key.function->return_type),
-					std::move(blocks),
-					std::move(locals),
-					std::move(block_order),
+					.name               = key.function->name,
+					.return_type_layout = return_type,
+					.parameter_layouts  = std::move(parameter_types),
+					.blocks             = std::move(blocks),
+					.local_list         = std::move(locals),
+					.block_order        = std::move(block_order),
 				};
 			}
 		};
@@ -397,7 +418,8 @@ namespace compiler::lir {
 			auto fun = std::move(mir2lir).get();
 
 			// @opt: remove it in optimized, release builds
-			CORE_ASSERT(fun.validateBlockOrder(), "Invalid block order");
+			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
+			CORE_ASSERT(fun.validateParameters().isOk(), "Invalid parameters");
 
 			return fun;
 		}

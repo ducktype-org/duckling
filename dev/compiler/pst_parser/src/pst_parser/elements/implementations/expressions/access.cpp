@@ -32,8 +32,7 @@ namespace pst::expr {
 		state.parse(out).eatOne();  // `.` or `.?`
 		state.parse(out).one(&out->name);
 
-		if (length > 2 && state[0].is(NamedOperator::Colon)
-		    && state[1].isBracketGroup(Token::Curly))
+		if (length > 2 && state[0].is(NamedOperator::Colon) && state[1].isBracketGroup(Token::Curly))
 			state.parse(out).with(&out->template_specifier, TemplateSpecifier::parse, 2L);
 
 		return out;
@@ -54,4 +53,8 @@ namespace pst::expr {
 	}
 
 	void Access::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitAccess(*this); }
+
+	base::StrID Access::getType() const { return type; }
+
+	const tpc::Identifier& Access::getName() const { return name; }
 }

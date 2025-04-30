@@ -1,7 +1,8 @@
 #pragma once
 
-#include <base/string_id.hpp>
 #include <lang_definitions/key_spec_op.hpp>
+
+#include <base/string_id.hpp>
 
 namespace lexer {
 	/**
@@ -19,6 +20,24 @@ namespace lexer {
 		Operator(const Operator&) = default;
 
 		operator base::StrID() { return value; }
+
+		[[nodiscard]]
+		bool isComparison() const;
+
+		[[nodiscard]]
+		bool isAssignment() const;
+
+		[[nodiscard]]
+		bool isSpecialOp() const;
+
+		[[nodiscard]]
+		bool isNotReserved() const;
+
+		[[nodiscard]]
+		base::Optional<Operator> filterNotReserved() const;
+
+		[[nodiscard]]
+		i64 getGenBinOpPrecedence() const;
 
 		[[nodiscard]]
 		std::string str() const {

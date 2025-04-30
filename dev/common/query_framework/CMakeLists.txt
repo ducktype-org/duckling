@@ -4,11 +4,11 @@ add_library(QueryFramework
 	src/query_framework/detail/query_id_provider.cpp
 	src/query_framework/detail/query_id.cpp
 	src/query_framework/utils/with_context_do.cpp
+	src/query_framework/context.cpp
 )
 
-make_module(QueryFramework USES Base Diagnostic Tester)
+make_module(QueryFramework USES Base Diagnostic)
 
 add_example(query_example examples/example.cpp USES QueryFramework)
 
-duck_add_test(common query_test_simple tests/test.cpp
-	USES QueryFramework)
+duck_add_test(common query_framework tests/query_framework_test.cpp USES QueryFramework)

@@ -1,0 +1,24 @@
+
+function main {
+	arg_size: 0;
+	arg_size: 0;
+	local_size: 10;
+	local_size: 10;
+
+	code: {
+		input_int64 0;
+		
+		set_imm 1, 0;
+		set_imm 3, 1;
+
+		label Loop;
+
+		#aaa ;
+
+		output_int64 1, 0;
+		add64 1, 3;
+		cmp_eq_64 1, 0;
+		jmp_rel_not_if Loop;
+		ret64 0;
+	}
+}

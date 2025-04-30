@@ -5,11 +5,6 @@
 !.gitignore
 !.github/
 
-
-bin/
-build/
-cmake-build-*/
-
 # Editor files:
 .vscode/
 compile_commands.json

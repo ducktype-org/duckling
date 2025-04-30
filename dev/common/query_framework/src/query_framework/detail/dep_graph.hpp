@@ -5,9 +5,10 @@
  */
 #pragma once
 
-#include "node_id.hpp"
+#include "../node_id.hpp"
 
 #include <ostream>
+#include <vector>
 
 namespace query::detail {
 
@@ -42,6 +43,16 @@ namespace query::detail {
 
 		void debugPrint(std::ostream& out);
 		void debugPrintForDrawing(std::ostream& out);
+
+		/**
+		 * Returns all dependencies of a @p node_id.
+		 */
+		std::vector<NodeID> getNodeDeps(detail::NodeID node_id);
+
+		/**
+		 * Returns all dependencies of a @p node_id of type @p dependency_id.
+		 */
+		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id);
 	}
 }
 
@@ -50,5 +61,23 @@ namespace query {
 
 	inline void debugPrintDependencyGraphForDrawing(std::ostream& out) {
 		detail::dep_graph::debugPrintForDrawing(out);
+	}
+
+	/**
+	 * @brief Returns all dependencies of a given query call.
+	 */
+	template<class Query>
+	auto getNodeDeps(typename Query::QKey key) {
+		detail::NodeID node_id = makeNodeID(Query::getID(), key);
+		return detail::dep_graph::getNodeDeps(node_id);
+	}
+
+	/**
+	 * @brief Returns all dependencies arising from @p dependency_id of a given query call.
+	 */
+	template<class Query>
+	auto getNodeDepsFiltered(typename Query::QKey key, detail::QueryID dependency_id) {
+		detail::NodeID node_id = makeNodeID(Query::getID(), key);
+		return detail::dep_graph::getNodeDepsFilterred(node_id, dependency_id);
 	}
 }

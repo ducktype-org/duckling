@@ -1,0 +1,190 @@
+#pragma once
+
+#include <base/ints.hpp>
+#include <base/string_id.hpp>
+
+#include <vm/bytecode/element_base.hpp>
+
+#include <variant>
+
+/**
+ * @brief This namespace encapsulates types of opcode arguments.
+ * @note All types should be default constructible.
+ */
+namespace vm::opargs {
+
+	/**
+	 * @brief Represents `imm` argument.
+	 */
+	struct Immediate final: code::ElementBase {
+		Immediate() = default;
+
+		Immediate(const i64 value): value(value) {}
+
+		i64 value = 0;
+
+		constexpr bool operator==(const Immediate& other) const noexcept {
+			return value == other.value;
+		}
+	};
+
+	/**
+	 * @brief Represents `l8` argument.
+	 */
+	struct StackLocalI8 final: code::ElementBase {
+		StackLocalI8() = default;
+
+		StackLocalI8(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalI8& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `l16` argument.
+	 */
+	struct StackLocalI16 final: code::ElementBase {
+		StackLocalI16() = default;
+
+		StackLocalI16(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalI16& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `l32` argument.
+	 */
+	struct StackLocalI32 final: code::ElementBase {
+		StackLocalI32() = default;
+
+		StackLocalI32(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalI32& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `l64` argument.
+	 */
+	struct StackLocalI64 final: code::ElementBase {
+		StackLocalI64() = default;
+
+		StackLocalI64(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalI64& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `any` argument.
+	 */
+	struct StackLocalAny final: code::ElementBase {
+		StackLocalAny() = default;
+
+		StackLocalAny(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalAny& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief Represents `lptr` argument.
+	 */
+	struct StackLocalPtr final: code::ElementBase {
+		StackLocalPtr() = default;
+
+		StackLocalPtr(const base::StrID var_name): var_name(var_name) {}
+
+		base::StrID var_name;
+
+		constexpr bool operator==(const StackLocalPtr& other) const noexcept {
+			return var_name == other.var_name;
+		}
+	};
+
+	/**
+	 * @brief List of all argument types that target stack offset.
+	 */
+#define VM_OPARG_LOCAL_TYPES \
+	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr
+
+	/**
+	 * @brief Represents type name argument.
+	 */
+	struct Type final: code::ElementBase {
+		Type() = default;
+
+		Type(const base::StrID type_name): type_name(type_name) {}
+
+		base::StrID type_name = base::StrID("");
+
+		constexpr bool operator==(const Type& other) const noexcept {
+			return type_name == other.type_name;
+		}
+	};
+
+	/**
+	 * @brief Represents function name argument.
+	 */
+	struct FunctionName final: code::ElementBase {
+		FunctionName() = default;
+
+		FunctionName(const base::StrID function_name): function_name(function_name) {}
+
+		base::StrID function_name = base::StrID("");
+
+		constexpr bool operator==(const FunctionName& other) const noexcept {
+			return function_name == other.function_name;
+		}
+	};
+
+	struct BuiltinFunctionName final: code::ElementBase {
+		BuiltinFunctionName() = default;
+
+		BuiltinFunctionName(const base::StrID function_name): function_name(function_name) {}
+
+		base::StrID function_name = base::StrID("");
+
+		constexpr bool operator==(const BuiltinFunctionName& other) const noexcept {
+			return function_name == other.function_name;
+		}
+	};
+
+	/**
+	 * @brief Represents label name argument.
+	 */
+	struct Label final: code::ElementBase {
+		Label() = default;
+
+		Label(base::StrID label_name): label_name(label_name) {}
+
+		base::StrID label_name = base::StrID("");
+
+		constexpr bool operator==(const Label& other) const noexcept {
+			return label_name == other.label_name;
+		}
+	};
+
+	/**
+	 * @brief Storage class for any kind of opcode argument.
+	 */
+	using OpCodeArg
+		= std::variant<VM_OPARG_LOCAL_TYPES, Immediate, Type, FunctionName, BuiltinFunctionName, Label>;
+	using OpCodeLocalArg = std::variant<VM_OPARG_LOCAL_TYPES>;
+}

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <concepts>
-
 #include <base/ints.hpp>
+
+#include <concepts>
 
 namespace hashing {
 

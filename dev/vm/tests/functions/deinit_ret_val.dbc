@@ -1,0 +1,34 @@
+# Tests if call_func effectively deinit's it's parameters
+# input = ""
+# output = "42"
+
+type fun: foo { i64 } i64
+
+function foo {
+
+    deinit; # arg0
+    deinit; # ret_val
+
+    init_lany_type       x, i64;
+    mov_l64_imm     x, 42;
+
+    ret;
+}
+
+function main {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    init_lany_type       foo_ret_val, i64;
+    init_lany_type       foo_arg0, i64;
+
+    call_func       foo;
+
+    output_l64 foo_ret_val;
+
+    deinit; # foo_ret_val
+    deinit; # *argv
+    deinit; # argc
+    ret;
+}

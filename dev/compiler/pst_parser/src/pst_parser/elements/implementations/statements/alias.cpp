@@ -25,7 +25,8 @@ namespace pst {
 
 		state.parse(out).all(Keyword::Alias, &out->name, NamedOperator::Assign, &out->points_to);
 
-		if (out->points_to->getStar()) state.log(makeBox<AliasStarError>(out->source_position));
+		if (out->points_to.internal()->getStar())
+			state.log(makeBox<AliasStarError>(out->source_position));
 
 		return out;
 	}

@@ -5,7 +5,6 @@ include(BuildTreeSitter.cmake)
 # It's nice to get stripped-down release zips instead of cloning
 # a repo and checking out a tag
 set(NLOHMANN_JSON_TAG "v3.11.3")
-set(RESULT_COMMIT "a97e66bc66f140132619fd5f5cdffc30127f4220")
 set(ASIO_COMMIT "89b0a4138a92883ae2514be68018a6c837a5b65f")
 set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
@@ -21,11 +20,6 @@ set(ICU_CONTROL "SHA512=32c28270aa5d94c58d2b1ef46d4ab73149b5eaa2e0621d4a4c11597b
 FetchContent_Declare(
 	nlohmann_json
 	URL "https://github.com/nlohmann/json/releases/download/${NLOHMANN_JSON_TAG}/json.tar.xz"
-)
-
-FetchContent_Declare(
-	result
-	URL "https://github.com/bitwizeshift/result/archive/${RESULT_COMMIT}.zip"
 )
 
 FetchContent_Declare(
@@ -57,9 +51,6 @@ setAsSystemLibrary(Crow)
 
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
-
-FetchContent_MakeAvailable(result)
-setAsSystemLibrary(Result)
 
 find_library(gvc gvc)
 

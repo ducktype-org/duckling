@@ -1,5 +1,8 @@
 #include "abstract_type_impl.hpp"
-#include <query_framework/query_impl.hpp>
+
+#include <helios/symbols/query_class_symbol_data.hpp>
+#include <query_framework/context.hpp>
+
 #include <utility>
 
 namespace tsh::internal {
@@ -13,41 +16,68 @@ namespace tsh::internal {
 	}
 
 	/**
-	 * @brief Creates a human-readable string representation of a vector of component types.
-	 * @param types Vector of component types to stringify.
-	 * @return A human-readable string representing a sequence of component types.
+	 * @brief Creates a human-readable string representation of a vector of symbol types.
+	 * @param types Vector of symbol types to stringify.
+	 * @return A human-readable string representing a sequence of symbol types.
 	 */
-	std::string stringifyTypeVector(const std::vector<ComponentType>& types) {
+	std::string stringifyTypeVector(const std::vector<SymbolType<>>& types) {
 		std::stringstream res;
 		res << "(";
-		if (!types.empty()) res << (types[0].is_mutable ? "mut " : "") << types[0].type.toString();
-		for (const auto& [type, is_mutable]: types | std::views::drop(1))
-			res << ", " << (is_mutable ? "mut " : "") << type.toString();
+		if (!types.empty()) res << types[0].toString();
+		for (const auto& type: types | std::views::drop(1)) res << ", " << type.toString();
 		res << ")";
 
 		return res.str();
 	}
 
-	/**
-	 * @brief Creates a human-readable string representation of a vector of types.
-	 * @param types Vector of types to stringify.
-	 * @return A human-readable string representing a sequence of types.
-	 */
-	std::string stringifyTypeVector(const std::vector<AbstractType>& types) {
-		std::vector<ComponentType> immutable_types;
-		immutable_types.reserve(types.size());
-		for (const auto& t: types) immutable_types.emplace_back(t, false);
-		return stringifyTypeVector(immutable_types);
+	bool PointerAbstractTypeImpl::isImplicitlyCoercible(
+		const AbstractType target, query::Context& ctx
+	) const {
+		// Explicit override without change in implementation to add comment.
+		// Implicit coercions allow checking against null pointer.
+		// We do not allow casting to another (raw) pointer type,
+		// because we forbid implicit type (de)specification in this context.
+		// We only allow dropping mutability.
+		return target.getKind() == Kind::Bool
+		    || (target.getKind() == Kind::Pointer
+		        && ctx.query<QueryImplicitCoercibilityOnSymbolType>(
+					{ pointee, PointerAbstractType(target).getPointee() }
+				));
 	}
 
-	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<ComponentType> components):
+	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
+		const AbstractType target, query::Context& ctx
+	) const {
+		// Implicit coercions are allowed to other tuples of the same size,
+		// where each component can be coerced independently.
+
+		if (target.getKind() != Kind::Tuple) return false;
+		TupleAbstractType target_tuple = target;
+
+		const std::vector<SymbolType<>>& target_components = target_tuple.getComponents();
+		if (target_components.size() != components.size()) return false;
+
+		for (usize i = 0; i < components.size(); i++) {
+			SymbolType component = components[i];
+			if (const SymbolType target_component = target_components[i];
+			    !ctx.query<QueryImplicitCoercibilityOnSymbolType>({
+					component,
+					target_component,
+				}))
+				return false;
+		}
+
+		return true;
+	}
+
+	TupleAbstractTypeImpl::TupleAbstractTypeImpl(std::vector<SymbolType<>> components):
 		  components(std::move(components)) {
 		representation = "Tuple" + stringifyTypeVector(this->components);
 	}
 
 	FunctionAbstractTypeImpl::FunctionAbstractTypeImpl(
-		std::vector<AbstractType> parameter_types,
-		const AbstractType        result_type,
+		std::vector<SymbolType<>> parameter_types,
+		const SymbolType<>        result_type,
 		const bool                pure,
 		const bool                free
 	):
@@ -78,19 +108,16 @@ namespace tsh::internal {
 		}
 
 		for (usize i = 0; i < parameter_types.size(); i++)
-			if (!context.query<QueryImplicitCoercibilityOnAbstractType>({
-					target_function.getParameterTypes()[i],
-					parameter_types[i],
-				}))
+			if (!context.query<QueryImplicitCoercibilityOnSymbolType>(
+					{ target_function.getParameterTypes()[i], parameter_types[i] }
+				))
 				return false;
-		return context.query<QueryImplicitCoercibilityOnAbstractType>({
-			result_type,
-			target_function.getResultType(),
-		});
+		return context.query<QueryImplicitCoercibilityOnSymbolType>(
+			{ result_type, target_function.getResultType() }
+		);
 	}
 
-	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<AbstractType>& variant_types
-	):
+	VariantAbstractTypeImpl::VariantAbstractTypeImpl(const std::vector<SymbolType<>>& variant_types):
 		  underlying_types(variant_types) {
 		representation = "Variant " + stringifyTypeVector(underlying_types);
 	}
@@ -112,16 +139,18 @@ namespace tsh::internal {
 		return {};
 	}
 
-	std::vector<ClassAbstractType>
-		ClassAbstractTypeImpl::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassAbstractType> ClassAbstractTypeImpl::getImplementedInterfaceTypes(
+		query::Context& ctx
+	) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;
 		return { implements.begin(), implements.end() };
 	}
 
-	std::vector<compiler::helios::SymID>
-		ClassAbstractTypeImpl::getImplementedInterfaceSymbols(query::Context& ctx) const {
+	std::vector<compiler::helios::SymID> ClassAbstractTypeImpl::getImplementedInterfaceSymbols(
+		query::Context& ctx
+	) const {
 		auto& implements = ctx.query<compiler::helios::QueryClassSymbolData>(symbol)
 		                       ->expect("Not handling ERRORS in TS yet")
 		                       .implements;

@@ -9,15 +9,17 @@
  */
 #pragma once
 
+#include "abstract_type.hpp"
+#include "symbol_type.hpp"
+
+#include <helios/scope_symbol_id.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
 #include <map>
 #include <set>
 #include <string>
-
-#include <base/optional.hpp>
-
-#include "abstract_type.hpp"
-#include <helios/scope_symbol_id.hpp>
-#include <base/string_id.hpp>
 #include <variant>
 
 namespace tsh {
@@ -35,7 +37,7 @@ namespace tsh {
 		 */
 		struct Parameter final {
 			base::StrID          name;
-			AbstractType         type;
+			SymbolType<>         type;
 			bool                 has_default_value;
 			std::strong_ordering operator<=>(const Parameter& other) const = default;
 		};
@@ -73,7 +75,7 @@ namespace tsh {
 		/**
 		 * @brief The type of a field or the return type of a method.
 		 */
-		AbstractType result_type;
+		SymbolType<> result_type;
 
 		/**
 		 * @brief The visibility of an element of the interface.
@@ -98,7 +100,7 @@ namespace tsh {
 			const compiler::helios::SymID          symbol,
 			const AbstractType                     source,
 			base::Optional<std::vector<Parameter>> parameters,
-			const AbstractType                     result_type,
+			const SymbolType<>                     result_type,
 			const Visibility                       visibility
 		):
 			  symbol(symbol),
@@ -169,7 +171,7 @@ namespace tsh {
 		 * @return The result type of this element.
 		 */
 		[[nodiscard]]
-		AbstractType getResultType() const {
+		SymbolType<> getResultType() const {
 			return result_type;
 		}
 
@@ -184,7 +186,7 @@ namespace tsh {
 		 * @return The type of this element.
 		 */
 		[[nodiscard]]
-		AbstractType getType(query::Context& ctx) const;
+		SymbolType<> getType(query::Context& ctx) const;
 
 		/**
 		 * @brief Gets the visibility of this element.
@@ -200,7 +202,7 @@ namespace tsh {
 		 * @param other The other InterfaceElement.
 		 * @return A strong_ordering result.
 		 *
-		 * @note We can guarantee the ordering to be strong because all the components can be
+		 * @note We can guarantee the ordering to be strong because all the fields can be
 		 * strongly ordered. Including Optionals, vectors, and Parameters.
 		 */
 		std::strong_ordering operator<=>(const InterfaceElement& other) const = default;
@@ -365,8 +367,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult
-			resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.

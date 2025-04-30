@@ -6,9 +6,10 @@
 #include "token.hpp"
 
 #include <lang_definitions/key_spec_op.hpp>
-#include <utility>
-#include <algorithm>
 #include <unicode/uchar.h>
+
+#include <algorithm>
+#include <utility>
 
 namespace lexer {
 	Token::Token(Token::Type type, const base::RawView value, const dia::SourcePosition& position):
@@ -43,9 +44,7 @@ namespace lexer {
 
 		// sets str_id of brackets to the pair of brackets for example "()"
 		std::string s;
-		icu::UnicodeString(bracket_type)
-			.append(u_getBidiPairedBracket(bracket_type))
-			.toUTF8String(s);
+		icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
 		str_id = base::StrID(base::RawView(s.data()));
 	}
 
@@ -71,8 +70,7 @@ namespace lexer {
 		return { Type::Operator, oper, position };
 	}
 
-	Token
-		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
+	Token Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
 		if (lang_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
@@ -170,12 +168,33 @@ namespace lexer {
 
 	Keyword Token::asKeyword() const { return lang_def::strAsKeyword(str_id); }
 
-	bool Token::isOperator() const { return type == Type::Operator; }
+	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
 
-	Operator Token::asOperator() const {
-		if (isOperator()) return { getValue() };
-		return { lang_def::NamedOperator::NotAnOperator };
+	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
+
+	bool Token::isPrefixOperator() const {
+		return isOperatorSymbol()
+		    || (isKeyword()
+		        && lang_def::keywordFlags(asKeyword())
+		               .contains(lang_def::KeywordFlagsOptions::IsGenPrefixOp));
 	}
+
+	NamedOperator Token::asNamedOperator() const {
+		if (isOperatorSymbol()) return Operator(getValue()).asNamed();
+		return lang_def::NamedOperator::NotAnOperator;
+	}
+
+	base::Optional<Operator> Token::asBinaryOperator() const {
+		if (isOperatorSymbolOrText()) return { { getValue() } };
+		return {};
+	}
+
+	base::Optional<Operator> Token::asPrefixOperator() const {
+		if (isPrefixOperator()) return { { getValue() } };
+		return {};
+	}
+
+	base::Optional<Operator> Token::asSuffixOperator() const { return asBinaryOperator(); }
 
 	bool Token::isIdentifier() const { return type == Type::Identifier; }
 

@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <helios/scopes/scopes.hpp>
-#include <helios/symbols/symbols.hpp>
+#include <filesystem/file.hpp>
+#include <frontend/module_tree/module_id.hpp>
+#include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
+#include <helios/scope_symbol_id.hpp>
 
-// @todo relax this dependency, just expr is needed (#404)
-#include <helios/hout/elements/expr.hpp>
+#include <vector>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -34,10 +34,19 @@ namespace compiler::helios::test_utils {
 
 	/**
 	 * Get the type of the value associated with last symbol in a symbol chain in a given scope.
-	 * Use this to get the type of the a variable `a` in `var a : i32`.
+	 * Use this to get the type of the variable `a` in `var a : i32`.
 	 * @param chain The symbol chain to resolve.
 	 * @param scope The scope in which to resolve.
-	 * @return The type of the last symbol in the chain.
+	 * @return The symbol type of the last symbol in the chain.
+	 */
+	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope);
+
+	/**
+	 * Get the abstract type of the value associated with last symbol in a symbol chain
+	 * in a given scope. Use this to get the type of the variable `a` in `var a : i32`.
+	 * @param chain The symbol chain to resolve.
+	 * @param scope The scope in which to resolve.
+	 * @return The abstract type of the last symbol in the chain.
 	 */
 	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope);
 
@@ -48,7 +57,7 @@ namespace compiler::helios::test_utils {
 	 * @param scope The scope in which to resolve.
 	 * @return The type of the last symbol in the chain.
 	 */
-	tsh::AbstractType getTypeFromDefinition(const std::string_view chain, ScopeID scope);
+	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * @brief returns hout-expr of the initialization value of given const.

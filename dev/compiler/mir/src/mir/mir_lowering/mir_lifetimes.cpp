@@ -1,5 +1,8 @@
 #include "mir_lifetimes.hpp"
+
 #include "../mir_structure/mir_structure.hpp"
+
+#include <helios/scopes/simple.hpp>
 
 namespace compiler::mir {
 
@@ -59,11 +62,8 @@ namespace compiler::mir {
 		// Idea of implementation: for each block we iterate over instructions
 		// and add destructors after each instruction (often 0 of them),
 		// based on scopes that ends there.
-
 		// context is unused, but left since it might be useful in the future.
-
 		// preserving block order is important, because of how MIR BlockIDs works
-		std::vector<Block> new_blocks;
 
 		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list)
@@ -72,8 +72,10 @@ namespace compiler::mir {
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
-		for (auto& block: function.blocks) {
+		std::vector<std::vector<Instruction>> new_blocks_instructions;
+		for (auto& block_id: function.block_order) {
 			// each block is considered independently
+			auto& block = function.blocks[block_id];
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
@@ -128,9 +130,8 @@ namespace compiler::mir {
 				// implementation. This hole for is just for this validation. Maybe we should have
 				// some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
-					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, function.blocks.at(u64(succ)).beginScope()
-					);
+					auto succ_ending_scopes
+						= getEndingScopes(terminator.scope, function.blocks[succ].beginScope());
 
 					if (ending_scopes.has_value()) {
 						// we have to validate that all paths have the same ending scopes
@@ -144,11 +145,14 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			new_blocks.push_back({ block.id, std::move(new_instructions), block.terminator });
+			new_blocks_instructions.push_back(std::move(new_instructions));
 		}
 
+		for (usize i = 0; i < function.block_order.size(); i++) {
+			auto block_id                          = function.block_order[i];
+			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
+		}
 
-		function.blocks = std::move(new_blocks);
 		return function;
 	}
 }

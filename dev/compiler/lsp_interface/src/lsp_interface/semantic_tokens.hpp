@@ -7,12 +7,13 @@
 
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/ref.hpp>
+
 #include <base/ints.hpp>
+#include <base/ref.hpp>
+#include <base/stringifyable_enum.hpp>
 
 #include <string>
 
-// clang-format off
 MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 	Namespace,
 	Class,
@@ -39,7 +40,6 @@ MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 	Operator,
 	Unknown
 )
-// clang-format on
 
 namespace lsp {
 	class SemanticToken;
@@ -48,21 +48,21 @@ namespace lsp {
 	public:
 		// https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#standard-token-types-and-modifiers
 
-		SemanticToken(base::c_borrow_ptr<lexer::Token>);
+		SemanticToken(CRef<lexer::Token>);
 
 		static Type translateType(lexer::Token::Type);
 
 		std::string toJSON();
 
 	private:
-		base::c_borrow_ptr<lexer::Token> source_token;
-		u64                              line;
-		u64                              start_character;
-		u64                              length;
-		Type                             type;
+		CRef<lexer::Token> source_token;
+		u64                line;
+		u64                start_character;
+		u64                length;
+		Type               type;
 		// @TODO token modifiers (Duckling LSP 2.0)
 	};
 
-	void        getSemanticTokens(MCRef<pst::LangElement>, std::vector<SemanticToken>&);
-	std::string getSemanticTokens(MCRef<pst::LangElement>);
+	void        getSemanticTokens(pst::AccessLocked<pst::LangElement>, std::vector<SemanticToken>&);
+	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement>);
 }

@@ -1,7 +1,10 @@
 #pragma once
 
 #include <lir/lir_structure/function_forward.hpp>
+#include <query_framework/context_fd.hpp>
+
 #include <base/box.hpp>
+#include <base/ok_bad.hpp>
 #include <base/string_id.hpp>
 
 namespace compiler::backend_llvm {
@@ -34,9 +37,21 @@ namespace compiler::backend_llvm {
 	public:
 		Module(base::StrID module_id);
 
+		Module(Module&&)      = default;
+		Module(const Module&) = delete;
+
+
+		/**
+		 * @brief Creates a llvm module from llvm IR code given as a text input.
+		 * Panics if the code is invalid.
+		 *
+		 * @return Module created by parsing the given IR code.
+		 */
+		static Module fromIRCode(std::string_view llvm_ir_code);
+
 		Module(Box<ModuleImpl> impl): impl(std::move(impl)) {}
 
-		void addFunctionToModule(CRef<lir::Function> lir_function);
+		void addFunctionToModule(query::Context&, CRef<lir::Function> lir_function);
 
 		void debugPrint() const;
 
@@ -48,7 +63,7 @@ namespace compiler::backend_llvm {
 		void debugDumpToFile(base::StrID output_file) const;
 
 		[[nodiscard]]
-		bool verify() const;
+		base::OkBad verify() const;
 
 		/**
 		 * @brief Compile the module to binary object file or assembly file.
@@ -58,13 +73,15 @@ namespace compiler::backend_llvm {
 		 */
 		void compile(base::StrID output_file, CompilationOutputType output_type);
 
+		/**
+		 * Returns the number of functions in the module.
+		 * It is used for testing purposes.
+		 * @param including_prototypes If false, doesn't count prototypes (function without
+		 * definitions) in the result.
+		 */
+		[[nodiscard]]
+		u64 getFunctionCount(bool including_prototypes = true) const;
+
 		~Module();
 	};
-
-	/**
-	 * @brief Converts single lir function into a llvm module
-	 * containing only this function.
-	 * @note This function is a temporary entry point for the llvm backend.
-	 */
-	Module lirFunctionToModule(CRef<lir::Function>);
 }

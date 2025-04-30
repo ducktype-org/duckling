@@ -1,17 +1,16 @@
 #pragma once
 
-#include "../../symbols/symbols.hpp"  // @todo ... #404
 #include "../../scope_symbol_id.hpp"
 
-#include <vector>
-
-#include <base/ints.hpp>
-#include <base/box.hpp>
-
+#include <helios/utils/symbol_list.hpp>
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/queries.hpp>
-#include <helios/lookup_result.hpp>
+
+#include <base/box.hpp>
+#include <base/ints.hpp>
+
+#include <vector>
 
 namespace compiler::helios::code {
 	class HoutExprVisitor;
@@ -72,7 +71,7 @@ namespace compiler::helios::code {
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
-		tsh::AbstractType value_type;
+		tsh::SymbolType<> value_type;
 
 		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type);
 
@@ -120,7 +119,7 @@ namespace compiler::helios::code {
 	/**
 	 * Builtin binary operation.
 	 */
-	enum class BuiltinBinary {
+	enum class BuiltinBinary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -158,7 +157,7 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Builtin unary operations.
 	 */
-	enum class BuiltinUnary {
+	enum class BuiltinUnary : std::uint8_t {
 		// we don't have to be super specific here
 		// we will likely want to be super specific in LIR
 
@@ -224,6 +223,19 @@ namespace compiler::helios::code {
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};
 
-	// @todo HOUT 2.0: function call expression
-	// it should hold SymID of a function and vector of arguments
+	/**
+	 * @brief Represents a call in an expression.
+	 * @note This is a mock, with this representation it's impossible to handle overloads.
+	 */
+	struct CallExpr final: public Expr {
+		SymID                        callee;
+		std::vector<base::Box<Expr>> arguments;
+
+		CallExpr(
+			query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
+		);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
 }

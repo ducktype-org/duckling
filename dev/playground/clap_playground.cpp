@@ -2,12 +2,15 @@
  * @file clap_playground.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
-#include <iostream>
 #include <clap/clap.hpp>
-#include <clap/param_builder.hpp>
 #include <clap/exceptions.hpp>
 #include <clap/help_message_generator.hpp>
+#include <clap/param_builder.hpp>
 #include <printer/stream_printer.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <iostream>
 
 void greet(i64 n, const std::string& name) { std::cout << n << ": Hello " << name << "!\n"; }
 
@@ -26,8 +29,7 @@ int main(int argc, const char** argv) {
 	          .add(clap::ParamBuilder::ofFlag()
 	                   .addShortName('d')
 	                   .addLongName("descending")
-	                   .addShortDesc("Whether or not numbers should be print in a descending order."
-	                   )
+	                   .addShortDesc("Whether or not numbers should be print in a descending order.")
 	                   .addLongDesc("This is a multiline,\nlong comment, that should\n"
 	                                "explain this parameter with more\ndetail...")
 	                   .build())
@@ -40,7 +42,7 @@ int main(int argc, const char** argv) {
 	clap::ParsingResult result;
 
 	try {
-		result = clap.parse(argc, argv);
+		result = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },
@@ -62,7 +64,7 @@ int main(int argc, const char** argv) {
 
 	clap::RangeParser::Range range = *result.getValue<clap::RangeParser::Range>("range");
 	auto [begin, end]              = range;
-	i64 n                          = result.getValue<i64>('n').value_or(1);
+	i64 n                          = result.getValue<i64>('n').valueOr(1);
 
 	for (const auto& name: names) {
 		for (i64 i = 0; i < n; i++) {

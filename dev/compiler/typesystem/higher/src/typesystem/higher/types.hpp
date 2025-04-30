@@ -8,9 +8,12 @@
 
 #pragma once
 #include "abstract_type.hpp"
+#include "symbol_type.hpp"
+
 #include <helios/scope_symbol_id.hpp>
-#include <base/optional.hpp>
+
 #include <base/bits_and_bytes.hpp>
+#include <base/optional.hpp>
 
 namespace tsh {
 	namespace internal {
@@ -172,49 +175,6 @@ namespace tsh {
 	\*******************/
 
 	/**
-	 * @brief A type supplied with mutability type information.
-	 *
-	 * @todo should this exist, how it realted to AbstractType, ExpressionType; document it.
-	 *
-	 * It's called "Component Type" because it is used in types which are composed of other types.
-	 * For example, a typed pointer may point to an immutable value. Or a tuple may have some
-	 * of its components locked in as immutable.
-	 */
-	struct ComponentType {
-		/**
-		 * @brief The actual type of the component.
-		 */
-		AbstractType type;
-
-		/**
-		 * @brief Whether the component is mutable or not.
-		 */
-		bool is_mutable = false;
-
-		/**
-		 * @brief Create a string representation of the component type.
-		 */
-		[[nodiscard]]
-		std::string toString() const;
-
-		/**
-		 * Check whether a component type is implicitly coercible to another component type.
-		 * @param target The target component.
-		 * @param ctx The query context required f
-		 * @return
-		 */
-		[[nodiscard]]
-		bool isImplicitlyCoercible(ComponentType target, query::detail::ContextType& ctx) const;
-
-		[[nodiscard]]
-		auto operator<=>(const ComponentType& other) const
-			= default;
-
-		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-	};
-
-	/**
 	 * @brief The Raw Pointer type.
 	 *
 	 * A value of this type is simply a memory address.
@@ -242,11 +202,11 @@ namespace tsh {
 		SETUP_TYPE_WITH_BASE(PointerAbstractType, AbstractType)
 
 		/**
-		 * @brief Gets the underlying component of the Pointer type.
-		 * @return The underlying component of the Pointer type.
+		 * @brief Gets the underlying symbol type of the Pointer type.
+		 * @return The underlying symbol type of the Pointer type.
 		 */
 		[[nodiscard]]
-		ComponentType getComponent() const;
+		SymbolType<> getPointee() const;
 
 		/**
 		 * @brief Gets the underlying type of the Pointer type.
@@ -255,121 +215,9 @@ namespace tsh {
 		[[nodiscard]]
 		AbstractType getUnderlyingType() const;
 
-		/**
-		 * @brief Checks whether the data under the pointer is mutable.
-		 * @return Whether the data under the pointer is mutable.
-		 */
-		[[nodiscard]]
-		bool isMutable() const;
-
 		CONSTRUCT_WITH_CHECKED_CAST(PointerAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(PointerAbstractType)
-	};
-
-	/**
-	 * @brief The kind of a Reference type. See documentation of each kind for details.
-	 */
-	enum class ReferenceKind {
-		/**
-		 * @brief A reference of this kind owns its referee.
-		 *
-		 * When the reference is destroyed, so is the referee.
-		 * The reference does not give access to explicit destruction of the referee, because
-		 * destruction is automatic.
-		 */
-		BOX,
-
-		/**
-		 * @brief A reference of this kind specifically does **not** own its referee.
-		 *
-		 * When the reference is destroyed, the referee remains untouched.
-		 * Additionally, the reference does not give access to explicit destruction of the referee.
-		 * This kind of reference can only be constructed from a BOX or PTR reference.
-		 */
-		REF,
-
-		/**
-		 * @brief A reference of this kind allows the user to decide if they want to explicitly
-		 * destroy the referee.
-		 *
-		 * When the reference is destroyed, the referee remains untouched.
-		 * The reference gives access to explicit destruction of the referee.
-		 * This kind of reference is somewhat unsafe, but necessary in e.g. cyclic data structures.
-		 */
-		PTR
-	};
-
-	/**
-	 * @brief The Reference types.
-	 *
-	 * A value of a Reference type is just a memory address with an
-	 * associated type, just like in the case of a (typed) Pointer.
-	 * However, a reference carries additional semantics and guarantees,
-	 * such as leakiness, nullability and uniqueness.
-	 */
-	class ReferenceAbstractType final: public AbstractType {
-	public:
-		SETUP_TYPE_WITH_BASE(ReferenceAbstractType, AbstractType)
-
-		/**
-		 * @brief Create a new reference type with the given parameters.
-		 * @param underlying_type The underlying type of the reference.
-		 * @param ref_kind The kind of a reference.
-		 * @param leaking Whether the reference can leak its value.
-		 * By default, references are non-leaking.
-		 * @param nullable Whether the reference can be empty.
-		 * By default, references cannot be empty.
-		 * @param unique Whether the reference is unique.
-		 * By default, references can be copied and shared.
-		 * @return The created reference type.
-		 */
-		static ReferenceAbstractType create(
-			AbstractType  underlying_type,
-			ReferenceKind ref_kind,
-			bool          leaking  = false,
-			bool          nullable = false,
-			bool          unique   = false
-		);
-
-		/**
-		 * @brief Gets the underlying type.
-		 * @return The underlying type.
-		 */
-		[[nodiscard]]
-		AbstractType getUnderlyingType() const;
-
-		/**
-		 * @brief Gets the reference kind.
-		 * @return The reference kind.
-		 */
-		[[nodiscard]]
-		ReferenceKind getReferenceKind() const;
-
-		/**
-		 * @brief Check whether the reference is leaking or not.
-		 * @return Whether the reference is leaking or not.
-		 */
-		[[nodiscard]]
-		bool isLeaking() const;
-
-		/**
-		 * @brief Check whether the reference is nullable or not.
-		 * @return Whether the reference is nullable or not.
-		 */
-		[[nodiscard]]
-		bool isNullable() const;
-
-		/**
-		 * @brief Check whether the reference is unique or not.
-		 * @return Whether the reference is unique or not.
-		 */
-		[[nodiscard]]
-		bool isUnique() const;
-
-		CONSTRUCT_WITH_CHECKED_CAST(ReferenceAbstractType)
-
-		CONSTRUCT_FROM_IMPLEMENTATION(ReferenceAbstractType)
 	};
 
 	/*******************\
@@ -390,10 +238,10 @@ namespace tsh {
 		SETUP_TYPE_WITH_BASE(TupleAbstractType, AbstractType)
 
 		[[nodiscard]]
-		const std::vector<ComponentType>& getComponents() const;
+		const std::vector<SymbolType<>>& getComponents() const;
 
 		[[nodiscard]]
-		std::vector<AbstractType> getComponentTypes() const;
+		std::vector<AbstractType> getComponentAbstractTypes() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(TupleAbstractType)
 
@@ -452,14 +300,14 @@ namespace tsh {
 		 * @return The parameter types of the function type.
 		 */
 		[[nodiscard]]
-		const std::vector<AbstractType>& getParameterTypes() const;
+		const std::vector<SymbolType<>>& getParameterTypes() const;
 
 		/**
 		 * @brief Gets the result type of the function type.
 		 * @return The result type of the function type.
 		 */
 		[[nodiscard]]
-		AbstractType getResultType() const;
+		SymbolType<> getResultType() const;
 
 		/**
 		 * @brief Check whether the function type is pure or not.
@@ -492,10 +340,10 @@ namespace tsh {
 		SETUP_TYPE_WITH_BASE(VariantAbstractType, AbstractType)
 
 		[[nodiscard]]
-		const std::vector<AbstractType>& getUnderlyingTypes() const;
+		const std::vector<SymbolType<>>& getUnderlyingTypes() const;
 
 		[[nodiscard]]
-		AbstractType getMember(usize index) const;
+		SymbolType<> getMember(usize index) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(VariantAbstractType)
 
@@ -562,7 +410,7 @@ namespace tsh {
 		 * @return The type of the member.
 		 */
 		[[nodiscard]]
-		AbstractType getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
+		SymbolType<> getMemberType(compiler::helios::SymID sym, query::Context& ctx) const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(ClassAbstractType)
 

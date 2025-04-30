@@ -1,17 +1,19 @@
 #pragma once
 
-#include <vector>
-#include <variant>
-#include <helios/scopes/scopes.hpp>
-#include <typesystem/higher/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-#include <base/stable_container.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <base/stringifyable_enum.hpp>
-
 #include "mir_local_ref.hpp"
 
-// clang-format off
+#include <helios/scope_symbol_id.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/types.hpp>
+
+#include <base/stable_container.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/stringifyable_enum.hpp>
+#include <base/strongly_typed_id.hpp>
+
+#include <variant>
+#include <vector>
+
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
@@ -57,7 +59,17 @@ MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	FunctionEnd
 )
 
-// clang-format on
+namespace compiler::mir {
+	/**
+	 * @brief BlockID is a temporary solution that should be replaced by
+	 * proper BlockReference.
+	 * It is like that for now, to avoid confusion with BlockRef used in mir_lowering and
+	 * transformation between that BlockRef to this "BlockRef".
+	 */
+	STRONG_TYPEDEF_INT(BlockID, u64);
+}
+
+STRONGLY_TYPED_INT_STD_HASH(::compiler::mir::BlockID);
 
 namespace compiler::mir {
 
@@ -66,14 +78,6 @@ namespace compiler::mir {
 	 * the last operation in the block (i.e. be a terminator).
 	 */
 	bool isTerminating(Operation);
-
-	/**
-	 * @brief BlockID is a temporary solution that should be replaced by
-	 * proper BlockReference.
-	 * It is like that for now, to avoid confusion with BlockRef used in mir_lowering and
-	 * transformation between that BlockRef to this "BlockRef".
-	 */
-	STRONG_TYPEDEF_INT(BlockID, u64);
 
 	struct MirIntegerConst final {
 		i64 value;
@@ -85,6 +89,15 @@ namespace compiler::mir {
 		bool value;
 
 		bool operator==(const MirBoolConst& other) const = default;
+	};
+
+	/**
+	 * Represent a direct reference to a function linked to a HELIOS SymID.
+	 */
+	struct MirFunctionLiteral final {
+		helios::SymID helios_id;
+
+		bool operator==(const MirFunctionLiteral& other) const = default;
 	};
 
 	STRONG_TYPEDEF_ID(LocalID);
@@ -101,20 +114,37 @@ namespace compiler::mir {
 
 		// Locals without a helios_id are locals created for temporary values
 		base::Optional<helios::SymID> helios_id;
-		tsh::ComponentType            type;
+		tsh::SymbolType<>             type;
 		helios::ScopeID               lifetime_scope;
+
+		/**
+		 * If this local is a function parameter, this field contains the index of the parameter.
+		 */
+		base::Optional<u64> parameter_index;
 
 	private:
 		// @note: Constructing MirLocal from helios_id
 		// might work poorly for template/generic instantiations.
 
-		MirLocal(helios::SymID helios_id, tsh::ComponentType type, helios::ScopeID lifetime_scope):
+		MirLocal(helios::SymID helios_id, tsh::SymbolType<> type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
 			  lifetime_scope(lifetime_scope) {}
 
-		MirLocal(tsh::ComponentType type, helios::ScopeID lifetime_scope):
+		MirLocal(
+			helios::SymID     helios_id,
+			tsh::SymbolType<> type,
+			helios::ScopeID   lifetime_scope,
+			u64               parameter_index
+		):
+			  id(LocalID::next()),
+			  helios_id(helios_id),
+			  type(type),
+			  lifetime_scope(lifetime_scope),
+			  parameter_index(parameter_index) {}
+
+		MirLocal(tsh::SymbolType<> type, helios::ScopeID lifetime_scope):
 			  id(LocalID::next()),
 			  helios_id({}),
 			  type(type),
@@ -136,25 +166,28 @@ namespace compiler::mir {
 	/**
 	 * @brief Structure representing any MIR value.
 	 */
-	struct MirLocation final {
+	struct MIRValue final {
 	private:
-		// @TODO: global, literal, func-literal, ...
+		// @TODO: global, literal, ...
 		// "LocalAccess" a.b.c
 		// "GlobalAccess" a.b.c
-		using ValueType = std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID>;
+		using ValueType
+			= std::variant<MirIntegerConst, MirBoolConst, LocalRef, BlockID, MirFunctionLiteral>;
 
 		ValueType value;
 
 	public:
-		MirLocation(MirIntegerConst value): value(value) {}
+		MIRValue(MirIntegerConst value): value(value) {}
 
-		MirLocation(MirBoolConst value): value(value) {}
+		MIRValue(MirBoolConst value): value(value) {}
 
-		MirLocation(LocalRef value): value(value) {}
+		MIRValue(LocalRef value): value(value) {}
 
-		MirLocation(BlockID value): value(value) {}
+		MIRValue(BlockID value): value(value) {}
 
-		bool operator==(const MirLocation& other) const = default;
+		MIRValue(MirFunctionLiteral value): value(value) {}
+
+		bool operator==(const MIRValue& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
 
@@ -165,7 +198,7 @@ namespace compiler::mir {
 
 		/**
 		 * @brief Returns reference value of given type
-		 * stored in MirLocation.
+		 * stored in MIRValue.
 		 * Throws if value is not of given type.
 		 * @tparam T
 		 * @return const T&
@@ -202,7 +235,7 @@ namespace compiler::mir {
 
 		base::Optional<LocalRef> output;
 
-		std::vector<MirLocation> arguments;
+		std::vector<MIRValue> arguments;
 
 		// construct, destruct, move.
 		std::vector<OperationFlag> flags;
@@ -228,7 +261,7 @@ namespace compiler::mir {
 		Instruction(
 			Operation                  operation,
 			base::Optional<LocalRef>   output,
-			std::vector<MirLocation>   arguments,
+			std::vector<MIRValue>      arguments,
 			std::vector<OperationFlag> flags,
 			helios::ScopeID            scope
 		):
@@ -286,11 +319,30 @@ namespace compiler::mir {
 	 * @brief Function in MIR.
 	 */
 	struct Function final {
-		base::StrID                  name;
-		tsh::AbstractType            return_type;
-		std::vector<Block>           blocks;
+		base::StrID name;
+
+		tsh::SymbolType<>              return_type;
+		std::vector<tsh::SymbolType<>> parameter_types;
+
+		/**
+		 * @brief Map from BlockID to the Block.
+		 * The block's content is stored here.
+		 * @note Block with ID "0" should always be the one with FunctionEnd (@p
+		 * finalizeFunctionEnd)
+		 */
+		base::StableHashMap<BlockID, Block> blocks;
+		/**
+		 * @brief The generated order of blocks in the function.
+		 * It serves as a list of all the blocks that are inside the function.
+		 * The order is not important but it is more human friendly.
+		 * First block in the block order is the entry block.
+		 */
+		std::vector<BlockID> block_order;
+
+		/**
+		 * @brief List of all local variables in the function.
+		 */
 		base::StableVector<MirLocal> local_list;
-		BlockID                      entry_block;
 		helios::ScopeID              top_lifetime_scope;
 
 		// helios ID for hashes, ... this it temporary?
@@ -308,13 +360,14 @@ namespace compiler::mir {
 		Function& operator=(Function&&) = delete;
 
 		Function(
-			base::StrID                  name,
-			tsh::AbstractType            return_type,
-			std::vector<Block>           blocks,
-			base::StableVector<MirLocal> local_list,
-			BlockID                      entry_block,
-			helios::ScopeID              top_lifetime_scope,
-			helios::SymID                helios_id
+			base::StrID                         name,
+			tsh::SymbolType<>                   return_type,
+			std::vector<tsh::SymbolType<>>      parameter_types,
+			base::StableHashMap<BlockID, Block> blocks,
+			std::vector<BlockID>                block_order,
+			base::StableVector<MirLocal>        local_list,
+			helios::ScopeID                     top_lifetime_scope,
+			helios::SymID                       helios_id
 		);
 
 		[[nodiscard]]
@@ -323,6 +376,17 @@ namespace compiler::mir {
 		bool operator==(const Function& other) const = default;
 
 		void debugPrint(std::ostream& output) const;
+
+		/**
+		 * @brief Checks if the id's from the HashMap match the id's in the blocks,
+		 * if all block_order elements are present in the HashMap and
+		 * if the jump targets exist.
+		 * Used for debugging.
+
+		 * @note If there is a block in the HashMap but not in the block_order,
+		 * it is considered invalid.
+		 */
+		base::OkBad validateBlockIDs() const;
 	};
 
 }

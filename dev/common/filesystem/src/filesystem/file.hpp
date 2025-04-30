@@ -5,19 +5,16 @@
 
 #pragma once
 
-#include <string>
-#include <utility>
-#include <vector>
-#include <filesystem>
-#include <fstream>
-#include <unordered_map>
-#include <memory>
-#include <base/raw_view.hpp>
-#include <base/smart_pointers.hpp>
 #include <base/maps.hpp>
 #include <base/optional.hpp>
 #include <base/perfect_hash.hpp>
+#include <base/raw_view.hpp>
+
 #include <expected>
+#include <filesystem>
+#include <memory>
+#include <string>
+#include <utility>
 
 // Seems fixed:
 // #if __GNUC__ < 12 && (!defined(__clang__))
@@ -99,9 +96,11 @@ namespace fs {
 		std::filesystem::path genTempPathInMe(std::string_view custom_name = "") const;
 
 	public:
-		FilePath(const FilePath&) = default;
-		FilePath(FilePath&&)      = default;
-		~FilePath()               = default;
+		FilePath& operator=(const FilePath&) = default;
+		FilePath& operator=(FilePath&&)      = default;
+		FilePath(const FilePath&)            = default;
+		FilePath(FilePath&&)                 = default;
+		~FilePath()                          = default;
 
 		FilePath(const std::filesystem::path& path): path(canonical(absolute(path))) {}
 

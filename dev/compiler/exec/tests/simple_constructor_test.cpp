@@ -1,10 +1,11 @@
 #include <exec/ctv.hpp>
-#include <iostream>
 #include <operations/constructors.hpp>
 #include <operations/create_default.hpp>
 #include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
+
+#include <iostream>
 
 class SimpleExecTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -44,8 +45,7 @@ private:
 		assert(offset == ctv.data.offset, "Pointer has incorrect offset");
 
 		assert(
-			p_ctv.getData<u32>().size() == 2,
-			"Pointer doesn't hold two values (block id and offset)"
+			p_ctv.getData<u32>().size() == 2, "Pointer doesn't hold two values (block id and offset)"
 		);
 
 

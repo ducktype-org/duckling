@@ -2,29 +2,19 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#include <iostream>
+
 #include <base64.hpp>
 
-#include <clap/clap.hpp>
-#include <pst_parser/parser.hpp>
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <filesystem/file.hpp>
-#include <base/variant.hpp>
-#include <base/int_conv.hpp>
+#include <base/macros/diagnostics.hpp>
 
-PUSH_DIAGNOSTIC
+#include <iostream>
+
+PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
-POP_DIAGNOSTIC
+POP_DIAGNOSTIC;
 
-// vm includes:
-#include <server.hpp>
-#include <cli.hpp>
-#include <config.hpp>
-
-#include "utils.hpp"
 #include "export_keywords.hpp"
 #include "semantic_tokens.hpp"
 #include "go_to_definition.hpp"
@@ -56,7 +46,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
  * @return crow::response The HTTP response corresponding to the result.
  */
 template<class E>
-crow::response toResponse(const cpp::result<void, E>& x) {
+crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();
@@ -72,7 +62,6 @@ void server(i32 port) {
 	crow::SimpleApp                               app;
 	lsp::ExportKeywords                           lsp;
 	std::unordered_map<std::string, fs::FilePath> files;
-	pst::init();
 
 	/**
 	 * @brief Route to check if the server is running.

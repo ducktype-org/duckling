@@ -4,16 +4,18 @@
  */
 
 #include "file.hpp"
+
+#include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/perfect_hash.hpp>
-#include <base/exceptions.hpp>
 
 #include <fstream>
 #include <random>
 
 namespace {
-	std::filesystem::path
-		random_name(const std::filesystem::path& prefix_path, const size_t name_len = 16) {
+	std::filesystem::path random_name(
+		const std::filesystem::path& prefix_path, const size_t name_len = 16
+	) {
 		static std::random_device device;
 		static std::mt19937       rng(device());
 		static std::string        name_chars

@@ -1,0 +1,42 @@
+type static_table: tablei64 i64 2
+
+function main {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type           x, i64;
+	init_lany_type           i, i64;
+	init_lany_type           y, i64;
+	init_lany_type           t, i64;
+
+	mov_l64_imm         t, 42;
+
+	alloc_lptr_type     t, tablei64;
+
+	# x := t[0]
+	mov_l64_imm         i, 0;
+	load_l64_lptr_ofs   x, t;
+	ext_l64             i;
+
+	mov_l64_l64         y, x;
+
+	# x := t[1]
+	mov_l64_imm         i, 1;
+	load_l64_lptr_ofs   x, t;
+	ext_l64             i;
+
+	add_l64_l64         y, x;
+
+	output_l64          y;
+
+	free_lptr           t;
+
+	deinit;
+	deinit;
+	deinit;
+	deinit;
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

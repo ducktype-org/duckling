@@ -12,10 +12,18 @@ class xxx extends aaa implements bbb, cccc {
 		return y;
 	}
 
+	using std.math;
+
 	public {
+		alias sqrt=std.math.sqrt;
+
 		xxx.create(c:i64): aaa(c) = {
 			x = c;
 		} 
+
+		xxx.copy() = {
+			x = 81;
+		}
 
 		xxx.abc() = {
 			x = 81;

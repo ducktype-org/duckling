@@ -1,0 +1,40 @@
+# Tests a function call with multiple parameters of different sizes.
+# input = "a b c"
+# output = a * c
+
+type fun: check { i64, i32, i64 } void
+
+function check {
+
+	init_lany_type 		acc, i64;
+	mov_l64_imm			acc, 1; 	# acc := 1
+	mul_l64_l64			acc, arg0; 	# acc *= a
+	mul_l64_l64			acc, arg2;  # acc *= c
+
+	output_l64			acc;
+
+	deinit; # acc
+	deinit; # arg2
+	deinit; # arg1
+	deinit; # arg0
+	ret;
+}
+
+function main {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type a, i64;
+	init_lany_type b, i32;
+	init_lany_type c, i64;
+
+	input_l64	a;
+	input_l32	b;
+	input_l64	c;
+	call_func          	check;
+
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

@@ -4,12 +4,14 @@
  */
 
 
-#include <string>
+#include "source_position.hpp"
+
 #include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
+
 #include <base/exceptions.hpp>
 
-#include "source_position.hpp"
+#include <string>
 
 namespace dia {
 	std::vector<printer::PrinterContent> SourcePosition::getPrettySourceLines() const {
@@ -70,9 +72,7 @@ namespace dia {
 		return res;
 	}
 
-	SourcePosition::SourcePosition(
-		MRef<tokenizer::TokenFile> source_file, const usize source_start
-	):
+	SourcePosition::SourcePosition(MRef<tokenizer::TokenFile> source_file, const usize source_start):
 		  SourcePosition(source_file, source_start, source_start) {}
 
 	SourcePosition::SourcePosition(
@@ -111,8 +111,9 @@ namespace dia {
 
 	MRef<tokenizer::TokenFile> SourcePosition::getSource() const { return source_file; }
 
-	printer::PrinterContentsSeq
-		SourcePosition::genPrinterContents(const printer::PrinterContent& reason) const {
+	printer::PrinterContentsSeq SourcePosition::genPrinterContents(
+		const printer::PrinterContent& reason
+	) const {
 		if (source_file == nullptr) {
 			return {
 				reason,

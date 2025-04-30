@@ -1,7 +1,9 @@
 #pragma once
 
-#include <base/perfect_hash.hpp>
 #include <query_framework/query_int.hpp>
+
+#include <base/perfect_hash.hpp>
+
 #include <string>  // std::string
 
 /**

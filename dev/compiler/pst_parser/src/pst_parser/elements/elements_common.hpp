@@ -1,11 +1,14 @@
 #pragma once
 
-#include "elements_list.hpp"
 #include "../lang_parser_state.hpp"
+#include "elements_list.hpp"
 
 namespace pst {
 	class PstVisitor;
-	class PstExprVisitor;
+
+	namespace expr {
+		class PstExprVisitor;
+	}
 }
 
 namespace pst::detail {
@@ -94,9 +97,7 @@ namespace pst::detail {
 
 	/**
 	 * @brief Borrow Iterator for Containers of Box (like std::vector<Box<T> >).
-	 * It is needed because Box beeing base::unique_ptr cannot be "copied".
-	 * This iterator returns ParserCBorrowRef when dereferenced
-	 * which is a wrapper for base::borrow_ptr.
+	 * It is needed because Box beeing Box cannot be "copied".
 	 *
 	 * @tparam ParserElement Element contained in the reference
 	 * @tparam Container Container that of Boxs to the @p ParserElement .
@@ -108,7 +109,7 @@ namespace pst::detail {
 		internal_iterator it;
 
 	public:
-		using value_type        = MCRef<ParserElement>;
+		using value_type        = AccessLocked<ParserElement>;
 		using iterator_category = std::random_access_iterator_tag;
 		using difference_type   = typename internal_iterator::difference_type;
 		using reference         = value_type;
@@ -119,11 +120,11 @@ namespace pst::detail {
 
 		ForwardBorrowIterator(const internal_iterator& other): it(other) {}
 
-		explicit ForwardBorrowIterator(const MBox<ParserElement>* ptr): it(ptr) {}
+		explicit ForwardBorrowIterator(const AccessInternal<ParserElement>* ptr): it(ptr) {}
 
-		value_type operator*() const { return it->ref(); }
+		value_type operator*() const { return it->give(); }
 
-		value_type operator[](difference_type diff) const { return it[diff]->ref(); }
+		value_type operator[](difference_type diff) const { return it[diff]->give(); }
 
 		ForwardBorrowIterator& operator++() {
 			++it;
@@ -146,8 +147,9 @@ namespace pst::detail {
 
 		ForwardBorrowIterator operator+(const difference_type diff) const { return it + diff; }
 
-		friend ForwardBorrowIterator
-			operator+(const difference_type diff, const ForwardBorrowIterator& iter) {
+		friend ForwardBorrowIterator operator+(
+			const difference_type diff, const ForwardBorrowIterator& iter
+		) {
 			return iter.it + diff;
 		}
 

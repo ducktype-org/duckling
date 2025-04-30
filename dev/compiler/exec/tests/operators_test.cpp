@@ -1,9 +1,9 @@
+#include <exec/ctv.hpp>
 #include <exec/exec.hpp>
+#include <exec/operators/builtinoperators.hpp>
+#include <operations/operation.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/typesystem.hpp>
-#include <exec/operators/builtinoperators.hpp>
-#include <exec/ctv.hpp>
-#include <operations/operation.hpp>
 using namespace exec;
 
 class SimpleExecTest: public tester::TestSuite {
@@ -60,8 +60,7 @@ private:
 		int_ctv_exp.getData<int8_t>().front() = 36;
 		BuiltInOp mul_op                      = { Operator::Asterisk, { int_desc, int_desc } };
 		assert(
-			getBuiltInOps().contains(mul_op),
-			"Int8 multiplication not found in built in operations."
+			getBuiltInOps().contains(mul_op), "Int8 multiplication not found in built in operations."
 		);
 		auto mul_id = getBuiltInOps()[mul_op];
 		assert(operation::existsOperation(mul_id), "Int8 multiplication not found in operations.");

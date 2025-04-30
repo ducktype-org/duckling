@@ -20,8 +20,9 @@
  */
 #pragma once
 
-#include <type_traits>
-#include "define_helper.hpp"
+#include "macros/utils.hpp"
+
+#include <type_traits>  // IWYU pragma: export
 
 /**
  * @brief This is helper macro, do not use directly
@@ -140,3 +141,9 @@
  * Allows for operations like MyOwnI32 * MyOwnI32
  */
 #define STRONG_TYPEDEF_INT(NAME, BASE) STRONG_TYPEDEF_INT_AUX(NAME, BASE, true, false)
+
+#define STRONGLY_TYPED_INT_STD_HASH(TYPE)                                                  \
+	template<>                                                                             \
+	struct std::hash<TYPE> final {                                                         \
+		usize operator()(const TYPE& id) const noexcept { return static_cast<usize>(id); } \
+	};

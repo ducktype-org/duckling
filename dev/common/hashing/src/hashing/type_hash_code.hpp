@@ -1,13 +1,13 @@
 #pragma once
 
-#include <concepts>
-#include <span>
+#include "hashing_algorithms.hpp"
+#include "type_code.hpp"
 
 #include <base/ints.hpp>
 #include <base/type_traits.hpp>
 
-#include "type_code.hpp"
-#include "hashing_algorithms.hpp"
+#include <concepts>
+#include <span>
 
 namespace hashing {
 
@@ -76,10 +76,7 @@ namespace hashing {
 	 * @tparam I - type of the value of the type code
 	 * @tparam HashAlgorithm - type of the hashing algorithm to use to get the hash code
 	 */
-	template<
-		typename T,
-		std::integral I        = u32,
-		typename HashAlgorithm = default_hash_algorithm_for<I>>
+	template<typename T, std::integral I = u32, typename HashAlgorithm = default_hash_algorithm_for<I>>
 	static constexpr TypeCode<I, false> TYPE_HASH_CODE
 		= detail::getIDFromUniqueString<T, I, HashAlgorithm>();
 

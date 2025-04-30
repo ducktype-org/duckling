@@ -1,8 +1,10 @@
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
-
 #include "abstract_type_impl.hpp"
+
+#include <helios/symbols/query_class_symbol_data.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <query_framework/query_impl.hpp>
 
 namespace tsh::internal {
 	struct IMPLEMENT_QUERY(QueryInterfaceOfClass, TypeInterface) {
@@ -16,7 +18,7 @@ namespace tsh::internal {
 			std::set<InterfaceElement> elements;
 
 			for (const compiler::helios::QueryTypeOfSymbol::QKey field_sym: field_syms) {
-				AbstractType field_type
+				const SymbolType<> field_type
 					= ctx.query<compiler::helios::QueryTypeOfSymbol>(field_sym)->expect(
 						"Handling ERRORS in TS is not supported yet..."
 					);

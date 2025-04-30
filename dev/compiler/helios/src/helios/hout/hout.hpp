@@ -7,9 +7,11 @@
 #pragma once
 
 #include "../scope_symbol_id.hpp"
-#include <base/string_id.hpp>
-#include <typesystem/higher/types.hpp>
+
 #include <query_framework/query_int.hpp>
+#include <typesystem/higher/types.hpp>
+
+#include <base/string_id.hpp>
 
 #include <memory>
 #include <vector>
@@ -109,7 +111,7 @@ namespace compiler::helios {
 		// @TODO: CTV from TS:
 		i64 value;
 
-		tsh::AbstractType type;
+		tsh::SymbolType<> type;
 
 		HOUTGlobalData(SymID symbol, query::Context& ctx);
 

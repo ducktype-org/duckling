@@ -25,12 +25,12 @@
  */
 #pragma once
 
-#include "parser_state.hpp"
-#include "common_elements.hpp"
-#include <lang_definitions/key_spec_op.hpp>
-
 #include "base_element.hpp"
+#include "common_elements.hpp"
+#include "parser_state.hpp"
+
 #include <diagnostic/source_position.hpp>
+#include <lang_definitions/key_spec_op.hpp>
 
 #include <concepts>
 
@@ -58,6 +58,14 @@ namespace tpc {
 
 	template<typename T>
 	void nullAwareDprint(const MBox<T>& ref, std::ostream& out) {
+		if (!ref)
+			out << "\"<nullptr>\"";
+		else
+			ref->debugPrint(out);
+	}
+
+	template<typename T>
+	void nullAwareDprint(MCRef<T> ref, std::ostream& out) {
 		if (!ref)
 			out << "\"<nullptr>\"";
 		else
@@ -276,10 +284,13 @@ namespace tpc {
 	};
 
 	class NoIdentifierError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Expected an identifier here.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected an identifier here.";
+			return std::string(ERR_MSG);
 		}
 
 	public:

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/ints.hpp>
 #include <base/bits_and_bytes.hpp>
+#include <base/ints.hpp>
 
 namespace tsl {
 	// This may become const instead of constexpr because it might be defined during runtime.

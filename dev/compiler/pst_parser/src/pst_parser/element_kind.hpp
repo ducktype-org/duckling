@@ -57,6 +57,7 @@ namespace pst {
 		ClassField,
 		ClassMethod,
 		AccessBlock,
+		NonClassStmt,
 
 		// use it, once its docs are more stable:
 		// ClassConstructor,
@@ -67,7 +68,7 @@ namespace pst {
 		// others:
 		FunParam,
 		ParamList,
-
+		DottedName,
 
 		// for detecting when kind was not set:
 		KindNotSet,

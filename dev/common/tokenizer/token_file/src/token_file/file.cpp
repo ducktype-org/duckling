@@ -1,10 +1,11 @@
-#include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
+#include "file.hpp"
+
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
 
-#include "file.hpp"
+#include <base/exceptions.hpp>
+#include <base/raw_view.hpp>
 
 namespace tokenizer {
 	/**
@@ -63,8 +64,9 @@ namespace tokenizer {
 		return { begin, size };
 	}
 
-	std::vector<std::pair<usize, base::RawView>>
-		TokenFile::viewSplitRange(usize begin_char, usize end_char) {
+	std::vector<std::pair<usize, base::RawView>> TokenFile::viewSplitRange(
+		usize begin_char, usize end_char
+	) {
 		usize                                        begin_line = getLineColumn(begin_char).first;
 		usize                                        end_line   = getLineColumn(end_char).first;
 		std::vector<std::pair<usize, base::RawView>> res;

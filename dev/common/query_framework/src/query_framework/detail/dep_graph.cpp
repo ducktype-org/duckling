@@ -1,10 +1,14 @@
 #include "dep_graph.hpp"
 
 #include <base/maps.hpp>
+
 #include <iomanip>
-#include <ostream>
-#include <vector>
 #include <iostream>
+#include <ostream>
+#include <queue>
+#include <ranges>
+#include <set>
+#include <vector>
 
 using query::detail::NodeID;
 
@@ -67,7 +71,9 @@ namespace query::detail {
 					throw base::NotYetImplemented("Query Cycle!");
 				}
 			}
-			node_data.insert_or_assign(node, NodeData{ Color::Visiting, {}, from });
+			node_data.insert_or_assign(
+				node, NodeData{ .color = Color::Visiting, .dependencies = {}, .parent = from }
+			);
 		}
 
 		DependencyStatus addDependency(NodeID from, NodeID to) {
@@ -82,6 +88,42 @@ namespace query::detail {
 			query_stack_size--;
 
 			node_data.at(node).color = Color::Done;
+		}
+
+		std::vector<NodeID> getNodeDeps(detail::NodeID node_id) {
+			CORE_ASSERT(
+				node_data.contains(node_id),
+				"Node not found in dep graph, call the given query first."
+			);
+
+			// some simple bfs for now:
+			std::set<NodeID>   visited;
+			std::queue<NodeID> queue;
+			queue.push(node_id);
+
+			while (!queue.empty()) {
+				auto visited_node_id = queue.front();
+				queue.pop();
+
+				if (visited.contains(visited_node_id)) continue;
+				visited.insert(visited_node_id);
+
+				const auto& node = node_data.at(visited_node_id);
+				for (auto& dep: node.dependencies)
+					if (!visited.contains(dep)) queue.push(dep);
+			}
+
+			// make issue for query types (side input/input/standard/etc):
+			// it would be cool to print only input ones, but for now we print all of them:
+
+			return { visited.begin(), visited.end() };
+		}
+
+		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) {
+			return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
+					   return id.q_id == dependency_id;
+				   })
+			     | std::ranges::to<std::vector<NodeID>>();
 		}
 
 		void debugPrint(std::ostream& out) {

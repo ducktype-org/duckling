@@ -4,16 +4,17 @@
  * semantic tokens in JSON format.
  */
 #include "semantic_tokens.hpp"
+
 #include "utils.hpp"
 
-#include <base/variant.hpp>
 #include <base/stringifyable_enum.hpp>
+#include <base/variant.hpp>
 
-#include <string>
 #include <map>
+#include <string>
 
 namespace lsp {
-	SemanticToken::SemanticToken(base::c_borrow_ptr<lexer::Token> source):
+	SemanticToken::SemanticToken(CRef<lexer::Token> source):
 		  source_token(source),
 		  line(source->getPosition().getStartLineColumn().first - 1),
 		  start_character(source->getPosition().getStartLineColumn().second - 1),
@@ -59,16 +60,18 @@ namespace lsp {
 		return jsonDict(result);
 	}
 
-	void
-		getSemanticTokens(MCRef<pst::LangElement> element, std::vector<SemanticToken>& token_list) {
-		for (auto sub: element->viewSubElements()) {
+	void getSemanticTokens(
+		pst::AccessLocked<pst::LangElement> element, std::vector<SemanticToken>& token_list
+	) {
+		auto unlocked = element.illegalAccess().value();
+		for (auto sub: unlocked->viewSubElements()) {
 			variant_match(sub) {
 				variant_case(pst::LangElement::SubToken, token) {
 					// add token to list
 					auto semantic_token = SemanticToken(token);
 					token_list.push_back(semantic_token);
 				}
-				variant_case(pst::LangElement::ConstChild, child) {
+				variant_case(pst::LangElement::Child, child) {
 					// recursive token generation
 					getSemanticTokens(child, token_list);
 				}
@@ -76,7 +79,7 @@ namespace lsp {
 		}
 	}
 
-	std::string getSemanticTokens(MCRef<pst::LangElement> element) {
+	std::string getSemanticTokens(pst::AccessLocked<pst::LangElement> element) {
 		std::vector<SemanticToken> tokens;
 		getSemanticTokens(element, tokens);
 
