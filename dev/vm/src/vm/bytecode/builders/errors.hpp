@@ -1,6 +1,7 @@
 #pragma once
 #include <base/exceptions.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -73,6 +74,26 @@ namespace vm::code::builders {
 			  TYPE(type) {}
 	};
 
+	class DuplicateLocalNameError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Duplicate local name: ";
+		const vm::opargs::StackLocalAny         NAME;
+
+		DuplicateLocalNameError(vm::opargs::StackLocalAny name):
+			  BuilderError(base::strConcat(ERR_MSG, name.var_name)),
+			  NAME(name) {}
+	};
+
+	class InvalidLocalNameError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "This local does not exist: ";
+		const vm::opargs::OpCodeLocalArg        NAME;
+
+		InvalidLocalNameError(vm::opargs::OpCodeLocalArg name):
+			  BuilderError(base::strConcat(ERR_MSG, VISIT(name, n, return n.var_name))),
+			  NAME(name) {}
+	};
+
 	class EmptyStackDeinitError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Popping from empty variable stack.";
@@ -95,4 +116,58 @@ namespace vm::code::builders {
 
 		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
+
+	class TypeValidationError: public BuilderError {
+	public:
+		const TypeOfData TYPE;
+
+		TypeValidationError(std::string msg, TypeOfData type):
+			  BuilderError(std::move(msg)),
+			  TYPE(std::move(type)) {}
+	};
+
+	class InstructionValidationError: public BuilderError {
+	public:
+		InstructionValidationError(std::string_view msg): BuilderError(std::string(msg)) {}
+	};
+
+#define DEFINE_TYPE_VALIDATION_ERROR(error_name, msg)                                        \
+	class error_name: public TypeValidationError {                                           \
+	public:                                                                                  \
+		constexpr static const std::string_view ERR_MSG = (msg);                             \
+                                                                                             \
+		error_name(TypeOfData type):                                                         \
+			  TypeValidationError(                                                           \
+				  base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name)), std::move(type) \
+			  ) {}                                                                           \
+	};
+
+#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)     \
+	class error_name: public InstructionValidationError {        \
+	public:                                                      \
+		constexpr static const std::string_view ERR_MSG = (msg); \
+                                                                 \
+		error_name(): InstructionValidationError(ERR_MSG) {}     \
+	};
+
+	DEFINE_TYPE_VALIDATION_ERROR(
+		InvalidImplementsError, "This interface/class can implement only other interfaces: "
+	);
+	DEFINE_TYPE_VALIDATION_ERROR(InvalidExtends, "This class can extend only other classes: ");
+	DEFINE_TYPE_VALIDATION_ERROR(
+		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
+	);
+	DEFINE_TYPE_VALIDATION_ERROR(
+		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
+	);
+
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		UninstantiableValueError, "Cannot intiantiate a value of this type."
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidUpcastError, "The source type does not inherit from the destination type"
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
+	);
 }

@@ -1,6 +1,7 @@
 #include "builders.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 #include <base/ref.hpp>
 #include <base/str_utils.hpp>
@@ -12,6 +13,9 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+
+#include <algorithm>
+#include <ranges>
 
 #define NOIMPL_CASE(tp, reason)                                                          \
 	variant_case(tp, _) {                                                                \
@@ -26,16 +30,160 @@ vm::code::Function FunctionBuilder::build() const {
 	Function function;
 	function.body = instructions;
 	function.name = name;
-
+	// @TODO this should be the compiler's responsibility, move it there
+	function.local_offset_map = local_offset_map;
 	function.local_stack_size = max_stack_size;
 
 	return function;
 }
 
+namespace {
+	// Helpers for validation `ext_*` instructions
+	using namespace vm::code;
+	using namespace vm::code::instructions;
+
+	template<typename T, typename Tup>
+	struct IsIn;
+
+	template<typename T, typename... Ts>
+	struct IsIn<T, std::tuple<Ts...>> {
+		static constexpr bool VALUE = (std::same_as<T, Ts> || ...);
+	};
+
+	template<typename... Tups>
+	using Cat = decltype(std::tuple_cat(std::declval<Tups>()...));
+
+	template<typename Tup>
+	struct HoldsOneOfImpl;
+
+	template<typename... Ts>
+	struct HoldsOneOfImpl<std::tuple<Ts...>> {
+		constexpr bool operator()(const Instruction& instr) {
+			return (std::holds_alternative<Ts>(instr) || ...);
+		}
+	};
+
+	template<typename Tup>
+	constexpr bool holdsOneOf(const Instruction& instr) {
+		return HoldsOneOfImpl<Tup>{}(instr);
+	}
+
+	using ExtensionTypes = std::tuple<Op_ext_l64, Op_ext_type>;
+	template<typename T>
+	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
+
+	template<Extension E>
+	struct ExtensionMetadata;
+
+	template<>
+	struct ExtensionMetadata<Op_ext_l64> {
+		using RequiredAfter = std::tuple<>;
+		using OptionalAfter = std::tuple<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>;
+	};
+
+	template<>
+	struct ExtensionMetadata<Op_ext_type> {
+		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<typename Tup>
+	struct CatRequired;
+
+	template<typename... Ts>
+	struct CatRequired<std::tuple<Ts...>> {
+		using Value = Cat<typename ExtensionMetadata<Ts>::RequiredAfter...>;
+	};
+
+	template<Extension E>
+	bool acceptsExtension(const Instruction& instr) {
+		return holdsOneOf<
+			Cat<typename ExtensionMetadata<E>::RequiredAfter,
+		        typename ExtensionMetadata<E>::OptionalAfter>>(instr);
+	}
+
+	bool requiresSomeExtension(const Instruction& instr) {
+		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
+	}
+}
+
+void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) {
+	// @TODO remove `atMaybe` after #732
+	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	if (!type->isInstantiable()) throw UninstantiableValueError();
+}
+
+void FunctionBuilder::validateExtension(const Instruction& instruction) {
+	// This check assumes that the last instruction in a function is non-extendable,
+	// this is the case for `ret`.
+	auto predecessor
+		= instructions.empty() ? base::Optional<const Instruction&>{} : instructions.back();
+	bool valid_extension = std::visit(
+		[&]<typename T>(const T&) {
+			if constexpr (Extension<T>)
+				// If the current instruction is an extension, the situation is valid
+			    // if the previous instruction can take this extension.
+			    // Extensions must always come after some instruction, so it's invalid for it to be
+			    // the first instruction in a function (to not have a predecessor).
+				return predecessor.map(acceptsExtension<T>).valueOr(false);
+			else
+				// It is invalid if the current instruction is not an extension, but the previous
+			    // instruction *requires* one. If there was no previous instruction, it's not invalid.
+				return !predecessor.map(requiresSomeExtension).valueOr(false);
+		},
+		instruction
+	);
+	if (!valid_extension) throw InvalidInstructionExtensionError();
+}
+
+void FunctionBuilder::validateLocalArgs(const Instruction& instruction) const {
+	// @TODO this check is temporary (and therefore kinda unpolished),
+	// will get done redone in graph jumps.
+
+	// Wrap the arguments in a variant in order to ease manipulation.
+	auto args = std::visit(
+		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+			if constexpr (TwoArgumentOpcode<T>)
+				return { instr.arg0, instr.arg1 };
+			else if constexpr (OneArgumentOpcode<T>)
+				return { instr.arg0 };
+			else
+				return {};
+		},
+		instruction
+	);
+
+	// The check whether a variable is initialised exactly once
+	// happens in `pushStackState` (to make sure manual variable definition is checked as well),
+	// so we skip the `init` instructions here.
+	if (!std::holds_alternative<instructions::Op_init_lany_type>(instruction)) {
+		for (auto arg: args) {
+			variant_match(arg) {
+#define HANDLE_LOCAL(Type)                                                                  \
+	variant_case(vm::opargs::Type, local) {                                                 \
+		if (!local_offset_map.contains(local.var_name)) throw InvalidLocalNameError(local); \
+	}
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
+#undef HANDLE_LOCAL
+			}
+		}
+	}
+}
+
 void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	using namespace instructions;
+	validateExtension(instruction);
+	validateLocalArgs(instruction);
+
 	variant_match(instruction) {
-		variant_case(Op_init_type, instr) { pushStackState(instr.arg0); }
+		variant_case(Op_init_lany_type, instr) {
+			validateArgInstantiable(instr.arg1);
+			pushStackState(instr.arg0, instr.arg1);
+		}
+		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_upcast_lptr_lptr, isntr) {
+			// @TODO implement checking if the cast is valid after #732
+		}
 		variant_case(Op_deinit, instr) { handleDeinit(); }
 		variant_case(Op_label, label) { handleLabel(label); }
 		variant_case(Op_call_func, func) { handleCall(func.arg0.function_name); }
@@ -69,17 +217,21 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	                                .expect<MissingFunctionalTypeError>(name)
 	                                ->getResultType()
 	                                .expect<TypeIsNotFunctionalError>(name);
-	initType(instructions::Op_init_type{ func_result_type->getName() });
-	instructions.pop_back();
-	auto params = type_context.getMetadata().at(name)->getParameters().value();
-	for (TypeCRef param: params) pushStackState({ param->getName() });
+	pushStackState(base::StrID("ret_val"), func_result_type->getName());
+	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
+	for (auto [index, type]: std::views::enumerate(param_types))
+		pushStackState(base::StrID(base::strConcat("arg", index).c_str()), type->getName());
 }
 
-usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type) {
+usize vm::code::builders::FunctionBuilder::pushStackState(
+	vm::opargs::StackLocalAny name, vm::opargs::Type type
+) {
 	const usize type_size = type_context.getMetadata()
 	                            .atMaybe(type.type_name)
 	                            .expect<UnknownTypeError>(type)
 	                            ->getSize();
+
+	if (local_offset_map.contains(name.var_name)) throw DuplicateLocalNameError(name);
 
 	usize offset = 0;
 
@@ -88,6 +240,7 @@ usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type)
 		offset                            = prev_entry.local_stack_position + prev_entry.type_size;
 	}
 
+	local_offset_map.put(name.var_name, offset);
 	local_stack.emplace_back(LocalStackEntry{ .unique_id            = LocalStackEntryID::next(),
 	                                          .type_name            = type.type_name,
 	                                          .local_stack_position = offset,
@@ -98,9 +251,9 @@ usize vm::code::builders::FunctionBuilder::pushStackState(vm::opargs::Type type)
 	return offset;
 }
 
-usize FunctionBuilder::initType(instructions::Op_init_type init) {
+void FunctionBuilder::initType(instructions::Op_init_lany_type init) {
 	instructions.emplace_back(init);
-	return pushStackState(init.arg0);
+	pushStackState(init.arg0, init.arg1);
 }
 
 void FunctionBuilder::handleDeinit() {
@@ -141,7 +294,7 @@ void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName functi
 	for (usize i = 0; i < param_count; i++) {
 		// Invalid arguments
 		auto tp = func_type->getNthParameterType(i).value();
-		if (tp->getName() != local_stack.at(local_stack.size() - 1 - i).type_name)
+		if (tp->getName() != local_stack.at(local_stack.size() - param_count + i).type_name)
 			throw InvalidFunctionCallArguments();
 	}
 }
@@ -180,7 +333,73 @@ const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeCon
 	return types;
 }
 
+void TypeContextBuilder::validateType(const TypeOfData& type) const {
+	auto get_type = [&](base::StrID name) {
+		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
+	};
+	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
+		for (const auto& impl: implements) {
+			auto impl_type = get_type(impl);
+			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
+				throw InvalidImplementsError(type);
+		}
+	};
+
+	variant_match(type) {
+		variant_case(InterfaceType, interface) { validate_implements(interface.implements); }
+		variant_case(ClassType, clazz) {
+			validate_implements(clazz.implements);
+			if_opt_some(clazz.extends, extends) {
+				auto super_type = get_type(extends);
+				if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
+					throw InvalidExtends(type);
+
+				const auto& superclass = std::get<ClassType>(*super_type);
+				if (clazz.fields.size() < superclass.fields.size())
+					throw MissingAncestorFieldError(type);
+				for (auto [field, super_field]: std::views::zip(clazz.fields, superclass.fields))
+					if (field != super_field) throw MissingAncestorFieldError(type);
+			}
+		}
+	}
+}
+
+void TypeContextBuilder::validateTypes() const {
+	for (const auto& type: types) validateType(type);
+
+	// Check for cycles in hierarchy.
+	enum Status { Waiting, Visited, Done };
+
+	base::HashMap<base::StrID, Status> status;
+	for (const auto& type: types) status.put(typeName(type), Waiting);
+
+	// explicit object parameter lambdas don't seem to work with class members, hence the reference
+	auto& types_ref = types;
+	auto  helper    = [&](this auto self, const auto& type) {
+        auto name = typeName(type);
+        if (status[name] == Visited)
+            throw CycleInHierarchyError(type);
+        else if (status[name] == Done)
+            return;
+
+        status[name] = Visited;
+        variant_match(type) {
+            variant_case(ClassType, clazz) {
+                if_opt_some(clazz.extends, superclass) self(*types_ref.at(superclass));
+                for (auto iface: clazz.implements) self(*types_ref.at(iface));
+            }
+            variant_case(InterfaceType, interface) {
+                for (auto iface: interface.implements) self(*types_ref.at(iface));
+            }
+        }
+        status[name] = Done;
+	};
+
+	for (const auto& type: types) helper(type);
+}
+
 TypeContext TypeContextBuilder::build() const {
+	validateTypes();
 	TypeContext tctx;
 	for (const auto& type: types) {
 		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
