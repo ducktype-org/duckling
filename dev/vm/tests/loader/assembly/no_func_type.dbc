@@ -1,8 +1,8 @@
 function foo {
-    init_type i64;
+    init_lany_type x, i64;
 }
 
 function main {
-    init_type       i64;
-    mov_l64_imm     0, 5;
+    init_lany_type x, i64;
+    mov_l64_imm     x, 5;
 }

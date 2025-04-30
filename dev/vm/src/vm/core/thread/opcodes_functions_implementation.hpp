@@ -163,6 +163,14 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
+		{
+			auto pointer      = derefStack<Pointer>(local_stack, instr->arg0);
+			frame->flags.flag = pointer.isNull();
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
 		FUNCTION_CONT_CHECK_STRATEGY(1);
@@ -377,10 +385,10 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_lany_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg0)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
@@ -448,6 +456,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ext_l64)(FUNCTION_ARGS) {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type not consumed by previous instruction");
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
@@ -557,6 +569,35 @@ namespace vm {
 			*vt_pointer = type.get();
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			// Same as move_lptr_lptr, treated differently by static analysis.
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process.getMemory().setPointer(dst, src);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+
+			auto dst_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+			// Classes are guaranteed to hold vtable pointer as their first field.
+			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
+			);
+			auto cast_allowed = real_src_type->inheritsFrom(dst_type);
+
+			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
+		}
+		FUNCTION_CONT(2);  // skip ext_type
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {

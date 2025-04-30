@@ -5,18 +5,18 @@
 type fun: check {} i32
 
 function check {
-	input_l32       0;
+	input_l32       ret_val;
 	ret;
 }
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type 			i32; # [32, 36) check() ret_val
+	init_lany_type 			check_ret_val, i32;
 	call_func          	check;
-	output_l32 			32;
+	output_l32 			check_ret_val;
 
 	deinit;
 	deinit; # *argv

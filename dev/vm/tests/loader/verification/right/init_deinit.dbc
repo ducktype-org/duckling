@@ -1,15 +1,14 @@
 function main {
-    # [0, 8) -> main ret_val
-    # [8, 16) -> argc
-    # [16, 32) -> *argv
-    # [32, 40) -> x
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-    init_type       i64; # x
-    mov_l64_imm     32, 1;
-    output_l64      32;
+    init_lany_type  x, i64;
+    mov_l64_imm     x, 1;
+    output_l64      x;
 
-    deinit;         # x
-    deinit;         # *argv
-    deinit;         # argc
+    deinit; # x
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

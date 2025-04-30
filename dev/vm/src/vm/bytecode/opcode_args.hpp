@@ -34,12 +34,12 @@ namespace vm::opargs {
 	struct StackLocalI8 final: code::ElementBase {
 		StackLocalI8() = default;
 
-		StackLocalI8(const i64 offset): offset(offset) {}
+		StackLocalI8(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalI8& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
@@ -49,12 +49,12 @@ namespace vm::opargs {
 	struct StackLocalI16 final: code::ElementBase {
 		StackLocalI16() = default;
 
-		StackLocalI16(const i64 offset): offset(offset) {}
+		StackLocalI16(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalI16& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
@@ -64,12 +64,12 @@ namespace vm::opargs {
 	struct StackLocalI32 final: code::ElementBase {
 		StackLocalI32() = default;
 
-		StackLocalI32(const i64 offset): offset(offset) {}
+		StackLocalI32(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalI32& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
@@ -79,12 +79,12 @@ namespace vm::opargs {
 	struct StackLocalI64 final: code::ElementBase {
 		StackLocalI64() = default;
 
-		StackLocalI64(const i64 offset): offset(offset) {}
+		StackLocalI64(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalI64& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
@@ -94,12 +94,12 @@ namespace vm::opargs {
 	struct StackLocalAny final: code::ElementBase {
 		StackLocalAny() = default;
 
-		StackLocalAny(const i64 offset): offset(offset) {}
+		StackLocalAny(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalAny& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
@@ -109,19 +109,19 @@ namespace vm::opargs {
 	struct StackLocalPtr final: code::ElementBase {
 		StackLocalPtr() = default;
 
-		StackLocalPtr(const i64 offset): offset(offset) {}
+		StackLocalPtr(const base::StrID var_name): var_name(var_name) {}
 
-		i64 offset = 0;
+		base::StrID var_name;
 
 		constexpr bool operator==(const StackLocalPtr& other) const noexcept {
-			return offset == other.offset;
+			return var_name == other.var_name;
 		}
 	};
 
 	/**
 	 * @brief List of all argument types that target stack offset.
 	 */
-#define VM_OPARG_OFFSET_TYPES \
+#define VM_OPARG_LOCAL_TYPES \
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr
 
 	/**
@@ -185,5 +185,6 @@ namespace vm::opargs {
 	 * @brief Storage class for any kind of opcode argument.
 	 */
 	using OpCodeArg
-		= std::variant<VM_OPARG_OFFSET_TYPES, Immediate, Type, FunctionName, BuiltinFunctionName, Label>;
+		= std::variant<VM_OPARG_LOCAL_TYPES, Immediate, Type, FunctionName, BuiltinFunctionName, Label>;
+	using OpCodeLocalArg = std::variant<VM_OPARG_LOCAL_TYPES>;
 }

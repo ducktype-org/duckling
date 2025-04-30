@@ -91,6 +91,18 @@ namespace vm::code::builders {
 	class TypeContextBuilder {
 		StableTypeIdNameMap<TypeOfData> types;
 
+		/*
+		 * @brief Throws a builder error if type is invalid.
+		 */
+		void validateType(const TypeOfData& type) const;
+
+		/*
+		 * @brief Throws a builder error if types are invalid.
+		 * Checks each type individually and inheritance
+		 * hierarchy soundness.
+		 */
+		void validateTypes() const;
+
 	public:
 		void                                   addType(const TypeOfData& type);
 		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
@@ -159,6 +171,8 @@ namespace vm::code::builders {
 
 		std::vector<LocalStackEntry> local_stack;
 
+		base::HashMap<base::StrID, i64> local_offset_map;
+
 		usize max_stack_size = 0;
 
 		const TypeContext& type_context;
@@ -174,15 +188,20 @@ namespace vm::code::builders {
 		void handleDeinit();
 		void handleRet();
 
-		usize pushStackState(opargs::Type type);
+		usize pushStackState(opargs::StackLocalAny name, opargs::Type type);
+
+		void validateLocalArgs(const Instruction& instruction) const;
+
+		void validateExtension(const Instruction& instruction);
+		void validateArgInstantiable(const opargs::Type& arg);
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
 
 		/**
-		 * @brief Return variable's stack offset. Also pushes `init_type` instruction.
+		 * @brief Pushes `init_lany_type` instruction.
 		 */
-		usize initType(instructions::Op_init_type init);
+		void initType(instructions::Op_init_lany_type init);
 
 		/**
 		 * @brief Adds instruction to the function.

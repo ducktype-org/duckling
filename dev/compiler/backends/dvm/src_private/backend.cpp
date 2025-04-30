@@ -77,10 +77,12 @@ namespace compiler::backend_vm {
 			CRef<lir::Function> lir_function;
 			FunctionBuilder     func_builder;
 
-			base::HashMap<usize, base::StrID>    block_id_to_label;
-			base::Map<lir::LocalRef, usize>      lir_local_to_stack;
-			base::Map<lir::LocalRef, TypeOfData> lir_local_types;
+			base::HashMap<usize, base::StrID>     block_id_to_label;
+			base::Map<lir::LocalRef, base::StrID> lir_local_to_name;
+			base::Map<lir::LocalRef, TypeOfData>  lir_local_types;
 
+			// Used to create unique names for temporary values.
+			usize                                        next_call_id = 0;
 			base::Map<lir::LocalRef, u64>                variable_to_id;
 			base::Map<lir::BlockRef, u64>                block_to_id;
 			const vm::TypeMetadata&                      types;
@@ -102,14 +104,10 @@ namespace compiler::backend_vm {
 		};
 
 		/**
-		 * @brief Generate `init_type` instruction and return the offset on the stack of the variable.
+		 * @brief Generate `init_lany_type` instruction.
 		 */
-		usize initType(AddLirFuncContext& ctx, base::StrID type_name) {
-			auto offset = ctx.func_builder.initType(instructions::Op_init_type(type_name));
-			ctx.func_builder.addInstruction(
-				instructions::Comment(base::StrID(base::strConcat("Variable\t\t\t", offset).data()))
-			);
-			return offset;
+		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
+			ctx.func_builder.initType(instructions::Op_init_lany_type(variable_name, type_name));
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
@@ -120,20 +118,11 @@ namespace compiler::backend_vm {
 			);
 			auto func_type_tod
 				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name));
-			base::HashMap<usize, usize> param_offsets;
-			const auto                  param_count = *func_type->getParameterCount();
-
-			usize prev_param_offset = func_type->getResultType().value()->getSize(
-			);  // at 0th index is the result storage
-			for (usize idx = 0; idx < param_count; idx++) {
-				param_offsets.put(idx, prev_param_offset);
-				prev_param_offset += func_type->getNthParameterType(idx).value()->getSize();
-			}
 
 			// Save locals offset
 			for (const auto& var: ctx.lir_function->local_list) {
 				// This is most likely redundant
-				CORE_ASSERT(!ctx.lir_local_to_stack.contains(var.ref()), "Duplicated lir local");
+				CORE_ASSERT(!ctx.lir_local_to_name.contains(var.ref()), "Duplicated lir local");
 
 				auto vm_type = getTypeFromLayout(var->layout);
 				ctx.lir_local_types.put(var.ref(), vm_type);
@@ -145,13 +134,17 @@ namespace compiler::backend_vm {
 							"getTypeFromLayout created an invalid type..."
 						);
 
-						ctx.lir_local_to_stack.put(var.ref(), param_offsets[param_idx]);
+						auto name = base::StrID(base::strConcat("arg", param_idx).c_str());
+						ctx.lir_local_to_name.put(var.ref(), name);
 					}
 					opt_none {
 						// In this case we are handling a regular variable
-						auto tp_name = VISIT(vm_type, tp, return tp.name);
-						auto offset  = initType(ctx, tp_name);
-						ctx.lir_local_to_stack.put(var.ref(), offset);
+						auto tp_name  = typeName(vm_type);
+						auto var_name = base::StrID(
+							base::strConcat("var", ctx.variable_to_id[var.ref()]).c_str()
+						);
+						initType(ctx, var_name, tp_name);
+						ctx.lir_local_to_name.put(var.ref(), var_name);
 					}
 				}
 			}
@@ -164,15 +157,14 @@ namespace compiler::backend_vm {
 
 			std::ranges::for_each(param_types, [&](auto&& type) { type_context.addType(type); });
 
-			auto param_names
-				= param_types
-			    | std::views::transform([](auto&& type) { return VISIT(type, tp, return tp.name); })
-			    | std::ranges::to<std::vector>();
+			auto param_names = param_types
+			                 | std::views::transform([](auto&& type) { return typeName(type); })
+			                 | std::ranges::to<std::vector>();
 
 			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
 			type_context.addType(result_type);
 
-			auto result_type_name = VISIT(result_type, type, return type.name);
+			auto result_type_name = typeName(result_type);
 
 			if (lir_function->name != "main") {
 				type_context.addType(FunctionType{
@@ -202,7 +194,7 @@ namespace compiler::backend_vm {
 			ctx.func_builder.addInstruction(instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
-		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, const i64 offset) {
+		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, base::StrID name) {
 			variant_match(type) {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
@@ -214,13 +206,13 @@ namespace compiler::backend_vm {
 							", size: ",
 							primitive.size
 						));
-					if (primitive.size == 8) return vm::opargs::StackLocalI64{ offset };
-					if (primitive.size == 4) return vm::opargs::StackLocalI32{ offset };
-					if (primitive.size == 2) return vm::opargs::StackLocalI16{ offset };
-					if (primitive.size == 1) return vm::opargs::StackLocalI8{ offset };
+					if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
+					if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
+					if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
+					if (primitive.size == 1) return vm::opargs::StackLocalI8{ name };
 				}
 				variant_case(vm::code::PointerType, pointer) {
-					return vm::opargs::StackLocalPtr(offset);
+					return vm::opargs::StackLocalPtr(name);
 				}
 
 				INVALID_CASE(vm::code::StaticTableType, "output target");
@@ -237,7 +229,7 @@ namespace compiler::backend_vm {
 		) {
 			const lir::LocalRef output   = lir_instruction.output.value();
 			auto&&              var_type = ctx.lir_local_types[output];
-			return outputToOpArg(var_type, i64(ctx.lir_local_to_stack[output]));
+			return outputToOpArg(var_type, ctx.lir_local_to_name[output]);
 		}
 
 		constexpr vm::opargs::OpCodeArg lirValueToOpArg(
@@ -248,7 +240,7 @@ namespace compiler::backend_vm {
 				variant_case(bool, value) return vm::opargs::Immediate{ value };
 				variant_case(
 					lir::LocalRef, local_ref
-				) return vm::opargs::StackLocalI64{ i64(ctx.lir_local_to_stack[local_ref]) };
+				) return vm::opargs::StackLocalI64{ ctx.lir_local_to_name[local_ref] };
 				variant_case(lir::BlockRef, block_ref) {
 					return vm::opargs::Label{ ctx.block_id_to_label[ctx.block_to_id[block_ref]] };
 				}
@@ -260,19 +252,19 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
-		constexpr vm::opargs::OpCodeArg modifyOffsetOpArg(
-			const vm::opargs::OpCodeArg& op_arg, const i64 new_offset
+		constexpr vm::opargs::OpCodeArg modifyVarNameOpArg(
+			const vm::opargs::OpCodeArg& op_arg, base::StrID new_name
 		) {
 			variant_match(op_arg) {
-#define OFFSET_CASE(type)                         \
-	variant_case(vm::opargs::type, offset_type) { \
-		auto copy   = offset_type;                \
-		copy.offset = new_offset;                 \
-		return copy;                              \
+#define LOCAL_CASE(type)                         \
+	variant_case(vm::opargs::type, local_type) { \
+		auto copy     = local_type;              \
+		copy.var_name = new_name;                \
+		return copy;                             \
 	}
-				FOR_EACH(OFFSET_CASE, VM_OPARG_OFFSET_TYPES);
-#undef OFFSET_CASE
-				variant_default { CORE_PANIC("Given op_arg is not an offset kind"); }
+				FOR_EACH(LOCAL_CASE, VM_OPARG_LOCAL_TYPES);
+#undef LOCAL_CASE
+				variant_default { CORE_PANIC("Given op_arg is not a local argument"); }
 			}
 
 			CORE_UNREACHABLE();
@@ -335,27 +327,26 @@ namespace compiler::backend_vm {
 
 			base::StrID called_func_name
 				= std::get<vm::opargs::FunctionName>(called_func_arg).function_name;
-			auto called_func = ctx.types.at(called_func_name);
+			auto called_func = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(called_func_name));
 
 			// Init result type
 
-			auto func_result_storage_offset
-				= initType(ctx, called_func->getResultType().value()->getName());
-			auto func_result_argument = modifyOffsetOpArg(
-				lir_result_argument, base::safeIntConv<i64>(func_result_storage_offset)
-			);
+			usize call_id     = ctx.next_call_id++;
+			auto  result_name = base::StrID(base::strConcat("call", call_id, "_res").c_str());
+			auto  func_result_argument = modifyVarNameOpArg(lir_result_argument, result_name);
+			initType(ctx, result_name, called_func.result);
 
 			// Instantiate function parameters on the stack.
 
-			auto func_params = called_func->getParameters().value();
-			for (const auto& [op_arg, param_type]: std::views::zip(args, func_params)) {
-				auto        type_of_argument = param_type;
-				base::StrID type_name        = type_of_argument->getName();
+			for (const auto& [arg_id, op_arg, type_name]:
+			     std::views::zip(std::views::iota(0), args, called_func.parameters)) {
 				std::cerr << "Initializing: " << type_name.str() << '\n';
-				auto offset = initType(ctx, type_name);
+				auto arg_name
+					= base::StrID(base::strConcat("call", call_id, "_arg", arg_id).c_str());
+				initType(ctx, arg_name, type_name);
 
 				InstructionBuilder mov_arg(OpKind::mov);
-				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], i64(offset)));
+				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
 				ctx.func_builder.addInstruction(mov_arg);
 			}
@@ -474,7 +465,7 @@ namespace compiler::backend_vm {
 				);
 				ctx.func_builder.addInstruction({
 					OpKind::mov,
-					vm::opargs::StackLocalI64(0),
+					vm::opargs::StackLocalI64(base::StrID("ret_val")),
 					lirValueToOpArg(ctx, terminator.arguments.at(0)),
 				});
 			} else {
