@@ -19,10 +19,10 @@ namespace vm::builtins {
 		base::Optional<VmValue>
 			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
-				function(thread, args[Is].intepret<FunArgs>()...);
+				function(thread, args[Is].interpret<FunArgs>()...);
 				return {};
 			}
-			auto value = function(thread, args[Is].intepret<FunArgs>()...);
+			auto value = function(thread, args[Is].interpret<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
 			// @note THIS ASSUMES MATCHING ENDIANNESS
 			return VmValue(vm_return_type, reinterpret_cast<byte*>(&value));
@@ -97,13 +97,20 @@ namespace vm::builtins {
 	 * @note The order and id should match the order in the getBuiltinFunctionTypes() array.
 	 */
 	base::Optional<VmValue> callBuiltinFunction(
-		BuiltinFunctionID id, VMThread& thread, const std::vector<VmValue>& arguments
+		BuiltinFunctionID           id,
+		TypeCRef                    builtin_func_type,
+		VMThread&                   thread,
+		const std::vector<VmValue>& arguments
 	) {
 		switch (id) {
-#define CASE_FUNC(ID_NAME)                                                                  \
-	case BuiltinFunctionID::ID_NAME: {                                                      \
-		auto type = thread.getTypes()->at(getBuiltinFunctionType(id)->result);              \
-		return callUnpackArgs(FunctionHandlers::builtin##ID_NAME, type, thread, arguments); \
+#define CASE_FUNC(ID_NAME)                       \
+	case BuiltinFunctionID::ID_NAME: {           \
+		return callUnpackArgs(                   \
+			FunctionHandlers::builtin##ID_NAME,  \
+			*builtin_func_type->getResultType(), \
+			thread,                              \
+			arguments                            \
+		);                                       \
 	}
 
 			FOR_EACH(CASE_FUNC, InputI64, OutputI64)

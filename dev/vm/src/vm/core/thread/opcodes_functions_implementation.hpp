@@ -280,9 +280,10 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
-			auto builtin_id    = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
-			auto function_type = builtins::getBuiltinFunctionType(builtin_id);
-			auto arg_count     = function_type->parameters.size();
+			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
+			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
+			auto real_function_type = thread.executing_program->types->at(function_type->name);
+			auto arg_count          = function_type->parameters.size();
 
 			std::vector<VmValue> args;
 			u64                  first_arg_idx = frame->block_stack.size() - arg_count;
@@ -297,7 +298,7 @@ namespace vm {
 			}
 
 			base::Optional<VmValue> return_value
-				= builtins::callBuiltinFunction(builtin_id, thread, args);
+				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
 			match_optional(return_value) {
 				opt_none {}
 				opt_some(value) {
@@ -377,7 +378,7 @@ namespace vm {
 			frame->called_func_arg_size = 0;
 			frame->called_func_ret_size = 0;
 		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 

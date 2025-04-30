@@ -8,10 +8,11 @@
 namespace vm {
 	/**
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
-	 * @note It is not meant to be used by the internal memory module.
+	 * It is NOT meant to be used by the internal memory module.
+	 * @note Passed data is copied.
 	 */
 	struct VmValue {
-		VmValue(TypeCRef type): type(type) { data.resize(type->getSize()); }
+		explicit VmValue(TypeCRef type): type(type) { data.resize(type->getSize()); }
 
 		VmValue(TypeCRef type, const byte* data): VmValue(type) { setValue(data); }
 
@@ -19,6 +20,7 @@ namespace vm {
 		 * @brief Sets value's data as new_data. Assumes new_data.size() >= type.getSize();
 		 */
 		void setValue(const byte* new_data) {
+			CORE_ASSERT(new_data != nullptr, "VmValue\'s data cannot be null!");
 			std::memcpy(this->data.data(), new_data, type->getSize());
 		}
 
@@ -26,12 +28,12 @@ namespace vm {
 		TypeCRef          type;
 
 		template<class T>
-		T& intepret(usize offset = 0) {
+		constexpr T& interpret(usize offset = 0) {
 			return *reinterpret_cast<T*>(data.data() + offset);
 		}
 
 		template<class T>
-		const T& intepret(usize offset = 0) const {
+		constexpr const T& interpret(usize offset = 0) const {
 			return *reinterpret_cast<const T*>(data.data() + offset);
 		}
 	};

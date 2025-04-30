@@ -235,7 +235,5 @@ namespace vm {
 		friend class VMProcess;
 		friend class OpFuns;
 		friend class builtins::FunctionHandlers;
-
-		[[nodiscard]] MCRef<TypeMetadata> getTypes() const;
 	};
 }
