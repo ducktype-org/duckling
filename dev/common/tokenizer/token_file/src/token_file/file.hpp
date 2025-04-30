@@ -55,7 +55,9 @@ namespace tokenizer {
 		 * @brief Get the path of underlying file.
 		 */
 		[[nodiscard]]
-		fs::FilePath getPath() const { return path; }
+		fs::FilePath getPath() const {
+			return path;
+		}
 
 		/**
 		 * @brief Compute pair (line, column) from character index.

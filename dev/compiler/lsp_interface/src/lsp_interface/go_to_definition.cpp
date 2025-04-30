@@ -60,7 +60,9 @@ namespace lsp {
 						{ dynamic_cast<const pst::ExprElement*>(&*element.toOpt().value()) }
 		)
 		                .value();
+
 		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr*>(&*expr);
+
 		return { compiler::helios::stmt(id_expr->symbol) };
 	}
 }
