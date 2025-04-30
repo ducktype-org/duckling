@@ -413,7 +413,7 @@ namespace compiler::helios {
 				auto lookup_res = lookupChain(
 					ctx,
 					LookupChainKey{
-						.names = names, .begin_scope = scope(key), .follow_wildcards = false }
+						.names = names, .begin_scope = scope(key), .params = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
@@ -491,7 +491,7 @@ namespace compiler::helios {
 
 			UNPACK_RESULT_MOVE(
 				auto lookup_chain =,
-				lookupChain(ctx, LookupChainKey{ pointed_chain, scope(key), false })
+				lookupChain(ctx, LookupChainKey{ pointed_chain, scope(key), {.with_wildcards = false} })
 			);
 
 			return lookup_chain;
