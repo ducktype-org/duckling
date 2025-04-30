@@ -1,8 +1,7 @@
 type fun: main {} i32
 
 function main {
-	# [0, 4) -> main ret_val
-	init_type i32;
-	deinit;
+	init_lany_type x, i32;
+	deinit; # x
 	ret;
 }

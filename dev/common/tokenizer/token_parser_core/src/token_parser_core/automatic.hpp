@@ -284,10 +284,13 @@ namespace tpc {
 	};
 
 	class NoIdentifierError final: public dia::Error {
+	public:
+		constexpr static std::string_view ERR_MSG = "Expected an identifier here.";
+
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected an identifier here.";
+			return std::string(ERR_MSG);
 		}
 
 	public:

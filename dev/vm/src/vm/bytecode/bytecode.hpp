@@ -18,7 +18,9 @@ namespace vm::code {
 	 */
 	struct Function final: ElementBase {
 		base::StrID name;
-		usize       local_stack_size = 0;
+		// @TODO this should be the compiler's responsibility, move it there
+		usize                           local_stack_size = 0;
+		base::HashMap<base::StrID, i64> local_offset_map;
 
 		CodeBlock body;
 	};
