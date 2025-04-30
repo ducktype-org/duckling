@@ -4,6 +4,7 @@
  */
 
 #include "go_to_definition.hpp"
+#include "base/optional.hpp"
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/query_hout_of_expr.hpp>
 #include <helios/symbols/symbols.hpp>
@@ -55,13 +56,14 @@ namespace lsp {
 		return element;
 	}
 
-	Definition findDefinition(MCRef<pst::LangElement> element) {
+	base::Optional<Definition> findDefinition(MCRef<pst::LangElement> element) {
 		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>(
-						{ dynamic_cast<const pst::ExprElement*>(&*element.toOpt().value()) }
-		)
-		                .value();
+			{ dynamic_cast<const pst::ExprElement*>(&*element.toOpt().value()) }
+		);
 
-		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr*>(&*expr);
+		if (!expr.hasValue()) return {};
+
+		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr*>(&*expr.value());
 
 		return { compiler::helios::stmt(id_expr->symbol) };
 	}

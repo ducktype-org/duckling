@@ -24,5 +24,5 @@ namespace lsp {
 	};
 
 	base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> root, usize offset);
-	Definition                    findDefinition(MCRef<pst::LangElement>);
+	base::Optional<Definition>    findDefinition(MCRef<pst::LangElement>);
 }

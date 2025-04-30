@@ -214,7 +214,11 @@ void server(i32 port) {
 
 			auto definition = lsp::findDefinition(element);
 
-			std::vector<std::string> out = { definition.toJSON() };
+			if (!definition.has_value()) {
+				return crow::response(200, "[]");
+			}
+
+			std::vector<std::string> out = { definition.value().toJSON() };
 
 			return crow::response(200, lsp::jsonList(out));
 		} catch (std::exception& e) {
