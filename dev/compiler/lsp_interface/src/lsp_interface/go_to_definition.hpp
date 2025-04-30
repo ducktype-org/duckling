@@ -5,8 +5,11 @@
 
 #pragma once
 
+#include "pst_parser/access.hpp"
+
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/pst.hpp>
+
 #include <base/ref.hpp>
 
 #include <string>
@@ -20,9 +23,9 @@ namespace lsp {
 
 		std::string toJSON();
 
-		Definition(CRef<pst::LangElement>);
+		Definition(const pst::LangElement *);
 	};
 
-	base::MCRef<pst::LangElement> findElement(MCRef<pst::LangElement> root, usize offset);
-	base::Optional<Definition>    findDefinition(MCRef<pst::LangElement>);
+	pst::AccessLocked<pst::LangElement> findElement(pst::AccessLocked<pst::LangElement>, usize);
+	base::Optional<Definition>          findDefinition(pst::AccessLocked<pst::LangElement>);
 }
