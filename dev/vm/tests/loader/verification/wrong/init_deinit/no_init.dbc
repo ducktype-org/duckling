@@ -1,10 +1,9 @@
 function main {
-    # [0, 8) -> main ret_val
-    # [8, 16) -> argc
-    # [16, 32) -> *argv
-    # [32, 40) -> x
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	output_l64          32;
+	output_l64          x;
 	deinit; # x
 
 	ret;

@@ -2,21 +2,19 @@
 type primitive: ui64 8
 
 function main {
-	# [0, 8) -> main ret_val
-    # [8, 16) -> argc
-    # [16, 32) -> *argv
-	# [32, 40) -> x
-	# [40, 48) -> y
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type       i64; # x
-	init_type       ui64; # y
+	init_lany_type       x, i64;
+	init_lany_type       y, ui64;
 
-	mov_l64_imm     32, 1;
-	mov_l64_l64     32, 40;
+	mov_l64_imm     x, 1;
+	mov_l64_l64     x, y;
 
 	deinit; # y
 	deinit; # x
-    deinit;       # *argv
-    deinit;       # argc
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

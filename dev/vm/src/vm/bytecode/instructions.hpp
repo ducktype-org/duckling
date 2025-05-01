@@ -69,6 +69,18 @@ namespace vm::code {
 		};
 	}
 
+	template<typename T>
+	concept TwoArgumentOpcode = requires(T t) {
+		t.arg0;
+		t.arg1;
+	};
+
+	template<typename T>
+	concept OneArgumentOpcode = requires(T t) { t.arg0; } && !TwoArgumentOpcode<T>;
+
+	template<typename T>
+	concept ZeroArgumentOpcode = !OneArgumentOpcode<T> and !TwoArgumentOpcode<T>;
+
 	using Instruction = std::variant<
 #define HANDLE_OPCODE(opcode) VM_INSTR_FROM_NAME(opcode),
 #include <vm/bytecode/opcode_definitions.hpp>

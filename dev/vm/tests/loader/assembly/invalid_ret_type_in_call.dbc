@@ -2,20 +2,20 @@
 type fun: check { i64 } i32
 
 function check {
-    mov_l32_imm     0, 42;
+    mov_l32_imm     ret_val, 42;
     ret;
 }
 
 function main {
-    # [0, 8) main ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
     
-    init_type           i64; # [32, 40) check() arg0
-    mov_l64_imm         32, 30;
+    init_lany_type      check_arg0, i64;
+    mov_l64_imm         check_arg0, 30;
     call_func           check;
 
-    mov_l64_imm         0, 42;
+    mov_l64_imm         ret_val, 42;
 	
     deinit;             # *argv
     deinit;             # argc

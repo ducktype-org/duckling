@@ -106,6 +106,19 @@ namespace compiler::helios {
 	 */
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
+	template<typename Element>
+	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const dia::Logger&>;
+	template<typename Element>
+	using ExpansionResult = errors::HResult<pst::AccessLocked<Element>, ExpansionError<Element>>;
+
+	/**
+	 * @brief Query the expansion of an expand statement.
+	 *
+	 * @note This will have some issues for now. The potential errors from parsed subexpression
+	 * aren't available for now. There needs to be a small rework of errors and position first.
+	 */
+	DECLARE_QUERY(QueryMacroExpansion, pst::GenericPSTQueryKey<pst::Expand>, ExpansionResult<pst::Stmt>)
+
 	/**
 	 * @brief Root scope of main module file.
 	 * It is currently the "effective" root scope of a module.
