@@ -52,9 +52,9 @@ namespace lsp {
 	}
 
 	pst::AccessLocked<pst::LangElement> findElement(
-		pst::AccessLocked<pst::LangElement> locked_element, usize offset
+		pst::AccessLocked<pst::LangElement> root, usize offset
 	) {
-		auto element = locked_element.illegalAccess().value();
+		auto element = root.illegalAccess().value();
 
 		for (auto sub: element->viewChildren()) {
 			auto curr_position = sub.illegalAccess().value()->getSourcePosition();
@@ -75,9 +75,9 @@ namespace lsp {
 
 		base::Optional<Definition> result;
 
-		query::utils::withContextDo([&](query::Context& context) {
-			auto stmt = compiler::helios::stmt(context, id_expr->symbol);
-			result    = Definition(dynamic_cast<const pst::LangElement*>(&*stmt.value()));
+		query::utils::withContextDo([&](query::Context& ctx) {
+			auto stmt = compiler::helios::stmt(ctx, id_expr->symbol);
+			result    = Definition(&*stmt.value());
 		});
 
 		return { result };

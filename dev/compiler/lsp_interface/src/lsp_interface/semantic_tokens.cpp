@@ -54,7 +54,7 @@ namespace lsp {
 		result["line"]           = std::to_string(this->line);
 		result["startCharacter"] = std::to_string(this->start_character);
 		result["length"]         = std::to_string(this->length);
-		result["tokenType"]      = std::to_string(static_cast<int8_t>(this->type));
+		result["tokenType"]      = base::enumToStr(this->type).strView();
 		result["tokenModifiers"] = "0";  // @TODO Duckling LSP 2.0
 
 		return jsonDict(result);
@@ -84,8 +84,7 @@ namespace lsp {
 		getSemanticTokens(element, tokens);
 
 		std::vector<std::string> token_strings(tokens.size());
-		for (unsigned long i = 0; i < token_strings.size(); i++)
-			token_strings[i] = tokens[i].toJSON();
+		for (usize i = 0; i < token_strings.size(); i++) token_strings[i] = tokens[i].toJSON();
 
 		return jsonList(token_strings);
 	}
