@@ -10,6 +10,7 @@
 #include <base/perfect_hash.hpp>
 #include <base/raw_view.hpp>
 
+#include <cassert>
 #include <expected>
 #include <filesystem>
 #include <memory>
@@ -79,6 +80,56 @@ namespace fs {
 	 */
 	enum class FileCategory { File, Directory };
 
+	/**
+	 * @class FilePath
+	 * @brief Represents a file or directory path in the filesystem, supporting physical, virtual,
+	 * and temporary files.
+	 *
+	 * The FilePath class provides a unified interface for managing and processing files and
+	 * directories across three types of filesystems:
+	 *
+	 * 1. **Physical Filesystem**: Represents files and directories that exist on the physical disk.
+	 * 2. **Virtual Filesystem**: Represents files and directories managed by a virtual filesystem
+	 * (VFS).
+	 * 3. **Temporary Filesystem**: Represents temporary files and directories managed by the
+	 * system.
+	 *
+	 * ### Key Features:
+	 * - **File and Directory Management**:
+	 *   - Create, access, and manage files and directories in physical, virtual, and temporary
+	 * filesystems.
+	 *   - Support for creating unique paths for files and directories.
+	 * - **Content Management**:
+	 *   - Retrieve file content as `FileContent` objects.
+	 *   - Support for safe content retrieval with error handling.
+	 * - **Path Utilities**:
+	 *   - Retrieve parent paths, absolute paths, URIs, and file extensions.
+	 *   - Check file properties such as whether it is a directory, file, or symbolic link.
+	 * - **Integration with Virtual Filesystem (VFS)**:
+	 *   - Seamless handling of virtual files and directories.
+	 *   - Support for reading and writing virtual file content.
+	 *
+	 * ### Usage:
+	 * - Use `createTempFile` and `createTempDirectory` for temporary files and directories.
+	 * - Use `createVirtualFile` and `createVirtualDirectory` for virtual files and directories.
+	 * - Use `getContent` or `getContentSafe` to retrieve file content.
+	 * - Use `listFilePaths` to list the contents of a directory.
+	 *
+	 * ### Example:
+	 * ```cpp
+	 * // Create a temporary file
+	 * auto tempFile = FilePath::createTempFile("Temporary content");
+	 *
+	 * // Retrieve its content
+	 * auto content = tempFile.getContent();
+	 *
+	 * // Create a virtual directory
+	 * auto virtualDir = FilePath::createVirtualDirectory();
+	 *
+	 * // Add a file to the virtual directory
+	 * auto virtualFile = virtualDir.createFileIn("Virtual content");
+	 * ```
+	 */
 	class FilePath {
 		using WeakContent = std::weak_ptr<base::OwningView>;
 		using FileHash    = std::hash<std::filesystem::path>;
@@ -132,8 +183,13 @@ namespace fs {
 
 		FilePath(const std::filesystem::path& path);
 
-		// @TODO: this might not be perfect:
-		bool operator==(const FilePath& oth) const { return path == oth.path; }
+		bool operator==(const FilePath& oth) const {
+			assert(
+				type == oth.type && category == oth.category
+				&& "FilePath type and category must match if paths are equal"
+			);
+			return path == oth.path;
+		}
 
 		/**
 		 * Creates a new directory inside this object's path. It is required that this object is a
