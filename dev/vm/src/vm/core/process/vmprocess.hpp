@@ -61,10 +61,6 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::FilePath>, code::CodeCollection>& source
-		);
-
 		Memory memory;
 
 		Box<loader::Loader> loader;
@@ -101,6 +97,13 @@ namespace vm {
 		);
 
 		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		);
+
+		/**
+		 * @brief Loads the program from a given source into VMProcesses memory.
+		 */
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<std::vector<fs::FilePath>, code::CodeCollection>& source
 		);
 
 		/**

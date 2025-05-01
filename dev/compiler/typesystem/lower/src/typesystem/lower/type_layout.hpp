@@ -12,6 +12,8 @@
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 
+#include <variant>
+
 /**
  * @brief The namespace of all definitions of the Lower Type System.
  * Short for "Type System: Low(er)".

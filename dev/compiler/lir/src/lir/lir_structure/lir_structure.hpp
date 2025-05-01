@@ -9,6 +9,8 @@
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 
+#include <variant>
+
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Placeholder for uninitialized value, should not be in LIR output. */

@@ -25,6 +25,7 @@
 #include <cstring>
 #include <iostream>
 #include <mutex>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <variant>
@@ -525,14 +526,24 @@ namespace vm {
 
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
-	bool VMThread::initThreadAndRunFunction(
+	bool VMThread::spawnThreadAndRun(
 		CRef<vm::low::LowVMProgram>     program,
 		const std::string&              func_name,
 		const std::vector<i64>&         func_args,
 		const std::vector<std::string>& program_args
 	) {
-		if (exec_thread)  // there is already a thread running
-			return false;
+		if (exec_thread.has_value() && exec_thread->joinable()) {
+			// Tried to run while already running.
+			if (std::holds_alternative<api::ExecutionStopped>(status)
+			    || std::holds_alternative<api::ExecutionCompleted>(status)
+			    || std::holds_alternative<api::ExecutionPanicked>(status)) {
+				respondExecutionRequest(api::ExecutionPanicked{});
+			}
+			// Wait for the current thread to finish and reset it.
+			exec_thread->join();
+			exec_thread.reset();
+		}
+
 		exec_thread = std::thread([this, program, func_args, func_name, program_args] {
 			try {
 				run(program, func_name, func_args, program_args);

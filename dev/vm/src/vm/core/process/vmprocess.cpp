@@ -62,7 +62,7 @@ namespace vm {
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRunFunction(
+		bool response = getMainVMThread().spawnThreadAndRun(
 			&*loaded_program, func_name, func_args, program_args
 		);
 		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
@@ -74,8 +74,10 @@ namespace vm {
 		// @TODO: more verbose errors
 		// @TODO: check status
 		auto& thread = getMainVMThread().exec_thread;
-		if (thread && thread->joinable())
+		if (thread && thread->joinable()) {
 			thread->join();
+			getMainVMThread().exec_thread.reset();
+		}
 		else
 			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
 		return api::Response(api::response::Empty());
