@@ -54,7 +54,8 @@ namespace lsp {
 		result["line"]           = std::to_string(this->line);
 		result["startCharacter"] = std::to_string(this->start_character);
 		result["length"]         = std::to_string(this->length);
-		result["tokenType"]      = base::enumToStr(this->type).strView();
+		// lst expects token type to be a number, not descriptive name
+		result["tokenType"]      = std::to_string(static_cast<int8_t>(this->type));
 		result["tokenModifiers"] = "0";  // @TODO Duckling LSP 2.0
 
 		return jsonDict(result);
