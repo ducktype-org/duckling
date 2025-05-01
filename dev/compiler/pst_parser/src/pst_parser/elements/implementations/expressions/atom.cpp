@@ -11,6 +11,8 @@ namespace pst::expr {
 			return IdentifierLiteral::parse(state, length);
 		} else if (state[0].isNumLiteral()) {
 			return ExprValue::parse(state, length);
+		} else if (state[0].isString()) {
+			return ExprStrValue::parse(state, length);
 		} else if (state[0].isBracketGroup(lexer::Token::Round)) {
 			return RoundExpr::parse(state, length);
 		} else if (state[0].isBracketGroup(lexer::Token::Curly)) {
