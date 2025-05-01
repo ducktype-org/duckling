@@ -526,7 +526,7 @@ namespace compiler::helios {
 			if (value.has_value())
 				return pst::PST<pst::Stmt>::fromContents(value.value()->getValue().str());
 			else
-				CORE_PANIC("Expand argument is not a single string.");
+				CORE_PANIC("Expand argument is not exactly a single string.");
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
