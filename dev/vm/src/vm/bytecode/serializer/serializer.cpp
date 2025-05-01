@@ -11,14 +11,17 @@
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
-#define OFFSET_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
+#define LOCAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+#undef LOCAL_TO_STRING
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
@@ -96,14 +99,8 @@ namespace vm::code {
 		void indentDown() { current_indentation -= 4; }
 
 		void writeCode() {
-			withIdentWriteLine("code: {");
-			indentUp();
-
 			for (const auto& instruction: function.body)
 				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
-
-			indentDown();
-			withIdentWriteLine("}");
 		}
 
 	public:
@@ -123,10 +120,7 @@ namespace vm::code {
 			// out << "} " << function.result_type.strView() << "{\n";
 
 			indentUp();
-
-			out << '\n';
 			writeCode();
-
 			indentDown();
 			out << "}\n";
 		}
@@ -145,8 +139,10 @@ namespace vm::code {
 				out << type.size;
 			}
 
-			void operator()(const PointerType&) const {
-				throw base::NotYetImplemented("PointerType serialization");
+			void operator()(const PointerType& type) const {
+				out << "type pointer: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView();
 			}
 
 			void operator()(const StaticTableType& type) const {
@@ -177,11 +173,48 @@ namespace vm::code {
 					if (first)
 						out << " ";
 					else
-						out << ",";
-					out << param.strView() << " ";
+						out << ", ";
+					out << param.strView();
 					first = false;
 				}
-				out << "} " << fun.result.strView();
+				out << " } " << fun.result.strView();
+			}
+
+			void operator()(const OpaqueType& type) const {
+				out << "type opaque: ";
+				out << type.name.strView() << " ";
+				out << type.size;
+			}
+
+			void operator()(const ClassType& clazz) const {
+				out << "type class:  " << clazz.name.strView() << "{\n";
+				out << "    fields: [";
+				for (auto field: clazz.fields)
+					out << field.name.strView() << ": " << field.name.strView() << ", ";
+				out << "]\n";
+				out << "    abstract: " << clazz.is_abstract << ";\n";
+				if (clazz.extends.has_value())
+					out << "    extends: " << clazz.extends.value().strView() << ";\n";
+				out << "    implements: [";
+				for (auto& iface: clazz.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: clazz.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
+			}
+
+			void operator()(const InterfaceType& interface) const {
+				out << "type interface:  " << interface.name.strView() << "{\n";
+				out << "    implements: [";
+				for (auto& iface: interface.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: interface.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
 			}
 		};
 

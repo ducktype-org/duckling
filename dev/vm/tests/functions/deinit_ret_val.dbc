@@ -2,31 +2,33 @@
 # input = ""
 # output = "42"
 
-type fun: main {} i64
 type fun: foo { i64 } i64
 
 function foo {
-    # [0, 8) -> ret_val
-    # [8, 16) -> arg0
 
     deinit; # arg0
     deinit; # ret_val
 
-    init_type       i64; # ret_val
-    mov_l64_imm     0, 42;
+    init_lany_type       x, i64;
+    mov_l64_imm     x, 42;
 
     ret;
 }
 
 function main {
-    # [0, 8) main ret_val
-    init_type       i64; # [8, 16) foo ret_val
-    init_type       i64; # [16, 24) foo arg0
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    init_lany_type       foo_ret_val, i64;
+    init_lany_type       foo_arg0, i64;
 
     call_func       foo;
 
-    output_l64 8;
+    output_l64 foo_ret_val;
 
-    deinit; # foo ret_val
+    deinit; # foo_ret_val
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

@@ -2,15 +2,18 @@
 # input = ""
 # output = "42"
 
-type fun: main {} i64
-
 function main {
-    init_type       i64; # [0, 8) main ret_val
-    deinit;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-    init_type       i64; # [0, 8)
-    mov_l64_imm     0, 42;
-    output_l64      0;
+    deinit; # argv_ptr
+    deinit; # argc
+    deinit; # main ret_val
+
+    init_lany_type       x, i64;
+    mov_l64_imm     x, 42;
+    output_l64      x;
 
     ret;
 }

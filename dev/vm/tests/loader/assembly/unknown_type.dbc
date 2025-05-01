@@ -1,7 +1,4 @@
-
-type fun: main {} i64
-
 function main {
-    init_type in64;
+    init_lany_type x, in64;
     deinit;
 }

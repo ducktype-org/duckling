@@ -2,21 +2,24 @@
 # input = n
 # output = n
 
-type fun: main {} i64
 type fun: check {} i64
 
 function check {
-	# [0, 8) check() ret_val
-	input_l64       0;
+	input_l64       ret_val;
 	ret;
 }
 
 function main {
-	# [0, 8) main ret_val
-	init_type       i64; # [8, 16) check() ret_val
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+	
+	init_lany_type  check_ret_val, i64;
 	call_func       check;
-	output_l64      8;
+	output_l64      check_ret_val;
 
 	deinit;
+	deinit; # *argv
+	deinit; # argc 
 	ret;
 }

@@ -2,64 +2,58 @@
 # Also if the stacks are seperate.
 # output = input + 1110
 
-type fun: main {} i64
 type fun: add1110 { i64 } i64
 type fun: add1100 { i64 } i64
 type fun: add1000 { i64 } i64
 
 function add1000 {
-	# [0, 8) -> ret_val
-	# [8, 16) -> arg0
-
-	mov_l64_imm    0, 1000;
-	add_l64_l64    0, 8;
+	mov_l64_imm    ret_val, 1000;
+	add_l64_l64    ret_val, arg0;
 	ret;
 }
 
 function add1100 {
-	# [0, 8) -> ret_val
-	# [8, 16) -> arg0
+	mov_l64_imm    		ret_val, 100;
 
-	mov_l64_imm    		0, 100;
-
-	init_type 			i64; # [16, 24) add1000 ret_val
-	init_type 			i64; # [24, 32) add1000 arg0
-	mov_l64_l64			24, 8;
+	init_lany_type 			add1000_ret_val, i64; # [16, 24) add1000 ret_val
+	init_lany_type 			add1000_arg0, i64; # [24, 32) add1000 arg0
+	mov_l64_l64			add1000_arg0, arg0;
 	call_func           add1000;
 
-	add_l64_l64    0,   16;
+	add_l64_l64    ret_val,   add1000_ret_val;
 	ret;
 }
 
 function add1110 {
-	# [0, 8) -> ret_val
-	# [8, 16) -> arg0
+	mov_l64_imm    		ret_val, 10;
 
-	mov_l64_imm    		0, 10;
-
-	init_type 			i64; # [16, 24) add1100 ret_val
-	init_type 			i64; # [24, 32) add1100 arg0
-	mov_l64_l64			24, 8;
+	init_lany_type 			add1100_ret_val, i64;
+	init_lany_type 			add1100_arg0, i64;
+	mov_l64_l64			add1100_arg0, arg0;
 
 	call_func           add1100;
 
-	add_l64_l64    		0, 16; # += add1100()
+	add_l64_l64    		ret_val, add1100_ret_val; # += add1100()
 
 	deinit; # add1100 ret_val
 	deinit; # arg0
 	ret;
 }
 
-
 function main {
-	# [0, 8) main ret_val
-	init_type 			i64; # [8, 16) add1110 ret_val
-	init_type 			i64; # [16, 24) add1110 arg0
-	input_l64           16;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type 			add1110_ret_val, i64;
+	init_lany_type 			add1110_arg0, i64;
+	input_l64           add1110_arg0;
 
 	call_func          	add1110;
-	output_l64          8;
+	output_l64          add1110_ret_val;
 
 	deinit; # add1110 ret_val, arg0 is deinitialized by the call.
+	deinit; # argv*
+	deinit; # argc
 	ret;
 }

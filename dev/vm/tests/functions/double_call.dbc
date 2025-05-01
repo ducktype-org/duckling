@@ -2,48 +2,48 @@
 # input = "a b c d"
 # output = a + b + c + d
 
-type fun: main {} i64
 type fun: foo { i64, i64 } i64
 
 function foo {
-    # [0, 8) -> ret_val
-    # [8, 16) -> arg0
-    # [16, 24) -> arg1
-
-    mov_l64_l64     0, 8;
-    add_l64_l64     0, 16;
+    mov_l64_l64     ret_val, arg0;
+    add_l64_l64     ret_val, arg1;
     deinit; # arg1
     deinit; # arg0
     ret;
 }
 
 function main {
-    # [0, 8) main ret_val
-    init_type       i64; # [8, 16) accumulator
-    init_type       i64; # [16, 24) foo ret_val
-    init_type       i64; # [24, 32) foo arg0
-    init_type       i64; # [32, 40) foo arg1
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-    input_l64       24;
-    input_l64       32;
+    init_lany_type       acc, i64;
+    init_lany_type       foo_ret_val, i64;
+    init_lany_type       foo_arg0, i64;
+    init_lany_type       foo_arg1, i64;
+
+    input_l64       foo_arg0;
+    input_l64       foo_arg1;
     call_func       foo;
 
-    # Here [24, 32) and [32, 40) are deinitialized
-    add_l64_l64     8, 16; # acc := a + b
+    # Here foo_arg0 and foo_arg1 are deinitialized
+    add_l64_l64     acc, foo_ret_val; # acc := a + b
 
-    init_type       i64; # [24, 32) foo arg0
-    init_type       i64; # [32, 40) foo arg1
+    init_lany_type       foo2_arg0, i64;
+    init_lany_type       foo2_arg1, i64;
 
-    input_l64       24;
-    input_l64       32;
+    input_l64       foo2_arg0;
+    input_l64       foo2_arg1;
     call_func       foo;
-    # Here [24, 32) and [32, 40) are deinitialized
+    # Here foo2_arg0 and foo2_arg1 are deinitialized
 
-    add_l64_l64     8, 16; # acc += c + d
+    add_l64_l64     acc, foo_ret_val; # acc += c + d
 
-    output_l64      8;
+    output_l64      acc;
 
     deinit; # foo ret_val
     deinit; # accumulator
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

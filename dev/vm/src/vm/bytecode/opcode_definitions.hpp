@@ -127,14 +127,18 @@ DEF_OPCODE(cmpEq_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 
+// sets the flag if pointer is null
+DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
+
 
 DEF_OPCODE(label, vm::opargs::Label)
 
-DEF_OPCODE(jmpRel_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelIf_label, vm::opargs::Label)
-DEF_OPCODE(jmpRelNotIf_label, vm::opargs::Label)
+DEF_OPCODE(jmp_label, vm::opargs::Label)
+DEF_OPCODE(jmpIf_label, vm::opargs::Label)
+DEF_OPCODE(jmpIfNot_label, vm::opargs::Label)
 
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
+DEF_OPCODE(call_builtin_func, vm::opargs::BuiltinFunctionName)
 
 // return while performing a tail call
 DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
@@ -142,7 +146,7 @@ DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
 DEF_OPCODE(ret)
 
 // initialize local variable on local stack with given type
-DEF_OPCODE(init_type, vm::opargs::Type)
+DEF_OPCODE(init_lany_type, vm::opargs::StackLocalAny, vm::opargs::Type)
 // pop variable from local stack
 DEF_OPCODE(deinit)
 
@@ -166,10 +170,18 @@ DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalP
 DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
 // passes additional argument to preceding opcode
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
+DEF_OPCODE(ext_type, vm::opargs::Type)
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+
+// initialises vtable pointer
+DEF_OPCODE(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+// casts pointed object to its superclass
+DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// tries to cast pointed object to its subclass, requires that ext_64 is next
+DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // terminates execution
 DEF_OPCODE(exit)

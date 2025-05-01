@@ -1,10 +1,9 @@
-type fun: main {} i64
-
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	output_l64          8;
+	output_l64          x;
 	deinit; # x
 
 	ret;

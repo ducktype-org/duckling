@@ -215,7 +215,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
-		opt_some_move(parsed_files) {
+		opt_some(parsed_files) {
 			auto         type_context_builder = vm::code::getBuiltinTypes();
 			LoaderLogger log;
 			for (const auto& parsed_file: parsed_files)
@@ -238,8 +238,10 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 				}
 				if (log.good())
 					return getProgram({ .functions = functions, .types = type_context.getTypes() });
-			} catch (code::builders::MissingSubtypeError& e) {
+			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
+			} catch (code::builders::TypeValidationError& e) {
+				log.log<SomeBuilderError>(e.TYPE, e.what());
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}
@@ -258,7 +260,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	std::expected<Program, LoaderLogger> opt_program = Program::from(code_collection);
 	if (opt_program.has_value()) {
-		const Program program = std::move(opt_program).value();
+		const Program program = *std::move(opt_program);
 
 		auto main_validation = validateMain(program);
 		if (!main_validation.has_value())

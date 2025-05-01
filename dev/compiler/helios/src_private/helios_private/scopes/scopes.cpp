@@ -96,6 +96,7 @@ namespace compiler::helios {
 			return ElementScopeKind::Standard;
 
 		case pst::ElementKind::Import:
+		case pst::ElementKind::DottedName:
 			return ElementScopeKind::Invalid;
 
 

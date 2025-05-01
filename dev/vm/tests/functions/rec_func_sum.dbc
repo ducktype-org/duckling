@@ -3,25 +3,21 @@
 # input = n
 # output = n * (n + 1) / 2
 
-type fun: main {} i64
 type fun: sum { i64 } i64
 
 function sum {
-    # [0, 8) -> ret_val
-    # [8, 16) -> arg0
-
-    cmpEq_l64_imm       8,  0;
-    jmpRelIf_label      ret_label;
+    cmpEq_l64_imm       arg0,  0;
+    jmpIf_label      ret_label;
     # if arg != 0:
-        init_type           i64; # [16, 24) init a return value spot for sum()
-        init_type           i64; # [24, 32) init an arg0 spot for sum()
-        mov_l64_l64         24,  8;
-        sub_l64_imm         24,  1;
+        init_lany_type           total, i64; # [16, 24) init a return value spot for sum()
+        init_lany_type           a, i64; # [24, 32) init an arg0 spot for sum()
+        mov_l64_l64         a,  arg0;
+        sub_l64_imm         a,  1;
 
         call_func           sum;
 
-        mov_l64_l64         0, 16;
-        add_l64_l64         0,  8;
+        mov_l64_l64         ret_val, total;
+        add_l64_l64         ret_val,  arg0;
 
         deinit; # sum() ret_val. arg0 was deinitialized by the call.
     label ret_label;
@@ -31,15 +27,20 @@ function sum {
 }
 
 function main {
-    # [0, 8) main ret_val
-    init_type           i64; # [8, 16) sum ret_val
-    init_type           i64; # [16, 24) sum arg0
-    input_l64           16;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    init_lany_type           sum_ret_val, i64;
+    init_lany_type           sum_arg0, i64;
+    input_l64           sum_arg0;
 
     call_func          	sum;
 
-    output_l64          8;
+    output_l64          sum_ret_val;
 
     deinit; # sum ret_val, sum arg0 is deinitialized by the call
+    deinit; # *argv
+    deinit; # argc
     ret;
 }

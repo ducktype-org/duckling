@@ -1,25 +1,25 @@
-type fun: main {} i64
-
 function main {
-	# [0, 8) -> main ret_val
-	# [8, 16) -> x
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type       i64; # x
-	input_l64       8;
+    init_lany_type      x, i64;
+    input_l64           x;
 
-	# if x == 0
-	cmpEq_l64_imm       8, 0;
-	jmpRelIf_label      OUT;
-			output_l64      8;
-			deinit; # x
-			jmpRel_label      EXIT;
+    # if x == 0
+    cmpEq_l64_imm       x, 0;
+    jmpIf_label         OUT;
+		output_l64          x;
+		deinit; # x
+		jmp_label           EXIT;
 
+    label               OUT;
+		add_l64_imm         x, 10; # x += 10
+		output_l64          x;
+		deinit; # x
 
-	label OUT;
-			add_l64_imm 8, 10; # x += 10
-			output_l64 8;
-			deinit; # x
-
-	label EXIT;
-	ret;
+    label               EXIT;
+    deinit; # *argv
+    deinit; # argc
+    ret;
 }

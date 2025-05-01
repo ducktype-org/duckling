@@ -11,6 +11,7 @@
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -42,9 +43,13 @@ namespace vm::loader::compiler {
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
-#define HANDLE_OFFSET(Type) variant_case(vm::opargs::Type, offset_type) return offset_type.offset;
-				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
-#undef HANDLE_OFFSET
+				// Every used local variable is guaranteed to exist by static verification.
+#define HANDLE_LOCAL(Type)                                             \
+	variant_case(vm::opargs::Type, local_type) {                       \
+		return ctx.function->local_offset_map.at(local_type.var_name); \
+	}
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
+#undef HANDLE_LOCAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
@@ -56,6 +61,16 @@ namespace vm::loader::compiler {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
 							return i;
+					ctx.log.log<UnknownFunctionError>(func, func.function_name);
+					return 0;
+				}
+				variant_case(vm::opargs::BuiltinFunctionName, func) {
+					auto func_id = builtins::getBuiltinFunctionID(func.function_name);
+					if (func_id)
+						return base::safeIntConv<i64>(
+							static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(*func_id
+						    )
+						);
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
 				}

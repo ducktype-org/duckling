@@ -1,15 +1,17 @@
-type fun: main {} i64
-
 function main {
-	# [0, 8) -> main ret_val
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type     i64; # x
-	jmpRel_label  Other;
+	init_lany_type     	x, i64;
+	jmp_label  			Other;
 	deinit; # x
 
-	init_type     i64; # x
-	label         Other;
-	deinit; # x
+	init_lany_type     	y, i64;
+	label         		Other;
+	deinit; # y
 
+    deinit; # *argv
+    deinit; # argc
 	ret;
 }

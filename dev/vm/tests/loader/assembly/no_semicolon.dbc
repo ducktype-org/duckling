@@ -1,6 +1,4 @@
-type fun: main {} i64
-
 function main {
     label LB;
-    mov_l64_imm 5, 10
+    mov_l64_imm ret_val, 10
 }
