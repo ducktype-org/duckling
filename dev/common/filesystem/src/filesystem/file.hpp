@@ -185,10 +185,10 @@ namespace fs {
 		bool operator==(const FilePath& oth) const {
 			bool are_equal = path == oth.path;
 			if (are_equal) {
-			  CORE_ASSERT(
-			     type == oth.type && category == oth.category,
-			    "FilePath type and category must match if paths are equal"
-			  );
+				CORE_ASSERT(
+					type == oth.type && category == oth.category,
+					"FilePath type and category must match if paths are equal"
+				);
 			}
 			return are_equal;
 		}
