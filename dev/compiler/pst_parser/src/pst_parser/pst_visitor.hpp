@@ -35,6 +35,7 @@ namespace pst {
 		CopyConstructor,
 		Destructor,
 		AccessBlock,
-		FunParam
+		FunParam,
+		Expand
 	);
 }
