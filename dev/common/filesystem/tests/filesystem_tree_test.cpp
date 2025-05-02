@@ -6,7 +6,7 @@ class FileSystemFsTreeTest: public tester::TestSuite {
 #define TESTER_CLASS FileSystemFsTreeTest
 
 	// This regex catches anything, that starts with '.' or '$'.
-	const std::regex test_regex = std::regex(R"(\..*|\$.*)");
+	const regex::Regex test_regex = regex::Regex(R"(\..*|\$.*)");
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {

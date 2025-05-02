@@ -152,14 +152,14 @@ namespace clap {
 	class FileParser: public ValueParser {
 		using ValueParser::ValueParser;
 
-		std::regex file_regex = std::regex(".*");  // The regex - default matches everything.
+		std::regex file_regex;
 
 	public:
-		explicit FileParser(std::regex regex): file_regex(std::move(regex)) {}
+		FileParser();
 
-		FileParser(const std::string& name, std::regex regex):
-			  ValueParser(name),
-			  file_regex(std::move(regex)) {}
+		explicit FileParser(std::regex regex);
+
+		FileParser(const std::string& name, std::regex regex);
 
 		template<class... Args>
 		static Box<FileParser> make(Args&&... args) {

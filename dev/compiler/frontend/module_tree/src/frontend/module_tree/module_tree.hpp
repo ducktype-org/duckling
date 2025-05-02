@@ -72,14 +72,12 @@ namespace compiler::frontend {
 		 * If a file matches this regex, then it is omitted.
 		 * The value is set by fs::FsTree::default_reject_file_regex.
 		 */
-		constexpr static std::regex& default_reject_file_regex
-			= fs::FsTree::default_reject_file_regex;
+		static regex::Regex& default_reject_file_regex;
 		/**
 		 * If a directory matches this regex, then it is omitted.
 		 * The value is set by fs::FsTree::default_reject_directory_regex.
 		 */
-		constexpr static std::regex& default_reject_directory_regex
-			= fs::FsTree::default_reject_directory_regex;
+		static regex::Regex& default_reject_directory_regex;
 
 	public:
 		/**
@@ -94,8 +92,8 @@ namespace compiler::frontend {
 		 */
 		static std::shared_ptr<ModuleTree> create(
 			auto       root,
-			std::regex reject_file_regex      = default_reject_file_regex,
-			std::regex reject_directory_regex = default_reject_directory_regex
+			regex::Regex reject_file_regex      = default_reject_file_regex,
+			regex::Regex reject_directory_regex = default_reject_directory_regex
 		) {
 			return ModuleTree::create(
 				fs::FsTree::create(root, reject_file_regex, reject_directory_regex)

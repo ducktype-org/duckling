@@ -5,8 +5,9 @@
 
 #pragma once
 #include "file.hpp"
+#include "fs_tree_fd.hpp"
 
-#include <regex>
+#include <regex/regex.hpp>
 
 namespace fs {
 	/**
@@ -22,12 +23,12 @@ namespace fs {
 		 * A note for the future: std::regex is not well optimized, so we could replace it with
 		 * some other library.
 		 */
-		static std::regex default_reject_file_regex;
+		static regex::Regex default_reject_file_regex;
 		/**
 		 * If a directory matches to this regex, then it is omitted.
 		 * The value is set in module_tree.cpp.
 		 */
-		static std::regex default_reject_directory_regex;
+		static regex::Regex default_reject_directory_regex;
 
 		/**
 		 * The main factory of FsTree. Constructs a new FsTree.
@@ -39,8 +40,8 @@ namespace fs {
 		 */
 		static std::shared_ptr<FsTree> create(
 			const auto&       root,
-			const std::regex& file_reject = default_reject_file_regex,
-			const std::regex& dir_reject  = default_reject_directory_regex
+			const regex::Regex& file_reject = default_reject_file_regex,
+			const regex::Regex& dir_reject  = default_reject_directory_regex
 		) {
 			// Using `new` to access the private constructors.
 			auto ptr = std::shared_ptr<FsTree>(new FsTree(root, file_reject, dir_reject));
@@ -94,14 +95,14 @@ namespace fs {
 	private:
 		explicit FsTree(
 			FilePath   root,
-			std::regex reject_file_regex      = default_reject_file_regex,
-			std::regex reject_directory_regex = default_reject_directory_regex
+			regex::Regex reject_file_regex      = default_reject_file_regex,
+			regex::Regex reject_directory_regex = default_reject_directory_regex
 		);
 
 		explicit FsTree(
 			const std::filesystem::path& root,
-			std::regex                   reject_file_regex      = default_reject_file_regex,
-			std::regex                   reject_directory_regex = default_reject_directory_regex
+			regex::Regex                   reject_file_regex      = default_reject_file_regex,
+			regex::Regex                   reject_directory_regex = default_reject_directory_regex
 		);
 
 		/**
@@ -118,11 +119,11 @@ namespace fs {
 		/**
 		 * A user-defined instance of a regex for rejecting files.
 		 */
-		std::regex m_reject_file_regex;
+		regex::Regex m_reject_file_regex;
 		/**
 		 * A user-defined instance of a regex for rejecting directories.
 		 */
-		std::regex m_reject_directory_regex;
+		regex::Regex m_reject_directory_regex;
 
 		/**
 		 * A link to the directory used as a root.

@@ -4,21 +4,21 @@
  */
 #include "fs_tree.hpp"
 
-using std::regex;
+using Regex = regex::Regex;
 using namespace std::filesystem;
 using namespace fs;
 
 // These regexes catch anything, that starts with '.' or '$'.
 // These values are used by compiler::frontend::ModuleTree.
-regex FsTree::default_reject_directory_regex = regex(R"((\$.*|\..*))");
-regex FsTree::default_reject_file_regex      = regex(R"((\$.*|\..*))");
+Regex FsTree::default_reject_directory_regex = Regex(R"((\$.*|\..*))");
+Regex FsTree::default_reject_file_regex      = Regex(R"((\$.*|\..*))");
 
 FsTree::FsTree(
-	const std::filesystem::path& root, regex reject_file_regex, regex reject_directory_regex
+	const std::filesystem::path& root, Regex reject_file_regex, Regex reject_directory_regex
 ):
 	  FsTree(fs::FilePath(root), std::move(reject_file_regex), std::move(reject_directory_regex)) {}
 
-FsTree::FsTree(fs::FilePath root, regex reject_file_regex, regex reject_directory_regex):
+FsTree::FsTree(fs::FilePath root, Regex reject_file_regex,Regex reject_directory_regex):
 	  m_reject_file_regex(std::move(reject_file_regex)),
 	  m_reject_directory_regex(std::move(reject_directory_regex)),
 	  m_root(std::move(root)) {}
@@ -77,13 +77,11 @@ void FsTree::recursiveCreate(const std::shared_ptr<FsTree>& root) {
 }
 
 bool FsTree::isFileNameValid(const std::string& filename) const {
-	std::smatch _match;
-	return !std::regex_match(filename, _match, m_reject_file_regex);
+	return !m_reject_file_regex.match(filename);
 }
 
 bool FsTree::isDirectoryNameValid(const std::string& dirname) const {
-	std::smatch _match;
-	return !std::regex_match(dirname, _match, m_reject_directory_regex);
+	return !m_reject_directory_regex.match(dirname);
 }
 
 bool FsTree::isEmpty() const { return m_files.empty() && m_dirs.empty(); }

@@ -13,6 +13,15 @@
 #include <charconv>
 
 namespace clap {
+
+	FileParser::FileParser(): ValueParser(), file_regex{".*"} {}
+
+	FileParser::FileParser(std::regex regex): file_regex(std::move(regex)) {}
+
+	FileParser::FileParser(const std::string& name, std::regex regex):
+			ValueParser(name),
+			file_regex(std::move(regex)) {}
+
 	ValueParsingResult StringParser::parse(usize start, std::string_view raw_input) const {
 		// Allows parsing of strings like "\"Hello\\\" here\" and the\"re!".
 		usize position        = start;

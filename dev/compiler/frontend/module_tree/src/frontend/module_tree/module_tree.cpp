@@ -13,7 +13,6 @@
 #include <base/stable_hashmap.hpp>
 
 using fs::FsTree;
-using std::regex;
 using namespace compiler::frontend;
 
 // @todo: creation points of module tree shared objects
@@ -45,6 +44,12 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
  * @brief Holds global map of module path to module id
  */
 inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
+
+regex::Regex& ModuleTree::default_reject_file_regex
+			= fs::FsTree::default_reject_file_regex;
+
+regex::Regex& ModuleTree::default_reject_directory_regex
+	= fs::FsTree::default_reject_directory_regex;
 
 SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	  path(std::move(path)),

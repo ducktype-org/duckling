@@ -5,7 +5,7 @@ add_library(Filesystem
 	src/filesystem/encoding.hpp
 )
 
-make_module(Filesystem USES Base)
+make_module(Filesystem USES Base Regex)
 
 duck_add_test(common filesystem tests/filesystem_test.cpp USES Filesystem)
 duck_add_test(common filesystem_tree tests/filesystem_tree_test.cpp USES Filesystem)
