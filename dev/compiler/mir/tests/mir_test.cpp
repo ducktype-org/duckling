@@ -5,6 +5,7 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
+#include <typesystem/higher/queries.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/context.hpp>
