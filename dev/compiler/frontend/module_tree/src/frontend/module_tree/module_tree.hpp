@@ -16,6 +16,7 @@
 
 #include <base/ints.hpp>
 #include <base/maps.hpp>
+#include <regex/regex.hpp>
 
 #include <string>
 
