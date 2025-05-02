@@ -10,7 +10,6 @@
 #include <base/perfect_hash.hpp>
 #include <base/raw_view.hpp>
 
-#include <cassert>
 #include <expected>
 #include <filesystem>
 #include <memory>
