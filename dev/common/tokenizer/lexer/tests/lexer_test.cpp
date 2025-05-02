@@ -35,7 +35,7 @@ private:
 	};
 
 	void testBasicStructure() {
-		assertTrue(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
+		assertTrue(td->getTokenData().tokens.size() == 9, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
@@ -121,6 +121,8 @@ private:
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
+
+	void testGroup8() { testTokenGroup<7, lexer::Token::Type::Char, &lexer::Token::isChar>(); }
 
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();

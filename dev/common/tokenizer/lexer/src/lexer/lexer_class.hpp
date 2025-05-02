@@ -74,6 +74,7 @@ namespace lexer {
 		void operatorHandler(Tokens& output);
 		void nameHandler(Tokens& output);
 		void stringHandler(Tokens& output);
+		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
