@@ -34,7 +34,7 @@ private:
 	}
 
 	static fs::FilePath parseFile(
-		const std::string& str, const std::regex& regex = std::regex(".*")
+		const std::string& str, const regex::Regex& regex = regex::Regex(".*")
 	) {
 		return std::any_cast<fs::FilePath>(clap::FileParser::make(regex)->parse(0, str).value);
 	}
@@ -103,11 +103,11 @@ private:
 
 		ASSERT_EQUAL(
 			"awesome_content\n",
-			parseFile("test_file.txt", std::regex(".*\\.txt")).getContent().view().stdString()
+			parseFile("test_file.txt", regex::Regex(".*\\.txt")).getContent().view().stdString()
 		);
 
 		assertThrows<clap::exceptions::ValueParsingException>(
-			[&]() { parseFile("test_file.txt", std::regex(".*\\.cpp")); },
+			[&]() { parseFile("test_file.txt", regex::Regex(".*\\.cpp")); },
 			"Regex should make it invalid"
 		);
 

@@ -16,9 +16,9 @@ namespace clap {
 
 	FileParser::FileParser(): ValueParser(), file_regex{".*"} {}
 
-	FileParser::FileParser(std::regex regex): file_regex(std::move(regex)) {}
+	FileParser::FileParser(regex::Regex regex): file_regex(std::move(regex)) {}
 
-	FileParser::FileParser(const std::string& name, std::regex regex):
+	FileParser::FileParser(const std::string& name, regex::Regex regex):
 			ValueParser(name),
 			file_regex(std::move(regex)) {}
 
@@ -100,8 +100,7 @@ namespace clap {
 		auto result = StringParser::make()->parse(start, raw_input);
 		auto str    = std::any_cast<std::string>(result.value);
 
-		std::smatch _match;
-		if (!std::regex_match(str, _match, file_regex))
+		if (!file_regex.match(str))
 			throw clap::exceptions::ValueParsingException(
 				getTypeName().c_str(),
 				start,

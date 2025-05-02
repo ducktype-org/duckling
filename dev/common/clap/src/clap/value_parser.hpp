@@ -12,7 +12,7 @@
 #include <base/type_traits.hpp>
 
 #include <any>
-#include <regex>
+#include <regex/regex.hpp>
 #include <utility>
 
 namespace clap {
@@ -152,14 +152,14 @@ namespace clap {
 	class FileParser: public ValueParser {
 		using ValueParser::ValueParser;
 
-		std::regex file_regex;
+		regex::Regex file_regex;
 
 	public:
 		FileParser();
 
-		explicit FileParser(std::regex regex);
+		explicit FileParser(regex::Regex regex);
 
-		FileParser(const std::string& name, std::regex regex);
+		FileParser(const std::string& name, regex::Regex regex);
 
 		template<class... Args>
 		static Box<FileParser> make(Args&&... args) {
