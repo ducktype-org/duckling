@@ -525,20 +525,20 @@ namespace lexer {
 		end = where - 1 + usize(closed);
 		dia::SourcePosition source_position(source_start, end);
 
-		if (count == 0) {
+		if (count == 0)
 			logger.log(makeBox<EmptyCharError>(source_position));
-		} else {
+		else
 			logger.log(makeBox<MultiCharacterCharError>(source_position));
-		}
 
 		if (closed) next();
 
 
 		addTokenMsg(begin, end, "string");
-		output.push_back(Token::makeChar(
-			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
-		));
+		output.push_back(
+			Token::makeChar(file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position)
+		);
 	}
+
 	void Lexer::bracketHandler(Tokens& output) {
 		usize end{};
 		auto  source_start = currentPosition();
