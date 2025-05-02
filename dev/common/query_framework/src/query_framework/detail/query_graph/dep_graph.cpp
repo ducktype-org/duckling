@@ -12,16 +12,7 @@
 
 using query::detail::NodeID;
 
-template<>
-struct std::hash<NodeID> final {
-	std::size_t operator()(const NodeID& key) const {
-		auto l = key.q_id;
-		auto r = key.hash.val;
 
-		// this is questionable:
-		return l.asInt() * 9'223'372'036'854'775'783UL + r;
-	}
-};
 
 namespace query::detail {
 
