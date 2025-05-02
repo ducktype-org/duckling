@@ -8,3 +8,5 @@
 # Editor files:
 .vscode/
 compile_commands.json
+package-lock.json
+*.tsbuildinfo

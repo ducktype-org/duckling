@@ -4,8 +4,9 @@
  */
 #pragma once
 
-#include "../node_id.hpp"
-#include "query_id.hpp"
+#include "node_id.hpp"
+
+#include <query_framework/detail/query_data/query_id.hpp>
 
 #include <base/perfect_hash.hpp>
 
