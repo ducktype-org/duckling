@@ -184,11 +184,14 @@ namespace fs {
 		FilePath(const std::filesystem::path& path);
 
 		bool operator==(const FilePath& oth) const {
-			assert(
-				type == oth.type && category == oth.category
-				&& "FilePath type and category must match if paths are equal"
-			);
-			return path == oth.path;
+			bool are_equal = path == oth.path;
+			if (are_equal) {
+			  CORE_ASSERT(
+			     type == oth.type && category == oth.category,
+			    "FilePath type and category must match if paths are equal"
+			  );
+			}
+			return are_equal;
 		}
 
 		/**
