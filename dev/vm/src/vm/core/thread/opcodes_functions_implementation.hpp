@@ -385,10 +385,10 @@ namespace vm {
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_lany_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg0)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to

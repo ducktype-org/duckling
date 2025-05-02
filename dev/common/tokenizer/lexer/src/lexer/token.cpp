@@ -170,7 +170,9 @@ namespace lexer {
 
 	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
 
-	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
+	bool Token::isOperatorSymbolOrText() const {
+		return isOperatorSymbol() || isKeyword() || isIdentifier();
+	}
 
 	bool Token::isPrefixOperator() const {
 		return isOperatorSymbol()

@@ -3,13 +3,13 @@
 namespace pst::expr {
 	/**
 	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
-	 * some situation where only a number value will be accepted in an expression.
+	 * some situation where only a string value will be accepted in an expression.
 	 */
-	class BadValueError final: public dia::Error {
+	class BadStrValueError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected a value";
+			return "Expected a string value";
 		}
 
 	public:
@@ -18,14 +18,14 @@ namespace pst::expr {
 			return Domain::Parser;
 		}
 
-		BadValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		BadStrValueError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class MoreThanValueError final: public dia::Error {
+	class MoreThanStrValueError final: public dia::Error {
 	protected:
 		[[nodiscard]]
 		std::string toStringBrief() const override {
-			return "Expected just a single value";
+			return "Expected just a single string value";
 		}
 
 	public:
@@ -34,41 +34,41 @@ namespace pst::expr {
 			return Domain::Parser;
 		}
 
-		MoreThanValueError(dia::SourcePosition pos): dia::Error(pos) {}
+		MoreThanStrValueError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	MBox<ExprElement> ExprValue::parse(LangParserState& state, i64 length) {
+	MBox<ExprElement> ExprStrValue::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
 		auto pos = dia::SourcePosition(state.getPosition(), state.getPosition(length - 1).getEnd());
 
-		if (!state[0].is(lexer::Token::Type::NumLiteral)) {
+		if (!state[0].isString()) {
 			// This should (probably) never happen with how it's called by the parser
-			state.log(makeBox<BadValueError>(pos));
+			state.log(makeBox<BadStrValueError>(pos));
 			fastForward(state, length);
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprValue>(pos, state[0].getValue());
+		auto out = makeBox<ExprStrValue>(pos, state[0].getValue());
 		state.parse(out).eatOne();
 
 		if (length > 1) {
-			state.log(makeBox<MoreThanValueError>(pos));
+			state.log(makeBox<MoreThanStrValueError>(pos));
 			fastForward(state, length);
 		}
 
 		return out;
 	}
 
-	void ExprValue::dprint(std::ostream& out) const {
+	void ExprStrValue::dprint(std::ostream& out) const {
 		out << "{";
 
-		out << R"("number": ")" << number.str() << "\"";
+		out << R"("string": ")" << string.value.str() << "\"";
 
 		out << "}";
 	}
 
-	void ExprValue::acceptExprVisitor(PstExprVisitor& visitor) const {
-		visitor.visitExprValue(*this);
+	void ExprStrValue::acceptExprVisitor(PstExprVisitor& visitor) const {
+		visitor.visitExprStrValue(*this);
 	}
 }

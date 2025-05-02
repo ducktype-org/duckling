@@ -6,39 +6,39 @@
 type fun: check {} void
 
 function check {
-	init_type 			i64;
-	mov_l64_imm         0,   15;
-	cmpEq_l64_imm       0,   14;
+	init_lany_type 		x, i64;
+	mov_l64_imm         x,   15;
+	cmpEq_l64_imm       x,   14;
 	deinit;
 	ret;
 }
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type           i64; # [32, 40) local_1
-	init_type           i64; # [40, 48) local_2
+	init_lany_type           a, i64;
+	init_lany_type           b, i64;
 
-	mov_l64_imm         32,  1;
-	cmpEq_l64_imm       32,  1;
+	mov_l64_imm         a,  1;
+	cmpEq_l64_imm       a,  1;
 
 	call_func          	check;
 
-	mov_l64_imm         32,  1;
-	mov_l64_imm         40,  0;
+	mov_l64_imm         a,  1;
+	mov_l64_imm         b,  0;
 
 	# flag from cmpEq should be on
 	jmpIf_label      ok_label;
 
 	# print "0" (failed)
-	output_l64          40;
+	output_l64          b;
 	ret;
 
 	label ok_label;
 	# print "1" (passed)
-	output_l64          32;
+	output_l64          a;
 
 	deinit; # local_2
 	deinit; # local_1
