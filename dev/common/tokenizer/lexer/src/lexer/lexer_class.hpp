@@ -97,6 +97,8 @@ namespace lexer {
 		bool isBlockCommentEnd() const;
 		[[nodiscard]]
 		bool isStringBegin() const;
+		[[nodiscard]]
+		bool isCharBegin() const;
 		/**@}*/
 
 		/**

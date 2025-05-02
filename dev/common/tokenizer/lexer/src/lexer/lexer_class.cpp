@@ -282,6 +282,8 @@ namespace lexer {
 			nameHandler(output);
 		} else if (isStringBegin()) {
 			stringHandler(output);
+		} else if (isCharBegin()) {
+			charHandler(output);
 		} else if (peek().is(Class::open_bracket)) {
 			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
@@ -527,13 +529,13 @@ namespace lexer {
 
 		if (count == 0)
 			logger.log(makeBox<EmptyCharError>(source_position));
-		else
+		else if (count > 1)
 			logger.log(makeBox<MultiCharacterCharError>(source_position));
 
 		if (closed) next();
 
 
-		addTokenMsg(begin, end, "string");
+		addTokenMsg(begin, end, "char");
 		output.push_back(
 			Token::makeChar(file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position)
 		);
@@ -600,6 +602,8 @@ namespace lexer {
 	bool Lexer::isBlockCommentEnd() const { return tryRawValue('}') && tryRawValue('#', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
+
+	bool Lexer::isCharBegin() const { return tryRawValue('\''); }
 
 	dia::SourcePosition Lexer::currentPosition() const { return { file, where }; }
 }

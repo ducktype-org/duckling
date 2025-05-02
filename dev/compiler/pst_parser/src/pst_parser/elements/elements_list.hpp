@@ -62,6 +62,7 @@ namespace pst {
 		class BinaryOperator;
 		class ExprValue;
 		class ExprStrValue;
+		class ExprCharValue;
 		class Literal;
 		class TemplateSpecifier;
 		class IdentifierLiteral;
