@@ -4,13 +4,13 @@
 
 int main() {
 	// Create a temporary file with content: "Content"
-	const auto f = fs::FilePath::createTempFile("Content");
+	const auto f = fs::FilePath::createVirtualFile("Content");
 	std::cout << "f content: " << f.getContent().view().stringView() << '\n';
 	std::cout << "f path: " << f.absolutePath() << '\n';
 
 	// Create a temporary directory.
-	const auto temp_dir = fs::FilePath::createTempDirectory();
-	std::cout << "temp_dir path: " << temp_dir.absolutePath() << '\n';
+	const auto temp_dir = fs::FilePath::createVirtualDirectory();
+	std::cout << "virtual_dir path: " << temp_dir.absolutePath() << '\n';
 
 	// Create a new file in `temp_dir` with content: "f1".
 	const auto f1 = temp_dir.createFileIn("f1");
