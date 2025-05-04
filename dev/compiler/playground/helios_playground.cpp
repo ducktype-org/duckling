@@ -21,7 +21,7 @@ void printContextErrors() {
 void printQueryDeps(const std::vector<query::detail::NodeID>& deps) {
 	std::cerr << "Dependencies:\n";
 	for (auto& i: deps)
-		std::cerr << "    > query: " << i.q_id.asInt() << ",  key: " << i.hash.val << "\n";
+		std::cerr << "    > query: " << i.q_id.getData().name << ",  key: " << i.hash.val << "\n";
 }
 
 int notMain(int argc, const char* const* argv) {
