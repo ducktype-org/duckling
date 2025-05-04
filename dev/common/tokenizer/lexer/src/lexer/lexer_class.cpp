@@ -272,10 +272,10 @@ namespace lexer {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
 		// @TODO: for now comments aren't saved as tokens
-		else if (isCommentBegin()) {
-			commentHandler(output);
-		} else if (isBlockCommentBegin()) {
+		else if (isBlockCommentBegin()) {
 			blockCommentHandler(output);
+		} else if (isCommentBegin()) {
+			commentHandler(output);
 		} else if (peek().is(Class::operator_start)) {
 			operatorHandler(output);
 		} else if (peek().is(Class::name_start)) {

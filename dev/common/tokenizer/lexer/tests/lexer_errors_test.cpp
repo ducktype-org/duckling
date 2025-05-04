@@ -51,10 +51,10 @@ class LexerErrorTests: public tester::TestSuite {
 		assertTrue(example(), example.message());
 	}
 
-	std::array<std::unique_ptr<GenExample>, 5> unclosed_eof = {
+	std::array<std::unique_ptr<GenExample>, 6> unclosed_eof = {
 		std::make_unique<Example<false>>("("),  std::make_unique<Example<false>>("{"),
 		std::make_unique<Example<false>>("["),  std::make_unique<Example<false>>("\""),
-		std::make_unique<Example<false>>("\'"),
+		std::make_unique<Example<false>>("\'"), std::make_unique<Example<false>>("#{"),
 	};
 
 	std::array<std::unique_ptr<GenExample>, 2> unclosed_eol = {
@@ -73,6 +73,8 @@ class LexerErrorTests: public tester::TestSuite {
 		std::make_unique<Example<true>>("\'+\'"),
 		std::make_unique<Example<true>>(R"('\n')"),
 	};
+
+	Example<false> bad_char_start{ "\xCC\x80" };
 
 	void exampleTests() {
 		for (auto e: examples) assertTrue((*e)(), e->message());
