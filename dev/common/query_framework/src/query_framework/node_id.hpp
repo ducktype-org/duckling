@@ -1,10 +1,10 @@
 /**
  * @file node_id.hpp
- * @brief Definition of `NodeID` type, that identifies node inside dependency graph.
+ * @brief Definition of `NodeID` type, that identifies query node inside dependency graph.
  */
 #pragma once
 
-#include "query_id.hpp"
+#include "detail/query_id.hpp"
 
 namespace query::detail {
 
@@ -23,5 +23,4 @@ namespace query::detail {
 		QueryID q_id;
 		KeyHash hash;
 	};
-
 }

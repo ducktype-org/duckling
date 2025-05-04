@@ -1,30 +1,30 @@
 type static_table: tablei64 i64 4
 
 function main {
-	# [0, 8) main ret_val
-	# [8, 16) argc
-	# [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type           i64;          # [32,40) # x
-	init_type           i64;          # [40,48) # i
-	init_type           i64;          # [48,56) # arrPtr
+	init_lany_type      x, i64;
+	init_lany_type      i, i64;
+	init_lany_type      arr_ptr, i64;
 
-	alloc_lptr_type     48, tablei64; # arrPtr := alloc *int[]
-	mov_l64_imm         40, 0;        # i := 0
-	mov_l64_imm         32, 3;        # x := 3
+	alloc_lptr_type     arr_ptr, tablei64; # arr_ptr := alloc *int[]
+	mov_l64_imm         i, 0;        # i := 0
+	mov_l64_imm         x, 3;        # x := 3
 
 	# t[i] := x (by i)
-	store_lptr_l64_ofs  48, 32;       # t[i] := x
-	ext_l64             40;
+	store_lptr_l64_ofs  arr_ptr, x;       # t[i] := x
+	ext_l64             i;
 
-	mov_l64_imm         32, 5;        # x := 5
+	mov_l64_imm         x, 5;        # x := 5
 
-	load_l64_lptr_ofs   0, 48;
-	ext_l64             40;
+	load_l64_lptr_ofs   ret_val, arr_ptr;
+	ext_l64             i;
 
-	output_l64          40;
+	output_l64          i;
 
-	free_lptr           48;
+	free_lptr           arr_ptr;
 
 	deinit;
 	deinit;

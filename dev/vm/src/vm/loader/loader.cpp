@@ -207,6 +207,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 				log.log<SomeBuilderError>(e.FUNC, e.what());
 			} catch (code::builders::TypeIsNotFunctionalError& e) {
 				log.log<SomeBuilderError>(e.FUNC, e.what());
+			} catch (code::builders::TypeValidationError& e) {
+				log.log<SomeBuilderError>(e.TYPE, e.what());
 			}
 			return std::unexpected(std::move(log));
 		}

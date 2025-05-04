@@ -5,16 +5,13 @@
 type fun: check { i64, i32, i64 } void
 
 function check {
-	# [0, 8) arg0
-	# [8, 12) arg1
-	# [12, 20) arg2
 
-	init_type 			i64; 	# [20, 28) acc
-	mov_l64_imm			20, 1; 	# acc := 1
-	mul_l64_l64			20, 0; 	# acc *= a
-	mul_l64_l64			20, 12; # acc *= c
+	init_lany_type 		acc, i64;
+	mov_l64_imm			acc, 1; 	# acc := 1
+	mul_l64_l64			acc, arg0; 	# acc *= a
+	mul_l64_l64			acc, arg2;  # acc *= c
 
-	output_l64			20;
+	output_l64			acc;
 
 	deinit; # acc
 	deinit; # arg2
@@ -24,17 +21,17 @@ function check {
 }
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-	init_type i64; # [32, 40) check() arg0
-	init_type i32; # [40, 44) check() arg1
-	init_type i64; # [44, 52) check() arg2
+	init_lany_type a, i64;
+	init_lany_type b, i32;
+	init_lany_type c, i64;
 
-	input_l64	32;
-	input_l32	40;
-	input_l64	44;
+	input_l64	a;
+	input_l32	b;
+	input_l64	c;
 	call_func          	check;
 
 	deinit; # *argv

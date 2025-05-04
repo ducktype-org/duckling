@@ -1,12 +1,12 @@
 function main {
-	# [0, 8) main ret_val
-	# [8, 16) -> argc
-	# [16, 32) -> *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 	breakpoint;
-	init_type			i64; # [32, 40) tmp
-	mov_l64_imm         32, 0;
+	init_lany_type			tmp, i64;
+	mov_l64_imm         	tmp, 0;
 	label Loop;
-		cmpEq_l64_imm		32, 0;
+		cmpEq_l64_imm		tmp, 0;
 		jmpIf_label 	  	Loop;
 
 	deinit; # temp

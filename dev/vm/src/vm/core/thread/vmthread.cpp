@@ -124,14 +124,16 @@ namespace vm {
 
 		i32 stack_top = 0;
 		// @todo: VM functions should be able to return and take as parameters any VM type.
-		// For now we assume we can only pass and return arguments od i64 type.
+		// For now we assume we can only pass and return arguments of i64 type.
 		// This should be changed in:
 		// https://github.com/ducktype-org/duckling/issues/721
 
 		// Initialize an exit code/return value spot. In case of non void functions the exit_code is
 		// the return value of the function. Void functions always return with the exit_code = 0.
-		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0));
-		stack_top += base::safeIntConv<i32>(i64_type->getSize());
+		start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, i64_type_id));
+
+			stack_top
+			+= base::safeIntConv<i32>(i64_type->getSize());
 
 		for (u64 i = 0; i < func_args.size(); i++) {
 			i32  converted_arg = base::safeIntConv<i32>(func_args[i]);
@@ -139,7 +141,7 @@ namespace vm {
                 "Wrong number of passed arguments!"
             );
 			i32 arg_type_id = base::safeIntConv<i32>(arg_type->getID().asInt());
-			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_type, arg_type_id, 0));
+			start_function.bc.push_back(MAKE_BYTECODE_INSTRUCTION(init_lany_type, 0, arg_type_id));
 			start_function.bc.push_back(
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, stack_top, converted_arg)
 			);
@@ -198,11 +200,13 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [0, 8) program ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),    // [8, 24) *argv
-				MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),  // alloc argv
-				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [24, 32) ix
-				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),         // [32, 40) temp_store
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 0, func_ret_type_id
+				),  // [0, 8) program ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 8, argv_ptr_type_id),  // [8, 24) *argv
+				MAKE_BYTECODE_INSTRUCTION(alloc_lptr_type, 8, argv_type_id),     // alloc argv
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 24, i64_type_id),      // [24, 32) ix
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 32, i64_type_id),  // [32, 40) temp_store
 			}
 		);
 
@@ -226,10 +230,12 @@ namespace vm {
 		start_function.bc.insert(
 			start_function.bc.end(),
 			{
-				MAKE_BYTECODE_INSTRUCTION(init_type, func_ret_type_id, 0),  // [40, 48) call ret_val
-				MAKE_BYTECODE_INSTRUCTION(init_type, i64_type_id, 0),       // [48, 56] argc
+				MAKE_BYTECODE_INSTRUCTION(
+					init_lany_type, 40, func_ret_type_id
+				),  // [40, 48) call ret_val
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 48, i64_type_id),       // [48, 56] argc
 				MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 48, base::safeIntConv<i32>(args.size())),
-				MAKE_BYTECODE_INSTRUCTION(init_type, argv_ptr_type_id, 0),  // [56, 72) *argv
+				MAKE_BYTECODE_INSTRUCTION(init_lany_type, 56, argv_ptr_type_id),  // [56, 72) *argv
 				MAKE_BYTECODE_INSTRUCTION(mov_lptr_lptr, 56, 8),
 				MAKE_BYTECODE_INSTRUCTION(call_func, called_function_id, 0),
 				// @todo: For now we assume that the return values are always i64. It's true for

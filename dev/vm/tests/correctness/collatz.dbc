@@ -10,21 +10,16 @@
 type fun: collatz { i64 } i64
 
 function collatz {
-	# ret_val - 0
-	# n - 8 (value for which the collatz sequence is calculated)
-	# max - 16 (maximum value in the calculated collatz sequence)
-	# tmp - 24
+	# arg0 -> n - value for which the collatz sequence is calculated
+	# max - maximum value in the calculated collatz sequence
 
-	# [0, 8) ret_val
-	# [8, 16) arg0 -> n
+	init_lany_type		max, i64;
+	init_lany_type		tmp, i64;
 
-	init_type		i64; # [16, 24) max
-	init_type		i64; # [24, 32) tmp
-
-	mov_l64_l64		16, 8; # max := n
+	mov_l64_l64		max, arg0; # max := n
 
 	# if n == 1: end
-	cmpEq_l64_imm         8, 1;
+	cmpEq_l64_imm         arg0, 1;
 	jmpIf_label        End;
 
 	# do-while (n != 1):
@@ -32,15 +27,15 @@ function collatz {
 		# if n % 2 == 0:
 
 		# if condition:
-			mov_l64_l64         24, 8; # tmp := n
-			mod_l64_imm         24, 2; # tmp %= 2
-			cmpEq_l64_imm       24, 0;
+			mov_l64_l64         tmp, arg0; # tmp := n
+			mod_l64_imm         tmp, 2; # tmp %= 2
+			cmpEq_l64_imm       tmp, 0;
 			jmpIf_label      else;
 
 		# if code:
 			# n = 3n + 1;
-			mul_l64_imm		    8, 3;
-			add_l64_imm         8, 1;
+			mul_l64_imm		    arg0, 3;
+			add_l64_imm         arg0, 1;
 			jmp_label        afterIf;
 
 		# else
@@ -48,25 +43,25 @@ function collatz {
 
 			# else code:
 				# n = n / 2
-				div_l64_imm  8, 2;
+				div_l64_imm  arg0, 2;
 
 		label afterIf;
 
 		# if n > max:
-		cmpG_l64_l64     	8, 16;
-		cmov_l64_l64     	16, 8; # max := n
+		cmpG_l64_l64     	arg0, max;
+		cmov_l64_l64     	max, arg0; # max := n
 
 		# if n == 1
-		cmpEq_l64_imm       8, 1;
+		cmpEq_l64_imm       arg0, 1;
 		jmpIfNot_label   WhileNneq0;
 
-		# cmpG_l64_imm       8, 1;
+		# cmpG_l64_imm       arg0, 1;
 		# jmpIf_label   WhileNneq0;
 
 	label End;
 
 	# return max
-	mov_l64_l64 	0, 16; # ret_val := max
+	mov_l64_l64 	ret_val, max; # ret_val := max
 
 	deinit; # tmp
 	deinit; # max
@@ -76,49 +71,49 @@ function collatz {
 
 
 function main {
-	# [0, 8) -> main ret_val
-    # [8, 16) -> argc
-    # [16, 32) -> *argv
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
 	# x - 8
 	# max - 16
 	# i - 24
 	# tmp - 32
 
-	init_type 		i64; 	# [8, 16) x
-	init_type 		i64; 	# [16, 24) max
-	init_type 		i64; 	# [24, 32) i
-	init_type 		i64; 	# [32, 40) tmp
+	init_lany_type 		x, i64;
+	init_lany_type 		max, i64;
+	init_lany_type 		i, i64;
+	init_lany_type 		tmp, i64;
 
-	input_l64       32; 		# x := input
-	mov_l64_imm     40, 0; 	# max := 0
-	mov_l64_imm     48, 1; 	# i := 1
+	input_l64       x; 		# x := input
+	mov_l64_imm     max, 0; 	# max := 0
+	mov_l64_imm     i, 1; 	# i := 1
 
 	# do-for (i < x; i++)
 	label Loop;
 		# tmp := collatz(i)
-		init_type 			i64; 		# [40, 48) collatz(i) ret_val
-		init_type 			i64; 		# [48, 56) collatz(i) arg0
+		init_lany_type 			col_ret_val, i64; 	# collatz(i) ret_val
+		init_lany_type 			col_arg0, i64; 		# collatz(i) arg0
 
-		mov_l64_l64 		72, 48;		# arg0 := i
+		mov_l64_l64 		col_arg0, i;		# arg0 := i
 		call_func          	collatz;
-		mov_l64_l64 		56, 64; 	# tmp := collatz(i)
-		deinit; 						# deinit collatz(i) ret_val
+		mov_l64_l64 		tmp, col_ret_val; 	# tmp := collatz(i)
+		deinit; # col_ret_val
 
 		# if tmp > max:
-		cmpG_l64_l64       	56, 40;
+		cmpG_l64_l64       	tmp, max;
 		jmpIfNot_label  	EndIF;
-			mov_l64_l64    	40, 56; 	# max := tmp
+			mov_l64_l64    	max, tmp; 	# max := tmp
 
 		label EndIF;
 
-		add_l64_imm      	48, 1; 		# i := i + 1
+		add_l64_imm      	i, 1; 		# i := i + 1
 
 		# if x > i : end
-		cmpG_l64_l64     	32, 48;
+		cmpG_l64_l64     	x, i;
 		jmpIf_label   	Loop;
 
-	output_l64      40;
+	output_l64      max;
 
 	deinit; # tmp
 	deinit;	# i

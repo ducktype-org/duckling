@@ -1,13 +1,11 @@
 type fun: summer {} void
 
 function summer {
-    init_type i64; # [0, 8)
-
-    mov_l64_imm 0, 700;
-    add_l64_imm 0, 30;
-    add_l64_imm 0, 5;
-
-    output_l64 0;
+    init_lany_type  x, i64; # [0, 8)
+    mov_l64_imm     x, 700;
+    add_l64_imm     x, 30;
+    add_l64_imm     x, 5;
+    output_l64      x;
 
     deinit;
     ret;

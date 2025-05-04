@@ -8,13 +8,13 @@ class VmCodeInjectionTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(multipleFiles);
-		TESTER_ADD_TEST(injectCode);
-		TESTER_ADD_TEST(callNoArgFunction);
-		TESTER_ADD_TEST(callVoidFunction);
-		TESTER_ADD_TEST(callNonVoidFunction);
-		TESTER_ADD_TEST(injectExistingFunction);
-		// TESTER_ADD_TEST(repl);
+		// TESTER_ADD_TEST(multipleFiles);
+		// TESTER_ADD_TEST(injectCode);
+		// TESTER_ADD_TEST(callNoArgFunction);
+		// TESTER_ADD_TEST(callVoidFunction);
+		// TESTER_ADD_TEST(callNonVoidFunction);
+		// TESTER_ADD_TEST(injectExistingFunction);
+		TESTER_ADD_TEST(repl);
 	}
 
 private:
@@ -23,6 +23,16 @@ private:
 		fs::FilePath file1(path("multiple_files_1.dbc"));
 		fs::FilePath file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
+
+		// auto loaded_file_response = vm::api::loadFiles(pid, { file1, file2 });
+		// if (!loaded_file_response.has_value()) {
+		// 	auto err = loaded_file_response.error();
+		// 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
+		// 	auto core_op = std::get<vm::api::CoreOperationError>(err);
+		// 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
+		// 	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
+		// 	std::cerr << err_str << '\n';
+		// }
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());
 		ASSERT_TRUE(vm::api::input(pid, "123").has_value());

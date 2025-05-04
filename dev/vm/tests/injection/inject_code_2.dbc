@@ -1,9 +1,9 @@
 type fun: check {} void
 
 function check {
-    init_type i64;
-    mov_l64_imm 0, 735;
-    deinit;
+    init_lany_type      x, i64;
+    mov_l64_imm x, 735;
+    deinit; # x
 
     ret;
 }

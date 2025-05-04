@@ -1,4 +1,3 @@
-#include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
 #include <base/optional.hpp>
@@ -8,9 +7,9 @@
 
 #include <variant>
 
-class VmInheritanceTest: public VmTestSuite {
+class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS
-#define TESTER_CLASS VmInheritanceTest
+#define TESTER_CLASS VmInheritanceLoadingTest
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(metadataLoading); }

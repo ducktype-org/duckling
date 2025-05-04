@@ -1,6 +1,7 @@
 type fun: check { i64 } void
 
 function check {
-	output_l64          0;
+	output_l64          arg0;
+	deinit;
 	ret;
 }
