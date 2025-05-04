@@ -80,9 +80,9 @@ private:
 		auto c = base::StrID("c");
 		auto d = base::StrID("d");
 
-		func_builder.initType(Op_init_lany_type{ a, int32 });
-		func_builder.initType(Op_init_lany_type{ b, int64 });
-		func_builder.initType(Op_init_lany_type{ c, int64 });
+		func_builder.addInstruction(Op_init_lany_type{ a, int32 });
+		func_builder.addInstruction(Op_init_lany_type{ b, int64 });
+		func_builder.addInstruction(Op_init_lany_type{ c, int64 });
 
 		InstructionBuilder instr(OpKind::add);
 		const auto         arg0 = vm::opargs::StackLocalI32{ a };
@@ -93,11 +93,10 @@ private:
 
 		func_builder.addInstruction(Op_deinit());
 		func_builder.addInstruction(Op_deinit());
-		func_builder.initType(Op_init_lany_type{ d, int32 });
+		func_builder.addInstruction(Op_init_lany_type{ d, int32 });
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::code::Function func = func_builder.build();
 		ASSERT_EQUAL(base::StrID("test"), func.name);
-		ASSERT_EQUAL(20, func.local_stack_size);
 
 		assertInstructionsEqual(func.body[0], Op_init_lany_type{ a, int32 });
 		assertInstructionsEqual(func.body[1], Op_init_lany_type{ b, int64 });
@@ -122,8 +121,8 @@ private:
 		FunctionBuilder func_builder(main, finalized);
 		auto            a = base::StrID("a");
 		auto            b = base::StrID("b");
-		func_builder.initType(Op_init_lany_type{ a, int64 });
-		func_builder.initType(Op_init_lany_type{ b, int32 });
+		func_builder.addInstruction(Op_init_lany_type{ a, int64 });
+		func_builder.addInstruction(Op_init_lany_type{ b, int32 });
 
 		InstructionBuilder instr_mov(OpKind::mov);
 		instr_mov.pushArgs(vm::opargs::StackLocalI64(a), vm::opargs::Immediate(1'337));
@@ -138,7 +137,7 @@ private:
 			[&] { func_builder.addInstruction(Op_deinit()); }, "Cannot pop from empty variable stack"
 		);
 
-		func_builder.initType(Op_init_lany_type{ base::StrID("ret_val2"), int64 }
+		func_builder.addInstruction(Op_init_lany_type{ base::StrID("ret_val2"), int64 }
 		);  // reinit ret val (int64)
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 

@@ -354,6 +354,29 @@ namespace vm::loader {
 			  subtype_name(subtype_name) {}
 	};
 
+	class DuplicateLocalNameError final: public dia::Error {
+		base::StrID local_name;
+
+	public:
+		constexpr static const std::string_view ERR_MSG = "This local name is not unique: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, local_name);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		DuplicateLocalNameError(dia::SourcePosition pos, base::StrID local_name):
+			  dia::Error(pos),
+			  local_name(local_name) {}
+	};
+
 	class SomeBuilderError final: public dia::Error {
 		std::string error_message;
 

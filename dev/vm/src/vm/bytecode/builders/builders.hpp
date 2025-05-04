@@ -73,11 +73,11 @@ namespace vm::code::builders {
 		friend TypeContextBuilder;
 		TypeContext() = default;
 
-		Box<TypeMetadata>       metadata = makeBox<TypeMetadata>();
-		std::vector<TypeOfData> types;
+		Box<TypeMetadata>               metadata = makeBox<TypeMetadata>();
+		StableTypeIdNameMap<TypeOfData> types;
 
 	public:
-		[[nodiscard]] const std::vector<TypeOfData>& getTypes() const;
+		[[nodiscard]] const StableTypeIdNameMap<TypeOfData>& getTypes() const;
 
 		[[nodiscard]] const TypeMetadata& getMetadata() const;
 
@@ -152,56 +152,41 @@ namespace vm::code::builders {
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
 		base::StrID              name;
-
-		STRONG_TYPEDEF_ID(LocalStackEntryID)
+		const TypeContext&       type_context;
+		FunctionType             type;
 
 		/**
 		 * @brief Represents a local stack variable.
 		 */
 		struct LocalStackEntry {
-			// This is does not equal to variable index.
-			// It is used to check stack state between jumps.
-			LocalStackEntryID unique_id;
-			base::StrID       type_name;
-			usize             local_stack_position;
-			usize             type_size;
+			base::StrID      local_name;
+			CRef<TypeOfData> type;
 
-			bool operator==(const LocalStackEntry& other) const = default;
+			bool operator==(const LocalStackEntry& other) const {
+				return local_name == other.local_name
+				    && code::typeName(*type) == code::typeName(*other.type);
+			}
 		};
 
-		std::vector<LocalStackEntry> local_stack;
+		using InstructionIter = decltype(instructions)::const_iterator;
 
-		base::HashMap<base::StrID, i64> local_offset_map;
+		std::vector<LocalStackEntry>                      stack_state;
+		base::HashMap<base::StrID, CRef<TypeOfData>>      local_name_to_type;
+		base::HashMap<base::StrID, decltype(stack_state)> stack_at_label;
+		base::HashMap<base::StrID, InstructionIter>       instruction_at_label;
 
-		usize max_stack_size = 0;
+		void validateInstruction(const Instruction& instruction) const;
 
-		const TypeContext& type_context;
+		InstructionIter getLabelTarget(opargs::Label label) const;
 
-		base::HashMap<base::StrID, base::Optional<LocalStackEntry>> stack_top_at_label;
-		base::HashMap<base::StrID, std::vector<Instruction>>        label_users;
-
-		void saveStackState(opargs::Label at_label);
-
-		void verifyCall(opargs::FunctionName function);
-		void handleCall(opargs::FunctionName function);
-		void handleLabel(instructions::Op_label label);
-		void handleDeinit();
-		void handleRet();
-
-		usize pushStackState(opargs::StackLocalAny name, opargs::Type type);
-
-		void validateLocalArgs(const Instruction& instruction) const;
-
-		void validateExtension(const Instruction& instruction);
-		void validateArgInstantiable(const opargs::Type& arg);
+		void pushStackState(opargs::StackLocalAny local, opargs::Type type);
+		void popStackState();
+		void popCallArgs(opargs::FunctionName function);
+		void validateReturnValue() const;
+		void validate();
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);
-
-		/**
-		 * @brief Pushes `init_lany_type` instruction.
-		 */
-		void initType(instructions::Op_init_lany_type init);
 
 		/**
 		 * @brief Adds instruction to the function.
@@ -215,7 +200,7 @@ namespace vm::code::builders {
 		 */
 		void addInstruction(const InstructionBuilder& instruction);
 
-		[[nodiscard]] Function build() const;
+		[[nodiscard]] Function build();
 	};
 
 }

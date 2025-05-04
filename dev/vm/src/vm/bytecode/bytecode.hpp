@@ -6,6 +6,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**
@@ -18,11 +19,7 @@ namespace vm::code {
 	 */
 	struct Function final: ElementBase {
 		base::StrID name;
-		// @TODO this should be the compiler's responsibility, move it there
-		usize                           local_stack_size = 0;
-		base::HashMap<base::StrID, i64> local_offset_map;
-
-		CodeBlock body;
+		CodeBlock   body;
 	};
 
 	struct CodeCollection final {

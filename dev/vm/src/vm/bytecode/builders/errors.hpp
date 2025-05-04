@@ -23,6 +23,7 @@ namespace vm::code::builders {
 		DuplicatedTypeError(base::StrID name): BuilderError(base::strConcat(ERR_MSG, name)) {}
 	};
 
+	// @TODOB think of the notes for this and stuff, this is logged very verbosely
 	class StackStructureMismatchError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG
@@ -72,6 +73,27 @@ namespace vm::code::builders {
 		UnknownTypeError(vm::opargs::Type type):
 			  BuilderError(base::strConcat(ERR_MSG, type.type_name)),
 			  TYPE(type) {}
+	};
+
+	// @TODOB this may be wrong
+	class UnknownLabelError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Unknown label: ";
+		const vm::opargs::Label                 NAME;
+
+		UnknownLabelError(vm::opargs::Label name):
+			  BuilderError(base::strConcat(ERR_MSG, name.label_name)),
+			  NAME(name) {}
+	};
+
+	class DuplicateLabelError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Duplicate label: ";
+		const vm::opargs::Label                 NAME;
+
+		DuplicateLabelError(vm::opargs::Label name):
+			  BuilderError(base::strConcat(ERR_MSG, name.label_name)),
+			  NAME(name) {}
 	};
 
 	class DuplicateLocalNameError: public BuilderError {
