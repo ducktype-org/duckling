@@ -106,11 +106,11 @@ namespace compiler::helios::test_utils {
 		return std::move(visitor.expr_tree).value();
 	}
 
-	helios::ScopeID getFunctionBodyScope(SymID sym) {
-		return base::anyCast<helios::ScopeID>(query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
+	ScopeID getFunctionBodyScope(SymID sym) {
+		return base::anyCast<ScopeID>(query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
 			auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
 			auto fun_body = func_pst->getBody().unlock(ctx);
-			return ctx.query<helios::QueryPrimaryCodeScopeFor>(fun_body);
+			return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
 		}));
 	}
 }

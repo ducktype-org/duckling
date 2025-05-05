@@ -404,8 +404,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		auto newScope(ScopeRef scope) {
-			return lifetime_scope_tree.newScope(scope);
+		auto newScope(ScopeRef parent) {
+			return lifetime_scope_tree.newScope(parent);
 		}
 
 		[[nodiscard]]
