@@ -114,8 +114,11 @@ private:
 			using enum compiler::mir::Operation;
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 1);
+
+			// those assertions might change when we improve mir generaration:
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(1).operation, Nop);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
