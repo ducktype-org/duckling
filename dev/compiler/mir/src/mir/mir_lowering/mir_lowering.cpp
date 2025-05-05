@@ -688,7 +688,7 @@ namespace compiler::mir {
 		FunctionBuilder& function;
 
 		/**
-		 * Scope the expression, where it and its result should live in.
+		 * The scope of the expression, where it and its result should live in.
 		 */
 		ScopeRef expr_scope;
 
