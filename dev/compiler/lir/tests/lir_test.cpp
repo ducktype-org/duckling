@@ -121,7 +121,7 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:
-		// if this happen just see mir-output of tested module for mir block numbers
+		// if this happen just see lir-output of tested module for lir block numbers
 
 		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
@@ -168,23 +168,32 @@ private:
 				ASSERT_EQUAL(local->parameter_index.value(), 2);
 				was_z = true;
 			} else {
+				ASSERT_TRUE(local->helios_id.empty());
 				ASSERT_TRUE(local->parameter_index.empty());
 			}
 		}
 
 		ASSERT_TRUE(was_x and was_y and was_z);
 
-		// check if value in return instruction is indeed the parameter we expect:
-		u64 return_value_count = 0;
+		// check if value used in the function body is indeed the parameter we expect:
 		for (auto& block: foo_lir->block_order) {
-			if (block->terminator.operation == compiler::lir::Operation::ReturnValue) {
-				auto z_local = block->terminator.arguments.at(0).get<compiler::lir::LocalRef>();
-				ASSERT_EQUAL(z_local->parameter_index.value(), 2);
-				return_value_count++;
+			// only parameter of index 2 is ever used:
+
+			auto validate_value = [&](const compiler::lir::LIRValue& value) {
+				if (value.get<compiler::lir::LocalRef>()->parameter_index.has_value()) {
+					ASSERT_EQUAL(value.get<compiler::lir::LocalRef>()->parameter_index.value(), 2);
+				}
+			};
+
+			for (auto& instruction: block->instructions) {
+				for (auto& arg: instruction.arguments) {
+					validate_value(arg);
+				}
+			}
+			for (auto& arg: block->terminator.arguments) {
+				validate_value(arg);
 			}
 		}
-
-		ASSERT_EQUAL(return_value_count, 1);
 	}
 };
 

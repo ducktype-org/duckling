@@ -594,32 +594,57 @@ namespace compiler::mir {
 			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
 			
-			// we have to "move" the condition result
-			// into special temporary value, so we can use it
-			// after the actual condition result is destroyed.
 			auto get_condition_return = condition_block->addHole();
-			auto condition_result_tmp = function.addBoolTmp();
 
 			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
-			get_condition_return.fill(Instruction{
-				Operation::Assign,
-				{ condition_result_tmp },
-				{ expr_result.value },
-				{ flagConstruct(condition_result_tmp) },
-				condition_scope,
-			});
+			if (expr_result.value.isLocal()) {
+				// we have to "move" the condition result
+				// into special temporary value, so we can use it
+				// after the actual condition result is destroyed.
+				auto condition_result_tmp = function.addBoolTmp();
 
-			condition_block->setTerminator(
-				{ 
-					Operation::Branch,
-			      	{},
-			      	{condition_result_tmp, then_body.begin->getID(), else_block->getID() },
-			      	{},
-			      	condition_scope,
-				}
-			);
+				get_condition_return.fill(Instruction{
+					Operation::Assign,
+					{ condition_result_tmp },
+					{ expr_result.value },
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope,
+				});
 
+				condition_block->setTerminator(
+					{ 
+						Operation::Branch,
+						{},
+						{condition_result_tmp, then_body.begin->getID(), else_block->getID() },
+						{},
+						condition_scope,
+					}
+				);
+
+			}
+			else {
+				// we can use the result of the expression directly:
+
+				get_condition_return.fill(Instruction{
+					Operation::Nop,
+					{ },
+					{ },
+					{ },
+					condition_scope,
+				});
+
+				condition_block->setTerminator(
+					{ 
+						Operation::Branch,
+						{},
+						{expr_result.value, then_body.begin->getID(), else_block->getID() },
+						{},
+						condition_scope,
+					}
+				);
+			}
+			
 			output({ expr_result.begin });
 		}
 
