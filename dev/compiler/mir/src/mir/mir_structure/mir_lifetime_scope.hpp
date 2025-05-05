@@ -29,7 +29,7 @@ namespace compiler::mir {
             u64 depth;
             
             /**
-             * Unique id, for mapping, comparision, etc.
+             * Unique runtime id, for mapping, comparision, etc.
              */
             u64 id;
             
@@ -50,11 +50,15 @@ namespace compiler::mir {
          */
         base::StableVector<const LifetimeScope> scopes;
 
+         /**
+         * Creates a root scope for this tree.
+         */
+         ScopeRef generateRootScope();
+
     public:
 
         /**
-         * Root of the scope tree, created at tree creation, with depth 1.
-         * Its parent will be the scope returned by getSuperRootScope.
+         * Root of the scope tree, created at tree creation, with depth 0, and no parent.
          */
         ScopeRef root;
        
@@ -69,9 +73,4 @@ namespace compiler::mir {
     };
 
     using ScopeRef = LifetimeScopeTree::ScopeRef;
-
-    /**
-     * Returns a scope that is above all other scopes, and does not have a parent.
-     */
-     ScopeRef getSuperRootScope();
 }

@@ -245,11 +245,22 @@ namespace compiler::mir {
 
 		LifetimeScopeTree lifetime_scope_tree;
 
+		/**
+		 * @brief Top level scope of the function.
+		 * it is different from the root scope of litetime tree,
+		 * since the root scope is the scope in which nothing
+		 * should live.
+		 * @important: This has to be defined bellow lifetime_scope_tree,
+		 * since lifetime_scope_tree is used in its initialization.
+		 */
+		ScopeRef top_level_scope;
+
 		query::Context& ctx;
 		helios::SymID   helios_symbol;
 
 	public:
 		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
+			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  ctx(ctx),
 			  helios_symbol(helios_symbol) {}
 
@@ -399,8 +410,8 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		auto getRootScope() const {
-			return lifetime_scope_tree.root;
+		auto getTopLevelScope() const {
+			return top_level_scope;
 		}
 
 		[[nodiscard]]
@@ -453,7 +464,7 @@ namespace compiler::mir {
 			u64 parameter_index = 0;
 			for (const auto& parameter: *hout_function.content.parameters) {
 				auto local = function.addParameter(parameter.helios_symbol, parameter_index);
-				local->setLifetimeScope(function.getRootScope());
+				local->setLifetimeScope(function.getTopLevelScope());
 				parameter_index++;
 			}
 			goOverCodeBlock(*hout_function.content.body);
@@ -900,10 +911,10 @@ namespace compiler::mir {
 		visitor.collect(function);
 
 		auto last_block     = function_builder.newBlock();
-		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, function_builder.getRootScope() });
+		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() });
 
 		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder, function_builder.getRootScope());
+		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder, function_builder.getTopLevelScope());
 
 		function_builder.setEntry(first_block.begin);
 
