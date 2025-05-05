@@ -1,7 +1,7 @@
 #include <vm_tester_utils.hpp>
 
-#include "vm/api/data/core_operation_error.hpp"
 #include <vm/api/api.hpp>
+#include <vm/api/data/core_operation_error.hpp>
 
 class VmCodeInjectionTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -21,21 +21,12 @@ public:
 	}
 
 private:
+	// TODO: Move run + exit code to a separate function.
 	void multipleFiles() {
 		vm::PID      pid = initProcess();
 		fs::FilePath file1(path("multiple_files_1.dbc"));
 		fs::FilePath file2(path("multiple_files_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1, file2 }).has_value());
-
-		// auto loaded_file_response = vm::api::loadFiles(pid, { file1, file2 });
-		// if (!loaded_file_response.has_value()) {
-		// 	auto err = loaded_file_response.error();
-		// 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
-		// 	auto core_op = std::get<vm::api::CoreOperationError>(err);
-		// 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
-		// 	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-		// 	std::cerr << err_str << '\n';
-		// }
 
 		ASSERT_TRUE(vm::api::run(pid).has_value());
 		ASSERT_TRUE(vm::api::input(pid, "123").has_value());
@@ -153,7 +144,7 @@ private:
 
 			auto exit_code_response = vm::api::getExitCode(pid);
 			ASSERT_TRUE(exit_code_response.has_value());
-			ASSERT_EQUAL_PRINT(i*i, *exit_code_response);
+			ASSERT_EQUAL_PRINT(i * i, *exit_code_response);
 		}
 	}
 

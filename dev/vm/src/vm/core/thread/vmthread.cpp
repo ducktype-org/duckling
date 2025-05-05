@@ -422,7 +422,7 @@ namespace vm {
 	}
 
 	/**
-	 * @brief Starts the execution of a single function with a given name and function arguments.
+	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void VMThread::run(
 		CRef<low::LowVMProgram>         program,
@@ -442,8 +442,9 @@ namespace vm {
 			                                 : createFunctionStartFor(func, func_args);
 			i64           exit_code      = executeFunction(start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
-			// TODO: Jak ładnie zrobić tego catcha
-		} catch (KillProcessException& e) { respondExecutionRequest(api::ExecutionPanicked{}); }
+		} catch (const KillProcessException& e) {
+			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
+		}
 	}
 
 	bool VMThread::stop() {
@@ -539,7 +540,8 @@ namespace vm {
 		const std::vector<i64>&         func_args,
 		const std::vector<std::string>& program_args
 	) {
-		if (exec_thread) return false;
+		if (exec_thread)  // There is already a thread running.
+			return false;
 
 		exec_thread = std::thread([this, program, func_args, func_name, program_args] {
 			try {
@@ -555,40 +557,14 @@ namespace vm {
 
 	void VMThread::respondExecutionRequest(const api::ExecStatus& response) {
 		setProcessStatus(response);
-		variant_match(response) {
-			variant_case_novalue(api::Running) { std::cerr << "Sending Running from thread\n"; }
-			variant_case_novalue(api::Paused) { std::cerr << "Sending Paused from thread\n"; }
-			variant_case_novalue(api::WaitingForInput) {
-				std::cerr << "Sending WaitingForInput from thread\n";
-			}
-			variant_case_novalue(api::NotStarted) {
-				std::cerr << "Sending NotStarted from thread\n";
-			}
-			variant_case(api::ExecutionCompleted, exec) {
-				std::cerr << "Sending ExecutionCompleted from thread\n";
-				std::cerr << exec.exit_code << '\n';
-			}
-			variant_case_novalue(api::ExecutionStopped) {
-				std::cerr << "Sending ExecutionStopped from thread\n";
-			}
-			variant_case_novalue(api::ExecutionPanicked) {
-				std::cerr << "Sending ExecutionPanicked from thread\n";
-			}
-		}
 		execution_response_queue.push(response);
 	}
 
 	bool VMThread::waitForStoppedResponse() {
 		auto response = execution_response_queue.pop();
-		bool run      = std::holds_alternative<api::ExecutionStopped>(response)
-		        || std::holds_alternative<api::ExecutionCompleted>(response)
-		        || std::holds_alternative<api::ExecutionPanicked>(response);
-		std::cerr << "Wait for stopped response: " << run << "\n";
-		return run;
-
-		// return std::holds_alternative<api::ExecutionStopped>(response)
-		//     || std::holds_alternative<api::ExecutionCompleted>(response)
-		//     || std::holds_alternative<api::ExecutionPanicked>(response);
+		return std::holds_alternative<api::ExecutionStopped>(response)
+		    || std::holds_alternative<api::ExecutionCompleted>(response)
+		    || std::holds_alternative<api::ExecutionPanicked>(response);
 	}
 
 	bool VMThread::waitForBreakpointResponse() {
@@ -596,9 +572,6 @@ namespace vm {
 	}
 
 	bool VMThread::waitForRunningResponse() {
-		bool run = std::holds_alternative<api::Running>(execution_response_queue.pop());
-		std::cerr << "Wait for running response: " << run << "\n";
-		return run;
-		// return std::holds_alternative<api::Running>(execution_response_queue.pop());
+		return std::holds_alternative<api::Running>(execution_response_queue.pop());
 	}
 }  // namespace vm

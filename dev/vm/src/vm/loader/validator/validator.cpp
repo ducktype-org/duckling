@@ -17,8 +17,6 @@
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/validator/detail/stack_state.hpp>
 
-#include <unordered_set>
-
 namespace vm::loader::validator {
 	namespace {
 		/**
@@ -42,9 +40,8 @@ namespace vm::loader::validator {
 			std::expected<void, LoaderLogger> validateProgram();
 
 		private:
-			const Program&                  program;
+			[[maybe_unused]] const Program& program;
 			LoaderLogger                    log;
-			std::unordered_set<base::StrID> is_function_verified;
 		};
 
 		std::expected<void, LoaderLogger> Validator::validateProgram() { return {}; }

@@ -195,7 +195,7 @@ namespace vm {
 		 * @brief Creates new thread that runs the code in the Executor service.
 		 * If there already exists a thread which runs this process it waits for it the end and
 		 * creates a new instance. Blocks until the thread is running.
-		 * 
+		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,
 		 * @param func_args - if running a function (not a whole program), this are the arguments to

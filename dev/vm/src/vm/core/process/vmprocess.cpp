@@ -1,7 +1,7 @@
 #include "vmprocess.hpp"
 
-#include "base/optional.hpp"
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
@@ -16,11 +16,9 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
-#include <expected>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
-#include <string>
 #include <variant>
 
 namespace vm {
@@ -121,8 +119,8 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::stop() {
-		auto& thread   = getMainVMThread();
-		auto  response = thread.stop();
+		auto& thread          = getMainVMThread();
+		auto  response        = thread.stop();
 		auto& opt_exec_thread = thread.exec_thread;
 
 		if (opt_exec_thread && opt_exec_thread->joinable()) {
