@@ -41,7 +41,7 @@ namespace vm::api {
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
 	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& path);
-	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code);
+	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code);
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
 	std::expected<void, ApiError> runFunction(
 		PID pid, const std::string& func_name, const std::vector<i64>& args = {}

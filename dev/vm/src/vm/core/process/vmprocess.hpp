@@ -103,7 +103,7 @@ namespace vm {
 		 * @brief Loads the program from a given source into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<std::vector<fs::FilePath>, code::CodeCollection>& source
+			const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source
 		);
 
 		/**

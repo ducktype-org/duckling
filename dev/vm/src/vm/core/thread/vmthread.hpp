@@ -192,9 +192,8 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
-		 * @brief Creates new thread that runs the code in the Executor service.
-		 * If there already exists a thread which runs this process it waits for it the end and
-		 * creates a new instance. Blocks until the thread is running.
+		 * @brief Creates a new thread that runs the code in the Executor service.
+		 * Blocks until the thread is running.
 		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,
@@ -202,7 +201,9 @@ namespace vm {
 		 * pass as parameters to the function,
 		 * @param program_args - if running a program, this are the command line arguments passed to
 		 * the program (argv equivalent).
-		 * @return true if the thread was successfully created and the program is running
+		 *
+		 * @return true if the thread was successfully created and the program is running, false if
+		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
 			CRef<vm::low::LowVMProgram>     program,

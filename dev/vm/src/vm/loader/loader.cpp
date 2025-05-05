@@ -164,12 +164,9 @@ void Program::insertFunctions(
 	}
 }
 
-std::expected<void, LoaderLogger> Program::injectCode(const code::CodeCollection& code_collection) {
-	LoaderLogger log;
-	insertTypes(code_collection.types, log);
-	insertFunctions(code_collection.functions, log);
-	if (!log.good()) return std::unexpected(std::move(log));
-	return {};
+void Program::insertCode(const code::CodeCollection& code_collection, LoaderLogger& logger) {
+	insertTypes(code_collection.types, logger);
+	insertFunctions(code_collection.functions, logger);
 }
 
 Loader::Loader(const bool validate_program): validate_program(validate_program) {}
@@ -217,23 +214,25 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const code::CodeCollection& code_collection
+	const std::vector<code::CodeCollection>& code_collection
 ) {
-	auto injection_result = program.injectCode(code_collection);
-	if (injection_result.has_value()) {
+	LoaderLogger logger;
+	for (const auto& code: code_collection) program.insertCode(code, logger);
+	if (logger.good()) {
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
 			return std::unexpected(std::move(validation_result).error());
 		return compiler::compile(program);
 	}
-	return std::unexpected(std::move(injection_result).error());
+	return std::unexpected(std::move(logger));
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<fs::FilePath>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value()) return getProgram(std::move(opt_code_collection).value());
+	if (opt_code_collection.has_value())
+		return getProgram({ std::move(opt_code_collection).value() });
 	return std::unexpected(std::move(opt_code_collection).error());
 }
 

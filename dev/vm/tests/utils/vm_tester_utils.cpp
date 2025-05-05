@@ -33,7 +33,7 @@ void VmTestSuite::runTestOnVm(
 ) {
 	auto pid = initProcess();
 
-	ASSERT_TRUE(vm::api::loadCode(pid, code).has_value());
+	ASSERT_TRUE(vm::api::loadCode(pid, { code }).has_value());
 	runTestImpl(pid, optional_input, optional_output, args, exit_code);
 }
 

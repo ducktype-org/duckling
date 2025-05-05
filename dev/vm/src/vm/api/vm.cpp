@@ -55,7 +55,7 @@ namespace vm::api {
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
+	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);

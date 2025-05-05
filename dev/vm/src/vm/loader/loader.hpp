@@ -26,10 +26,6 @@ namespace vm::loader {
 		Program& operator=(const Program&) = delete;
 		Program& operator=(Program&&)      = default;
 
-		/**
-		 * @brief Injects new code represented as code collection to a current program state.
-		 */
-		std::expected<void, LoaderLogger> injectCode(const code::CodeCollection& code_collection);
 		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
@@ -39,6 +35,10 @@ namespace vm::loader {
 		friend class Loader;
 		Program() = default;
 
+		/**
+		 * @brief Injects new code represented as code collection to a current program state.
+		 */
+		void insertCode(const code::CodeCollection& code_collection, LoaderLogger& logger);
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
@@ -84,7 +84,7 @@ namespace vm::loader {
 		 * low-level program representation of the current loader state.
 		 */
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
-			const code::CodeCollection& code_collection
+			const std::vector<code::CodeCollection>& code_collection
 		);
 	};
 }
