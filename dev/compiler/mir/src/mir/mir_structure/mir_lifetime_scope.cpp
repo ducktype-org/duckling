@@ -23,7 +23,7 @@ namespace compiler::mir {
         scopes(),
         root(newScope(&SUPER_ROOT_SCOPE)) { }
 
-    ScopeRef LifetimeScopeTree::newScope(CRef<LifetimeScope> parent) {
+    ScopeRef LifetimeScopeTree::newScope(ScopeRef parent) {
         scopes.emplaceBack(parent, parent->depth + 1, next_id++);
         return scopes.last();
     }
