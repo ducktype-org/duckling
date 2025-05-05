@@ -1,5 +1,6 @@
 add_library(Filesystem
 	src/filesystem/file.cpp
+	src_private/filesystem_private/vfs.cpp
 	src/filesystem/fs_tree.cpp
 	src/filesystem/fs_tree.hpp
 	src/filesystem/encoding.hpp

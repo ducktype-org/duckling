@@ -68,6 +68,7 @@ namespace pst {
 		TopLevel,
 		Const,
 		Variable,
+		Expand,
 		// Class Statements
 		Method,
 		Field,
