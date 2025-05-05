@@ -1,5 +1,6 @@
 #include "vmprocess.hpp"
 
+#include "base/optional.hpp"
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
@@ -15,6 +16,7 @@
 #include <vm/loader/loader.hpp>
 #include <vm/loader/logger.hpp>
 
+#include <expected>
 #include <mutex>
 #include <shared_mutex>
 #include <sstream>
@@ -71,16 +73,31 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::join() {
-		// @TODO: more verbose errors
 		// @TODO: check status
-		auto& thread = getMainVMThread().exec_thread;
-		if (thread && thread->joinable()) {
-			thread->join();
-			getMainVMThread().exec_thread.reset();
-		}
-		else
+		auto& thread          = getMainVMThread();
+		auto& opt_exec_thread = thread.exec_thread;
+		if (!opt_exec_thread || !opt_exec_thread->joinable())
 			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
-		return api::Response(api::response::Empty());
+
+		opt_exec_thread->join();
+		opt_exec_thread.reset();
+
+		auto execution_status = thread.execution_response_queue.pop();
+		variant_match(execution_status) {
+			variant_case(api::ExecutionCompleted, completed) {
+				return api::Response(api::response::Empty());
+			}
+			variant_case(api::ExecutionPanicked, panicked) {
+				return std::unexpected(api::CoreOperationError(api::OtherError("Execution panicked!"
+				)));
+			}
+			variant_default {
+				return std::unexpected(
+					api::CoreOperationError(api::OtherError("Unexpected run status!"))
+				);
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::input(
@@ -104,9 +121,16 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::stop() {
-		auto response = getMainVMThread().stop();
-		(void) join();
-		getMainVMThread().exec_thread.reset();
+		auto& thread   = getMainVMThread();
+		auto  response = thread.stop();
+		auto& opt_exec_thread = thread.exec_thread;
+
+		if (opt_exec_thread && opt_exec_thread->joinable()) {
+			opt_exec_thread->join();
+			getMainVMThread().exec_thread.reset();
+		} else {
+			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
+		}
 
 		// @TODO: make two different "stop" functions, one that throws error if program panicked
 		if (!response)
@@ -295,13 +319,12 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
-		auto proc_status = getStatus();
 		variant_match(getStatus()) {
 			variant_case(api::Executing, exec_status) {
 				variant_match(exec_status.exec_status) {
 					variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
 					variant_default return std::unexpected(
-						api::StateError("Execution is did not complete")
+						api::StateError("Execution did not complete")
 					);
 				}
 			}

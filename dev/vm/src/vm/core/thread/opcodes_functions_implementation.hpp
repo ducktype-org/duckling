@@ -372,8 +372,7 @@ namespace vm {
 
 				callee_frame->block_stack.pop_back();
 			}
-			callee_frame->local_offset_to_block_idx.clear();
-			callee_frame->block_idx_to_local_offset.clear();
+			callee_frame->resetFrameData();
 
 			// Load previous frame
 			instr                       = frame->instr;  // This is already a pointer to next instr

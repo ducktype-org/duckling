@@ -9,7 +9,7 @@ function spring {
     mul_l64_l64 ret_val, arg1;
 
     deinit; # arg1
-    deinit; #arg0 
+    deinit; # arg0 
 
     ret;
 }
