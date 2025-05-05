@@ -168,16 +168,14 @@ namespace vm::code::builders {
 			}
 		};
 
-		using InstructionIter = decltype(instructions)::const_iterator;
-
 		std::vector<LocalStackEntry>                      stack_state;
 		base::HashMap<base::StrID, CRef<TypeOfData>>      local_name_to_type;
 		base::HashMap<base::StrID, decltype(stack_state)> stack_at_label;
-		base::HashMap<base::StrID, InstructionIter>       instruction_at_label;
+		base::HashMap<base::StrID, usize>                 instruction_at_label;
 
 		void validateInstruction(const Instruction& instruction) const;
 
-		InstructionIter getLabelTarget(opargs::Label label) const;
+		usize getLabelTarget(opargs::Label label) const;
 
 		void pushStackState(opargs::StackLocalAny local, opargs::Type type);
 		void popStackState();

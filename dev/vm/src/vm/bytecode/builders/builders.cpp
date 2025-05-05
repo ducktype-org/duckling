@@ -161,7 +161,7 @@ void FunctionBuilder::validateReturnValue() const {
 		throw BadReturnError();
 }
 
-FunctionBuilder::InstructionIter FunctionBuilder::getLabelTarget(opargs::Label label) const {
+usize FunctionBuilder::getLabelTarget(opargs::Label label) const {
 	return instruction_at_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
 }
 
@@ -170,82 +170,84 @@ void FunctionBuilder::validate() {
 	for (auto [idx, param]: std::views::enumerate(type.parameters))
 		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
 
-	for (auto iter = instructions.cbegin(); iter != instructions.cend(); ++iter) {
-		variant_match(*iter) {
+	for (usize index = 0; index < instructions.size(); index++) {
+		variant_match(instructions[index]) {
 			variant_case(Op_label, instr) {
 				auto [_, added]
-					= instruction_at_label.insert_or_assign(instr.arg0.label_name, iter);
+					= instruction_at_label.insert_or_assign(instr.arg0.label_name, index);
 				if (!added) throw DuplicateLabelError(instr.arg0);
 			}
 		}
 	}
 
-	std::vector<std::pair<InstructionIter, decltype(stack_state)>> dfs_stack{
-		{ instructions.cend(), {} }  // sentinel
+	std::vector<bool>                                    visited_instructions(instructions.size());
+	std::vector<std::pair<usize, decltype(stack_state)>> dfs_stack{
+		{ instructions.size(), {} }  // sentinel
 	};
-	auto iter = instructions.cbegin();
+	usize index = 0;
 
-	while (iter != instructions.cend()) {
+	while (index != instructions.size()) {
 		// Validate non-control flow instruction there.
-		validateInstruction(*iter);
+		validateInstruction(instructions[index]);
 
-		variant_match(*iter) {
+		variant_match(instructions[index]) {
 			variant_case(Op_init_lany_type, instr) {
 				pushStackState(instr.arg0, instr.arg1);
-				++iter;
+				index++;
 			}
 			variant_case(Op_deinit, instr) {
 				popStackState();
-				++iter;
+				index++;
 			}
 			variant_case(Op_label, instr) {
 				match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 					opt_some(label_state) {
 						if (label_state != stack_state) throw StackStructureMismatchError({});
-						std::tie(iter, stack_state) = dfs_stack.back();
-                        dfs_stack.pop_back();
+						std::tie(index, stack_state) = dfs_stack.back();
+						dfs_stack.pop_back();
 					}
 					opt_none {
 						stack_at_label.put(instr.arg0.label_name, stack_state);
-						++iter;
+						index++;
 					}
 				}
 			}
-			variant_case(Op_jmp_label, instr) { iter = getLabelTarget(instr.arg0); }
+			variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
 			variant_case(Op_jmpIf_label, instr) {
-				++iter;
+				index++;
 				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
 			}
 			variant_case(Op_jmpIfNot_label, instr) {
-				++iter;
+				index++;
 				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
 			}
 			variant_case(Op_ret, instr) {
 				validateReturnValue();
-				std::tie(iter, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
 				popCallArgs(instr.arg0);
-				++iter;
+				index++;
 			}
 			variant_case(Op_call_builtin_func, instr) {
 				// @TODOB really?
 				opargs::FunctionName hack(instr.arg0.function_name);
 				hack.bytecode_pos = instr.arg0.bytecode_pos;
 				popCallArgs(hack);
-				++iter;
+				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
 				popCallArgs(instr.arg0);
-				std::tie(iter, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
-            variant_default {
-                ++iter;
-            }
+			variant_default { index++; }
 		}
 	}
+
+	for (auto [visited, instruction]: std::views::zip(visited_instructions, instructions))
+		if (!visited) instruction = Comment(base::StrID("DEAD CODE"));
 }
 
 const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
