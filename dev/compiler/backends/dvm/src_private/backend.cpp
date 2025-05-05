@@ -107,8 +107,7 @@ namespace compiler::backend_vm {
 		 * @brief Generate `init_lany_type` instruction.
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
-			ctx.func_builder.addInstruction(
-				instructions::Op_init_lany_type(variable_name, type_name)
+			ctx.func_builder.addInstruction(instructions::Op_init_lany_type(variable_name, type_name)
 			);
 		}
 
@@ -169,9 +168,8 @@ namespace compiler::backend_vm {
 			auto result_type_name = typeName(result_type);
 
 			if (lir_function->name != "main") {
-				type_context.addType(
-					FunctionType{ lir_function->name, param_names, result_type_name }
-				);
+				type_context.addType(FunctionType{
+					lir_function->name, param_names, result_type_name });
 			}
 		}
 
@@ -202,15 +200,13 @@ namespace compiler::backend_vm {
 				variant_case(vm::code::PrimitiveType, primitive) {
 					if (primitive.size != 8 && primitive.size != 4 && primitive.size != 2
 					    && primitive.size != 1)
-						throw base::NotYetImplemented(
-							base::strConcat(
-								"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
-								"supported YET, name: ",
-								primitive.name,
-								", size: ",
-								primitive.size
-							)
-						);
+						throw base::NotYetImplemented(base::strConcat(
+							"Primitives of sizes different than 64 | 32 | 16 | 8 bits are not "
+							"supported YET, name: ",
+							primitive.name,
+							", size: ",
+							primitive.size
+						));
 					if (primitive.size == 8) return vm::opargs::StackLocalI64{ name };
 					if (primitive.size == 4) return vm::opargs::StackLocalI32{ name };
 					if (primitive.size == 2) return vm::opargs::StackLocalI16{ name };
@@ -358,27 +354,20 @@ namespace compiler::backend_vm {
 
 			ctx.func_builder.addInstruction({ OpKind::call, called_func_arg });
 
-			ctx.func_builder.addInstruction(
-				{
-					OpKind::mov,
-					lir_result_argument,
-					func_result_argument,
-				}
-			);
+			ctx.func_builder.addInstruction({
+				OpKind::mov,
+				lir_result_argument,
+				func_result_argument,
+			});
 			ctx.func_builder.addInstruction(instructions::Op_deinit());  // Deinit func result
 		}
 
 		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
 			// Insert a comment about operation type.
 			// @TODO: Improve this to contain more information.
-			ctx.func_builder.addInstruction(
-				vm::code::instructions::Comment(
-					base::StrID(
-						base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation))
-							.data()
-					)
-				)
-			);
+			ctx.func_builder.addInstruction(vm::code::instructions::Comment(base::StrID(
+				base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
+			)));
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
 			const auto output = lirOutputToOpArg(ctx, lir_instruction);
@@ -440,13 +429,9 @@ namespace compiler::backend_vm {
 	void addTerminator(AddLirFuncContext& ctx, const lir::BlockRef lir_block) {
 		const auto& terminator = lir_block->terminator;
 
-		ctx.func_builder.addInstruction(
-			instructions::Comment(
-				base::StrID(
-					base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-				)
-			)
-		);
+		ctx.func_builder.addInstruction(instructions::Comment(base::StrID(
+			base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+		)));
 
 		if (terminator.operation == lir::Operation::Branch) {
 			auto bool_arg    = lirValueToOpArg(ctx, terminator.arguments.at(0));
@@ -479,13 +464,11 @@ namespace compiler::backend_vm {
 				CORE_ASSERT(
 					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
 				);
-				ctx.func_builder.addInstruction(
-					{
-						OpKind::mov,
-						vm::opargs::StackLocalI64(base::StrID("ret_val")),
-						lirValueToOpArg(ctx, terminator.arguments.at(0)),
-					}
-				);
+				ctx.func_builder.addInstruction({
+					OpKind::mov,
+					vm::opargs::StackLocalI64(base::StrID("ret_val")),
+					lirValueToOpArg(ctx, terminator.arguments.at(0)),
+				});
 			} else {
 				for (auto&& lir_location: terminator.arguments)
 					terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));

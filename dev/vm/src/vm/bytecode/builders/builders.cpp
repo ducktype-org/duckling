@@ -157,8 +157,7 @@ void FunctionBuilder::validateReturnValue() const {
 	if (stack_state.empty()) throw BadReturnError();
 	const auto& bottom = stack_state[0];
 	// @TODOB czy tu ifować voida?
-	if (bottom.local_name != "ret_val" || code::typeName(*bottom.type) != type.result)
-		throw BadReturnError();
+	if (code::typeName(*bottom.type) != type.result) throw BadReturnError();
 }
 
 usize FunctionBuilder::getLabelTarget(opargs::Label label) const {
@@ -189,6 +188,7 @@ void FunctionBuilder::validate() {
 	while (index != instructions.size()) {
 		// Validate non-control flow instruction there.
 		validateInstruction(instructions[index]);
+		visited_instructions[index] = true;
 
 		variant_match(instructions[index]) {
 			variant_case(Op_init_lany_type, instr) {

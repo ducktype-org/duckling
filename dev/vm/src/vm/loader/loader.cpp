@@ -237,10 +237,9 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					}
 				}
 				if (log.good())
-					return getProgram(
-						{ .functions = functions,
-					      .types     = type_context.getTypes() | std::ranges::to<std::vector>() }
-					);
+					return getProgram({ .functions = functions,
+					                    .types     = type_context.getTypes()
+					                           | std::ranges::to<std::vector>() });
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::TypeValidationError& e) {
