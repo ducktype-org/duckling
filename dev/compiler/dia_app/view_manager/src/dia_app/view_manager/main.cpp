@@ -221,34 +221,34 @@ class ViewManager {
     // }
 };
 
-class ViewServiceImpl : public view::ViewService::Service {
-    ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::Empty* request, ::view::ViewResponse* response) override {
-        cerr << "Received GetView" << endl;
-        auto component = make_unique<::view::Component>();
-        component->set_id(5);
-        auto text_component = make_unique<::view::TextComponent>();
-        ::view::TextEntry text_entry1;
-        text_entry1.set_text("Pierwszy tekst.");
-        text_entry1.set_group_id(17);
-        text_entry1.set_type(::view::TextDisplayType::PLAIN);
-        ::view::TextEntry text_entry2;
-        text_entry2.set_text("Drugi tekst.");
-        text_entry2.set_group_id(17);
-        text_entry2.set_type(::view::TextDisplayType::PLAIN);
-        auto tmp = {text_entry1, text_entry2};
-        text_component->mutable_entries()->Add(tmp.begin(), tmp.end());
-        component->set_allocated_text_component(text_component.release());
-        response->set_allocated_component(component.release());
-        return ::grpc::Status::OK;
-    }
+// class ViewServiceImpl : public view::ViewService::Service {
+//     ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::Empty* request, ::view::ViewResponse* response) override {
+//         cerr << "Received GetView" << endl;
+//         auto component = make_unique<::view::Component>();
+//         component->set_id(5);
+//         auto text_component = make_unique<::view::TextComponent>();
+//         ::view::TextEntry text_entry1;
+//         text_entry1.set_text("Pierwszy tekst.");
+//         text_entry1.set_group_id(17);
+//         text_entry1.set_type(::view::TextDisplayType::PLAIN);
+//         ::view::TextEntry text_entry2;
+//         text_entry2.set_text("Drugi tekst.");
+//         text_entry2.set_group_id(17);
+//         text_entry2.set_type(::view::TextDisplayType::PLAIN);
+//         auto tmp = {text_entry1, text_entry2};
+//         text_component->mutable_entries()->Add(tmp.begin(), tmp.end());
+//         component->set_allocated_text_component(text_component.release());
+//         response->set_allocated_component(component.release());
+//         return ::grpc::Status::OK;
+//     }
 
-    ::grpc::Status Click(::grpc::ServerContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response) override {
-        cerr << "Received Click" << endl;
-        int32_t component_id = request->object_id();
-        response->set_status("Status of the response of request with object_id: " + to_string(component_id));
-        return ::grpc::Status::OK;
-    }
-};
+//     ::grpc::Status Click(::grpc::ServerContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response) override {
+//         cerr << "Received Click" << endl;
+//         int32_t component_id = request->object_id();
+//         response->set_status("Status of the response of request with object_id: " + to_string(component_id));
+//         return ::grpc::Status::OK;
+//     }
+// };
 
 int main(int argc, char* argv[]) {
     // if (argc != 2) {
@@ -264,13 +264,13 @@ int main(int argc, char* argv[]) {
 
     // stawić serwis
 
-    ViewServiceImpl service;
-    grpc::ServerBuilder builder;
-    builder.AddListeningPort("localhost:50051", grpc::InsecureServerCredentials());
-    builder.RegisterService(&service);
-    unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    cout << "ViewManager started on port 50051" << endl;
-    server->Wait();
+    // ViewServiceImpl service;
+    // grpc::ServerBuilder builder;
+    // builder.AddListeningPort("localhost:50051", grpc::InsecureServerCredentials());
+    // builder.RegisterService(&service);
+    // unique_ptr<grpc::Server> server(builder.BuildAndStart());
+    // cout << "ViewManager started on port 50051" << endl;
+    // server->Wait();
     
     return 0;
 }

@@ -5,7 +5,7 @@ add_library(Proto
 	src/proto/view.pb.h
 )
 # TODO: This doesn't build if generated files are not present
-# And we get a chicken-and-egg problem, because we need to be able
+# and we get a chicken-and-egg problem, because we need to be able
 # to build the whole project in order to be able to generate them.
 
 target_include_directories(Proto
