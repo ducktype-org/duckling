@@ -5,9 +5,9 @@
  */
 #pragma once
 
-#include "detail/dep_graph.hpp"
-#include "detail/node_making.hpp"
-#include "detail/query_id_provider.hpp"
+#include "detail/query_data/query_id.hpp"
+#include "detail/query_graph/dep_graph.hpp"
+#include "detail/query_graph/node_making.hpp"
 #include "empty_key.hpp"
 
 #include <base/exceptions.hpp>
