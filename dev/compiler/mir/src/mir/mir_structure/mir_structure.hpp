@@ -18,6 +18,7 @@
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
+	/** Empty instruction, somtime used by the lowerring to fill instruction holes that ware not needed */
 	Nop,
 
 	Call,
@@ -416,7 +417,10 @@ namespace compiler::mir {
 		[[nodiscard]]
 		base::HashT customPerfectHash() const;
 
-		bool operator==(const Function& other) const = default;
+		/**
+		 * @todo: delete it during hash refactror  #523
+		 */
+		bool operator==(const Function& other) const;
 
 		void debugPrint(std::ostream& output) const;
 

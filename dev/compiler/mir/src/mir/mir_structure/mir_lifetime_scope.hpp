@@ -68,8 +68,6 @@ namespace compiler::mir {
          * Creates a new scope, with given parent.
          */
         ScopeRef newScope(ScopeRef parent);
-
-        bool operator==(const LifetimeScopeTree& other) const;
     };
 
     using ScopeRef = LifetimeScopeTree::ScopeRef;

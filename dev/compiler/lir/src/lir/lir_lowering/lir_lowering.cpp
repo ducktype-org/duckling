@@ -291,6 +291,9 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
+				case mir::Operation::Nop: {
+					return curr_block;
+				}
 				case mir::Operation::Assign:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerSub:
@@ -330,7 +333,7 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented("instruction in LowerToLirFunction");
+					throw base::NotYetImplemented(base::strConcat("instruction ", base::enumToStr(mir_instruction.operation), " in LowerToLirFunction"));
 				}
 			}
 
