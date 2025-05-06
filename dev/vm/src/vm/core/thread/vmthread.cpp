@@ -433,7 +433,11 @@ namespace vm {
 		const std::vector<std::string>& program_args
 	) {
 		respondExecutionRequest(api::Running{});
+
 		executing_program = program;
+		for (const auto& [type, id, name]: program->global_data.allData())
+			process_memory.insertGlobalData(id, *type);
+
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist!");

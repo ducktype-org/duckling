@@ -27,6 +27,7 @@
 #include <vm/loader/errors.hpp>
 #include <vm/loader/validator/validator.hpp>
 
+#include <algorithm>
 #include <expected>
 #include <unordered_map>
 #include <variant>
@@ -36,47 +37,47 @@ using namespace vm::loader;
 
 namespace {
 	template<class Instruction>
-	vm::code::Instruction getInstructionImpl(CRef<parser::OpCode> opcode);
+	vm::code::Instruction getInstructionImpl(const parser::OpCode& opcode);
 
 #define HANDLE_OPCODE_0ARGS(opcode)                                       \
 	template<>                                                            \
 	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>( \
-		CRef<parser::OpCode> opcode                                       \
+		const parser::OpCode& opcode                                      \
 	) {                                                                   \
-		CORE_ASSERT(opcode->args.size() == 0, "Invalid number of args");  \
+		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
 		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = *opcode->position;                           \
+		instr.bytecode_pos = *opcode.position;                            \
 		return instr;                                                     \
 	}
 
-#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                  \
-	template<>                                                                                  \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                       \
-		CRef<parser::OpCode> opcode                                                             \
-	) {                                                                                         \
-		CORE_ASSERT(opcode->args.size() == 1, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0))) {                            \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)) }; \
-			instr.bytecode_pos = *opcode->position;                                             \
-			return instr;                                                                       \
-		}                                                                                       \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
+#define HANDLE_OPCODE_1ARGS(opcode, arg0_type)                                                 \
+	template<>                                                                                 \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                      \
+		const parser::OpCode& opcode                                                           \
+	) {                                                                                        \
+		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
+		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
+			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
+			instr.bytecode_pos = *opcode.position;                                             \
+			return instr;                                                                      \
+		}                                                                                      \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
 	}
 
-#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                       \
-	template<>                                                                                  \
-	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                       \
-		CRef<parser::OpCode> opcode                                                             \
-	) {                                                                                         \
-		CORE_ASSERT(opcode->args.size() == 2, "Invalid number of args");                        \
-		if (std::holds_alternative<arg0_type>(opcode->args.at(0))                               \
-		    && std::holds_alternative<arg1_type>(opcode->args.at(1))) {                         \
-			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode->args.at(0)),   \
-				                                     std::get<arg1_type>(opcode->args.at(1)) }; \
-			instr.bytecode_pos = *opcode->position;                                             \
-			return instr;                                                                       \
-		}                                                                                       \
-		CORE_PANIC("Couldn't create opcode: " #opcode);                                         \
+#define HANDLE_OPCODE_2ARGS(opcode, arg0_type, arg1_type)                                              \
+	template<>                                                                                         \
+	vm::code::Instruction getInstructionImpl<VM_INSTR_FROM_NAME(opcode)>(                              \
+		const parser::OpCode& opcode                                                                   \
+	) {                                                                                                \
+		CORE_ASSERT(opcode.args.size() == 2, "Invalid number of args");                                \
+		if (std::holds_alternative<arg0_type>(opcode.args.at(0))                                       \
+		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
+			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
+				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
+			instr.bytecode_pos = *opcode.position;                                                     \
+			return instr;                                                                              \
+		}                                                                                              \
+		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
 	}
 
 #include <vm/bytecode/opcode_definitions.hpp>
@@ -94,12 +95,12 @@ namespace {
 
 #undef HANDLE_OPCODE
 
-	vm::code::Instruction translateInstruction(CRef<parser::OpCode> opcode) {
-		return instr_to_factory.at(opcode->opcode_name.str())(opcode);
+	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
+		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
 	}
 
 	void insertInstruction(
-		CRef<parser::OpCode>                 opcode,
+		const parser::OpCode&                opcode,
 		vm::code::builders::FunctionBuilder& func_builder,
 		LoaderLogger&                        logger
 	) {
@@ -147,18 +148,53 @@ namespace {
 			);
 		}
 	}
+
+	void insertGlobalData(
+		const vm::code::GlobalData&        global,
+		vm::code::builders::GlobalDataMap& globals_map,
+		LoaderLogger&                      log
+	) {
+		if (globals_map.contains(global.name))
+			log.log<DuplicatedGlobalDataError>(global.name, global.name.str);
+		globals_map.insert(global, global.name);
+	}
 }
 
 Program Program::from() { return Program{}; }
+
+std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& code_collection) {
+	Program      program;
+	LoaderLogger log;
+
+	program.insertTypes(code_collection.types, log);
+	program.insertFunctions(code_collection.functions, log);
+	program.insertGlobals(code_collection.global_data, log);
+	if (!log.good()) return std::unexpected(std::move(log));
+	return program;
+}
+
+void Program::insertCode(
+	const std::vector<code::CodeCollection>& code_collections, LoaderLogger& logger
+) {
+	for (const auto& code_collection: code_collections) {
+		insertTypes(code_collection.types, logger);
+		insertFunctions(code_collection.functions, logger);
+		insertGlobals(code_collection.global_data, logger);
+	}
+}
+
+void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
+	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
+}
 
 void Program::insertFunctions(
 	const std::vector<code::Function>& new_functions, LoaderLogger& logger
 ) {
 	for (const auto& func: new_functions) {
-		if (const auto func_name = func.name; functions.contains(func_name)) {
-			logger.logMap<DuplicatedFunctionError>(func, [&](auto& err) {
+		if (const auto func_name = func.name.str; functions.contains(func_name)) {
+			logger.logMap<DuplicatedFunctionError>(func.name, [&](auto& err) {
 				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicatedFunctionNote>(err, *dup_func);
+				logger.addNote<DuplicatedFunctionNote>(err, dup_func->name);
 			});
 		} else {
 			functions.insert(func, func_name);
@@ -166,9 +202,22 @@ void Program::insertFunctions(
 	}
 }
 
-void Program::insertCode(const code::CodeCollection& code_collection, LoaderLogger& logger) {
-	insertTypes(code_collection.types, logger);
-	insertFunctions(code_collection.functions, logger);
+void Program::insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger) {
+	for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
+}
+
+Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
+	return std::move(type_context_builder.build()).moveMetadata();
+}
+
+const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
+
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
+	return type_context_builder.getTypes();
+}
+
+const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const {
+	return globals_map;
 }
 
 Loader::Loader(const bool validate_program): validate_program(validate_program) {}
@@ -179,11 +228,18 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto         type_context_builder = vm::code::getBuiltinTypes();
-			LoaderLogger log;
-			for (const auto& parsed_file: parsed_files)
+			auto                          type_context_builder = vm::code::getBuiltinTypes();
+			code::builders::GlobalDataMap globals;
+			LoaderLogger                  log;
+			for (const auto& parsed_file: parsed_files) {
+				for (const auto& global: parsed_file.global_data) {
+					auto code_global
+						= code::GlobalData{ .name = global->name, .type = global->type };
+					insertGlobalData(code_global, globals, log);
+				}
 				for (const auto& tp: parsed_file.types)
 					insertType(tp->datatype, type_context_builder, log);
+			}
 
 			try {
 				auto                        type_context = type_context_builder.build();
@@ -191,15 +247,25 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 				for (const auto& parsed_file: parsed_files) {
 					for (const auto& func: parsed_file.functions) {
-						code::builders::FunctionBuilder func_builder(func->name, type_context);
+						code::Identifier func_name;
+						func_name.str          = func->name.value;
+						func_name.bytecode_pos = func->name.position;
+						code::builders::FunctionBuilder func_builder(
+							func_name, globals, type_context
+						);
 
 						for (const auto& instr: func->code->opcodes)
-							insertInstruction(instr.ref(), func_builder, log);
+							insertInstruction(*instr, func_builder, log);
 
 						functions.emplace_back(func_builder.build());
 					}
 				}
-				if (log.good()) return code::CodeCollection(functions, type_context.getTypes());
+				if (log.good())
+					return code::CodeCollection{
+						.functions   = functions,
+						.types       = type_context.getTypes(),
+						.global_data = { globals.begin(), globals.end() },
+					};
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::MissingFunctionalTypeError& e) {
@@ -219,7 +285,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<code::CodeCollection>& code_collection
 ) {
 	LoaderLogger logger;
-	for (const auto& code: code_collection) program.insertCode(code, logger);
+	program.insertCode(code_collection, logger);
 	if (logger.good()) {
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
@@ -236,18 +302,4 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	if (opt_code_collection.has_value())
 		return getProgram({ std::move(opt_code_collection).value() });
 	return std::unexpected(std::move(opt_code_collection).error());
-}
-
-const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
-
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
-	return type_context_builder.getTypes();
-}
-
-void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
-	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
-}
-
-Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
-	return std::move(type_context_builder.build()).moveMetadata();
 }

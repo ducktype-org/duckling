@@ -21,28 +21,50 @@ namespace vm::loader {
 	 */
 	class Program final {
 	public:
-		Program(const Program&)                  = delete;
-		Program(Program&&) noexcept              = default;
-		Program&       operator=(const Program&) = delete;
-		Program&       operator=(Program&&)      = default;
-		static Program from();
+		Program(const Program&)                                               = delete;
+		Program(Program&&) noexcept                                           = default;
+		Program&                                    operator=(const Program&) = delete;
+		Program&                                    operator=(Program&&)      = default;
+		static Program                              from();
+		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
+		);
 
 		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
+		const code::builders::GlobalDataMap&         globalMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 
 		/**
-		 * @brief Inserts new code represented as code collection to a current program state.
+		 * @brief Inserts new code to a current program state. Can be called multiple times with
+		 * the same type object.
 		 */
-		void insertCode(const code::CodeCollection& code_collection, LoaderLogger& logger);
-		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
+		void insertCode(
+			const std::vector<code::CodeCollection>& new_code_collections, LoaderLogger& logger
+		);
+
+		/**
+		 * @brief Inserts a type. Can be called multiple times with the same type object.
+		 */
+		void insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger);
+
+		/**
+		 * @brief Inserts a function. Cannot be called multiple times with the same function
+		 * object.
+		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
+
+		/**
+		 * @brief Inserts a global. Cannot be called multiple times with the same global data
+		 * object.
+		 */
+		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
 	private:
 		Program() = default;
 
 		StableTypeIdNameMap<code::Function> functions;
+		code::builders::GlobalDataMap       globals_map;
 		code::builders::TypeContextBuilder  type_context_builder;
 	};
 
@@ -54,18 +76,11 @@ namespace vm::loader {
 		Program program = Program::from();
 
 		/**
-		 * @brief Parses a list of files, returns an intermediate loader-only program representation.
+		 * @brief Parses a list of files, returns an intermediate loader-only program
+		 * representation.
 		 */
 		std::expected<code::CodeCollection, LoaderLogger> loadFiles(
 			const std::vector<fs::FilePath>& files
-		);
-
-		/**
-		 * @brief Injects new code represented as code collection to a current program state and
-		 * returns a low-level program representation.
-		 */
-		std::expected<low::LowVMProgram, LoaderLogger> injectCode(
-			const code::CodeCollection& code_collection
 		);
 
 	public:

@@ -9,6 +9,7 @@
 
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -29,7 +30,7 @@ using namespace vm::code::builders;
 vm::code::Function FunctionBuilder::build() const {
 	Function function;
 	function.body = instructions;
-	function.name = name.value;
+	function.name = name;
 	// @TODO this should be the compiler's responsibility, move it there
 	function.local_offset_map = local_offset_map;
 	function.local_stack_size = max_stack_size;
@@ -209,14 +210,17 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
+FunctionBuilder::FunctionBuilder(
+	vm::code::Identifier name, const GlobalDataMap& globals, const TypeContext& types
+):
 	  name(name),
-	  type_context(types) {
+	  type_context(types),
+	  globals(globals) {
 	TypeCRef func_result_type = type_context.getMetadata()
-	                                .atMaybe(name)
-	                                .expect<MissingFunctionalTypeError>(name)
+	                                .atMaybe(name.str)
+	                                .expect<MissingFunctionalTypeError>(name.str)
 	                                ->getResultType()
-	                                .expect<TypeIsNotFunctionalError>(name, name);
+	                                .expect<TypeIsNotFunctionalError>(name, name.str);
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
 	for (auto [index, type]: std::views::enumerate(param_types))
@@ -324,7 +328,7 @@ void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
 void vm::code::builders::FunctionBuilder::handleRet() {
 	if (local_stack.empty()
 	    || local_stack.at(0).type_name
-	           != type_context.getMetadata().at(name)->getResultType().value()->getName()) {
+	           != type_context.getMetadata().at(name.str)->getResultType().value()->getName()) {
 		throw BadReturnError();
 	}
 }

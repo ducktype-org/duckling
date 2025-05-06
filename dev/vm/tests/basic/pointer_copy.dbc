@@ -9,7 +9,7 @@ function main {
     init_lany_type           q, ptr_i64;
     init_lany_type           r, ptr_i64;
 
-    ref_lptr_any        p, x;      # p := &x
+    ref_lptr_lany        p, x;      # p := &x
 
     # from null to non-null
     mov_lptr_lptr       q, p;      # q = p

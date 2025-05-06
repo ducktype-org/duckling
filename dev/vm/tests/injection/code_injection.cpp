@@ -22,6 +22,7 @@ public:
 		TESTER_ADD_TEST(doubleRunFunction);
 		TESTER_ADD_TEST(manyRunFunctions);
 		TESTER_ADD_TEST(repl);
+		TESTER_ADD_TEST(replWithGlobals);
 		TESTER_ADD_TEST(injectExistingFunction);
 	}
 
@@ -133,6 +134,17 @@ private:
 		fs::FilePath file2(path("repl_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 1, 2 }, {}, {}, 3);
+	}
+
+	void replWithGlobals() {
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("repl_with_globals_1.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "1 2", {}, 0);
+
+		fs::FilePath file2(path("repl_with_globals_2.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		runAndCheckExitCode(pid, "globaler_reader", std::vector<i64>{}, {}, "12", 0);
 	}
 
 	void injectExistingFunction() {
