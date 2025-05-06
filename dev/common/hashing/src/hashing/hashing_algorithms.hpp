@@ -154,6 +154,189 @@ namespace hashing {
 	};
 
 	/**
+	 * SHA-256 hash algorithm implementation.
+	 */
+	class SHA256 {
+	private:
+		// Internal state: 8 32-bit words
+		std::array<uint32_t, 8> state;
+
+		// Buffer for unprocessed data (512 bits = 64 bytes)
+		std::array<std::byte, 64> buffer{};
+
+		// Total message length in bits
+		uint64_t total_bits{ 0 };
+
+		// Current size of the buffer
+		size_t buffer_size{ 0 };
+
+	public:
+		// The result type is a 32-byte array
+		using result_type = std::array<std::byte, 32>;
+
+		// Constructor - initializes the hash state
+		constexpr SHA256() noexcept:
+			  state{ // Initial hash values: first 32 bits of the fractional parts of the
+			         // square roots of the first 8 primes (2 through 19)
+			         0x6a'09'e6'67, 0xbb'67'ae'85, 0x3c'6e'f3'72, 0xa5'4f'f5'3a,
+			         0x51'0e'52'7f, 0x9b'05'68'8c, 0x1f'83'd9'ab, 0x5b'e0'cd'19
+		      } {}
+
+		// Update state with input data
+		constexpr void operator()(std::span<const std::byte> data) noexcept {
+			total_bits += data.size() * 8;  // Update total bits processed
+
+			const std::byte* ptr       = data.data();
+			size_t           remaining = data.size();
+
+			// If we have data in the buffer already, fill it and process if full
+			if (buffer_size > 0) {
+				size_t to_copy = std::min(static_cast<size_t>(64 - buffer_size), remaining);
+				for (size_t i = 0; i < to_copy; ++i) buffer.at(buffer_size + i) = ptr[i];
+				buffer_size += to_copy;
+				ptr += to_copy;
+				remaining -= to_copy;
+
+				if (buffer_size == 64) {
+					transform(buffer.data());
+					buffer_size = 0;
+				}
+			}
+
+			// Process full 64-byte blocks directly from the input
+			while (remaining >= 64) {
+				transform(ptr);
+				ptr += 64;
+				remaining -= 64;
+			}
+
+			// Store any remaining bytes in the buffer for next update
+			for (size_t i = 0; i < remaining; ++i) buffer.at(buffer_size + i) = ptr[i];
+			buffer_size += remaining;
+		}
+
+		// Finalize and return the hash value
+		[[nodiscard]]
+		constexpr result_type finalize() const noexcept {
+			SHA256 copy = *this;
+			copy.padAndProcess();
+
+			result_type result{};
+			for (size_t i = 0; i < state.size(); ++i) {
+				const uint32_t value = copy.state.at(i);
+				result.at(i * 4)     = static_cast<std::byte>((value >> 24) & 0xFF);
+				result.at(i * 4 + 1) = static_cast<std::byte>((value >> 16) & 0xFF);
+				result.at(i * 4 + 2) = static_cast<std::byte>((value >> 8) & 0xFF);
+				result.at(i * 4 + 3) = static_cast<std::byte>(value & 0xFF);
+			}
+
+			return result;
+		}
+
+	private:
+		// Helper methods
+		constexpr void transform(const std::byte* data) noexcept {
+			// SHA-256 Constants: first 32 bits of the fractional parts of the cube roots
+			// of the first 64 prime numbers (2 through 311)
+			constexpr std::array<uint32_t, 64> k
+				= { 0x42'8a'2f'98, 0x71'37'44'91, 0xb5'c0'fb'cf, 0xe9'b5'db'a5, 0x39'56'c2'5b,
+				    0x59'f1'11'f1, 0x92'3f'82'a4, 0xab'1c'5e'd5, 0xd8'07'aa'98, 0x12'83'5b'01,
+				    0x24'31'85'be, 0x55'0c'7d'c3, 0x72'be'5d'74, 0x80'de'b1'fe, 0x9b'dc'06'a7,
+				    0xc1'9b'f1'74, 0xe4'9b'69'c1, 0xef'be'47'86, 0x0f'c1'9d'c6, 0x24'0c'a1'cc,
+				    0x2d'e9'2c'6f, 0x4a'74'84'aa, 0x5c'b0'a9'dc, 0x76'f9'88'da, 0x98'3e'51'52,
+				    0xa8'31'c6'6d, 0xb0'03'27'c8, 0xbf'59'7f'c7, 0xc6'e0'0b'f3, 0xd5'a7'91'47,
+				    0x06'ca'63'51, 0x14'29'29'67, 0x27'b7'0a'85, 0x2e'1b'21'38, 0x4d'2c'6d'fc,
+				    0x53'38'0d'13, 0x65'0a'73'54, 0x76'6a'0a'bb, 0x81'c2'c9'2e, 0x92'72'2c'85,
+				    0xa2'bf'e8'a1, 0xa8'1a'66'4b, 0xc2'4b'8b'70, 0xc7'6c'51'a3, 0xd1'92'e8'19,
+				    0xd6'99'06'24, 0xf4'0e'35'85, 0x10'6a'a0'70, 0x19'a4'c1'16, 0x1e'37'6c'08,
+				    0x27'48'77'4c, 0x34'b0'bc'b5, 0x39'1c'0c'b3, 0x4e'd8'aa'4a, 0x5b'9c'ca'4f,
+				    0x68'2e'6f'f3, 0x74'8f'82'ee, 0x78'a5'63'6f, 0x84'c8'78'14, 0x8c'c7'02'08,
+				    0x90'be'ff'fa, 0xa4'50'6c'eb, 0xbe'f9'a3'f7, 0xc6'71'78'f2 };
+
+			std::array<uint32_t, 64> w{};
+
+			for (size_t i = 0; i < 16; ++i) {
+				w.at(i) = (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4])) << 24)
+				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 1])) << 16)
+				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 2])) << 8)
+				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 3])));
+			}
+
+			for (size_t i = 16; i < 64; ++i) {
+				const uint32_t s0 = rightRotate(w.at(i - 15), 7) ^ rightRotate(w.at(i - 15), 18)
+				                  ^ (w.at(i - 15) >> 3);
+				const uint32_t s1 = rightRotate(w.at(i - 2), 17) ^ rightRotate(w.at(i - 2), 19)
+				                  ^ (w.at(i - 2) >> 10);
+				w.at(i) = w.at(i - 16) + s0 + w.at(i - 7) + s1;
+			}
+
+			uint32_t a = state.at(0);
+			uint32_t b = state.at(1);
+			uint32_t c = state.at(2);
+			uint32_t d = state.at(3);
+			uint32_t e = state.at(4);
+			uint32_t f = state.at(5);
+			uint32_t g = state.at(6);
+			uint32_t h = state.at(7);
+
+			for (size_t i = 0; i < 64; ++i) {
+				const uint32_t s1    = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+				const uint32_t ch    = (e & f) ^ ((~e) & g);
+				const uint32_t temp1 = h + s1 + ch + k.at(i) + w.at(i);
+				const uint32_t s0    = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+				const uint32_t maj   = (a & b) ^ (a & c) ^ (b & c);
+				const uint32_t temp2 = s0 + maj;
+
+				h = g;
+				g = f;
+				f = e;
+				e = d + temp1;
+				d = c;
+				c = b;
+				b = a;
+				a = temp1 + temp2;
+			}
+
+			state.at(0) += a;
+			state.at(1) += b;
+			state.at(2) += c;
+			state.at(3) += d;
+			state.at(4) += e;
+			state.at(5) += f;
+			state.at(6) += g;
+			state.at(7) += h;
+		}
+
+		constexpr void padAndProcess() noexcept {
+			buffer.at(buffer_size++) = std::byte{ 0x80 };  // Use .at() for bounds checking
+
+			if (buffer_size > 56) {
+				while (buffer_size < 64) buffer.at(buffer_size++) = std::byte{ 0 };  // Use .at()
+				transform(buffer.data());
+				buffer_size = 0;
+			}
+
+			while (buffer_size < 56) buffer.at(buffer_size++) = std::byte{ 0 };  // Use .at()
+
+			const uint64_t bits = total_bits;
+			buffer.at(56)       = static_cast<std::byte>((bits >> 56) & 0xFF);
+			buffer.at(57)       = static_cast<std::byte>((bits >> 48) & 0xFF);
+			buffer.at(58)       = static_cast<std::byte>((bits >> 40) & 0xFF);
+			buffer.at(59)       = static_cast<std::byte>((bits >> 32) & 0xFF);
+			buffer.at(60)       = static_cast<std::byte>((bits >> 24) & 0xFF);
+			buffer.at(61)       = static_cast<std::byte>((bits >> 16) & 0xFF);
+			buffer.at(62)       = static_cast<std::byte>((bits >> 8) & 0xFF);
+			buffer.at(63)       = static_cast<std::byte>(bits & 0xFF);
+
+			transform(buffer.data());
+		}
+
+		static constexpr uint32_t rightRotate(uint32_t value, unsigned int count) noexcept {
+			return (value >> count) | (value << (32 - count));
+		}
+	};
+
+	/**
 	 * The default hash algorithm
 	 */
 	using DefaultHashAlgorithm = Fnv1a_64;
