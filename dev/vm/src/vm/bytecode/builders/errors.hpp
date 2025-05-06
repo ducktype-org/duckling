@@ -101,12 +101,19 @@ namespace vm::code::builders {
 		EmptyStackDeinitError(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
 
+	class ReturnValueDeinitError: public BuilderError {
+	public:
+		constexpr const static std::string_view ERR_MSG = "Deinitializing functions return value.";
+
+		ReturnValueDeinitError(): BuilderError(base::strConcat(ERR_MSG)) {}
+	};
+
 	class BadReturnError: public BuilderError {
 	public:
 		constexpr const static std ::string_view ERR_MSG
 			= "Function returns, but incorrect return type is on the stack\'s bottom";
 
-		BadReturnError(): BuilderError(base ::strConcat(ERR_MSG)) {}
+		BadReturnError(): BuilderError(base::strConcat(ERR_MSG)) {}
 	};
 
 	class InvalidFunctionCallArguments: public BuilderError {
@@ -114,7 +121,7 @@ namespace vm::code::builders {
 		constexpr const static std ::string_view ERR_MSG
 			= "Invalid function call arguments. Values on the stack do not have proper types.";
 
-		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
+		InvalidFunctionCallArguments(): BuilderError(base::strConcat(ERR_MSG)) {}
 	};
 
 	class TypeValidationError: public BuilderError {

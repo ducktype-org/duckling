@@ -270,8 +270,7 @@ namespace vm {
 			auto called_func_type = thread.executing_program->types->at(called_func.name);
 			u64  arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
-			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
-			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
+			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - arg_count;
 
 			frame->local_stack_head = shared_stack_space_size;
 			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
@@ -285,10 +284,11 @@ namespace vm {
 				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
 			}
 
-			// Remove the argument and return value blocks from caller's block stack.
-			// The return value block may have been uninitialized and initialized again.
-			prev_frame->local_stack_head -= called_func.arg_size + called_func.ret_size;
-			for (u64 i = 0; i < shared_block_count; i++) {
+			// Remove the argument blocks from caller's block stack. Only the return value stays in
+			// the block stack.
+			// @note: We assume that the callee can't deinitialize the return value passed by the caller.
+			prev_frame->local_stack_head -= called_func.arg_size;
+			for (u64 i = 0; i < arg_count; i++) {
 				prev_frame->block_stack.pop_back();
 				// @note: Removing block_id to local_offset mappings from the frame is not needed,
 				// since a new init (after returning from a called function) to the same
@@ -374,24 +374,14 @@ namespace vm {
 			// call stack frame.
 			frame--;  // This is now the caller's frame.
 
-			// If the function we're returning from is non-void and not main, we don't deinitialize
-			// the first frame on the block_stack, since it's being used by the caller (it contains
-			// the return value). We just pop it.
 			bool non_void = frame->called_func_ret_size > 0;
 			while (!callee_frame->block_stack.empty()) {
 				auto block = callee_frame->block_stack.back();
 
-				// We're returning from a non-void, so the last block is the return value, which
-				// should be put in the callers block stack and left initialized.
-				if (non_void && callee_frame->block_stack.size() == 1) {
-					u64 callers_block_idx = frame->block_stack.size();
-					frame->block_stack.push_back(block);
-					frame->block_idx_to_local_offset.put(callers_block_idx, frame->local_stack_head);
-					frame->local_offset_to_block_idx.put(frame->local_stack_head, callers_block_idx);
-					frame->local_stack_head += frame->called_func_ret_size;
-				} else {
+				// We're returning from a non-void function, so the last block on the stack is the
+				// return value. It's being used by the caller so we don't free it.
+				if (!non_void || callee_frame->block_stack.size() != 1)
 					thread.process.getMemory().freeBlock(block);
-				}
 
 				callee_frame->block_stack.pop_back();
 			}

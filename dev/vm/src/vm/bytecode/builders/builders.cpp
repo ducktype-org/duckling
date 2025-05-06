@@ -182,7 +182,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			pushStackState(instr.arg0, instr.arg1);
 		}
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_upcast_lptr_lptr, isntr) {
+		variant_case(Op_upcast_lptr_lptr, instr) {
 			// @TODO implement checking if the cast is valid after #732
 		}
 		variant_case(Op_deinit, instr) { handleDeinit(); }
@@ -221,6 +221,7 @@ FunctionBuilder::FunctionBuilder(
 	                                .expect<MissingFunctionalTypeError>(name.str)
 	                                ->getResultType()
 	                                .expect<TypeIsNotFunctionalError>(name);
+	// TODO: This is strange, maybe should be ifed.
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
 	for (auto [index, type]: std::views::enumerate(param_types))
@@ -262,6 +263,10 @@ void FunctionBuilder::initType(instructions::Op_init_lany_type init) {
 
 void FunctionBuilder::handleDeinit() {
 	if (local_stack.empty()) throw EmptyStackDeinitError();
+
+	TypeCRef func_result_type = *type_context.getMetadata().at(name.str)->getResultType();
+	if (func_result_type->getSize() > 0 && local_stack.size() == 1) throw ReturnValueDeinitError();
+
 	local_stack.pop_back();
 }
 

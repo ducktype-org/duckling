@@ -23,6 +23,8 @@ public:
 		TESTER_ADD_TEST(noFuncType);
 		TESTER_ADD_TEST(invalidFunctionCall);
 		TESTER_ADD_TEST(invalidRetTypeInCall);
+		TESTER_ADD_TEST(deinitRetVal);
+		TESTER_ADD_TEST(missingReturn);
 	}
 
 private:
@@ -97,6 +99,24 @@ private:
 			"invalid_ret_type_in_call.dbc",
 			{
 				vm::code::builders::InvalidFunctionCallArguments::ERR_MSG,
+			}
+		);
+	}
+
+	void deinitRetVal() {
+		loadInvalidDbc(
+			"deinit_main_ret_val.dbc",
+			{
+				vm::code::builders::ReturnValueDeinitError::ERR_MSG,
+			}
+		);
+	}
+
+	void missingReturn() {
+		loadInvalidDbc(
+			"deinit_ret_val.dbc",
+			{
+				vm::code::builders::ReturnValueDeinitError::ERR_MSG,
 			}
 		);
 	}
