@@ -2,8 +2,8 @@
 
 #include "forward.hpp"
 
-#include <diagnostic/logger.hpp>
 #include <diagnostic/location.hpp>
+#include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
@@ -90,9 +90,9 @@ namespace tokenizer {
 		[[nodiscard]]
 		const lexer::TokenData& getTokenData() const;
 		[[nodiscard]]
-		CRef<dia::Location>      getLocation() const;
-		dia::Logger&            getLogger();
-		fs::FilePath            getPath();
+		CRef<dia::Location> getLocation() const;
+		dia::Logger&        getLogger();
+		fs::FilePath        getPath();
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

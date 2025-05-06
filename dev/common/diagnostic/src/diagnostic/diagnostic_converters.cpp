@@ -74,8 +74,9 @@ namespace dia {
 		const auto severity_tag = severityToPrinterContent(s);
 		const auto domain_tag   = domainToString(d);
 
-		auto result_contents
-			= message_ptr->getSourcePosition().genPrinterContents({ message_ptr->toString(detailed) });
+		auto result_contents = message_ptr->getSourcePosition().genPrinterContents(
+			{ message_ptr->toString(detailed) }
+		);
 		result_contents.insert(result_contents.begin(), { severity_tag, " [", domain_tag, "]:\n" });
 
 		// Append the notes.
@@ -93,11 +94,12 @@ namespace dia {
 	) {
 		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BRIGHT_GREEN };
 
-		auto result_contents = note_ptr->getSourcePosition()
-		                           .map([&](const SourcePosition& pos) {
-									   return pos.genPrinterContents({ note_ptr->toString(detailed) });
-								   })
-		                           .valueOr({ note_ptr->toString(detailed) });
+		auto result_contents
+			= note_ptr->getSourcePosition()
+		          .map([&](const SourcePosition& pos) {
+					  return pos.genPrinterContents({ note_ptr->toString(detailed) });
+				  })
+		          .valueOr({ note_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
 
 		return result_contents;

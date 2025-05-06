@@ -2,6 +2,10 @@
  * @file message.cpp
  * @author Mateusz Kołpa (matihopemine@gmail.com)
  */
+#include "source_position.hpp"
+
+#include "location.hpp"
+
 #include <printer/printer_content.hpp>
 #include <token_file/file.hpp>
 
@@ -9,14 +13,11 @@
 
 #include <string>
 
-#include "source_position.hpp"
-#include "location.hpp"
-
 namespace dia {
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream& out, const SourcePosition& pos) {
-		auto source = pos.getSource();
+		auto source       = pos.getSource();
 		auto source_start = pos.source_start;
-		auto source_end = pos.source_end;
+		auto source_end   = pos.source_end;
 
 		usize start_line = pos.getStartLineColumn().first;
 		usize end_line   = pos.getEndLineColumn().first;
@@ -72,7 +73,10 @@ namespace dia {
 		out << "\n" << std::string(length + 1, ' ') << "|";
 	}
 
-	SourcePosition::SourcePosition(): source_start(0), source_end(0), location(FakeLocation::getInstance()) {}
+	SourcePosition::SourcePosition():
+		  source_start(0),
+		  source_end(0),
+		  location(FakeLocation::getInstance()) {}
 
 	SourcePosition::SourcePosition(CRef<Location> location, const usize source_start):
 		  SourcePosition(location, source_start, source_start) {}

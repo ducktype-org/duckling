@@ -1,7 +1,6 @@
 #include "file.hpp"
 
 #include <diagnostic/location.hpp>
-
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
@@ -27,7 +26,9 @@ namespace tokenizer {
 		return 0;
 	}
 
-	TokenFile::TokenFile(const fs::FilePath& path): path(path), location(makeBox<dia::FileLocation>(Ref<TokenFile>(this))) {
+	TokenFile::TokenFile(const fs::FilePath& path):
+		  path(path),
+		  location(makeBox<dia::FileLocation>(Ref<TokenFile>(this))) {
 		content.emplace(path.getContent());
 	}
 
@@ -112,7 +113,5 @@ namespace tokenizer {
 		return token_data.value();
 	}
 
-	CRef<dia::Location> TokenFile::getLocation() const {
-		return location.ref();
-	}
+	CRef<dia::Location> TokenFile::getLocation() const { return location.ref(); }
 }

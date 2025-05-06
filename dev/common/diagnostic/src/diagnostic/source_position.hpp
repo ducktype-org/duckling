@@ -22,8 +22,8 @@ int main() {
 #include <printer/printer_ostream.hpp>
 #include <token_file/forward.hpp>
 
-#include <base/ref.hpp>
 #include <base/box.hpp>
+#include <base/ref.hpp>
 
 #include <string>
 
@@ -32,8 +32,8 @@ namespace dia {
 	class SourcePosition;
 
 	/**
-	* @brief Get lines surrounding with position colored.
-	*/
+	 * @brief Get lines surrounding with position colored.
+	 */
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
 
 	/**
@@ -54,7 +54,9 @@ namespace dia {
 		 */
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
-		static SourcePosition childPosition(SourcePosition parent, usize source_start, usize source_end);
+		static SourcePosition childPosition(
+			SourcePosition parent, usize source_start, usize source_end
+		);
 
 		SourcePosition(CRef<Location>, usize source_start);
 		SourcePosition(CRef<Location>, usize source_start, usize source_end);
@@ -75,7 +77,8 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::PrinterContent> genPrinterContents(const printer::PrinterContentsSeq& reason
+		std::vector<printer::PrinterContent> genPrinterContents(
+			const printer::PrinterContentsSeq& reason
 		) const;
 
 		/**
@@ -109,8 +112,8 @@ namespace dia {
 		void printToJson(std::ostream&) const;
 
 	private:
-		usize                      source_start;  ///< Start of the range of characters in the file.
-		usize                      source_end;    ///< End of the range of characters in the file.
-		CRef<Location>             location;      ///< Location of the position
+		usize          source_start;  ///< Start of the range of characters in the file.
+		usize          source_end;    ///< End of the range of characters in the file.
+		CRef<Location> location;      ///< Location of the position
 	};
 }

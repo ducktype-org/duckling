@@ -5,7 +5,8 @@
 namespace printer {
 	class PrinterOStream {
 	private:
-		std::vector<PrinterContent> contents;	
+		std::vector<PrinterContent> contents;
+
 	public:
 		PrinterOStream() = default;
 
@@ -20,15 +21,13 @@ namespace printer {
 		}
 
 		PrinterOStream& operator<<(const PrinterContentsSeq& added) {
-			for(const auto& content: added) {
-				*this << content;
-			}
+			for (const auto& content: added) *this << content;
 			return *this;
 		}
 
-		[[nodiscard]] 
+		[[nodiscard]]
 		std::vector<PrinterContent> getContents() const {
-			return {contents.begin(), contents.end()};
+			return { contents.begin(), contents.end() };
 		}
 	};
 }
