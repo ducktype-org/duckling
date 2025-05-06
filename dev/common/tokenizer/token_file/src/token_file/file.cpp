@@ -27,9 +27,13 @@ namespace tokenizer {
 	}
 
 	TokenFile::TokenFile(const fs::FilePath& path):
-		  path(path),
-		  location(makeBox<dia::FileLocation>(Ref<TokenFile>(this))) {
+		  location(makeBox<dia::FileLocation>(Ref<TokenFile>(this), path)) {
 		content.emplace(path.getContent());
+	}
+
+	TokenFile::TokenFile(const dia::SourcePosition& parent, const std::string& contents):
+		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenFile>(this))) {
+		content.emplace(fs::FileContent::fromString(contents));
 	}
 
 	void TokenFile::countLines() {
@@ -95,12 +99,7 @@ namespace tokenizer {
 		token_data.emplace(lexer.tokenize());
 	}
 
-	const fs::FileContent TokenFile::getContent() const {
-		if (content) return content.value();
-		return path.getContent();
-	}
-
-	fs::FilePath TokenFile::getPath() { return path; }
+	const fs::FileContent TokenFile::getContent() const { return content.value(); }
 
 	const lexer::CharArray& TokenFile::getChars() const {
 		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");
@@ -112,6 +111,8 @@ namespace tokenizer {
 		if (!token_data) CORE_PANIC("Tried to access nonexistant token data.");
 		return token_data.value();
 	}
+
+	fs::FilePath TokenFile::getPath() const { return location->getSourceFile(); }
 
 	CRef<dia::Location> TokenFile::getLocation() const { return location.ref(); }
 }

@@ -5,6 +5,8 @@
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 
+#include <utility>
+
 namespace dia {
 	/**
 	 * @brief General location of a source position.
@@ -32,7 +34,8 @@ namespace dia {
 		 * @brief Returns the file connected to the location.
 		 */
 		[[nodiscard]]
-		virtual fs::FilePath getSourceFile() const;
+		virtual fs::FilePath getSourceFile() const
+			= 0;
 
 		/**
 		 * @brief Returns the file connected to the location.
@@ -61,10 +64,16 @@ namespace dia {
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const override;
 
-		FileLocation(Ref<tokenizer::TokenFile> path): file(path) {}
+		[[nodiscard]]
+		fs::FilePath getSourceFile() const override;
+
+		FileLocation(Ref<tokenizer::TokenFile> file, fs::FilePath path):
+			  file(file),
+			  path(std::move(path)) {}
 
 	private:
-		Ref<tokenizer::TokenFile> file;  ///< source file, might be changed to TokenFile if needed.
+		Ref<tokenizer::TokenFile> file;  ///< source file
+		fs::FilePath              path;
 	};
 
 	/**
@@ -78,11 +87,14 @@ namespace dia {
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const override;
 
-		MacroLocation(const SourcePosition& parent);
+		fs::FilePath getSourceFile() const override;
+
+		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file);
 
 	private:
 		SourcePosition            parent;
 		Ref<tokenizer::TokenFile> file;  ///< source file.
+		fs::FilePath              path;
 	};
 
 	class FakeLocation final: public Location {
@@ -97,6 +109,8 @@ namespace dia {
 	public:
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const override;
+
+		fs::FilePath getSourceFile() const override;
 
 		void printMessage(
 			printer::PrinterOStream&,

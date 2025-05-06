@@ -23,7 +23,6 @@ namespace tokenizer {
 	 */
 	class TokenFile {
 	private:
-		fs::FilePath                           path;
 		dia::Logger                            log;
 		base::Box<dia::Location>               location;
 		base::Optional<const fs::FileContent>  content;
@@ -44,6 +43,8 @@ namespace tokenizer {
 
 		explicit TokenFile(const fs::FilePath&);
 
+		explicit TokenFile(const dia::SourcePosition&, const std::string&);
+
 		template<class T, class... Ts>
 		friend base::Box<T> base::makeBox(Ts&&... args);
 
@@ -52,14 +53,6 @@ namespace tokenizer {
 		TokenFile()                 = delete;
 
 		TokenFile(TokenFile&&) = delete;
-
-		/**
-		 * @brief Get the path of underlying file.
-		 */
-		[[nodiscard]]
-		fs::FilePath getPath() const {
-			return path;
-		}
 
 		/**
 		 * @brief Compute pair (line, column) from character index.
@@ -92,7 +85,7 @@ namespace tokenizer {
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
 		dia::Logger&        getLogger();
-		fs::FilePath        getPath();
+		fs::FilePath        getPath() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

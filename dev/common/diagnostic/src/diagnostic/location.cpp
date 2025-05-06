@@ -3,9 +3,6 @@
 #include <token_file/file.hpp>
 
 namespace dia {
-
-	fs::FilePath Location::getSourceFile() const { return getSource()->getPath(); }
-
 	void Location::printPrefixInfo(printer::PrinterOStream& out) const {
 		out << "In file: " << getSourceFile().strView().data() << "\n";
 	}
@@ -26,11 +23,16 @@ namespace dia {
 
 	Ref<tokenizer::TokenFile> FileLocation::getSource() const { return file; }
 
-	MacroLocation::MacroLocation(const SourcePosition& parent):
+	fs::FilePath FileLocation::getSourceFile() const { return path; }
+
+	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file):
 		  parent(parent),
-		  file(parent.getSource()) {}
+		  file(file),
+		  path(parent.getSource()->getPath()) {}
 
 	Ref<tokenizer::TokenFile> MacroLocation::getSource() const { return file; }
+
+	fs::FilePath MacroLocation::getSourceFile() const { return path; }
 
 	void MacroLocation::printSuffixInfo(printer::PrinterOStream& out) const {
 		out << "Expanded here: \n";
@@ -52,6 +54,10 @@ namespace dia {
 	}
 
 	Ref<tokenizer::TokenFile> FakeLocation::getSource() const {
+		CORE_PANIC("Tried to access a fake location from a fake position.");
+	}
+
+	fs::FilePath FakeLocation::getSourceFile() const {
 		CORE_PANIC("Tried to access a fake location from a fake position.");
 	}
 
