@@ -5,8 +5,12 @@
 
 #include "instruction.hpp"
 
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
+
+#include <utility>
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -31,15 +35,23 @@ namespace vm::low {
 	 * @note It's guaranteed to contain main, if validator is enabled.
 	 *
 	 * @note The order of functions in the `std::vector<FuncData>` is important, as the `ID` of
-	 * the function in the function calls is the index in this vector
+	 * the function in the function calls is the index in this vector. Similar holds for
+	 * `std::vector<code::GlobalData>` - global data.
 	 */
 	struct LowVMProgram {
-		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> types):
+		LowVMProgram(
+			const std::vector<FuncData>&         functions,
+			Box<TypeMetadata>                    types,
+			const std::vector<code::GlobalData>& global_data
+		):
 			  types(std::move(types)) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
+			for (const auto& global: global_data)
+				this->global_data.insert(this->types->at(global.type), global.name);
 		}
 
-		StableTypeIdNameMap<FuncData, usize> functions;
-		Box<TypeMetadata>                    types;
+		StableTypeIdNameMap<FuncData, usize>        functions;
+		Box<TypeMetadata>                           types;
+		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
 	};
 }
