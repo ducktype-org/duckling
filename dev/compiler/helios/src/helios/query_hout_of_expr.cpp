@@ -2,6 +2,7 @@
 
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/go_to_definition.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
@@ -53,48 +54,6 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
-
-		/**
-		 * @brief Tries to extract a resulting symbol from hout expression.
-		 * @note Logic like this might be useful one day for "go-to-definition" on expressions,
-		 * but it might get removed from hout creation in the future.
-		 */
-		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
-			explicit HoutResultingSymbolListVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
-
-			query::Context& ctx;
-			ScopeID         scope;
-
-			base::Optional<SymbolList> symbols;
-
-			void visitBinaryOperatorExpr(const BinaryOperatorExpr&) override {
-				// note: it should be possible if given operator points to a
-				// user defined operator.
-				throw base::NotYetImplemented("Cannot evaluate symbol after binary operators");
-			}
-
-			void visitIdentifierExpr(const IdentifierExpr& val) override {
-				symbols = SymbolList{ val.symbol };
-			}
-
-			void visitParenthesisExpr(const ParenthesisExpr& val) override {
-				HoutResultingSymbolListVisitor vis(ctx, scope);
-				val.inner->acceptVisitor(vis);
-				symbols = vis.symbols;
-			}
-
-			void visitUnaryOperatorExpr(const UnaryOperatorExpr&) override {
-				// note: it should be possible if given operator points to a
-				// user defined operator.
-				throw base::NotYetImplemented("Cannot evaluate symbol after unary operators");
-			}
-
-			void visitLinkedIdentifierExpr(const LinkedIdentifierExpr& val) override {
-				symbols = val.symbols;
-			}
-		};
 
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
@@ -259,12 +218,9 @@ namespace compiler::helios::code {
 					return;
 				}
 
-				HoutResultingSymbolListVisitor resulting_symbol_vis(ctx, scope);
-				atom_expr.value()->acceptVisitor(resulting_symbol_vis);
-
-				CORE_ASSERT(resulting_symbol_vis.symbols, "Failed to get symbols");
-
-				SymbolList looked_up_symbol = std::move(resulting_symbol_vis.symbols.value());
+				// this is very temporary:
+				SymbolList looked_up_symbol
+					= { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() };
 
 				// @note If optional is not empty it means there has been a call.
 				base::Optional<std::vector<Box<Expr>>> call_arguments;
