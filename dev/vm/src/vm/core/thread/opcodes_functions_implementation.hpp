@@ -38,6 +38,7 @@
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <variant>
 
@@ -305,41 +306,36 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
-			auto builtin_id    = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
-			auto function_type = builtins::getBuiltinFunctionType(builtin_id);
-			auto arg_count     = function_type->parameters.size();
+			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
+			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
+			auto real_function_type = thread.executing_program->types->at(function_type->name);
+			auto arg_count          = function_type->parameters.size();
 
-			std::vector<builtins::Value> args;
-			u64                          first_arg_idx = frame->block_stack.size() - arg_count;
+			std::vector<VmValue> args;
+			u64                  first_arg_idx = frame->block_stack.size() - arg_count;
 
-
-			// Converting from memory bytes on the local stack to the builtin::Value arguments.
+			// Create VmValue objects from local arguments
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type = function_type->parameters[i];
-				// @TODO the conversion from local stack bytes to builtin::Value is done
-				// based on declaration type, but it should be done based on the Metadata Type in
-				// the future.
-				if (arg_type == "i64") {
-					args.emplace_back(derefStack<i64>(
-						local_stack,
-						static_cast<i64>(frame->block_idx_to_local_offset[first_arg_idx + i])
-					));
-				} else {
-					CORE_PANIC("Unsupported builtin function argument type: ", arg_type);
-				}
+				const base::StrID arg_type  = function_type->parameters[i];
+				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
+				args.emplace_back(
+					real_type, local_stack + frame->block_idx_to_local_offset[first_arg_idx + i]
+				);
 			}
 
-			builtins::Value return_value = builtins::callBuiltinFunction(builtin_id, thread, args);
-			variant_match(return_value) {
-				variant_case_novalue(builtins::NoValue) {}
-				variant_case(i64, value) {
+			base::Optional<VmValue> return_value
+				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
+			match_optional(return_value) {
+				opt_none {}
+				opt_some(value) {
 					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
-					derefStack<i64>(local_stack, static_cast<i64>(ret_val_offset)) = value;
+					std::memcpy(
+						local_stack + ret_val_offset, value.data.data(), value.type->getSize()
+					);
 				}
-				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
 			}
 
-			// Similiar as in func_call, but we deinit the arguments blocks as well,
+			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
@@ -349,6 +345,7 @@ namespace vm {
 			if (arg_count > 0)
 				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
 		}
+
 		FUNCTION_CONT(1);
 	}
 
@@ -407,14 +404,14 @@ namespace vm {
 			frame->called_func_arg_size = 0;
 			frame->called_func_ret_size = 0;
 		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_lany_type)(FUNCTION_ARGS) {
 		{
 			auto type
-				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg0)));
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to

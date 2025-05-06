@@ -26,7 +26,7 @@ namespace vm {
 	/**
 	 * @brief A memory module for a process.
 	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
-     */
+	 */
 	class Memory final {
 	private:
 		mutable std::shared_mutex mutex;

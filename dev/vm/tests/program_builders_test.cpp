@@ -46,8 +46,8 @@ private:
 
 		// Test `mov_l32_l32`
 		instr_builder.setKind(OpKind::mov);
-		const auto arg0 = vm::opargs::StackLocalI32{ 0 };
-		const auto arg1 = vm::opargs::StackLocalI32{ 4 };
+		const auto arg0 = vm::opargs::StackLocalI32{ base::StrID("arg0") };
+		const auto arg1 = vm::opargs::StackLocalI32{ base::StrID("arg1") };
 		instr_builder.pushArgs(arg0, arg1);
 		std::vector<Instruction> instr = instr_builder.build();
 		ASSERT_TRUE(instr.size() == 1);
@@ -74,15 +74,18 @@ private:
 		TypeContext     available_types = type_context_builder.build();
 		FunctionBuilder func_builder(test, {}, available_types);
 
-		auto a = func_builder.initType(Op_init_type{ int32 });
-		ASSERT_EQUAL(0, a);
-		auto b = func_builder.initType(Op_init_type{ int64 });
-		auto c = func_builder.initType(Op_init_type{ int64 });
-		ASSERT_EQUAL(4, b);
-		ASSERT_EQUAL(12, c);
+		// variable names
+		auto a = base::StrID("a");
+		auto b = base::StrID("b");
+		auto c = base::StrID("c");
+		auto d = base::StrID("d");
+
+		func_builder.initType(Op_init_lany_type{ a, int32 });
+		func_builder.initType(Op_init_lany_type{ b, int64 });
+		func_builder.initType(Op_init_lany_type{ c, int64 });
 
 		InstructionBuilder instr(OpKind::add);
-		const auto         arg0 = vm::opargs::StackLocalI32{ i64(a) };
+		const auto         arg0 = vm::opargs::StackLocalI32{ a };
 		const auto         arg1 = vm::opargs::Immediate{ 7 };
 		instr.pushArgs(arg0, arg1);
 
@@ -90,16 +93,15 @@ private:
 
 		func_builder.addInstruction(Op_deinit());
 		func_builder.addInstruction(Op_deinit());
-		auto d = func_builder.initType(Op_init_type{ int32 });
-		ASSERT_EQUAL(4, d);
+		func_builder.initType(Op_init_lany_type{ d, int32 });
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::code::Function func = func_builder.build();
 		ASSERT_EQUAL(base::StrID("test"), func.name.str);
 		ASSERT_EQUAL(20, func.local_stack_size);
 
-		assertInstructionsEqual(func.body[0], Op_init_type{ int32 });
-		assertInstructionsEqual(func.body[1], Op_init_type{ int64 });
-		assertInstructionsEqual(func.body[2], Op_init_type{ int64 });
+		assertInstructionsEqual(func.body[0], Op_init_lany_type{ a, int32 });
+		assertInstructionsEqual(func.body[1], Op_init_lany_type{ b, int64 });
+		assertInstructionsEqual(func.body[2], Op_init_lany_type{ c, int64 });
 		assertInstructionsEqual(func.body[3], Op_add_l32_imm{ arg0, arg1 });
 		assertInstructionsEqual(func.body[4], Op_deinit{});
 		assertInstructionsEqual(func.body.back(), Op_ret{});
@@ -118,14 +120,16 @@ private:
 		TypeContext finalized = type_context_builder.build();
 
 		FunctionBuilder func_builder(main, {}, finalized);
-		auto            a = func_builder.initType(Op_init_type{ int64 });  // a
-		func_builder.initType(Op_init_type{ int32 });                      // b
+		auto            a = base::StrID("a");
+		auto            b = base::StrID("b");
+		func_builder.initType(Op_init_lany_type{ a, int64 });
+		func_builder.initType(Op_init_lany_type{ b, int32 });
 
 		InstructionBuilder instr_mov(OpKind::mov);
-		instr_mov.pushArgs(vm::opargs::StackLocalI64(i64(a)), vm::opargs::Immediate(1'337));
+		instr_mov.pushArgs(vm::opargs::StackLocalI64(a), vm::opargs::Immediate(1'337));
 		func_builder.addInstruction(instr_mov);
 		InstructionBuilder instr_output(OpKind::output);
-		instr_output.pushArgs(vm::opargs::StackLocalI64(i64(a)));
+		instr_output.pushArgs(vm::opargs::StackLocalI64(a));
 		func_builder.addInstruction(instr_output);
 		func_builder.addInstruction(Op_deinit());  // a
 		func_builder.addInstruction(Op_deinit());  // b
@@ -134,7 +138,8 @@ private:
 			[&] { func_builder.addInstruction(Op_deinit()); }, "Cannot pop from empty variable stack"
 		);
 
-		func_builder.initType(Op_init_type{ int64 });  // reinit ret val (int64)
+		func_builder.initType(Op_init_lany_type{ base::StrID("ret_val2"), int64 }
+		);  // reinit ret val (int64)
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 
 		std::stringstream ss;

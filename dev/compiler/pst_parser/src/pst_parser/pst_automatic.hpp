@@ -142,6 +142,21 @@ namespace pst {
 		}
 
 		/**
+		 * @brief Parses a string to @p result. Skips on success, does nothing on failure.
+		 * @param result The place to store the parsed string.
+		 */
+		void one(tpc::StringValue* result, [[maybe_unused]] bool ignorable = false) {
+			if (!state.ctokens().peek().isString()) {
+				state.log(makeBox<tpc::NoStringError>(state.getPosition()));
+				result->value = base::StrID("<error>");
+				if (!ignorable) state.tokens().next();
+				return;
+			}
+			el->addToken(state[0]);
+			result->value = state.tokens().next().getValue();
+		}
+
+		/**
 		 * @brief Parses an Element. Skips on success, logs error on failure.
 		 * @param result The place to store the parsed element.
 		 */

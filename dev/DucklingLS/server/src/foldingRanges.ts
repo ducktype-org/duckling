@@ -1,105 +1,124 @@
-import { TextDocument } from 'vscode-languageserver-textdocument';
-import { FoldingRange, FoldingRangeKind, TextDocuments, FoldingRangeParams } from 'vscode-languageserver';
-import { Token, getTokenTypeIndex } from "./semanticTokensDeclarations";
-import { DucklingElement } from './lsptree/elements/elements';
+import {
+    FoldingRange,
+    FoldingRangeKind,
+    FoldingRangeParams,
+    TextDocuments
+} from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
-/**
- * Represents a mapping of token types to their corresponding families.
- * If we set tokens to one family, they will fold together.
- */
-const tokenFamilies: { [key: number]: number } = {
-	[getTokenTypeIndex('keyword')]: 1,
-	[getTokenTypeIndex('variable')]: 1,
-	[getTokenTypeIndex('operator')]: 1,
-	[getTokenTypeIndex('number')]: 1,
-	[getTokenTypeIndex('comment')]: 2,
-	[getTokenTypeIndex('string')]: 3,
-	[getTokenTypeIndex('decorator')]: 4,
-};
-
-/**
- * Retrieves the folding ranges for a given text document.
- * @param params - The parameters for the folding range request.
- * @param documents - The collection of text documents.
- * @param semanticTokensCache - Cache of semantic tokens.
- * @param pstCache - Cache of Duckling elements.
- * @returns An array of FoldingRanges.
- */
-export function getFoldingRanges(
-	params: FoldingRangeParams,
-	documents: TextDocuments<TextDocument>,
-	semanticTokensCache: Map<string, Token[]>,
-	pstCache: Map<string, DucklingElement | null>
+// Folding Range request handler
+export function handleFoldingRanges(
+    params: FoldingRangeParams,
+    documents: TextDocuments<TextDocument>
 ): FoldingRange[] {
-	const document = documents.get(params.textDocument.uri) as TextDocument;
-	if (!document) return []; 
+    const document = documents.get(params.textDocument.uri);
+    if (!document) {
+        return [];
+    }
+    let text = document.getText();
+    const lines = text.split(/\r?\n/);
+    let foldingRanges: FoldingRange[] = [];
 
-	const LSPTree = pstCache.get(document.uri);
-	const foldingRangesPST: any =  LSPTree?.getFoldingRanges() ?? [];
-	const foldingRanges: FoldingRange[] = [];
-	const tokens = semanticTokensCache.get(document.uri) || [];
-	foldingRanges.push(...foldSemTokens(tokens, document));
-	foldingRanges.push(...foldingRangesPST);
+    // 1. Fold multi-line comment blocks (/* ... */) and remove them from the text
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
+        const startPos = line.indexOf("/*");
+        if (startPos !== -1) {
+            if (line.indexOf("*/", startPos + 2) !== -1) {
+                continue;
+            }
+            for (let j = lineIndex + 1; j < lines.length; j++) {
+                if (lines[j].includes("*/")) {
+                    foldingRanges.push({
+                        startLine: lineIndex,
+                        endLine: j,
+                        kind: FoldingRangeKind.Comment
+                    });
+                    // Remove the comment block from the text
+                    for (let k = lineIndex; k <= j; k++) {
+                        lines[k] = "";
+                    }
+                    lineIndex = j;
+                    break;
+                }
+            }
+        }
+    }
 
-	return foldingRanges;
-}
+    // 2. Fold consecutive single-line comments (// ...) and remove them from the text
+    let i = 0;
+    while (i < lines.length) {
+        if (lines[i].trim().startsWith("//")) {
+            const startLine = i;
+            while (i < lines.length && lines[i].trim().startsWith("//")) {
+                i++;
+            }
+            const endLine = i - 1;
+            if (endLine > startLine) {
+                foldingRanges.push({
+                    startLine: startLine,
+                    endLine: endLine,
+                    kind: FoldingRangeKind.Comment
+                });
+                // Remove the single-line comments from the text
+                for (let k = startLine; k <= endLine; k++) {
+                    lines[k] = "";
+                }
+            }
+            continue;
+        }
+        i++;
+    }
 
-/**
- * Generates folding ranges based on the provided tokens and document.
- * @param tokens - The array of tokens to generate folding ranges for.
- * @param document - The text document.
- * @returns An array of FoldingRanges.
- */
-function foldSemTokens(tokens: Token[], document: TextDocument): FoldingRange[] {
-	const foldingRanges: FoldingRange[] = [];
-	let currentFamily: number | null = null; // Current token family being processed
-	let startToken: Token | null = null; // Start token of the current folding range
-	let lastTokenLine: number = 0; // Line number of the last token processed
+    // Update the text after removing comments
+    text = lines.join("\n");
 
-	tokens.forEach((token, i) => {
-		const tokenFamily = tokenFamilies[token.tokenType]; // Get the family of the current token
-		// Check if the current token belongs to the same family or is a comment and is on a consecutive line
-		if ((currentFamily === tokenFamily || 
-			token.tokenType === getTokenTypeIndex('comment')) 
-			&& token.line - lastTokenLine <= 1) {
-			lastTokenLine = token.line; // Update the last token line
-			return; // Continue to the next token
-		}
-		// If the current token does not belong to the same family and is not on a consecutive line
-		if (currentFamily !== null && startToken !== null && token.line > startToken.line + 1) {
-			// Create a folding range from the start token to the previous token
-			foldingRanges.push(createFoldingRange(startToken, tokens[i - 1], document));
-		}
-		// Update the start token and current family if the token family is defined
-		if (tokenFamily !== undefined) {
-			startToken = token;
-			currentFamily = tokenFamily;
-		} else {
-			currentFamily = null;
-			startToken = null;  
-		}
-		lastTokenLine = token.line; // Update the last token line
-	});
-	// Create a folding range for the last set of tokens if applicable
-	if (currentFamily !== null && startToken !== null && tokens[tokens.length - 1].line > startToken['line'] + 1) {
-		foldingRanges.push(createFoldingRange(startToken, tokens[tokens.length - 1], document));
-	}
-	return foldingRanges; // Return the generated folding ranges
-}
+    // 3. Fold consecutive import lines into a single range
+    i = 0;
+    while (i < lines.length) {
+        if (lines[i].trim().startsWith("import")) {
+            const startLine = i;
+            while (i < lines.length && lines[i].trim().startsWith("import")) {
+                i++;
+            }
+            const endLine = i - 1;
+            if (endLine > startLine) {
+                foldingRanges.push({
+                    startLine: startLine,
+                    endLine: endLine,
+                    kind: FoldingRangeKind.Imports
+                });
+            }
+            continue;
+        }
+        i++;
+    }
 
-/**
- * Creates a folding range based on the provided start and end tokens.
- * @param startToken - The start token of the folding range.
- * @param endToken - The end token of the folding range.
- * @param document - The text document.
- * @returns A FoldingRange object.
- */
-function createFoldingRange(startToken: Token, endToken: Token, document: TextDocument): FoldingRange {
-	return {
-		startLine: startToken.line,
-		startCharacter: startToken.startCharacter,
-		endLine: endToken.line,
-		endCharacter: endToken.startCharacter + endToken.length,
-		kind: FoldingRangeKind.Region
-	};
+    // 4. Fold regions enclosed in curly braces
+    const stack: number[] = [];
+    lines.forEach((line, lineIndex) => {
+        for (let j = 0; j < line.length; j++) {
+            if (line[j] === "{") {
+                stack.push(lineIndex);
+            } else if (line[j] === "}") {
+                if (stack.length > 0) {
+                    const startLine = stack.pop()!;
+                    if (startLine < lineIndex - 1) {
+                        foldingRanges.push({
+                            startLine: startLine,
+                            endLine: lineIndex - 1,
+                            kind: FoldingRangeKind.Region
+                        });
+                    }
+                }
+            }
+        }
+    });
+    
+
+
+    // Sort folding ranges by start line
+    foldingRanges.sort((a, b) => a.startLine - b.startLine);
+
+    return foldingRanges;
 }

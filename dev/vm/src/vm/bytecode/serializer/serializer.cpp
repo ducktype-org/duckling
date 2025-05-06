@@ -13,10 +13,11 @@
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
-#define OFFSET_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
+#define LOCAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+#undef LOCAL_TO_STRING
 
 #define GLOBAL_TO_STRING(Tp) \
 	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }

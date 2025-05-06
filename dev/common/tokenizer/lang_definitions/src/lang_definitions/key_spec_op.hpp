@@ -64,6 +64,9 @@ namespace lang_def {
 		Switch,
 		Case,
 
+		// Macro
+		Expand,
+
 		// Actions:
 		Return,
 		Break,

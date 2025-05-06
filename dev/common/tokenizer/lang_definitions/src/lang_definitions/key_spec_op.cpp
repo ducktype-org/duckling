@@ -62,6 +62,8 @@ namespace lang_def {
 			{ Keyword::Assert, "assert", KeywordFlags() },
 			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
 
+			{ Keyword::Expand, "expand", KeywordFlags() },
+
 			{ Keyword::i8, "i8", KeywordFlags() },
 			{ Keyword::i16, "i16", KeywordFlags() },
 			{ Keyword::i32, "i32", KeywordFlags() },

@@ -12,13 +12,13 @@ type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
 function main {
-    # [0, 8) ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
-    init_type DogPtr;  # 32
-    init_type CatPtr;  # 48
-    alloc_lptr_type 32, Dog;
-    setVTable_lptr_type 32, Dog;
-    upcast_lptr_lptr 48, 32;  # cat := static_cast<CatPtr>(dog)
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+    init_lany_type dog, DogPtr;
+    init_lany_type cat, CatPtr;
+    alloc_lptr_type dog, Dog;
+    setVTable_lptr_type dog, Dog;
+    upcast_lptr_lptr cat, dog;  # cat := static_cast<CatPtr>(dog)
     ret;
 }
