@@ -261,9 +261,11 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					}
 				}
 				if (log.good())
-					return getProgram({ .functions   = functions,
-					                    .types       = type_context.getTypes(),
-					                    .global_data = { globals.begin(), globals.end() } });
+					return getProgram({
+						.functions   = functions,
+						.types       = type_context.getTypes(),
+						.global_data = { globals.begin(), globals.end() },
+					});
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::TypeValidationError& e) {

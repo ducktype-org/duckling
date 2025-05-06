@@ -387,7 +387,7 @@ namespace vm::loader {
 		base::StrID global_data_name;
 
 	public:
-		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+		constexpr static const std::string_view ERR_MSG = "This global data is duplicated: ";
 
 	protected:
 		[[nodiscard]]

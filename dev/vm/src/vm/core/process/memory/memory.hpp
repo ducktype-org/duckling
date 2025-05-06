@@ -72,6 +72,9 @@ namespace vm {
 
 		void insertGlobalData(GlobalDataID id, TypeCRef type);
 
+		/**
+		 * @brief Returns a view of global data by the id.
+		 */
 		[[nodiscard]]
 		__attribute__((always_inline)) auto getGlobalData(GlobalDataID id) -> base::ModRawView {
 			return global_data.atMaybe(id).expect("Id not stored!").modView();

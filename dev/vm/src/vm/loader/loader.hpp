@@ -37,8 +37,17 @@ namespace vm::loader {
 	private:
 		Program() = default;
 
+		/**
+		 * @brief Inserts a type. Can be called multiple times with the same type object.
+		 */
 		void insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger);
+		/**
+		 * @brief Inserts a function. Cannot be called multiple times with the same function object.
+		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
+		/**
+		 * @brief Inserts a global. Cannot be called multiple times with the same global data object.
+		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
 		StableTypeIdNameMap<code::Function> functions;

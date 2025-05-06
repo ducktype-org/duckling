@@ -121,6 +121,9 @@ namespace vm {
 
 		constexpr const T& operator[](TID id) const { return values[static_cast<usize>(id)]; }
 
+		/**
+		 * @brief Returns ids of inserted elements.
+		 */
 		constexpr auto ids() const { return id_to_name | std::views::keys; }
 
 		std::vector<std::tuple<CRef<T>, TID, base::StrID>> allData() const {

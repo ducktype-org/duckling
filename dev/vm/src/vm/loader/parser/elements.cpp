@@ -42,6 +42,9 @@ namespace vm::loader::parser {
 		template<class T>
 		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
 
+		/**
+		 * @brief Parses opcode argument. Template specializations change only the return type.
+		 */
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
@@ -114,7 +117,6 @@ namespace vm::loader::parser {
 
 		state.parse().one(lang_def::Keyword::BCGlobalData);
 
-		/// @TODO: implement keywordToNumLiteral
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
 		state.parse().one(lang_def::Special::Semicolon);

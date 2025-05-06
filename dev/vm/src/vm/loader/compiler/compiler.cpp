@@ -6,7 +6,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -14,6 +13,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -205,8 +205,10 @@ namespace vm::loader::compiler {
 		}
 
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
-		return low::LowVMProgram{ converted_functions,
-			                      std::move(types),
-			                      { program.globalMap().begin(), program.globalMap().end() } };
+		return low::LowVMProgram{
+			converted_functions,
+			std::move(types),
+			{ program.globalMap().begin(), program.globalMap().end() },
+		};
 	}
 }
