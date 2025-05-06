@@ -14,8 +14,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/vmprocess.hpp"
-#include "vm/core/thread/low_program/low_program.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -429,9 +427,9 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void VMThread::run(
-		CRef<low::LowVMProgram>                                         program,
-		const std::string&                                              func_name,
-		const RunArguments& run_arguments
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
 	) {
 		respondExecutionRequest(api::Running{});
 
