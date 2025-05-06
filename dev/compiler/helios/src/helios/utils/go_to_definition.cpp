@@ -10,8 +10,6 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Tries to extract a resulting symbol from hout expression.
-	 * @note Logic like this might be useful one day for "go-to-definition" on expressions,
-	 * but it might get removed from hout creation in the future.
 	 */
 	struct HoutResultingSymbolListVisitor final: public HoutExprVisitorEmpty {
 		explicit HoutResultingSymbolListVisitor(query::Context& ctx): ctx(ctx) {}
@@ -46,7 +44,7 @@ namespace compiler::helios {
 		}
 
 		void visitLiteralTypeExpr(const LiteralTypeExpr&) override {
-			//...
+			// @TODO ZPP 3.3 -- make this functionality work on more then just sym ids.
 		}
 
 		void visitCallExpr(const CallExpr& call) override { symbol = call.callee; }

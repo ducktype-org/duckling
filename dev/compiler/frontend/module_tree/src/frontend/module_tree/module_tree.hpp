@@ -41,7 +41,7 @@ namespace compiler::frontend {
 
 		/**
 		 * @brief Lazily parses the source file and returns PST
-		 * @return const pst::PST&
+		 * @return CRef<pst::PST>
 		 */
 		CRef<pst::PST<>> getPST();
 	};
