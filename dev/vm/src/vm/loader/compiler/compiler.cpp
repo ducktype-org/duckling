@@ -6,12 +6,14 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -28,11 +30,12 @@
 namespace vm::loader::compiler {
 	namespace {
 		struct CompilationContext final {
-			const StableTypeIdNameMap<code::Function>& func_map;
-			const TypeMetadata&                        type_map;
-			LoaderLogger                               log{};
-			base::Optional<code::Function>             function{};
-			base::HashMap<base::StrID, usize>          label_positions{};
+			const StableTypeIdNameMap<code::Function>&         func_map;
+			const TypeMetadata&                                type_map;
+			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
+			LoaderLogger                                       log{};
+			base::Optional<code::Function>                     function{};
+			base::HashMap<base::StrID, usize>                  label_positions{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -44,12 +47,22 @@ namespace vm::loader::compiler {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 				// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(Type)                                             \
-	variant_case(vm::opargs::Type, local_type) {                       \
+#define HANDLE_LOCAL(TYPE)                                             \
+	variant_case(vm::opargs::TYPE, local_type) {                       \
 		return ctx.function->local_offset_map.at(local_type.var_name); \
 	}
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
+
+#define HANDLE_GLOBAL(TYPE)                                                         \
+	variant_case(vm::opargs::TYPE, global_data) {                                   \
+		auto name = global_data.global_data_name;                                   \
+		if (ctx.globals.contains(name)) return i64(usize(*ctx.globals.idOf(name))); \
+		ctx.log.log<UnknownGlobalDataError>(global_data, name);                     \
+		return 0;                                                                   \
+	}
+				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
+#undef HANDLE_OFFSET
 
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
@@ -59,7 +72,8 @@ namespace vm::loader::compiler {
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
-						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name == func.function_name)
+						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str
+						    == func.function_name)
 							return i;
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
 					return 0;
@@ -87,18 +101,19 @@ namespace vm::loader::compiler {
 					return 0;
 				}
 			}
+
 			CORE_UNREACHABLE();
 		}
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
-			func_data.name = ctx.function->name;
+			func_data.name = ctx.function->name.str;
 			auto functional_type
-				= ctx.type_map.atMaybe(ctx.function->name)
-			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name);
+				= ctx.type_map.atMaybe(ctx.function->name.str)
+			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name.str);
 			func_data.arg_size
 				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name);
+			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name.str);
 			// Not expecting here because it's checked above
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.function->local_stack_size;
@@ -173,7 +188,17 @@ namespace vm::loader::compiler {
 		converted_functions.reserve(program.funcMap().size());
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
-		auto              ctx   = CompilationContext(program.funcMap(), *types);
+
+		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
+		auto ctx = CompilationContext(program.funcMap(), *types, globals);
+
+		for (const auto& global: program.globalMap()) {
+			match_optional(types->atMaybe(global.type)) {
+				opt_some(type) { globals.insert(type, global.name); }
+				opt_none { ctx.log.log<UnknownTypeError>(global.type, global.type.str); }
+			}
+		}
+
 
 		for (auto& func: program.funcMap()) {
 			ctx.function = func;
@@ -184,6 +209,10 @@ namespace vm::loader::compiler {
 		}
 
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
-		return low::LowVMProgram{ converted_functions, std::move(types) };
+		return low::LowVMProgram{
+			converted_functions,
+			std::move(types),
+			{ program.globalMap().begin(), program.globalMap().end() },
+		};
 	}
 }

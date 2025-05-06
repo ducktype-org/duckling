@@ -7,8 +7,6 @@
 
 #include <vm/core/process/type_metadata/definitions.hpp>
 
-#include <functional>
-
 namespace vm {
 	class BlockData final {
 	private:

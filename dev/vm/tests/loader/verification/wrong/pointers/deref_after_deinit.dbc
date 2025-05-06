@@ -8,7 +8,7 @@ function main {
 	init_lany_type 		z, i64;
 
 	mov_l64_imm         z, 1;
-	ref_lptr_any        x, z;  # x = &z
+	ref_lptr_lany        x, z;  # x = &z
 
 	deinit; # z
 

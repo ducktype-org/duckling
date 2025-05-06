@@ -30,15 +30,28 @@ namespace vm::loader {
 		const StableTypeIdNameMap<code::Function>&  funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
+		const code::builders::GlobalDataMap& globalMap() const;
+
 		Box<TypeMetadata> produceTypeMetadata() const;
 
 	private:
 		Program() = default;
 
-		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
+		/**
+		 * @brief Inserts a type. Can be called multiple times with the same type object.
+		 */
+		void insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger);
+		/**
+		 * @brief Inserts a function. Cannot be called multiple times with the same function object.
+		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
+		/**
+		 * @brief Inserts a global. Cannot be called multiple times with the same global data object.
+		 */
+		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
 		StableTypeIdNameMap<code::Function> functions;
+		code::builders::GlobalDataMap       globals_map;
 		code::builders::TypeContextBuilder  type_context_builder;
 	};
 
@@ -47,6 +60,8 @@ namespace vm::loader {
 	 */
 	class Loader final {
 		bool validate_program;
+
+		static std::expected<low::LowVMProgram, LoaderLogger> load(const Program& program);
 
 	public:
 		explicit Loader(bool validate_program);

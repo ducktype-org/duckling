@@ -81,25 +81,41 @@ namespace vm {
 	// inside interpeter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); } \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				= derefStack<TYPE>(local_stack, instr->arg1);                            \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
-		{                                                                                \
-			if (frame->flags.flag)                                                       \
-				derefStack<TYPE>(local_stack, instr->arg0)                               \
-					= derefStack<TYPE>(local_stack, instr->arg1);                        \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); }            \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = derefStack<TYPE>(local_stack, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			if (frame->flags.flag)                                                        \
+				derefStack<TYPE>(local_stack, instr->arg0)                                \
+					= derefStack<TYPE>(local_stack, instr->arg1);                         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
@@ -114,6 +130,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = DEREF_GLOBAL(Pointer, instr->arg1); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
+		{ DEREF_GLOBAL(Pointer, instr->arg0) = derefStack<Pointer>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
@@ -533,7 +559,7 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
