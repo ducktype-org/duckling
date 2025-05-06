@@ -103,16 +103,17 @@ namespace vm {
 		frame->instr                     = instr;
 	}
 
-	low::FuncData VMThread::createFunctionStartFor(
-		CRef<low::FuncData> func, const std::vector<i64>& func_args
+	low::FuncData VMThread::createStartFunctionFor(
+		const low::FuncData& func, const std::vector<i64>& func_args
 	) {
 		low::FuncData start_function;
 		start_function.name     = base::StrID("vm_start_function");
 		start_function.arg_size = 0;
 		start_function.ret_size = 0;
 
-		auto called_func_type = executing_program->types->atMaybe(func->name)
-		                            .expect("Expected the called function to exist!");
+		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
+			"Expected the called function to exist!"
+		);
 		auto i64_type = executing_program->types->atMaybe(base::StrID("i64"))
 		                    .expect("Type i64 is expected to exist!");
 
@@ -121,7 +122,7 @@ namespace vm {
 		i32  called_function_id = 0;
 		// TODO: Change that to a hashmap for faster lookup?
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
 		i32 stack_top = 0;
 		// @todo: VM functions should be able to return and take as parameters any VM type.
@@ -162,7 +163,7 @@ namespace vm {
 	}
 
 	low::FuncData VMThread::createProgramStartFunction(
-		CRef<low::FuncData> func, const std::vector<std::string>& args
+		const low::FuncData& func, const std::vector<std::string>& args
 	) {
 		// Just like in libc, the start function pushes the program arguments on to the stack and
 		// performs the call to the actual function. After the called function returns, it
@@ -175,8 +176,9 @@ namespace vm {
 		start_function.ret_size = 0;
 
 		// Types
-		auto called_func_type = executing_program->types->atMaybe(func->name)
-		                            .expect("Expected the called function to exist!");
+		auto called_func_type = executing_program->types->atMaybe(func.name).expect(
+			"Expected the called function to exist!"
+		);
 		auto called_return_type
 			= called_func_type->getResultType().expect("Expected main to have a return value!");
 		auto argv_type = executing_program->types->atMaybe(base::StrID("argv"))
@@ -195,7 +197,7 @@ namespace vm {
 		auto funcs              = executing_program->functions;
 		i32  called_function_id = 0;
 		for (u64 i = 0; i < funcs.size(); i++)
-			if (func->name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
+			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
 		start_function.bc.insert(
 			start_function.bc.end(),
@@ -261,12 +263,12 @@ namespace vm {
 #endif
 	// NOLINTBEGIN(cppcoreguidelines-avoid-goto)
 	// NOLINTBEGIN(cppcoreguidelines-pro-bounds-constant-array-index)
-	i64 VMThread::executeFunction(const low::FuncData& start_function, CRef<low::FuncData> func) {
+	i64 VMThread::executeFunction(const low::FuncData& start_function, const low::FuncData& func) {
 		// Frame of the called function.
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		auto called_func_type   = executing_program->types->at(func->name);
+		auto called_func_type   = executing_program->types->at(func.name);
 		auto called_return_type = called_func_type->getResultType();
 		if (called_return_type.has_value())
 			frame->called_func_ret_size = called_return_type.value()->getSize();
@@ -433,13 +435,12 @@ namespace vm {
 		respondExecutionRequest(api::Running{});
 		executing_program = program;
 		try {
-			CRef<low::FuncData> func
-				= executing_program->functions.atMaybe(base::StrID(func_name.data()))
-			          .expect("Called function does not exist!");
+			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
+			                        .expect("Called function does not exist!");
 
 			low::FuncData start_function = func_name.data() == base::StrID("main")
 			                                 ? createProgramStartFunction(func, program_args)
-			                                 : createFunctionStartFor(func, func_args);
+			                                 : createStartFunctionFor(func, func_args);
 			i64           exit_code      = executeFunction(start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (const KillProcessException& e) {

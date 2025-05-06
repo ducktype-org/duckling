@@ -137,20 +137,21 @@ namespace vm {
 
 		/**
 		 * @brief Creates a list of instructions, which initialize the argv table and populate it
-		 * with given command line `args`, push the argc and *argv blocks on to mains local stack,
+		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
 		 * perform the call and deinitialize the argv table when main returns.
 		 */
 		low::FuncData createProgramStartFunction(
-			CRef<low::FuncData> func, const std::vector<std::string>& args
+			const low::FuncData& func, const std::vector<std::string>& args
 		);
 
 		/**
-		 * @brief Creates a list of instructions, which push the passed i`func_args` on to the local
+		 * @brief Creates a list of instructions, which push the passed i`func_args` onto the local
 		 * stack and perform a call to `func`.
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
+		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
 		 */
-		low::FuncData createFunctionStartFor(
-			CRef<low::FuncData> func, const std::vector<i64>& func_args
+		low::FuncData createStartFunctionFor(
+			const low::FuncData& func, const std::vector<i64>& func_args
 		);
 		/**
 		 * @brief @TODO:
@@ -170,7 +171,7 @@ namespace vm {
 		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
-		 * @brief This is the main function to call to start execution on the VM.
+		 * @brief This is the primary function to call to start execution on the VM.
 		 * It calls both the main function when running the program and single functions called by
 		 * the 'runFunction' endpoint. It starts the execution begining with the first instruction
 		 * in the start_function bytecode vector.
@@ -178,7 +179,7 @@ namespace vm {
 		 * @param func - the function to execute.
 		 * @return value returned by the program
 		 */
-		i64 executeFunction(const low::FuncData& start_function, CRef<low::FuncData> func);
+		i64 executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 

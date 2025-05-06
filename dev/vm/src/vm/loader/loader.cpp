@@ -117,7 +117,7 @@ namespace {
 		} catch (vm::code::builders::UnknownTypeError& e) {
 			logger.log<UnknownTypeError>(e.TYPE, e.TYPE.type_name);
 		} catch (vm::code::builders::MissingFunctionalTypeError& e) {
-			logger.log<UnknownFunctionError>(instr, e.FUNC_NAME);
+			logger.log<UnknownFunctionError>(instr, e.FUNC.function_name);
 		} catch (vm::code::builders::BuilderError& e) {
 			logger.log<SomeBuilderError>(instr, e.what());
 		}
@@ -148,6 +148,8 @@ namespace {
 		}
 	}
 }
+
+Program Program::from() { return Program{}; }
 
 void Program::insertFunctions(
 	const std::vector<code::Function>& new_functions, LoaderLogger& logger

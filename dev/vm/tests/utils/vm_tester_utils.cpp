@@ -81,7 +81,5 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(
-		vm::api::loadFiles(vm::api::spawn()->pid, { fs::FilePath(path(dbc_filename)) }).has_value()
-	);
+	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::FilePath(path(dbc_filename)) }).has_value());
 }

@@ -214,7 +214,7 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 	  type_context(types) {
 	TypeCRef func_result_type = type_context.getMetadata()
 	                                .atMaybe(name)
-	                                .expect<MissingFunctionalTypeError>(name, name)
+	                                .expect<MissingFunctionalTypeError>(name)
 	                                ->getResultType()
 	                                .expect<TypeIsNotFunctionalError>(name, name);
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
@@ -273,7 +273,7 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName function) {
 	auto func_type = type_context.getMetadata()
 	                     .atMaybe(function.function_name)
-	                     .expect<MissingFunctionalTypeError>(function.function_name, function);
+	                     .expect<MissingFunctionalTypeError>(function);
 	auto param_count = func_type->getParameterCount().expect<TypeIsNotFunctionalError>(
 		function.function_name, function
 	);
@@ -304,7 +304,7 @@ void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 	verifyCall(function);
 	auto param_count = type_context.getMetadata()
 	                       .atMaybe(function.function_name)
-	                       .expect<MissingFunctionalTypeError>(function.function_name, function)
+	                       .expect<MissingFunctionalTypeError>(function)
 	                       ->getParameterCount()
 	                       .expect<TypeIsNotFunctionalError>(function.function_name, function);
 	for (usize i = 0; i < param_count; i++) local_stack.pop_back();

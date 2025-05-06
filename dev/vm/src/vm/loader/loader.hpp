@@ -21,26 +21,26 @@ namespace vm::loader {
 	 */
 	class Program final {
 	public:
-		Program(const Program&)            = delete;
-		Program(Program&&) noexcept        = default;
-		Program& operator=(const Program&) = delete;
-		Program& operator=(Program&&)      = default;
+		Program(const Program&)                  = delete;
+		Program(Program&&) noexcept              = default;
+		Program&       operator=(const Program&) = delete;
+		Program&       operator=(Program&&)      = default;
+		static Program from();
 
 		const StableTypeIdNameMap<code::Function>&   funcMap() const;
 		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
 
 		Box<TypeMetadata> produceTypeMetadata() const;
 
-	private:
-		friend class Loader;
-		Program() = default;
-
 		/**
-		 * @brief Injects new code represented as code collection to a current program state.
+		 * @brief Inserts new code represented as code collection to a current program state.
 		 */
 		void insertCode(const code::CodeCollection& code_collection, LoaderLogger& logger);
 		void insertTypes(const std::vector<code::TypeOfData>& types, LoaderLogger& logger);
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
+
+	private:
+		Program() = default;
 
 		StableTypeIdNameMap<code::Function> functions;
 		code::builders::TypeContextBuilder  type_context_builder;
@@ -51,7 +51,7 @@ namespace vm::loader {
 	 */
 	class Loader final {
 		bool    validate_program;
-		Program program;
+		Program program = Program::from();
 
 		/**
 		 * @brief Parses a list of files, returns an intermediate loader-only program representation.

@@ -37,12 +37,10 @@ namespace vm::code::builders {
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                       FUNC_NAME;
 		const vm::opargs::FunctionName          FUNC;
 
-		MissingFunctionalTypeError(base::StrID func_name, opargs::FunctionName func):
-			  BuilderError(base::strConcat(ERR_MSG, func_name)),
-			  FUNC_NAME(func_name),
+		MissingFunctionalTypeError(opargs::FunctionName func):
+			  BuilderError(base::strConcat(ERR_MSG, func.function_name)),
 			  FUNC(func) {}
 	};
 
