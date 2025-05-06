@@ -29,6 +29,7 @@ inline static base::HashMap<ModuleID, std::shared_ptr<ModuleTree>> modules{};
 /**
  * @brief Holds global map of all Source files
  * @TODO: this holding a reference is dangerous:
+ * @TODO: change it during frontend queryfication #731 ?
  */
 inline static base::HashMap<FileID, SourceFile&> files{};
 
@@ -53,12 +54,12 @@ SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	lang_file_name = base::StrID(this->path.stem().c_str());
 }
 
-const pst::PST<>& SourceFile::getPST() {
+CRef<pst::PST<>> SourceFile::getPST() {
 	if (parse_tree) {
-		return parse_tree.value();
+		return &parse_tree.value();
 	} else {
 		parse_tree.emplace(pst::PST(path));
-		return parse_tree.value();
+		return &parse_tree.value();
 	}
 }
 
@@ -291,17 +292,17 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto& file = files.at(key);
-		auto& pst  = file.getPST();
-		root_element_file_back_map.put(pst.getRootElement().unlock(ctx)->getID(), key);
+		auto pst  = file.getPST();
+		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
-		if (pst.getLogger().bad()) {
+		if (pst->getLogger().bad()) {
 			std::cerr << "PARSING ERRORS: \n";
-			pst.getLogger().dumpLog(true, std::cerr);
+			pst->getLogger().dumpLog(true, std::cerr);
 			std::cerr << "\n\n";
 		}
 
-		return &pst;
+		return pst;
 	}
 
 	// @note: unstable ref here is only possible, because
@@ -323,4 +324,20 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
+}
+
+CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
+	query::Context&, const fs::FilePath& file_path
+) {
+	u64 count = 0;
+	for (const auto& [file_id, file]: files) {
+		if (file.path == file_path) count++;
+	}
+	CORE_ASSERT(count == 1, "File not found in module tree");
+
+	for (const auto& [file_id, file]: files) {
+		if (file.path == file_path) return file.getPST();
+	}
+
+	CORE_UNREACHABLE();
 }
