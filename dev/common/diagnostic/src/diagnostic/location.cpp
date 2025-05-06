@@ -14,9 +14,9 @@ namespace dia {
 
 	void Location::printMessage(printer::PrinterOStream& out, const SourcePosition& pos, const printer::PrinterContentsSeq& reason) const {
 		printPrefixInfo(out);
-		out << "At position :";
+		out << "At position ";
 		pos.printPosition(out);
-		out << ":\n" << reason;
+		out << ":\n" << reason << "\n";
 		printPrettySourceLinesFromPosition(out, pos);
 	}
 
@@ -45,7 +45,7 @@ namespace dia {
 
 	void FakeLocation::printMessage(printer::PrinterOStream& out, const SourcePosition&, const printer::PrinterContentsSeq& reason) const {
 		printPrefixInfo(out);
-		out << reason;	
+		out << reason << "\n";	
 	}
 
 	Ref<tokenizer::TokenFile> FakeLocation::getSource() const {

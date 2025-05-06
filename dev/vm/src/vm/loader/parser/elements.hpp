@@ -29,10 +29,10 @@ namespace vm::loader::parser {
 	};
 
 	struct AsmElement: tpc::Element {
-		Box<dia::SourcePosition> position;
+		dia::SourcePosition position;
 
 		AsmElement(const dia::SourcePosition& position):
-			  position(makeBox<dia::SourcePosition>(position)) {}
+			  position(position) {}
 
 		void debugPrint(std::ostream& out) const override;
 	};

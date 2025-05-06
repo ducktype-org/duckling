@@ -141,9 +141,8 @@ namespace vm::loader::parser {
 					// Update end to contains args
 					if (!out->args.empty()) {
 						auto end = VISIT(out->args.back(), arg, return *arg.bytecode_pos).getEnd();
-						const auto& pos = *out->position;
-						out->position
-							= makeBox<dia::SourcePosition>(pos.getSource(), pos.getStart(), end);
+						auto pos = out->position;
+						out->position = {pos, end};
 					}
 
 					return out;
@@ -270,7 +269,7 @@ namespace vm::loader::parser {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -281,7 +280,7 @@ namespace vm::loader::parser {
 				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = PointerType{ name, pointed_type.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -298,7 +297,7 @@ namespace vm::loader::parser {
 					auto tp         = StaticTableType{ name,
                                                type_name.getValue(),
                                                static_cast<usize>(strIDToNum(size.getValue())) };
-					tp.bytecode_pos = *out->position;
+					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
 			}
@@ -310,14 +309,14 @@ namespace vm::loader::parser {
 				state.err.failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = DynamicTableType{ name, type_name.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
 		}
 		case lang_def::Keyword::BCData: {
 			auto tp         = DataType{ name, parseFields(state) };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
@@ -344,7 +343,7 @@ namespace vm::loader::parser {
 			}
 			state.goUpAndSkip();
 			auto tp         = VariantType{ name, alternatives };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
@@ -373,7 +372,7 @@ namespace vm::loader::parser {
 			tpc::Identifier result;
 			state.parse().one(&result);
 			auto tp         = FunctionType{ name, arguments, result };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
@@ -383,7 +382,7 @@ namespace vm::loader::parser {
 				state.err.failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -506,7 +505,7 @@ namespace vm::loader::parser {
 										 std::move(implements),
 										 std::move(virtual_methods)
 									 ));
-			VISIT(tp, t, t.bytecode_pos = *out->position);
+			VISIT(tp, t, t.bytecode_pos = out->position);
 			out->datatype = std::move(tp);
 			break;
 		}
