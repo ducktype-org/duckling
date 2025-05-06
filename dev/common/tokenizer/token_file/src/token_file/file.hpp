@@ -43,7 +43,7 @@ namespace tokenizer {
 
 		explicit TokenFile(const fs::FilePath&);
 
-		explicit TokenFile(const dia::SourcePosition&, const std::string&);
+		explicit TokenFile(dia::SourcePosition, std::string_view);
 
 		template<class T, class... Ts>
 		friend base::Box<T> base::makeBox(Ts&&... args);

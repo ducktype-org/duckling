@@ -31,7 +31,7 @@ namespace tokenizer {
 		content.emplace(path.getContent());
 	}
 
-	TokenFile::TokenFile(const dia::SourcePosition& parent, const std::string& contents):
+	TokenFile::TokenFile(dia::SourcePosition parent, const std::string_view contents):
 		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenFile>(this))) {
 		content.emplace(fs::FileContent::fromString(contents));
 	}

@@ -66,8 +66,9 @@ namespace pst {
 		 * @brief Construct a new Pst from expanded text
 		 */
 		template<typename... Args>
-		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args) requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenFile(pos, fs::FilePath::createTempFile(content))) {
+		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args)
+			requires ParseAble<Args...>
+			  : file(tokenizer::makeTokenFile(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -104,7 +105,9 @@ namespace pst {
 		}
 
 		template<typename... Args>
-		static PST fromExpandWithContext(dia::SourcePosition pos, std::string_view contents, Args&&... args) requires ParseAble<Args...> {
+		static PST fromExpandWithContext(
+			dia::SourcePosition pos, std::string_view contents, Args&&... args
+		) requires ParseAble<Args...> {
 			return PST(pos, contents, std::forward<Args>(args)...);
 		}
 
