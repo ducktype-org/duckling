@@ -41,17 +41,17 @@ namespace compiler::helios {
 	/**
 	 * @brief Return parent scope or none for root-scopes.
 	 */
-	 base::Optional<ScopeID> parent(ScopeID);
+	base::Optional<ScopeID> parent(ScopeID);
 
-	 /**
-	  * @brief Return module the scope was defined in
-	  */
-	 frontend::ModuleID module(ScopeID id);
- 
-	 /**
-	  * @brief Return depth of the scope in the scope tree.
-	  */
-	 u64 scopeDepth(ScopeID);
+	/**
+	 * @brief Return module the scope was defined in
+	 */
+	frontend::ModuleID module(ScopeID id);
+
+	/**
+	 * @brief Return depth of the scope in the scope tree.
+	 */
+	u64 scopeDepth(ScopeID);
 
 	/**
 	 * @brief Query root scope for given module.

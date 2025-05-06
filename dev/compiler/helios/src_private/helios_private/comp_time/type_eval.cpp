@@ -2,11 +2,11 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <typesystem/higher/queries.hpp>
 #include <helios/query_hout_of_expr.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include <base/variant.hpp>
 

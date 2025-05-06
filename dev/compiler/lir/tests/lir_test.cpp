@@ -7,13 +7,13 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <typesystem/higher/queries/types.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -180,19 +180,13 @@ private:
 			// only parameter of index 2 is ever used:
 
 			auto validate_value = [&](const compiler::lir::LIRValue& value) {
-				if (value.get<compiler::lir::LocalRef>()->parameter_index.has_value()) {
+				if (value.get<compiler::lir::LocalRef>()->parameter_index.has_value())
 					ASSERT_EQUAL(value.get<compiler::lir::LocalRef>()->parameter_index.value(), 2);
-				}
 			};
 
-			for (auto& instruction: block->instructions) {
-				for (auto& arg: instruction.arguments) {
-					validate_value(arg);
-				}
-			}
-			for (auto& arg: block->terminator.arguments) {
-				validate_value(arg);
-			}
+			for (auto& instruction: block->instructions)
+				for (auto& arg: instruction.arguments) validate_value(arg);
+			for (auto& arg: block->terminator.arguments) validate_value(arg);
 		}
 	}
 };

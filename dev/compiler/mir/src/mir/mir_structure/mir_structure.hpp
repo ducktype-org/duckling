@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mir_local_ref.hpp"
 #include "mir_lifetime_scope.hpp"
+#include "mir_local_ref.hpp"
 
 #include <typesystem/higher/expression_type.hpp>
 #include <typesystem/higher/types.hpp>
@@ -124,8 +124,9 @@ namespace compiler::mir {
 
 		/**
 		 * Lifetime scopes of this local.
-		 * This is used to determine when the local is valid (i.e. "live") and when it should be destructed.
-		 * The local is valid only in instructions for which the instruction scope is in the scope-sub-tree of the lifetime scope of the local.
+		 * This is used to determine when the local is valid (i.e. "live") and when it should be
+		 * destructed. The local is valid only in instructions for which the instruction scope is in
+		 * the scope-sub-tree of the lifetime scope of the local.
 		 *
 		 * If this is not set, then the local will be ignored by lifetime analysis.
 		 * This means that no destructors will be inserted for this local,
@@ -135,9 +136,9 @@ namespace compiler::mir {
 		 * to go-around the problem of using the value after destructors should be called, e.g:
 		 * in return statements, for if condition value.
 		 */
-		base::Optional<ScopeRef>      scope;
+		base::Optional<ScopeRef> scope;
 
-		/** 
+		/**
 		 * If this local is a function parameter, this field contains the index of the parameter.
 		 */
 		base::Optional<u64> parameter_index;
@@ -155,13 +156,10 @@ namespace compiler::mir {
 			  type(type) {}
 
 		/**
-		 * @brief Constructor for a local variables with a HELIOS SymID that are the function parameters.
+		 * @brief Constructor for a local variables with a HELIOS SymID that are the function
+		 * parameters.
 		 */
-		MirLocal(
-			helios::SymID     helios_id,
-			tsh::SymbolType<> type,
-			u64               parameter_index
-		):
+		MirLocal(helios::SymID helios_id, tsh::SymbolType<> type, u64 parameter_index):
 			  id(LocalID::next()),
 			  helios_id(helios_id),
 			  type(type),
@@ -170,11 +168,8 @@ namespace compiler::mir {
 		/**
 		 * @brief Constructor for temporary values.
 		 */
-		MirLocal(tsh::SymbolType<> type):
-			  id(LocalID::next()),
-			  helios_id({}),
-			  type(type) {}
-		
+		MirLocal(tsh::SymbolType<> type): id(LocalID::next()), helios_id({}), type(type) {}
+
 		/**
 		 * Setter of lifetime scope of this local.
 		 * MIR lowering uses it to set the lifetime scope of the local
@@ -217,7 +212,7 @@ namespace compiler::mir {
 		MIRValue(MirBoolConst value): value(value) {}
 
 		MIRValue(LocalRef value): value(value) {}
-		
+
 		MIRValue(MutLocalRef value): value(value) {}
 
 		MIRValue(BlockID value): value(value) {}
@@ -370,7 +365,7 @@ namespace compiler::mir {
 		 * finalizeFunctionEnd)
 		 */
 		base::StableHashMap<BlockID, Block> blocks;
-		
+
 		/**
 		 * @brief The generated order of blocks in the function.
 		 * It serves as a list of all the blocks that are inside the function.
@@ -385,7 +380,7 @@ namespace compiler::mir {
 		base::StableVector<const MirLocal> local_list;
 
 		/**
-		 * Lifetimes scope-tree of this function. 
+		 * Lifetimes scope-tree of this function.
 		 */
 		LifetimeScopeTree lifetime_scope_tree;
 
@@ -409,7 +404,7 @@ namespace compiler::mir {
 			std::vector<tsh::SymbolType<>>      parameter_types,
 			base::StableHashMap<BlockID, Block> blocks,
 			std::vector<BlockID>                block_order,
-			base::StableVector<const MirLocal>        local_list,
+			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
 			helios::SymID                       helios_id
 		);

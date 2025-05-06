@@ -5,13 +5,13 @@
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <typesystem/higher/queries.hpp>
 #include <mir/mir_lowering/mir_lowering.hpp>
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <typesystem/higher/queries.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -301,13 +301,17 @@ private:
 					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
 					for (const auto& arg: instr.arguments) {
 						if (arg.get<compiler::mir::LocalRef>()->parameter_index.has_value()) {
-							ASSERT_EQUAL(arg.get<compiler::mir::LocalRef>()->parameter_index.value(), 2);
+							ASSERT_EQUAL(
+								arg.get<compiler::mir::LocalRef>()->parameter_index.value(), 2
+							);
 						}
 					}
 				}
 				for (const auto& terminator: block.terminator.arguments) {
 					if (terminator.get<compiler::mir::LocalRef>()->parameter_index.has_value()) {
-						ASSERT_EQUAL(terminator.get<compiler::mir::LocalRef>()->parameter_index.value(), 2);
+						ASSERT_EQUAL(
+							terminator.get<compiler::mir::LocalRef>()->parameter_index.value(), 2
+						);
 					}
 				}
 			}

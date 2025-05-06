@@ -14,5 +14,5 @@ namespace compiler::mir {
 	 * @brief Mutable reference to MIR Local variable data.
 	 * Used in the lowering process only.
 	 */
-	 using MutLocalRef = Ref<MirLocal>;
+	using MutLocalRef = Ref<MirLocal>;
 }

@@ -627,7 +627,7 @@ private:
 		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
 
 		// a simple way to get function scope through hout:
-		auto foo = getChain("foo", top_scope).back();
+		auto foo            = getChain("foo", top_scope).back();
 		auto foo_body_scope = getFunctionBodyScope(foo);
 
 		// variable types:

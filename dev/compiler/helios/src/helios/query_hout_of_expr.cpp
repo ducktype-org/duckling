@@ -1,7 +1,6 @@
 #include "query_hout_of_expr.hpp"
 
 #include <helios/hout/elements/expr.hpp>
-
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/scopes/scopes.hpp>
@@ -63,8 +62,7 @@ namespace compiler::helios::code {
 		 * but it might get removed from hout creation in the future.
 		 */
 		struct HoutResultingSymbolListVisitor final: public HoutExprVisitorPanicky {
-			explicit HoutResultingSymbolListVisitor(query::Context& ctx):
-				  ctx(ctx) {}
+			explicit HoutResultingSymbolListVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
 
@@ -98,8 +96,7 @@ namespace compiler::helios::code {
 		};
 
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
-			explicit PstExprToHoutExprVisitor(query::Context& ctx):
-				  ctx(ctx) {}
+			explicit PstExprToHoutExprVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
 
@@ -322,9 +319,7 @@ namespace compiler::helios::code {
 
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
 					if (call_arguments)
-						node = makeBox<CallExpr>(
-							ctx, dealiased.back(), std::move(*call_arguments)
-						);
+						node = makeBox<CallExpr>(ctx, dealiased.back(), std::move(*call_arguments));
 					else
 						node = makeBox<LinkedIdentifierExpr>(ctx, std::move(dealiased));
 				}
@@ -338,8 +333,8 @@ namespace compiler::helios::code {
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
 				// note: this is a mock, it should be unified with ChainExpr
-				
-				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({stmt});
+
+				auto        scope    = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 				const auto& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
 					{ scope, stmt->getName().value, true }
 				);
@@ -433,8 +428,7 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(80));
 					break;
 				case pst::Keyword::f128:
-					node
-						= makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
 					break;
 				case pst::Keyword::f64:
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(64));

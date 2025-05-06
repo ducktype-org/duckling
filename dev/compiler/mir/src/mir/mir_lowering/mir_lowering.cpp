@@ -71,7 +71,10 @@ namespace compiler::mir {
 	 * @return StmtLowerRes
 	 */
 	StmtLowerRes lowerStmt(
-		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+		const hc::Stmt&  stmt,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         parent_scope
 	);
 
 	/**
@@ -84,7 +87,10 @@ namespace compiler::mir {
 	 * @return ExprLowerRes
 	 */
 	ExprLowerRes lowerExpr(
-		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope
 	);
 
 	/**
@@ -96,7 +102,10 @@ namespace compiler::mir {
 	 * @return StmtLowerRes
 	 */
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+		const hc::CodeBlock& code_block,
+		BlockBuilderRef      continuation,
+		FunctionBuilder&     function,
+		ScopeRef             parent_scope
 	);
 
 	/**
@@ -297,14 +306,9 @@ namespace compiler::mir {
 			// we sanity check here, that all local variables
 			// that have a helios id also have lifetime scope,
 			// as thery always have to have it.
-			for (auto& local: local_list) {
-				if (local->helios_id.has_value()) {
-					CORE_ASSERT(
-						local->scope.has_value(),
-						"Local variable without lifetime scope"
-					);
-				}
-			}
+			for (auto& local: local_list)
+				if (local->helios_id.has_value())
+					CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
 
 			return Function{
 				name.value(),
@@ -364,13 +368,13 @@ namespace compiler::mir {
 		/**
 		 * Creates a temporary local value, and also sets its lifetime scope.
 		 */
-		 [[nodiscard]]
-		 MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
-			 auto tmp = addTmp(type);
-			 tmp->setLifetimeScope(scope);
-			 return tmp;
-		 }
-		
+		[[nodiscard]]
+		MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
+			auto tmp = addTmp(type);
+			tmp->setLifetimeScope(scope);
+			return tmp;
+		}
+
 		/**
 		 * Add a temporary value of type bool.
 		 * Used for example by if/while lowering to store
@@ -378,7 +382,11 @@ namespace compiler::mir {
 		 */
 		[[nodiscard]]
 		MutLocalRef addBoolTmp() {
-			auto type = tsh::SymbolType<>(ctx.query<tsh::QueryBoolType>({}), tsh::ReferenceKind::Direct, tsh::Mutability::Immutable);
+			auto type = tsh::SymbolType<>(
+				ctx.query<tsh::QueryBoolType>({}),
+				tsh::ReferenceKind::Direct,
+				tsh::Mutability::Immutable
+			);
 			local_list.emplaceBack(MirLocal{ type });
 			return local_list.last();
 		}
@@ -420,7 +428,9 @@ namespace compiler::mir {
 		}
 
 		[[nodiscard]]
-		query::Context& getContext() { return ctx; }
+		query::Context& getContext() {
+			return ctx;
+		}
 
 		/**
 		 * This is needed only for some assertins.
@@ -501,7 +511,9 @@ namespace compiler::mir {
 		 */
 		ScopeRef parent_scope;
 
-		StmtBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope):
+		StmtBlockVisitor(
+			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+		):
 			  continuation(continuation),
 			  function(function),
 			  parent_scope(parent_scope) {}
@@ -536,13 +548,12 @@ namespace compiler::mir {
 				return_block->setTerminator(
 					Instruction(Operation::ReturnValue, {}, { return_value }, {}, return_scope)
 				);
-			}
-			else {	
+			} else {
 				retrieve_value.fill(Instruction{
 					Operation::Nop,
-					{ },
-					{ },
-					{ },
+					{},
+					{},
+					{},
 					return_scope,
 				});
 				return_block->setTerminator(
@@ -561,14 +572,13 @@ namespace compiler::mir {
 		}
 
 		void visitExprStmt(const hc::ExprStmt& stmt) override {
-			auto expr_scope = function.newScope(parent_scope);
+			auto expr_scope  = function.newScope(parent_scope);
 			auto expr_result = lowerExpr(*stmt.expr, continuation, function, expr_scope);
 
 			output({ expr_result.begin });
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
-
 			auto condition_scope = function.newScope(parent_scope);
 
 			// I'm not sure if we need these scopes,
@@ -593,10 +603,11 @@ namespace compiler::mir {
 
 			// @TODO: Implement jumpy code here.
 			auto condition_block = function.newBlock();
-			
+
 			auto get_condition_return = condition_block->addHole();
 
-			auto expr_result     = lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+			auto expr_result
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
 
 			if (expr_result.value.isLocal()) {
 				// we have to "move" the condition result
@@ -612,45 +623,40 @@ namespace compiler::mir {
 					condition_scope,
 				});
 
-				condition_block->setTerminator(
-					{ 
-						Operation::Branch,
-						{},
-						{condition_result_tmp, then_body.begin->getID(), else_block->getID() },
-						{},
-						condition_scope,
-					}
-				);
+				condition_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ condition_result_tmp, then_body.begin->getID(), else_block->getID() },
+					{},
+					condition_scope,
+				});
 
-			}
-			else {
+			} else {
 				// we can use the result of the expression directly:
 
 				get_condition_return.fill(Instruction{
 					Operation::Nop,
-					{ },
-					{ },
-					{ },
+					{},
+					{},
+					{},
 					condition_scope,
 				});
 
-				condition_block->setTerminator(
-					{ 
-						Operation::Branch,
-						{},
-						{expr_result.value, then_body.begin->getID(), else_block->getID() },
-						{},
-						condition_scope,
-					}
-				);
+				condition_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ expr_result.value, then_body.begin->getID(), else_block->getID() },
+					{},
+					condition_scope,
+				});
 			}
-			
+
 			output({ expr_result.begin });
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
-			auto local                   = function.findLocal(stmt.helios_symbol);
-			
+			auto local = function.findLocal(stmt.helios_symbol);
+
 			// we set the lifetime scope of the local variable here
 			// since we only know it here:
 			local->setLifetimeScope(parent_scope);
@@ -682,12 +688,13 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
 			// TODO: #469 Support arbitrary lvalues on the left.
-			
-			auto assignment_scope = function.newScope(parent_scope);		
 
-			auto target_location            = function.findLocal(stmt.helios_symbol);
-			auto target_construction_hole   = continuation->addHole();
-			auto [sub_continuation, result] = lowerExpr(*stmt.new_value, continuation, function, assignment_scope);
+			auto assignment_scope = function.newScope(parent_scope);
+
+			auto target_location          = function.findLocal(stmt.helios_symbol);
+			auto target_construction_hole = continuation->addHole();
+			auto [sub_continuation, result]
+				= lowerExpr(*stmt.new_value, continuation, function, assignment_scope);
 
 			target_construction_hole.fill(Instruction{
 				Operation::Assign,
@@ -717,7 +724,9 @@ namespace compiler::mir {
 		 */
 		ScopeRef expr_scope;
 
-		ExprBlockVisitor(BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope):
+		ExprBlockVisitor(
+			BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+		):
 			  continuation(continuation),
 			  function(function),
 			  expr_scope(expr_scope) {}
@@ -746,9 +755,11 @@ namespace compiler::mir {
 
 		void visitBinaryOperatorExpr(const hc::BinaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole          = continuation->addHole();
-			const auto [r_continuation, right_res] = lowerExpr(*expr.rhs, continuation, function, expr_scope);
-			const auto [l_continuation, left_res]  = lowerExpr(*expr.lhs, r_continuation, function, expr_scope);
+			auto target_construction_hole = continuation->addHole();
+			const auto [r_continuation, right_res]
+				= lowerExpr(*expr.rhs, continuation, function, expr_scope);
+			const auto [l_continuation, left_res]
+				= lowerExpr(*expr.lhs, r_continuation, function, expr_scope);
 
 			// Fill the hole with the binary operation.
 			// Assume (for now?) that the arguments are of the same type,
@@ -773,8 +784,9 @@ namespace compiler::mir {
 
 		void visitUnaryOperatorExpr(const hc::UnaryOperatorExpr& expr) override {
 			// Construct the result of the expression in reverse.
-			auto target_construction_hole          = continuation->addHole();
-			const auto [sub_continuation, sub_res] = lowerExpr(*expr.expr, continuation, function, expr_scope);
+			auto target_construction_hole = continuation->addHole();
+			const auto [sub_continuation, sub_res]
+				= lowerExpr(*expr.expr, continuation, function, expr_scope);
 
 			// Fill the hole with the unary operation.
 			const auto      argument_type   = locationType(sub_res, function.getContext());
@@ -816,7 +828,8 @@ namespace compiler::mir {
 			std::vector<MIRValue> args;
 			args.emplace_back(MirFunctionLiteral{ expr.callee });
 			for (const auto& arg: expr.arguments) {
-				auto [expr_continuation, sub_res] = lowerExpr(*arg, sub_continuation, function, expr_scope);
+				auto [expr_continuation, sub_res]
+					= lowerExpr(*arg, sub_continuation, function, expr_scope);
 				args.push_back(sub_res);
 				sub_continuation = expr_continuation;
 			}
@@ -900,7 +913,10 @@ namespace compiler::mir {
 	};
 
 	StmtLowerRes lowerStmt(
-		const hc::Stmt& stmt, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+		const hc::Stmt&  stmt,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         parent_scope
 	) {
 		StmtBlockVisitor visitor{ continuation, function, parent_scope };
 		stmt.acceptVisitor(visitor);
@@ -908,7 +924,10 @@ namespace compiler::mir {
 	}
 
 	ExprLowerRes lowerExpr(
-		const hc::Expr& expr, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef expr_scope
+		const hc::Expr&  expr,
+		BlockBuilderRef  continuation,
+		FunctionBuilder& function,
+		ScopeRef         expr_scope
 	) {
 		ExprBlockVisitor visitor{ continuation, function, expr_scope };
 		expr.acceptVisitor(visitor);
@@ -916,7 +935,10 @@ namespace compiler::mir {
 	}
 
 	StmtLowerRes lowerCodeBlock(
-		const hc::CodeBlock& code_block, BlockBuilderRef continuation, FunctionBuilder& function, ScopeRef parent_scope
+		const hc::CodeBlock& code_block,
+		BlockBuilderRef      continuation,
+		FunctionBuilder&     function,
+		ScopeRef             parent_scope
 	) {
 		StmtLowerRes last_result{ continuation };
 		for (auto& stmt: code_block.statements | std::views::reverse) {
@@ -935,11 +957,15 @@ namespace compiler::mir {
 		LocalVarCollectionVisitor visitor{ function_builder };
 		visitor.collect(function);
 
-		auto last_block     = function_builder.newBlock();
-		last_block->setTerminator({ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() });
+		auto last_block = function_builder.newBlock();
+		last_block->setTerminator(
+			{ Operation::FunctionEnd, {}, {}, {}, function_builder.getTopLevelScope() }
+		);
 
 		// build cfg+quad step by step:
-		auto first_block = lowerCodeBlock(*function.content.body, last_block, function_builder, function_builder.getTopLevelScope());
+		auto first_block = lowerCodeBlock(
+			*function.content.body, last_block, function_builder, function_builder.getTopLevelScope()
+		);
 
 		function_builder.setEntry(first_block.begin);
 

@@ -83,7 +83,9 @@ namespace compiler::mir {
 					Operation::DestructIf,
 					{},
 					{ local },
-					{ OperationFlag{ .flag=OperationFlag::Flag::Destruct,.local= local }, },
+					{
+						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+					},
 					instr_scope });
 			};
 			auto add_destructors = [&](const auto& ending_scopes, ScopeRef instr_scope) {
@@ -113,7 +115,8 @@ namespace compiler::mir {
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
-				auto ending_scopes = getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
+				auto ending_scopes
+					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
 				add_destructors(ending_scopes, terminator.scope);
 			} else {
 				base::Optional<std::vector<ScopeRef>> ending_scopes;

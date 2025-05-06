@@ -166,9 +166,7 @@ namespace compiler::helios {
 
 					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
 
-					output(code::AssignmentStmt(
-						std::move(rhs), dynamic_casted_lhs->symbol
-					));
+					output(code::AssignmentStmt(std::move(rhs), dynamic_casted_lhs->symbol));
 					return;
 				}
 
@@ -181,7 +179,6 @@ namespace compiler::helios {
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
-
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto condition
@@ -210,9 +207,7 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>(stmt->getValue().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
-				output(
-					code::VariableStmt(std::move(initial_value), symbol_type, symbol)
-				);
+				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
 			}
 		};
 

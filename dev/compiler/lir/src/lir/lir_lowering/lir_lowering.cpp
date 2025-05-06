@@ -333,7 +333,11 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented(base::strConcat("instruction ", base::enumToStr(mir_instruction.operation), " in LowerToLirFunction"));
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLirFunction"
+					));
 				}
 			}
 

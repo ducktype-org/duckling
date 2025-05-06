@@ -13,7 +13,7 @@ namespace compiler::mir {
 		std::vector<tsh::SymbolType<>>      parameter_types,
 		base::StableHashMap<BlockID, Block> blocks,
 		std::vector<BlockID>                block_order,
-		base::StableVector<const MirLocal>        local_list,
+		base::StableVector<const MirLocal>  local_list,
 		LifetimeScopeTree                   lifetime_scope_tree,
 		helios::SymID                       helios_id
 	):
@@ -151,9 +151,7 @@ namespace compiler::mir {
 			output << ": Helios Name: " << getName().strView();
 			output << ", Type: ";
 			output << this->type.toString();
-			if_opt_some (this->scope, scope) {
-				output << ", Lifetime Scope: " << scope->id;
-			}
+			if_opt_some(this->scope, scope) { output << ", Lifetime Scope: " << scope->id; }
 			if (parameter_index.has_value())
 				output << ", Parameter Index: " << parameter_index.value();
 		}

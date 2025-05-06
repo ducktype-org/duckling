@@ -19,14 +19,12 @@ namespace compiler::helios::code {
 	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
-
 		/**
 		 * The type of the expression, and its value category.
 		 */
 		tsh::ExpressionType<> expression_type;
 
-		Expr(tsh::ExpressionType<> expression_type):
-			  expression_type(expression_type) {}
+		Expr(tsh::ExpressionType<> expression_type): expression_type(expression_type) {}
 
 		virtual ~Expr()                                  = default;
 		virtual void debugPrint(std::ostream& out) const = 0;
@@ -140,10 +138,7 @@ namespace compiler::helios::code {
 		base::Box<Expr> rhs;
 
 		BinaryOperatorExpr(
-			query::Context& ctx,
-			BuiltinBinary   operation,
-			base::Box<Expr> lhs,
-			base::Box<Expr> rhs
+			query::Context& ctx, BuiltinBinary operation, base::Box<Expr> lhs, base::Box<Expr> rhs
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -180,9 +175,7 @@ namespace compiler::helios::code {
 	struct TupleTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleTypeConstructorExpr(
-			query::Context& ctx, std::vector<base::Box<Expr>> elements
-		);
+		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -194,9 +187,7 @@ namespace compiler::helios::code {
 	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
 
-		VariantTypeConstructorExpr(
-			query::Context& ctx, std::vector<base::Box<Expr>> subtypes
-		);
+		VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -227,9 +218,7 @@ namespace compiler::helios::code {
 		SymID                        callee;
 		std::vector<base::Box<Expr>> arguments;
 
-		CallExpr(
-			query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments
-		);
+		CallExpr(query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
