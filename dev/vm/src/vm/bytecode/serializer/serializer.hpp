@@ -21,5 +21,5 @@ namespace vm::code {
 	/**
 	 * @brief Stringifies instruction arguments.
 	 */
-    std::string argumentToString(const opargs::OpCodeArg &arg);
+	std::string argumentToString(const opargs::OpCodeArg& arg);
 }

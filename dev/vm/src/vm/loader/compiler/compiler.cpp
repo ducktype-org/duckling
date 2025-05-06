@@ -53,8 +53,8 @@ namespace vm::loader::compiler {
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
 
-                // @TODO After typechecks (#732) most of those checks should probably
-                // get removed.
+				// @TODO After typechecks (#732) most of those checks should probably
+				// get removed.
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
@@ -79,7 +79,7 @@ namespace vm::loader::compiler {
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
-                    // Labels are guaranteed to exist by static verification.
+					// Labels are guaranteed to exist by static verification.
 					auto pos = ctx.label_positions.at(label.label_name);
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}

@@ -22,11 +22,11 @@ namespace vm::code::builders {
 		constexpr static const std::string_view ERR_MSG
 			= "Stack structure differs between jumps and label.";
 		const instructions::Op_label LABEL;
-		std::vector<Instruction> jumps;  /// all jumps to the label
+		std::vector<Instruction>     jumps;  /// all jumps to the label
 
 		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
 			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
-              LABEL(label),
+			  LABEL(label),
 			  jumps(std::move(jumps)) {}
 	};
 

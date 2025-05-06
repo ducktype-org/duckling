@@ -235,8 +235,8 @@ namespace vm::code {
 		serializer.write();
 		out << '\n';
 	}
-    
-    std::string argumentToString(const opargs::OpCodeArg &arg) {
-        return VISIT(arg, a, return toString(a));
-    }
+
+	std::string argumentToString(const opargs::OpCodeArg& arg) {
+		return VISIT(arg, a, return toString(a));
+	}
 }
