@@ -292,7 +292,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto& file = files.at(key);
-		auto pst  = file.getPST();
+		auto  pst  = file.getPST();
 		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
@@ -330,14 +330,12 @@ CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
 	query::Context&, const fs::FilePath& file_path
 ) {
 	u64 count = 0;
-	for (const auto& [file_id, file]: files) {
+	for (const auto& [file_id, file]: files)
 		if (file.path == file_path) count++;
-	}
 	CORE_ASSERT(count == 1, "File not found in module tree");
 
-	for (const auto& [file_id, file]: files) {
+	for (const auto& [file_id, file]: files)
 		if (file.path == file_path) return file.getPST();
-	}
 
 	CORE_UNREACHABLE();
 }

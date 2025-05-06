@@ -2,9 +2,9 @@
 
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/go_to_definition.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>
@@ -54,8 +54,6 @@ namespace compiler::helios::code {
 			getVariantSubExprsInPlace(ctx, expr.unlock(ctx)->getRightOperand(), sub_exprs);
 			return sub_exprs;
 		}
-
-		
 
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
@@ -221,7 +219,8 @@ namespace compiler::helios::code {
 				}
 
 				// this is very temporary:
-				SymbolList looked_up_symbol = { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() };
+				SymbolList looked_up_symbol
+					= { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() };
 
 				// @note If optional is not empty it means there has been a call.
 				base::Optional<std::vector<Box<Expr>>> call_arguments;
