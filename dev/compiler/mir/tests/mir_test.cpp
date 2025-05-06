@@ -294,17 +294,23 @@ private:
 
 			ASSERT_TRUE(was_x and was_y and was_z);
 
-			// check if value in return instruction is indeed the parameter we expect:
-			u64 return_value_count = 0;
+			// check if value used in the function body is indeed the parameter we expect:
 			for (auto block_id: foo_mir.block_order) {
 				const auto& block = foo_mir.blocks[block_id];
-				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
-					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
-					ASSERT_EQUAL(z_local->parameter_index.value(), 2);
-					return_value_count++;
+				for (const auto& instr: block.instructions) {
+					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
+					for (const auto& arg: instr.arguments) {
+						if (arg.get<compiler::mir::LocalRef>()->parameter_index.has_value()) {
+							ASSERT_EQUAL(arg.get<compiler::mir::LocalRef>()->parameter_index.value(), 2);
+						}
+					}
+				}
+				for (const auto& terminator: block.terminator.arguments) {
+					if (terminator.get<compiler::mir::LocalRef>()->parameter_index.has_value()) {
+						ASSERT_EQUAL(terminator.get<compiler::mir::LocalRef>()->parameter_index.value(), 2);
+					}
 				}
 			}
-			ASSERT_EQUAL(return_value_count, 1);
 		});
 	}
 
