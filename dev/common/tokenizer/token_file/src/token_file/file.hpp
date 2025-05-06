@@ -85,7 +85,8 @@ namespace tokenizer {
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
 		dia::Logger&        getLogger();
-		fs::FilePath        getPath() const;
+		[[nodiscard]]
+		fs::FilePath getPath() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 

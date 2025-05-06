@@ -87,6 +87,7 @@ namespace dia {
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const override;
 
+		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
 		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file);
@@ -110,6 +111,7 @@ namespace dia {
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const override;
 
+		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
 		void printMessage(
