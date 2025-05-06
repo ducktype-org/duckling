@@ -31,7 +31,7 @@ namespace compiler::helios {
 			variant_case(TypeMetaInterface, type) {
 				throw base::NotYetImplemented("HInterface::lookup for type");
 			}
-			variant_case(CucstomInterface, custom) {
+			variant_case(CustomInterface, custom) {
 				return custom.custom->lookup(ctx, name, params);
 			}
 		}

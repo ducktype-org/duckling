@@ -73,7 +73,7 @@ namespace compiler::helios {
 
 		/**
 		 * @brief The interface of the type instance.
-		 * The behavior depends on the type, but in generall it
+		 * The behavior depends on the type, but in general it
 		 * represents what `symbol-of-given-type.abc` would do.
 		 */
 		struct TypeInstanceInterface {
@@ -82,7 +82,7 @@ namespace compiler::helios {
 
 		/**
 		 * @brief The interface of the type.
-		 * The behavior depends on the type, but in generall it
+		 * The behavior depends on the type, but in general it
 		 * represents what `given-type.abc` would do.
 		 */
 		struct TypeMetaInterface {
@@ -92,7 +92,7 @@ namespace compiler::helios {
 		/**
 		 * @brief A custom interface -- anyone can create their own interface.
 		 */
-		struct CucstomInterface {
+		struct CustomInterface {
 			Box<CustomInterface> custom;
 		};
 
@@ -102,7 +102,7 @@ namespace compiler::helios {
 			SymbolInterface,
 			TypeInstanceInterface,
 			TypeMetaInterface,
-			CucstomInterface>;
+			CustomInterface>;
 
 		VariantT data;
 
@@ -156,7 +156,7 @@ namespace compiler::helios {
 		}
 
 		static HInterface ofCustom(Box<CustomInterface> custom) {
-			return HInterface{ CucstomInterface{ std::move(custom) } };
+			return HInterface{ CustomInterface{ std::move(custom) } };
 		}
 	};
 
