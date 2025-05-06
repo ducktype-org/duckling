@@ -14,6 +14,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/vmprocess.hpp"
+#include "vm/core/thread/low_program/low_program.hpp"
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
@@ -104,7 +106,7 @@ namespace vm {
 	}
 
 	low::FuncData VMThread::createStartFunctionFor(
-		const low::FuncData& func, const std::vector<i64>& func_args
+		const low::FuncData& func, const FunctionRunArguments& func_args
 	) {
 		low::FuncData start_function;
 		start_function.name     = base::StrID("vm_start_function");
@@ -163,7 +165,7 @@ namespace vm {
 	}
 
 	low::FuncData VMThread::createProgramStartFunction(
-		const low::FuncData& func, const std::vector<std::string>& args
+		const low::FuncData& func, const ProgramRunArguments& args
 	) {
 		// Just like in libc, the start function pushes the program arguments on to the stack and
 		// performs the call to the actual function. After the called function returns, it
@@ -427,10 +429,9 @@ namespace vm {
 	 * @brief Starts the execution of a function with a given name and arguments.
 	 */
 	void VMThread::run(
-		CRef<low::LowVMProgram>         program,
-		const std::string&              func_name,
-		const std::vector<i64>&         func_args,
-		const std::vector<std::string>& program_args
+		CRef<low::LowVMProgram>                                         program,
+		const std::string&                                              func_name,
+		const RunArguments& run_arguments
 	) {
 		respondExecutionRequest(api::Running{});
 
@@ -441,11 +442,17 @@ namespace vm {
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
 			                        .expect("Called function does not exist!");
+			low::FuncData start_function;
+			variant_match(run_arguments) {
+				variant_case(ProgramRunArguments, program_run_arguments) {
+					start_function = createProgramStartFunction(func, program_run_arguments);
+				}
+				variant_case(FunctionRunArguments, function_run_data) {
+					start_function = createStartFunctionFor(func, function_run_data);
+				}
+			}
 
-			low::FuncData start_function = func_name.data() == base::StrID("main")
-			                                 ? createProgramStartFunction(func, program_args)
-			                                 : createStartFunctionFor(func, func_args);
-			i64           exit_code      = executeFunction(start_function, func);
+			i64 exit_code = executeFunction(start_function, func);
 			respondExecutionRequest(api::ExecutionCompleted{ exit_code });
 		} catch (const KillProcessException& e) {
 			respondExecutionRequest(api::ExecutionPanicked{ e.what() });
@@ -540,17 +547,16 @@ namespace vm {
 	void VMThread::notifyPaused() { pause_cv.notify_all(); }
 
 	bool VMThread::spawnThreadAndRun(
-		CRef<vm::low::LowVMProgram>     program,
-		const std::string&              func_name,
-		const std::vector<i64>&         func_args,
-		const std::vector<std::string>& program_args
+		CRef<low::LowVMProgram> program,
+		const std::string&      func_name,
+		const RunArguments&     run_arguments
 	) {
 		if (exec_thread)  // There is already a thread running.
 			return false;
 
-		exec_thread = std::thread([this, program, func_args, func_name, program_args] {
+		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
-				run(program, func_name, func_args, program_args);
+				run(program, func_name, run_arguments);
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";

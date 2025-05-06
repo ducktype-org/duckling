@@ -207,10 +207,9 @@ namespace vm {
 		 * there is already a thread running.
 		 */
 		bool spawnThreadAndRun(
-			CRef<vm::low::LowVMProgram>     program,
-			const std::string&              func_name,
-			const std::vector<i64>&         func_args,
-			const std::vector<std::string>& program_args
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
 		);
 
 		/**
@@ -249,10 +248,9 @@ namespace vm {
 		 * @brief Run a single function with given parameters.
 		 */
 		void run(
-			CRef<low::LowVMProgram>         program,
-			const std::string&              func_name,
-			const std::vector<i64>&         func_args,
-			const std::vector<std::string>& program_args
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
 		);
 
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();

@@ -24,13 +24,19 @@
 #include <deque>
 #include <expected>
 #include <shared_mutex>
+#include <string>
+#include <variant>
+#include <vector>
 
 namespace vm::loader {
 	class Loader;
 }
 
 namespace vm {
-	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ProgramRunArguments  = std::vector<std::string>;
+	using FunctionRunArguments = std::vector<i64>;
+	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -110,9 +116,7 @@ namespace vm {
 		 * @brief Creates new thread that runs a function in the Executor service.
 		 */
 		std::expected<api::Response, api::CoreOperationError> runFunction(
-			const std::string&              func_name,
-			const std::vector<i64>&         func_args,
-			const std::vector<std::string>& program_args
+			const std::string& func_name, const RunArguments& run_arguments
 		);
 
 		/**
