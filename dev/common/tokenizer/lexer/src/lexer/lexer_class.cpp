@@ -139,8 +139,8 @@ namespace lexer {
 	TokenData Lexer::tokenize() {
 		tokens.clear();
 		codeblock();
-		dia::SourcePosition eof_pos(file, where);
-		dia::SourcePosition bof_pos(file, 0);
+		dia::SourcePosition eof_pos(file->getLocation(), where);
+		dia::SourcePosition bof_pos(file->getLocation(), 0);
 		return { std::move(tokens),
 			     Token::makeSentinelBof(bof_pos),
 			     Token::makeSentinelEof(eof_pos) };
@@ -199,7 +199,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		dia::SourcePosition source_start(file, where);
+		dia::SourcePosition source_start = currentPosition();
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
@@ -460,7 +460,7 @@ namespace lexer {
 
 		dia::SourcePosition source_position(source_start, end);
 
-		dia::SourcePosition sentinel_end_position(file, end);
+		dia::SourcePosition sentinel_end_position(file->getLocation(), end);
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
@@ -486,5 +486,5 @@ namespace lexer {
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
 
-	dia::SourcePosition Lexer::currentPosition() const { return { file, where }; }
+	dia::SourcePosition Lexer::currentPosition() const { return { file->getLocation(), where }; }
 }

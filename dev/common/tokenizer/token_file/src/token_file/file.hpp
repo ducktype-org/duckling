@@ -3,6 +3,7 @@
 #include "forward.hpp"
 
 #include <diagnostic/logger.hpp>
+#include <diagnostic/location.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
 #include <lexer/char.hpp>
@@ -13,7 +14,6 @@
 #include <base/raw_view.hpp>
 
 #include <set>
-#include <span>
 
 namespace tokenizer {
 	/**
@@ -25,6 +25,7 @@ namespace tokenizer {
 	private:
 		fs::FilePath                           path;
 		dia::Logger                            log;
+		base::Box<dia::Location>               location;
 		base::Optional<const fs::FileContent>  content;
 		base::Optional<const lexer::CharArray> decoded;
 		base::Optional<const lexer::TokenData> token_data;
@@ -88,6 +89,8 @@ namespace tokenizer {
 		const lexer::CharArray& getChars() const;
 		[[nodiscard]]
 		const lexer::TokenData& getTokenData() const;
+		[[nodiscard]]
+		CRef<dia::Location>      getLocation() const;
 		dia::Logger&            getLogger();
 		fs::FilePath            getPath();
 

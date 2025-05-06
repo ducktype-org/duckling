@@ -75,7 +75,7 @@ namespace dia {
 		const auto domain_tag   = domainToString(d);
 
 		auto result_contents
-			= message_ptr->getSourcePosition().genPrinterContents(message_ptr->toString(detailed));
+			= message_ptr->getSourcePosition().genPrinterContents({ message_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, " [", domain_tag, "]:\n" });
 
 		// Append the notes.
@@ -94,8 +94,8 @@ namespace dia {
 		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BRIGHT_GREEN };
 
 		auto result_contents = note_ptr->getSourcePosition()
-		                           .map([&](SourcePosition pos) {
-									   return pos.genPrinterContents(note_ptr->toString(detailed));
+		                           .map([&](const SourcePosition& pos) {
+									   return pos.genPrinterContents({ note_ptr->toString(detailed) });
 								   })
 		                           .valueOr({ note_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
@@ -239,9 +239,7 @@ namespace dia {
 	) {
 		auto source_position
 			= note_ptr->getSourcePosition().valueOr(parent_message->getSourcePosition());
-		auto source_uri = (source_position.getSource() != nullptr)
-		                    ? source_position.getSource()->getPath().uri()
-		                    : "file:///dev/null";
+		auto source_uri = source_position.getSource()->getPath().uri();
 		auto range      = sourcePositionToLspJson(source_position);
 
 		// clang-format off
