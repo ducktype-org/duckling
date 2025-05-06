@@ -1,5 +1,7 @@
 #include "serializer.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
@@ -16,6 +18,11 @@ namespace vm::code {
 
 	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
 #undef LOCAL_TO_STRING
+
+#define GLOBAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
+
+	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
@@ -109,7 +116,7 @@ namespace vm::code {
 			  function(function) {}
 
 		void write() {
-			out << "function " << function.name.strView() << " {\n";
+			out << "function " << function.name.str.strView() << " {\n";
 			// Needed by https://github.com/ducktype-org/duckling/issues/699
 			// bool first = true;
 			// for (const auto& param: function.parameter_types) {
@@ -224,6 +231,22 @@ namespace vm::code {
 		void write() const { std::visit(TypeSerializerVisitor{ out }, type); }
 	};
 
+	class GlobalDataSerializer final {
+		std::ostream&     out;
+		const GlobalData& global_data;
+
+	public:
+		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
+			  out(out),
+			  global_data(global_data) {}
+
+		void write() {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
+			out << global_data.name.str.strView() << " " << global_data.type.str.strView();
+			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+		}
+	};
+
 	void serialize(const Function& function, std::ostream& out) {
 		FunctionSerializer serializer(out, function);
 		serializer.write();
@@ -236,4 +259,9 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serialize(const GlobalData& global_data, std::ostream& out) {
+		GlobalDataSerializer serializer(out, global_data);
+		serializer.write();
+		out << '\n';
+	}
 }

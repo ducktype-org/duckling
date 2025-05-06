@@ -158,6 +158,7 @@ namespace lang_def {
 		BCData,
 		BCVariant,
 		BCFunType,
+		BCGlobalData,
 		BCOpaque,
 		BCClass,
 		BCAbstract,
