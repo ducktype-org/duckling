@@ -53,6 +53,8 @@ namespace vm::loader::compiler {
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
 
+                // @TODO After typechecks (#732) most of those checks should probably
+                // get removed.
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
 						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
@@ -77,16 +79,9 @@ namespace vm::loader::compiler {
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
-					auto it = ctx.label_positions.find(label.label_name);
-					if (it != ctx.label_positions.end()) {
-						// We have to calculate the
-						// difference instead of absolute jump position,
-						// because our instruction counter is a pointer.
-						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
-						     - 1;
-					}
-					ctx.log.log<UnknownLabelError>(label);
-					return 0;
+                    // Labels are guaranteed to exist by static verification.
+					auto pos = ctx.label_positions.at(label.label_name);
+					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
 			}
 			CORE_UNREACHABLE();
@@ -139,27 +134,12 @@ namespace vm::loader::compiler {
 		void splitCodeAndLabels(CompilationContext& ctx) {
 			code::Function new_func = ctx.function.value();
 			new_func.body.clear();
-			base::HashMap<base::StrID, usize>                        label_positions;
-			base::HashMap<base::StrID, code::instructions::Op_label> labels;
+			base::HashMap<base::StrID, usize> label_positions;
 			for (const auto& instr: ctx.function.value().body) {
 				variant_match(instr) {
 					variant_case(code::instructions::Comment, _);
 					variant_case(code::instructions::Op_label, label) {
-						auto [_, inserted] = label_positions.insert_or_assign(
-							label.arg0.label_name, new_func.body.size()
-						);
-						if (!inserted) {
-							ctx.log.logMap<RepeatedLabelError>(label, [&](auto& err) {
-								for (auto&& lbl: label_positions)
-									if (lbl.first == label.arg0.label_name) {
-										ctx.log.addNote<RepeatedLabelNote>(
-											err, labels[label.arg0.label_name]
-										);
-									}
-							});
-						} else {
-							labels.put(label.arg0.label_name, label);
-						}
+						label_positions.put(label.arg0.label_name, new_func.body.size());
 					}
 					variant_default { new_func.body.push_back(instr); }
 				}

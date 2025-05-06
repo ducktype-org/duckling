@@ -98,31 +98,6 @@ namespace {
 		return instr_to_factory.at(opcode->opcode_name.str())(opcode);
 	}
 
-	void insertInstruction(
-		CRef<parser::OpCode>                 opcode,
-		vm::code::builders::FunctionBuilder& func_builder,
-		LoaderLogger&                        logger
-	) {
-		auto instr = translateInstruction(opcode);
-		try {
-			func_builder.addInstruction(instr);
-		} catch (vm::code::builders::StackStructureMismatchError& e) {
-			logger.logMap<StackStructureMismatchError>(
-				instr,
-				[&](Box<StackStructureMismatchError>& err) {
-					for (const auto& instruction: e.linked_instructions)
-						logger.addNote<StackStructureMismatchNote>(err, instruction);
-				}
-			);
-		} catch (vm::code::builders::UnknownTypeError& e) {
-			logger.log<UnknownTypeError>(e.TYPE, e.TYPE.type_name);
-		} catch (vm::code::builders::MissingFunctionalTypeError& e) {
-			logger.log<UnknownFunctionError>(instr, e.FUNC_NAME);
-		} catch (vm::code::builders::BuilderError& e) {
-			logger.log<SomeBuilderError>(instr, e.what());
-		}
-	}
-
 	void insertType(
 		const vm::code::TypeOfData&             type,
 		vm::code::builders::TypeContextBuilder& types,
@@ -131,7 +106,7 @@ namespace {
 		using namespace vm;
 		try {
 			types.addType(type);
-		} catch (code::builders::DuplicatedTypeError&) {
+		} catch (code::builders::DuplicateTypeError&) {
 			base::StrID name = VISIT(type, tp, return tp.name);
 			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
 			log.logMap<DuplicatedTypeError>(
@@ -231,7 +206,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 						code::builders::FunctionBuilder func_builder(func->name, type_context);
 
 						for (const auto& instr: func->code->opcodes)
-							insertInstruction(instr.ref(), func_builder, log);
+							func_builder.addInstruction(translateInstruction(instr.ref()));
 
 						functions.emplace_back(func_builder.build());
 					}
@@ -240,10 +215,22 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					return getProgram({ .functions = functions,
 					                    .types     = type_context.getTypes()
 					                           | std::ranges::to<std::vector>() });
+			} catch (vm::code::builders::StackStructureMismatchError& e) {
+				log.logMap<StackStructureMismatchError>(
+					e.LABEL,
+					[&](Box<StackStructureMismatchError>& err) {
+						for (const auto& instruction: e.jumps)
+							log.addNote<StackStructureMismatchNote>(err, instruction);
+					}
+				);
 			} catch (code::builders::UnknownSubtypeError& e) {
 				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
 			} catch (code::builders::TypeValidationError& e) {
 				log.log<SomeBuilderError>(e.TYPE, e.what());
+			} catch (code::builders::InstructionValidationError& e) {
+				log.log<SomeBuilderError>(e.INSTRUCTION, e.what());
+			} catch (code::builders::ArgumentValidationError& e) {
+				log.log<SomeBuilderError>(e.ARGUMENT, e.what());
 			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
 			return std::unexpected(std::move(log));
 		}

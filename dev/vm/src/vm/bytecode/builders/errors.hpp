@@ -5,6 +5,7 @@
 
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <string_view>
@@ -16,23 +17,17 @@ namespace vm::code::builders {
 		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
 	};
 
-	class DuplicatedTypeError: public BuilderError {
-	public:
-		constexpr const static std ::string_view ERR_MSG = "Duplicated type: ";
-
-		DuplicatedTypeError(base::StrID name): BuilderError(base::strConcat(ERR_MSG, name)) {}
-	};
-
-	// @TODOB think of the notes for this and stuff, this is logged very verbosely
 	class StackStructureMismatchError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "Stack structure differs between jumps and label.";
-		std::vector<Instruction> linked_instructions;  /// all jumps to the label and the label
+		const instructions::Op_label LABEL;
+		std::vector<Instruction> jumps;  /// all jumps to the label
 
-		StackStructureMismatchError(std::vector<Instruction> linked_instructions):
-			  BuilderError(base::strConcat(ERR_MSG)),
-			  linked_instructions(std::move(linked_instructions)) {}
+		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
+			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
+              LABEL(label),
+			  jumps(std::move(jumps)) {}
 	};
 
 	class MissingFunctionalTypeError: public BuilderError {
@@ -65,80 +60,6 @@ namespace vm::code::builders {
 			  MISSING_NAME(missing_name) {}
 	};
 
-	class UnknownTypeError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Unknown type: ";
-		const vm::opargs::Type                  TYPE;
-
-		UnknownTypeError(vm::opargs::Type type):
-			  BuilderError(base::strConcat(ERR_MSG, type.type_name)),
-			  TYPE(type) {}
-	};
-
-	// @TODOB this may be wrong
-	class UnknownLabelError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Unknown label: ";
-		const vm::opargs::Label                 NAME;
-
-		UnknownLabelError(vm::opargs::Label name):
-			  BuilderError(base::strConcat(ERR_MSG, name.label_name)),
-			  NAME(name) {}
-	};
-
-	class DuplicateLabelError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Duplicate label: ";
-		const vm::opargs::Label                 NAME;
-
-		DuplicateLabelError(vm::opargs::Label name):
-			  BuilderError(base::strConcat(ERR_MSG, name.label_name)),
-			  NAME(name) {}
-	};
-
-	class DuplicateLocalNameError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Duplicate local name: ";
-		const vm::opargs::StackLocalAny         NAME;
-
-		DuplicateLocalNameError(vm::opargs::StackLocalAny name):
-			  BuilderError(base::strConcat(ERR_MSG, name.var_name)),
-			  NAME(name) {}
-	};
-
-	class InvalidLocalNameError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "This local does not exist: ";
-		const vm::opargs::OpCodeLocalArg        NAME;
-
-		InvalidLocalNameError(vm::opargs::OpCodeLocalArg name):
-			  BuilderError(base::strConcat(ERR_MSG, VISIT(name, n, return n.var_name))),
-			  NAME(name) {}
-	};
-
-	class EmptyStackDeinitError: public BuilderError {
-	public:
-		constexpr const static std::string_view ERR_MSG = "Popping from empty variable stack.";
-
-		EmptyStackDeinitError(): BuilderError(base ::strConcat(ERR_MSG)) {}
-	};
-
-	class BadReturnError: public BuilderError {
-	public:
-		constexpr const static std ::string_view ERR_MSG
-			= "Function returns, but incorrect return type is on the stack\'s bottom";
-
-		BadReturnError(): BuilderError(base ::strConcat(ERR_MSG)) {}
-	};
-
-	class InvalidFunctionCallArguments: public BuilderError {
-	public:
-		constexpr const static std ::string_view ERR_MSG
-			= "Invalid function call arguments. Values on the stack do not have proper types.";
-
-		InvalidFunctionCallArguments(): BuilderError(base ::strConcat(ERR_MSG)) {}
-	};
-
 	class TypeValidationError: public BuilderError {
 	public:
 		const TypeOfData TYPE;
@@ -150,7 +71,20 @@ namespace vm::code::builders {
 
 	class InstructionValidationError: public BuilderError {
 	public:
-		InstructionValidationError(std::string_view msg): BuilderError(std::string(msg)) {}
+		const Instruction INSTRUCTION;
+
+		InstructionValidationError(std::string_view msg, Instruction instruction):
+			  BuilderError(std::string(msg)),
+			  INSTRUCTION(instruction) {}
+	};
+
+	class ArgumentValidationError: public BuilderError {
+	public:
+		const opargs::OpCodeArg ARGUMENT;
+
+		ArgumentValidationError(std::string msg, opargs::OpCodeArg argument):
+			  BuilderError(std::move(msg)),
+			  ARGUMENT(argument) {}
 	};
 
 #define DEFINE_TYPE_VALIDATION_ERROR(error_name, msg)                                        \
@@ -164,12 +98,23 @@ namespace vm::code::builders {
 			  ) {}                                                                           \
 	};
 
-#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)     \
-	class error_name: public InstructionValidationError {        \
-	public:                                                      \
-		constexpr static const std::string_view ERR_MSG = (msg); \
-                                                                 \
-		error_name(): InstructionValidationError(ERR_MSG) {}     \
+#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)                                     \
+	class error_name: public InstructionValidationError {                                        \
+	public:                                                                                      \
+		constexpr static const std::string_view ERR_MSG = (msg);                                 \
+                                                                                                 \
+		error_name(Instruction instruction): InstructionValidationError(ERR_MSG, instruction) {} \
+	};
+
+#define DEFINE_ARGUMENT_VALIDATION_ERROR(error_name, msg)                        \
+	class error_name: public ArgumentValidationError {                           \
+	public:                                                                      \
+		constexpr static const std::string_view ERR_MSG = (msg);                 \
+                                                                                 \
+		error_name(opargs::OpCodeArg argument):                                  \
+			  ArgumentValidationError(                                           \
+				  base::strConcat(ERR_MSG, argumentToString(argument)), argument \
+			  ) {}                                                               \
 	};
 
 	DEFINE_TYPE_VALIDATION_ERROR(
@@ -182,14 +127,27 @@ namespace vm::code::builders {
 	DEFINE_TYPE_VALIDATION_ERROR(
 		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
 	);
+	DEFINE_TYPE_VALIDATION_ERROR(DuplicateTypeError, "Duplicate type: ");
 
-	DEFINE_INSTRUCTION_VALIDATION_ERROR(
-		UninstantiableValueError, "Cannot intiantiate a value of this type."
-	);
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
 	);
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
+	);
+	DEFINE_INSTRUCTION_VALIDATION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
+
+	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownTypeError, "Unknown type: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLocalNameError, "Unknown local name: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicateLocalNameError, "Duplicate local name: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLabelError, "Unknown label: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicateLabelError, "Duplicate label: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownFunctionError, "Unknown function: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(
+		InvalidFunctionCallArgumentsError,
+		"Invalid function call arguments. Values on the stack do not have proper types."
+	);
+	DEFINE_ARGUMENT_VALIDATION_ERROR(
+		UninstantiableValueError, "Cannot intiantiate a value of this type."
 	);
 }

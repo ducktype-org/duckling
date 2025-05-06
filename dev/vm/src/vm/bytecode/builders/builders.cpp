@@ -18,15 +18,6 @@
 
 using namespace vm::code::builders;
 
-vm::code::Function FunctionBuilder::build() {
-	validate();
-
-	Function function;
-	function.body = instructions;
-	function.name = name;
-	return function;
-}
-
 namespace {
 	// Helpers for validation `ext_*` instructions
 	using namespace vm::code;
@@ -97,8 +88,40 @@ namespace {
 	}
 }
 
-void FunctionBuilder::addInstruction(const Instruction& instruction) {
-	instructions.push_back(instruction);
+void FunctionBuilder::validateExtension(usize index) const {
+	// This check assumes that the last instruction in a function is non-extendable,
+	// this is the case for `ret`.
+	auto instruction = instructions[index];
+	auto predecessor = index == 0 ? base::Optional<const Instruction&>{} : instructions[index - 1];
+	bool valid_extension = std::visit(
+		[&]<typename T>(const T&) {
+			if constexpr (Extension<T>)
+				// If the current instruction is an extension, the situation is valid
+			    // if the previous instruction can take this extension.
+			    // Extensions must always come after some instruction, so it's invalid for it to be
+			    // the first instruction in a function (to not have a predecessor).
+				return predecessor.map(acceptsExtension<T>).valueOr(false);
+			else
+				// It is invalid if the current instruction is not an extension, but the previous
+			    // instruction *requires* one. If there was no previous instruction, it's not invalid.
+				return !predecessor.map(requiresSomeExtension).valueOr(false);
+		},
+		instruction
+	);
+	if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
+}
+
+void FunctionBuilder::validateInstruction(const Instruction& instruction) const {
+	variant_match(instruction) {
+		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+	}
+}
+
+void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) const {
+	// @TODO remove `atMaybe` after #732
+	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
 FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
@@ -112,12 +135,21 @@ FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
 		  return std::get<FunctionType>(*maybe_func_type);
 	  }()) {}
 
-void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
-	for (auto&& instr: instruction.build()) this->addInstruction(instr);
+vm::code::Function FunctionBuilder::build() {
+	processControlFlowGraph();
+
+	Function function;
+	function.body = instructions;
+	function.name = name;
+	return function;
 }
 
-void FunctionBuilder::validateInstruction(const Instruction& instruction) const {
-	// @TODO check args for non-control flow instruction etc.
+void FunctionBuilder::addInstruction(const Instruction& instruction) {
+	instructions.push_back(instruction);
+}
+
+void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
+	for (auto&& instr: instruction.build()) this->addInstruction(instr);
 }
 
 void FunctionBuilder::pushStackState(opargs::StackLocalAny local, opargs::Type type) {
@@ -129,55 +161,64 @@ void FunctionBuilder::pushStackState(opargs::StackLocalAny local, opargs::Type t
 	local_name_to_type.put(local.var_name, tod);
 }
 
-// @TODOB this should probably put the instruction responsible for the error in the builder error
-void FunctionBuilder::popStackState() {
-	if (stack_state.empty()) throw EmptyStackDeinitError();
+void FunctionBuilder::popStackState(const Op_deinit& cause) {
+	if (stack_state.size() == 1) throw RetValDeinitError(cause);
 	const auto& top = stack_state.back();
 	local_name_to_type.erase(top.local_name);
 	stack_state.pop_back();
 }
 
-void FunctionBuilder::popCallArgs(opargs::FunctionName function) {
-	// @TODOB is this the right error?
-	auto maybe_func_type = type_context.getTypes()
-	                           .atMaybe(function.function_name)
-	                           .expect<MissingFunctionalTypeError>(function.function_name);
+void FunctionBuilder::popCallArgs(opargs::OpCodeFunctionArg function, bool check_ret_val) {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto maybe_func_type
+		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
 	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw TypeIsNotFunctionalError(name);
+		throw UnknownFunctionError(generic_arg);
 	auto func_type = std::get<FunctionType>(*maybe_func_type);
+	check_ret_val  = check_ret_val && func_type.result != base::StrID("void");
 
-	if (func_type.parameters.size() > stack_state.size()) throw InvalidFunctionCallArguments();
+	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
 	for (auto param: func_type.parameters | std::views::reverse) {
-		if (code::typeName(*stack_state.back().type) != param) throw InvalidFunctionCallArguments();
+		if (code::typeName(*stack_state.back().type) != param)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
 		stack_state.pop_back();
 	}
-}
-
-void FunctionBuilder::validateReturnValue() const {
-	if (stack_state.empty()) throw BadReturnError();
-	const auto& bottom = stack_state[0];
-	// @TODOB czy tu ifować voida?
-	if (code::typeName(*bottom.type) != type.result) throw BadReturnError();
+	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
 }
 
 usize FunctionBuilder::getLabelTarget(opargs::Label label) const {
-	return instruction_at_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
+	return index_of_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
 }
 
-void FunctionBuilder::validate() {
-	pushStackState(base::StrID("ret_val"), type.result);
-	for (auto [idx, param]: std::views::enumerate(type.parameters))
-		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
+void FunctionBuilder::preprocessLabels() {
+	auto register_jump = [&](auto instr) {
+		jumps_to_label.try_emplace(instr.arg0.label_name);
+		jumps_to_label.at(instr.arg0.label_name).push_back(instr);
+	};
 
 	for (usize index = 0; index < instructions.size(); index++) {
 		variant_match(instructions[index]) {
 			variant_case(Op_label, instr) {
-				auto [_, added]
-					= instruction_at_label.insert_or_assign(instr.arg0.label_name, index);
+				auto [_, added] = index_of_label.insert_or_assign(instr.arg0.label_name, index);
 				if (!added) throw DuplicateLabelError(instr.arg0);
 			}
+			variant_case(Op_jmp_label, instr) { register_jump(instr); }
+			variant_case(Op_jmpIf_label, instr) { register_jump(instr); }
+			variant_case(Op_jmpIfNot_label, instr) { register_jump(instr); }
 		}
 	}
+}
+
+void FunctionBuilder::processControlFlowGraph() {
+	preprocessLabels();
+
+	pushStackState(base::StrID("ret_val"), type.result);
+	for (auto [idx, param]: std::views::enumerate(type.parameters))
+		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
 
 	std::vector<bool>                                    visited_instructions(instructions.size());
 	std::vector<std::pair<usize, decltype(stack_state)>> dfs_stack{
@@ -187,6 +228,7 @@ void FunctionBuilder::validate() {
 
 	while (index != instructions.size()) {
 		// Validate non-control flow instruction there.
+		validateExtension(index);
 		validateInstruction(instructions[index]);
 		visited_instructions[index] = true;
 
@@ -196,13 +238,16 @@ void FunctionBuilder::validate() {
 				index++;
 			}
 			variant_case(Op_deinit, instr) {
-				popStackState();
+				popStackState(instr);
 				index++;
 			}
 			variant_case(Op_label, instr) {
 				match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 					opt_some(label_state) {
-						if (label_state != stack_state) throw StackStructureMismatchError({});
+						if (label_state != stack_state)
+							throw StackStructureMismatchError(
+								instr, jumps_to_label.at(instr.arg0.label_name)
+							);
 						std::tie(index, stack_state) = dfs_stack.back();
 						dfs_stack.pop_back();
 					}
@@ -222,7 +267,6 @@ void FunctionBuilder::validate() {
 				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
 			}
 			variant_case(Op_ret, instr) {
-				validateReturnValue();
 				std::tie(index, stack_state) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
@@ -231,14 +275,11 @@ void FunctionBuilder::validate() {
 				index++;
 			}
 			variant_case(Op_call_builtin_func, instr) {
-				// @TODOB really?
-				opargs::FunctionName hack(instr.arg0.function_name);
-				hack.bytecode_pos = instr.arg0.bytecode_pos;
-				popCallArgs(hack);
+				popCallArgs(instr.arg0);
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
-				popCallArgs(instr.arg0);
+				popCallArgs(instr.arg0, false);
 				std::tie(index, stack_state) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
@@ -246,6 +287,7 @@ void FunctionBuilder::validate() {
 		}
 	}
 
+	// Since dead code does not get checked, elimate it.
 	for (auto [visited, instruction]: std::views::zip(visited_instructions, instructions))
 		if (!visited) instruction = Comment(base::StrID("DEAD CODE"));
 }
@@ -449,7 +491,7 @@ void TypeContextBuilder::addType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
-			if (type != *tp) throw DuplicatedTypeError(name);
+			if (type != *tp) throw DuplicateTypeError(type);
 		}
 		opt_none { types.insert(type, name); }
 	}

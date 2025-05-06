@@ -1,6 +1,8 @@
 #include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
+#include <vm/bytecode/builders/errors.hpp>
+
 class VmFunctionsTests: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmFunctionsTests
@@ -46,8 +48,12 @@ private:
 	}
 
 	void testDeinitializeReturnValue() {
-		runTestOnVm("deinit_ret_val.dbc", "", "42", {});
-		runTestOnVm("deinit_main_ret_val.dbc", "", "42", {}, 42);
+		loadInvalidDbc(
+			"deinit_ret_val.dbc",
+			{
+				vm::code::builders::RetValDeinitError::ERR_MSG,
+			}
+		);
 	}
 
 	void testRecursion() {

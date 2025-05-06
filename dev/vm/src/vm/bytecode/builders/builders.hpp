@@ -168,20 +168,22 @@ namespace vm::code::builders {
 			}
 		};
 
-		std::vector<LocalStackEntry>                      stack_state;
-		base::HashMap<base::StrID, CRef<TypeOfData>>      local_name_to_type;
-		base::HashMap<base::StrID, decltype(stack_state)> stack_at_label;
-		base::HashMap<base::StrID, usize>                 instruction_at_label;
+		std::vector<LocalStackEntry>                         stack_state;
+		base::HashMap<base::StrID, CRef<TypeOfData>>         local_name_to_type;
+		base::HashMap<base::StrID, decltype(stack_state)>    stack_at_label;
+		base::HashMap<base::StrID, usize>                    index_of_label;
+		base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
 
+		void validateExtension(usize index) const;
 		void validateInstruction(const Instruction& instruction) const;
+		void validateArgInstantiable(const opargs::Type& arg) const;
 
 		usize getLabelTarget(opargs::Label label) const;
-
-		void pushStackState(opargs::StackLocalAny local, opargs::Type type);
-		void popStackState();
-		void popCallArgs(opargs::FunctionName function);
-		void validateReturnValue() const;
-		void validate();
+		void  pushStackState(opargs::StackLocalAny local, opargs::Type type);
+		void  popStackState(const instructions::Op_deinit& cause);
+		void  popCallArgs(opargs::OpCodeFunctionArg function, bool check_ret_val = true);
+		void  preprocessLabels();
+		void  processControlFlowGraph();
 
 	public:
 		FunctionBuilder(base::StrID name, const TypeContext& types);

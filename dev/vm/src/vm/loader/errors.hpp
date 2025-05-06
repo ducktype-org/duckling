@@ -5,58 +5,6 @@
 #include <string_view>
 
 namespace vm::loader {
-	class UnknownLabelError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Label does not exist.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UnknownLabelError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class RepeatedLabelError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Repeated label.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		RepeatedLabelError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class RepeatedLabelNote final: public dia::NoteWithPosition {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Previous declaration here.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		RepeatedLabelNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
-	};
-
 	class DuplicatedTypeError final: public dia::Error {
 		base::StrID type_name;
 
@@ -177,6 +125,29 @@ namespace vm::loader {
 		DuplicatedFunctionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
+	class UnknownSubtypeError final: public dia::Error {
+		base::StrID subtype_name;
+
+	public:
+		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, subtype_name);
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::StaticVerification;
+		}
+
+		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
+			  dia::Error(pos),
+			  subtype_name(subtype_name) {}
+	};
+
 	class StackStructureMismatchError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG
@@ -209,149 +180,6 @@ namespace vm::loader {
 
 	public:
 		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
-	};
-
-	class UseAfterDeinit final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This instruction tries to dereference a pointer to a deinitialized value.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UseAfterDeinit(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class DeferenceTypeMismatchError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "The dereferenced pointer's type does not match the target variable's type.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		DeferenceTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class LocalUsedAsPointerError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This instruction tries to use a primitive as a pointer.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		LocalUsedAsPointerError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class OpCodeTypeMismatchError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This instruction tries to be constructed with arguments of wrong types.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		OpCodeTypeMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class UninitializedLocalError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "Tried to access an uninitizlized local variable.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UninitializedLocalError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class StackOffsetError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "Tried to dereference a stack variable with an invalid offset.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		StackOffsetError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class UnknownSubtypeError final: public dia::Error {
-		base::StrID subtype_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, subtype_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
-			  dia::Error(pos),
-			  subtype_name(subtype_name) {}
 	};
 
 	class DuplicateLocalNameError final: public dia::Error {
