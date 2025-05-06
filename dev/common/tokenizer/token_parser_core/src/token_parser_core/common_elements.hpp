@@ -71,7 +71,7 @@ namespace tpc {
 	struct CharValue final {
 		base::StrID value;
 
-		CharValue(): value(base::StrID(" ")) {}
+		CharValue(): value(base::StrID("!")) {}
 
 		CharValue(const base::StrID id): value(id) {}
 

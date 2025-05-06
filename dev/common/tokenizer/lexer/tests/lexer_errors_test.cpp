@@ -52,26 +52,26 @@ class LexerErrorTests: public tester::TestSuite {
 	}
 
 	std::array<std::unique_ptr<GenExample>, 6> unclosed_eof = {
-		std::make_unique<Example<false>>("("),  std::make_unique<Example<false>>("{"),
-		std::make_unique<Example<false>>("["),  std::make_unique<Example<false>>("\""),
-		std::make_unique<Example<false>>("\'"), std::make_unique<Example<false>>("#{"),
+		std::make_unique<Example<false>>("("), std::make_unique<Example<false>>("{"),
+		std::make_unique<Example<false>>("["), std::make_unique<Example<false>>("\""),
+		std::make_unique<Example<false>>("'"), std::make_unique<Example<false>>("#{"),
 	};
 
 	std::array<std::unique_ptr<GenExample>, 2> unclosed_eol = {
 		std::make_unique<Example<false>>("\"\n"),
-		std::make_unique<Example<false>>("\'\n"),
+		std::make_unique<Example<false>>("'\n"),
 	};
 
 	std::array<std::unique_ptr<GenExample>, 2> bad_char_count = {
-		std::make_unique<Example<false>>("\'\'"),
-		std::make_unique<Example<false>>("\'aaaa\'"),
+		std::make_unique<Example<false>>("''"),
+		std::make_unique<Example<false>>("'aaaa'"),
 	};
 
 	std::array<std::unique_ptr<GenExample>, 4> good_char = {
-		std::make_unique<Example<true>>("\'a\'"),
-		std::make_unique<Example<true>>("\'z\'"),
-		std::make_unique<Example<true>>("\'+\'"),
-		std::make_unique<Example<true>>(R"('\n')"),
+		std::make_unique<Example<true>>("'a'"),
+		std::make_unique<Example<true>>("'z'"),
+		std::make_unique<Example<true>>("'+'"),
+		std::make_unique<Example<true>>("'\\n'"),
 	};
 
 	Example<false> bad_char_start{ "\xCC\x80" };
