@@ -52,8 +52,8 @@ namespace compiler::frontend {
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>)
 
 	/**
-	 * @brief Gets module-tree PST of given file, performing some guess about what FileID is given path
-	 * pointing to. It was added for go-to definition and simillar features.
+	 * @brief Gets module-tree PST of given file, performing some guess about what FileID is given
+	 * path pointing to. It was added for go-to definition and simillar features.
 	 * @TODO: make it better during frontend queryfication #731.
 	 */
 	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::FilePath& file_path);
