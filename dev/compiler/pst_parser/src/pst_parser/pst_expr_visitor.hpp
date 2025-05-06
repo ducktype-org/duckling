@@ -14,6 +14,7 @@ namespace pst::expr {
 		BinaryOperator,
 		ExprValue,
 		ExprStrValue,
+		ExprCharValue,
 		TemplateSpecifier,
 		IdentifierLiteral,
 		KeywordLiteral,
