@@ -2,20 +2,30 @@
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+#include <base/macros/for_each.hpp>
 
+#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/core/thread/vmvalue.hpp>
+
+#include <type_traits>
 
 namespace vm::builtins {
+
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
-		Value callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), VMThread& thread, const std::vector<Value>& args, std::index_sequence<Is...>) {
-			if constexpr (std::is_void_v<Ret>) {
-				function(thread, std::get<FunArgs>(args[Is])...);
-				return NoValue{};
-			} else {
-				return function(thread, std::get<FunArgs>(args[Is])...);
+		base::Optional<VmValue>
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
+			if (std::is_void_v<Ret>) {
+				function(thread, args[Is].interpret<FunArgs>()...);
+				return {};
 			}
+			auto value = function(thread, args[Is].interpret<FunArgs>()...);
+			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
+			// @note THIS ASSUMES MATCHING ENDIANNESS
+			return VmValue(vm_return_type, reinterpret_cast<byte*>(&value));
 		}
 
 		/**
@@ -23,7 +33,7 @@ namespace vm::builtins {
 		 * converts them to the required types and calls the function.
 		 * Throws an exception if the types do not match.
 		 *
-		 * Similiar to python '*' operator:
+		 * Similar to python '*' operator:
 		 * @code
 		 * args = [1, 2, 4]
 		 * f(*args)
@@ -32,15 +42,20 @@ namespace vm::builtins {
 		 * It checks if each variant type is the same as the function parameter type.
 		 *
 		 * @note alternative would be to pass the vector of Values to each handler and perform the
-		 * `std::get` on variantes inside each handler. Maybe if copying the values in calls would
+		 * `std::get` on variants inside each handler. Maybe if copying the values in calls would
 		 * be expensive we could go back to that approach.
 		 */
 		template<class Ret, class... FunArgs>
-		Value callUnpackArgs(
-			Ret (*function)(VMThread&, FunArgs...), VMThread& thread, const std::vector<Value>& args
+		base::Optional<VmValue> callUnpackArgs(
+			Ret (*function)(VMThread&, FunArgs...),
+			TypeCRef                    vm_return_type,
+			VMThread&                   thread,
+			const std::vector<VmValue>& args
 		) {
 			if (sizeof...(FunArgs) != args.size()) CORE_PANIC("Argument number mismatch!");
-			return callUnpackArgsImpl(function, thread, args, std::index_sequence_for<FunArgs...>{});
+			return callUnpackArgsImpl(
+				function, vm_return_type, thread, args, std::index_sequence_for<FunArgs...>{}
+			);
 		}
 	}
 
@@ -81,14 +96,25 @@ namespace vm::builtins {
 	/**
 	 * @note The order and id should match the order in the getBuiltinFunctionTypes() array.
 	 */
-	Value callBuiltinFunction(
-		BuiltinFunctionID id, VMThread& thread, const std::vector<Value>& arguments
+	base::Optional<VmValue> callBuiltinFunction(
+		BuiltinFunctionID           id,
+		TypeCRef                    builtin_func_type,
+		VMThread&                   thread,
+		const std::vector<VmValue>& arguments
 	) {
 		switch (id) {
-		case BuiltinFunctionID::InputI64:
-			return callUnpackArgs(FunctionHandlers::builtinInputI64, thread, arguments);
-		case BuiltinFunctionID::OutputI64:
-			return callUnpackArgs(FunctionHandlers::builtinOutputI64, thread, arguments);
+#define CASE_FUNC(ID_NAME)                       \
+	case BuiltinFunctionID::ID_NAME: {           \
+		return callUnpackArgs(                   \
+			FunctionHandlers::builtin##ID_NAME,  \
+			*builtin_func_type->getResultType(), \
+			thread,                              \
+			arguments                            \
+		);                                       \
+	}
+
+			FOR_EACH(CASE_FUNC, InputI64, OutputI64)
+
 		default:
 			CORE_PANIC("Invalid builtin function ID");
 		}
@@ -99,7 +125,7 @@ namespace vm::builtins {
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name) {
 		// Lazy initialization of the "builtin name -> id" map.
 		static const std::unordered_map<base::StrID, BuiltinFunctionID> builtin_function_indices
-			= []() {
+			= [] {
 				  std::unordered_map<base::StrID, BuiltinFunctionID> indices;
 
 				  for (const auto& func_tp: *getBuiltinFunctionTypes())

@@ -42,6 +42,9 @@ namespace vm::loader::parser {
 		template<class T>
 		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
 
+		/**
+		 * @brief Parses opcode argument. Template specializations change only the return type.
+		 */
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
@@ -50,9 +53,9 @@ namespace vm::loader::parser {
 			return { parseInt<i64, vm::opargs::Immediate>(state) };
 		}
 
-#define HANDLE_LOCAL(Type)                                    \
+#define HANDLE_LOCAL(TYPE)                                    \
 	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::Type { \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
 		return { parseStr(state) };                           \
 	}
 
@@ -60,25 +63,17 @@ namespace vm::loader::parser {
 
 #undef HANDLE_LOCAL
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
-			return { parseStr(state) };
-		}
+#define HANDLE_STR_ARG(TYPE)                                  \
+	template<>                                                \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
+		return { parseStr(state) };                           \
+	}
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::FunctionName {
-			return { parseStr(state) };
-		}
+		FOR_EACH(
+			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+		)
 
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::BuiltinFunctionName {
-			return { parseStr(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
-			return { parseStr(state) };
-		}
+#undef HANDLE_STR_ARG
 
 		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
 
@@ -119,6 +114,18 @@ namespace vm::loader::parser {
 #undef HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_2ARGS
 #undef MAKE_LINK
+	}
+
+	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
+		using namespace vm::code;
+		auto out = makeBox<GlobalData>(state.getPosition());
+
+		state.parse().one(lang_def::Keyword::BCGlobalData);
+
+		state.parse().one(&out->name);
+		state.parse().one(&out->type);
+		state.parse().one(lang_def::Special::Semicolon);
+		return out;
 	}
 
 	MBox<OpCode> OpCode::parse(F8ParserState& state) {
@@ -524,6 +531,9 @@ namespace vm::loader::parser {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
 				if (type) out->types.emplace_back(std::move(*type));
+			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
+				auto global_data = GlobalData::parse(state);
+				out->global_data.emplace_back(std::move(global_data));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
@@ -575,6 +585,12 @@ namespace vm::loader::parser {
 
 	void ByteCode::dprint(std::ostream& out) const {
 		for (auto& opcode: opcodes) opcode->dprint(out);
+	}
+
+	void GlobalData::dprint(std::ostream& out) const {
+		out << "global_data ";
+		out << name.value.strView() << " " << type.value.strView();
+		out << ";";
 	}
 
 	void Func::dprint(std::ostream& out) const {

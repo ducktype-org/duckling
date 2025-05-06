@@ -11,9 +11,9 @@ namespace vm {
 
 	using TypeRef  = Ref<Type>;
 	using TypeCRef = CRef<Type>;
+
+	STRONG_TYPEDEF_ID_DIRECT_CREATION(GlobalDataID);
 }
 
-template<>
-struct std ::hash<vm ::TypeID> final {
-	usize operator()(const vm ::TypeID& key) const { return static_cast<usize>(key); }
-};
+ID_STD_HASH(vm::TypeID);
+ID_STD_HASH(vm::GlobalDataID);

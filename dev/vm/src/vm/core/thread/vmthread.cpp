@@ -362,7 +362,11 @@ namespace vm {
 	 */
 	void VMThread::run(CRef<low::LowVMProgram> program, const std::vector<std::string>& args) {
 		respondExecutionRequest(api::Running{});
+
 		executing_program = program;
+		for (const auto& [type, id, name]: program->global_data.allData())
+			process_memory.insertGlobalData(id, *type);
+
 		try {
 			i64 exit_code
 				= internalCallFunction(executing_program->functions.at(base::StrID("main")), args);
