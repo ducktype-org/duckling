@@ -376,12 +376,12 @@ namespace compiler::mir {
 		/**
 		 * Creates a temporary local value, i.e. local value
 		 * not arising from variable written directly in the Duckling source code.
-		 * Sets its lifetime scope to no_lifetime_scope.		 
+		 * Sets its lifetime scope to no_lifetime_scope.
 		 */
 		[[nodiscard]]
 		MutLocalRef addNoLifetimeTmp(const tsh::SymbolType<> type) {
-			 return addTmp(type, no_lifetime_scope);
-		 }
+			return addTmp(type, no_lifetime_scope);
+		}
 
 		/**
 		 * Add a temporary local value of type bool.
