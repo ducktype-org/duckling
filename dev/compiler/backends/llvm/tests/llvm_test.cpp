@@ -17,7 +17,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
-		TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(booleansTest);
 		TESTER_ADD_TEST(arithmeticTest);
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
@@ -64,7 +64,7 @@ private:
 			// debug print for coverage only:
 			llvm_module.debugPrint();
 
-			// this is were the main part ot test is:
+			// this is where the main part ot test is:
 			assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
 		});
 	}
@@ -78,7 +78,11 @@ private:
 		runTestForModuleWithSingleFunction("modules/variables");
 	}
 
-	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
+	void booleansTest() {
+		auto llvm_module = getLLVMModuleFromPath("modules/booleans");
+		ASSERT_EQUAL(llvm_module.getFunctionCount(), 2);
+		ASSERT_EQUAL(llvm_module.getFunctionCount(false), 2);
+	}
 
 	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
 

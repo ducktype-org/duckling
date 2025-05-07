@@ -91,6 +91,12 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
+		case mir::Operation::BooleanAnd:
+			return Operation::BooleanAnd;
+		case mir::Operation::BooleanOr:
+			return Operation::BooleanOr;
+		case mir::Operation::BooleanNot:
+			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -298,7 +304,10 @@ namespace compiler::lir {
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
 				case mir::Operation::IntegerLt:
-				case mir::Operation::IntegerNeg: {
+				case mir::Operation::IntegerNeg:
+				case mir::Operation::BooleanAnd:
+				case mir::Operation::BooleanOr:
+				case mir::Operation::BooleanNot: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 

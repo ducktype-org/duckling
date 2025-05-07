@@ -192,19 +192,24 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
-			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(2, functions.size());
 
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
 
 			// note: it might change where those branch operations are placed:
-			// if this happen just see mir-output of tested module for mir block numbers
+			// if this happens, just see mir-output of tested module for mir block numbers
 			auto true_mir_value  = foo_mir.blocks[BlockID(6)].terminator.arguments.at(0);
 			auto false_mir_value = foo_mir.blocks[BlockID(3)].terminator.arguments.at(0);
 
 			ASSERT_EQUAL(true_mir_value.get<compiler::mir::MirBoolConst>().value, true);
 			ASSERT_EQUAL(false_mir_value.get<compiler::mir::MirBoolConst>().value, false);
+
+			// Don't go into details of the second function. Just validate block IDs.
+			auto& goo_mir
+				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) })->value();
+			ASSERT_TRUE(goo_mir.validateBlockIDs().isOk());
 		});
 	}
 
