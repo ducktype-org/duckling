@@ -128,7 +128,10 @@ namespace compiler::mir {
 		 * destructed. The local is valid only in instructions for which the instruction scope is in
 		 * the scope-sub-tree of the lifetime scope of the local.
 		 *
-		 * If this is not set, then the local will be ignored by lifetime analysis.
+		 * It is optional, because the scope is not always known during creation of local variable.
+		 * One MIR Function is created the scopes should always be set.
+		 *
+		 * If this is set to no_filetime_scope (defined in MIR Function), then the local will be ignored by lifetime analysis.
 		 * This means that no destructors will be inserted for this local,
 		 * and no use-after-free verification will be performed
 		 * (move analysis will likely still happen @TODO: #505 determine it).
@@ -384,6 +387,13 @@ namespace compiler::mir {
 		 */
 		LifetimeScopeTree lifetime_scope_tree;
 
+		/**
+		 * Special scope for local variables that are not
+		 * omitted by lifetime analysis and destructor calls.
+		 * See MirLocal::scope for details.
+		 */
+		ScopeRef no_lifetime_scope;
+
 		// helios ID for hashes, ... this it temporary?
 		// pushing this ID all the way here is problematic
 		// it should be optional at best
@@ -406,6 +416,7 @@ namespace compiler::mir {
 			std::vector<BlockID>                block_order,
 			base::StableVector<const MirLocal>  local_list,
 			LifetimeScopeTree                   lifetime_scope_tree,
+			ScopeRef                            no_lifetime_scope,
 			helios::SymID                       helios_id
 		);
 

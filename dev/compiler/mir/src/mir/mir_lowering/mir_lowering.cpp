@@ -264,12 +264,21 @@ namespace compiler::mir {
 		 */
 		ScopeRef top_level_scope;
 
+		/**
+		 * @brief The scope that should be used for local variables
+		 * that do not have a lifetime scope.
+		 * @important: This has to be defined below lifetime_scope_tree,
+		 * since lifetime_scope_tree is used in its initialization.
+		 */
+		ScopeRef no_lifetime_scope;
+
 		query::Context& ctx;
 		helios::SymID   helios_symbol;
 
 	public:
 		FunctionBuilder(query::Context& ctx, const helios::SymID helios_symbol):
 			  top_level_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
+			  no_lifetime_scope(lifetime_scope_tree.newScope(lifetime_scope_tree.root)),
 			  ctx(ctx),
 			  helios_symbol(helios_symbol) {}
 
@@ -303,12 +312,9 @@ namespace compiler::mir {
 				)
 			          .getType();
 
-			// we sanity check here, that all local variables
-			// that have a helios id also have lifetime scope,
-			// as thery always have to have it.
+			// we sanity check here, that all local variable have a lifetime scope,
 			for (auto& local: local_list)
-				if (local->helios_id.has_value())
-					CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
+				CORE_ASSERT(local->scope.has_value(), "Local variable without lifetime scope");
 
 			return Function{
 				name.value(),
@@ -318,6 +324,7 @@ namespace compiler::mir {
 				std::move(block_order),
 				std::move(local_list).toConstData(),
 				std::move(lifetime_scope_tree),
+				no_lifetime_scope,
 				helios_symbol,
 			};
 		}
@@ -356,39 +363,40 @@ namespace compiler::mir {
 		}
 
 		/**
-		 * Creates a temporary local value, i.e. local value
-		 * not arising from variable written directly in the Duckling source code.
-		 */
-		[[nodiscard]]
-		MutLocalRef addTmp(const tsh::SymbolType<> type) {
-			local_list.emplaceBack(MirLocal{ type });
-			return local_list.last();
-		}
-
-		/**
 		 * Creates a temporary local value, and also sets its lifetime scope.
 		 */
 		[[nodiscard]]
 		MutLocalRef addTmp(const tsh::SymbolType<> type, ScopeRef scope) {
-			auto tmp = addTmp(type);
+			local_list.emplaceBack(MirLocal{ type });
+			auto tmp = local_list.last();
 			tmp->setLifetimeScope(scope);
 			return tmp;
 		}
 
 		/**
-		 * Add a temporary value of type bool.
+		 * Creates a temporary local value, i.e. local value
+		 * not arising from variable written directly in the Duckling source code.
+		 * Sets its lifetime scope to no_lifetime_scope.		 
+		 */
+		[[nodiscard]]
+		MutLocalRef addNoLifetimeTmp(const tsh::SymbolType<> type) {
+			 return addTmp(type, no_lifetime_scope);
+		 }
+
+		/**
+		 * Add a temporary local value of type bool.
+		 * Sets its lifetime scope to no_lifetime_scope.
 		 * Used for example by if/while lowering to store
 		 * the result of the condition.
 		 */
 		[[nodiscard]]
-		MutLocalRef addBoolTmp() {
+		MutLocalRef addNoLifetimeBoolTmp() {
 			auto type = tsh::SymbolType<>(
 				ctx.query<tsh::QueryBoolType>({}),
 				tsh::ReferenceKind::Direct,
 				tsh::Mutability::Immutable
 			);
-			local_list.emplaceBack(MirLocal{ type });
-			return local_list.last();
+			return addNoLifetimeTmp(type);
 		}
 
 		/**
@@ -420,6 +428,11 @@ namespace compiler::mir {
 		[[nodiscard]]
 		auto getTopLevelScope() const {
 			return top_level_scope;
+		}
+
+		[[nodiscard]]
+		auto getNoLifetimeScope() const {
+			return no_lifetime_scope;
 		}
 
 		[[nodiscard]]
@@ -484,17 +497,17 @@ namespace compiler::mir {
 			function.addLocal(stmt.helios_symbol);
 		}
 
-		void visitIfStmt(const helios::code::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
+		void visitIfStmt(const hc::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
-		void visitReturnStmt(const helios::code::ReturnStmt&) override {}
+		void visitReturnStmt(const hc::ReturnStmt&) override {}
 
-		void visitVoidReturnStmt(const helios::code::VoidReturnStmt&) override {}
+		void visitVoidReturnStmt(const hc::VoidReturnStmt&) override {}
 
-		void visitExprStmt(const helios::code::ExprStmt&) override {}
+		void visitExprStmt(const hc::ExprStmt&) override {}
 
-		void visitAssignmentStmt(const helios::code::AssignmentStmt&) override {}
+		void visitAssignmentStmt(const hc::AssignmentStmt&) override {}
 	};
 
 	/**
@@ -537,7 +550,7 @@ namespace compiler::mir {
 			if (expr_res.value.isLocal()) {
 				// we need to store the result of the expression
 				// in additional variable, so it doesn't get destroyed:
-				auto return_value = function.addTmp(expr_res.value.get<LocalRef>()->type);
+				auto return_value = function.addNoLifetimeTmp(expr_res.value.get<LocalRef>()->type);
 				retrieve_value.fill(Instruction{
 					Operation::Assign,
 					{ return_value },
@@ -613,7 +626,7 @@ namespace compiler::mir {
 				// we have to "move" the condition result
 				// into special temporary value, so we can use it
 				// after the actual condition result is destroyed.
-				auto condition_result_tmp = function.addBoolTmp();
+				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
 
 				get_condition_return.fill(Instruction{
 					Operation::Assign,
@@ -685,7 +698,7 @@ namespace compiler::mir {
 			CORE_UNREACHABLE();
 		}
 
-		void visitAssignmentStmt(const helios::code::AssignmentStmt& stmt) override {
+		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
 			// TODO: #469 Support arbitrary lvalues on the left.
 
@@ -850,8 +863,8 @@ namespace compiler::mir {
 		}
 
 	private:
-		static Operation builtinBinaryToOperation(const helios::code::BuiltinBinary builtin) {
-			using enum helios::code::BuiltinBinary;
+		static Operation builtinBinaryToOperation(const hc::BuiltinBinary builtin) {
+			using enum hc::BuiltinBinary;
 			switch (builtin) {
 			case IntegerAdd:
 				return Operation::IntegerAdd;
@@ -873,8 +886,8 @@ namespace compiler::mir {
 			}
 		}
 
-		static Operation builtinUnaryToOperation(const helios::code::BuiltinUnary builtin) {
-			using enum helios::code::BuiltinUnary;
+		static Operation builtinUnaryToOperation(const hc::BuiltinUnary builtin) {
+			using enum hc::BuiltinUnary;
 			switch (builtin) {
 			case IntegerNegation:
 				return Operation::IntegerNeg;

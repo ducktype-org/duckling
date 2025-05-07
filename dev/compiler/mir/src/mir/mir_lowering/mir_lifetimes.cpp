@@ -61,8 +61,8 @@ namespace compiler::mir {
 
 		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list) {
-			if_opt_some(local->scope, lifetime_scope) {
-				locals_by_scope[lifetime_scope].emplace_back(local.ref());
+			if (local->scope.value() != function.no_lifetime_scope) {
+				locals_by_scope[local->scope.value()].emplace_back(local.ref());
 			}
 		}
 
@@ -86,7 +86,7 @@ namespace compiler::mir {
 					{
 						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
 					},
-					instr_scope });
+					instr_scope, });
 			};
 			auto add_destructors = [&](const auto& ending_scopes, ScopeRef instr_scope) {
 				for (auto scope: ending_scopes) {

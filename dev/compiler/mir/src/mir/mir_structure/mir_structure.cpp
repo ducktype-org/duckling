@@ -15,6 +15,7 @@ namespace compiler::mir {
 		std::vector<BlockID>                block_order,
 		base::StableVector<const MirLocal>  local_list,
 		LifetimeScopeTree                   lifetime_scope_tree,
+		ScopeRef                            no_lifetime_scope,
 		helios::SymID                       helios_id
 	):
 		  name(name),
@@ -24,6 +25,7 @@ namespace compiler::mir {
 		  block_order(std::move(block_order)),
 		  local_list(std::move(local_list)),
 		  lifetime_scope_tree(std::move(lifetime_scope_tree)),
+		  no_lifetime_scope(no_lifetime_scope),
 		  helios_id(helios_id) {}
 
 	bool Function::operator==(const Function& other) const {
