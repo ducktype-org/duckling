@@ -19,6 +19,8 @@ public:
 		TESTER_ADD_TEST(testManyFunctions);
 		TESTER_ADD_TEST(testPreservedFlag);
 		TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testGraphJumps);
+		TESTER_ADD_TEST(testNoRet);
 	}
 
 private:
@@ -71,6 +73,20 @@ private:
 	void testBuiltinFunctions() {
 		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {});
 		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {});
+	}
+
+	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
+
+	void testNoRet() {
+		for (auto filename: { "no_ret.dbc", "empty_function.dbc" })
+			loadInvalidDbc(
+				filename,
+				{
+					vm::code::builders::InvalidFunctionEndError::ERR_MSG,
+				}
+			);
+
+		for (auto filename: { "infinite_loop.dbc", "dead_end.dbc" }) loadValidDbc(filename);
 	}
 };
 

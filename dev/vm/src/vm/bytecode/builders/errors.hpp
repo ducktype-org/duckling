@@ -30,6 +30,16 @@ namespace vm::code::builders {
 			  jumps(std::move(jumps)) {}
 	};
 
+	class InvalidFunctionEndError: public BuilderError {
+	public:
+		constexpr const static std::string_view ERR_MSG = "Not all code paths end with returns in function: ";
+		const base::StrID                       FUNC_NAME;
+
+		InvalidFunctionEndError(base::StrID func_name):
+			  BuilderError(base::strConcat(ERR_MSG, func_name)),
+			  FUNC_NAME(func_name) {}
+	};
+
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";

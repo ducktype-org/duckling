@@ -20,7 +20,7 @@
 using namespace vm::code::builders;
 
 namespace {
-	// Helpers for validation `ext_*` instructions
+	// Helpers for validation, mainly `ext_*` instructions
 	using namespace vm::code;
 	using namespace vm::code::instructions;
 
@@ -50,7 +50,8 @@ namespace {
 		return HoldsOneOfImpl<Tup>{}(instr);
 	}
 
-	using ExtensionTypes = std::tuple<Op_ext_l64, Op_ext_type>;
+	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
+	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type>;
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 
@@ -294,6 +295,12 @@ void FunctionBuilder::processControlFlowGraph() {
 	// Since dead code does not get checked, elimate it.
 	for (auto [visited, instruction]: std::views::zip(visited_instructions, instructions))
 		if (!visited) instruction = Comment(base::StrID("DEAD CODE"));
+
+	if (instructions.empty()
+	    || (visited_instructions.back() && !holdsOneOf<ValidLastInstructions>(instructions.back())
+	    )) {
+		throw InvalidFunctionEndError(name.str);
+	}
 }
 
 const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
