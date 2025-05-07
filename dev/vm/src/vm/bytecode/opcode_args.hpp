@@ -305,6 +305,6 @@ namespace vm::opargs {
 		FunctionName,
 		BuiltinFunctionName,
 		Label>;
-	using OpCodeLocalArg = std::variant<VM_OPARG_LOCAL_TYPES>;
+	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
 	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
 }

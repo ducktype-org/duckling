@@ -238,7 +238,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					return getProgram({
 						.functions   = functions,
 						.types       = type_context.getTypes() | std::ranges::to<std::vector>(),
-						.global_data = globals| std::ranges::to<std::vector>(),
+						.global_data = globals | std::ranges::to<std::vector>(),
 					});
 			} catch (vm::code::builders::StackStructureMismatchError& e) {
 				log.logMap<StackStructureMismatchError>(

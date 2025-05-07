@@ -49,7 +49,7 @@ namespace vm::code {
 	 */
 	struct Function final: ElementBase {
 		Identifier name;
-		CodeBlock   body;
+		CodeBlock  body;
 	};
 
 	struct CodeCollection final {
