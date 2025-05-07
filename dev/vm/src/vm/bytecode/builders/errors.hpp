@@ -41,22 +41,28 @@ namespace vm::code::builders {
 			  FUNC_NAME(func_name) {}
 	};
 
+    // This is a position-less error for function definitions.
+    // For function name arguments, like in call instructions, use UnknownFunctionError.
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
-		const base::StrID                       FUNC_NAME;
+		const base::StrID          FUNC_NAME;
 
 		MissingFunctionalTypeError(base::StrID func_name):
 			  BuilderError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
+    // This is a position-less error for function definitions.
+    // For function name arguments, like in call instructions, use UnknownFunctionError.
 	class TypeIsNotFunctionalError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
+		const base::StrID                       TYPE_NAME;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
-			  BuilderError(base::strConcat(ERR_MSG, type_name)) {}
+			  BuilderError(base::strConcat(ERR_MSG, type_name)),
+			  TYPE_NAME(type_name) {};
 	};
 
 	class UnknownSubtypeError: public BuilderError {

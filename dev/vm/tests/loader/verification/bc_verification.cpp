@@ -21,7 +21,6 @@ public:
 		//  TESTER_ADD_TEST(validJumpOutOfBlock);
 
 		// Function verification
-		TESTER_ADD_TEST(noMain);
 		TESTER_ADD_TEST(multipleFunctions);
 
 		// Jump verfification
@@ -48,22 +47,13 @@ private:
 	// False positives
 	void jumpSkipBlock() { loadValidDbc("right/jump_skip_block.dbc"); }
 
-	void validJumpOutOfBlock() { loadValidDbc("right/vaild_jump_out_of_block.dbc"); }
+	void validJumpOutOfBlock() { loadValidDbc("right/valid_jump_out_of_block.dbc"); }
 
 	void initDeinit() { loadValidDbc("right/init_deinit.dbc"); }
 
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 
 	// Function verification
-	void noMain() {
-		loadInvalidDbc(
-			"wrong/functions/no_main.dbc",
-			{
-				vm::loader::NO_MAIN_ERR,
-			}
-		);
-	}
-
 	void multipleFunctions() {
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",

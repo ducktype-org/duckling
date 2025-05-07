@@ -107,10 +107,11 @@ namespace vm::loader::compiler {
 			func_data.name = ctx.function->name.str;
 			auto functional_type
 				= ctx.type_map.atMaybe(ctx.function->name.str)
-			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name.str);
+			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name);
 			func_data.arg_size
 				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name.str);
+			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name);
+
 			// Not expecting here because it's checked above
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.local_stack_size;
