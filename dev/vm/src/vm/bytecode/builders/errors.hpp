@@ -32,8 +32,9 @@ namespace vm::code::builders {
 
 	class InvalidFunctionEndError: public BuilderError {
 	public:
-		constexpr const static std::string_view ERR_MSG = "Not all code paths end with returns in function: ";
-		const base::StrID                       FUNC_NAME;
+		constexpr const static std::string_view ERR_MSG
+			= "Not all code paths end with returns in function: ";
+		const base::StrID FUNC_NAME;
 
 		InvalidFunctionEndError(base::StrID func_name):
 			  BuilderError(base::strConcat(ERR_MSG, func_name)),
