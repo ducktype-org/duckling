@@ -182,7 +182,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			pushStackState(instr.arg0, instr.arg1);
 		}
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_upcast_lptr_lptr, isntr) {
+		variant_case(Op_upcast_lptr_lptr, instr) {
 			// @TODO implement checking if the cast is valid after #732
 		}
 		variant_case(Op_deinit, instr) { handleDeinit(); }
@@ -220,7 +220,7 @@ FunctionBuilder::FunctionBuilder(
 	                                .atMaybe(name.str)
 	                                .expect<MissingFunctionalTypeError>(name.str)
 	                                ->getResultType()
-	                                .expect<TypeIsNotFunctionalError>(name);
+	                                .expect<TypeIsNotFunctionalError>(name, name.str);
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
 	for (auto [index, type]: std::views::enumerate(param_types))
@@ -277,9 +277,10 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName function) {
 	auto func_type = type_context.getMetadata()
 	                     .atMaybe(function.function_name)
-	                     .expect<MissingFunctionalTypeError>(function.function_name);
-	auto param_count
-		= func_type->getParameterCount().expect<TypeIsNotFunctionalError>(function.function_name);
+	                     .expect<MissingFunctionalTypeError>(function);
+	auto param_count = func_type->getParameterCount().expect<TypeIsNotFunctionalError>(
+		function.function_name, function
+	);
 
 	auto min_stack_size = param_count + 1;  // +1 because return value
 	if (func_type->getResultType().value()->getSize() == 0) {
@@ -307,9 +308,9 @@ void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 	verifyCall(function);
 	auto param_count = type_context.getMetadata()
 	                       .atMaybe(function.function_name)
-	                       .expect<MissingFunctionalTypeError>(function.function_name)
+	                       .expect<MissingFunctionalTypeError>(function)
 	                       ->getParameterCount()
-	                       .expect<TypeIsNotFunctionalError>(function.function_name);
+	                       .expect<TypeIsNotFunctionalError>(function.function_name, function);
 	for (usize i = 0; i < param_count; i++) local_stack.pop_back();
 }
 

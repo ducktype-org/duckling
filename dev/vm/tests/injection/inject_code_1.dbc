@@ -1,0 +1,14 @@
+function main {
+	# [0, 8) main ret_val
+	# [8, 16) argc
+	# [16, 32) *argv	
+
+    init_lany_type      x, i64; # [32, 40) check() arg0
+	input_l64			x;
+	output_l64			x;
+
+	deinit; # x
+	deinit; # *argv
+	deinit; # argc
+	ret;
+}

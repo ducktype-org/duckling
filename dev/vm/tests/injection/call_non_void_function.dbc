@@ -1,0 +1,11 @@
+
+type fun: summer { i64, i64 } i64
+
+function summer {
+    mov_l64_l64 ret_val, arg0;
+    add_l64_l64 ret_val, arg1;
+
+    deinit;
+    deinit;
+    ret;
+}
