@@ -131,7 +131,7 @@ namespace compiler::mir {
 		 * It is optional, because the scope is not always known during creation of local variable.
 		 * One MIR Function is created the scopes should always be set.
 		 *
-		 * If this is set to no_filetime_scope (defined in MIR Function), then the local will be
+		 * If this is set to no_lifetime_scope (defined in MIR Function), then the local will be
 		 * ignored by lifetime analysis. This means that no destructors will be inserted for this
 		 * local, and no use-after-free verification will be performed (move analysis will likely
 		 * still happen @TODO: #505 determine it). This possibility should only be used for simple
