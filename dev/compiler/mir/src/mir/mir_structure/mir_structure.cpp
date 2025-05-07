@@ -87,6 +87,7 @@ namespace compiler::mir {
 			local->debugPrint(output, true);
 			output << "\n";
 		}
+		output << "No Lifetime Scope: " << no_lifetime_scope->id << "\n";
 		output << "{\n";
 
 		for (const auto block_id: block_order) {
@@ -153,7 +154,7 @@ namespace compiler::mir {
 			output << ": Helios Name: " << getName().strView();
 			output << ", Type: ";
 			output << this->type.toString();
-			if_opt_some(this->scope, scope) { output << ", Lifetime Scope: " << scope->id; }
+			output << ", Lifetime Scope: " << this->scope.value()->id;
 			if (parameter_index.has_value())
 				output << ", Parameter Index: " << parameter_index.value();
 		}
