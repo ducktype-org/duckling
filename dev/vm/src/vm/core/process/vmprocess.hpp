@@ -106,7 +106,8 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Loads the program from a given source into VMProcesses memory.
+		 * @brief Loads the program from a given source into the current loader program state,
+		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
 		std::expected<api::Response, api::LoadProgramError> loadProgram(
 			const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source

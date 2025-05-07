@@ -21,11 +21,11 @@ namespace vm::loader {
 	 */
 	class Program final {
 	public:
+		Program()                                                             = default;
 		Program(const Program&)                                               = delete;
 		Program(Program&&) noexcept                                           = default;
 		Program&                                    operator=(const Program&) = delete;
 		Program&                                    operator=(Program&&)      = default;
-		static Program                              from();
 		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
 		);
 
@@ -37,7 +37,7 @@ namespace vm::loader {
 
 		/**
 		 * @brief Inserts new code to a current program state. Can be called multiple times with
-		 * the same type object.
+		 * the same code collection object.
 		 */
 		void insertCode(
 			const std::vector<code::CodeCollection>& new_code_collections, LoaderLogger& logger
@@ -61,8 +61,6 @@ namespace vm::loader {
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
 	private:
-		Program() = default;
-
 		StableTypeIdNameMap<code::Function> functions;
 		code::builders::GlobalDataMap       globals_map;
 		code::builders::TypeContextBuilder  type_context_builder;
@@ -73,7 +71,7 @@ namespace vm::loader {
 	 */
 	class Loader final {
 		bool    validate_program;
-		Program program = Program::from();
+		Program program;
 
 		/**
 		 * @brief Parses a list of files, returns an intermediate loader-only program

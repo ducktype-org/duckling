@@ -145,7 +145,7 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Creates a list of instructions, which push the passed i`func_args` onto the local
+		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
 		 * stack and perform a call to `func`.
 		 * @note `func_args` should be changed to a vector of arguments of any VM type.
 		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
@@ -173,7 +173,7 @@ namespace vm {
 		/**
 		 * @brief This is the primary function to call to start execution on the VM.
 		 * It calls both the main function when running the program and single functions called by
-		 * the 'runFunction' endpoint. It starts the execution begining with the first instruction
+		 * the `runFunction` endpoint. It starts the execution beginning with the first instruction
 		 * in the start_function bytecode vector.
 		 * @param start_function - the code of the start function.
 		 * @param func - the function to execute.
@@ -198,10 +198,10 @@ namespace vm {
 		 *
 		 * @param program - program for the thread to run,
 		 * @param func_name - name of the function to run,
-		 * @param func_args - if running a function (not a whole program), this are the arguments to
-		 * pass as parameters to the function,
-		 * @param program_args - if running a program, this are the command line arguments passed to
-		 * the program (argv equivalent).
+		 * @param func_args - if running a function (not a whole program), these are the arguments
+		 * to pass as parameters to the function,
+		 * @param program_args - if running a program, these are the command line arguments passed
+		 * to the program (argv equivalent).
 		 *
 		 * @return true if the thread was successfully created and the program is running, false if
 		 * there is already a thread running.

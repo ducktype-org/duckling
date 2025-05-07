@@ -120,7 +120,6 @@ namespace vm {
 		i32  i64_type_id        = base::safeIntConv<i32>(i64_type->getID().asInt());
 		auto funcs              = executing_program->functions;
 		i32  called_function_id = 0;
-		// TODO: Change that to a hashmap for faster lookup?
 		for (u64 i = 0; i < funcs.size(); i++)
 			if (func.name == funcs[i].name) called_function_id = base::safeIntConv<i32>(i);
 
@@ -221,7 +220,7 @@ namespace vm {
 				{
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
 					// @todo: This should be changed to 'store_lptr_imm_ofs' and temp_store should
-			        // be removed once it exists.
+			        // be removed once it exists. https://github.com/ducktype-org/duckling/issues/778
 					MAKE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
@@ -268,10 +267,8 @@ namespace vm {
 		Frame*     frame       = runtime_data.frame_stack_base;
 		std::byte* local_stack = runtime_data.local_stack_base;
 
-		auto called_func_type   = executing_program->types->at(func.name);
-		auto called_return_type = called_func_type->getResultType();
-		if (called_return_type.has_value())
-			frame->called_func_ret_size = called_return_type.value()->getSize();
+		auto called_func_return_type = *executing_program->types->at(func.name)->getResultType();
+		frame->called_func_ret_size  = called_func_return_type->getSize();
 
 		const auto* instr = start_function.bc.data();
 

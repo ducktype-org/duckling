@@ -160,8 +160,6 @@ namespace {
 	}
 }
 
-Program Program::from() { return Program{}; }
-
 std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& code_collection) {
 	Program      program;
 	LoaderLogger log;
