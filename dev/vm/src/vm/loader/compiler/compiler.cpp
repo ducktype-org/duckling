@@ -113,7 +113,10 @@ namespace vm::loader::compiler {
 			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name.str);
 			func_data.arg_size
 				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name.str);
+			          .expect<code::builders::TypeIsNotFunctionalError>(
+						  ctx.function->name, ctx.func_map.at(ctx.function->name)->name.str
+					  );
+
 			// Not expecting here because it's checked above
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.function->local_stack_size;
