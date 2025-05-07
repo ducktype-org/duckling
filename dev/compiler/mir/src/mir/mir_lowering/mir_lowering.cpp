@@ -259,7 +259,7 @@ namespace compiler::mir {
 		 * it is different from the root scope of litetime tree,
 		 * since the root scope is the scope in which nothing
 		 * should live.
-		 * @important: This has to be defined bellow lifetime_scope_tree,
+		 * @important: This has to be defined below lifetime_scope_tree,
 		 * since lifetime_scope_tree is used in its initialization.
 		 */
 		ScopeRef top_level_scope;
