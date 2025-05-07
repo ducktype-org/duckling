@@ -2,8 +2,8 @@
 
 namespace pst::expr {
 	/**
-	 * @brief For now this is a safety error unless there will be some situation where only a value
-	 * will be accepted.
+	 * @brief For now this is a safety error (meaning it should never happen), unless there will be
+	 * some situation where only a number value will be accepted in an expression.
 	 */
 	class BadValueError final: public dia::Error {
 	protected:

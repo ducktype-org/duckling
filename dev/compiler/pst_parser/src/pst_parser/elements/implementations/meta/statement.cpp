@@ -59,6 +59,9 @@ namespace pst {
 			case Keyword::Let:
 				return detail::parseStmt<Variable>(state);
 
+			case Keyword::Expand:
+				return detail::parseStmt<Expand>(state);
+
 			default:
 				break;
 			}

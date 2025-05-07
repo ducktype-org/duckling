@@ -92,6 +92,10 @@ namespace lexer {
 		return { Type::String, string, position };
 	}
 
+	Token Token::makeChar(const base::RawView string, const dia::SourcePosition& position) {
+		return { Type::Char, string, position };
+	}
+
 	Token Token::makeBracketGroup(
 		BracketType                groupType,
 		Tokens&&                   tokens,
@@ -170,7 +174,9 @@ namespace lexer {
 
 	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
 
-	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
+	bool Token::isOperatorSymbolOrText() const {
+		return isOperatorSymbol() || isKeyword() || isIdentifier();
+	}
 
 	bool Token::isPrefixOperator() const {
 		return isOperatorSymbol()
@@ -203,6 +209,8 @@ namespace lexer {
 	bool Token::isComment() const { return type == Type::Comment; }
 
 	bool Token::isString() const { return type == Type::String; }
+
+	bool Token::isChar() const { return type == Type::Char; }
 
 	bool Token::isStr(base::StrID str) const { return getValue() == str; }
 

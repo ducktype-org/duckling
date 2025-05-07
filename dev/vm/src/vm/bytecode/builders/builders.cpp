@@ -9,6 +9,7 @@
 
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -181,7 +182,7 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 			pushStackState(instr.arg0, instr.arg1);
 		}
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_upcast_lptr_lptr, isntr) {
+		variant_case(Op_upcast_lptr_lptr, instr) {
 			// @TODO implement checking if the cast is valid after #732
 		}
 		variant_case(Op_deinit, instr) { handleDeinit(); }
@@ -209,14 +210,17 @@ void FunctionBuilder::addInstruction(const Instruction& instruction) {
 	instructions.push_back(instruction);
 }
 
-FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
+FunctionBuilder::FunctionBuilder(
+	vm::code::Identifier name, const GlobalDataMap& globals, const TypeContext& types
+):
 	  name(name),
-	  type_context(types) {
+	  type_context(types),
+	  globals(globals) {
 	TypeCRef func_result_type = type_context.getMetadata()
-	                                .atMaybe(name)
-	                                .expect<MissingFunctionalTypeError>(name)
+	                                .atMaybe(name.str)
+	                                .expect<MissingFunctionalTypeError>(name.str)
 	                                ->getResultType()
-	                                .expect<TypeIsNotFunctionalError>(name);
+	                                .expect<TypeIsNotFunctionalError>(name, name.str);
 	pushStackState(base::StrID("ret_val"), func_result_type->getName());
 	auto param_types = type_context.getMetadata().at(name)->getParameters().value();
 	for (auto [index, type]: std::views::enumerate(param_types))
@@ -273,9 +277,10 @@ void FunctionBuilder::handleLabel(instructions::Op_label label) {
 void vm::code::builders::FunctionBuilder::verifyCall(opargs::FunctionName function) {
 	auto func_type = type_context.getMetadata()
 	                     .atMaybe(function.function_name)
-	                     .expect<MissingFunctionalTypeError>(function.function_name);
-	auto param_count
-		= func_type->getParameterCount().expect<TypeIsNotFunctionalError>(function.function_name);
+	                     .expect<MissingFunctionalTypeError>(function);
+	auto param_count = func_type->getParameterCount().expect<TypeIsNotFunctionalError>(
+		function.function_name, function
+	);
 
 	auto min_stack_size = param_count + 1;  // +1 because return value
 	if (func_type->getResultType().value()->getSize() == 0) {
@@ -303,9 +308,9 @@ void FunctionBuilder::handleCall(vm::opargs::FunctionName function) {
 	verifyCall(function);
 	auto param_count = type_context.getMetadata()
 	                       .atMaybe(function.function_name)
-	                       .expect<MissingFunctionalTypeError>(function.function_name)
+	                       .expect<MissingFunctionalTypeError>(function)
 	                       ->getParameterCount()
-	                       .expect<TypeIsNotFunctionalError>(function.function_name);
+	                       .expect<TypeIsNotFunctionalError>(function.function_name, function);
 	for (usize i = 0; i < param_count; i++) local_stack.pop_back();
 }
 
@@ -323,7 +328,7 @@ void FunctionBuilder::saveStackState(vm::opargs::Label at_label) {
 void vm::code::builders::FunctionBuilder::handleRet() {
 	if (local_stack.empty()
 	    || local_stack.at(0).type_name
-	           != type_context.getMetadata().at(name)->getResultType().value()->getName()) {
+	           != type_context.getMetadata().at(name.str)->getResultType().value()->getName()) {
 		throw BadReturnError();
 	}
 }

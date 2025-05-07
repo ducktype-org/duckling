@@ -147,7 +147,7 @@ private:
 		auto pid = process_pid_response.value().pid;
 
 		fs::FilePath file(path("inheritance_metadata.dbc"));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
+		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);
