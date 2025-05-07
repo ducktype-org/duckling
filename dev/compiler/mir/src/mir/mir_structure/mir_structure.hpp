@@ -18,7 +18,7 @@
 MAKE_STRINGIFYABLE_ENUM(compiler::mir, u64, Operation,
 	Uninitialized,
 
-	/** Empty instruction, somtime used by the lowerring to fill instruction holes that ware not needed */
+	/** Empty instruction, sometimes used by the lowering to fill instruction holes that were not needed */
 	Nop,
 
 	Call,
