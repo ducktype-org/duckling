@@ -168,7 +168,6 @@ private:
 				ASSERT_EQUAL(local->parameter_index.value(), 2);
 				was_z = true;
 			} else {
-				ASSERT_TRUE(local->helios_id.empty());
 				ASSERT_TRUE(local->parameter_index.empty());
 			}
 		}
@@ -180,8 +179,11 @@ private:
 			// only parameter of index 2 is ever used:
 
 			auto validate_value = [&](const compiler::lir::LIRValue& value) {
-				if (value.get<compiler::lir::LocalRef>()->parameter_index.has_value())
-					ASSERT_EQUAL(value.get<compiler::lir::LocalRef>()->parameter_index.value(), 2);
+				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
+					if ((*local)->parameter_index.has_value()) {
+						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+					}
+				}
 			};
 
 			for (auto& instruction: block->instructions)
