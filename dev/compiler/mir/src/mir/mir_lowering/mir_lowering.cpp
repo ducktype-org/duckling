@@ -820,50 +820,50 @@ namespace compiler::mir {
 		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& expr) override {
 			// Get info about the target.
 			const auto result_type     = expr.expression_type.getSymbolType();
-			const auto target_location = function.addTmp(result_type, expr.lifetime_scope);
+			const auto target_location = function.addTmp(result_type, expr_scope);
 
 			// Build "else" block.
 			auto else_block = function.newBlock();
 			else_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, expr.lifetime_scope }
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
 			);
 			auto else_construction_hole = else_block->addHole();
 			const auto [else_continuation, else_res]
-				= lowerExpr(*expr.if_true, else_block, function);
+				= lowerExpr(*expr.if_true, else_block, function, expr_scope);
 			else_construction_hole.fill(Instruction{
 				Operation::Assign,
 				{ target_location },
 				{ else_res },
 				{ flagConstruct(target_location) },
-				expr.lifetime_scope,
+				expr_scope,
 			});
 
 			// Build "then" block.
 			auto then_block = function.newBlock();
 			then_block->setTerminator(
-				{ Operation::Jump, {}, { continuation->getID() }, {}, expr.lifetime_scope }
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
 			);
 			auto then_construction_hole = then_block->addHole();
 			const auto [then_continuation, then_res]
-				= lowerExpr(*expr.if_false, then_block, function);
+				= lowerExpr(*expr.if_false, then_block, function, expr_scope);
 			then_construction_hole.fill(Instruction{
 				Operation::Assign,
 				{ target_location },
 				{ then_res },
 				{ flagConstruct(target_location) },
-				expr.lifetime_scope,
+				expr_scope,
 			});
 
 			// Build branching.
 			auto condition_block = function.newBlock();
 			const auto [condition_continuation, condition_res]
-				= lowerExpr(*expr.condition, condition_block, function);
+				= lowerExpr(*expr.condition, condition_block, function, expr_scope);
 			condition_block->setTerminator({
 				Operation::Branch,
 				{},
 				{ condition_res, then_block->getID(), else_block->getID() },
 				{},
-				expr.lifetime_scope,
+				expr_scope,
 			});
 
 			// Return.

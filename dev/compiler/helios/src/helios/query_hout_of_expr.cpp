@@ -476,7 +476,7 @@ namespace compiler::helios::code {
 				auto if_false  = std::move(if_false_res).value();
 
 				node = makeBox<TernaryOperatorExpr>(
-					ctx, scope, std::move(condition), std::move(if_true), std::move(if_false)
+					ctx, std::move(condition), std::move(if_true), std::move(if_false)
 				);
 			}
 		};

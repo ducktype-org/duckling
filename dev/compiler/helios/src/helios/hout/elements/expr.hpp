@@ -183,11 +183,7 @@ namespace compiler::helios::code {
 		Box<Expr> if_false;
 
 		TernaryOperatorExpr(
-			query::Context& ctx,
-			ScopeID         scope,
-			Box<Expr>       condition,
-			Box<Expr>       if_true,
-			Box<Expr>       if_false
+			query::Context& ctx, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
 		);
 
 		void debugPrint(std::ostream& out) const final;
