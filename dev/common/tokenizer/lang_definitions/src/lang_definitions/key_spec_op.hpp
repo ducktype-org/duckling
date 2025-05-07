@@ -4,6 +4,7 @@
  * Moduł pozwalający wykrywać i definiować keyword-y
  *
  *
+ *
  * Usage:
  * keywords::init() should be called before anything else (including lexer), and only once
  * getKeyword return keyword based, on `keywords_array` inside cpp

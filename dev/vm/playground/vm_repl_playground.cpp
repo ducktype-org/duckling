@@ -2,6 +2,7 @@
 #include "base/int_conv.hpp"
 
 #include "vm/api/vm.hpp"
+#include "lang_definitions/key_spec_op.hpp"
 #include "lexer/classifications.hpp"
 
 #include <filesystem>
@@ -108,12 +109,12 @@ private:
 			std::cout << "Function loaded successfully\n";
 		}
 
-		// std::error_code err_code;
-		// std::filesystem::remove(TEMP_FILE_NAME.data(), err_code);
-		// if (err_code) {
-		// 	std::cout << "Error: Failed to remove a temporary file " << TEMP_FILE_NAME << ": "
-		// 			  << err_code.message() << '\n';
-		// }
+		std::error_code err_code;
+		std::filesystem::remove(TEMP_FILE_NAME.data(), err_code);
+		if (err_code) {
+			std::cout << "Error: Failed to remove a temporary file " << TEMP_FILE_NAME << ": "
+					  << err_code.message() << '\n';
+		}
 	}
 
 	void strip(std::string& string) {
@@ -191,7 +192,7 @@ private:
 };
 
 int main() {
-	lexer::Classifications::init();
+	init::InitObject _;
 	
 	DuckRepl repl;
 	repl.run();
