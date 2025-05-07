@@ -669,7 +669,7 @@ namespace compiler::mir {
 			});
 
 			// Build branching.
-			auto       condition_block    = function.newBlock();
+			auto condition_block = function.newBlock();
 			const auto [condition_continuation, condition_res]
 				= lowerExpr(*expr.condition, condition_block, function);
 			condition_block->setTerminator({

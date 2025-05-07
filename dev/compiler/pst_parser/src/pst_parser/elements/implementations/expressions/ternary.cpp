@@ -140,15 +140,9 @@ namespace pst::expr {
 
 	void Ternary::acceptExprVisitor(PstExprVisitor& visitor) const { visitor.visitTernary(*this); }
 
-	AccessLocked<ExprElement> Ternary::getCondition() const {
-		return condition.give();
-	}
+	AccessLocked<ExprElement> Ternary::getCondition() const { return condition.give(); }
 
-	AccessLocked<ExprElement> Ternary::getIfTrue() const {
-		return if_true.give();
-	}
+	AccessLocked<ExprElement> Ternary::getIfTrue() const { return if_true.give(); }
 
-	AccessLocked<ExprElement> Ternary::getIfFalse() const {
-		return if_false.give();
-	}
+	AccessLocked<ExprElement> Ternary::getIfFalse() const { return if_false.give(); }
 }

@@ -202,9 +202,9 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  new_operators{ "<> 3 <> 5 <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> new_operators{ "<> 3 <> 5 <>" };
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_integer_operators{
 		"1 + 2 - 3 * 4 / 5 % 6 ** 7"
 	};

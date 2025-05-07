@@ -513,10 +513,8 @@ namespace compiler::helios::code {
 				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
 				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
 
-				if (condition_res.hasError() or if_true_res.hasError()
-                    or if_false_res.hasError()) {
-                    return;
-                }
+				if (condition_res.hasError() or if_true_res.hasError() or if_false_res.hasError())
+					return;
 
 				auto condition = std::move(condition_res).value();
 				auto if_true   = std::move(if_true_res).value();

@@ -187,11 +187,7 @@ namespace compiler::helios::code {
 		  inner(std::move(inner)) {}
 
 	TernaryOperatorExpr::TernaryOperatorExpr(
-		query::Context&,
-		ScopeID         scope,
-		Box<Expr>       condition,
-		Box<Expr>       if_true,
-		Box<Expr>       if_false
+		query::Context&, ScopeID scope, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
 	):
 		  Expr(scope, if_true->expression_type),
 		  condition(std::move(condition)),
