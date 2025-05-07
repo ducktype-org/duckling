@@ -1,0 +1,56 @@
+# Tests if tailcalling functions with different argument count works.
+# Input: N
+# Output: N * 2 * 2
+
+type fun: dummy { i64 } i64
+type fun: bigDummy { i64, i64 } i64
+type fun: megaBigDummy { i64, i64, i64 } i64
+
+function megaBigDummy {
+	mov_l64_l64 ret_val, arg0;
+	mul_l64_l64 ret_val, arg1;
+	mul_l64_l64 ret_val, arg2;
+	
+	ret;
+}
+
+function bigDummy {
+	# ret_val
+	# arg0
+	# arg1
+	
+	init_lany_type megaBigDumArg, i64;
+	mov_l64_imm megaBigDumArg, 2;
+
+	ret_tailcall_func megaBigDummy;
+}
+
+function dummy {
+	# ret_val
+	# arg0
+    init_lany_type temp, i64;
+	init_lany_type bigDumArg, i64;
+	mov_l64_imm bigDumArg, 2;
+
+	ret_tailcall_func bigDummy;
+}
+
+
+function main {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+	init_lany_type dummy_ret_val, i64;
+	init_lany_type dummy_arg0, i64;
+
+	input_l64          dummy_arg0; # arg0 := input
+	call_func          dummy;
+
+	output_l64         dummy_ret_val;
+
+	deinit;		# dummy ret_val
+    deinit;     # *argv
+    deinit;		# argc
+	ret;
+}
