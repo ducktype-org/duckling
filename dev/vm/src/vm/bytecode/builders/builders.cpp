@@ -9,6 +9,7 @@
 
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -124,9 +125,12 @@ void FunctionBuilder::validateArgInstantiable(const opargs::Type& arg) const {
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
-FunctionBuilder::FunctionBuilder(base::StrID name, const TypeContext& types):
+FunctionBuilder::FunctionBuilder(
+	vm::code::Identifier name, const GlobalDataMap& globals, const TypeContext& types
+):
 	  name(name),
 	  type_context(types),
+	  globals(globals),
 	  type([&] {
 		  auto maybe_func_type
 			  = type_context.getTypes().atMaybe(name).expect<MissingFunctionalTypeError>(name);

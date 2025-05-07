@@ -19,6 +19,12 @@ namespace vm::code {
 	void serialize(const TypeOfData& type, std::ostream& out);
 
 	/**
+	 * @brief Serializes bytecode global data into a parse-able by the DVM
+	 * text representation.
+	 */
+	void serialize(const GlobalData& type, std::ostream& out);
+
+	/**
 	 * @brief Stringifies instruction arguments.
 	 */
 	std::string argumentToString(const opargs::OpCodeArg& arg);

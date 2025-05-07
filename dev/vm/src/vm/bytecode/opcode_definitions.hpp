@@ -75,6 +75,26 @@ DEF_OPCODE(mov_l64_r0, vm::opargs::StackLocalI64)
 DEF_OPCODE(mov_r0_l64, vm::opargs::StackLocalI64)
 
 
+DEF_OPCODE(mov_g64_g64, vm::opargs::GlobalI64, vm::opargs::GlobalI64)
+DEF_OPCODE(mov_g64_l64, vm::opargs::GlobalI64, vm::opargs::StackLocalI64)
+DEF_OPCODE(mov_g64_imm, vm::opargs::GlobalI64, vm::opargs::Immediate)
+DEF_OPCODE(mov_g32_g32, vm::opargs::GlobalI32, vm::opargs::GlobalI32)
+DEF_OPCODE(mov_g32_l32, vm::opargs::GlobalI32, vm::opargs::StackLocalI32)
+DEF_OPCODE(mov_g32_imm, vm::opargs::GlobalI32, vm::opargs::Immediate)
+DEF_OPCODE(mov_g16_g16, vm::opargs::GlobalI16, vm::opargs::GlobalI16)
+DEF_OPCODE(mov_g16_l16, vm::opargs::GlobalI16, vm::opargs::StackLocalI16)
+DEF_OPCODE(mov_g16_imm, vm::opargs::GlobalI16, vm::opargs::Immediate)
+DEF_OPCODE(mov_g8_g8, vm::opargs::GlobalI8, vm::opargs::GlobalI8)
+DEF_OPCODE(mov_g8_l8, vm::opargs::GlobalI8, vm::opargs::StackLocalI8)
+DEF_OPCODE(mov_g8_imm, vm::opargs::GlobalI8, vm::opargs::Immediate)
+DEF_OPCODE(mov_gptr_lptr, vm::opargs::GlobalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(mov_l64_g64, vm::opargs::StackLocalI64, vm::opargs::GlobalI64)
+DEF_OPCODE(mov_l32_g32, vm::opargs::StackLocalI32, vm::opargs::GlobalI32)
+DEF_OPCODE(mov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
+DEF_OPCODE(mov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
+DEF_OPCODE(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
+
+
 DEF_OPCODE(add_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(add_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 
@@ -172,7 +192,7 @@ DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocal
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(ext_type, vm::opargs::Type)
 // stores reference to local object of any type T in pointer<T>
-DEF_OPCODE(ref_lptr_any, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
 DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 

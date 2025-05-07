@@ -90,7 +90,7 @@ namespace compiler::backend_vm {
 
 			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& type_context):
 				  lir_function(lir_function),
-				  func_builder(lir_function->name, type_context),
+				  func_builder(lir_function->name, {}, type_context),
 				  types(type_context.getMetadata()),
 				  TYPE_OF_DATA([&type_context] {
 					  base::HashMap<base::StrID, TypeOfData> map;

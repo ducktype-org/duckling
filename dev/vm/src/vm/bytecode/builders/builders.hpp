@@ -11,6 +11,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
@@ -146,13 +147,16 @@ namespace vm::code::builders {
 		[[nodiscard]] std::vector<Instruction> build() const;
 	};
 
+	using GlobalDataMap = StableTypeIdNameMap<GlobalData, GlobalDataID>;
+
 	/**
 	 * @brief Helper to compose bytecode functions.
 	 */
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
-		base::StrID              name;
+		Identifier               name;
 		const TypeContext&       type_context;
+		const GlobalDataMap&     globals;
 		FunctionType             type;
 
 		/**
@@ -186,17 +190,15 @@ namespace vm::code::builders {
 		void  processControlFlowGraph();
 
 	public:
-		FunctionBuilder(base::StrID name, const TypeContext& types);
+		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
 
 		/**
 		 * @brief Adds instruction to the function.
-		 * @note It can throw exceptions.
 		 */
 		void addInstruction(const Instruction& instruction);
 
 		/**
 		 * @brief Builds and adds instruction(s) to the function.
-		 * @note It can throw exceptions.
 		 */
 		void addInstruction(const InstructionBuilder& instruction);
 

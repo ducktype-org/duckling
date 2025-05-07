@@ -72,7 +72,7 @@ private:
 		type_context_builder.addType(vm::code::FunctionType{ test, {}, { void_t } });
 
 		TypeContext     available_types = type_context_builder.build();
-		FunctionBuilder func_builder(test, available_types);
+		FunctionBuilder func_builder(test, {}, available_types);
 
 		// variable names
 		auto a = base::StrID("a");
@@ -96,7 +96,7 @@ private:
 		func_builder.addInstruction(Op_init_lany_type{ d, int32 });
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 		vm::code::Function func = func_builder.build();
-		ASSERT_EQUAL(base::StrID("test"), func.name);
+		ASSERT_EQUAL(base::StrID("test"), func.name.str);
 
 		assertInstructionsEqual(func.body[0], Op_init_lany_type{ a, int32 });
 		assertInstructionsEqual(func.body[1], Op_init_lany_type{ b, int64 });
@@ -118,7 +118,7 @@ private:
 
 		TypeContext finalized = type_context_builder.build();
 
-		FunctionBuilder func_builder(main, finalized);
+		FunctionBuilder func_builder(main, {}, finalized);
 		auto            a = base::StrID("a");
 		auto            b = base::StrID("b");
 		func_builder.addInstruction(Op_init_lany_type{ a, int64 });

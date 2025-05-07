@@ -37,7 +37,7 @@ function(BuildTreeSitter)
 	add_custom_target(
 		build_tree_sitter
 		BYPRODUCTS ${TS_LIB}
-		COMMAND make -j --quiet
+		COMMAND make --quiet
 		WORKING_DIRECTORY ${TS_DIR}
 		VERBATIM
 	)
@@ -45,7 +45,7 @@ function(BuildTreeSitter)
 	add_custom_target(
 		build_tree_sitter_cpp
 		BYPRODUCTS ${TS_CPP_LIB}
-		COMMAND make -j --quiet
+		COMMAND make --quiet
 		WORKING_DIRECTORY ${TS_CPP_DIR}
 		VERBATIM
 	)

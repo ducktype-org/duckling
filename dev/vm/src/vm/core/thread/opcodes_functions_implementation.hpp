@@ -38,6 +38,7 @@
 
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 #include <variant>
 
@@ -80,25 +81,41 @@ namespace vm {
 	// inside interpeter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); } \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				= derefStack<TYPE>(local_stack, instr->arg1);                            \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
-		{                                                                                \
-			if (frame->flags.flag)                                                       \
-				derefStack<TYPE>(local_stack, instr->arg0)                               \
-					= derefStack<TYPE>(local_stack, instr->arg1);                        \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); }            \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = derefStack<TYPE>(local_stack, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			if (frame->flags.flag)                                                        \
+				derefStack<TYPE>(local_stack, instr->arg0)                                \
+					= derefStack<TYPE>(local_stack, instr->arg1);                         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
@@ -113,6 +130,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = DEREF_GLOBAL(Pointer, instr->arg1); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
+		{ DEREF_GLOBAL(Pointer, instr->arg0) = derefStack<Pointer>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
@@ -279,41 +306,36 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
 		{
-			auto builtin_id    = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
-			auto function_type = builtins::getBuiltinFunctionType(builtin_id);
-			auto arg_count     = function_type->parameters.size();
+			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
+			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
+			auto real_function_type = thread.executing_program->types->at(function_type->name);
+			auto arg_count          = function_type->parameters.size();
 
-			std::vector<builtins::Value> args;
-			u64                          first_arg_idx = frame->block_stack.size() - arg_count;
+			std::vector<VmValue> args;
+			u64                  first_arg_idx = frame->block_stack.size() - arg_count;
 
-
-			// Converting from memory bytes on the local stack to the builtin::Value arguments.
+			// Create VmValue objects from local arguments
 			for (u64 i = 0; i < arg_count; i++) {
-				const base::StrID arg_type = function_type->parameters[i];
-				// @TODO the conversion from local stack bytes to builtin::Value is done
-				// based on declaration type, but it should be done based on the Metadata Type in
-				// the future.
-				if (arg_type == "i64") {
-					args.emplace_back(derefStack<i64>(
-						local_stack,
-						static_cast<i64>(frame->block_idx_to_local_offset[first_arg_idx + i])
-					));
-				} else {
-					CORE_PANIC("Unsupported builtin function argument type: ", arg_type);
-				}
+				const base::StrID arg_type  = function_type->parameters[i];
+				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
+				args.emplace_back(
+					real_type, local_stack + frame->block_idx_to_local_offset[first_arg_idx + i]
+				);
 			}
 
-			builtins::Value return_value = builtins::callBuiltinFunction(builtin_id, thread, args);
-			variant_match(return_value) {
-				variant_case_novalue(builtins::NoValue) {}
-				variant_case(i64, value) {
+			base::Optional<VmValue> return_value
+				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
+			match_optional(return_value) {
+				opt_none {}
+				opt_some(value) {
 					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
-					derefStack<i64>(local_stack, static_cast<i64>(ret_val_offset)) = value;
+					std::memcpy(
+						local_stack + ret_val_offset, value.data.data(), value.type->getSize()
+					);
 				}
-				variant_default { CORE_PANIC("Invalid return value from builtin function"); }
 			}
 
-			// Similiar as in func_call, but we deinit the arguments blocks as well,
+			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
@@ -323,6 +345,7 @@ namespace vm {
 			if (arg_count > 0)
 				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
 		}
+
 		FUNCTION_CONT(1);
 	}
 
@@ -381,7 +404,7 @@ namespace vm {
 			frame->called_func_arg_size = 0;
 			frame->called_func_ret_size = 0;
 		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
@@ -536,7 +559,7 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];

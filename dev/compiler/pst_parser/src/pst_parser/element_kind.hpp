@@ -31,6 +31,8 @@ namespace pst {
 
 		Const,
 
+		Expand,
+
 
 		// Duckling statements:
 		If,

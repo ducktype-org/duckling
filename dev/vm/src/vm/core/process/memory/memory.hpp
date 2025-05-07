@@ -23,6 +23,10 @@
 #include <shared_mutex>
 
 namespace vm {
+	/**
+	 * @brief A memory module for a process.
+	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
+	 */
 	class Memory final {
 	private:
 		mutable std::shared_mutex mutex;
@@ -30,6 +34,8 @@ namespace vm {
 		StackAllocator            stack_allocator;
 
 		std::deque<ThreadStack> threads_frame_stacks;
+
+		base::HashMap<GlobalDataID, base::OwningView> global_data;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -58,12 +64,21 @@ namespace vm {
 		// =================== Used by executor ===================
 
 		auto initializeFrameStack() -> Ref<ThreadStack>;
-
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
 		auto allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
 		void freeBlock(Ref<Block> block);
+
+		void insertGlobalData(GlobalDataID id, TypeCRef type);
+
+		/**
+		 * @brief Returns a view of global data by the id.
+		 */
+		[[nodiscard]]
+		__attribute__((always_inline)) auto getGlobalData(GlobalDataID id) -> base::ModRawView {
+			return global_data.atMaybe(id).expect("Id not stored!").modView();
+		}
 
 		// =================== Block operations ===================
 
