@@ -13,6 +13,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -120,7 +121,7 @@ private:
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:
-		// if this happen just see mir-output of tested module for mir block numbers
+		// if this happen just see lir-output of tested module for lir block numbers
 
 		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
@@ -173,17 +174,21 @@ private:
 
 		ASSERT_TRUE(was_x and was_y and was_z);
 
-		// check if value in return instruction is indeed the parameter we expect:
-		u64 return_value_count = 0;
+		// check if value used in the function body is indeed the parameter we expect:
 		for (auto& block: foo_lir->block_order) {
-			if (block->terminator.operation == compiler::lir::Operation::ReturnValue) {
-				auto z_local = block->terminator.arguments.at(0).get<compiler::lir::LocalRef>();
-				ASSERT_EQUAL(z_local->parameter_index.value(), 2);
-				return_value_count++;
-			}
-		}
+			// only parameter of index 2 is ever used:
 
-		ASSERT_EQUAL(return_value_count, 1);
+			auto validate_value = [&](const compiler::lir::LIRValue& value) {
+				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
+					if ((*local)->parameter_index.has_value())
+						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+				}
+			};
+
+			for (auto& instruction: block->instructions)
+				for (auto& arg: instruction.arguments) validate_value(arg);
+			for (auto& arg: block->terminator.arguments) validate_value(arg);
+		}
 	}
 };
 

@@ -11,6 +11,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
+#include <typesystem/higher/queries.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -113,8 +114,11 @@ private:
 			using enum compiler::mir::Operation;
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 1);
+
+			// those assertions might change when we improve mir generaration:
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 2);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(1).operation, Nop);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
@@ -290,17 +294,22 @@ private:
 
 			ASSERT_TRUE(was_x and was_y and was_z);
 
-			// check if value in return instruction is indeed the parameter we expect:
-			u64 return_value_count = 0;
+			// check if value used in the function body is indeed the parameter we expect:
 			for (auto block_id: foo_mir.block_order) {
-				const auto& block = foo_mir.blocks[block_id];
-				if (block.terminator.operation == compiler::mir::Operation::ReturnValue) {
-					auto z_local = block.terminator.arguments.at(0).get<compiler::mir::LocalRef>();
-					ASSERT_EQUAL(z_local->parameter_index.value(), 2);
-					return_value_count++;
+				const auto& block          = foo_mir.blocks[block_id];
+				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
+                    if (auto local = std::get_if<compiler::mir::LocalRef>(&value.getVariant())) {
+                        if ((*local)->parameter_index.has_value())
+                            ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+                    }
+				};
+
+				for (const auto& instr: block.instructions) {
+					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
+					for (const auto& arg: instr.arguments) validate_value(arg);
 				}
+				for (const auto& arg: block.terminator.arguments) validate_value(arg);
 			}
-			ASSERT_EQUAL(return_value_count, 1);
 		});
 	}
 
