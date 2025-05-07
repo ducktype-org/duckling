@@ -296,24 +296,19 @@ private:
 
 			// check if value used in the function body is indeed the parameter we expect:
 			for (auto block_id: foo_mir.block_order) {
-				const auto& block = foo_mir.blocks[block_id];
-				auto validate_value = [&](const compiler::mir::MIRValue& value) {
-					if (auto local = std::get_if<compiler::mir::LocalRef>(&value.getVariant())) {
-						if ((*local)->parameter_index.has_value()) {
-							ASSERT_EQUAL((*local)->parameter_index.value(), 2);
-						}
-					}
+				const auto& block          = foo_mir.blocks[block_id];
+				auto        validate_value = [&](const compiler::mir::MIRValue& value) {
+                    if (auto local = std::get_if<compiler::mir::LocalRef>(&value.getVariant())) {
+                        if ((*local)->parameter_index.has_value())
+                            ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+                    }
 				};
 
 				for (const auto& instr: block.instructions) {
 					if (instr.operation == compiler::mir::Operation::DestructIf) continue;
-					for (const auto& arg: instr.arguments) {
-						validate_value(arg);
-					}
+					for (const auto& arg: instr.arguments) validate_value(arg);
 				}
-				for (const auto& arg: block.terminator.arguments) {
-					validate_value(arg);
-				}
+				for (const auto& arg: block.terminator.arguments) validate_value(arg);
 			}
 		});
 	}

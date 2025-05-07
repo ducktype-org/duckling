@@ -180,9 +180,8 @@ private:
 
 			auto validate_value = [&](const compiler::lir::LIRValue& value) {
 				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
-					if ((*local)->parameter_index.has_value()) {
+					if ((*local)->parameter_index.has_value())
 						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
-					}
 				}
 			};
 
