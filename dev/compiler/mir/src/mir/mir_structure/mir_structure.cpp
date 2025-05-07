@@ -27,8 +27,8 @@ namespace compiler::mir {
 		  helios_id(helios_id) {}
 
 	bool Function::operator==(const Function& other) const {
-		// this dons't make much sense, in gernall
-		// mir Function should be trated as a unique objects.
+		// This doesn't make much sense, in general
+		// MIR Functions should be treated as unique objects.
 		// This is a temporary solution to make it work with the current hash-query system.
 		// It will be deleted during the hash-query refactor #523
 		return helios_id == other.helios_id;
