@@ -206,7 +206,13 @@ namespace lexer {
 
 	TokenData Lexer::tokenize() {
 		tokens.clear();
+		
 		codeblock();
+		std::cerr << "========================\n";
+		for (const auto& token : tokens) {
+			std::cerr << token.getStrValue() << '\n';
+		}
+		std::cerr << "========================\n";
 		dia::SourcePosition eof_pos(file, where);
 		dia::SourcePosition bof_pos(file, 0);
 		return { std::move(tokens),
@@ -268,6 +274,42 @@ namespace lexer {
 
 	void Lexer::parseSingleInto(Tokens& output) {
 		dia::SourcePosition source_start(file, where);
+		// std::cerr << "========================\n";
+		// for (const auto& token : output) {
+		// 	std::cerr << token.getStrValue() << '\n';
+		// }
+		// std::cerr << "========================\n";if (!isEOF()) { // Upewnij się, że nie jesteś na końcu pliku
+        auto current_peeked_char_data = peek(); // Pobierz obiekt CharData
+        std::string actual_char = "?"; // Domyślna wartość, jeśli nie można uzyskać znaku
+
+        // Spróbuj uzyskać rzeczywisty znak, jeśli obiekt CharData to umożliwia
+        // Musisz dostosować to do API twojej klasy CharData
+        // Przykład: if (current_peeked_char_data.isValid()) actual_char = current_peeked_char_data.getChar();
+        // Lub jeśli peek() zwraca bezpośrednio char lub coś co ma operator char:
+        // actual_char = static_cast<char>(current_peeked_char_data);
+
+        // Załóżmy, że masz jakąś metodę, aby uzyskać surowy znak z CharData
+        // np. current_peeked_char_data.value() lub current_peeked_char_data.rawChar()
+        // Dla celów demonstracyjnych użyję miejsca na to:
+        actual_char = current_peeked_char_data.rawStr(); // ZASTĄP RZECZYWISTĄ METODĄ
+
+        std::cerr << "DEBUG [Lexer::parseSingleInto]: Current char (via peek()): ";
+        // Tutaj próbujemy wypisać znak, jeśli to możliwe
+        std::cerr << "'" << actual_char << "'";
+        // else std::cerr << "[non-printable_or_unknown]";
+        // std::cerr << " (ASCII: " << static_cast<int>(actual_char) << ")" << std::endl;
+        
+        // Najważniejsze: jak ten znak jest klasyfikowany?
+        std::cerr << "  peek().is(Class::operator_start): " << current_peeked_char_data.is(Class::operator_start) << '\n';
+        std::cerr << "  peek().is(Class::name_start): " << current_peeked_char_data.is(Class::name_start) << '\n';
+        std::cerr << "  peek().is(Class::open_bracket): " << current_peeked_char_data.is(Class::open_bracket) << '\n';
+        std::cerr << "  peek().is(Class::special): " << current_peeked_char_data.is(Class::special) << '\n';
+        std::cerr << "  peek().isDigit(): " << current_peeked_char_data.isDigit() << '\n';
+        std::cerr << "  peek().is(Class::whitespace): " << current_peeked_char_data.is(Class::whitespace) << '\n';
+        // Dodaj inne relevantne klasy, jeśli istnieją, np. Class::name_continue
+
+        // Jeśli masz dostęp do wewnętrznej "klasy" znaku:
+        // std::cerr << "  peek().getInternalClass(): " << static_cast<int>(current_peeked_char_data.getInternalClass()) << std::endl;
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
