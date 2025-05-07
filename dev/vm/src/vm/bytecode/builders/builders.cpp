@@ -90,11 +90,12 @@ namespace {
 	}
 }
 
-void FunctionBuilder::validateExtension(usize index) const {
+void FunctionBuilder::validateExtension(usize instruction_index) const {
 	// This check assumes that the last instruction in a function is non-extendable,
 	// this is the case for `ret`.
-	auto instruction = instructions[index];
-	auto predecessor = index == 0 ? base::Optional<const Instruction&>{} : instructions[index - 1];
+	auto instruction     = instructions[instruction_index];
+	auto predecessor     = instruction_index == 0 ? base::Optional<const Instruction&>{}
+	                                              : instructions[instruction_index - 1];
 	bool valid_extension = std::visit(
 		[&]<typename T>(const T&) {
 			if constexpr (Extension<T>)
