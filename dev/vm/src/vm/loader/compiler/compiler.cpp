@@ -95,9 +95,9 @@ namespace vm::loader::compiler {
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
 					auto pos = ctx.label_positions.at(label.label_name);
-                    // We have to calculate the
-                    // difference instead of absolute jump position,
-                    // because our instruction counter is a pointer.
+					// We have to calculate the
+					// difference instead of absolute jump position,
+					// because our instruction counter is a pointer.
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
 			}

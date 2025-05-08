@@ -7,8 +7,8 @@
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
@@ -28,8 +28,8 @@ FunctionBuilder::FunctionBuilder(
 	  globals(globals) {}
 
 vm::code::Function FunctionBuilder::build() const {
-    FunctionValidator validator(name, type_context, globals, instructions);
-    validator.validate();
+	FunctionValidator validator(name, type_context, globals, instructions);
+	validator.validate();
 	Function function;
 	function.body = validator.extractReachableCode();
 	function.name = name;

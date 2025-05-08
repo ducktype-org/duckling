@@ -45,7 +45,7 @@ namespace vm::code::builders {
 		void validateInstruction(const Instruction& instruction) const;
 		void validateArgInstantiable(opargs::Type arg) const;
 		void validateFunctionEnd() const;
-        void validateTailcall(opargs::OpCodeFunctionArg function) const;
+		void validateTailcall(opargs::OpCodeFunctionArg function) const;
 
 		usize getLabelTarget(opargs::Label label) const;
 		void  initStackState();
