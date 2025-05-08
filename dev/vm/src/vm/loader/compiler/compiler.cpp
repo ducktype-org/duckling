@@ -173,7 +173,7 @@ namespace vm::loader::compiler {
 			auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 				if_opt_some(offsets.atMaybe(local.var_name), offset) {
 					if (offset != curr_stack_size) {
-						ctx.log.log<DuplicateLocalNameError>(local, local.var_name);
+						ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
 						return;
 					}
 				}

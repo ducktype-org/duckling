@@ -106,7 +106,7 @@ namespace {
 		using namespace vm;
 		try {
 			types.addType(type);
-		} catch (code::builders::DuplicateTypeError&) {
+		} catch (code::builders::DuplicatedTypeError&) {
 			base::StrID name = VISIT(type, tp, return tp.name);
 			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
 			log.logMap<DuplicatedTypeError>(

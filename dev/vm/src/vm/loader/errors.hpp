@@ -182,7 +182,7 @@ namespace vm::loader {
 		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class DuplicateLocalNameError final: public dia::Error {
+	class DuplicatedLocalNameError final: public dia::Error {
 		base::StrID local_name;
 
 	public:
@@ -200,7 +200,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		DuplicateLocalNameError(dia::SourcePosition pos, base::StrID local_name):
+		DuplicatedLocalNameError(dia::SourcePosition pos, base::StrID local_name):
 			  dia::Error(pos),
 			  local_name(local_name) {}
 	};

@@ -161,7 +161,7 @@ void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
 void FunctionBuilder::pushStackState(opargs::StackLocalAny local, opargs::Type type) {
 	auto tod = type_context.getTypes().atMaybe(type.type_name).expect<UnknownTypeError>(type);
 
-	if (local_name_to_type.contains(local.var_name)) throw DuplicateLocalNameError(local);
+	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
 	stack_state.emplace_back(local.var_name, tod);
 	local_name_to_type.put(local.var_name, tod);
@@ -210,7 +210,7 @@ void FunctionBuilder::preprocessLabels() {
 		variant_match(instructions[index]) {
 			variant_case(Op_label, instr) {
 				auto [_, added] = index_of_label.insert_or_assign(instr.arg0.label_name, index);
-				if (!added) throw DuplicateLabelError(instr.arg0);
+				if (!added) throw DuplicatedLabelError(instr.arg0);
 			}
 			variant_case(Op_jmp_label, instr) { register_jump(instr); }
 			variant_case(Op_jmpIf_label, instr) { register_jump(instr); }
@@ -503,7 +503,7 @@ void TypeContextBuilder::addType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {
-			if (type != *tp) throw DuplicateTypeError(type);
+			if (type != *tp) throw DuplicatedTypeError(type);
 		}
 		opt_none { types.insert(type, name); }
 	}

@@ -30,7 +30,7 @@ private:
 		loadInvalidDbc(
 			"multiple_labels.dbc",
 			{
-				vm::code::builders::DuplicateLabelError::ERR_MSG,
+				vm::code::builders::DuplicatedLabelError::ERR_MSG,
 			}
 		);
 	}

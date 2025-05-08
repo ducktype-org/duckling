@@ -144,7 +144,7 @@ namespace vm::code::builders {
 	DEFINE_TYPE_VALIDATION_ERROR(
 		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
 	);
-	DEFINE_TYPE_VALIDATION_ERROR(DuplicateTypeError, "Duplicate type: ");
+	DEFINE_TYPE_VALIDATION_ERROR(DuplicatedTypeError, "Duplicated type: ");
 
 	DEFINE_INSTRUCTION_VALIDATION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
@@ -156,9 +156,9 @@ namespace vm::code::builders {
 
 	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLocalNameError, "Unknown local name: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicateLocalNameError, "Duplicate local name: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
 	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLabelError, "Unknown label: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicateLabelError, "Duplicate label: ");
+	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicatedLabelError, "Duplicated label: ");
 	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownFunctionError, "Unknown function: ");
 	DEFINE_ARGUMENT_VALIDATION_ERROR(
 		InvalidFunctionCallArgumentsError,
