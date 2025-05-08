@@ -41,8 +41,7 @@ namespace query::detail {
 
 	std::vector<NodeID> QueryGraph::getNodeDeps(detail::NodeID node_id) const {
 		CORE_ASSERT(
-			node_data.contains(node_id),
-			"Node not found in dep graph, call the given query first."
+			node_data.contains(node_id), "Node not found in dep graph, call the given query first."
 		);
 
 		// some simple bfs for now:
@@ -68,11 +67,13 @@ namespace query::detail {
 		return { visited.begin(), visited.end() };
 	}
 
-	std::vector<NodeID> QueryGraph::getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) const {
+	std::vector<NodeID> QueryGraph::getNodeDepsFilterred(
+		detail::NodeID node_id, QueryID dependency_id
+	) const {
 		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {
 				   return id.q_id == dependency_id;
 			   })
-			 | std::ranges::to<std::vector<NodeID>>();
+		     | std::ranges::to<std::vector<NodeID>>();
 	}
 
 	void QueryGraph::debugPrint(std::ostream& out) const {

@@ -28,6 +28,7 @@ namespace query::detail {
 	 */
 	struct ContextMaker final {
 		static auto make(NodeID my_node) { return Context(my_node); }
+
 		static Ref<detail::QueryGraph> getGraph() { return &Context::main_query_graph; }
 	};
 

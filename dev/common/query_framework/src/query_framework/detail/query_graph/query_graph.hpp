@@ -2,9 +2,10 @@
 
 #include "node_id.hpp"
 #include "query_graph_fd.hpp"
-#include <base/maps.hpp>
-#include <vector>
 
+#include <base/maps.hpp>
+
+#include <vector>
 
 namespace query::detail {
 
@@ -38,7 +39,7 @@ namespace query::detail {
 			 * e.g. a graph that was read from a file during incremental compilation.
 			 */
 			Frozen,
-			
+
 			/**
 			 * Live graph is the graph, that queries can actively work on.
 			 * It will most likely be a global graph used by the query framework.
@@ -63,18 +64,19 @@ namespace query::detail {
 
 
 	public:
-		QueryGraph() = default;
-		QueryGraph(const QueryGraph&) = delete;
-		QueryGraph(QueryGraph&&) = delete;
+		QueryGraph()                             = default;
+		QueryGraph(const QueryGraph&)            = delete;
+		QueryGraph(QueryGraph&&)                 = delete;
 		QueryGraph& operator=(const QueryGraph&) = delete;
-		QueryGraph& operator=(QueryGraph&&) = delete;
+		QueryGraph& operator=(QueryGraph&&)      = delete;
 
 		enum class DependencyStatus { OK, Cycle };
 
 		/**
 		 * @brief Marks beginning of new query calculation.
 		 * The graph will add a node to a graph or update its data if it already exists.
-		 * @note @p called_by is used only for cycle recovery, addDependency has to be always called explicitly.
+		 * @note @p called_by is used only for cycle recovery, addDependency has to be always called
+		 * explicitly.
 		 */
 		void setEntry(detail::NodeID node, detail::NodeID called_by);
 
@@ -82,7 +84,7 @@ namespace query::detail {
 		 * @brief Marks exit of a query calculation.
 		 */
 		void setExit(detail::NodeID node);
-		
+
 		/**
 		 * @brief Marks that given query depends on another query.
 		 * Note that @p to does not need to be in the graph at the moment of calling this function.
@@ -90,7 +92,9 @@ namespace query::detail {
 		DependencyStatus addDependency(detail::NodeID from, detail::NodeID to);
 
 		[[nodiscard]]
-		u64 queryStackSize() const { return query_stack_size; }
+		u64 queryStackSize() const {
+			return query_stack_size;
+		}
 
 		/**
 		 * Returns all dependencies of a @p node_id.
@@ -108,8 +112,8 @@ namespace query::detail {
 		void debugPrintForDrawing(std::ostream& out) const;
 
 		/**
-		* @brief Returns all dependencies of a given query call.
-		*/
+		 * @brief Returns all dependencies of a given query call.
+		 */
 		template<class Query>
 		auto getNodeDeps(typename Query::QKey key) const {
 			detail::NodeID node_id = makeNodeID(Query::getID(), key);
@@ -117,8 +121,8 @@ namespace query::detail {
 		}
 
 		/**
-		* @brief Returns all dependencies arising from @p dependency_id of a given query call.
-		*/
+		 * @brief Returns all dependencies arising from @p dependency_id of a given query call.
+		 */
 		template<class Query>
 		auto getNodeDepsFiltered(typename Query::QKey key, detail::QueryID dependency_id) const {
 			detail::NodeID node_id = makeNodeID(Query::getID(), key);

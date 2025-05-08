@@ -26,7 +26,7 @@ namespace query::detail {
 		constexpr bool operator==(const NodeID& r) {
 			return this->q_id.asInt() == r.q_id.asInt() and this->hash.val == r.hash.val;
 		}
-	
+
 		constexpr bool operator<(const NodeID& r) {
 			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
 			return this->q_id.asInt() < r.q_id.asInt();
