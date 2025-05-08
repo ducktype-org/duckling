@@ -13,7 +13,7 @@ namespace compiler::lir {
 
 		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
 			// this kind of doesn't work, but it won't be run anyway (mir functions are unique)
-			// @TODO: change it during hash-query refactor
+			// @TODO: delete it during hash-query refactor #523
 			return (*function) == (*oth.function);
 		}
 	};
