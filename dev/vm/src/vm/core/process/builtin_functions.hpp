@@ -20,6 +20,7 @@
 #include <base/string_id.hpp>
 
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {
 	class VMThread;
@@ -68,8 +69,11 @@ namespace vm::builtins {
 	/**
 	 * @brief Calls a builtin function with the given ID and arguments.
 	 */
-	Value callBuiltinFunction(
-		BuiltinFunctionID id, VMThread& thread, const std::vector<Value>& arguments
+	base::Optional<VmValue> callBuiltinFunction(
+		BuiltinFunctionID           id,
+		TypeCRef                    builtin_func_type,
+		VMThread&                   thread,
+		const std::vector<VmValue>& arguments
 	);
 
 	/**

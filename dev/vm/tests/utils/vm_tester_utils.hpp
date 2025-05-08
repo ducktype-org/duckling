@@ -16,8 +16,6 @@ public:
 		  tester::TestSuite(std::move(config), name) {}
 
 private:
-	vm::PID initProcess();
-
 	void runTestImpl(
 		vm::PID                            pid,
 		const base::Optional<std::string>& optional_input,
@@ -27,6 +25,8 @@ private:
 	);
 
 protected:
+	vm::PID initProcess();
+
 	/**
 	 * @brief Runs a program from a given filepath with the specified input and command-line
 	 * arguments. Asserts that the actual output matches the expected one.

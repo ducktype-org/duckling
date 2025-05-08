@@ -46,6 +46,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());
+					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
 					std::string name  = "i" + std::to_string(bits);
@@ -90,7 +91,7 @@ namespace compiler::backend_vm {
 
 			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& type_context):
 				  lir_function(lir_function),
-				  func_builder(lir_function->name, type_context),
+				  func_builder(lir_function->name, {}, type_context),
 				  types(type_context.getMetadata()),
 				  TYPE_OF_DATA([&type_context] {
 					  base::HashMap<base::StrID, TypeOfData> map;

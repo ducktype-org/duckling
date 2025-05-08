@@ -11,6 +11,7 @@
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
@@ -146,12 +147,14 @@ namespace vm::code::builders {
 		[[nodiscard]] std::vector<Instruction> build() const;
 	};
 
+	using GlobalDataMap = StableTypeIdNameMap<GlobalData, GlobalDataID>;
+
 	/**
 	 * @brief Helper to compose bytecode functions.
 	 */
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
-		base::StrID              name;
+		Identifier               name;
 
 		STRONG_TYPEDEF_ID(LocalStackEntryID)
 
@@ -175,7 +178,8 @@ namespace vm::code::builders {
 
 		usize max_stack_size = 0;
 
-		const TypeContext& type_context;
+		const TypeContext&   type_context;
+		const GlobalDataMap& globals;
 
 		base::HashMap<base::StrID, base::Optional<LocalStackEntry>> stack_top_at_label;
 		base::HashMap<base::StrID, std::vector<Instruction>>        label_users;
@@ -196,7 +200,7 @@ namespace vm::code::builders {
 		void validateArgInstantiable(const opargs::Type& arg);
 
 	public:
-		FunctionBuilder(base::StrID name, const TypeContext& types);
+		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
 
 		/**
 		 * @brief Pushes `init_lany_type` instruction.

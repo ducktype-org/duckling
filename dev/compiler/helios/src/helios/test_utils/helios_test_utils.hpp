@@ -72,4 +72,10 @@ namespace compiler::helios::test_utils {
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfVariable(SymID sym);
+
+	/**
+	 * @brief Gets function body scope of given function.
+	 * @param sym The function symbol ID.
+	 */
+	helios::ScopeID getFunctionBodyScope(SymID sym);
 }

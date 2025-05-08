@@ -83,20 +83,7 @@ namespace vm::code::builders {
 		 * @brief Appends opcode argument as string to a to a stream.
 		 */
 		void pushOpcodeArg(const opargs::OpCodeArg& arg, std::ostream& out) {
-			using namespace opargs;
-			variant_match(arg) {
-				variant_case_novalue(Immediate) out << "imm";
-				variant_case_novalue(StackLocalI8) out << "l8";
-				variant_case_novalue(StackLocalI16) out << "l16";
-				variant_case_novalue(StackLocalI32) out << "l32";
-				variant_case_novalue(StackLocalI64) out << "l64";
-				variant_case_novalue(StackLocalAny) out << "any";
-				variant_case_novalue(StackLocalPtr) out << "lptr";
-				variant_case_novalue(opargs::Type) out << "type";
-				variant_case_novalue(FunctionName) out << "func";
-				variant_case_novalue(Label) out << "label";
-				variant_default CORE_PANIC("Unhandled arg type during opcode generation.");
-			}
+			out << std::visit([]<class T>(const T&) { return T::OP_SHORT; }, arg);
 		}
 
 		/**

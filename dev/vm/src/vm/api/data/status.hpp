@@ -12,8 +12,8 @@ namespace vm::api {
 	struct TypeAnalysis {};
 
 	struct ExecutionPanicked {
-		std::exception exception;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, exception);
+		std::string error_message;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
 	};
 
 	struct Paused {};

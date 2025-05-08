@@ -6,6 +6,7 @@
 #include <helios/symbols/query_type_from_definition.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include <base/variant.hpp>
 
