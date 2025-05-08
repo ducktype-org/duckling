@@ -176,6 +176,11 @@ namespace tsh {
 	DECLARE_QUERY(QueryFunctionType, KeyFor_QueryFunctionType, FunctionAbstractType)
 
 	/**
+	 * @brief Query to get the Function type.
+	 */
+	 DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
+
+	/**
 	 * @brief Query to get the Class type.
 	 */
 	DECLARE_QUERY(QueryClassType, compiler::helios::SymID, ClassAbstractType)

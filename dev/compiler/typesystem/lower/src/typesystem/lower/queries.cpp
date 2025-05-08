@@ -25,6 +25,8 @@ namespace tsl {
 				return PointerTypeLayout(key, ctx);
 			case Function:
 				return FunctionalTypeLayout(key);
+			case String:
+				return StringTypeLayout(key);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:

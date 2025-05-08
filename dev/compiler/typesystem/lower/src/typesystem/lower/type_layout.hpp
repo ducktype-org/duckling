@@ -339,6 +339,17 @@ namespace tsl {
 		}
 	};
 
+	class StringTypeLayout final: public TypeLayoutABC {
+	public:
+		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
+			  TypeLayoutABC(POINTER_SIZE, string_type) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
+			return getIndent(indent) + "String : " + std::to_string(getSize());
+		}
+	};
+
 	/**
 	 * @brief Layout of a type that has pointer-like low level behaviour.
 	 */
@@ -399,6 +410,7 @@ namespace tsl {
 		TupleTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
+		StringTypeLayout,
 		PointerTypeLayout>;
 
 	/**

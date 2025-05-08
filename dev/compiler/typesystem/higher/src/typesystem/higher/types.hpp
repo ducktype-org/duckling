@@ -29,8 +29,10 @@ namespace tsh {
 		class ReferenceAbstractTypeImpl;
 		class TupleAbstractTypeImpl;
 		class FunctionAbstractTypeImpl;
+		class StringAbstractTypeImpl;
 		class VariantAbstractTypeImpl;
 		class ClassAbstractTypeImpl;
+		class DynamicArrayTypeImpl;
 		class NamespaceAbstractTypeImpl;
 		class ModuleAbstractTypeImpl;
 		class MetaAbstractTypeImpl;
@@ -326,6 +328,15 @@ namespace tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(FunctionAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
+	};
+
+	class StringAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
+
+		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
 	};
 
 	/**
