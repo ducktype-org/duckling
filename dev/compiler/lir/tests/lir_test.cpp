@@ -117,11 +117,11 @@ private:
 
 	void simpleBools() {
 		auto module = getLirOfModule(path("modules/booleans"));
-		ASSERT_EQUAL(1, module.funcs.size());
+		ASSERT_EQUAL(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:
-		// if this happen just see lir-output of tested module for lir block numbers
+		// if this happens, just see lir-output of tested module for lir block numbers
 
 		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);

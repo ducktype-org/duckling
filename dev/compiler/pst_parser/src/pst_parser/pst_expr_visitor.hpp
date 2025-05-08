@@ -28,4 +28,4 @@ namespace pst::expr {
 		Comma,
 		Assignment
 	);
-};
+}

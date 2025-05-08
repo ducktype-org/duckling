@@ -46,6 +46,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());
+					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
 					std::string name  = "i" + std::to_string(bits);
