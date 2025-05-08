@@ -17,7 +17,7 @@
 namespace query {
 
 	namespace detail {
-		struct ContextMaker;
+		struct ContextAccess;
 	}
 
 	/**
@@ -37,20 +37,23 @@ namespace query {
 		bool           active = true;
 
 		Context(detail::NodeID my_node): my_node(my_node) {}
-		friend struct query::detail::ContextMaker;
+		friend struct query::detail::ContextAccess;
 
+		/**
+		 * Main query graph, that query calls work on.
+		 */
 		static detail::QueryGraph main_query_graph;
+
+		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 	public:
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
-		static dia::Logger logger;
+		static dia::Logger logger; 
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
-
-		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 		template<typename OthQuery>
 		auto query(typename OthQuery::QKey key) -> decltype(auto) {
@@ -69,5 +72,9 @@ namespace query {
 		 * @param message The dia::Message to be logged.
 		 */
 		void log(Box<dia::Message> message);
+
+		static const detail::QueryGraph& getGraph() {
+			return main_query_graph;
+		}
 	};
 }

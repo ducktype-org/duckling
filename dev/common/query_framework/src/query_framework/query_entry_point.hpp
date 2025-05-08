@@ -6,7 +6,7 @@
 #pragma once
 
 #include "detail/query_data/query_id.hpp"
-#include "detail/query_graph/dep_graph.hpp"
+#include "context.hpp"
 #include "detail/query_graph/node_making.hpp"
 #include "empty_key.hpp"
 
@@ -36,7 +36,7 @@ namespace query {
 	template<typename QueryType>
 	auto entryPoint(typename QueryType::QKey key) -> decltype(auto) {
 		CORE_ASSERT(
-			detail::dep_graph::queryStackSize() == 0, "query::entryPoint called from within query!"
+			Context::getGraph().queryStackSize() == 0, "query::entryPoint called from within query!"
 		);
 		return detail::EntryPointHelper::callQuery<QueryType>(key);
 	}

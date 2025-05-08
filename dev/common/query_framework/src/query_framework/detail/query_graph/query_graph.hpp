@@ -1,10 +1,10 @@
 #pragma once
 
 #include "node_id.hpp"
-#include "query_graph_fd.hpp"
 
 #include <base/maps.hpp>
 
+#include <ostream>
 #include <vector>
 
 namespace query::detail {

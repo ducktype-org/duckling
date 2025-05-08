@@ -23,11 +23,11 @@ namespace query::detail {
 		QueryID q_id;
 		KeyHash hash;
 
-		constexpr bool operator==(const NodeID& r) {
+		constexpr bool operator==(const NodeID& r) const {
 			return this->q_id.asInt() == r.q_id.asInt() and this->hash.val == r.hash.val;
 		}
 
-		constexpr bool operator<(const NodeID& r) {
+		constexpr bool operator<(const NodeID& r) const {
 			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
 			return this->q_id.asInt() < r.q_id.asInt();
 		}

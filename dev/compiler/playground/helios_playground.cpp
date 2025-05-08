@@ -61,13 +61,13 @@ int notMain(int argc, const char* const* argv) {
 	std::cerr << "Inputs of entire hout:\n";
 
 	auto pst_access_id = pst::detail::PSTAccessSideInput::getID();
-	auto deps = query::getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, pst_access_id);
+	auto deps = query::Context::getGraph().getNodeDepsFiltered<helios::QueryTopLevelEntities>(root, pst_access_id);
 	printQueryDeps(deps);
 
 	for (auto& i: top_level->functions) {
 		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
 		auto i_deps
-			= query::getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
+			= query::Context::getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(i.original_symbol, pst_access_id);
 		printQueryDeps(i_deps);
 	}
 	return 0;

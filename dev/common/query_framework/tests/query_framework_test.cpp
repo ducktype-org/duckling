@@ -1,4 +1,4 @@
-#include <query_framework/detail/query_graph/dep_graph.hpp>
+#include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
@@ -359,45 +359,49 @@ private:
 	}
 
 	void testDeps() {
+		const auto& graph = query::Context::getGraph();
+
 		assertThrows<base::Panic>(
-			[&]() { query::getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
 		);
 
 		query::entryPoint<EmptyQuery>(1);
-		auto deps = query::getNodeDeps<EmptyQuery>(1);
+		auto deps = graph.getNodeDeps<EmptyQuery>(1);
 		ASSERT_EQUAL(deps.size(), 1);
 
 		assertThrows<base::Panic>(
-			[&]() { query::getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
 		);
 
 		query::entryPoint<CallEmptyQueryNTimes>(10);
-		auto deps2 = query::getNodeDeps<CallEmptyQueryNTimes>(10);
+		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>(10);
 		// 10 + 1 for the query itself:
 		ASSERT_EQUAL(deps2.size(), 11);
 		{
 			auto deps2_filtered
-				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
-			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(
+			auto deps2_filtered = graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(
 				10, CallEmptyQueryNTimes::getID()
 			);
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{
 			auto deps2_filtered
-				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
 	}
 
 	void testSideInput() {
+		const auto& graph = query::Context::getGraph();
+
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
 			query::entryPoint<CallSideInputNTimes>(10);
-			auto deps = query::getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
+			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
 			ASSERT_EQUAL(deps.size(), 10);
 		}
 	}
@@ -471,10 +475,11 @@ private:
 	}
 
 	void debugPrintTest() {
+		const auto& graph = query::Context::getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
-		query::debugPrintDependencyGraphForDrawing(s);
-		query::debugPrintDependencyGraph(s);
+		graph.debugPrintForDrawing(s);
+		graph.debugPrint(s);
 	}
 
 	void testConstructCache() {
