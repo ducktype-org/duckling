@@ -72,7 +72,7 @@ namespace query {
 		 * @param message The dia::Message to be logged.
 		 */
 		void log(Box<dia::Message> message);
-		
+
 		/**
 		 * @brief Returns a const reference to the main query graph.
 		 * Can be safely used outside query framework.
