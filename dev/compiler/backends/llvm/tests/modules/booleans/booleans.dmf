@@ -27,5 +27,5 @@ fun goo() = {
     let b : bool = true and true or false and false or true;
     let c : bool = a71 or a72;
 
-    let t : bool = if c then 1 + 2 else 3 * 4;
+    let t : i64 = if c then 1 + 2 else 3 * 4;
 }

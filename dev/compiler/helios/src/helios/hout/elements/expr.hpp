@@ -82,7 +82,6 @@ namespace compiler::helios::code {
 	 */
 	struct IdentifierExpr final: public Expr {
 		// @note: this is a mock
-		// Review: Is it???
 		SymID symbol;
 
 		IdentifierExpr(query::Context& ctx, SymID symbol);
