@@ -3,7 +3,7 @@
 #include "../context.hpp"
 
 namespace query::detail {
-    /**
+	/**
 	 * @brief Internal helper struct used to access context private state
 	 */
 	struct ContextAccess final {

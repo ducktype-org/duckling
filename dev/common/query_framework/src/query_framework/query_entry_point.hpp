@@ -5,8 +5,8 @@
  */
 #pragma once
 
-#include "detail/query_data/query_id.hpp"
 #include "context.hpp"
+#include "detail/query_data/query_id.hpp"
 #include "detail/query_graph/node_making.hpp"
 #include "empty_key.hpp"
 

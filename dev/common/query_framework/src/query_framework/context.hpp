@@ -50,7 +50,7 @@ namespace query {
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
 		// so that all queries run on the same file / in the same compilation thread / whatever
 		// use a single, *non-static* logger object.
-		static dia::Logger logger; 
+		static dia::Logger logger;
 
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
@@ -73,8 +73,6 @@ namespace query {
 		 */
 		void log(Box<dia::Message> message);
 
-		static const detail::QueryGraph& getGraph() {
-			return main_query_graph;
-		}
+		static const detail::QueryGraph& getGraph() { return main_query_graph; }
 	};
 }

@@ -383,9 +383,8 @@ private:
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
-			auto deps2_filtered = graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(
-				10, CallEmptyQueryNTimes::getID()
-			);
+			auto deps2_filtered
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, CallEmptyQueryNTimes::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{

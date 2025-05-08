@@ -6,8 +6,8 @@
 
 #include "context.hpp"
 #include "detail/acd.hpp"
-#include "detail/query_graph/node_making.hpp"
 #include "detail/context_access.hpp"
+#include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_int.hpp"
