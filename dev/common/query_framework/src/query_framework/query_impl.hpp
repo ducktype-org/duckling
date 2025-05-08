@@ -6,7 +6,6 @@
 
 #include "context.hpp"
 #include "detail/acd.hpp"
-#include "detail/query_graph/dep_graph.hpp"
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
@@ -29,6 +28,7 @@ namespace query::detail {
 	 */
 	struct ContextMaker final {
 		static auto make(NodeID my_node) { return Context(my_node); }
+		static Ref<detail::QueryGraph> getGraph() { return &Context::main_query_graph; }
 	};
 
 	/**
@@ -64,10 +64,10 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(dep_graph::setExit(node_id));
+			defer(ContextMaker::getGraph()->setExit(node_id));
 
 			// prolog:
-			dep_graph::setEntry(node_id, from);
+			ContextMaker::getGraph()->setEntry(node_id, from);
 
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
