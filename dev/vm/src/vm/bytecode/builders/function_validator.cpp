@@ -110,7 +110,7 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 	}
 }
 
-void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
+void FunctionValidator::validateArgInstantiable(opargs::Type arg) const {
 	// @TODO remove `atMaybe` after #732
 	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);

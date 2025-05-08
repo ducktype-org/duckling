@@ -43,7 +43,7 @@ namespace vm::code::builders {
 
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction) const;
-		void validateArgInstantiable(const opargs::Type& arg) const;
+		void validateArgInstantiable(opargs::Type arg) const;
 		void validateFunctionEnd();
 
 		usize getLabelTarget(opargs::Label label) const;
