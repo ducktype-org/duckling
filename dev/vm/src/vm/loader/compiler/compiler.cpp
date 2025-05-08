@@ -95,6 +95,9 @@ namespace vm::loader::compiler {
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
 					auto pos = ctx.label_positions.at(label.label_name);
+                    // We have to calculate the
+                    // difference instead of absolute jump position,
+                    // because our instruction counter is a pointer.
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
 			}
@@ -193,8 +196,8 @@ namespace vm::loader::compiler {
 
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
 			push(base::StrID("ret_val"), func_type.result->getName());
-			for (auto [idx, param]: std::views::enumerate(func_type.parameters))
-				push(base::StrID(base::strConcat("arg", idx).c_str()), param->getName());
+			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
+				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type->getName());
 
 			// instruction index, stack state, stack size
 			std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
