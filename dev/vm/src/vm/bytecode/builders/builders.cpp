@@ -27,7 +27,7 @@ FunctionBuilder::FunctionBuilder(
 	  type_context(types),
 	  globals(globals) {}
 
-vm::code::Function FunctionBuilder::build() {
+vm::code::Function FunctionBuilder::build() const {
     FunctionValidator validator(name, type_context, globals, instructions);
     validator.validate();
 	Function function;

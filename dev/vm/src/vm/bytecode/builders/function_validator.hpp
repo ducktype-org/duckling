@@ -44,13 +44,14 @@ namespace vm::code::builders {
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction) const;
 		void validateArgInstantiable(opargs::Type arg) const;
-		void validateFunctionEnd();
+		void validateFunctionEnd() const;
+        void validateTailcall(opargs::OpCodeFunctionArg function) const;
 
 		usize getLabelTarget(opargs::Label label) const;
 		void  initStackState();
 		void  pushStackState(opargs::StackLocalAny local, opargs::Type type);
 		void  popStackState(const instructions::Op_deinit& cause);
-		void  popCallArgs(opargs::OpCodeFunctionArg function, bool check_ret_val = true);
+		void  popCallArgs(opargs::OpCodeFunctionArg function);
 		void  preprocessLabels();
 		void  traverseControlFlowGraph();
 

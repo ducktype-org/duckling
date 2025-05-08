@@ -171,7 +171,7 @@ namespace vm::code::builders {
 		 */
 		void addInstruction(const InstructionBuilder& instruction);
 
-		[[nodiscard]] Function build();
+		[[nodiscard]] Function build() const;
 	};
 
 }

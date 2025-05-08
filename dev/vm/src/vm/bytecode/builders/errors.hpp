@@ -183,7 +183,15 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
 	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
-		"Invalid function call arguments. Values on the stack do not have proper types."
+		"Invalid function call arguments. Values on the stack do not have proper types for calling: "
 	);
-	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of this type.");
+	DEFINE_ARGUMENT_ERROR(
+		InvalidTailcallSignatureError,
+		"The callee must have the same signature as the caller when tailcalling: "
+	);
+	DEFINE_ARGUMENT_ERROR(
+		InvalidTailcallArgumentsError,
+		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for calling: "
+	);
+	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of type: ");
 }

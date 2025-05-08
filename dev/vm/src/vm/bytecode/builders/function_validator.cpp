@@ -138,7 +138,7 @@ void FunctionValidator::popStackState(const Op_deinit& cause) {
 	stack_state.pop_back();
 }
 
-void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function, bool check_ret_val) {
+void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
@@ -146,8 +146,8 @@ void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function, bool che
 		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
 	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 		throw UnknownFunctionError(generic_arg);
-	auto func_type = std::get<FunctionType>(*maybe_func_type);
-	check_ret_val  = check_ret_val && func_type.result != base::StrID("void");
+	auto func_type     = std::get<FunctionType>(*maybe_func_type);
+	bool check_ret_val = func_type.result != base::StrID("void");
 
 	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
 		throw InvalidFunctionCallArgumentsError(generic_arg);
@@ -158,6 +158,30 @@ void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function, bool che
 	}
 	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
 		throw InvalidFunctionCallArgumentsError(generic_arg);
+}
+
+void FunctionValidator::validateTailcall(opargs::OpCodeFunctionArg function) const {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto maybe_func_type
+		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+		throw UnknownFunctionError(generic_arg);
+	auto func_type = std::get<FunctionType>(*maybe_func_type);
+
+	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
+		throw InvalidTailcallSignatureError(generic_arg);
+
+	if (func_type.parameters.size() + 1 != stack_state.size())
+		throw InvalidTailcallArgumentsError(generic_arg);
+
+	if (code::typeName(*stack_state.front().type) != func_type.result)
+		throw InvalidTailcallArgumentsError(generic_arg);
+	for (auto [param, stack_elem]:
+	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
+		if (code::typeName(*stack_elem.type) != param)
+			throw InvalidTailcallArgumentsError(generic_arg);
 }
 
 usize FunctionValidator::getLabelTarget(opargs::Label label) const {
@@ -244,7 +268,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
-				popCallArgs(instr.arg0, false);
+				validateTailcall(instr.arg0);
 				std::tie(index, stack_state) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
@@ -253,7 +277,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 	}
 }
 
-void FunctionValidator::validateFunctionEnd() {
+void FunctionValidator::validateFunctionEnd() const {
 	if (instructions.empty()
 	    || (visited_instructions.back() && !holdsOneOf<ValidLastInstructions>(instructions.back())
 	    )) {
