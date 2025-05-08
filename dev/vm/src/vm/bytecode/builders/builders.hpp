@@ -157,37 +157,6 @@ namespace vm::code::builders {
 		Identifier               name;
 		const TypeContext&       type_context;
 		const GlobalDataMap&     globals;
-		FunctionType             type;
-
-		/**
-		 * @brief Represents a local stack variable.
-		 */
-		struct LocalStackEntry {
-			base::StrID      local_name;
-			CRef<TypeOfData> type;
-
-			bool operator==(const LocalStackEntry& other) const {
-				return local_name == other.local_name
-				    && code::typeName(*type) == code::typeName(*other.type);
-			}
-		};
-
-		std::vector<LocalStackEntry>                         stack_state;
-		base::HashMap<base::StrID, CRef<TypeOfData>>         local_name_to_type;
-		base::HashMap<base::StrID, decltype(stack_state)>    stack_at_label;
-		base::HashMap<base::StrID, usize>                    index_of_label;
-		base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
-
-		void validateExtension(usize instruction_index) const;
-		void validateInstruction(const Instruction& instruction) const;
-		void validateArgInstantiable(const opargs::Type& arg) const;
-
-		usize getLabelTarget(opargs::Label label) const;
-		void  pushStackState(opargs::StackLocalAny local, opargs::Type type);
-		void  popStackState(const instructions::Op_deinit& cause);
-		void  popCallArgs(opargs::OpCodeFunctionArg function, bool check_ret_val = true);
-		void  preprocessLabels();
-		void  processControlFlowGraph();
 
 	public:
 		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
