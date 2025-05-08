@@ -33,29 +33,10 @@ namespace query::detail {
 			NodeID parent;
 		};
 
-		enum GraphState {
-			/**
-			 * Frozen graph is the graph, that static,
-			 * e.g. a graph that was read from a file during incremental compilation.
-			 */
-			Frozen,
-
-			/**
-			 * Live graph is the graph, that queries can actively work on.
-			 * It will most likely be a global graph used by the query framework.
-			 */
-			Live
-		};
-
 		/**
 		 * Amount of actively calculating queries.
 		 */
 		u64 query_stack_size = 0;
-
-		/**
-		 * @brief The state of the graph.
-		 */
-		GraphState state = GraphState::Live;
 
 		/**
 		 * The actual data of the graph.
