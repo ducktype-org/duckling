@@ -15,6 +15,9 @@ namespace vm::code::builders {
 	class BuilderError: public base::LogicError {
 	public:
 		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
+
+		// @brief element causing the error
+		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
 	};
 
 	class StackStructureMismatchError: public BuilderError {
@@ -28,6 +31,10 @@ namespace vm::code::builders {
 			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
 			  LABEL(label),
 			  jumps(std::move(jumps)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &LABEL;
+		}
 	};
 
 	class InvalidFunctionEndError: public BuilderError {
@@ -75,96 +82,108 @@ namespace vm::code::builders {
 			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
 			  BASE_TYPE(std::move(base_type)),
 			  MISSING_NAME(missing_name) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(BASE_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
 	};
 
-	class TypeValidationError: public BuilderError {
+	class TypeError: public BuilderError {
 	public:
 		const TypeOfData TYPE;
 
-		TypeValidationError(std::string msg, TypeOfData type):
+		TypeError(std::string msg, TypeOfData type):
 			  BuilderError(std::move(msg)),
 			  TYPE(std::move(type)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
 	};
 
-	class InstructionValidationError: public BuilderError {
+	class InstructionError: public BuilderError {
 	public:
 		const Instruction INSTRUCTION;
 
-		InstructionValidationError(std::string_view msg, Instruction instruction):
+		InstructionError(std::string_view msg, Instruction instruction):
 			  BuilderError(std::string(msg)),
 			  INSTRUCTION(instruction) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(INSTRUCTION, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
 	};
 
-	class ArgumentValidationError: public BuilderError {
+	class ArgumentError: public BuilderError {
 	public:
 		const opargs::OpCodeArg ARGUMENT;
 
-		ArgumentValidationError(std::string msg, opargs::OpCodeArg argument):
+		ArgumentError(std::string msg, opargs::OpCodeArg argument):
 			  BuilderError(std::move(msg)),
 			  ARGUMENT(argument) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(ARGUMENT, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
 	};
 
-#define DEFINE_TYPE_VALIDATION_ERROR(error_name, msg)                                        \
-	class error_name: public TypeValidationError {                                           \
+#define DEFINE_TYPE_ERROR(error_name, msg)                                                   \
+	class error_name: public TypeError {                                                     \
 	public:                                                                                  \
 		constexpr static const std::string_view ERR_MSG = (msg);                             \
                                                                                              \
 		error_name(TypeOfData type):                                                         \
-			  TypeValidationError(                                                           \
+			  TypeError(                                                                     \
 				  base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name)), std::move(type) \
 			  ) {}                                                                           \
 	};
 
-#define DEFINE_INSTRUCTION_VALIDATION_ERROR(error_name, msg)                                     \
-	class error_name: public InstructionValidationError {                                        \
-	public:                                                                                      \
-		constexpr static const std::string_view ERR_MSG = (msg);                                 \
-                                                                                                 \
-		error_name(Instruction instruction): InstructionValidationError(ERR_MSG, instruction) {} \
+#define DEFINE_INSTRUCTION_ERROR(error_name, msg)                                      \
+	class error_name: public InstructionError {                                        \
+	public:                                                                            \
+		constexpr static const std::string_view ERR_MSG = (msg);                       \
+                                                                                       \
+		error_name(Instruction instruction): InstructionError(ERR_MSG, instruction) {} \
 	};
 
-#define DEFINE_ARGUMENT_VALIDATION_ERROR(error_name, msg)                        \
-	class error_name: public ArgumentValidationError {                           \
-	public:                                                                      \
-		constexpr static const std::string_view ERR_MSG = (msg);                 \
-                                                                                 \
-		error_name(opargs::OpCodeArg argument):                                  \
-			  ArgumentValidationError(                                           \
-				  base::strConcat(ERR_MSG, argumentToString(argument)), argument \
-			  ) {}                                                               \
+#define DEFINE_ARGUMENT_ERROR(error_name, msg)                                                 \
+	class error_name: public ArgumentError {                                                   \
+	public:                                                                                    \
+		constexpr static const std::string_view ERR_MSG = (msg);                               \
+                                                                                               \
+		error_name(opargs::OpCodeArg argument):                                                \
+			  ArgumentError(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	};
 
-	DEFINE_TYPE_VALIDATION_ERROR(
+	DEFINE_TYPE_ERROR(
 		InvalidImplementsError, "This interface/class can implement only other interfaces: "
 	);
-	DEFINE_TYPE_VALIDATION_ERROR(InvalidExtends, "This class can extend only other classes: ");
-	DEFINE_TYPE_VALIDATION_ERROR(
+	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
+	DEFINE_TYPE_ERROR(
 		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
 	);
-	DEFINE_TYPE_VALIDATION_ERROR(
+	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
 	);
-	DEFINE_TYPE_VALIDATION_ERROR(DuplicatedTypeError, "Duplicated type: ");
+	DEFINE_TYPE_ERROR(DuplicatedTypeError, "Duplicated type: ");
 
-	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
 	);
-	DEFINE_INSTRUCTION_VALIDATION_ERROR(
+	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
-	DEFINE_INSTRUCTION_VALIDATION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
+	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
 
-	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownTypeError, "Unknown type: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLocalNameError, "Unknown local name: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownLabelError, "Unknown label: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(DuplicatedLabelError, "Duplicated label: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(UnknownFunctionError, "Unknown function: ");
-	DEFINE_ARGUMENT_VALIDATION_ERROR(
+	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
+	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
+	DEFINE_ARGUMENT_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
+	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");
+	DEFINE_ARGUMENT_ERROR(DuplicatedLabelError, "Duplicated label: ");
+	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
+	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
 		"Invalid function call arguments. Values on the stack do not have proper types."
 	);
-	DEFINE_ARGUMENT_VALIDATION_ERROR(
-		UninstantiableValueError, "Cannot intiantiate a value of this type."
-	);
+	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of this type.");
 }

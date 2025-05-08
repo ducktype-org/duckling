@@ -246,15 +246,12 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 							log.addNote<StackStructureMismatchNote>(err, instruction);
 					}
 				);
-			} catch (code::builders::UnknownSubtypeError& e) {
-				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			} catch (code::builders::TypeValidationError& e) {
-				log.log<SomeBuilderError>(e.TYPE, e.what());
-			} catch (code::builders::InstructionValidationError& e) {
-				log.log<SomeBuilderError>(e.INSTRUCTION, e.what());
-			} catch (code::builders::ArgumentValidationError& e) {
-				log.log<SomeBuilderError>(e.ARGUMENT, e.what());
-			} catch (code::builders::BuilderError& e) { log.logSimple(e.what()); }
+			} catch (code::builders::BuilderError& e) {
+				match_optional(e.maybeElement()) {
+					opt_some(elem) { log.log<SomeBuilderError>(*elem, e.what()); }
+					opt_none { log.logSimple(e.what()); }
+				}
+			}
 			return std::unexpected(std::move(log));
 		}
 	}
