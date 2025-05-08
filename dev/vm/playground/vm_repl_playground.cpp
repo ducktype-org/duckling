@@ -1,9 +1,10 @@
+#include "lang_definitions/key_spec_op.hpp"
+#include "lexer/classifications.hpp"
+
 #include "base/exceptions.hpp"
 #include "base/int_conv.hpp"
 
 #include "vm/api/vm.hpp"
-#include "lang_definitions/key_spec_op.hpp"
-#include "lexer/classifications.hpp"
 
 #include <filesystem>
 #include <fstream>
@@ -27,7 +28,8 @@ REPL - Quick overview:
 class DuckRepl {
 public:
 	DuckRepl() {
-		auto process_pid_response = vm::api::spawn();
+		init::InitObject _;
+		auto             process_pid_response = vm::api::spawn();
 		CORE_ASSERT(process_pid_response.has_value(), "Error: Failed to spawn a process");
 		pid = process_pid_response->pid;
 		CORE_ASSERT(vm::api::attach(pid, std::cin, std::cout), "Error: Attach failed\n");
@@ -45,7 +47,7 @@ public:
 				break;
 			}
 
-			if (line == "exit") {
+			if (line == "exit" || line == "q") {
 				std::cout << "Exiting REPL\n";
 				break;
 			} else if (line == "{")
@@ -61,23 +63,27 @@ public:
 
 private:
 	vm::PID pid{};
+	u64     load_counter = 0;
 
-	static constexpr const std::string_view TEMP_FILE_NAME = "temp_repl_file.dbc";
+	static constexpr const std::string_view TEMP_FILE_NAME_PREFIX = "temp_repl_file_";
+	static constexpr const std::string_view TEMP_FILE_NAME_SUFFIX = ".dbc";
+
+	std::string getCurrentFilePath() {
+		return TEMP_FILE_NAME_PREFIX.data() + std::to_string(load_counter)
+		     + TEMP_FILE_NAME_SUFFIX.data();
+	}
 
 	void saveToTempFile(const std::string& content) {
-		std::ofstream file(TEMP_FILE_NAME.data());
+		std::ofstream file(getCurrentFilePath());
 		if (!file) {
-			std::cerr << "Error: Could not create a temp file: " << TEMP_FILE_NAME << "\n";
+			std::cerr << "Error: Could not create a temp file: " << TEMP_FILE_NAME_PREFIX << "\n";
 			return;
 		}
 		file << content;
-		// file.write(content.c_str(), base::safeIntConv<std::streamsize>(content.size()));
-		file.flush();
 		file.close();
 	}
 
 	void processCodeInjection() {
-		std::cout << "Processing Code Injection\n";
 		std::string function_code = "";
 		std::string line;
 
@@ -96,25 +102,24 @@ private:
 					brace_count--;
 		}
 		saveToTempFile(function_code);
-        
-		// std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-		fs::FilePath file(TEMP_FILE_NAME.data());
+
+		fs::FilePath file(getCurrentFilePath());
 		auto         load_files_response = vm::api::loadFiles(pid, { file });
 		if (!load_files_response.has_value()) {
 			auto err     = load_files_response.error();
 			auto core_op = std::get<vm::api::CoreOperationError>(err);
 			auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
 			std::cout << "Error: Failed to load a file " << err_str << '\n';
-		} else {
-			std::cout << "Function loaded successfully\n";
 		}
 
 		std::error_code err_code;
-		std::filesystem::remove(TEMP_FILE_NAME.data(), err_code);
+		std::filesystem::remove(getCurrentFilePath(), err_code);
 		if (err_code) {
-			std::cout << "Error: Failed to remove a temporary file " << TEMP_FILE_NAME << ": "
+			std::cout << "Error: Failed to remove a temporary file " << getCurrentFilePath() << ": "
 					  << err_code.message() << '\n';
 		}
+
+		load_counter++;
 	}
 
 	void strip(std::string& string) {
@@ -123,12 +128,8 @@ private:
 	}
 
 	void processFunctionCall(const std::string& line) {
-		std::cout << "Processing function call\n";
-		std::cout << line << '\n';
-
 		size_t paren_open  = line.find('(');
 		size_t paren_close = line.rfind(')');
-		std::cout << paren_open << " " << paren_close << '\n';
 
 		if (paren_open == std::string::npos || paren_close == std::string::npos
 		    || paren_close <= paren_open) {
@@ -140,13 +141,10 @@ private:
 		strip(function_name);
 
 		std::string args_str = line.substr(paren_open + 1, paren_close - paren_open - 1);
-		std::cout << "Function name: \"" << function_name << "\"\n";
-		std::cout << "Function args: \"" << args_str << "\"\n";
 
 		std::vector<std::string> arg_strings;
 		size_t                   start = 0;
 		size_t                   end   = args_str.find(',');
-
 		while (end != std::string::npos) {
 			std::string arg = args_str.substr(start, end - start);
 			strip(arg);
@@ -159,10 +157,6 @@ private:
 		std::string last_arg = args_str.substr(start);
 		strip(last_arg);
 		if (!last_arg.empty()) arg_strings.push_back(last_arg);
-
-		std::cout << "Parsed args: \n";
-		for (const auto& arg: arg_strings) std::cout << "\"" << arg << "\"" << '\n';
-		std::cout << "==================\n";
 
 		// Convert to i64.
 		std::vector<i64> arguments;
@@ -177,8 +171,6 @@ private:
 			}
 		}
 
-		std::cout << "Function '" << function_name << "' called with " << arguments.size()
-				  << " arguments\n";
 		CORE_ASSERT(
 			vm::api::runFunction(pid, function_name, arguments).has_value(),
 			"Failed to runFunction\n"
@@ -187,13 +179,11 @@ private:
 
 		auto exit_code_response = vm::api::getExitCode(pid);
 		CORE_ASSERT(exit_code_response.has_value(), "Error: Empty exit_code\n");
-		std::cout << "-> " << *exit_code_response << '\n';
+		std::cout << "\n" <<  function_name << "-> " << *exit_code_response << '\n';
 	}
 };
 
 int main() {
-	init::InitObject _;
-	
 	DuckRepl repl;
 	repl.run();
 	return 0;
