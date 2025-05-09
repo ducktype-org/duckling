@@ -99,6 +99,10 @@ namespace tsh {
 
 	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
+	AbstractType DynamicArrayAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/

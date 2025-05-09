@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../types.hpp"
+#include "query_framework/query_int.hpp"
 
 #include <base/maps.hpp>
 
@@ -83,6 +84,9 @@ namespace tsh {
 	 */
 	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
 
+
+	DECLARE_QUERY(QueryDynamicArrayType, key, DynamicArrayAbstractType)
+	
 	/**
 	 * @brief Key for QueryTupleType.
 	 */

@@ -30,6 +30,7 @@ namespace tsh {
 		class StringAbstractTypeImpl;
 		class TupleAbstractTypeImpl;
 		class FunctionAbstractTypeImpl;
+		class DynamicArrayAbstractTypeImpl;
 		class VariantAbstractTypeImpl;
 		class ClassAbstractTypeImpl;
 		class DynamicArrayTypeImpl;
@@ -328,6 +329,22 @@ namespace tsh {
 		CONSTRUCT_WITH_CHECKED_CAST(FunctionAbstractType)
 
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
+	};
+
+	class DynamicArrayAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(DynamicArrayAbstractType, AbstractType)
+
+		/**
+		 * @brief Gets the type of the elements of the dynamic array.
+		 * @return The type of the elements of the dynamic array.
+		 */
+		[[nodiscard]]
+		AbstractType getElementType() const; // @TODO AbstractType or SymbolType?
+
+		CONSTRUCT_WITH_CHECKED_CAST(DynamicArrayAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(DynamicArrayAbstractType)
 	};
 
 	/**
