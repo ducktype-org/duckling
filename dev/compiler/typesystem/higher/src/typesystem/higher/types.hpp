@@ -26,10 +26,10 @@ namespace tsh {
 		class FloatAbstractTypeImpl;
 		class RawPointerAbstractTypeImpl;
 		class PointerAbstractTypeImpl;
-		class ReferenceAbstractTypeImpl;
+		class ReferenceAbstractTypeImpl class StringAbstractTypeImpl;
+		;
 		class TupleAbstractTypeImpl;
 		class FunctionAbstractTypeImpl;
-		class StringAbstractTypeImpl;
 		class VariantAbstractTypeImpl;
 		class ClassAbstractTypeImpl;
 		class DynamicArrayTypeImpl;
@@ -330,15 +330,6 @@ namespace tsh {
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
 	};
 
-	class StringAbstractType: public AbstractType {
-	public:
-		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
-
-		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
-
-		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
-	};
-
 	/**
 	 * @brief The Variant types.
 	 *
@@ -431,6 +422,15 @@ namespace tsh {
 	/***********************\
 	|  MISCELLANEOUS TYPES  |
 	\***********************/
+
+	class StringAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
+
+		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
+	};
 
 	class NamespaceAbstractType: public AbstractType {
 	public:

@@ -79,6 +79,11 @@ namespace tsh {
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType)
 
 	/**
+	 * @brief Query to get the String type.
+	 */
+	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
+
+	/**
 	 * @brief Key for QueryTupleType.
 	 */
 	struct KeyFor_QueryTupleType final {
@@ -174,11 +179,6 @@ namespace tsh {
 	 * @brief Query to get the Function type.
 	 */
 	DECLARE_QUERY(QueryFunctionType, KeyFor_QueryFunctionType, FunctionAbstractType)
-
-	/**
-	 * @brief Query to get the Function type.
-	 */
-	 DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
 
 	/**
 	 * @brief Query to get the Class type.

@@ -362,6 +362,21 @@ namespace tsh::internal {
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
 	};
 
+	class StringAbstractTypeImpl final: public AbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::String;
+
+		StringAbstractTypeImpl() { representation = "string"; }
+	};
+
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> components;
 
@@ -432,21 +447,6 @@ namespace tsh::internal {
 			bool                      pure = false,
 			bool                      free = false
 		);
-	};
-
-	class StringAbstractTypeImpl final: public AbstractTypeImpl {
-	public:
-		[[nodiscard]]
-		Kind getKind() const override {
-			return STATIC_KIND;
-		}
-
-		/**
-		 * @brief The Kind of types described by objects of this class.
-		 */
-		static constexpr Kind STATIC_KIND = Kind::String;
-
-		StringAbstractTypeImpl() { representation = "string"; }
 	};
 
 	/** @TODO:

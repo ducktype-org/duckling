@@ -206,6 +206,17 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
+	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto string_impl = internal::StringAbstractTypeImpl{};
+			return &string_impl;
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
+
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto tuple_pimpl = new internal::TupleAbstractTypeImpl{ key.components };
@@ -244,17 +255,6 @@ namespace tsh {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryFunctionType)
-
-	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
-		static auto provide(Context&, QKey) -> PResult {
-			static auto string_impl = internal::StringAbstractTypeImpl{};
-			return &string_impl;
-		}
-
-		QUERY_AUTO_NO_CACHE
-	};
-
-	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
 
 	struct IMPLEMENT_QUERY(QueryClassType, ClassAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey key) -> PResult {
