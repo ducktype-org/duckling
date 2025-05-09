@@ -339,15 +339,51 @@ namespace tsl {
 		}
 	};
 
+	/**
+	 * @brief Layout of the string type.
+	 * The string type consists of four parts of information:
+	 * -# Pointer to the start of data
+	 * -# Offset of the end of data
+	 * -# Offset of the start of reserved memory
+	 * -# Offset of the end of reserved memory
+	 * The pointer and offsets are arranged in this exact order in memory.
+	 */
 	class StringTypeLayout final: public TypeLayoutABC {
+		static constexpr auto OFFSET_SIZE = base::bytes2bits(Bytes(8));
+
 	public:
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
-			  TypeLayoutABC(POINTER_SIZE, string_type) {}
+			  TypeLayoutABC(POINTER_SIZE + 3*OFFSET_SIZE, string_type) {}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "String : " + std::to_string(getSize());
 		}
+
+		/**
+		 * @return The offset of the end of data offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfDataOffsetPosition() const {
+			return POINTER_SIZE;
+		}
+
+		/**
+		 * @return The offset of the start of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getStartOfMemoryOffsetPosition() const {
+			return POINTER_SIZE + OFFSET_SIZE;
+		}
+
+		/**
+		 * @return The offset of the end of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfMemoryOffsetPosition() const {
+			return POINTER_SIZE + 2*OFFSET_SIZE;
+		}
+
 	};
 
 	/**
