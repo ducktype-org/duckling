@@ -75,13 +75,13 @@ namespace dia {
 			return LocationType::FileLocationType;
 		}
 
-		FileLocation(Ref<tokenizer::TokenSource> file, fs::FilePath path):
-			  file(file),
+		FileLocation(Ref<tokenizer::TokenSource> source, fs::FilePath path):
+			  source(source),
 			  path(std::move(path)) {}
 
 	private:
-		Ref<tokenizer::TokenSource> file;  ///< source file
-		fs::FilePath              path;
+		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
+		fs::FilePath              path; ///< Path to the original file.
 	};
 
 	/**
@@ -107,8 +107,8 @@ namespace dia {
 
 	private:
 		SourcePosition            parent;
-		Ref<tokenizer::TokenSource> file;  ///< source file.
-		fs::FilePath              path;
+		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
+		fs::FilePath              path; ///< Path to original file
 	};
 
 	class FakeLocation final: public Location {

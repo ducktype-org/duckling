@@ -21,16 +21,16 @@ namespace dia {
 
 	void Location::printSuffixInfo(printer::PrinterOStream&) const {}
 
-	Ref<tokenizer::TokenSource> FileLocation::getSource() const { return file; }
+	Ref<tokenizer::TokenSource> FileLocation::getSource() const { return source; }
 
 	fs::FilePath FileLocation::getSourceFile() const { return path; }
 
-	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> file):
+	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> source):
 		  parent(parent),
-		  file(file),
+		  source(source),
 		  path(parent.getSource()->getPath()) {}
 
-	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return file; }
+	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return source; }
 
 	fs::FilePath MacroLocation::getSourceFile() const { return path; }
 

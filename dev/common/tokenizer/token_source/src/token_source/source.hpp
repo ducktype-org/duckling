@@ -41,9 +41,15 @@ namespace tokenizer {
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
 
+		/**
+		 * @brief Construct a new TokenSource from file.
+		 */
 		explicit TokenSource(const fs::FilePath&);
 
-		explicit TokenSource(dia::SourcePosition, std::string_view);
+		/**
+		 * @brief Construct a new TokenSource as a macro with parent position.
+		 */
+		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
 
 		template<class T, class... Ts>
 		friend base::Box<T> base::makeBox(Ts&&... args);

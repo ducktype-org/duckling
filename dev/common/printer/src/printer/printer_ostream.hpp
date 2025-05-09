@@ -3,6 +3,9 @@
 #include "printer_content.hpp"
 
 namespace printer {
+	/**
+	 * @brief Simple stream printer for efficient building of printer contents.
+	 */
 	class PrinterOStream {
 	private:
 		std::vector<PrinterContent> contents;
