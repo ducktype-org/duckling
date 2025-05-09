@@ -75,6 +75,12 @@ namespace compiler::helios {
 				case code::BuiltinBinary::IntegerPow:
 					result = std::pow(lhs_value, rhs_value);
 					break;
+				case code::BuiltinBinary::BooleanAnd:
+					result = lhs_value and rhs_value;
+					break;
+				case code::BuiltinBinary::BooleanOr:
+					result = lhs_value or rhs_value;
+					break;
 				default:
 					result = errors::HError(errors::Failed());
 					throw base::NotYetImplemented(
@@ -97,6 +103,26 @@ namespace compiler::helios {
 					result = errors::HError(errors::Failed());
 					break;
 				}
+			}
+
+			void visitTernaryOperatorExpr(const code::TernaryOperatorExpr& expr) final {
+				auto cond_result = evaluateExpr(ctx, *expr.condition);
+				if (cond_result.hasError()) {
+					result = cond_result;
+					return;
+				}
+				auto true_result = evaluateExpr(ctx, *expr.if_true);
+				if (true_result.hasError()) {
+					result = true_result;
+					return;
+				}
+				auto false_result = evaluateExpr(ctx, *expr.if_false);
+				if (false_result.hasError()) {
+					result = false_result;
+					return;
+				}
+
+				result = cond_result.value() ? true_result.value() : false_result.value();
 			}
 
 			void visitParenthesisExpr(const code::ParenthesisExpr& expr) final {

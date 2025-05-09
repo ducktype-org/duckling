@@ -19,9 +19,9 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
-		TESTER_ADD_TEST(variant_test);
-		TESTER_ADD_TEST(tuple_test);
-		TESTER_ADD_TEST(class_test);
+		TESTER_ADD_TEST(variantTest);
+		TESTER_ADD_TEST(tupleTest);
+		TESTER_ADD_TEST(classTest);
 	}
 
 private:
@@ -58,26 +58,26 @@ private:
 			}
 			testPrinting(unit_layout, ctx);
 
-			const std::array<AbstractType, 3> byte_sized_types{
-				ctx.query<QueryByteType>({}),
-				ctx.query<QueryBoolType>({}),
-				ctx.query<QueryCharType>({}),
-			};
-			for (AbstractType byte_sized_type: byte_sized_types) {
-				TypeLayout byte_sized_layout = ctx.query<QueryAbstractTypeLayout>(byte_sized_type);
+			const std::array<std::pair<AbstractType, Bits>, 3> small_types{ {
+				{ ctx.query<QueryBoolType>({}), BOOL_SIZE },
+				{ ctx.query<QueryByteType>({}), BYTE_SIZE },
+				{ ctx.query<QueryCharType>({}), CHAR_SIZE },
+			} };
+			for (auto [small_type, expected_small_size]: small_types) {
+				TypeLayout small_layout = ctx.query<QueryAbstractTypeLayout>(small_type);
 				assertTrue(
-					byte_sized_layout.getSize() == BYTE_SIZE,
+					small_layout.getSize() == expected_small_size,
 					"Integral layout should have size equal to that of the source type."
 				);
 				assertTrue(
-					byte_sized_layout.getSourceType() == byte_sized_type,
+					small_layout.getSourceType() == small_type,
 					"Layout should have source type as constructed."
 				);
-				variant_match(byte_sized_layout()) {
+				variant_match(small_layout()) {
 					variant_case(IntegralTypeLayout, l) { /* good */ }
 					variant_default { fail("Layout of byte sized type should be integral."); }
 				}
-				testPrinting(byte_sized_layout, ctx);
+				testPrinting(small_layout, ctx);
 			}
 
 			for (constexpr std::array<usize, 5> int_sizes{ 8, 16, 32, 64, 128 };
@@ -178,7 +178,7 @@ private:
 		});
 	}
 
-	void variant_test() {
+	void variantTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			SymbolType<>              i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
 			SymbolType<>              f16_type = st(ctx.query<QueryFloatType>(16));
@@ -219,7 +219,7 @@ private:
 		});
 	}
 
-	void tuple_test() {
+	void tupleTest() {
 		withContextDo([&](query::Context& ctx) -> void {
 			const SymbolType<> i8_type  = st(ctx.query<QueryIntegralType>({ 8 }));
 			const SymbolType<> f16_type = st(ctx.query<QueryFloatType>(16));
@@ -255,7 +255,7 @@ private:
 		});
 	}
 
-	void class_test() {
+	void classTest() {
 		// @TODO: Add reference fields to class layout test #608.
 		using namespace compiler::helios;
 		using namespace test_utils;

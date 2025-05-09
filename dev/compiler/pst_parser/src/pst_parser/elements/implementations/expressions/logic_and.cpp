@@ -21,7 +21,7 @@ namespace pst::expr {
 		auto out = makeBox<LogicAnd>(pos);
 
 		state.parse(out).with(&out->left, Lower::parse, +and_fwd);
-		state.parse(out).one(Keyword::Or);
+		state.parse(out).one(Keyword::And);
 		state.parse(out).with(&out->right, Self::parse, length - and_fwd - 1);
 
 		return out;
