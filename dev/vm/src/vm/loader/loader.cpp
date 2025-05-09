@@ -25,7 +25,6 @@
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
-#include <vm/loader/validator/validator.hpp>
 
 #include <expected>
 #include <unordered_map>
@@ -264,12 +263,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger logger;
 	program.insertCode(code_collection, logger);
-	if (logger.good()) {
-		auto validation_result = validator::verify(program);
-		if (!validation_result.has_value())
-			return std::unexpected(std::move(validation_result).error());
-		return compiler::compile(program);
-	}
+	if (logger.good()) return compiler::compile(program);
 	return std::unexpected(std::move(logger));
 }
 
