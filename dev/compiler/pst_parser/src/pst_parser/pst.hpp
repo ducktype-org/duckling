@@ -78,7 +78,7 @@ namespace pst {
 		 * @brief Construct a new Pst from tokenized file
 		 */
 		PST(Box<tokenizer::TokenSource>&& file) requires ParseAble<>: file(std::move(file)) {
-			if (getLogger().bad()) return;
+			if (getLogger()->bad()) return;
 			parse();
 		}
 
@@ -117,7 +117,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		const dia::Logger& getLogger() const {
+		const Ref<dia::Logger> getLogger() const {
 			return file->getLogger();
 		}
 

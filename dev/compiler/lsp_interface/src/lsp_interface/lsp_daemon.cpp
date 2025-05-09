@@ -153,7 +153,7 @@ void server(i32 port) {
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
-			if (pst.getLogger().bad()) pst.getLogger().dumpLog(true, ss);
+			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
 			return crow::response(200, ss.str());
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
@@ -176,9 +176,9 @@ void server(i32 port) {
 			auto        tokens = lexer::tokenizeFile(file);
 			pst::PST<>  pst(std::move(tokens));
 
-			if (pst.getLogger().bad()) {
+			if (pst.getLogger()->bad()) {
 				std::stringstream ss;
-				pst.getLogger().dumpLog(true, ss);
+				pst.getLogger()->dumpLog(true, ss);
 				return crow::response(200, ss.str());
 			};
 
@@ -204,9 +204,9 @@ void server(i32 port) {
 			auto        tokens = lexer::tokenizeFile(file);
 			pst::PST<>  pst(std::move(tokens));
 
-			if (pst.getLogger().bad()) {
+			if (pst.getLogger()->bad()) {
 				std::stringstream ss;
-				pst.getLogger().dumpLog(true, ss);
+				pst.getLogger()->dumpLog(true, ss);
 				return crow::response(200, ss.str());
 			};
 			auto pst_root = pst.getRootElement();

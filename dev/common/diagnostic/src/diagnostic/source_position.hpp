@@ -56,10 +56,6 @@ namespace dia {
 		 */
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
-		static SourcePosition childPosition(
-			SourcePosition parent, usize source_start, usize source_end
-		);
-
 		SourcePosition(CRef<Location>, usize source_start);
 		SourcePosition(CRef<Location>, usize source_start, usize source_end);
 		SourcePosition(const SourcePosition& other) = default;

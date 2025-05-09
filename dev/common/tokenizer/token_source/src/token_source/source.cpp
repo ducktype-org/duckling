@@ -91,7 +91,7 @@ namespace tokenizer {
 		return res;
 	}
 
-	dia::Logger& TokenSource::getLogger() { return log; }
+	Ref<dia::Logger> TokenSource::getLogger() { return &log; }
 
 	void TokenSource::runLexer() {
 		if (log.bad()) return;

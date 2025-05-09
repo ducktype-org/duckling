@@ -107,7 +107,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
 	template<typename Element>
-	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const dia::Logger&>;
+	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
 	template<typename Element>
 	using ExpansionResult = errors::HResult<pst::AccessLocked<Element>, ExpansionError<Element>>;
 

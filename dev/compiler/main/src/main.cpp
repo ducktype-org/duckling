@@ -189,7 +189,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		if (not tokenize_ok) {
 			std::cout << "Tokenization errors: ";
-			token_file->getLogger().dumpLog(true, std::cout);
+			token_file->getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n";
 			return 1;
 		} else {
@@ -224,9 +224,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		int exit_code = 0;
 
-		if (pst.getLogger().messageCount() != 0) {
+		if (pst.getLogger()->messageCount() != 0) {
 			std::cout << "Errors and messages: \n";
-			pst.getLogger().dumpLog(true, std::cout);
+			pst.getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n\n";
 			exit_code = 1;
 		}

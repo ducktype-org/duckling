@@ -30,7 +30,7 @@ namespace lexer {
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const dia::Logger& getLogger() const {
+		const Ref<dia::Logger> getLogger() const {
 			return logger;
 		}
 
@@ -112,7 +112,7 @@ namespace lexer {
 
 		usize                     where = 0;  ///< Current position in file
 		Ref<tokenizer::TokenSource> file;
-		dia::Logger&              logger;
+		Ref<dia::Logger>              logger;
 		const CharArray&          char_array;
 		Tokens                    tokens;
 

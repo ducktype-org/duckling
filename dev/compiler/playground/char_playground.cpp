@@ -16,8 +16,8 @@ int main(int argc, char** argv) {
 
 	file->decode<fs::Encoding::UTF8>();
 
-	if (file->getLogger().bad()) {
-		file->getLogger().dumpLog(true, std::cerr);
+	if (file->getLogger()->bad()) {
+		file->getLogger()->dumpLog(true, std::cerr);
 		return 0;
 	}
 

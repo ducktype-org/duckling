@@ -69,7 +69,7 @@ public:
 private:
 	template<typename Element>
 	pst::PST<Element> manualSteps(const std::string& filename) {
-		auto file = tokenizer::makeTokenFile(fs::FilePath(filename));
+		auto file = tokenizer::makeTokenSource(fs::FilePath(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}

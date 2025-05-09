@@ -532,7 +532,7 @@ namespace compiler::helios {
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
-			if (pst_ref.getLogger().good()) {
+			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
 				return errors::HError(

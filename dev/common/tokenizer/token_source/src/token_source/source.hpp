@@ -90,7 +90,7 @@ namespace tokenizer {
 		const lexer::TokenData& getTokenData() const;
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
-		dia::Logger&        getLogger();
+		Ref<dia::Logger>        getLogger();
 		[[nodiscard]]
 		fs::FilePath getPath() const;
 
@@ -98,7 +98,7 @@ namespace tokenizer {
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(Ref(this), log));
+			decoded.emplace(lexer::decode<encoding>(Ref(this), &log));
 		}
 
 		void countLines();

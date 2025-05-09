@@ -25,5 +25,5 @@ int main(int argc, char** argv) {
 	FilePath path(argv[1]);
 	auto     TokenSource = tokenizer::makeTokenSource(path);
 	TokenSource->tokenize();
-	if (TokenSource->getLogger().bad()) TokenSource->getLogger().dumpLog(true);
+	if (TokenSource->getLogger()->bad()) TokenSource->getLogger()->dumpLog(true);
 }
