@@ -110,11 +110,11 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPosition() const;
 
-		usize                     where = 0;  ///< Current position in file
+		usize                       where = 0;  ///< Current position in file
 		Ref<tokenizer::TokenSource> file;
-		Ref<dia::Logger>              logger;
-		const CharArray&          char_array;
-		Tokens                    tokens;
+		Ref<dia::Logger>            logger;
+		const CharArray&            char_array;
+		Tokens                      tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug

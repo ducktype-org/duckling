@@ -3,8 +3,8 @@
 #include "classifications.hpp"
 
 #include <diagnostic/source_position.hpp>
-#include <token_source/source.hpp>
 #include <token_source/forward.hpp>
+#include <token_source/source.hpp>
 
 #include <base/convert.hpp>
 #include <base/int_conv.hpp>
@@ -28,7 +28,7 @@ namespace lexer {
 	class DecodingError: public dia::Error {
 	private:
 		Ref<tokenizer::TokenSource> file;
-		usize                     byte;
+		usize                       byte;
 
 	public:
 		DecodingError(Ref<tokenizer::TokenSource> file, usize byte):
@@ -186,7 +186,8 @@ namespace lexer {
 		while (pos < bytes.size()) {
 			// Check if current byte is not a continuation byte
 			if (((bytes[pos] ^ byte{ 0b10000000u }) & byte{ 0b11000000u }) == byte{ 0 }) {
-				log->log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos]));
+				log->log(makeBox<Utf8UnexpectedContinuationError>(file, pos + 1, (usize) bytes[pos])
+				);
 				pos++;
 				continue;
 			}

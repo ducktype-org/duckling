@@ -29,8 +29,8 @@ namespace pst {
 
 	private:
 		Box<tokenizer::TokenSource> file;
-		AccessInternal<Element>   element;
-		std::vector<ImportType>   imports;
+		AccessInternal<Element>     element;
+		std::vector<ImportType>     imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.

@@ -27,8 +27,8 @@ namespace vm::loader::parser {
 		// @TODO: Decide on a better position
 		// So that they dont't die
 		static std::vector<Box<tokenizer::TokenSource>> tokenized_files;
-		auto                                          log = dia::Logger();
-		std::vector<ParsedFile>                       parsed_files;
+		auto                                            log = dia::Logger();
+		std::vector<ParsedFile>                         parsed_files;
 
 		for (const auto& file: files) {
 			tokenized_files.emplace_back(tokenizeFile(file));

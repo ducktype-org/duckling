@@ -81,7 +81,7 @@ namespace dia {
 
 	private:
 		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
-		fs::FilePath              path; ///< Path to the original file.
+		fs::FilePath                path;    ///< Path to the original file.
 	};
 
 	/**
@@ -106,9 +106,9 @@ namespace dia {
 		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> file);
 
 	private:
-		SourcePosition            parent;
+		SourcePosition              parent;
 		Ref<tokenizer::TokenSource> source;  ///< Source of tokens.
-		fs::FilePath              path; ///< Path to original file
+		fs::FilePath                path;    ///< Path to original file
 	};
 
 	class FakeLocation final: public Location {

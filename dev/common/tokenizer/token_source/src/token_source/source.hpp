@@ -56,7 +56,7 @@ namespace tokenizer {
 
 	public:
 		TokenSource(const TokenSource&) = delete;
-		TokenSource()                 = delete;
+		TokenSource()                   = delete;
 
 		TokenSource(TokenSource&&) = delete;
 
@@ -90,7 +90,7 @@ namespace tokenizer {
 		const lexer::TokenData& getTokenData() const;
 		[[nodiscard]]
 		CRef<dia::Location> getLocation() const;
-		Ref<dia::Logger>        getLogger();
+		Ref<dia::Logger>    getLogger();
 		[[nodiscard]]
 		fs::FilePath getPath() const;
 
