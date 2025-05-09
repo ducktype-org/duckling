@@ -283,7 +283,11 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<code::CodeCollection>& code_collection
 ) {
 	LoaderLogger logger;
+	std::cerr << "Program before adding: \n";
+	program.dprint();
 	program.insertCode(code_collection, logger);
+	std::cerr << "Program after adding: \n";
+	program.dprint();
 	if (logger.good()) {
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
