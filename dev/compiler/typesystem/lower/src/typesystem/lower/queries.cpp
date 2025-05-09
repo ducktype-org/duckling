@@ -27,6 +27,8 @@ namespace tsl {
 				return StringTypeLayout(key);
 			case Function:
 				return FunctionalTypeLayout(key);
+			case DynamicArray:
+				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:

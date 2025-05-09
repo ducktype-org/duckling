@@ -5,6 +5,7 @@
 #include <query_framework/context.hpp>
 #include <typesystem/higher/type_interface.hpp>
 
+#include "base/bits_and_bytes.hpp"
 #include <base/variant.hpp>
 
 using base::bytes2bits;
@@ -135,6 +136,14 @@ namespace tsl {
 			return result;
 		}
 	}
+
+	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
+		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+	):
+		  TypeLayoutABC(base::bytes2bits(POINTER_SIZE + OFFSET_SIZE * 3), dynamic_array_type),
+		  element_layout(makeBox<TypeLayout>(
+			  ctx.query<QueryAbstractTypeLayout>(dynamic_array_type.getElementType())
+		  )) {}
 
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;

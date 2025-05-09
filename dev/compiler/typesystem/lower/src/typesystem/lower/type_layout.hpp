@@ -181,6 +181,7 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
+		// @FIXME compute it from pointer size constant
 		static constexpr auto POINTER_SIZE = Bytes(8);
 		static constexpr auto OFFSET_SIZE  = Bytes(8);
 
@@ -215,6 +216,35 @@ namespace tsl {
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
 			return POINTER_SIZE + OFFSET_SIZE * 2;
+		}
+	};
+
+	/**
+	 * @brief Layout of a dynamic array type.
+	 */
+	class DynamicArrayTypeLayout final: public TypeLayoutABC {
+		/**
+		 * The dynamic array type consists of four parts of information:
+		 * -# Pointer to the start of data
+		 * -# Offset of the end of data
+		 * -# Offset of the start of reserved memory
+		 * -# Offset of the end of reserved memory
+		 * The pointer and offsets are arranged in this exact order in memory.
+		 */
+		// @FIXME compute it from pointer size constant
+		static constexpr auto POINTER_SIZE = Bytes(8);
+		static constexpr auto OFFSET_SIZE  = Bytes(8);
+
+		Box<TypeLayout> element_layout;
+
+	public:
+		explicit DynamicArrayTypeLayout(
+			tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
+		);
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
+			return getIndent(indent) + "DynamicArray : " + std::to_string(getSize());
 		}
 	};
 
