@@ -29,7 +29,7 @@ class PSTBuilderTest: public tester::TestSuite {
 
 		bool operator()() {
 			auto parsed = pst::PST<Element>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -99,8 +99,8 @@ private:
 		pst::PST<Element> PSTmanual   = manualSteps<Element>(filepath);
 		pst::PST<Element> PSTcontent  = fromContents<Element>(filepath);
 		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
-		assertTrue(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
-		assertTrue(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
+		assertTrue(PSTmanual.getLogger()->good() == PSTcontent.getLogger()->good(), error);
+		assertTrue(PSTmanual.getLogger()->good() == PSTfilename.getLogger()->good(), error);
 		std::string manualPrint   = stringDprint(PSTmanual);
 		std::string contentPrint  = stringDprint(PSTcontent);
 		std::string filenamePrint = stringDprint(PSTfilename);
