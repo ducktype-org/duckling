@@ -9,6 +9,7 @@
 #include <helios/queries.hpp>
 #include <helios/query_hout_of_expr.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
@@ -71,13 +72,13 @@ namespace lsp {
 
 		if (!expr.hasValue()) return {};
 
-		auto id_expr = dynamic_cast<compiler::helios::code::IdentifierExpr*>(&*expr.value());
-
 		base::Optional<Definition> result;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto stmt = compiler::helios::stmt(ctx, id_expr->symbol);
-			result    = Definition(&*stmt.value());
+			auto stmt = compiler::helios::stmt(
+				ctx, compiler::helios::querySymIDOfExpr(ctx, expr.value().ref()).value()
+			);
+			result = Definition(&*stmt.value());
 		});
 
 		return { result };

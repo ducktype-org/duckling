@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 
 	auto process_pid = vm::api::spawn().value().pid;
 
-	auto loaded_file_response = vm::api::loadFile(process_pid, file);
+	auto loaded_file_response = vm::api::loadFiles(process_pid, { file });
 
 	if (!loaded_file_response.has_value()) {
 		auto error = loaded_file_response.error();

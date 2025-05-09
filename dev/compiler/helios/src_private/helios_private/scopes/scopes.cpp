@@ -24,7 +24,6 @@
 
 namespace compiler::helios {
 
-
 	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
 

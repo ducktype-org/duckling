@@ -83,10 +83,10 @@ namespace vm {
 	}
 
 	void Memory::insertGlobalData(GlobalDataID id, TypeCRef type) {
-		CORE_ASSERT(!global_data.contains(id), "Duplicated global data id!");
-
-		auto             type_size = type->getSize();
-		base::OwningView storage(new byte[type_size], type_size);
-		global_data.put(id, std::move(storage));
+		if (!global_data.contains(id)) {
+			auto             type_size = type->getSize();
+			base::OwningView storage(new byte[type_size], type_size);
+			global_data.put(id, std::move(storage));
+		}
 	}
 }
