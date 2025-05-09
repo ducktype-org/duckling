@@ -2,6 +2,7 @@
 
 #include "../types.hpp"
 #include "query_framework/query_int.hpp"
+#include "typesystem/higher/abstract_type.hpp"
 
 #include <base/maps.hpp>
 
@@ -84,9 +85,12 @@ namespace tsh {
 	 */
 	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
 
+	/**
+	 * @brief Query to get the DynamicArray type.
+	 * The AbstractType of the elements of the array is given as a key.
+	 */
+	DECLARE_QUERY(QueryDynamicArrayType, AbstractType, DynamicArrayAbstractType)
 
-	DECLARE_QUERY(QueryDynamicArrayType, key, DynamicArrayAbstractType)
-	
 	/**
 	 * @brief Key for QueryTupleType.
 	 */

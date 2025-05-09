@@ -377,6 +377,33 @@ namespace tsh::internal {
 		StringAbstractTypeImpl() { representation = "string"; }
 	};
 
+	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
+		AbstractType element_type;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
+
+		DynamicArrayAbstractTypeImpl(const AbstractType element): element_type(element) {
+			representation = base::strConcat("dynamic_array(", element.toString(), ")");
+		}
+
+		[[nodiscard]]
+		AbstractType getElementType() const {
+			return element_type;
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+	};
+
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {
 		std::vector<SymbolType<>> components;
 
