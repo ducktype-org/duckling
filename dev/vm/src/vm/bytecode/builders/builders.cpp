@@ -262,10 +262,6 @@ void FunctionBuilder::initType(instructions::Op_init_lany_type init) {
 
 void FunctionBuilder::handleDeinit() {
 	if (local_stack.empty()) throw EmptyStackDeinitError();
-
-	TypeCRef func_result_type = *type_context.getMetadata().at(name.str)->getResultType();
-	if (func_result_type->getSize() > 0 && local_stack.size() == 1) throw ReturnValueDeinitError();
-
 	local_stack.pop_back();
 }
 

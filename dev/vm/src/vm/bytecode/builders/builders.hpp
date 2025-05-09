@@ -16,7 +16,6 @@
 #include <vm/utils/stable_type_id_name_map.hpp>
 
 #include <cstdint>
-#include <iostream>
 #include <utility>
 #include <vector>
 

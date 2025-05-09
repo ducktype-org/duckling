@@ -105,13 +105,6 @@ namespace vm::code::builders {
 		EmptyStackDeinitError(): BuilderError(base ::strConcat(ERR_MSG)) {}
 	};
 
-	class ReturnValueDeinitError: public BuilderError {
-	public:
-		constexpr const static std::string_view ERR_MSG = "Deinitializing functions return value.";
-
-		ReturnValueDeinitError(): BuilderError(base::strConcat(ERR_MSG)) {}
-	};
-
 	class BadReturnError: public BuilderError {
 	public:
 		constexpr const static std ::string_view ERR_MSG

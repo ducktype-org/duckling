@@ -91,9 +91,8 @@ private:
 
 		func_builder.addInstruction(instr);
 
-		func_builder.addInstruction(Op_deinit()); // c
-		func_builder.addInstruction(Op_deinit()); // b
-		func_builder.addInstruction(Op_deinit()); // a
+		func_builder.addInstruction(Op_deinit());
+		func_builder.addInstruction(Op_deinit());
 
 		func_builder.initType(Op_init_lany_type{ d, int32 });
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
@@ -135,9 +134,11 @@ private:
 		func_builder.addInstruction(instr_output);
 		func_builder.addInstruction(Op_deinit());  // a
 		func_builder.addInstruction(Op_deinit());  // b
-		assertThrows<ReturnValueDeinitError>(
-			[&] { func_builder.addInstruction(Op_deinit()); }, "Can't deinitialize functions return value."
+		func_builder.addInstruction(Op_deinit());  // ret val (int64)
+		assertThrows<EmptyStackDeinitError>(
+			[&] { func_builder.addInstruction(Op_deinit()); }, "Cannot pop from empty variable stack"
 		);
+
 		func_builder.addInstruction(InstructionBuilder(OpKind::ret));
 
 		std::stringstream ss;

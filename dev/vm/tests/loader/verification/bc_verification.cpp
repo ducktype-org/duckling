@@ -4,7 +4,6 @@
 #include <vm/api/data/load_program_error.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/validator/errors.hpp>
-#include "tester/tester.hpp"
 
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
