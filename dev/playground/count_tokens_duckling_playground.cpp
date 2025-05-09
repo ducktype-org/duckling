@@ -9,7 +9,7 @@
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 #include <iostream>
 
@@ -57,7 +57,7 @@ int main(int argc, const char** argv) {
 	}
 
 	auto path = input.getPositional<fs::FilePath>(0);
-	auto file = tokenizer::makeTokenFile(path);
+	auto file = tokenizer::makeTokenSource(path);
 
 	if (!file->tokenize()) {
 		std::cout << -1;

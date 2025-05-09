@@ -7,7 +7,7 @@
 #include "location.hpp"
 
 #include <printer/printer_content.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 #include <base/exceptions.hpp>
 
@@ -76,7 +76,7 @@ namespace dia {
 	SourcePosition::SourcePosition():
 		  source_start(0),
 		  source_end(0),
-		  location_type(LocationType::FakeLocation),
+		  location_type(LocationType::FakeLocationType),
 		  location(FakeLocation::getInstance()) {}
 
 	SourcePosition::SourcePosition(CRef<Location> location, const usize source_start):
@@ -115,7 +115,7 @@ namespace dia {
 
 	usize SourcePosition::getEnd() const { return source_end; }
 
-	Ref<tokenizer::TokenFile> SourcePosition::getSource() const { return location->getSource(); }
+	Ref<tokenizer::TokenSource> SourcePosition::getSource() const { return location->getSource(); }
 
 	LocationType SourcePosition::getLocationType() const { return location_type; }
 

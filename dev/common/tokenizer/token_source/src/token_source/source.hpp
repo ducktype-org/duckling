@@ -21,7 +21,7 @@ namespace tokenizer {
 	 *
 	 * @note For now it's very minimal and doesn't check proper usage.
 	 */
-	class TokenFile {
+	class TokenSource {
 	private:
 		dia::Logger                            log;
 		base::Box<dia::Location>               location;
@@ -41,18 +41,18 @@ namespace tokenizer {
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
 
-		explicit TokenFile(const fs::FilePath&);
+		explicit TokenSource(const fs::FilePath&);
 
-		explicit TokenFile(dia::SourcePosition, std::string_view);
+		explicit TokenSource(dia::SourcePosition, std::string_view);
 
 		template<class T, class... Ts>
 		friend base::Box<T> base::makeBox(Ts&&... args);
 
 	public:
-		TokenFile(const TokenFile&) = delete;
-		TokenFile()                 = delete;
+		TokenSource(const TokenSource&) = delete;
+		TokenSource()                 = delete;
 
-		TokenFile(TokenFile&&) = delete;
+		TokenSource(TokenSource&&) = delete;
 
 		/**
 		 * @brief Compute pair (line, column) from character index.
@@ -114,7 +114,7 @@ namespace tokenizer {
 	};
 
 	template<class... Ts>
-	Box<TokenFile> makeTokenFile(Ts&&... args) {
-		return makeBox<TokenFile>(std::forward<Ts>(args)...);
+	Box<TokenSource> makeTokenSource(Ts&&... args) {
+		return makeBox<TokenSource>(std::forward<Ts>(args)...);
 	}
 }

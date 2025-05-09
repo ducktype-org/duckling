@@ -1,6 +1,6 @@
 #include "diagnostic_converters.hpp"
 
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 #include <iomanip>
 #include <sstream>

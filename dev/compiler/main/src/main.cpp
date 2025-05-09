@@ -183,7 +183,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
-		auto token_file = tokenizer::makeTokenFile(file_to_lex);
+		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
 		bool tokenize_ok = token_file->tokenize();
 

@@ -5,4 +5,4 @@ add_library(Diagnostic
         src/diagnostic/location.cpp
 )
 
-make_module(Diagnostic USES Printer Filesystem TokenFile)
+make_module(Diagnostic USES Printer Filesystem TokenSource)

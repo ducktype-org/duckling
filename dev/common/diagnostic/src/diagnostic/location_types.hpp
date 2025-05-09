@@ -2,8 +2,8 @@
 
 namespace dia {
 	enum LocationType {
-		FakeLocation,
-		FileLocation,
-		MacroLocation,
+		FakeLocationType,
+		FileLocationType,
+		MacroLocationType,
 	};
 }

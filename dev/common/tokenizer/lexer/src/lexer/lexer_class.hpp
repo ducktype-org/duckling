@@ -6,7 +6,7 @@
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 #include <vector>
 
@@ -24,7 +24,7 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(Ref<tokenizer::TokenFile>);
+		explicit Lexer(Ref<tokenizer::TokenSource>);
 
 		[[nodiscard]]
 		TokenData tokenize();
@@ -111,7 +111,7 @@ namespace lexer {
 		dia::SourcePosition currentPosition() const;
 
 		usize                     where = 0;  ///< Current position in file
-		Ref<tokenizer::TokenFile> file;
+		Ref<tokenizer::TokenSource> file;
 		dia::Logger&              logger;
 		const CharArray&          char_array;
 		Tokens                    tokens;

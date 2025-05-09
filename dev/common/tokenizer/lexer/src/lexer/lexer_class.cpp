@@ -194,7 +194,7 @@ namespace lexer {
 		};
 	};
 
-	Lexer::Lexer(Ref<tokenizer::TokenFile> file):
+	Lexer::Lexer(Ref<tokenizer::TokenSource> file):
 		  file(file),
 		  logger(file->getLogger()),
 		  char_array(file->getChars()) {

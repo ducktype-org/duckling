@@ -1,5 +1,5 @@
 
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 #include <vm/loader/parser/elements.hpp>
 
@@ -7,12 +7,12 @@
 
 namespace vm::loader::parser {
 
-	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& path) {
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& path) {
 		lang_def::setKeywordMode(lang_def::KeywordMode::DuckBC);
 		return lexer::tokenizeFile(path);
 	}
 
-	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
+	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, dia::Logger& log) {
 		const lexer::TokenData& td = file->getTokenData();
 
 		F8ParserState state(
@@ -26,7 +26,7 @@ namespace vm::loader::parser {
 	) {
 		// @TODO: Decide on a better position
 		// So that they dont't die
-		static std::vector<Box<tokenizer::TokenFile>> tokenized_files;
+		static std::vector<Box<tokenizer::TokenSource>> tokenized_files;
 		auto                                          log = dia::Logger();
 		std::vector<ParsedFile>                       parsed_files;
 

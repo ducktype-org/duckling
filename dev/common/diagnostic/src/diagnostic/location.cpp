@@ -1,6 +1,6 @@
 #include "location.hpp"
 
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 namespace dia {
 	void Location::printPrefixInfo(printer::PrinterOStream& out) const {
@@ -21,16 +21,16 @@ namespace dia {
 
 	void Location::printSuffixInfo(printer::PrinterOStream&) const {}
 
-	Ref<tokenizer::TokenFile> FileLocation::getSource() const { return file; }
+	Ref<tokenizer::TokenSource> FileLocation::getSource() const { return file; }
 
 	fs::FilePath FileLocation::getSourceFile() const { return path; }
 
-	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file):
+	MacroLocation::MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> file):
 		  parent(parent),
 		  file(file),
 		  path(parent.getSource()->getPath()) {}
 
-	Ref<tokenizer::TokenFile> MacroLocation::getSource() const { return file; }
+	Ref<tokenizer::TokenSource> MacroLocation::getSource() const { return file; }
 
 	fs::FilePath MacroLocation::getSourceFile() const { return path; }
 
@@ -53,7 +53,7 @@ namespace dia {
 		out << reason << "\n";
 	}
 
-	Ref<tokenizer::TokenFile> FakeLocation::getSource() const {
+	Ref<tokenizer::TokenSource> FakeLocation::getSource() const {
 		CORE_PANIC("Tried to access a fake location from a fake position.");
 	}
 

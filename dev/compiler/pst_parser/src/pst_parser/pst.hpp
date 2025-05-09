@@ -4,7 +4,7 @@
 #include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 #include "lang_parser_state.hpp"
 
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 namespace pst {
 	/**
@@ -28,7 +28,7 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenFile> file;
+		Box<tokenizer::TokenSource> file;
 		AccessInternal<Element>   element;
 		std::vector<ImportType>   imports;
 
@@ -57,7 +57,7 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
+			  : file(tokenizer::makeTokenSource(fs::FilePath::createTempFile(content))) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -68,7 +68,7 @@ namespace pst {
 		template<typename... Args>
 		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args)
 			requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenFile(pos, content)) {
+			  : file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -77,7 +77,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(Box<tokenizer::TokenFile>&& file) requires ParseAble<>: file(std::move(file)) {
+		PST(Box<tokenizer::TokenSource>&& file) requires ParseAble<>: file(std::move(file)) {
 			if (getLogger().bad()) return;
 			parse();
 		}
@@ -85,7 +85,7 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenFile(path)) {
+		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
 			if (!file->tokenize()) return;
 			parse();
 		}
@@ -122,7 +122,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getFile() const {
+		Ref<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
 

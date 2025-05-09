@@ -22,7 +22,7 @@ int main() {
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 #include <printer/printer_ostream.hpp>
-#include <token_file/forward.hpp>
+#include <token_source/forward.hpp>
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
@@ -103,7 +103,7 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getSource() const;
+		Ref<tokenizer::TokenSource> getSource() const;
 		[[nodiscard]]
 		LocationType getLocationType() const;
 

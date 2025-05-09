@@ -42,7 +42,7 @@ namespace dia {
 		 * @brief Returns the file connected to the location.
 		 */
 		[[nodiscard]]
-		virtual Ref<tokenizer::TokenFile> getSource() const
+		virtual Ref<tokenizer::TokenSource> getSource() const
 			= 0;
 
 		virtual LocationType getLocationType() const = 0;
@@ -65,22 +65,22 @@ namespace dia {
 	class FileLocation final: public Location {
 	public:
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getSource() const override;
+		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {
-			return LocationType::FileLocation;
+			return LocationType::FileLocationType;
 		}
 
-		FileLocation(Ref<tokenizer::TokenFile> file, fs::FilePath path):
+		FileLocation(Ref<tokenizer::TokenSource> file, fs::FilePath path):
 			  file(file),
 			  path(std::move(path)) {}
 
 	private:
-		Ref<tokenizer::TokenFile> file;  ///< source file
+		Ref<tokenizer::TokenSource> file;  ///< source file
 		fs::FilePath              path;
 	};
 
@@ -93,21 +93,21 @@ namespace dia {
 
 	public:
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getSource() const override;
+		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {
-			return LocationType::MacroLocation;
+			return LocationType::MacroLocationType;
 		}
 
-		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file);
+		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> file);
 
 	private:
 		SourcePosition            parent;
-		Ref<tokenizer::TokenFile> file;  ///< source file.
+		Ref<tokenizer::TokenSource> file;  ///< source file.
 		fs::FilePath              path;
 	};
 
@@ -122,14 +122,14 @@ namespace dia {
 
 	public:
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getSource() const override;
+		Ref<tokenizer::TokenSource> getSource() const override;
 
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
 		[[nodiscard]]
 		LocationType getLocationType() const override {
-			return LocationType::FakeLocation;
+			return LocationType::FakeLocationType;
 		}
 
 		void printMessage(
