@@ -27,6 +27,11 @@ namespace base {
 			"When this fail, figure out what to do."
 		);
 
+		StableVector(std::vector<Box<Data>> data): data(std::move(data)) {}
+
+		template<class T>
+		friend class StableVector;
+
 	public:
 		using RefT  = Ref<Data>;
 		using CRefT = CRef<Data>;
@@ -112,5 +117,23 @@ namespace base {
 		auto begin() const { return data.begin(); }
 
 		auto end() const { return data.end(); }
+
+		/**
+		 * @brief Converts stable vector into
+		 * A stable vector storing the same objects but as const Data (instead of Data).
+		 * It is useful when we want to "lock" the state of the objects stored in StableVector.
+		 * @note References created before this operation may still modify the data.
+		 *
+		 * The original container is left in an empty state, and should not be used again.
+		 */
+		StableVector<const Data> toConstData() && {
+			// we have to do this this way, since
+			// std does not provide any direct vector<T> -> vector<Q> construction.
+			std::vector<Box<const Data>> casted;
+			casted.reserve(data.size());
+			for (auto& item: data) casted.emplace_back(std::move(item));
+			data.clear();
+			return StableVector<const Data>(std::move(casted));
+		}
 	};
 }

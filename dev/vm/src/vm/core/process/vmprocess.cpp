@@ -1,6 +1,7 @@
 #include "vmprocess.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
@@ -31,14 +32,15 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::LoadProgramError> VMProcess::loadProgram(
-		const std::variant<fs::FilePath, code::CodeCollection>& source
+		const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source
 	) {
-		std::unique_lock lock(rw_global);
-		// @TODO: this code should be improved in the future to not just return plain strings
+		std::unique_lock                                       lock(rw_global);
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(fs::FilePath, file) { return loader->getProgram(file); }
-				variant_case(code::CodeCollection, code) { return loader->getProgram(code); }
+				variant_case(std::vector<fs::FilePath>, files) { return loader->getProgram(files); }
+				variant_case(std::vector<code::CodeCollection>, code) {
+					return loader->getProgram(code);
+				}
 			}
 			CORE_UNREACHABLE();
 		}();
@@ -54,28 +56,46 @@ namespace vm {
 		}
 	}
 
-	std::expected<api::Response, api::CoreOperationError> VMProcess::run(
-		const std::vector<std::string>& args
+	std::expected<api::Response, api::CoreOperationError> VMProcess::runFunction(
+		const std::string& func_name, const RunArguments& run_arguments
 	) {
 		std::unique_lock lock(rw_global);
 		if (!loaded_program.has_value())
 			return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
-		bool response = getMainVMThread().initThreadAndRun(&*loaded_program, args);
+		bool response
+			= getMainVMThread().spawnThreadAndRun(&*loaded_program, func_name, run_arguments);
 		if (!response) return std::unexpected(api::CoreOperationError{ api::RunError{} });
 
 		return api::Response(api::response::Empty());
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::join() {
-		// @TODO: more verbose errors
 		// @TODO: check status
-		auto& thread = getMainVMThread().exec_thread;
-		if (thread && thread->joinable())
-			thread->join();
-		else
+		auto& thread          = getMainVMThread();
+		auto& opt_exec_thread = thread.exec_thread;
+		if (!opt_exec_thread || !opt_exec_thread->joinable())
 			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
-		return api::Response(api::response::Empty());
+
+		opt_exec_thread->join();
+		opt_exec_thread.reset();
+
+		auto execution_status = thread.execution_response_queue.pop();
+		variant_match(execution_status) {
+			variant_case(api::ExecutionCompleted, completed) {
+				return api::Response(api::response::Empty());
+			}
+			variant_case(api::ExecutionPanicked, panicked) {
+				return std::unexpected(api::CoreOperationError(api::OtherError("Execution panicked!"
+				)));
+			}
+			variant_default {
+				return std::unexpected(
+					api::CoreOperationError(api::OtherError("Unexpected run status!"))
+				);
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::input(
@@ -99,9 +119,16 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::CoreOperationError> VMProcess::stop() {
-		auto response = getMainVMThread().stop();
-		(void) join();
-		getMainVMThread().exec_thread.reset();
+		auto& thread          = getMainVMThread();
+		auto  response        = thread.stop();
+		auto& opt_exec_thread = thread.exec_thread;
+
+		if (opt_exec_thread && opt_exec_thread->joinable()) {
+			opt_exec_thread->join();
+			getMainVMThread().exec_thread.reset();
+		} else {
+			return std::unexpected(api::CoreOperationError{ api::JoinError{} });
+		}
 
 		// @TODO: make two different "stop" functions, one that throws error if program panicked
 		if (!response)
@@ -114,7 +141,12 @@ namespace vm {
 		const api::ExecutorRequest& request
 	) {
 		variant_match(request) {
-			variant_case(api::request::Run, run_request) { return run(run_request.args); }
+			variant_case(api::request::Run, run_request) {
+				return runFunction("main", run_request.program_args);
+			}
+			variant_case(api::request::RunFunction, run_func_request) {
+				return runFunction(run_func_request.func_name, run_func_request.func_args);
+			}
 			variant_case_novalue(api::request::Join) { return join(); }
 			variant_case_novalue(api::request::Pause) {
 				auto response = getMainVMThread().pause();
@@ -135,8 +167,8 @@ namespace vm {
 					});
 				return getMainVMThread().getCurrentPosition();
 			}
-			variant_case(api::request::LoadFile, load_request) {
-				return loadProgram(load_request.filename).transform_error([](auto err) {
+			variant_case(api::request::LoadFiles, load_request) {
+				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
@@ -285,13 +317,12 @@ namespace vm {
 	}
 
 	std::expected<api::Response, api::StateError> VMProcess::getExitCode() {
-		auto proc_status = getStatus();
 		variant_match(getStatus()) {
 			variant_case(api::Executing, exec_status) {
 				variant_match(exec_status.exec_status) {
 					variant_case(api::ExecutionCompleted, completed) { return completed.exit_code; }
 					variant_default return std::unexpected(
-						api::StateError("Execution is did not complete")
+						api::StateError("Execution did not complete")
 					);
 				}
 			}

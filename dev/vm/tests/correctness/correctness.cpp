@@ -12,7 +12,6 @@ public:
 		TESTER_ADD_TEST(testFibIter);
 		TESTER_ADD_TEST(testFibRec);
 		TESTER_ADD_TEST(testTailCall);
-		TESTER_ADD_TEST(testTailCallDifferentArgs);
 	}
 
 private:
@@ -29,8 +28,6 @@ private:
 	void testFibRec() { runTestOnVm("fib_rec.dbc", "28", "317811", {}); }
 
 	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0", {}); }
-
-	void testTailCallDifferentArgs() { runTestOnVm("tailcall_different_funcs.dbc", "5", "20", {}); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/correctness/");

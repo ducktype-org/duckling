@@ -1,5 +1,6 @@
 #include "query_hout_of_expr.hpp"
 
+#include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
@@ -8,6 +9,7 @@
 #include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>
+#include <typesystem/higher/queries.hpp>
 
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
@@ -56,75 +58,77 @@ namespace compiler::helios::code {
 		}
 
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
-			explicit PstExprToHoutExprVisitor(query::Context& ctx, ScopeID scope):
-				  ctx(ctx),
-				  scope(scope) {}
+			explicit PstExprToHoutExprVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
-			ScopeID         scope;
 
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
-				node = makeBox<LiteralIntExpr>(ctx, scope, std::stoi(stmt->getValue().str()));
+				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
 			}
 
 			/**
-			 * If valid builtin exist, returns it.
-			 * Otherwise returns None.
+			 * If a valid builtin exists (special characters only), returns it.
+			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> binaryBuiltin(base::StrID op, Box<Expr> lhs, Box<Expr> rhs) {
-				// note: this is mock that works only for very simple int op int.
+				// note: this is mock that works only for very simple int op int and bool op bool.
 				// @todo: make it smarter?
 				// @TODO: this whole section could be moved to a separate file
 				// // when refactoring it remember about unaryBuiltin
 
+				// Get argument types.
 				auto lhs_type = lhs->expression_type;
 				auto rhs_type = rhs->expression_type;
 
-				bool is_lhs_integer = lhs_type.getType().getKind() == tsh::Kind::Integral;
-				bool is_rhs_integer = rhs_type.getType().getKind() == tsh::Kind::Integral;
+				// Confirm appropriate types.
+				auto argument_kind           = lhs_type.getType().getKind();
+				bool are_arguments_same_kind = argument_kind == rhs_type.getType().getKind();
+				bool are_arguments_int_or_bool
+					= argument_kind == tsh::Kind::Integral or argument_kind == tsh::Kind::Bool;
 
-				if (not is_lhs_integer or not is_rhs_integer) {
+				if (not are_arguments_same_kind or not are_arguments_int_or_bool) {
 					// @TODO: report an error?
-					// no builtins for non-integers for now:
+					// No builtins for types other than ints and bools for now.
 					return {};
 				}
 
-				auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
-				auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
+				// Confirm matching sizes and signedness in the case of integers.
+				if (argument_kind == tsh::Kind::Integral) {
+					auto lhs_as_integer = tsh::IntegralAbstractType(lhs_type.getType());
+					auto rhs_as_integer = tsh::IntegralAbstractType(rhs_type.getType());
 
-				// we only do the most simplest version here:
-				if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
-				    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
-					// we don't have builtins for this case for now:
-					return {};
+					if (lhs_as_integer.getSize() != rhs_as_integer.getSize()
+					    or lhs_as_integer.getSignedness() != rhs_as_integer.getSignedness()) {
+						return {};
+					}
 				}
-
-				// only few things supported for now:
 
 				// @TODO: change to base::map when possible
-				const static std::map<base::StrID, BuiltinBinary> operators
-					= { { base::StrID("+"), BuiltinBinary::IntegerAdd },
-					    { base::StrID("-"), BuiltinBinary::IntegerSub },
-					    { base::StrID("*"), BuiltinBinary::IntegerMul },
-					    { base::StrID("/"), BuiltinBinary::IntegerDiv },
-					    { base::StrID("%"), BuiltinBinary::IntegerMod },
-					    { base::StrID("**"), BuiltinBinary::IntegerPow } };
+				const static std::map<base::StrID, BuiltinBinary> operators = {
+					{ base::StrID("+"), BuiltinBinary::IntegerAdd },
+					{ base::StrID("-"), BuiltinBinary::IntegerSub },
+					{ base::StrID("*"), BuiltinBinary::IntegerMul },
+					{ base::StrID("/"), BuiltinBinary::IntegerDiv },
+					{ base::StrID("%"), BuiltinBinary::IntegerMod },
+					{ base::StrID("**"), BuiltinBinary::IntegerPow },
+					{ keywordToStr(lang_def::Keyword::And), BuiltinBinary::BooleanAnd },
+					{ keywordToStr(lang_def::Keyword::Or), BuiltinBinary::BooleanOr },
+				};
 
 				if (operators.contains(op)) {
 					return makeBox<BinaryOperatorExpr>(
-						ctx, this->scope, operators.at(op), std::move(lhs), std::move(rhs)
+						ctx, operators.at(op), std::move(lhs), std::move(rhs)
 					);
-				} else {
-					return {};
 				}
+				return {};
 			}
 
 			/**
-			 * If valid builtin exist, returns it.
-			 * Otherwise returns None.
+			 * If a valid builtin exists (special characters only), returns it.
+			 * Otherwise, returns None.
 			 */
 			base::Optional<Box<Expr>> unaryBuiltin(base::StrID op, Box<Expr> expr) {
 				// note: this is mock that works only for very simple int op int.
@@ -132,18 +136,20 @@ namespace compiler::helios::code {
 
 				auto expr_type = expr->expression_type;
 
-				if (expr_type.getType().getKind() != tsh::Kind::Integral) {
-					// we don't have builtins for this case for now:
+				if (expr_type.getType().getKind() != tsh::Kind::Integral
+				    and expr_type.getType().getKind() != tsh::Kind::Bool) {
+					// No builtins for this case for types other than ints and bools for now.
 					return {};
 				}
 
 				// @TODO: change to base::map when possible
 				const static std::map<base::StrID, BuiltinUnary> operators = {
 					{ base::StrID("-"), BuiltinUnary::IntegerNegation },
+					{ keywordToStr(lang_def::Keyword::Not), BuiltinUnary::BooleanNot },
 				};
 
 				if (operators.contains(op))
-					return makeBox<UnaryOperatorExpr>(scope, operators.at(op), std::move(expr));
+					return makeBox<UnaryOperatorExpr>(operators.at(op), std::move(expr));
 				else
 					return {};
 			}
@@ -172,7 +178,7 @@ namespace compiler::helios::code {
 						}
 						all_subtypes.emplace_back(std::move(sub_expr_hout).value());
 					}
-					node = makeBox<VariantTypeConstructorExpr>(ctx, scope, std::move(all_subtypes));
+					node = makeBox<VariantTypeConstructorExpr>(ctx, std::move(all_subtypes));
 					return;
 				}
 
@@ -279,22 +285,23 @@ namespace compiler::helios::code {
 
 				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
 					if (call_arguments)
-						node = makeBox<CallExpr>(
-							ctx, scope, dealiased.back(), std::move(*call_arguments)
-						);
+						node = makeBox<CallExpr>(ctx, dealiased.back(), std::move(*call_arguments));
 					else
-						node = makeBox<LinkedIdentifierExpr>(ctx, scope, std::move(dealiased));
+						node = makeBox<LinkedIdentifierExpr>(ctx, std::move(dealiased));
 				}
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
-				PstExprToHoutExprVisitor vis(ctx, scope);
+				PstExprToHoutExprVisitor vis(ctx);
 				stmt->getInner().unlock(ctx)->acceptExprVisitor(vis);
-				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, scope, std::move(*vis.node));
+				if (vis.node) node = makeBox<ParenthesisExpr>(ctx, std::move(*vis.node));
 			}
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
-				auto&& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
+				// note: this is a mock, it should be unified with ChainExpr
+
+				auto        scope    = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+				const auto& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
 					{ scope, stmt->getName().value, true }
 				);
 
@@ -305,7 +312,7 @@ namespace compiler::helios::code {
 				}
 
 				if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
-					node = makeBox<IdentifierExpr>(ctx, scope, dealiased.back());
+					node = makeBox<IdentifierExpr>(ctx, dealiased.back());
 				}
 			}
 
@@ -313,91 +320,90 @@ namespace compiler::helios::code {
 				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
-					node = makeBox<LiteralBoolExpr>(ctx, scope, true);
+					node = makeBox<LiteralBoolExpr>(ctx, true);
 					break;
 				case pst::Keyword::False:
-					node = makeBox<LiteralBoolExpr>(ctx, scope, false);
+					node = makeBox<LiteralBoolExpr>(ctx, false);
 					break;
 
 
 				// types:
 				case pst::Keyword::Bool:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryBoolType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryBoolType>({}));
 					break;
 
 				case pst::Keyword::Char:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryCharType>({}));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
 					break;
 
 					// @todo: add meta keyword and type
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, true })
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, true })
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, true })
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, true })
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 128, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, false })
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 64, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, false })
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 32, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, false })
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 16, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, false })
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, scope, ctx.query<tsh::QueryIntegralType>({ 8, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, false })
 					);
 					break;
 
 				case pst::Keyword::f80:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(80));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(80));
 					break;
 				case pst::Keyword::f128:
-					node
-						= makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(128));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(128));
 					break;
 				case pst::Keyword::f64:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(64));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(64));
 					break;
 				case pst::Keyword::f32:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(32));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(32));
 					break;
 				case pst::Keyword::f16:
-					node = makeBox<LiteralTypeExpr>(ctx, scope, ctx.query<tsh::QueryFloatType>(16));
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryFloatType>(16));
 					break;
 
 
@@ -419,7 +425,7 @@ namespace compiler::helios::code {
 					expressions.emplace_back(std::move(res).value());
 				}
 
-				node = makeBox<TupleTypeConstructorExpr>(ctx, scope, std::move(expressions));
+				node = makeBox<TupleTypeConstructorExpr>(ctx, std::move(expressions));
 			}
 
 			void visitSuffixOperator(pst::Access<pst::expr::SuffixOperator>) override {
@@ -456,18 +462,33 @@ namespace compiler::helios::code {
 					// failed
 				}
 			}
+
+			void visitTernary(pst::Access<pst::expr::Ternary> stmt) override {
+				auto condition_res = fromPST(ctx, stmt->getCondition());
+				auto if_true_res   = fromPST(ctx, stmt->getIfTrue());
+				auto if_false_res  = fromPST(ctx, stmt->getIfFalse());
+
+				if (condition_res.hasError() or if_true_res.hasError() or if_false_res.hasError())
+					return;
+
+				auto condition = std::move(condition_res).value();
+				auto if_true   = std::move(if_true_res).value();
+				auto if_false  = std::move(if_false_res).value();
+
+				node = makeBox<TernaryOperatorExpr>(
+					ctx, std::move(condition), std::move(if_true), std::move(if_false)
+				);
+			}
 		};
 
 		ExprConstructionResult fromPST(
 			query::Context& ctx, pst::AccessLocked<pst::ExprElement> element
 		) {
-			auto scope = ctx.query<QueryPrimaryCodeScopeFor>(element);
-
 			// std::cerr << "\nExpr: \n";
 			// root->debugPrint(std::cerr);
 			// std::cerr << '\n'
 
-			PstExprToHoutExprVisitor visitor(ctx, scope);
+			PstExprToHoutExprVisitor visitor(ctx);
 			element.unlock(ctx)->acceptExprVisitor(visitor);
 
 			if_opt_some(visitor.node, expr) return std::move(expr);

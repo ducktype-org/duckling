@@ -135,10 +135,24 @@ namespace vm {
 
 		void executeOneStep();
 
-		low::ByteCode createStartFunction(
-			CRef<low::FuncData> func, const std::vector<std::string>& args
+		/**
+		 * @brief Creates a list of instructions, which initialize the argv table and populate it
+		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
+		 * perform the call and deinitialize the argv table when main returns.
+		 */
+		low::FuncData createProgramStartFunction(
+			const low::FuncData& func, const std::vector<std::string>& args
 		);
 
+		/**
+		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
+		 * stack and perform a call to `func`.
+		 * @note `func_args` should be changed to a vector of arguments of any VM type.
+		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
+		 */
+		low::FuncData createStartFunctionFor(
+			const low::FuncData& func, const std::vector<i64>& func_args
+		);
 		/**
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
@@ -157,11 +171,15 @@ namespace vm {
 		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
-		 * @brief This is the main function to call when starting the execution of a program.
-		 *
+		 * @brief This is the primary function to call to start execution on the VM.
+		 * It calls both the main function when running the program and single functions called by
+		 * the `runFunction` endpoint. It starts the execution beginning with the first instruction
+		 * in the start_function bytecode vector.
+		 * @param start_function - the code of the start function.
+		 * @param func - the function to execute.
 		 * @return value returned by the program
 		 */
-		i64 internalCallFunction(CRef<low::FuncData> program, const std::vector<std::string>& args);
+		i64 executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
 
@@ -175,12 +193,24 @@ namespace vm {
 		void breakActiveExecution();
 
 		/**
-		 * @brief Creates new thread that runs the code in the Executor service.
+		 * @brief Creates a new thread that runs the code in the Executor service.
 		 * Blocks until the thread is running.
-		 * @param code
-		 * @return true if the thread was successfully created and the program is running
+		 *
+		 * @param program - program for the thread to run,
+		 * @param func_name - name of the function to run,
+		 * @param func_args - if running a function (not a whole program), these are the arguments
+		 * to pass as parameters to the function,
+		 * @param program_args - if running a program, these are the command line arguments passed
+		 * to the program (argv equivalent).
+		 *
+		 * @return true if the thread was successfully created and the program is running, false if
+		 * there is already a thread running.
 		 */
-		bool initThreadAndRun(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
+		bool spawnThreadAndRun(
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
+		);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -194,7 +224,8 @@ namespace vm {
 		 * @brief Resumes the execution of a program.
 		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 * @return true if and only if program was in the paused state and was successfully resumed
+		 * @return true if and only if program was in the paused state and was successfully
+		 * resumed
 		 */
 		bool resume();
 
@@ -214,9 +245,13 @@ namespace vm {
 		bool stop();
 
 		/**
-		 * @brief Run the program.
+		 * @brief Run a single function with given parameters.
 		 */
-		void run(CRef<low::LowVMProgram> program, const std::vector<std::string>& args);
+		void run(
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
+		);
 
 		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 

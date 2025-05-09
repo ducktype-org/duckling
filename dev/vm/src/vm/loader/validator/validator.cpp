@@ -7,6 +7,7 @@
 #include <base/box.hpp>
 #include <base/exceptions.hpp>
 #include <base/optional.hpp>
+#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
@@ -22,7 +23,6 @@ namespace vm::loader::validator {
 		 * @brief Performs static validation of the program.
 		 *
 		 * Validates:
-		 * - Main function existence
 		 * - Valid ret_tailcall signatures
 		 * - No duplicate function declarations
 		 * @todo Update that list when next checks are added
@@ -40,23 +40,11 @@ namespace vm::loader::validator {
 			std::expected<void, LoaderLogger> validateProgram();
 
 		private:
-			const Program& program;
-			LoaderLogger   log;
-
-			void validateMainExistence();
+			[[maybe_unused]] const Program& program;
+			LoaderLogger                    log;
 		};
 
-		std::expected<void, LoaderLogger> Validator::validateProgram() {
-			validateMainExistence();
-
-			if (!log.good()) return std::unexpected(std::move(log));
-
-			return {};
-		}
-
-		void Validator::validateMainExistence() {
-			if (!program.funcMap().contains(base::StrID("main"))) log.logSimple(NO_MAIN_ERR.data());
-		}
+		std::expected<void, LoaderLogger> Validator::validateProgram() { return {}; }
 	}
 
 	std::expected<void, LoaderLogger> verify(const Program& program) {
