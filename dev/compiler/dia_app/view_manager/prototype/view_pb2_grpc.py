@@ -36,13 +36,18 @@ class ViewServiceStub(object):
         """
         self.GetView = channel.unary_unary(
                 '/view.ViewService/GetView',
-                request_serializer=view__pb2.Empty.SerializeToString,
+                request_serializer=view__pb2.ViewRequest.SerializeToString,
                 response_deserializer=view__pb2.ViewResponse.FromString,
                 _registered_method=True)
         self.Click = channel.unary_unary(
                 '/view.ViewService/Click',
                 request_serializer=view__pb2.ClickRequest.SerializeToString,
                 response_deserializer=view__pb2.ClickResponse.FromString,
+                _registered_method=True)
+        self.CloseSideNote = channel.unary_unary(
+                '/view.ViewService/CloseSideNote',
+                request_serializer=view__pb2.CloseSideNoteRequest.SerializeToString,
+                response_deserializer=view__pb2.CloseSideNoteResponse.FromString,
                 _registered_method=True)
 
 
@@ -61,18 +66,29 @@ class ViewServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CloseSideNote(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ViewServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'GetView': grpc.unary_unary_rpc_method_handler(
                     servicer.GetView,
-                    request_deserializer=view__pb2.Empty.FromString,
+                    request_deserializer=view__pb2.ViewRequest.FromString,
                     response_serializer=view__pb2.ViewResponse.SerializeToString,
             ),
             'Click': grpc.unary_unary_rpc_method_handler(
                     servicer.Click,
                     request_deserializer=view__pb2.ClickRequest.FromString,
                     response_serializer=view__pb2.ClickResponse.SerializeToString,
+            ),
+            'CloseSideNote': grpc.unary_unary_rpc_method_handler(
+                    servicer.CloseSideNote,
+                    request_deserializer=view__pb2.CloseSideNoteRequest.FromString,
+                    response_serializer=view__pb2.CloseSideNoteResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -100,7 +116,7 @@ class ViewService(object):
             request,
             target,
             '/view.ViewService/GetView',
-            view__pb2.Empty.SerializeToString,
+            view__pb2.ViewRequest.SerializeToString,
             view__pb2.ViewResponse.FromString,
             options,
             channel_credentials,
@@ -129,6 +145,33 @@ class ViewService(object):
             '/view.ViewService/Click',
             view__pb2.ClickRequest.SerializeToString,
             view__pb2.ClickResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CloseSideNote(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/view.ViewService/CloseSideNote',
+            view__pb2.CloseSideNoteRequest.SerializeToString,
+            view__pb2.CloseSideNoteResponse.FromString,
             options,
             channel_credentials,
             insecure,

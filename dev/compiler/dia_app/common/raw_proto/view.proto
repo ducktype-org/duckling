@@ -95,12 +95,16 @@ message Metadata {
     optional string file_info = 2;
 }
 
+message HlInfo {
+    int32 tag = 1;
+    string message = 2;
+}
+
 message Diagnostic {
     Metadata metadata = 1;
     repeated Section sections = 2;
+    repeated HlInfo hl_messages = 3;
 }
-
-
 
 message SideNoHlConcatComponent {
     repeated SideNoHlComponent components = 1;
