@@ -26,8 +26,8 @@ namespace tsh {
 		class FloatAbstractTypeImpl;
 		class RawPointerAbstractTypeImpl;
 		class PointerAbstractTypeImpl;
-		class ReferenceAbstractTypeImpl class StringAbstractTypeImpl;
-		;
+		class ReferenceAbstractTypeImpl;
+		class StringAbstractTypeImpl;
 		class TupleAbstractTypeImpl;
 		class FunctionAbstractTypeImpl;
 		class VariantAbstractTypeImpl;

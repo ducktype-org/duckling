@@ -35,6 +35,7 @@ public:
 		TESTER_ADD_TEST(simpleInts);
 		TESTER_ADD_TEST(simpleFloats);
 		TESTER_ADD_TEST(simplePointer);
+		TESTER_ADD_TEST(simpleString);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
@@ -229,6 +230,22 @@ private:
 			ptr_5.getKind() == Pointer && ptr_5.getPointee() == ptr_4.getPointee(),
 			"Pointer should survive casting."
 		);
+	}
+
+	/**
+	 * Test that there is only one string type, and that it is correctly cast.
+	 */
+	void simpleString() {
+		const auto str_1 = query::entryPoint<QueryStringType>({});
+		const auto str_2 = query::entryPoint<QueryStringType>({});
+
+		assertTrue(str_1 == str_2, "There should only be one String type.");
+
+		assertTrue(str_1.getKind() == String, "String type should have kind String.");
+
+		const AbstractType       type_str = str_1;
+		const StringAbstractType str_3    = type_str;
+		assertTrue(str_3.getKind() == String, "String should survive casting.");
 	}
 
 	/**

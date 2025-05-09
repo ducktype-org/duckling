@@ -181,11 +181,12 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
-		static constexpr auto OFFSET_SIZE = base::bytes2bits(Bytes(8));
+		static constexpr auto POINTER_SIZE = Bytes(8);
+		static constexpr auto OFFSET_SIZE  = Bytes(8);
 
 	public:
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
-			  TypeLayoutABC(POINTER_SIZE + 3 * OFFSET_SIZE, string_type) {}
+			  TypeLayoutABC(base::bytes2bits(POINTER_SIZE + OFFSET_SIZE * 3), string_type) {}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
@@ -213,7 +214,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
-			return POINTER_SIZE + 2 * OFFSET_SIZE;
+			return POINTER_SIZE + OFFSET_SIZE * 2;
 		}
 	};
 
