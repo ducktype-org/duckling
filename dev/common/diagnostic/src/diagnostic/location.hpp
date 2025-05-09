@@ -45,7 +45,9 @@ namespace dia {
 		virtual Ref<tokenizer::TokenSource> getSource() const
 			= 0;
 
-		virtual LocationType getLocationType() const = 0;
+		[[nodiscard]]
+		virtual LocationType getLocationType() const
+			= 0;
 
 		/**
 		 * @brief Generate an error message.
@@ -103,7 +105,7 @@ namespace dia {
 			return LocationType::MacroLocationType;
 		}
 
-		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> file);
+		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenSource> source);
 
 	private:
 		SourcePosition              parent;
