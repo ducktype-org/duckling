@@ -245,7 +245,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						for (const auto& instruction: e.jumps)
 							log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
 					},
-                    e.what()
+					e.what()
 				);
 			} catch (code::builders::BuilderError& e) {
 				match_optional(e.maybeElement()) {

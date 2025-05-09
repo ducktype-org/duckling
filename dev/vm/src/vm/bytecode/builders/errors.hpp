@@ -24,10 +24,9 @@ namespace vm::code::builders {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "Stack structure differs between jumps and label: ";
-		constexpr static const std::string_view NOTE_MSG
-			= "One of the jumps.";
-		instructions::Op_label   label;
-		std::vector<Instruction> jumps;  /// all jumps to the label
+		constexpr static const std::string_view NOTE_MSG = "One of the jumps.";
+		instructions::Op_label                  label;
+		std::vector<Instruction>                jumps;  /// all jumps to the label
 
 		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
 			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
