@@ -76,6 +76,7 @@ namespace dia {
 	SourcePosition::SourcePosition():
 		  source_start(0),
 		  source_end(0),
+		  location_type(LocationType::FakeLocation),
 		  location(FakeLocation::getInstance()) {}
 
 	SourcePosition::SourcePosition(CRef<Location> location, const usize source_start):
@@ -86,6 +87,7 @@ namespace dia {
 	):
 		  source_start(source_start),
 		  source_end(source_end),
+		  location_type(location->getLocationType()),
 		  location(location) {
 		// Potentially allow for special circumstances
 		auto source = location->getSource();
@@ -114,6 +116,8 @@ namespace dia {
 	usize SourcePosition::getEnd() const { return source_end; }
 
 	Ref<tokenizer::TokenFile> SourcePosition::getSource() const { return location->getSource(); }
+
+	LocationType SourcePosition::getLocationType() const { return location_type; }
 
 	void SourcePosition::printPosition(printer::PrinterOStream& out) const {
 		auto [line, column] = getStartLineColumn();

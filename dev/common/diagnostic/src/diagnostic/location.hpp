@@ -1,5 +1,6 @@
 #pragma once
 
+#include "location_types.hpp"
 #include "source_position.hpp"
 
 #include <filesystem/file.hpp>
@@ -44,6 +45,8 @@ namespace dia {
 		virtual Ref<tokenizer::TokenFile> getSource() const
 			= 0;
 
+		virtual LocationType getLocationType() const = 0;
+
 		/**
 		 * @brief Generate an error message.
 		 */
@@ -66,6 +69,11 @@ namespace dia {
 
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
+
+		[[nodiscard]]
+		LocationType getLocationType() const override {
+			return LocationType::FileLocation;
+		}
 
 		FileLocation(Ref<tokenizer::TokenFile> file, fs::FilePath path):
 			  file(file),
@@ -90,6 +98,11 @@ namespace dia {
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
 
+		[[nodiscard]]
+		LocationType getLocationType() const override {
+			return LocationType::MacroLocation;
+		}
+
 		MacroLocation(const SourcePosition& parent, Ref<tokenizer::TokenFile> file);
 
 	private:
@@ -113,6 +126,11 @@ namespace dia {
 
 		[[nodiscard]]
 		fs::FilePath getSourceFile() const override;
+
+		[[nodiscard]]
+		LocationType getLocationType() const override {
+			return LocationType::FakeLocation;
+		}
 
 		void printMessage(
 			printer::PrinterOStream&,

@@ -17,6 +17,8 @@ int main() {
 
 #pragma once
 
+#include "location_types.hpp"
+
 #include <filesystem/file.hpp>
 #include <printer/printer_content.hpp>
 #include <printer/printer_ostream.hpp>
@@ -102,6 +104,8 @@ namespace dia {
 		usize getEnd() const;
 		[[nodiscard]]
 		Ref<tokenizer::TokenFile> getSource() const;
+		[[nodiscard]]
+		LocationType getLocationType() const;
 
 		/**
 		 * @brief This checks exactly for position being EOF
@@ -112,8 +116,9 @@ namespace dia {
 		void printToJson(std::ostream&) const;
 
 	private:
-		usize          source_start;  ///< Start of the range of characters in the file.
-		usize          source_end;    ///< End of the range of characters in the file.
-		CRef<Location> location;      ///< Location of the position
+		usize          source_start;   ///< Start of the range of characters in the file.
+		usize          source_end;     ///< End of the range of characters in the file.
+		LocationType   location_type;  ///< Type of location the position is a part of.
+		CRef<Location> location;       ///< Location of the position
 	};
 }
