@@ -444,7 +444,9 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = binaryBuiltin(stmt->getOperators().at(0).value, std::move(lhs), std::move(rhs));
+				auto builtin = binaryBuiltin(
+					stmt->getOperators().at(0).value, std::move(lhs), std::move(rhs)
+				);
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;
