@@ -126,6 +126,9 @@ namespace compiler::helios::code {
 		IntegerPow,
 
 		IntegerLt,  //< Less than
+
+		BooleanAnd,
+		BooleanOr,
 	};
 
 	/**
@@ -153,6 +156,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		BooleanNot,
 	};
 
 	/**
@@ -164,6 +168,22 @@ namespace compiler::helios::code {
 		base::Box<Expr> expr;
 
 		UnaryOperatorExpr(BuiltinUnary operation, base::Box<Expr> expr);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief A ternary operator.
+	 */
+	struct TernaryOperatorExpr: public Expr {
+		Box<Expr> condition;
+		Box<Expr> if_true;
+		Box<Expr> if_false;
+
+		TernaryOperatorExpr(
+			query::Context& ctx, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
