@@ -82,7 +82,7 @@ private:
 			loadInvalidDbc(
 				filename,
 				{
-					vm::code::builders::InvalidFunctionEndError::ERR_MSG,
+					vm::code::builders::PathWithoutEndError::ERR_MSG,
 				}
 			);
 

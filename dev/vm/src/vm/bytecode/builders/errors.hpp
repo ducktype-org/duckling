@@ -23,32 +23,34 @@ namespace vm::code::builders {
 	class StackStructureMismatchError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG
-			= "Stack structure differs between jumps and label.";
-		const instructions::Op_label LABEL;
-		std::vector<Instruction>     jumps;  /// all jumps to the label
+			= "Stack structure differs between jumps and label: ";
+		constexpr static const std::string_view NOTE_MSG
+			= "One of the jumps.";
+		instructions::Op_label   label;
+		std::vector<Instruction> jumps;  /// all jumps to the label
 
 		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
 			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
-			  LABEL(label),
+			  label(label),
 			  jumps(std::move(jumps)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return &LABEL;
+			return &label;
 		}
 	};
 
-	class InvalidFunctionEndError: public BuilderError {
+	class PathWithoutEndError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG
 			= "Not all code paths end with returns in function: ";
 		const base::StrID FUNC_NAME;
 
-		InvalidFunctionEndError(base::StrID func_name):
+		PathWithoutEndError(base::StrID func_name):
 			  BuilderError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
-	// This is a position-less error for function definitions.
+	// @brief position-less error for function definitions.
 	// For function name arguments, like in call instructions, use UnknownFunctionError.
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
@@ -60,7 +62,7 @@ namespace vm::code::builders {
 			  FUNC_NAME(func_name) {}
 	};
 
-	// This is a position-less error for function definitions.
+	// @brief position-less error for function definitions.
 	// For function name arguments, like in call instructions, use UnknownFunctionError.
 	class TypeIsNotFunctionalError: public BuilderError {
 	public:
@@ -88,11 +90,11 @@ namespace vm::code::builders {
 		}
 	};
 
-	class TypeError: public BuilderError {
+	class TypeErrorBase: public BuilderError {
 	public:
 		const TypeOfData TYPE;
 
-		TypeError(std::string msg, TypeOfData type):
+		TypeErrorBase(std::string msg, TypeOfData type):
 			  BuilderError(std::move(msg)),
 			  TYPE(std::move(type)) {}
 
@@ -101,11 +103,11 @@ namespace vm::code::builders {
 		}
 	};
 
-	class InstructionError: public BuilderError {
+	class InstructionErrorBase: public BuilderError {
 	public:
 		const Instruction INSTRUCTION;
 
-		InstructionError(std::string_view msg, Instruction instruction):
+		InstructionErrorBase(std::string_view msg, Instruction instruction):
 			  BuilderError(std::string(msg)),
 			  INSTRUCTION(instruction) {}
 
@@ -114,11 +116,11 @@ namespace vm::code::builders {
 		}
 	};
 
-	class ArgumentError: public BuilderError {
+	class ArgumentErrorBase: public BuilderError {
 	public:
 		const opargs::OpCodeArg ARGUMENT;
 
-		ArgumentError(std::string msg, opargs::OpCodeArg argument):
+		ArgumentErrorBase(std::string msg, opargs::OpCodeArg argument):
 			  BuilderError(std::move(msg)),
 			  ARGUMENT(argument) {}
 
@@ -128,31 +130,31 @@ namespace vm::code::builders {
 	};
 
 #define DEFINE_TYPE_ERROR(error_name, msg)                                                   \
-	class error_name: public TypeError {                                                     \
+	class error_name: public TypeErrorBase {                                                 \
 	public:                                                                                  \
 		constexpr static const std::string_view ERR_MSG = (msg);                             \
                                                                                              \
 		error_name(TypeOfData type):                                                         \
-			  TypeError(                                                                     \
+			  TypeErrorBase(                                                                 \
 				  base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name)), std::move(type) \
 			  ) {}                                                                           \
 	};
 
-#define DEFINE_INSTRUCTION_ERROR(error_name, msg)                                      \
-	class error_name: public InstructionError {                                        \
-	public:                                                                            \
-		constexpr static const std::string_view ERR_MSG = (msg);                       \
-                                                                                       \
-		error_name(Instruction instruction): InstructionError(ERR_MSG, instruction) {} \
+#define DEFINE_INSTRUCTION_ERROR(error_name, msg)                                          \
+	class error_name: public InstructionErrorBase {                                        \
+	public:                                                                                \
+		constexpr static const std::string_view ERR_MSG = (msg);                           \
+                                                                                           \
+		error_name(Instruction instruction): InstructionErrorBase(ERR_MSG, instruction) {} \
 	};
 
-#define DEFINE_ARGUMENT_ERROR(error_name, msg)                                                 \
-	class error_name: public ArgumentError {                                                   \
-	public:                                                                                    \
-		constexpr static const std::string_view ERR_MSG = (msg);                               \
-                                                                                               \
-		error_name(opargs::OpCodeArg argument):                                                \
-			  ArgumentError(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
+#define DEFINE_ARGUMENT_ERROR(error_name, msg)                                                     \
+	class error_name: public ArgumentErrorBase {                                                   \
+	public:                                                                                        \
+		constexpr static const std::string_view ERR_MSG = (msg);                                   \
+                                                                                                   \
+		error_name(opargs::OpCodeArg argument):                                                    \
+			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	};
 
 	DEFINE_TYPE_ERROR(

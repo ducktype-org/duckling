@@ -107,15 +107,10 @@ namespace vm::loader::compiler {
 
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
-			func_data.name = ctx.function->name.str;
-			auto functional_type
-				= ctx.type_map.atMaybe(ctx.function->name.str)
-			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name);
-			func_data.arg_size
-				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name);
-
-			// Not expecting here because it's checked above
+			func_data.name       = ctx.function->name.str;
+			// This is guaranteed to exist by builders.
+			auto functional_type = ctx.type_map.at(ctx.function->name.str);
+			func_data.arg_size   = functional_type->getParametersSize().value();
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
 			func_data.local_stack_size = ctx.local_stack_size;
 

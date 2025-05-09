@@ -68,7 +68,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -77,7 +78,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -86,7 +88,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}

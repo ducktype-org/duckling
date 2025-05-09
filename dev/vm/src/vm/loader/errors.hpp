@@ -125,63 +125,6 @@ namespace vm::loader {
 		DuplicatedFunctionNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class UnknownSubtypeError final: public dia::Error {
-		base::StrID subtype_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, subtype_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UnknownSubtypeError(dia::SourcePosition pos, base::StrID subtype_name):
-			  dia::Error(pos),
-			  subtype_name(subtype_name) {}
-	};
-
-	class StackStructureMismatchError final: public dia::Error {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This instruction invalidates stack structure.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		StackStructureMismatchError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
-	class StackStructureMismatchNote final: public dia::NoteWithPosition {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Some stack structure here.";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return ERR_MSG.data();
-		}
-
-	public:
-		StackStructureMismatchNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
-	};
-
 	class DuplicatedLocalNameError final: public dia::Error {
 		base::StrID local_name;
 
@@ -225,6 +168,24 @@ namespace vm::loader {
 
 		SomeBuilderError(dia::SourcePosition pos, std::string_view error_message):
 			  dia::Error(pos),
+			  error_message(error_message) {}
+	};
+
+	class SomeBuilderNote final: public dia::NoteWithPosition {
+		std::string error_message;
+
+	public:
+		constexpr static const std::string_view ERR_MSG = "The error attached a note: ";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return base::strConcat(ERR_MSG, error_message);
+		}
+
+	public:
+		SomeBuilderNote(dia::SourcePosition pos, std::string_view error_message):
+			  dia::NoteWithPosition(pos),
 			  error_message(error_message) {}
 	};
 

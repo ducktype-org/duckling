@@ -110,7 +110,7 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 	}
 }
 
-void FunctionValidator::validateArgInstantiable(opargs::Type arg) const {
+void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	// @TODO remove `atMaybe` after #732
 	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
@@ -122,7 +122,7 @@ void FunctionValidator::initStackState() {
 		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
 }
 
-void FunctionValidator::pushStackState(opargs::StackLocalAny local, opargs::Type type) {
+void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
 	auto tod = type_context.getTypes().atMaybe(type.type_name).expect<UnknownTypeError>(type);
 
 	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
@@ -138,7 +138,7 @@ void FunctionValidator::popStackState(const Op_deinit& cause) {
 	stack_state.pop_back();
 }
 
-void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function) {
+void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
@@ -160,7 +160,7 @@ void FunctionValidator::popCallArgs(opargs::OpCodeFunctionArg function) {
 		throw InvalidFunctionCallArgumentsError(generic_arg);
 }
 
-void FunctionValidator::validateTailcall(opargs::OpCodeFunctionArg function) const {
+void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& function) const {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
@@ -184,12 +184,12 @@ void FunctionValidator::validateTailcall(opargs::OpCodeFunctionArg function) con
 			throw InvalidTailcallArgumentsError(generic_arg);
 }
 
-usize FunctionValidator::getLabelTarget(opargs::Label label) const {
+usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
 	return index_of_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
 }
 
 void FunctionValidator::preprocessLabels() {
-	auto register_jump = [&](auto instr) {
+	auto register_jump = [&](const auto& instr) {
 		jumps_to_label.try_emplace(instr.arg0.label_name);
 		jumps_to_label.at(instr.arg0.label_name).push_back(instr);
 	};
@@ -281,8 +281,12 @@ void FunctionValidator::validateFunctionEnd() const {
 	if (instructions.empty()
 	    || (visited_instructions.back() && !holdsOneOf<ValidLastInstructions>(instructions.back())
 	    )) {
-		throw InvalidFunctionEndError(name.str);
+		throw PathWithoutEndError(name.str);
 	}
+}
+
+constexpr bool FunctionValidator::LocalStackEntry::operator==(const LocalStackEntry& other) const {
+	return local_name == other.local_name && *type == *other.type;
 }
 
 FunctionValidator::FunctionValidator(
@@ -304,15 +308,16 @@ FunctionValidator::FunctionValidator(
 	  }()) {}
 
 void FunctionValidator::validate() {
+	if (validated) CORE_PANIC("The validator can only run once.");
 	preprocessLabels();
 	initStackState();
 	traverseControlFlowGraph();
 	validateFunctionEnd();
-	done = true;
+	validated = true;
 }
 
 std::vector<Instruction> FunctionValidator::extractReachableCode() {
-	if (!done) CORE_PANIC("Function has to be validated first.");
+	if (!validated) CORE_PANIC("Function has to be validated first.");
 	std::vector<Instruction> out;
 	for (auto [instruction, visited]: std::views::zip(instructions, visited_instructions))
 		if (visited) out.push_back(instruction);

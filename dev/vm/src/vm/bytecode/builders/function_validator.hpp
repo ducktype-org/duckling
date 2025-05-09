@@ -21,10 +21,7 @@ namespace vm::code::builders {
 			base::StrID      local_name;
 			CRef<TypeOfData> type;
 
-			bool operator==(const LocalStackEntry& other) const {
-				return local_name == other.local_name
-				    && code::typeName(*type) == code::typeName(*other.type);
-			}
+			constexpr bool operator==(const LocalStackEntry& other) const;
 		};
 
 		Identifier                      name;
@@ -39,19 +36,19 @@ namespace vm::code::builders {
 		base::HashMap<base::StrID, decltype(stack_state)>    stack_at_label;
 		base::HashMap<base::StrID, usize>                    index_of_label;
 		base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
-		bool                                                 done = false;
+		bool                                                 validated = false;
 
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction) const;
-		void validateArgInstantiable(opargs::Type arg) const;
+		void validateArgInstantiable(const opargs::Type& arg) const;
 		void validateFunctionEnd() const;
-		void validateTailcall(opargs::OpCodeFunctionArg function) const;
+		void validateTailcall(const opargs::OpCodeFunctionArg& function) const;
 
-		usize getLabelTarget(opargs::Label label) const;
+		usize getLabelTarget(const opargs::Label& label) const;
 		void  initStackState();
-		void  pushStackState(opargs::StackLocalAny local, opargs::Type type);
+		void  pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type);
 		void  popStackState(const instructions::Op_deinit& cause);
-		void  popCallArgs(opargs::OpCodeFunctionArg function);
+		void  popCallArgs(const opargs::OpCodeFunctionArg& function);
 		void  preprocessLabels();
 		void  traverseControlFlowGraph();
 

@@ -239,12 +239,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						.global_data = globals | std::ranges::to<std::vector>(),
 					};
 			} catch (vm::code::builders::StackStructureMismatchError& e) {
-				log.logMap<StackStructureMismatchError>(
-					e.LABEL,
-					[&](Box<StackStructureMismatchError>& err) {
+				log.logMap<SomeBuilderError>(
+					e.label,
+					[&](Box<SomeBuilderError>& err) {
 						for (const auto& instruction: e.jumps)
-							log.addNote<StackStructureMismatchNote>(err, instruction);
-					}
+							log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
+					},
+                    e.what()
 				);
 			} catch (code::builders::BuilderError& e) {
 				match_optional(e.maybeElement()) {
