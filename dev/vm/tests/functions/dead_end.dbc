@@ -1,0 +1,4 @@
+function main {
+    ret;
+    init_lany_type x, i64;  # dead code
+}
