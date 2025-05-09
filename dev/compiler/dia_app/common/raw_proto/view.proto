@@ -22,7 +22,6 @@ message NoHlConcatComponent {
 message NoHlInteractiveComponent {
     int32 component_id = 1;
     NoHlComponent primary_component = 2;
-    NoHlComponent alt_component = 3;
 }
 
 message NoHlComponent {
@@ -57,7 +56,6 @@ message ConcatComponent {
 message InteractiveComponent {
     int32 component_id = 1;
     Component primary_component = 2;
-    Component alt_component = 3;
 }
 
 message Component {
@@ -111,7 +109,6 @@ message SideNoHlConcatComponent {
 message SideNoHlInteractiveComponent {
     int32 component_id = 1;
     SideNoHlComponent primary_component = 2;
-    SideNoHlComponent alt_component = 3;
 }
 
 message SideNoHlComponent {
@@ -135,7 +132,6 @@ message SideConcatComponent {
 message SideInteractiveComponent {
     int32 component_id = 1;
     SideComponent primary_component = 2;
-    SideComponent alt_component = 3;
 }
 
 message SideComponent {
