@@ -1,3 +1,5 @@
+#include "typesystem/higher/queries/types.hpp"
+
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
@@ -261,15 +263,17 @@ private:
 		assertTrue(arr_1.getKind() == DynamicArray, "DynamicArray should have kind DynamicArray.");
 		assertTrue(arr_1.getElementType() == int_16, "Element type should be as constructed.");
 
-		const AbstractType           type_arr = arr_1;
-		const DynamicArrayAbstractType arr_2   = type_arr;
+		const AbstractType             type_arr = arr_1;
+		const DynamicArrayAbstractType arr_2    = type_arr;
 		assertTrue(arr_2.getKind() == DynamicArray, "DynamicArray should survive casting.");
 
 		const auto arr_3 = query::entryPoint<QueryDynamicArrayType>(int_16);
 		assertTrue(arr_1 == arr_3, "DynamicArrays with the same element types should be equal.");
 
 		const auto arr_4 = query::entryPoint<QueryDynamicArrayType>(int_32);
-		assertTrue(arr_1 != arr_4, "DynamicArrays with different element types should be different.");
+		assertTrue(
+			arr_1 != arr_4, "DynamicArrays with different element types should be different."
+		);
 	}
 
 	/**
@@ -522,6 +526,18 @@ private:
 		assertTrue(
 			!query::entryPoint<QueryImplicitCoercibilityOnExpressionType>({ i2_const, i2_mut }),
 			"Immutable value should not be coercible to a mutable one."
+		);
+
+		const auto arr_2 = query::entryPoint<QueryDynamicArrayType>(int_2);
+		const auto arr_3 = query::entryPoint<QueryDynamicArrayType>(int_3);
+		assertTrue(
+			query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_2, arr_3 }),
+			"Array of smaller ints should be coercible into an array of bigger ones."
+		);
+
+		assertTrue(
+			!query::entryPoint<QueryImplicitCoercibilityOnAbstractType>({ arr_3, arr_2 }),
+			"Array of bigger ints should not be coercible into an array of smaller ones."
 		);
 	}
 };

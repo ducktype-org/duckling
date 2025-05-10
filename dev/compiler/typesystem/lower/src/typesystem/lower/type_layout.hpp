@@ -243,14 +243,12 @@ namespace tsl {
 			tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 		);
 
-		explicit DynamicArrayTypeLayout(
-			const DynamicArrayTypeLayout& other
-		):
+		explicit DynamicArrayTypeLayout(const DynamicArrayTypeLayout& other):
 			  TypeLayoutABC(other),
 			  element_layout(makeBox<TypeLayout>(*other.element_layout)) {}
 
-		DynamicArrayTypeLayout(DynamicArrayTypeLayout&& other) noexcept
-			: TypeLayoutABC(other),
+		DynamicArrayTypeLayout(DynamicArrayTypeLayout&& other) noexcept:
+			  TypeLayoutABC(other),
 			  element_layout(std::move(other.element_layout)) {}
 
 		DynamicArrayTypeLayout& operator=(DynamicArrayTypeLayout&& other) noexcept {

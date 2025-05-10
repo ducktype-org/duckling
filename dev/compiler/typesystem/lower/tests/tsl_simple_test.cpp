@@ -204,7 +204,8 @@ private:
 
 			const DynamicArrayAbstractType dynamic_array_type
 				= ctx.query<QueryDynamicArrayType>(unit_type);
-			TypeLayout dynamic_array_layout = ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+			TypeLayout dynamic_array_layout
+				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
 
 			assertTrue(
 				dynamic_array_layout.getSourceType() == dynamic_array_type,
