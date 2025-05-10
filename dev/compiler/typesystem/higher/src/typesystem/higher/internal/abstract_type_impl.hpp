@@ -2,7 +2,6 @@
 
 #include "../all.hpp"
 #include "queries.hpp"
-#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>

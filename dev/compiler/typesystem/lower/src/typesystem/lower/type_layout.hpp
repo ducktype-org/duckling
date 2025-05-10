@@ -235,9 +235,7 @@ namespace tsl {
 		Box<TypeLayout> element_layout;
 
 	public:
-		explicit DynamicArrayTypeLayout(
-			tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-		);
+		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
 
 		explicit DynamicArrayTypeLayout(const DynamicArrayTypeLayout& other):
 			  TypeLayoutABC(other),
