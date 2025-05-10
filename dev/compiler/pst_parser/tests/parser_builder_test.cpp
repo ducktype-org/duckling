@@ -104,8 +104,8 @@ private:
 		std::string manual_print   = stringDprint(PSTmanual);
 		std::string content_print  = stringDprint(PSTcontent);
 		std::string filename_print = stringDprint(PSTfilename);
-		assertTrue(manualPrint == content_print, error);
-		assertTrue(manualPrint == filename_print, error);
+		assertTrue(manual_print == content_print, error);
+		assertTrue(manual_print == filename_print, error);
 	}
 
 	template<typename Element>
