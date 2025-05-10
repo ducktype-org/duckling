@@ -3,15 +3,15 @@ fun main() -> i64 = {
     let y: i64 = 1;
 
     if (1 < 2) {
-        builtin_print_i64(1);
+        builtin_output_i64(1);
     }
 
     if (1 < x) {
-        builtin_print_i64(2);
+        builtin_output_i64(2);
     }
 
     if (x < (y + 2)) {
-        builtin_print_i64(3);
+        builtin_output_i64(3);
     }
 
     return 0;
