@@ -145,6 +145,23 @@ namespace tsl {
 			  ctx.query<QueryAbstractTypeLayout>(dynamic_array_type.getElementType())
 		  )) {}
 
+
+	std::string DynamicArrayTypeLayout::toStringDefinition(
+		query::Context& ctx, bool recursive, const u32 indent
+	) const {
+		std::stringstream ss{};
+		ss << getIndent(indent) << "dynamic_array {\n";
+
+		if (recursive)
+			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
+		else
+			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
+
+		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+
+		return ss.str();
+	}
+	
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;
 		Bits                     max_component_size;

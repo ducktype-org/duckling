@@ -171,6 +171,7 @@ namespace tsl {
 
 	/**
 	 * @brief Layout of the string type.
+	 * It is similar to DynamicArrayTypeLayout, but intentionally implemented separately.
 	 */
 	class StringTypeLayout final: public TypeLayoutABC {
 		/**
@@ -191,7 +192,7 @@ namespace tsl {
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "String : " + std::to_string(getSize());
+			return getIndent(indent) + "string : " + std::to_string(getSize());
 		}
 
 		/**
@@ -261,8 +262,35 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
-			return getIndent(indent) + "DynamicArray : " + std::to_string(getSize());
+		Ref<TypeLayout> getElementLayout() const {
+			return &*element_layout;
+		}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override;
+
+		/**
+		 * @return The offset of the end of data offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfDataOffsetPosition() const {
+			return POINTER_SIZE;
+		}
+
+		/**
+		 * @return The offset of the start of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getStartOfMemoryOffsetPosition() const {
+			return POINTER_SIZE + OFFSET_SIZE;
+		}
+
+		/**
+		 * @return The offset of the end of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfMemoryOffsetPosition() const {
+			return POINTER_SIZE + OFFSET_SIZE * 2;
 		}
 	};
 
