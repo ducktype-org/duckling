@@ -62,6 +62,11 @@ namespace compiler::driver {
 		 */
 		virtual void link() = 0;
 
+		/**
+		 * @brief Run the compiled program.
+		 */
+		virtual void run() = 0;
+
 		virtual ~BackendDriver() = default;
 	};
 
@@ -85,6 +90,11 @@ namespace compiler::driver {
 		 * @brief Links all module compiled so far into a complete program.
 		 */
 		void link();
+
+		/**
+		 * @brief Run the compiled program. (only for DVM)
+		 */
+		void run();
 
 	private:
 		Options            options;

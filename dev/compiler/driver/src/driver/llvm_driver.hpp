@@ -16,6 +16,9 @@ namespace compiler::driver {
 		void compileModule(query::Context& ctx, const BackendModuleData& lir_module) final;
 
 		void link() final;
+
+		void run() final;
 	};
 
+	inline void LLVMDriver::run() {};
 }

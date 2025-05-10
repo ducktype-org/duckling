@@ -280,6 +280,10 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addLongName("dump-llvm-ir")
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 		             .build());
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dvm")
+		             .addShortDesc("Compile to DVM bytcode.")
+		             .build());
 
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("compile-to-assembly")
@@ -303,7 +307,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver::Driver driver{
 			driver::Options{
-				.backend_type = driver::BackendType::LLVM,
+				.backend_type = options.isFlag("dvm") ? driver::BackendType::DVM : driver::BackendType::LLVM,
 				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),

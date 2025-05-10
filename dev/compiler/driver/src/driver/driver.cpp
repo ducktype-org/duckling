@@ -44,4 +44,6 @@ namespace compiler::driver {
 	}
 
 	void Driver::link() { backend_driver->link(); }
+
+	void Driver::run() { backend_driver->run();}
 }
