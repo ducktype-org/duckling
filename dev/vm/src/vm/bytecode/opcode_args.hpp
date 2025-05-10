@@ -2,6 +2,7 @@
 
 #include <base/ints.hpp>
 #include <base/string_id.hpp>
+#include <base/variant.hpp>
 
 #include <vm/bytecode/element_base.hpp>
 
@@ -304,5 +305,6 @@ namespace vm::opargs {
 		FunctionName,
 		BuiltinFunctionName,
 		Label>;
-	using OpCodeLocalArg = std::variant<VM_OPARG_LOCAL_TYPES>;
+	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
+	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
 }

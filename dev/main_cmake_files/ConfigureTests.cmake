@@ -55,7 +55,8 @@ if(ENABLE_COVERAGE)
 		--gcov-tool "${GCOV_PATH}"
 
 		# Removing unwanted files from the coverage report.
-		COMMAND ${LCOV} --ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
+		COMMAND ${LCOV} 
+		--ignore-errors unused # Unused exclusions returns an error ("playground" is currently unused).
 		--remove coverage_unfiltered.info
 		"docs/**"
 		"integration_tests/**"

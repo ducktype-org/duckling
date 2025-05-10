@@ -1,5 +1,5 @@
 #pragma once
 
 namespace tokenizer {
-	class TokenFile;
+	class TokenSource;
 }

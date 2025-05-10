@@ -3,7 +3,7 @@
 #include <filesystem/file.hpp>
 #include <init/init.hpp>
 #include <lexer/decode.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 int main(int argc, char** argv) {
 	init::InitObject _;
@@ -12,12 +12,12 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	fs::FilePath path(argv[1]);
-	auto         file = tokenizer::makeTokenFile(path);
+	auto         file = tokenizer::makeTokenSource(path);
 
 	file->decode<fs::Encoding::UTF8>();
 
-	if (file->getLogger().bad()) {
-		file->getLogger().dumpLog(true, std::cerr);
+	if (file->getLogger()->bad()) {
+		file->getLogger()->dumpLog(true, std::cerr);
 		return 0;
 	}
 
