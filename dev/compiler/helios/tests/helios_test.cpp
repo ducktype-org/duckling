@@ -153,7 +153,7 @@ private:
 		const auto second_variant_abstract_type = query::entryPoint<tsh::QueryVariantType>(
 			{ { st(int32_type), st(f32_type), st(bool_type) } }
 		);
-		ASSERT_EQUAL( second_variant, second_variant_abstract_type);
+		ASSERT_EQUAL(second_variant, second_variant_abstract_type);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
@@ -169,7 +169,7 @@ private:
 		const auto weird_variant_type
 			= query::entryPoint<tsh::QueryVariantType>({ { class_a, st(right_tuple) } });
 
-		ASSERT_EQUAL( weird_variant, weird_variant_type);
+		ASSERT_EQUAL(weird_variant, weird_variant_type);
 
 		ASSERT_EQUAL(meta_type, getTypeOf("T", root_scope));
 		ASSERT_EQUAL(meta_type, getTypeOf("A", root_scope));
@@ -391,12 +391,11 @@ private:
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
 
-		auto get_cmp = getChain("CMP", root_scope).back();
+		auto get_cmp  = getChain("CMP", root_scope).back();
 		auto expr_cmp = getExprOfConst(get_cmp);
-		Ref expr_cmp_casted = dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
-		ASSERT_EQUAL(
-			compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation
-		);
+		Ref  expr_cmp_casted
+			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
+		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
 	}
 
 	void testError() {
