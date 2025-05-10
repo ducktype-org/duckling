@@ -2,6 +2,7 @@
 
 #include <frontend/module_tree/module_tree.hpp>
 #include <frontend/module_tree/queries.hpp>
+#include <helios/helios_result.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/lookup/lookup_result.hpp>
@@ -23,7 +24,6 @@
 #include <set>
 
 namespace compiler::helios {
-
 
 	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
@@ -511,6 +511,48 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
+
+	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
+		static inline base::HashMap<
+			QKey,
+			query::CacheEntry<pst::PST<pst::Stmt>>,
+			base::PerfectHashFunctor<QKey>>
+			cache;
+
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
+			// In the future calculate resulting string in comp time
+			auto expand       = key.element.unlock(ctx);
+			auto value_holder = expand->getValue().unlock(ctx);
+			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
+			if (value.has_value())
+				return pst::PST<pst::Stmt>::fromContents(value.value()->getValue().str());
+			else
+				CORE_PANIC("Expand argument is not exactly a single string.");
+		}
+
+		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
+			if (pst_ref.getLogger().good()) {
+				return { pst_ref.getRootElement() };
+			} else {
+				return errors::HError(
+					ExpansionError<pst::Stmt>(pst_ref.getRootElement(), pst_ref.getLogger())
+				);
+			}
+		}
+
+		static auto load(const QKey& key) -> LoadResult {
+			if (const auto& value = cache.atMaybe(key))
+				return QResWithACD{ extractResult(value.value().data), value->acd };
+			return {};
+		}
+
+		static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {
+			cache.put(key, { .data = std::move(res), .acd = acd });
+			return extractResult(cache.at(key).data);
+		}
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMacroExpansion);
 
 	struct IMPLEMENT_QUERY(QueryLookupInScopeAndParents, LookupResult) {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {

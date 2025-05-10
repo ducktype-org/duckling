@@ -15,6 +15,8 @@
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 
+#include <cstddef>
+
 namespace vm {
 
 	// Non-VLA data:
@@ -86,8 +88,10 @@ namespace vm {
 		 * @brief First free byte in the local stack.
 		 * Used when new block is created on the local stack.
 		 */
-		u64 local_stack_head{};
+		u64 local_stack_head = 0;
 
 		Frame(): regs{ .p64_reg_0 = 0, .pointer_reg_0 = Pointer::null() } {}
+
+		void resetFrameData() { *this = Frame(); }
 	};
 }

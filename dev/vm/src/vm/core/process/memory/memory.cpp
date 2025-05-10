@@ -3,8 +3,11 @@
 #include "block.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/raw_view.hpp>
 
+#include <algorithm>
 #include <mutex>
+#include <ranges>
 
 namespace vm {
 
@@ -77,5 +80,13 @@ namespace vm {
 
 	auto Memory::requestBlockType(BlockID id) -> TypeCRef {
 		return getBlock(id)->data.element_type;
+	}
+
+	void Memory::insertGlobalData(GlobalDataID id, TypeCRef type) {
+		if (!global_data.contains(id)) {
+			auto             type_size = type->getSize();
+			base::OwningView storage(new byte[type_size], type_size);
+			global_data.put(id, std::move(storage));
+		}
 	}
 }

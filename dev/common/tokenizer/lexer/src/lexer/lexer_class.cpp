@@ -44,6 +44,17 @@ namespace lexer {
 		UnclosedCommentError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	class EolLocationNote final: public dia::NoteWithPosition {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "This end of line.";
+		}
+
+	public:
+		EolLocationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
+	};
+
 	class UnclosedStringEolError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -57,18 +68,9 @@ namespace lexer {
 			return Domain::Lexer;
 		}
 
+		using EolNote = EolLocationNote;
+
 		UnclosedStringEolError(dia::SourcePosition pos): dia::Error(pos) {}
-
-		class EolLocationNote final: public dia::NoteWithPosition {
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "This end of line.";
-			}
-
-		public:
-			EolLocationNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
-		};
 	};
 
 	class UnclosedStringEofError final: public dia::Error {
@@ -85,6 +87,72 @@ namespace lexer {
 		}
 
 		UnclosedStringEofError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedCharEolError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Char unclosed before end of line.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		using EolNote = EolLocationNote;
+
+		UnclosedCharEolError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class UnclosedCharEofError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Char unclosed before end of file.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		UnclosedCharEofError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class EmptyCharError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Empty char.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		EmptyCharError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
+	class MultiCharacterCharError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Char with multiple characters.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Lexer;
+		}
+
+		MultiCharacterCharError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
 	class UnmatchedBracketError final: public dia::Error {
@@ -204,16 +272,18 @@ namespace lexer {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
 		// @TODO: for now comments aren't saved as tokens
-		else if (isCommentBegin()) {
-			commentHandler(output);
-		} else if (isBlockCommentBegin()) {
+		else if (isBlockCommentBegin()) {
 			blockCommentHandler(output);
+		} else if (isCommentBegin()) {
+			commentHandler(output);
 		} else if (peek().is(Class::operator_start)) {
 			operatorHandler(output);
 		} else if (peek().is(Class::name_start)) {
 			nameHandler(output);
 		} else if (isStringBegin()) {
 			stringHandler(output);
+		} else if (isCharBegin()) {
+			charHandler(output);
 		} else if (peek().is(Class::open_bracket)) {
 			bracketHandler(output);
 		} else if (peek().is(Class::special)) {
@@ -400,7 +470,7 @@ namespace lexer {
 				dia::SourcePosition err_pos(source_start, where - 1);
 				dia::SourcePosition eol_pos = currentPosition();
 				auto                error   = makeBox<UnclosedStringEolError>(err_pos);
-				error->addNote(makeBox<UnclosedStringEolError::EolLocationNote>(eol_pos));
+				error->addNote(makeBox<UnclosedStringEolError::EolNote>(eol_pos));
 				logger.log(std::move(error));
 				closed = false;
 				break;
@@ -413,7 +483,7 @@ namespace lexer {
 				next();
 			}
 		}
-		end = where - 1 + int(closed);
+		end = where - 1 + usize(closed);
 		if (closed) next();
 
 		dia::SourcePosition source_position(source_start, end);
@@ -422,6 +492,53 @@ namespace lexer {
 		output.push_back(Token::makeString(
 			file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position
 		));
+	}
+
+	void Lexer::charHandler(Tokens& output) {
+		usize begin = where;
+		usize end{};
+		auto  source_start = currentPosition();
+		bool  closed       = true;
+
+		usize count = 0;
+
+		next();
+		while (!peek().is('\'')) {
+			if (peek().is('\\')) {
+				skip(2);
+			} else if (isEOL()) {
+				dia::SourcePosition err_pos(source_start, where - 1);
+				dia::SourcePosition eol_pos = currentPosition();
+				auto                error   = makeBox<UnclosedCharEolError>(err_pos);
+				error->addNote(makeBox<UnclosedCharEolError::EolNote>(eol_pos));
+				logger.log(std::move(error));
+				closed = false;
+				break;
+			} else if (isEOF()) {
+				dia::SourcePosition err_pos(source_start, where - 1);
+				logger.log(makeBox<UnclosedCharEofError>(err_pos));
+				closed = false;
+				break;
+			} else {
+				next();
+			}
+			count++;
+		}
+		end = where - 1 + usize(closed);
+		dia::SourcePosition source_position(source_start, end);
+
+		if (count == 0)
+			logger.log(makeBox<EmptyCharError>(source_position));
+		else if (count > 1)
+			logger.log(makeBox<MultiCharacterCharError>(source_position));
+
+		if (closed) next();
+
+
+		addTokenMsg(begin, end, "char");
+		output.push_back(
+			Token::makeChar(file->getCharRange(begin + 1, end + 1 - usize(closed)), source_position)
+		);
 	}
 
 	void Lexer::bracketHandler(Tokens& output) {
@@ -485,6 +602,8 @@ namespace lexer {
 	bool Lexer::isBlockCommentEnd() const { return tryRawValue('}') && tryRawValue('#', 1); }
 
 	bool Lexer::isStringBegin() const { return tryRawValue('"'); }
+
+	bool Lexer::isCharBegin() const { return tryRawValue('\''); }
 
 	dia::SourcePosition Lexer::currentPosition() const { return { file, where }; }
 }

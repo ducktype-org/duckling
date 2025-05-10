@@ -46,6 +46,17 @@ namespace vm::loader::parser {
 		void dprint(std::ostream& out) const override;
 	};
 
+	struct GlobalData final: AsmElement {
+		using AsmElement::AsmElement;
+
+		tpc::Identifier name;
+		tpc::Identifier type;
+
+		static Box<GlobalData> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+	};
+
 	struct OpCode final: AsmElement {
 		using AsmElement::AsmElement;
 
@@ -88,9 +99,10 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-		fs::FilePath           source_file;
+		std::vector<Box<Func>>       functions;
+		std::vector<Box<Type>>       types;
+		std::vector<Box<GlobalData>> global_data;
+		fs::FilePath                 source_file;
 
 		ParsedFile(fs::FilePath source_file);
 

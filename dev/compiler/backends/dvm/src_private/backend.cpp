@@ -46,6 +46,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());
+					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
 					std::string name  = "i" + std::to_string(bits);
@@ -90,7 +91,7 @@ namespace compiler::backend_vm {
 
 			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& type_context):
 				  lir_function(lir_function),
-				  func_builder(lir_function->name, type_context),
+				  func_builder(lir_function->name, {}, type_context),
 				  types(type_context.getMetadata()),
 				  TYPE_OF_DATA([&type_context] {
 					  base::HashMap<base::StrID, TypeOfData> map;
@@ -107,7 +108,8 @@ namespace compiler::backend_vm {
 		 * @brief Generate `init_lany_type` instruction.
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
-			ctx.func_builder.initType(instructions::Op_init_lany_type(variable_name, type_name));
+			ctx.func_builder.addInstruction(instructions::Op_init_lany_type(variable_name, type_name)
+			);
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
@@ -483,7 +485,7 @@ namespace compiler::backend_vm {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
 		TypeContext type_context = type_context_builder.build();
-		code.types               = type_context.getTypes();
+		code.types               = type_context.getTypes() | std::ranges::to<std::vector>();
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
@@ -500,7 +502,6 @@ namespace compiler::backend_vm {
 
 				addTerminator(ctx, lir_block);
 			}
-
 
 			code.functions.emplace_back(ctx.func_builder.build());
 		}
