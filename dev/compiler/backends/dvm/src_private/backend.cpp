@@ -108,7 +108,8 @@ namespace compiler::backend_vm {
 		 * @brief Generate `init_lany_type` instruction.
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
-			ctx.func_builder.initType(instructions::Op_init_lany_type(variable_name, type_name));
+			ctx.func_builder.addInstruction(instructions::Op_init_lany_type(variable_name, type_name)
+			);
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
@@ -484,7 +485,7 @@ namespace compiler::backend_vm {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
 
 		TypeContext type_context = type_context_builder.build();
-		code.types               = type_context.getTypes();
+		code.types               = type_context.getTypes() | std::ranges::to<std::vector>();
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
@@ -501,7 +502,6 @@ namespace compiler::backend_vm {
 
 				addTerminator(ctx, lir_block);
 			}
-
 
 			code.functions.emplace_back(ctx.func_builder.build());
 		}

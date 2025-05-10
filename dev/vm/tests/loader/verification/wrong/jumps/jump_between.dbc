@@ -4,7 +4,10 @@ function main {
     # arg1 -> *argv
 
 	init_lany_type     	x, i64;
-	jmp_label  			Other;
+
+    # conditional so that the code inbetween the target and jump does not get eliminated
+	jmpIf_label 		Other;
+
 	deinit; # x
 
 	init_lany_type     	y, i64;

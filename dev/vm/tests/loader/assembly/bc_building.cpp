@@ -30,8 +30,7 @@ private:
 		loadInvalidDbc(
 			"multiple_labels.dbc",
 			{
-				vm::loader::RepeatedLabelError::ERR_MSG,
-				vm::loader::RepeatedLabelNote::ERR_MSG,
+				vm::code::builders::DuplicatedLabelError::ERR_MSG,
 			}
 		);
 	}
@@ -50,7 +49,7 @@ private:
 		loadInvalidDbc(
 			"label_not_found.dbc",
 			{
-				vm::loader::UnknownLabelError::ERR_MSG,
+				vm::code::builders::UnknownLabelError::ERR_MSG,
 				"LB",
 			}
 		);
@@ -69,7 +68,7 @@ private:
 		loadInvalidDbc(
 			"unknown_function.dbc",
 			{
-				base::strConcat(vm::loader::UnknownFunctionError::ERR_MSG, "foo"),
+				base::strConcat(vm::code::builders::UnknownFunctionError::ERR_MSG, "foo"),
 			}
 		);
 	}
@@ -87,7 +86,7 @@ private:
 		loadInvalidDbc(
 			"invalid_function_call.dbc",
 			{
-				vm::code::builders::InvalidFunctionCallArguments::ERR_MSG,
+				vm::code::builders::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
 		);
 	}
@@ -96,7 +95,7 @@ private:
 		loadInvalidDbc(
 			"invalid_ret_type_in_call.dbc",
 			{
-				vm::code::builders::InvalidFunctionCallArguments::ERR_MSG,
+				vm::code::builders::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
 		);
 	}

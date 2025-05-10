@@ -4,5 +4,6 @@ add_files(
     builders/instruction_builder.cpp
     serializer/serializer.cpp
     builtin_types.cpp
+    builders/function_validator.cpp
 )
 set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)

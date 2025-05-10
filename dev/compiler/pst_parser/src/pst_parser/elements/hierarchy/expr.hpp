@@ -566,6 +566,16 @@ namespace pst {
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
+			[[nodiscard]]
+			const auto& getOperators() const {
+				return operators;
+			}
+
+			[[nodiscard]]
+			auto getSubExpr(u64 index) const {
+				return sub_expr.at(index).give();
+			}
+
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;

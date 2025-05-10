@@ -129,7 +129,7 @@ private:
 		if (no_errors) {
 			// if (pst.getErrorState().fail()) pst.getErrorState().dumpLog();
 			assertTrue(
-				pst.getLogger().good(), "there are unexpected errors in Duckling source-code"
+				pst.getLogger()->good(), "there are unexpected errors in Duckling source-code"
 			);
 		}
 
@@ -171,34 +171,34 @@ private:
 	void testListParsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/lists_err.duck"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 4, "Expected 5 errors"
+			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 4, "Expected 5 errors"
 		);
 	}
 
 	void testUsingErrors() {
 		pst::PST<> pst = prepare(path("snippets/using_err.duck"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
+			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
 	void testParamListErrors() {
 		pst::PST<> pst = prepare(path("snippets/params_err.duck"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 11, "Expected 11 errors"
+			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 11, "Expected 11 errors"
 		);
 	}
 
 	void testMissingSemiErr() {
 		pst::PST<> pst = prepare(path("snippets/missing_semicolon_err.duck"));
 		assertTrue(
-			pst.getLogger().messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
+			pst.getLogger()->messageCount(dia::Message::Severity::Error) == 2, "Expected 2 errors"
 		);
 	}
 
 	void testFunctionParameterVisitors() {
 		pst::PST<> pst = prepare(path("snippets/function_with_parameters.duck"));
-		assertTrue(pst.getLogger().messageCount() == 0, "Expected 0 errors");
+		assertTrue(pst.getLogger()->messageCount() == 0, "Expected 0 errors");
 
 		auto fun_opt = pst.getRootElement()
 		                   .illegalAccess()
