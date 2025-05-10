@@ -177,7 +177,7 @@ namespace tsl {
 		/**
 		 * The string type consists of four parts of information:
 		 * -# Pointer to the start of data
-		 * -# Offset of the end of data
+		 * -# Offset of the end of data wrt. the pointer to its start
 		 * -# Offset of the start of reserved memory
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.

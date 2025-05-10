@@ -48,12 +48,7 @@ namespace tsh::internal {
 	bool DynamicArrayAbstractTypeImpl::isImplicitlyCoercible(
 		const AbstractType target, query::Context& ctx
 	) const {
-		// Implicit coercions are allowed to other dynamic arrays of the same element type.
-		if (target.getKind() != Kind::DynamicArray) return false;
-		DynamicArrayAbstractType target_array = target;
-		return ctx.query<QueryImplicitCoercibilityOnAbstractType>(
-			{ element_type, target_array.getElementType() }
-		);
+		return false;
 	}
 
 	bool TupleAbstractTypeImpl::isImplicitlyCoercible(

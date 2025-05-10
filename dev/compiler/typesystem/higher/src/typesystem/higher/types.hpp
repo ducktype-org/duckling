@@ -33,7 +33,6 @@ namespace tsh {
 		class DynamicArrayAbstractTypeImpl;
 		class VariantAbstractTypeImpl;
 		class ClassAbstractTypeImpl;
-		class DynamicArrayTypeImpl;
 		class NamespaceAbstractTypeImpl;
 		class ModuleAbstractTypeImpl;
 		class MetaAbstractTypeImpl;
