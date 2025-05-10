@@ -46,4 +46,6 @@ namespace pst {
 	}
 
 	void Const::acceptVisitor(PstVisitor& visitor) const { visitor.visitConst(*this); }
+
+	bool Const::trailingSemicolon() { return true; }
 }
