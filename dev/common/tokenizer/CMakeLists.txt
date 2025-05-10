@@ -1,4 +1,4 @@
 add_subdirectory(token_parser_core)
 add_subdirectory(lang_definitions)
 add_subdirectory(lexer)
-add_subdirectory(token_file)
+add_subdirectory(token_source)

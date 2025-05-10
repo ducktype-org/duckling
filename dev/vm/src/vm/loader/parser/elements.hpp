@@ -2,11 +2,11 @@
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
-#include <token_file/file.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include <token_source/source.hpp>
 
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
@@ -22,17 +22,16 @@ namespace vm::loader::parser {
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
-		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+		F8ParserState(tpc::TokenStream&& stream, Ref<dia::Logger> err):
 			  tpc::ParserState(std::move(stream), err) {}
 
 		tpc::GenericAutomatic<F8ParserState> parse();
 	};
 
 	struct AsmElement: tpc::Element {
-		Box<dia::SourcePosition> position;
+		dia::SourcePosition position;
 
-		AsmElement(const dia::SourcePosition& position):
-			  position(makeBox<dia::SourcePosition>(position)) {}
+		AsmElement(const dia::SourcePosition& position): position(position) {}
 
 		void debugPrint(std::ostream& out) const override;
 	};

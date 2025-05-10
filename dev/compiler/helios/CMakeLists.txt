@@ -8,6 +8,7 @@ add_library(HELIOS
 	src/helios/query_hout_of_expr.cpp
 	src_private/helios_private/comp_time/type_eval.cpp
 	src_private/helios_private/comp_time/int_eval.cpp
+	src_private/helios_private/builtin_operations/builtins.cpp
 	
 	src/helios/queries.cpp
 	src/helios/query_hout_of_expr.cpp
