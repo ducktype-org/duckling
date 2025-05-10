@@ -74,6 +74,8 @@ private:
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
 
+	void comparisonTest() { runTestForModule("modules/comparison"); }
+
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);
 		runTestForModule("modules/calls", 3, 5);
