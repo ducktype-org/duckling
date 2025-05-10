@@ -2,6 +2,7 @@
 
 #include "../all.hpp"
 #include "queries.hpp"
+#include "typesystem/higher/symbol_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/simple.hpp>
@@ -378,7 +379,7 @@ namespace tsh::internal {
 	};
 
 	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
-		AbstractType element_type;
+		SymbolType<> element_type;
 
 	public:
 		[[nodiscard]]
@@ -391,17 +392,19 @@ namespace tsh::internal {
 		 */
 		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
 
-		DynamicArrayAbstractTypeImpl(const AbstractType element): element_type(element) {
+		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
 			representation = base::strConcat("dynamic_array(", element.toString(), ")");
 		}
 
 		[[nodiscard]]
-		AbstractType getElementType() const {
+		SymbolType<> getElementType() const {
 			return element_type;
 		}
 
 		[[nodiscard]]
-		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
+			return false;
+		}
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {

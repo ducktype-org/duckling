@@ -339,7 +339,7 @@ namespace tsh {
 		 * @return The type of the elements of the dynamic array.
 		 */
 		[[nodiscard]]
-		AbstractType getElementType() const;  // @TODO AbstractType or SymbolType?
+		SymbolType<> getElementType() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(DynamicArrayAbstractType)
 

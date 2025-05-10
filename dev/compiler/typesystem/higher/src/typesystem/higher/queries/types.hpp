@@ -90,7 +90,7 @@ namespace tsh {
 	 * @brief Query to get the DynamicArray type.
 	 * The AbstractType of the elements of the array is given as a key.
 	 */
-	DECLARE_QUERY(QueryDynamicArrayType, AbstractType, DynamicArrayAbstractType)
+	DECLARE_QUERY(QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType)
 
 	/**
 	 * @brief Key for QueryTupleType.

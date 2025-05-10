@@ -203,7 +203,7 @@ private:
 			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
 
 			const DynamicArrayAbstractType dynamic_array_type
-				= ctx.query<QueryDynamicArrayType>(unit_type);
+				= ctx.query<QueryDynamicArrayType>(st(unit_type));
 			TypeLayout dynamic_array_layout
 				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
 

@@ -182,13 +182,11 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
-		// @FIXME compute it from pointer size constant
-		static constexpr auto POINTER_SIZE = Bytes(8);
-		static constexpr auto OFFSET_SIZE  = Bytes(8);
+		static constexpr auto OFFSET_SIZE = Bytes(8);
 
 	public:
 		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
-			  TypeLayoutABC(base::bytes2bits(POINTER_SIZE + OFFSET_SIZE * 3), string_type) {}
+			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, string_type) {}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
@@ -200,7 +198,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfDataOffsetPosition() const {
-			return POINTER_SIZE;
+			return POINTER_SIZE_BYTES;
 		}
 
 		/**
@@ -208,7 +206,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
-			return POINTER_SIZE + OFFSET_SIZE;
+			return POINTER_SIZE_BYTES + OFFSET_SIZE;
 		}
 
 		/**
@@ -216,7 +214,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
-			return POINTER_SIZE + OFFSET_SIZE * 2;
+			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
 		}
 	};
 
@@ -232,9 +230,7 @@ namespace tsl {
 		 * -# Offset of the end of reserved memory
 		 * The pointer and offsets are arranged in this exact order in memory.
 		 */
-		// @FIXME compute it from pointer size constant
-		static constexpr auto POINTER_SIZE = Bytes(8);
-		static constexpr auto OFFSET_SIZE  = Bytes(8);
+		static constexpr auto OFFSET_SIZE = Bytes(8);
 
 		Box<TypeLayout> element_layout;
 
@@ -272,7 +268,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfDataOffsetPosition() const {
-			return POINTER_SIZE;
+			return POINTER_SIZE_BYTES;
 		}
 
 		/**
@@ -280,7 +276,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getStartOfMemoryOffsetPosition() const {
-			return POINTER_SIZE + OFFSET_SIZE;
+			return POINTER_SIZE_BYTES + OFFSET_SIZE;
 		}
 
 		/**
@@ -288,7 +284,7 @@ namespace tsl {
 		 */
 		[[nodiscard]]
 		Bytes getEndOfMemoryOffsetPosition() const {
-			return POINTER_SIZE + OFFSET_SIZE * 2;
+			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
 		}
 	};
 

@@ -45,12 +45,6 @@ namespace tsh::internal {
 				));
 	}
 
-	bool DynamicArrayAbstractTypeImpl::isImplicitlyCoercible(
-		const AbstractType target, query::Context& ctx
-	) const {
-		return false;
-	}
-
 	bool TupleAbstractTypeImpl::isImplicitlyCoercible(
 		const AbstractType target, query::Context& ctx
 	) const {
