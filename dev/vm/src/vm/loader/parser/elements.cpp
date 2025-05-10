@@ -149,6 +149,7 @@ namespace vm::loader::parser {
 					if (!out->args.empty()) {
 						auto end = VISIT(out->args.back(), arg, return *arg.bytecode_pos).getEnd();
 						auto pos = out->position;
+
 						out->position = { pos, end };
 					}
 
