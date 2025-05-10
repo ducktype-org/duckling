@@ -102,11 +102,11 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
 	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
+	Example<pst::Const, true>  no_equals_const{ "const x: i32" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
-	Example<pst::Const, false> no_equals_const{ "const x: i32" };
 
 	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*;" };
 	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };

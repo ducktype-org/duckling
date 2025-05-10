@@ -74,7 +74,8 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitConst(pst::Access<pst::Const> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
+				// @TODO: handle potential lack of value
+				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};
 
@@ -95,7 +96,8 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
+				// @TODO: handle potential lack of value
+				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};
 

@@ -2,22 +2,6 @@
 #include "var_parse.hpp"
 
 namespace pst {
-	class VariableTypeEndError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected type expression followed by `=`.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		VariableTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	MBox<Variable> Variable::parse(LangParserState& state) {
 		MBox<Variable> out;
 
@@ -38,8 +22,19 @@ namespace pst {
 
 		out << R"("name": )";
 		nullAwareDprint(name, out);
-		out << R"(, "type": )";
-		nullAwareDprint(type, out);
+		out << R"(, "mutable": )";
+		if (is_const)
+			out << "false";
+		else
+			out << "true";
+		if (type) {
+			out << R"(, "type": )";
+			nullAwareDprint(type.value(), out);
+		}
+		if (value) {
+			out << R"(, "value": )";
+			nullAwareDprint(value.value(), out);
+		}
 
 		out << "}";
 	}

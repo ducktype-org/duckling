@@ -4,6 +4,22 @@
 
 namespace pst {
 
+	class VariableNoTypeAndValueError final: public dia::Error {
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return "Expected either a type or value.";
+		}
+
+	public:
+		[[nodiscard]]
+		Domain getDomain() const override {
+			return Domain::Parser;
+		}
+
+		VariableNoTypeAndValueError(dia::SourcePosition pos): dia::Error(pos) {}
+	};
+
 	template<typename T, lang_def::Keyword key>
 	MBox<T> parseVariableTemplate(pst::LangParserState& state) {
 		auto position = state.getPosition();
@@ -11,15 +27,26 @@ namespace pst {
 
 		if (!assertStmtChoice<T>(state, state[0].is(key))) return nullptr;
 
-		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		state.parse(out).all(key, &out->name, lang_def::NamedOperator::Colon);
+		state.parse(out).all(key, &out->name);
 
-		state.parse(out).one(&out->type);
+		bool has_type = false, has_value = false;
 
-		state.parse(out).one(lang_def::NamedOperator::Assign, true);
+		if (state[0].is(lang_def::NamedOperator::Colon)) {
+			state.parse(out).eatOne();
+			state.parse(out).one(&out->type);
 
-		// @TODO: Perhaps add possibility for default construction.
-		state.parse(out).one(&out->value);
+			has_type = true;
+		}
+
+		if (state[0].is(lang_def::NamedOperator::Assign)) {
+			state.parse(out).eatOne();
+			state.parse(out).one(&out->value);
+
+			has_value = true;
+		}
+
+		if (!has_value && !has_type)
+			state.log(makeBox<VariableNoTypeAndValueError>(state.getPosition()));
 
 		return out;
 	}

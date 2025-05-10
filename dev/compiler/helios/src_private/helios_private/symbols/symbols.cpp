@@ -575,7 +575,8 @@ namespace compiler::helios {
 				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Const>().value(
 				);
 
-			return ctx.query<EvalExprToI64>(const_symbol->getValue().unlock(ctx)->getExpr());
+			// @TODO: Handle potential lack of value
+			return ctx.query<EvalExprToI64>(const_symbol->getValue().value().unlock(ctx)->getExpr());
 		}
 
 		QUERY_AUTO_CACHE_COPY
