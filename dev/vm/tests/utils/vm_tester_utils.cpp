@@ -16,10 +16,14 @@ void VmTestSuite::runTestOnVm(
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
 	const std::vector<std::string>&    args,
-	i64                                exit_code
+	i64                                exit_code,
+	bool                               add_stdlib
 ) {
 	auto pid  = initProcess();
 	auto file = fs::FilePath(path(dbc_filename));
+	if (add_stdlib) {
+		ASSERT_TRUE(vm::api::loadStdlib(pid).has_value());
+	}
 	ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 	runTestImpl(pid, optional_input, optional_output, args, exit_code);
 }

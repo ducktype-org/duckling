@@ -4,6 +4,7 @@
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
@@ -166,13 +167,18 @@ namespace vm {
 					});
 				return getMainVMThread().getCurrentPosition();
 			}
+			variant_case(api::request::LoadStdlib, load_stdlib_request) {
+				return loadProgram(std::vector<code::CodeCollection>{*builtins::getStdlibModule()}).transform_error([](auto err) {
+					return api::CoreOperationError{ err };
+				});
+			}
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
 			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collection).transform_error([](auto err) {
+				return loadProgram(load_request.code_collections).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
