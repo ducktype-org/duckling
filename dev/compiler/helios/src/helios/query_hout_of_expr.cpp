@@ -74,7 +74,9 @@ namespace compiler::helios::code {
 			 * If a valid builtin exists (special characters only), returns it.
 			 * Otherwise, returns None.
 			 */
-			base::Optional<Box<Expr>> binaryBuiltin(lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs) {
+			base::Optional<Box<Expr>> binaryBuiltin(
+				lexer::Operator op, Box<Expr> lhs, Box<Expr> rhs
+			) {
 				auto operation = findBinaryBuiltin(op, lhs.ref(), rhs.ref());
 				if (operation) {
 					return makeBox<BinaryOperatorExpr>(
@@ -444,9 +446,8 @@ namespace compiler::helios::code {
 
 				// if no function call is found, we try to use builtin operators:
 
-				auto builtin = binaryBuiltin(
-					stmt->getOperators().at(0), std::move(lhs), std::move(rhs)
-				);
+				auto builtin
+					= binaryBuiltin(stmt->getOperators().at(0), std::move(lhs), std::move(rhs));
 				if (builtin.has_value()) {
 					node = std::move(builtin).value();
 					return;

@@ -6,7 +6,9 @@
 
 namespace compiler::helios::code {
 
-	base::Optional<BuiltinBinary> findBinaryBuiltin(lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs) {
+	base::Optional<BuiltinBinary> findBinaryBuiltin(
+		lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	) {
 		// note: this is mock that works only for very simple int op int and bool op bool.
 		// @todo: make it smarter?
 		// when refactoring it remember about unaryBuiltin

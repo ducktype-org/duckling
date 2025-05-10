@@ -16,7 +16,9 @@ namespace compiler::helios::code {
 	 * @brief Finds a builtin binary operation between to expression and for given operator.
 	 * Returns None if no such operation exists.
 	 */
-	base::Optional<BuiltinBinary> findBinaryBuiltin(lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs);
+	base::Optional<BuiltinBinary> findBinaryBuiltin(
+		lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs
+	);
 
 	/**
 	 * @brief Finds a builtin unary operation for a given expression and for given operator.
