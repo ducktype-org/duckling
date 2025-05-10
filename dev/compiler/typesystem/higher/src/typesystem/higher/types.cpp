@@ -173,6 +173,7 @@ namespace tsh {
 	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
+	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)

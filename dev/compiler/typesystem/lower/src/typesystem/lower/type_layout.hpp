@@ -242,6 +242,24 @@ namespace tsl {
 			tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
 		);
 
+		explicit DynamicArrayTypeLayout(
+			const DynamicArrayTypeLayout& other
+		):
+			  TypeLayoutABC(other),
+			  element_layout(makeBox<TypeLayout>(*other.element_layout)) {}
+
+		DynamicArrayTypeLayout(DynamicArrayTypeLayout&& other) noexcept
+			: TypeLayoutABC(other),
+			  element_layout(std::move(other.element_layout)) {}
+
+		DynamicArrayTypeLayout& operator=(DynamicArrayTypeLayout&& other) noexcept {
+			if (this != &other) {
+				TypeLayoutABC::operator=(other);
+				element_layout = std::move(other.element_layout);
+			}
+			return *this;
+		}
+
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
 			return getIndent(indent) + "DynamicArray : " + std::to_string(getSize());
@@ -476,10 +494,11 @@ namespace tsl {
 		FloatTypeLayout,
 		VariantTypeLayout,
 		TupleTypeLayout,
+		DynamicArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
-		StringTypeLayout,
-		PointerTypeLayout>;
+		PointerTypeLayout,
+		StringTypeLayout>;
 
 	/**
 	 * @brief The ADT representing the layout of a type.
