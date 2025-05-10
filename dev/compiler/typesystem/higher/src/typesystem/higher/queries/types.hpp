@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../types.hpp"
-#include "query_framework/query_int.hpp"
-#include "typesystem/higher/abstract_type.hpp"
+#include <query_framework/query_int.hpp>
+#include <typesystem/higher/abstract_type.hpp>
 
 #include <base/maps.hpp>
 
