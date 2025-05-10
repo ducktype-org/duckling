@@ -1,13 +1,13 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	MBox<tokenizer::TokenFile> td;
+	MBox<tokenizer::TokenSource> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {

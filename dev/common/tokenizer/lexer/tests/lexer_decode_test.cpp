@@ -2,7 +2,7 @@
 #include <lexer/decode.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 std::byte operator""_BT(unsigned long long x) {
 	CORE_ASSERT(x < 256, "bad std::byte literal operator");
@@ -38,9 +38,9 @@ private:
 	void assumeBadDecode(base::RawView view) {
 		std::string content{ view.stringView() };
 		auto        path = fs::FilePath::createTempFile(content);
-		auto        file = tokenizer::makeTokenFile(path);
+		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<encoding>();
-		assertTrue(file->getLogger().bad(), "Encoding error not found");
+		assertTrue(file->getLogger()->bad(), "Encoding error not found");
 	}
 
 	void badContinuations() {
@@ -98,14 +98,15 @@ private:
 	}
 
 	void goodAscii() {
-		std::vector<std::byte> in = {};
+		std::vector<std::byte> in;
+		in.reserve(128);
 		for (uchar c = 0; c < 128; c++) in.push_back(std::byte{ c });
 
 		std::string content{ reinterpret_cast<char*>(in.data()), in.size() };
 		auto        path = fs::FilePath::createTempFile(content);
-		auto        file = tokenizer::makeTokenFile(path);
+		auto        file = tokenizer::makeTokenSource(path);
 		file->decode<fs::Encoding::US_ASCII>();
-		assertTrue(file->getLogger().good(), "Valid Ascii not accepted");
+		assertTrue(file->getLogger()->good(), "Valid Ascii not accepted");
 	}
 };
 

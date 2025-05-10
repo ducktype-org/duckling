@@ -34,7 +34,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -65,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
