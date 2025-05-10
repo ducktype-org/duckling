@@ -101,11 +101,11 @@ private:
 		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
 		assertTrue(PSTmanual.getLogger()->good() == PSTcontent.getLogger()->good(), error);
 		assertTrue(PSTmanual.getLogger()->good() == PSTfilename.getLogger()->good(), error);
-		std::string manualPrint   = stringDprint(PSTmanual);
-		std::string contentPrint  = stringDprint(PSTcontent);
-		std::string filenamePrint = stringDprint(PSTfilename);
-		assertTrue(manualPrint == contentPrint, error);
-		assertTrue(manualPrint == filenamePrint, error);
+		std::string manual_print   = stringDprint(PSTmanual);
+		std::string content_print  = stringDprint(PSTcontent);
+		std::string filename_print = stringDprint(PSTfilename);
+		assertTrue(manualPrint == content_print, error);
+		assertTrue(manualPrint == filename_print, error);
 	}
 
 	template<typename Element>

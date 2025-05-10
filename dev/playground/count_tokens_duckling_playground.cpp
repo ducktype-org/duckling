@@ -42,7 +42,7 @@ int main(int argc, const char** argv) {
 	clap::ParsingResult input;
 
 	try {
-		input = clap.parse(argc, argv);
+		input = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },
