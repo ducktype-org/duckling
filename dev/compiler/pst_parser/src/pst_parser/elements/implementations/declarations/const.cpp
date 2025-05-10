@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "var_parse.hpp"
 
 namespace pst {
 	class ConstTypeEndError final: public dia::Error {
@@ -18,19 +19,7 @@ namespace pst {
 	};
 
 	MBox<Const> Const::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Const>(position);
-
-		if (!assertStmtChoice<Const>(state, state[0].is(Keyword::Const))) return nullptr;
-
-		state.parse(out).all(Keyword::Const, &out->name, NamedOperator::Colon);
-
-		state.parse(out).one(&out->type);
-
-		state.parse(out).one(NamedOperator::Assign, true);
-
-		state.parse(out).one(&out->value);
-		return out;
+		return parseVariableTemplate<Const, Keyword::Const>(state);
 	}
 
 	void Const::dprint(std::ostream& out) const {

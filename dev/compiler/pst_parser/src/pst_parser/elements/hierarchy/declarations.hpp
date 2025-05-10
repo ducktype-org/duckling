@@ -181,6 +181,9 @@ namespace pst {
 		AccessInternal<CommaExprHolder> type;
 		AccessInternal<CommaExprHolder> value;
 
+		template<typename T, lang_def::Keyword key>
+		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
+
 	public:
 		DECL_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
 		static MBox<Const> parse(LangParserState& state);
@@ -221,6 +224,9 @@ namespace pst {
 		AccessInternal<CommaExprHolder> type;
 		AccessInternal<CommaExprHolder> value;
 		bool                            is_const = true;
+
+		template<typename T, lang_def::Keyword key>
+		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);

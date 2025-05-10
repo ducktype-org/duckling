@@ -1,4 +1,5 @@
 #include "preamble.hpp"
+#include "var_parse.hpp"
 
 namespace pst {
 	class VariableTypeEndError final: public dia::Error {
@@ -18,26 +19,17 @@ namespace pst {
 	};
 
 	MBox<Variable> Variable::parse(LangParserState& state) {
-		auto position = state.getPosition();
-		auto out      = makeBox<Variable>(position);
+		MBox<Variable> out;
 
 		const bool is_var = state[0].is(Keyword::Var);
 		const bool is_let = state[0].is(Keyword::Let);
 
-		if (!assertStmtChoice<Namespace>(state, is_var || is_let)) return nullptr;
+		if (is_var)
+			out = parseVariableTemplate<Variable, Keyword::Var>(state);
+		else
+			out = parseVariableTemplate<Variable, Keyword::Let>(state);
 
 		out->is_const = is_let;
-
-		// @TODO: Add a possibility for type deduction from assigned value and no initial value.
-		state.parse(out).all(is_var ? Keyword::Var : Keyword::Let, &out->name, NamedOperator::Colon);
-
-		state.parse(out).one(&out->type);
-
-		state.parse(out).one(NamedOperator::Assign, true);
-
-		// @TODO: Perhaps add possibility for default construction.
-		state.parse(out).one(&out->value);
-
 		return out;
 	}
 
