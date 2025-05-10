@@ -36,6 +36,7 @@ public:
 		TESTER_ADD_TEST(simpleFloats);
 		TESTER_ADD_TEST(simplePointer);
 		TESTER_ADD_TEST(simpleString);
+		TESTER_ADD_TEST(simpleDynamicArray);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
@@ -246,6 +247,29 @@ private:
 		const AbstractType       type_str = str_1;
 		const StringAbstractType str_3    = type_str;
 		assertTrue(str_3.getKind() == String, "String should survive casting.");
+	}
+
+	/**
+	 * Test that dynamic array with different elements are different types
+	 * and that they are correctly cast.
+	 */
+	void simpleDynamicArray() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto arr_1 = query::entryPoint<QueryDynamicArrayType>(int_16);
+		assertTrue(arr_1.getKind() == DynamicArray, "DynamicArray should have kind DynamicArray.");
+		assertTrue(arr_1.getElementType() == int_16, "Element type should be as constructed.");
+
+		const AbstractType           type_arr = arr_1;
+		const DynamicArrayAbstractType arr_2   = type_arr;
+		assertTrue(arr_2.getKind() == DynamicArray, "DynamicArray should survive casting.");
+
+		const auto arr_3 = query::entryPoint<QueryDynamicArrayType>(int_16);
+		assertTrue(arr_1 == arr_3, "DynamicArrays with the same element types should be equal.");
+
+		const auto arr_4 = query::entryPoint<QueryDynamicArrayType>(int_32);
+		assertTrue(arr_1 != arr_4, "DynamicArrays with different element types should be different.");
 	}
 
 	/**

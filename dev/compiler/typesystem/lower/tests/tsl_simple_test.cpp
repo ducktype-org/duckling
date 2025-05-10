@@ -214,7 +214,7 @@ private:
 				variant_case(DynamicArrayTypeLayout, l) {
 					assertTrue(
 						*l.getElementLayout() == unit_layout,
-						"Element layout should be the same as the layout of the source type."
+						"Element layout should be a layout of the element type."
 					);
 				}
 				variant_default { fail("Layout of dynamic array type should be array-like."); }
