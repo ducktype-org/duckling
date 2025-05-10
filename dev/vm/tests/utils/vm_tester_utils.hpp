@@ -33,11 +33,11 @@ protected:
 	 */
 	void runTestOnVm(
 		const std::string&                 dbc_filename,
-		const base::Optional<std::string>& optional_input     = {},
-		const base::Optional<std::string>& optional_output    = {},
-		const std::vector<std::string>&    args               = {},
-		i64                                exit_code          = 0,
-		bool                               add_stdlib = false
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0,
+		bool                               add_stdlib      = false
 	);
 	/**
 	 * @brief Same as above, but the program is given as an argument

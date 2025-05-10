@@ -21,9 +21,7 @@ void VmTestSuite::runTestOnVm(
 ) {
 	auto pid  = initProcess();
 	auto file = fs::FilePath(path(dbc_filename));
-	if (add_stdlib) {
-		ASSERT_TRUE(vm::api::loadStdlib(pid).has_value());
-	}
+	if (add_stdlib) ASSERT_TRUE(vm::api::loadStdlib(pid).has_value());
 	ASSERT_TRUE(vm::api::loadFiles(pid, { file }).has_value());
 	runTestImpl(pid, optional_input, optional_output, args, exit_code);
 }

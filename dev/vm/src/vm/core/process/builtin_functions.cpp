@@ -136,11 +136,10 @@ namespace vm::builtins {
 
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection module;
+			code::CodeCollection               module;
 			code::builders::TypeContextBuilder types_builder(code::getBuiltinTypes());
-			for (const auto& [id, func_type]: *getBuiltinFunctionTypes()) {
+			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
 				types_builder.addType(func_type);
-			}
 			module.types = types_builder.build().getTypes() | std::ranges::to<std::vector>();
 
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {

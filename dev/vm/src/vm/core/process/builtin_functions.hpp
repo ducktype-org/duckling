@@ -8,7 +8,7 @@
  *
  * This module has two seperate parts:
  * - low level implementations, handling the VMThread calls to the builtin functions,
-	 and compiling the call_builtin_func opcode
+     and compiling the call_builtin_func opcode
  * - high level builtin "stdlib" module with DBC code to better interact with the loader
  *
  * The high level builtin functions serves as wrappers for the low level "call_builtin_func" opcodes.

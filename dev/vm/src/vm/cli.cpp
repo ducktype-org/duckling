@@ -52,9 +52,7 @@ void cli(bool load_stdlib) {
 
 void cli(const fs::FilePath& filepath, bool load_stdlib) {
 	vm::PID pid = expect(vm::api::spawn()).pid;
-	if (load_stdlib) {
-		expect(vm::api::loadStdlib(pid));
-	}
+	if (load_stdlib) expect(vm::api::loadStdlib(pid));
 	expect(vm::api::loadFiles(pid, { filepath }));
 	expect(vm::api::attach(pid, std::cin, std::cout));
 	expect(vm::api::run(pid));
