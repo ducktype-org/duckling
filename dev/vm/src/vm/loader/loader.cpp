@@ -44,7 +44,7 @@ namespace {
 	) {                                                                   \
 		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
 		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = *opcode.position;                            \
+		instr.bytecode_pos = opcode.position;                             \
 		return instr;                                                     \
 	}
 
@@ -56,7 +56,7 @@ namespace {
 		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
 		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
 			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
-			instr.bytecode_pos = *opcode.position;                                             \
+			instr.bytecode_pos = opcode.position;                                              \
 			return instr;                                                                      \
 		}                                                                                      \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
@@ -72,7 +72,7 @@ namespace {
 		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
 			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
 				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
-			instr.bytecode_pos = *opcode.position;                                                     \
+			instr.bytecode_pos = opcode.position;                                                      \
 			return instr;                                                                              \
 		}                                                                                              \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
