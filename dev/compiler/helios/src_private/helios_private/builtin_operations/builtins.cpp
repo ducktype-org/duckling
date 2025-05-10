@@ -6,11 +6,10 @@
 
 namespace compiler::helios::code {
 
-	base::Optional<BuiltinBinary> findBinaryBuiltin(base::StrID op, CRef<Expr> lhs, CRef<Expr> rhs) {
+	base::Optional<BuiltinBinary> findBinaryBuiltin(lexer::Operator op, CRef<Expr> lhs, CRef<Expr> rhs) {
 		// note: this is mock that works only for very simple int op int and bool op bool.
 		// @todo: make it smarter?
-		// @TODO: this whole section could be moved to a separate file
-		// // when refactoring it remember about unaryBuiltin
+		// when refactoring it remember about unaryBuiltin
 
 		// Get argument types.
 		auto lhs_type = lhs->expression_type;
@@ -56,8 +55,8 @@ namespace compiler::helios::code {
 		return {};
 	}
 
-	base::Optional<BuiltinUnary> findUnaryBuiltin(base::StrID op, CRef<Expr> expr) {
-		// note: this is mock that works only for very simple int op int.
+	base::Optional<BuiltinUnary> findUnaryBuiltin(lexer::Operator op, CRef<Expr> expr) {
+		// note: this is mock that works only for very simple int, bool operations.
 		// when refactoring it remember about binaryBuiltin
 
 		auto expr_type = expr->expression_type;
