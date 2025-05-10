@@ -20,6 +20,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
 		TESTER_ADD_TEST(stringTest);
+		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(classTest);
@@ -193,6 +194,32 @@ private:
 				variant_default { fail("Layout of string type should be string-like."); }
 			}
 			testPrinting(string_layout, ctx, true);
+		});
+	}
+
+	void dynamicArrayTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
+			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+
+			const DynamicArrayAbstractType dynamic_array_type
+				= ctx.query<QueryDynamicArrayType>(unit_type);
+			TypeLayout dynamic_array_layout = ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+
+			assertTrue(
+				dynamic_array_layout.getSourceType() == dynamic_array_type,
+				"Layout should have source type as constructed."
+			);
+			variant_match(dynamic_array_layout()) {
+				variant_case(DynamicArrayTypeLayout, l) {
+					assertTrue(
+						*l.getElementLayout() == unit_layout,
+						"Element layout should be the same as the layout of the source type."
+					);
+				}
+				variant_default { fail("Layout of dynamic array type should be array-like."); }
+			}
+			testPrinting(dynamic_array_layout, ctx, true);
 		});
 	}
 
