@@ -21,6 +21,7 @@ public:
 		TESTER_ADD_TEST(simpleTypesVariables);
 		TESTER_ADD_TEST(booleansTest);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(comparisonTest);
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
@@ -57,8 +58,8 @@ private:
 	) {
 		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
 		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
-		ASSERT_EQUAL(llvm_module.getFunctionCount(false), expected_function_count);
-		ASSERT_EQUAL(llvm_module.getFunctionCount(), expected_prototype_count);
+		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
+		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
 	}
 
 	void returnVoidTest() { runTestForModule("modules/simple"); }
@@ -73,6 +74,8 @@ private:
 	void booleansTest() { runTestForModule("modules/booleans", 2); }
 
 	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
+
+	void comparisonTest() { runTestForModule("modules/comparison", 1, 2); }
 
 	void functionCalls() {
 		runTestForModule("modules/calls_simple", 3);

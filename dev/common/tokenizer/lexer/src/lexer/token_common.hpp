@@ -52,11 +52,11 @@ namespace lexer {
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
 		 */
-		inline bool operator==(lang_def::NamedOperator& op) {
+		bool operator==(lang_def::NamedOperator& op) {
 			return lang_def::operatorToStr(op) == value;
 		}
 
-		inline bool operator==(Operator& other) { return *this == other.value; }
+		bool operator==(Operator& other) { return *this == other.value; }
 	};
 
 	/**
@@ -83,6 +83,6 @@ namespace lexer {
 		/**
 		 * @note This should probably do something more in the future
 		 */
-		inline bool operator==(Value& other) { return value == other.value; }
+		bool operator==(Value& other) { return value == other.value; }
 	};
 }
