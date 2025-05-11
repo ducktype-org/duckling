@@ -266,7 +266,7 @@ private:
 										42,
 										7,
 										std::string{ "hello" },
-										42
+										42,
 		)
 		                                .finalize();
 
