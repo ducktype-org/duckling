@@ -1,13 +1,13 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	MBox<tokenizer::TokenFile> td;
+	MBox<tokenizer::TokenSource> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testGroup5);
 		TESTER_ADD_TEST(testGroup6);
 		TESTER_ADD_TEST(testGroup7);
+		TESTER_ADD_TEST(testGroup8);
 		TESTER_ADD_TEST(testSourcePosition);
 	}
 
@@ -35,7 +36,7 @@ private:
 	};
 
 	void testBasicStructure() {
-		assertTrue(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
+		assertTrue(td->getTokenData().tokens.size() == 9, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
@@ -121,6 +122,8 @@ private:
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
+
+	void testGroup8() { testTokenGroup<8, lexer::Token::Type::Char, &lexer::Token::isChar>(); }
 
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();

@@ -49,13 +49,13 @@ namespace vm::api {
 		});
 	}
 
-	std::expected<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& paths) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::LoadFile{ path }))
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadFiles{ paths }))
 		    .transform(ignoreResponse);
 	}
 
-	std::expected<void, ApiError> loadCode(PID pid, const code::CodeCollection& code) {
+	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::LoadCode{ code }))
 		    .transform(ignoreResponse);
@@ -64,6 +64,16 @@ namespace vm::api {
 	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Run{ args }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> runFunction(
+		PID pid, const std::string& function_name, const std::vector<i64>& args
+	) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+			))
 		    .transform(ignoreResponse);
 	}
 
@@ -112,7 +122,9 @@ namespace vm::api {
 
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
-		    .doRequest(api::makeIORequest(pid, request::Attach{ input, output }))
+		    .doRequest(
+				api::makeIORequest(pid, request::Attach{ .istream = input, .ostream = output })
+			)
 		    .transform(ignoreResponse);
 	}
 

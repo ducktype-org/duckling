@@ -34,7 +34,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -65,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -195,7 +195,9 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::While, true> simple_while{ "while (x < 5) {}" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_ternary{ "if 5 then x else y" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_ternary{
+		"if 5 then '\\n' else y"
+	};
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad1_ternary{
 		"if if 5 then x else y"
 	};
@@ -209,9 +211,15 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 	Example<pst::ExprStmt, false> bad_operator{ "x = y z + 3" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  new_operators{ "<> 3 <> 5 <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> new_operators{ "<> 3 <> 'x' <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_integer_operators{
+		"1 + 2 - 3 * 4 / 5 % 6 ** 7"
+	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_boolean_operators{
+		"true and true or false and not false"
+	};
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 

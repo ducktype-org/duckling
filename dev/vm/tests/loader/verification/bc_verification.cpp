@@ -2,8 +2,8 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
+#include <vm/bytecode/builders/errors.hpp>
 #include <vm/loader/errors.hpp>
-#include <vm/loader/validator/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -20,7 +20,6 @@ public:
 		//  TESTER_ADD_TEST(validJumpOutOfBlock);
 
 		// Function verification
-		TESTER_ADD_TEST(noMain);
 		TESTER_ADD_TEST(multipleFunctions);
 
 		// Jump verfification
@@ -47,22 +46,13 @@ private:
 	// False positives
 	void jumpSkipBlock() { loadValidDbc("right/jump_skip_block.dbc"); }
 
-	void validJumpOutOfBlock() { loadValidDbc("right/vaild_jump_out_of_block.dbc"); }
+	void validJumpOutOfBlock() { loadValidDbc("right/valid_jump_out_of_block.dbc"); }
 
 	void initDeinit() { loadValidDbc("right/init_deinit.dbc"); }
 
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 
 	// Function verification
-	void noMain() {
-		loadInvalidDbc(
-			"wrong/functions/no_main.dbc",
-			{
-				vm::loader::NO_MAIN_ERR,
-			}
-		);
-	}
-
 	void multipleFunctions() {
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
@@ -77,8 +67,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
-				vm::loader::StackStructureMismatchNote::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -87,8 +77,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
-				vm::loader::StackStructureMismatchNote::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -97,8 +87,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
-				vm::loader::StackStructureMismatchError::ERR_MSG,
-				vm::loader::StackStructureMismatchNote::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::ERR_MSG,
+				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -108,11 +98,14 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
 
+	// @TODO Use these tests when typecheck gets implemented,
+	// but swap those deleted loader errors for (then freshly added by you) builder ones.
+#if 0
 	void beforeInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
@@ -129,15 +122,6 @@ private:
 			{
 				vm::loader::UninitializedLocalError::ERR_MSG,
 
-			}
-		);
-	}
-
-	void invalidOffset() {
-		loadInvalidDbc(
-			"wrong/init_deinit/invalid_offset.dbc",
-			{
-				vm::loader::StackOffsetError::ERR_MSG,
 			}
 		);
 	}
@@ -197,6 +181,8 @@ private:
 			}
 		);
 	}
+
+#endif
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/verification/");

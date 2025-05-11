@@ -19,7 +19,7 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 	public:
-		LangParserState(tpc::TokenStream&& tokens, dia::Logger& err):
+		LangParserState(tpc::TokenStream&& tokens, Ref<dia::Logger> err):
 			  tpc::ParserState(std::move(tokens), err) {}
 
 		/**

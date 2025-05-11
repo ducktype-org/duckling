@@ -20,7 +20,6 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios/scopes/simple.hpp>
 #include <helios_private/lookup_utils/lookup_result.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
@@ -31,14 +30,28 @@
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
-
-
 	/**
 	 * @brief Return all scopes currently stored by HELIOS.
-	 * @note: This should be used for tests and debug only.
+	 * @note: This should be used for tests and debug only,
+	 * and never in an actual query.
 	 * @return std::vector<ScopeID>
 	 */
 	std::vector<ScopeID> getAllHeliosScopes();
+
+	/**
+	 * @brief Return parent scope or none for root-scopes.
+	 */
+	base::Optional<ScopeID> parent(ScopeID);
+
+	/**
+	 * @brief Return module the scope was defined in
+	 */
+	frontend::ModuleID module(ScopeID id);
+
+	/**
+	 * @brief Return depth of the scope in the scope tree.
+	 */
+	u64 scopeDepth(ScopeID);
 
 	/**
 	 * @brief Query root scope for given module.
@@ -107,7 +120,7 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryScopesInModule, frontend::ModuleID, CRef<std::vector<ScopeID>>);
 
 	template<typename Element>
-	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const dia::Logger&>;
+	using ExpansionError = std::tuple<pst::AccessLocked<Element>, const Ref<dia::Logger>>;
 	template<typename Element>
 	using ExpansionResult = errors::HResult<pst::AccessLocked<Element>, ExpansionError<Element>>;
 

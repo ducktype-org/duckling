@@ -36,6 +36,8 @@ namespace vm::loader::compiler {
 			LoaderLogger                                       log{};
 			base::Optional<code::Function>                     function{};
 			base::HashMap<base::StrID, usize>                  label_positions{};
+			base::HashMap<base::StrID, usize>                  local_offset_map{};
+			usize                                              local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -43,13 +45,15 @@ namespace vm::loader::compiler {
 			const usize              instruction_index,
 			const opargs::OpCodeArg& opcode_arg
 		) {
+			// @TODO After typechecks (#732) most of these checks should probably
+			// get removed.
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
 				// Every used local variable is guaranteed to exist by static verification.
-#define HANDLE_LOCAL(TYPE)                                             \
-	variant_case(vm::opargs::TYPE, local_type) {                       \
-		return ctx.function->local_offset_map.at(local_type.var_name); \
+#define HANDLE_LOCAL(TYPE)                                                     \
+	variant_case(vm::opargs::TYPE, local_type) {                               \
+		return static_cast<i64>(ctx.local_offset_map.at(local_type.var_name)); \
 	}
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
@@ -62,7 +66,7 @@ namespace vm::loader::compiler {
 		return 0;                                                                   \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
-#undef HANDLE_OFFSET
+#undef HANDLE_GLOBAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
@@ -89,16 +93,12 @@ namespace vm::loader::compiler {
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
-					auto it = ctx.label_positions.find(label.label_name);
-					if (it != ctx.label_positions.end()) {
-						// We have to calculate the
-						// difference instead of absolute jump position,
-						// because our instruction counter is a pointer.
-						return static_cast<i64>(it->second) - static_cast<i64>(instruction_index)
-						     - 1;
-					}
-					ctx.log.log<UnknownLabelError>(label);
-					return 0;
+					// Labels are guaranteed to exist by static verification.
+					auto pos = ctx.label_positions.at(label.label_name);
+					// We have to calculate the
+					// difference instead of absolute jump position,
+					// because our instruction counter is a pointer.
+					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
 			}
 
@@ -108,15 +108,11 @@ namespace vm::loader::compiler {
 		low::FuncData changeFuncToFuncData(CompilationContext& ctx) {
 			low::FuncData func_data;
 			func_data.name = ctx.function->name.str;
-			auto functional_type
-				= ctx.type_map.atMaybe(ctx.function->name.str)
-			          .expect<code::builders::MissingFunctionalTypeError>(ctx.function->name.str);
-			func_data.arg_size
-				= functional_type->getParametersSize()
-			          .expect<code::builders::TypeIsNotFunctionalError>(ctx.function->name.str);
-			// Not expecting here because it's checked above
+			// This is guaranteed to exist by builders.
+			auto functional_type       = ctx.type_map.at(ctx.function->name.str);
+			func_data.arg_size         = functional_type->getParametersSize().value();
 			func_data.ret_size         = functional_type->getResultType().value()->getSize();
-			func_data.local_stack_size = ctx.function->local_stack_size;
+			func_data.local_stack_size = ctx.local_stack_size;
 
 			for (usize op_idx = 0; op_idx < ctx.function->body.size(); op_idx++) {
 				const auto& op    = ctx.function->body[op_idx];
@@ -152,27 +148,12 @@ namespace vm::loader::compiler {
 		void splitCodeAndLabels(CompilationContext& ctx) {
 			code::Function new_func = ctx.function.value();
 			new_func.body.clear();
-			base::HashMap<base::StrID, usize>                        label_positions;
-			base::HashMap<base::StrID, code::instructions::Op_label> labels;
+			base::HashMap<base::StrID, usize> label_positions;
 			for (const auto& instr: ctx.function.value().body) {
 				variant_match(instr) {
 					variant_case(code::instructions::Comment, _);
 					variant_case(code::instructions::Op_label, label) {
-						auto [_, inserted] = label_positions.insert_or_assign(
-							label.arg0.label_name, new_func.body.size()
-						);
-						if (!inserted) {
-							ctx.log.logMap<RepeatedLabelError>(label, [&](auto& err) {
-								for (auto&& lbl: label_positions)
-									if (lbl.first == label.arg0.label_name) {
-										ctx.log.addNote<RepeatedLabelNote>(
-											err, labels[label.arg0.label_name]
-										);
-									}
-							});
-						} else {
-							labels.put(label.arg0.label_name, label);
-						}
+						label_positions.put(label.arg0.label_name, new_func.body.size());
 					}
 					variant_default { new_func.body.push_back(instr); }
 				}
@@ -181,6 +162,113 @@ namespace vm::loader::compiler {
 			ctx.label_positions = std::move(label_positions);
 		}
 
+		void calculateOffsets(CompilationContext& ctx) {
+			base::HashMap<base::StrID, usize> offsets;
+			std::vector<usize>                type_size_stack;
+			usize                             curr_stack_size = 0;
+			usize                             max_stack_size  = 0;
+
+			auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
+				if_opt_some(offsets.atMaybe(local.var_name), offset) {
+					if (offset != curr_stack_size) {
+						ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
+						return;
+					}
+				}
+
+				offsets.put(local.var_name, curr_stack_size);
+				auto type_size = ctx.type_map.at(type.type_name)->getSize();
+				type_size_stack.push_back(type_size);
+				curr_stack_size += type_size;
+				max_stack_size = std::max(max_stack_size, curr_stack_size);
+			};
+
+			auto pop = [&]() {
+				auto type_size = type_size_stack.back();
+				type_size_stack.pop_back();
+				curr_stack_size -= type_size;
+			};
+
+			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
+			push(base::StrID("ret_val"), func_type.result->getName());
+			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
+				push(base::StrID(base::strConcat("arg", idx).c_str()), param_type->getName());
+
+			// instruction index, stack state, stack size
+			std::vector<std::tuple<usize, decltype(type_size_stack), usize>> dfs_stack{
+				{ ctx.function->body.size(), {}, 0 }  // sentinel
+			};
+			std::vector<bool> visited_instructions(ctx.function->body.size());
+			usize             index = 0;
+
+			while (index != ctx.function->body.size()) {
+				if (visited_instructions[index]) {
+					std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+					dfs_stack.pop_back();
+					continue;
+				}
+				visited_instructions[index] = true;
+
+				variant_match(ctx.function->body[index]) {
+					using namespace code::instructions;
+					variant_case(Op_init_lany_type, instr) {
+						push(instr.arg0, instr.arg1);
+						index++;
+					}
+					variant_case(Op_deinit, instr) {
+						pop();
+						index++;
+					}
+					variant_case(Op_jmp_label, instr) {
+						index = ctx.label_positions[instr.arg0.label_name];
+					}
+					variant_case(Op_jmpIf_label, instr) {
+						index++;
+						dfs_stack.emplace_back(
+							ctx.label_positions[instr.arg0.label_name],
+							type_size_stack,
+							curr_stack_size
+						);
+					}
+					variant_case(Op_jmpIfNot_label, instr) {
+						index++;
+						dfs_stack.emplace_back(
+							ctx.label_positions[instr.arg0.label_name],
+							type_size_stack,
+							curr_stack_size
+						);
+					}
+					variant_case(Op_ret, instr) {
+						std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+						dfs_stack.pop_back();
+					}
+					variant_case(Op_call_func, instr) {
+						for (usize i = 0;
+						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						     i++) {
+							pop();
+						}
+						index++;
+					}
+					variant_case(Op_call_builtin_func, instr) {
+						for (usize i = 0;
+						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						     i++) {
+							pop();
+						}
+						index++;
+					}
+					variant_case(Op_ret_tailcall_func, instr) {
+						std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
+						dfs_stack.pop_back();
+					}
+					variant_default { index++; }
+				}
+			}
+
+			ctx.local_offset_map = std::move(offsets);
+			ctx.local_stack_size = max_stack_size;
+		}
 	}
 
 	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
@@ -203,6 +291,7 @@ namespace vm::loader::compiler {
 		for (auto& func: program.funcMap()) {
 			ctx.function = func;
 			splitCodeAndLabels(ctx);
+			calculateOffsets(ctx);
 
 			auto converted_func = changeFuncToFuncData(ctx);
 			converted_functions.push_back(converted_func);
