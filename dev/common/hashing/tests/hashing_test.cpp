@@ -9,8 +9,6 @@
 
 #include <base/ints.hpp>
 
-#include <iomanip>
-#include <iostream>
 #include <unordered_map>
 
 
@@ -266,23 +264,14 @@ private:
 										42,
 										7,
 										std::string{ "hello" },
-										42,
+										42
 		)
 		                                .finalize();
 
-		// Convert hash_value to hexadecimal string
-		auto hash_to_hex = [](const auto& hash) {
-			std::ostringstream oss;
-			for (const auto& byte: hash) {
-				oss << std::hex << std::setw(2) << std::setfill('0')
-					<< static_cast<int>(std::to_integer<unsigned char>(byte));
-			}
-			return oss.str();
-		};
 
 		const std::string expected_hash
 			= "b2288f243a2cf2ce6c04b098b2f5ea7d140e961fc234cf55d08a42599847ad89";
-		const std::string computed_hash = hash_to_hex(hash_value);
+		const std::string computed_hash = hash_value.toStringHex();
 
 		assertTrue(
 			computed_hash == expected_hash,

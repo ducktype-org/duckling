@@ -154,25 +154,53 @@ namespace hashing {
 	};
 
 	/**
+	 * Bit256 is a 256-bit integer type used for SHA-256 hash values.
+	 * It is represented as an array of 4 64-bit integers.
+	 */
+	struct Bit256 {
+		std::array<u64, 4> data = {};
+
+		constexpr Bit256() = default;
+
+		constexpr Bit256(const std::array<u32, 8>& arr) noexcept {
+			for (size_t i = 0; i < 4; ++i)
+				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
+		}
+
+		constexpr bool operator==(const Bit256& other) const noexcept = default;
+		constexpr bool operator!=(const Bit256& other) const noexcept = default;
+
+		[[nodiscard]] constexpr std::string toStringHex() const {
+			std::string ret;
+			ret.reserve(64);
+			for (const auto& d: data)
+				for (int i = 0; i < 16; ++i)
+					ret += std::string_view("0123456789abcdef").at(((d >> (60 - i * 4)) & 0xF));
+			return ret;
+		}
+	};
+
+	/**
 	 * SHA-256 hash algorithm implementation.
+	 * the names of the variables are copied from official standard
+	 * that can be found here: https://nvlpubs.nist.gov/nistpubs/fips/nist.fips.180-4.pdf
 	 */
 	class SHA256 {
 	private:
 		// Internal state: 8 32-bit words
-		std::array<uint32_t, 8> state;
+		std::array<u32, 8> state;
 
 		// Buffer for unprocessed data (512 bits = 64 bytes)
 		std::array<std::byte, 64> buffer{};
 
 		// Total message length in bits
-		uint64_t total_bits{ 0 };
+		u64 total_bits{ 0 };
 
 		// Current size of the buffer
 		size_t buffer_size{ 0 };
 
 	public:
-		// The result type is a 32-byte array
-		using result_type = std::array<std::byte, 32>;
+		using result_type = Bit256;
 
 		// Constructor - initializes the hash state
 		constexpr SHA256() noexcept:
@@ -183,7 +211,7 @@ namespace hashing {
 		      } {}
 
 		// Update state with input data
-		constexpr void operator()(std::span<const std::byte> data) noexcept {
+		constexpr void operator()(detail::span_of_bytes auto data) noexcept {
 			total_bits += data.size() * 8;  // Update total bits processed
 
 			const std::byte* ptr       = data.data();
@@ -220,25 +248,26 @@ namespace hashing {
 		constexpr result_type finalize() const noexcept {
 			SHA256 copy = *this;
 			copy.padAndProcess();
-
-			result_type result{};
-			for (size_t i = 0; i < state.size(); ++i) {
-				const uint32_t value = copy.state.at(i);
-				result.at(i * 4)     = static_cast<std::byte>((value >> 24) & 0xFF);
-				result.at(i * 4 + 1) = static_cast<std::byte>((value >> 16) & 0xFF);
-				result.at(i * 4 + 2) = static_cast<std::byte>((value >> 8) & 0xFF);
-				result.at(i * 4 + 3) = static_cast<std::byte>(value & 0xFF);
-			}
-
-			return result;
+			return copy.state;
 		}
 
 	private:
 		// Helper methods
+		/**
+		    This function perform the SHA-256 transformation on a 512-bit block of data.
+		    It processes the data and updates the internal state of the hash.
+		    The transformation is based on the SHA-256 algorithm and uses bitwise operations
+		    and modular arithmetic to compute the hash value.
+		    @tparam T The type of the data to be transformed (should be a byte array).
+		    @param data Pointer to the 512-bit block of data to be transformed.
+		    @note The function uses a series of bitwise operations and modular arithmetic to
+		    compute the hash value. It also uses a set of constants defined in the SHA-256
+		    algorithm specification.
+		 */
 		constexpr void transform(const std::byte* data) noexcept {
 			// SHA-256 Constants: first 32 bits of the fractional parts of the cube roots
 			// of the first 64 prime numbers (2 through 311)
-			constexpr std::array<uint32_t, 64> k
+			constexpr std::array<u32, 64> k
 				= { 0x42'8a'2f'98, 0x71'37'44'91, 0xb5'c0'fb'cf, 0xe9'b5'db'a5, 0x39'56'c2'5b,
 				    0x59'f1'11'f1, 0x92'3f'82'a4, 0xab'1c'5e'd5, 0xd8'07'aa'98, 0x12'83'5b'01,
 				    0x24'31'85'be, 0x55'0c'7d'c3, 0x72'be'5d'74, 0x80'de'b1'fe, 0x9b'dc'06'a7,
@@ -253,39 +282,39 @@ namespace hashing {
 				    0x68'2e'6f'f3, 0x74'8f'82'ee, 0x78'a5'63'6f, 0x84'c8'78'14, 0x8c'c7'02'08,
 				    0x90'be'ff'fa, 0xa4'50'6c'eb, 0xbe'f9'a3'f7, 0xc6'71'78'f2 };
 
-			std::array<uint32_t, 64> w{};
+			std::array<u32, 64> w{};
 
 			for (size_t i = 0; i < 16; ++i) {
-				w.at(i) = (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4])) << 24)
-				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 1])) << 16)
-				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 2])) << 8)
-				        | (static_cast<uint32_t>(static_cast<unsigned char>(data[i * 4 + 3])));
+				w.at(i) = (static_cast<u32>(static_cast<unsigned char>(data[i * 4])) << 24)
+				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 1])) << 16)
+				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 2])) << 8)
+				        | (static_cast<u32>(static_cast<unsigned char>(data[i * 4 + 3])));
 			}
 
 			for (size_t i = 16; i < 64; ++i) {
-				const uint32_t s0 = rightRotate(w.at(i - 15), 7) ^ rightRotate(w.at(i - 15), 18)
-				                  ^ (w.at(i - 15) >> 3);
-				const uint32_t s1 = rightRotate(w.at(i - 2), 17) ^ rightRotate(w.at(i - 2), 19)
-				                  ^ (w.at(i - 2) >> 10);
+				const u32 s0 = rightRotate(w.at(i - 15), 7) ^ rightRotate(w.at(i - 15), 18)
+				             ^ (w.at(i - 15) >> 3);
+				const u32 s1 = rightRotate(w.at(i - 2), 17) ^ rightRotate(w.at(i - 2), 19)
+				             ^ (w.at(i - 2) >> 10);
 				w.at(i) = w.at(i - 16) + s0 + w.at(i - 7) + s1;
 			}
 
-			uint32_t a = state.at(0);
-			uint32_t b = state.at(1);
-			uint32_t c = state.at(2);
-			uint32_t d = state.at(3);
-			uint32_t e = state.at(4);
-			uint32_t f = state.at(5);
-			uint32_t g = state.at(6);
-			uint32_t h = state.at(7);
+			u32 a = state.at(0);
+			u32 b = state.at(1);
+			u32 c = state.at(2);
+			u32 d = state.at(3);
+			u32 e = state.at(4);
+			u32 f = state.at(5);
+			u32 g = state.at(6);
+			u32 h = state.at(7);
 
 			for (size_t i = 0; i < 64; ++i) {
-				const uint32_t s1    = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
-				const uint32_t ch    = (e & f) ^ ((~e) & g);
-				const uint32_t temp1 = h + s1 + ch + k.at(i) + w.at(i);
-				const uint32_t s0    = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
-				const uint32_t maj   = (a & b) ^ (a & c) ^ (b & c);
-				const uint32_t temp2 = s0 + maj;
+				const u32 s1    = rightRotate(e, 6) ^ rightRotate(e, 11) ^ rightRotate(e, 25);
+				const u32 ch    = (e & f) ^ ((~e) & g);
+				const u32 temp1 = h + s1 + ch + k.at(i) + w.at(i);
+				const u32 s0    = rightRotate(a, 2) ^ rightRotate(a, 13) ^ rightRotate(a, 22);
+				const u32 maj   = (a & b) ^ (a & c) ^ (b & c);
+				const u32 temp2 = s0 + maj;
 
 				h = g;
 				g = f;
@@ -307,6 +336,14 @@ namespace hashing {
 			state.at(7) += h;
 		}
 
+		/**
+		 * Pads the buffer and processes the final block.
+		 * This function is called at the end of the hashing process
+		 * the last 64 bits of sha256 hash are the length of the message
+		 * in bits, so we need to add the length to the end of the buffer
+		 * and add padding before the length to ensure all the block has excactly 512 bits
+		 * (64 bytes)
+		 */
 		constexpr void padAndProcess() noexcept {
 			buffer.at(buffer_size++) = std::byte{ 0x80 };  // Use .at() for bounds checking
 
@@ -318,20 +355,20 @@ namespace hashing {
 
 			while (buffer_size < 56) buffer.at(buffer_size++) = std::byte{ 0 };  // Use .at()
 
-			const uint64_t bits = total_bits;
-			buffer.at(56)       = static_cast<std::byte>((bits >> 56) & 0xFF);
-			buffer.at(57)       = static_cast<std::byte>((bits >> 48) & 0xFF);
-			buffer.at(58)       = static_cast<std::byte>((bits >> 40) & 0xFF);
-			buffer.at(59)       = static_cast<std::byte>((bits >> 32) & 0xFF);
-			buffer.at(60)       = static_cast<std::byte>((bits >> 24) & 0xFF);
-			buffer.at(61)       = static_cast<std::byte>((bits >> 16) & 0xFF);
-			buffer.at(62)       = static_cast<std::byte>((bits >> 8) & 0xFF);
-			buffer.at(63)       = static_cast<std::byte>(bits & 0xFF);
+			const u64 bits = total_bits;
+			buffer.at(56)  = static_cast<std::byte>((bits >> 56) & 0xFF);
+			buffer.at(57)  = static_cast<std::byte>((bits >> 48) & 0xFF);
+			buffer.at(58)  = static_cast<std::byte>((bits >> 40) & 0xFF);
+			buffer.at(59)  = static_cast<std::byte>((bits >> 32) & 0xFF);
+			buffer.at(60)  = static_cast<std::byte>((bits >> 24) & 0xFF);
+			buffer.at(61)  = static_cast<std::byte>((bits >> 16) & 0xFF);
+			buffer.at(62)  = static_cast<std::byte>((bits >> 8) & 0xFF);
+			buffer.at(63)  = static_cast<std::byte>(bits & 0xFF);
 
 			transform(buffer.data());
 		}
 
-		static constexpr uint32_t rightRotate(uint32_t value, unsigned int count) noexcept {
+		static constexpr u32 rightRotate(u32 value, u64 count) noexcept {
 			return (value >> count) | (value << (32 - count));
 		}
 	};
