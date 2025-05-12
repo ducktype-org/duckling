@@ -296,9 +296,9 @@ struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
-		if (pst->getLogger().bad()) {
+		if (pst->getLogger()->bad()) {
 			std::cerr << "PARSING ERRORS: \n";
-			pst->getLogger().dumpLog(true, std::cerr);
+			pst->getLogger()->dumpLog(true, std::cerr);
 			std::cerr << "\n\n";
 		}
 
