@@ -287,7 +287,8 @@ namespace vm {
 
 			// Remove the argument blocks from caller's block stack. Only the return value stays in
 			// the block stack.
-			// @note: We require that the callee can't deinitialize the return value passed by the caller.
+			// @note: We require that the callee can't deinitialize the return value passed by the
+			// caller.
 			prev_frame->local_stack_head -= called_func.arg_size;
 			for (u64 i = 0; i < arg_count; i++) {
 				prev_frame->block_stack.pop_back();
