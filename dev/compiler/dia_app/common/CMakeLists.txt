@@ -1,2 +1,3 @@
 add_subdirectory(proto)
 add_subdirectory(raw_proto)
+add_subdirectory(yaml_example)
