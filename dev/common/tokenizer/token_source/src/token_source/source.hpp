@@ -2,6 +2,7 @@
 
 #include "forward.hpp"
 
+#include <diagnostic/location.hpp>
 #include <diagnostic/logger.hpp>
 #include <filesystem/encoding.hpp>
 #include <filesystem/file.hpp>
@@ -13,7 +14,6 @@
 #include <base/raw_view.hpp>
 
 #include <set>
-#include <span>
 
 namespace tokenizer {
 	/**
@@ -21,10 +21,10 @@ namespace tokenizer {
 	 *
 	 * @note For now it's very minimal and doesn't check proper usage.
 	 */
-	class TokenFile {
+	class TokenSource {
 	private:
-		fs::FilePath                           path;
 		dia::Logger                            log;
+		base::Box<dia::Location>               location;
 		base::Optional<const fs::FileContent>  content;
 		base::Optional<const lexer::CharArray> decoded;
 		base::Optional<const lexer::TokenData> token_data;
@@ -41,24 +41,24 @@ namespace tokenizer {
 		 */
 		std::set<std::pair<usize, usize>> line_begins;
 
-		explicit TokenFile(const fs::FilePath&);
+		/**
+		 * @brief Construct a new TokenSource from file.
+		 */
+		explicit TokenSource(const fs::FilePath&);
+
+		/**
+		 * @brief Construct a new TokenSource as a macro with parent position.
+		 */
+		explicit TokenSource(dia::SourcePosition parent, std::string_view contents);
 
 		template<class T, class... Ts>
 		friend base::Box<T> base::makeBox(Ts&&... args);
 
 	public:
-		TokenFile(const TokenFile&) = delete;
-		TokenFile()                 = delete;
+		TokenSource(const TokenSource&) = delete;
+		TokenSource()                   = delete;
 
-		TokenFile(TokenFile&&) = delete;
-
-		/**
-		 * @brief Get the path of underlying file.
-		 */
-		[[nodiscard]]
-		fs::FilePath getPath() const {
-			return path;
-		}
+		TokenSource(TokenSource&&) = delete;
 
 		/**
 		 * @brief Compute pair (line, column) from character index.
@@ -88,14 +88,17 @@ namespace tokenizer {
 		const lexer::CharArray& getChars() const;
 		[[nodiscard]]
 		const lexer::TokenData& getTokenData() const;
-		dia::Logger&            getLogger();
-		fs::FilePath            getPath();
+		[[nodiscard]]
+		CRef<dia::Location> getLocation() const;
+		Ref<dia::Logger>    getLogger();
+		[[nodiscard]]
+		fs::FilePath getPath() const;
 
 		std::vector<std::pair<usize, usize>>& getLines() { return lines; }
 
 		template<fs::Encoding encoding = fs::Encoding::UTF8>
 		void decode() {
-			decoded.emplace(lexer::decode<encoding>(Ref(this), log));
+			decoded.emplace(lexer::decode<encoding>(Ref(this), &log));
 		}
 
 		void countLines();
@@ -117,7 +120,7 @@ namespace tokenizer {
 	};
 
 	template<class... Ts>
-	Box<TokenFile> makeTokenFile(Ts&&... args) {
-		return makeBox<TokenFile>(std::forward<Ts>(args)...);
+	Box<TokenSource> makeTokenSource(Ts&&... args) {
+		return makeBox<TokenSource>(std::forward<Ts>(args)...);
 	}
 }

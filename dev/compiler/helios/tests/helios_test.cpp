@@ -128,59 +128,60 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
-		const auto INT16_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		const auto F16_TYPE   = query::entryPoint<tsh::QueryFloatType>(16);
-		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
-		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
-		const auto META_TYPE  = query::entryPoint<tsh::QueryMetaType>({});
+		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto f16_type   = query::entryPoint<tsh::QueryFloatType>(16);
+		const auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
+		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto meta_type  = query::entryPoint<tsh::QueryMetaType>({});
 
-		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
-		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 
 		const auto tuple_int_int = getTypeOf("TupleII", root_scope);
 		const auto tuple_int_int_abstract_type
-			= query::entryPoint<tsh::QueryTupleType>({ { st(INT32_TYPE), st(INT32_TYPE) } });
-		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_abstract_type);
+			= query::entryPoint<tsh::QueryTupleType>({ { st(int32_type), st(int32_type) } });
+		ASSERT_EQUAL(tuple_int_int, tuple_int_int_abstract_type);
 
 		const auto first_variant = getTypeOf("first_variant", root_scope);
 		const auto first_variant_abstract_type
-			= query::entryPoint<tsh::QueryVariantType>({ { st(INT32_TYPE), st(F32_TYPE) } });
-		ASSERT_EQUAL(true, first_variant == first_variant_abstract_type);
+			= query::entryPoint<tsh::QueryVariantType>({ { st(int32_type), st(f32_type) } });
+		ASSERT_EQUAL(first_variant, first_variant_abstract_type);
 
 		const auto second_variant               = getTypeOf("second_variant", root_scope);
 		const auto second_variant_abstract_type = query::entryPoint<tsh::QueryVariantType>(
-			{ { st(INT32_TYPE), st(F32_TYPE), st(BOOL_TYPE) } }
+			{ { st(int32_type), st(f32_type), st(bool_type) } }
 		);
-		ASSERT_EQUAL(true, second_variant == second_variant_abstract_type);
+		ASSERT_EQUAL(second_variant, second_variant_abstract_type);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto classA = getTypeFromDefinition("A", root_scope);
-		const auto classB = getTypeFromDefinition("B", root_scope);
-		const auto classC = getTypeFromDefinition("C", root_scope);
+		const auto class_a = getTypeFromDefinition("A", root_scope);
+		const auto class_b = getTypeFromDefinition("B", root_scope);
+		const auto class_c = getTypeFromDefinition("C", root_scope);
 
 		auto right_tuple = query::entryPoint<tsh::QueryTupleType>({ {
-			classA,
-			st(query::entryPoint<tsh::QueryVariantType>({ { classB, classC } })),
+			class_a,
+			st(query::entryPoint<tsh::QueryVariantType>({ { class_b, class_c } })),
 		} });
 
 		const auto weird_variant_type
-			= query::entryPoint<tsh::QueryVariantType>({ { classA, st(right_tuple) } });
+			= query::entryPoint<tsh::QueryVariantType>({ { class_a, st(right_tuple) } });
 
-		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
+		ASSERT_EQUAL(weird_variant, weird_variant_type);
 
-		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("A", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("B", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("C", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("T", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("A", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("B", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("C", root_scope));
 
 		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
 
 		const auto tuple_f16_f32
-			= query::entryPoint<tsh::QueryTupleType>({ { st(F16_TYPE), st(F32_TYPE) } });
+			= query::entryPoint<tsh::QueryTupleType>({ { st(f16_type), st(f32_type) } });
 		const auto tuple_i16_i32
-			= query::entryPoint<tsh::QueryTupleType>({ { st(INT16_TYPE), st(INT32_TYPE) } });
+			= query::entryPoint<tsh::QueryTupleType>({ { st(int16_type), st(int32_type) } });
 
 		const auto tuple_ii_ff_abstract_type
 			= query::entryPoint<tsh::QueryTupleType>({ { st(tuple_i16_i32), st(tuple_f16_f32) } });
@@ -389,6 +390,12 @@ private:
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
+
+		auto get_cmp  = getChain("CMP", root_scope).back();
+		auto expr_cmp = getExprOfConst(get_cmp);
+		Ref  expr_cmp_casted
+			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
+		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
 	}
 
 	void testError() {

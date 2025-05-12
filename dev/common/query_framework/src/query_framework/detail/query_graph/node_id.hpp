@@ -22,5 +22,25 @@ namespace query::detail {
 	struct NodeID final {
 		QueryID q_id;
 		KeyHash hash;
+
+		constexpr bool operator==(const NodeID& r) const {
+			return this->q_id.asInt() == r.q_id.asInt() and this->hash.val == r.hash.val;
+		}
+
+		constexpr bool operator<(const NodeID& r) const {
+			if (this->q_id.asInt() == r.q_id.asInt()) return this->hash.val < r.hash.val;
+			return this->q_id.asInt() < r.q_id.asInt();
+		}
 	};
 }
+
+template<>
+struct std::hash<query::detail::NodeID> final {
+	std::size_t operator()(const query::detail::NodeID& key) const {
+		auto l = key.q_id;
+		auto r = key.hash.val;
+
+		// this is questionable:
+		return l.asInt() * 9'223'372'036'854'775'783UL + r;
+	}
+};
