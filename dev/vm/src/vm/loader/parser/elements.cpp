@@ -527,7 +527,12 @@ namespace vm::loader::parser {
 	}
 
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
+		std::cerr << "[DEBUG parse] Initial in parse. Logger state: good()="
+				  << state.err.good() << ", errorCount=" << state.err.messageCount() << '\n';
 		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getPath());
+		std::cerr << "[DEBUG parse] After makeBox. Logger state: good()="
+				  << state.err.good() << ", errorCount=" << state.err.messageCount() << '\n';
+
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
@@ -543,6 +548,8 @@ namespace vm::loader::parser {
 				break;
 			}
 		}
+		std::cerr << "[DEBUG parse] After all parsing. Logger state: good()="
+				  << state.err.good() << ", errorCount=" << state.err.messageCount() << '\n';
 
 		return out;
 	}

@@ -13,13 +13,25 @@ namespace vm::loader::parser {
 	}
 
 	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenFile> file, dia::Logger& log) {
+		std::cerr << "[DEBUG parseFile] === ENTERING for file: " << file->getPath().strView()
+				  << " ===\n";
+		std::cerr << "[DEBUG parseFile] Initial logger state: good()=" << log.good()
+				  << ", errorCount=" << log.messageCount() << '\n';
 		const lexer::TokenData& td = file->getTokenData();
-
+		std::cerr << "[DEBUG parseFile] Got TokenData, before state. Logger state: good()=" << log.good()
+				  << ", errorCount=" << log.messageCount() << '\n';
 		F8ParserState state(
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
+		std::cerr << "[DEBUG parseFile] After creating F8ParserState. Logger state: good()="
+				  << log.good() << ", errorCount=" << log.messageCount() << '\n';
 
-		return ParsedFile::parse(state);
+		auto res = ParsedFile::parse(state);
+
+		std::cerr << "[DEBUG parseFile] After parse. Logger state: good()="
+				  << log.good() << ", errorCount=" << log.messageCount() << '\n';
+
+		return res;
 	}
 
 	std::expected<std::vector<ParsedFile>, dia::Logger> parse(const std::vector<fs::FilePath>& files
@@ -28,13 +40,26 @@ namespace vm::loader::parser {
 		// So that they dont't die
 		static std::vector<Box<tokenizer::TokenFile>> tokenized_files;
 		auto                                          log = dia::Logger();
-		std::vector<ParsedFile>                       parsed_files;
+		assert(log.good() && "Nowy logger powinien być 'good' na starcie!");
+		std::cerr << "[DEBUG] Nowy logger w parse(): good()=" << log.good()
+				  << ", errorCount=" << log.messageCount(dia::Message::Severity::Error) << '\n';
+		std::vector<ParsedFile> parsed_files;
 
 		for (const auto& file: files) {
-			tokenized_files.emplace_back(tokenizeFile(file));
-			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), log);
+			std::cerr << "[DEBUG] Przed tokenizeFile dla: "
+					  << file.strView()  // Załóżmy, że FilePath ma toString()
+					  << ", log.good()=" << log.good() << '\n';
 
-			if (log.bad()) return std::unexpected(std::move(log));
+			tokenized_files.emplace_back(tokenizeFile(file));
+			std::cerr << "[DEBUG] Przed parseFile, log.good()=" << log.good()
+					  << ", przetwarzany plik: ostatni z tokenized_files" << '\n';
+
+			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), log);
+			if (log.bad()) {
+				std::cerr << "[DEBUG] log.bad() jest true, zwracam błąd." << '\n';
+				log.dumpLog(true, std::cerr);  // UWAGA: To może być dużo danych
+				return std::unexpected(std::move(log));
+			}
 			parsed_files.push_back(std::move(*maybe_parsed));
 		}
 

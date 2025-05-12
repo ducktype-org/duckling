@@ -305,7 +305,3 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 		return getProgram({ std::move(opt_code_collection).value() });
 	return std::unexpected(std::move(opt_code_collection).error());
 }
-
-// void Loader::clear() {
-// 	this.
-// }

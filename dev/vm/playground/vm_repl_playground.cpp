@@ -228,8 +228,8 @@ private:
 			std::cout << "Error: Failed to remove a temporary file " << getCurrentTempFilePath()
 					  << ": " << err_code.message() << '\n';
 		}
-		if (bad) return false;
 		load_counter++;
+		if (bad) return false;
 		return true;
 	}
 
