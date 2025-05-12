@@ -1,5 +1,5 @@
-# Tests if it's possible to take pointer ret_val/arg passed to a function, thus
-# it ret_val and arg0 block exists in the called function block stack or only 
+# Tests if it's possible to take pointer to ret_val/argument passed to a function, thus
+# it tests whether ret_val and arg0 blocks exist in the called function block stack or only 
 # on the local stack
 
 type fun: check { i64 } i64
