@@ -50,7 +50,7 @@ namespace vm {
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
-			code_result.error().dump(ss);
+			code_result.error().dumpLogAndClear(ss);
 			std::cout << ss.str() << '\n';
 			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
 		}

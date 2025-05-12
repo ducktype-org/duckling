@@ -218,7 +218,7 @@ private:
 			auto err     = load_files_response.error();
 			auto core_op = std::get<vm::api::CoreOperationError>(err);
 			auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-			std::cout << "Error: Failed to load a file " << err_str << '\n';
+			std::cout << "Error: Failed to load a file\n";
 			bad = true;
 		}
 

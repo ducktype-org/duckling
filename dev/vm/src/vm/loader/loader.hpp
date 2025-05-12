@@ -1,8 +1,12 @@
 #pragma once
 
+#include "diagnostic/logger.hpp"
 #include "logger.hpp"
+#include "token_file/file.hpp"
 
 #include <filesystem/file.hpp>
+
+#include "base/box.hpp"
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>

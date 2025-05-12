@@ -109,12 +109,17 @@ namespace vm::loader {
 		 */
 		void logSimple(std::string err) { errors.emplace_back(std::move(err)); }
 
-		void dump(std::ostream& stream) const {
+		void dumpLog(std::ostream& stream) const {
 			if (logger.bad()) {
 				logger.dumpLog(true, stream);
 				stream << '\n';
 			}
 			for (auto& msg: errors) stream << msg << '\n';
+		}
+
+		void dumpLogAndClear(std::ostream& stream) {
+			dumpLog(stream);
+			clear();
 		}
 
 		void clear() {
