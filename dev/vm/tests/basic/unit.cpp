@@ -12,8 +12,7 @@ public:
 		TESTER_ADD_TEST(initPrimitivesWithZero);
 		TESTER_ADD_TEST(check32BitsInstructions);
 		TESTER_ADD_TEST(types);
-		TESTER_ADD_TEST(pointerToLocal);
-		TESTER_ADD_TEST(pointerCopy);
+		TESTER_ADD_TEST(pointerTest);
 		TESTER_ADD_TEST(commandLineArguments);
 		TESTER_ADD_TEST(globalsTest);
 	}
@@ -29,9 +28,12 @@ private:
 
 	void types() { runTestOnVm("types.dbc", "3 4", "7", {}); }
 
-	void pointerToLocal() { runTestOnVm("pointer_to_local.dbc", "", "42", {}); }
-
-	void pointerCopy() { runTestOnVm("pointer_copy.dbc", "", "42", {}); }
+	void pointerTest() {
+		for (auto filename:
+		     { "pointer_to_local.dbc", "pointer_copy.dbc", "pointer_to_passed_blocks.dbc" }) {
+			runTestOnVm(filename, "", "42", {});
+		}
+	}
 
 	void commandLineArguments() {
 		runTestOnVm("command_line_args.dbc", "", "10", { "1", "2", "3", "4" });

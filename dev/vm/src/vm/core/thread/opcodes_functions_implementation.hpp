@@ -270,7 +270,8 @@ namespace vm {
 			auto called_func_type = thread.executing_program->types->at(called_func.name);
 			u64  arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
-			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - arg_count;
+			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
+			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
 
 			frame->local_stack_head = shared_stack_space_size;
 			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {

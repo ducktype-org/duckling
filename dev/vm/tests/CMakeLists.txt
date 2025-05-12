@@ -27,7 +27,7 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester)
         duck_add_test_custom(vm ${test_set}_static_table_test static_table/static_table.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_unit_tests basic/unit.cpp
+        duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
                 USES ${libvm} Tester ${vmtester})
