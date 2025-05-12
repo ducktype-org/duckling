@@ -1,4 +1,5 @@
-#include "ints.hpp" // IWYU pragma: export
+#include "ints.hpp"  // IWYU pragma: export
+
 #include <array>
 #include <string>
 
@@ -7,7 +8,7 @@ namespace base {
 	 * Bit256 is a 256-bit integer type used for SHA-256 hash values.
 	 * It is represented as an array of 4 64-bit integers.
 	 */
-     struct Bit256 {
+	struct Bit256 {
 		std::array<u64, 4> data = {};
 
 		constexpr Bit256() = default;
