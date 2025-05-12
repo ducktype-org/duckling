@@ -4,7 +4,7 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
-#include "vm/bytecode/builders/builders.hpp"
+#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/opcode_definitions.hpp>
