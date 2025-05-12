@@ -14,13 +14,13 @@ namespace compiler::helios {
 		bool       first_symbol = true;
 		SymbolList result;
 		for (auto pointed: key.names) {
-			auto lookup_interface = first_symbol ?
-				HInterface::ofScopeWithParents(key.begin_scope) :
-				HInterface::ofSymbol(result.back());
-			
-			UNPACK_RESULT_MOVE(
-				auto lookup =, lookup_interface.typicalSimpleLookup(pointed.position, ctx, pointed.value, key.params);
-			);
+			auto lookup_interface = first_symbol ? HInterface::ofScopeWithParents(key.begin_scope)
+			                                     : HInterface::ofSymbol(result.back());
+
+			UNPACK_RESULT_MOVE(auto lookup =,
+			                   lookup_interface.typicalSimpleLookup(
+								   pointed.position, ctx, pointed.value, key.params
+							   ););
 			result.insert(result.end(), lookup.begin(), lookup.end());
 			first_symbol = false;
 		}

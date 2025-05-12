@@ -3,9 +3,9 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
-#include <helios_private/lookup/interface.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/builtin_operations/builtins.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
@@ -244,8 +244,8 @@ namespace compiler::helios::code {
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
 				// note: this is a mock, it should be unified with ChainExpr
-				auto        scope    = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-				
+				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
+
 				const auto& sym_list = HInterface::ofScopeWithParents(scope).typicalSimpleLookup(
 					stmt->getName().position, ctx, stmt->getName().value
 				);

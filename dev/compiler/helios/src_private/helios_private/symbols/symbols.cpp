@@ -86,7 +86,9 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(
+		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
+	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -150,9 +152,11 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name        = base::StrID(
-						base::strConcat("<USING> ", using_stmt->getPointed().unlock(ctx)->getNames().front()).c_str()
-					),
+					.name        = base::StrID(base::strConcat(
+                                            "<USING> ",
+                                            using_stmt->getPointed().unlock(ctx)->getNames().front()
+                    )
+                                            .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
