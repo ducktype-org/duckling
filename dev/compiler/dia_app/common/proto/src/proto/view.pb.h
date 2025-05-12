@@ -84,6 +84,9 @@ extern ConcatComponentDefaultTypeInternal _ConcatComponent_default_instance_;
 class Diagnostic;
 struct DiagnosticDefaultTypeInternal;
 extern DiagnosticDefaultTypeInternal _Diagnostic_default_instance_;
+class HlInfo;
+struct HlInfoDefaultTypeInternal;
+extern HlInfoDefaultTypeInternal _HlInfo_default_instance_;
 class InteractiveComponent;
 struct InteractiveComponentDefaultTypeInternal;
 extern InteractiveComponentDefaultTypeInternal _InteractiveComponent_default_instance_;
@@ -277,7 +280,7 @@ class ViewRequest final
     return reinterpret_cast<const ViewRequest*>(
         &_ViewRequest_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 36;
+  static constexpr int kIndexInFileMessages = 37;
   friend void swap(ViewRequest& a, ViewRequest& b) { a.Swap(&b); }
   inline void Swap(ViewRequest* other) {
     if (other == this) return;
@@ -642,7 +645,7 @@ class SideMetadata final
     return reinterpret_cast<const SideMetadata*>(
         &_SideMetadata_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 29;
+  static constexpr int kIndexInFileMessages = 30;
   friend void swap(SideMetadata& a, SideMetadata& b) { a.Swap(&b); }
   inline void Swap(SideMetadata* other) {
     if (other == this) return;
@@ -1032,7 +1035,7 @@ class SideEdge final
     return reinterpret_cast<const SideEdge*>(
         &_SideEdge_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 30;
+  static constexpr int kIndexInFileMessages = 31;
   friend void swap(SideEdge& a, SideEdge& b) { a.Swap(&b); }
   inline void Swap(SideEdge* other) {
     if (other == this) return;
@@ -1793,6 +1796,215 @@ class Metadata final
 };
 // -------------------------------------------------------------------
 
+class HlInfo final
+    : public ::google::protobuf::Message
+/* @@protoc_insertion_point(class_definition:view.HlInfo) */ {
+ public:
+  inline HlInfo() : HlInfo(nullptr) {}
+  ~HlInfo() PROTOBUF_FINAL;
+
+#if defined(PROTOBUF_CUSTOM_VTABLE)
+  void operator delete(HlInfo* msg, std::destroying_delete_t) {
+    SharedDtor(*msg);
+    ::google::protobuf::internal::SizedDelete(msg, sizeof(HlInfo));
+  }
+#endif
+
+  template <typename = void>
+  explicit PROTOBUF_CONSTEXPR HlInfo(
+      ::google::protobuf::internal::ConstantInitialized);
+
+  inline HlInfo(const HlInfo& from) : HlInfo(nullptr, from) {}
+  inline HlInfo(HlInfo&& from) noexcept
+      : HlInfo(nullptr, std::move(from)) {}
+  inline HlInfo& operator=(const HlInfo& from) {
+    CopyFrom(from);
+    return *this;
+  }
+  inline HlInfo& operator=(HlInfo&& from) noexcept {
+    if (this == &from) return *this;
+    if (::google::protobuf::internal::CanMoveWithInternalSwap(GetArena(), from.GetArena())) {
+      InternalSwap(&from);
+    } else {
+      CopyFrom(from);
+    }
+    return *this;
+  }
+
+  inline const ::google::protobuf::UnknownFieldSet& unknown_fields() const
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.unknown_fields<::google::protobuf::UnknownFieldSet>(::google::protobuf::UnknownFieldSet::default_instance);
+  }
+  inline ::google::protobuf::UnknownFieldSet* mutable_unknown_fields()
+      ABSL_ATTRIBUTE_LIFETIME_BOUND {
+    return _internal_metadata_.mutable_unknown_fields<::google::protobuf::UnknownFieldSet>();
+  }
+
+  static const ::google::protobuf::Descriptor* descriptor() {
+    return GetDescriptor();
+  }
+  static const ::google::protobuf::Descriptor* GetDescriptor() {
+    return default_instance().GetMetadata().descriptor;
+  }
+  static const ::google::protobuf::Reflection* GetReflection() {
+    return default_instance().GetMetadata().reflection;
+  }
+  static const HlInfo& default_instance() {
+    return *internal_default_instance();
+  }
+  static inline const HlInfo* internal_default_instance() {
+    return reinterpret_cast<const HlInfo*>(
+        &_HlInfo_default_instance_);
+  }
+  static constexpr int kIndexInFileMessages = 17;
+  friend void swap(HlInfo& a, HlInfo& b) { a.Swap(&b); }
+  inline void Swap(HlInfo* other) {
+    if (other == this) return;
+    if (::google::protobuf::internal::CanUseInternalSwap(GetArena(), other->GetArena())) {
+      InternalSwap(other);
+    } else {
+      ::google::protobuf::internal::GenericSwap(this, other);
+    }
+  }
+  void UnsafeArenaSwap(HlInfo* other) {
+    if (other == this) return;
+    ABSL_DCHECK(GetArena() == other->GetArena());
+    InternalSwap(other);
+  }
+
+  // implements Message ----------------------------------------------
+
+  HlInfo* New(::google::protobuf::Arena* arena = nullptr) const {
+    return ::google::protobuf::Message::DefaultConstruct<HlInfo>(arena);
+  }
+  using ::google::protobuf::Message::CopyFrom;
+  void CopyFrom(const HlInfo& from);
+  using ::google::protobuf::Message::MergeFrom;
+  void MergeFrom(const HlInfo& from) { HlInfo::MergeImpl(*this, from); }
+
+  private:
+  static void MergeImpl(
+      ::google::protobuf::MessageLite& to_msg,
+      const ::google::protobuf::MessageLite& from_msg);
+
+  public:
+  bool IsInitialized() const {
+    return true;
+  }
+  ABSL_ATTRIBUTE_REINITIALIZES void Clear() PROTOBUF_FINAL;
+  #if defined(PROTOBUF_CUSTOM_VTABLE)
+  private:
+  static ::size_t ByteSizeLong(const ::google::protobuf::MessageLite& msg);
+  static ::uint8_t* _InternalSerialize(
+      const MessageLite& msg, ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream);
+
+  public:
+  ::size_t ByteSizeLong() const { return ByteSizeLong(*this); }
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const {
+    return _InternalSerialize(*this, target, stream);
+  }
+  #else   // PROTOBUF_CUSTOM_VTABLE
+  ::size_t ByteSizeLong() const final;
+  ::uint8_t* _InternalSerialize(
+      ::uint8_t* target,
+      ::google::protobuf::io::EpsCopyOutputStream* stream) const final;
+  #endif  // PROTOBUF_CUSTOM_VTABLE
+  int GetCachedSize() const { return _impl_._cached_size_.Get(); }
+
+  private:
+  void SharedCtor(::google::protobuf::Arena* arena);
+  static void SharedDtor(MessageLite& self);
+  void InternalSwap(HlInfo* other);
+ private:
+  template <typename T>
+  friend ::absl::string_view(
+      ::google::protobuf::internal::GetAnyMessageName)();
+  static ::absl::string_view FullMessageName() { return "view.HlInfo"; }
+
+ protected:
+  explicit HlInfo(::google::protobuf::Arena* arena);
+  HlInfo(::google::protobuf::Arena* arena, const HlInfo& from);
+  HlInfo(::google::protobuf::Arena* arena, HlInfo&& from) noexcept
+      : HlInfo(arena) {
+    *this = ::std::move(from);
+  }
+  const ::google::protobuf::internal::ClassData* GetClassData() const PROTOBUF_FINAL;
+  static void* PlacementNew_(const void*, void* mem,
+                             ::google::protobuf::Arena* arena);
+  static constexpr auto InternalNewImpl_();
+  static const ::google::protobuf::internal::ClassDataFull _class_data_;
+
+ public:
+  ::google::protobuf::Metadata GetMetadata() const;
+  // nested types ----------------------------------------------------
+
+  // accessors -------------------------------------------------------
+  enum : int {
+    kMessageFieldNumber = 2,
+    kTagFieldNumber = 1,
+  };
+  // string message = 2;
+  void clear_message() ;
+  const std::string& message() const;
+  template <typename Arg_ = const std::string&, typename... Args_>
+  void set_message(Arg_&& arg, Args_... args);
+  std::string* mutable_message();
+  PROTOBUF_NODISCARD std::string* release_message();
+  void set_allocated_message(std::string* value);
+
+  private:
+  const std::string& _internal_message() const;
+  inline PROTOBUF_ALWAYS_INLINE void _internal_set_message(
+      const std::string& value);
+  std::string* _internal_mutable_message();
+
+  public:
+  // int32 tag = 1;
+  void clear_tag() ;
+  ::int32_t tag() const;
+  void set_tag(::int32_t value);
+
+  private:
+  ::int32_t _internal_tag() const;
+  void _internal_set_tag(::int32_t value);
+
+  public:
+  // @@protoc_insertion_point(class_scope:view.HlInfo)
+ private:
+  class _Internal;
+  friend class ::google::protobuf::internal::TcParser;
+  static const ::google::protobuf::internal::TcParseTable<
+      1, 2, 0,
+      27, 2>
+      _table_;
+
+  friend class ::google::protobuf::MessageLite;
+  friend class ::google::protobuf::Arena;
+  template <typename T>
+  friend class ::google::protobuf::Arena::InternalHelper;
+  using InternalArenaConstructable_ = void;
+  using DestructorSkippable_ = void;
+  struct Impl_ {
+    inline explicit constexpr Impl_(
+        ::google::protobuf::internal::ConstantInitialized) noexcept;
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena);
+    inline explicit Impl_(::google::protobuf::internal::InternalVisibility visibility,
+                          ::google::protobuf::Arena* arena, const Impl_& from,
+                          const HlInfo& from_msg);
+    ::google::protobuf::internal::ArenaStringPtr message_;
+    ::int32_t tag_;
+    ::google::protobuf::internal::CachedSize _cached_size_;
+    PROTOBUF_TSAN_DECLARE_MEMBER
+  };
+  union { Impl_ _impl_; };
+  friend struct ::TableStruct_view_2eproto;
+};
+// -------------------------------------------------------------------
+
 class CodeComponent final
     : public ::google::protobuf::Message
 /* @@protoc_insertion_point(class_definition:view.CodeComponent) */ {
@@ -2071,7 +2283,7 @@ class CloseSideNoteResponse final
     return reinterpret_cast<const CloseSideNoteResponse*>(
         &_CloseSideNoteResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 38;
+  static constexpr int kIndexInFileMessages = 39;
   friend void swap(CloseSideNoteResponse& a, CloseSideNoteResponse& b) { a.Swap(&b); }
   inline void Swap(CloseSideNoteResponse* other) {
     if (other == this) return;
@@ -2268,7 +2480,7 @@ class CloseSideNoteRequest final
     return reinterpret_cast<const CloseSideNoteRequest*>(
         &_CloseSideNoteRequest_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 37;
+  static constexpr int kIndexInFileMessages = 38;
   friend void swap(CloseSideNoteRequest& a, CloseSideNoteRequest& b) { a.Swap(&b); }
   inline void Swap(CloseSideNoteRequest* other) {
     if (other == this) return;
@@ -2459,7 +2671,7 @@ class ClickResponse final
     return reinterpret_cast<const ClickResponse*>(
         &_ClickResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 35;
+  static constexpr int kIndexInFileMessages = 36;
   friend void swap(ClickResponse& a, ClickResponse& b) { a.Swap(&b); }
   inline void Swap(ClickResponse* other) {
     if (other == this) return;
@@ -2656,7 +2868,7 @@ class ClickRequest final
     return reinterpret_cast<const ClickRequest*>(
         &_ClickRequest_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 34;
+  static constexpr int kIndexInFileMessages = 35;
   friend void swap(ClickRequest& a, ClickRequest& b) { a.Swap(&b); }
   inline void Swap(ClickRequest* other) {
     if (other == this) return;
@@ -2866,7 +3078,7 @@ class SideNoHlComponent final
     return reinterpret_cast<const SideNoHlComponent*>(
         &_SideNoHlComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 20;
+  static constexpr int kIndexInFileMessages = 21;
   friend void swap(SideNoHlComponent& a, SideNoHlComponent& b) { a.Swap(&b); }
   inline void Swap(SideNoHlComponent* other) {
     if (other == this) return;
@@ -3142,7 +3354,7 @@ class SideNoHlConcatComponent final
     return reinterpret_cast<const SideNoHlConcatComponent*>(
         &_SideNoHlConcatComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 18;
+  static constexpr int kIndexInFileMessages = 19;
   friend void swap(SideNoHlConcatComponent& a, SideNoHlConcatComponent& b) { a.Swap(&b); }
   inline void Swap(SideNoHlConcatComponent* other) {
     if (other == this) return;
@@ -3340,7 +3552,7 @@ class SideNoHlInteractiveComponent final
     return reinterpret_cast<const SideNoHlInteractiveComponent*>(
         &_SideNoHlInteractiveComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 19;
+  static constexpr int kIndexInFileMessages = 20;
   friend void swap(SideNoHlInteractiveComponent& a, SideNoHlInteractiveComponent& b) { a.Swap(&b); }
   inline void Swap(SideNoHlInteractiveComponent* other) {
     if (other == this) return;
@@ -3428,7 +3640,6 @@ class SideNoHlInteractiveComponent final
   // accessors -------------------------------------------------------
   enum : int {
     kPrimaryComponentFieldNumber = 2,
-    kAltComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
   };
   // .view.SideNoHlComponent primary_component = 2;
@@ -3446,21 +3657,6 @@ class SideNoHlInteractiveComponent final
   ::view::SideNoHlComponent* _internal_mutable_primary_component();
 
   public:
-  // .view.SideNoHlComponent alt_component = 3;
-  bool has_alt_component() const;
-  void clear_alt_component() ;
-  const ::view::SideNoHlComponent& alt_component() const;
-  PROTOBUF_NODISCARD ::view::SideNoHlComponent* release_alt_component();
-  ::view::SideNoHlComponent* mutable_alt_component();
-  void set_allocated_alt_component(::view::SideNoHlComponent* value);
-  void unsafe_arena_set_allocated_alt_component(::view::SideNoHlComponent* value);
-  ::view::SideNoHlComponent* unsafe_arena_release_alt_component();
-
-  private:
-  const ::view::SideNoHlComponent& _internal_alt_component() const;
-  ::view::SideNoHlComponent* _internal_mutable_alt_component();
-
-  public:
   // int32 component_id = 1;
   void clear_component_id() ;
   ::int32_t component_id() const;
@@ -3476,7 +3672,7 @@ class SideNoHlInteractiveComponent final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 2,
+      1, 2, 1,
       0, 2>
       _table_;
 
@@ -3497,7 +3693,6 @@ class SideNoHlInteractiveComponent final
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::SideNoHlComponent* primary_component_;
-    ::view::SideNoHlComponent* alt_component_;
     ::int32_t component_id_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -3573,7 +3768,7 @@ class SideComponent final
     return reinterpret_cast<const SideComponent*>(
         &_SideComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 24;
+  static constexpr int kIndexInFileMessages = 25;
   friend void swap(SideComponent& a, SideComponent& b) { a.Swap(&b); }
   inline void Swap(SideComponent* other) {
     if (other == this) return;
@@ -3849,7 +4044,7 @@ class SideConcatComponent final
     return reinterpret_cast<const SideConcatComponent*>(
         &_SideConcatComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 22;
+  static constexpr int kIndexInFileMessages = 23;
   friend void swap(SideConcatComponent& a, SideConcatComponent& b) { a.Swap(&b); }
   inline void Swap(SideConcatComponent* other) {
     if (other == this) return;
@@ -4068,7 +4263,7 @@ class SideInteractiveComponent final
     return reinterpret_cast<const SideInteractiveComponent*>(
         &_SideInteractiveComponent_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 23;
+  static constexpr int kIndexInFileMessages = 24;
   friend void swap(SideInteractiveComponent& a, SideInteractiveComponent& b) { a.Swap(&b); }
   inline void Swap(SideInteractiveComponent* other) {
     if (other == this) return;
@@ -4156,7 +4351,6 @@ class SideInteractiveComponent final
   // accessors -------------------------------------------------------
   enum : int {
     kPrimaryComponentFieldNumber = 2,
-    kAltComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
   };
   // .view.SideComponent primary_component = 2;
@@ -4174,21 +4368,6 @@ class SideInteractiveComponent final
   ::view::SideComponent* _internal_mutable_primary_component();
 
   public:
-  // .view.SideComponent alt_component = 3;
-  bool has_alt_component() const;
-  void clear_alt_component() ;
-  const ::view::SideComponent& alt_component() const;
-  PROTOBUF_NODISCARD ::view::SideComponent* release_alt_component();
-  ::view::SideComponent* mutable_alt_component();
-  void set_allocated_alt_component(::view::SideComponent* value);
-  void unsafe_arena_set_allocated_alt_component(::view::SideComponent* value);
-  ::view::SideComponent* unsafe_arena_release_alt_component();
-
-  private:
-  const ::view::SideComponent& _internal_alt_component() const;
-  ::view::SideComponent* _internal_mutable_alt_component();
-
-  public:
   // int32 component_id = 1;
   void clear_component_id() ;
   ::int32_t component_id() const;
@@ -4204,7 +4383,7 @@ class SideInteractiveComponent final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 2,
+      1, 2, 1,
       0, 2>
       _table_;
 
@@ -4225,7 +4404,6 @@ class SideInteractiveComponent final
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::SideComponent* primary_component_;
-    ::view::SideComponent* alt_component_;
     ::int32_t component_id_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -4886,7 +5064,6 @@ class NoHlInteractiveComponent final
   // accessors -------------------------------------------------------
   enum : int {
     kPrimaryComponentFieldNumber = 2,
-    kAltComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
   };
   // .view.NoHlComponent primary_component = 2;
@@ -4904,21 +5081,6 @@ class NoHlInteractiveComponent final
   ::view::NoHlComponent* _internal_mutable_primary_component();
 
   public:
-  // .view.NoHlComponent alt_component = 3;
-  bool has_alt_component() const;
-  void clear_alt_component() ;
-  const ::view::NoHlComponent& alt_component() const;
-  PROTOBUF_NODISCARD ::view::NoHlComponent* release_alt_component();
-  ::view::NoHlComponent* mutable_alt_component();
-  void set_allocated_alt_component(::view::NoHlComponent* value);
-  void unsafe_arena_set_allocated_alt_component(::view::NoHlComponent* value);
-  ::view::NoHlComponent* unsafe_arena_release_alt_component();
-
-  private:
-  const ::view::NoHlComponent& _internal_alt_component() const;
-  ::view::NoHlComponent* _internal_mutable_alt_component();
-
-  public:
   // int32 component_id = 1;
   void clear_component_id() ;
   ::int32_t component_id() const;
@@ -4934,7 +5096,7 @@ class NoHlInteractiveComponent final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 2,
+      1, 2, 1,
       0, 2>
       _table_;
 
@@ -4955,7 +5117,6 @@ class NoHlInteractiveComponent final
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::NoHlComponent* primary_component_;
-    ::view::NoHlComponent* alt_component_;
     ::int32_t component_id_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -5637,7 +5798,6 @@ class InteractiveComponent final
   // accessors -------------------------------------------------------
   enum : int {
     kPrimaryComponentFieldNumber = 2,
-    kAltComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
   };
   // .view.Component primary_component = 2;
@@ -5655,21 +5815,6 @@ class InteractiveComponent final
   ::view::Component* _internal_mutable_primary_component();
 
   public:
-  // .view.Component alt_component = 3;
-  bool has_alt_component() const;
-  void clear_alt_component() ;
-  const ::view::Component& alt_component() const;
-  PROTOBUF_NODISCARD ::view::Component* release_alt_component();
-  ::view::Component* mutable_alt_component();
-  void set_allocated_alt_component(::view::Component* value);
-  void unsafe_arena_set_allocated_alt_component(::view::Component* value);
-  ::view::Component* unsafe_arena_release_alt_component();
-
-  private:
-  const ::view::Component& _internal_alt_component() const;
-  ::view::Component* _internal_mutable_alt_component();
-
-  public:
   // int32 component_id = 1;
   void clear_component_id() ;
   ::int32_t component_id() const;
@@ -5685,7 +5830,7 @@ class InteractiveComponent final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 2,
+      1, 2, 1,
       0, 2>
       _table_;
 
@@ -5706,7 +5851,6 @@ class InteractiveComponent final
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::Component* primary_component_;
-    ::view::Component* alt_component_;
     ::int32_t component_id_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -5972,7 +6116,7 @@ class SideTextSection final
     return reinterpret_cast<const SideTextSection*>(
         &_SideTextSection_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 25;
+  static constexpr int kIndexInFileMessages = 26;
   friend void swap(SideTextSection& a, SideTextSection& b) { a.Swap(&b); }
   inline void Swap(SideTextSection* other) {
     if (other == this) return;
@@ -6169,7 +6313,7 @@ class SideNoHlTextSection final
     return reinterpret_cast<const SideNoHlTextSection*>(
         &_SideNoHlTextSection_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 21;
+  static constexpr int kIndexInFileMessages = 22;
   friend void swap(SideNoHlTextSection& a, SideNoHlTextSection& b) { a.Swap(&b); }
   inline void Swap(SideNoHlTextSection* other) {
     if (other == this) return;
@@ -6563,7 +6707,7 @@ class SideCodeLine final
     return reinterpret_cast<const SideCodeLine*>(
         &_SideCodeLine_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 26;
+  static constexpr int kIndexInFileMessages = 27;
   friend void swap(SideCodeLine& a, SideCodeLine& b) { a.Swap(&b); }
   inline void Swap(SideCodeLine* other) {
     if (other == this) return;
@@ -6983,7 +7127,7 @@ class SideCodeSection final
     return reinterpret_cast<const SideCodeSection*>(
         &_SideCodeSection_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 27;
+  static constexpr int kIndexInFileMessages = 28;
   friend void swap(SideCodeSection& a, SideCodeSection& b) { a.Swap(&b); }
   inline void Swap(SideCodeSection* other) {
     if (other == this) return;
@@ -7385,7 +7529,7 @@ class SideSection final
     return reinterpret_cast<const SideSection*>(
         &_SideSection_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 28;
+  static constexpr int kIndexInFileMessages = 29;
   friend void swap(SideSection& a, SideSection& b) { a.Swap(&b); }
   inline void Swap(SideSection* other) {
     if (other == this) return;
@@ -7899,7 +8043,7 @@ class SideDiagnostic final
     return reinterpret_cast<const SideDiagnostic*>(
         &_SideDiagnostic_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 31;
+  static constexpr int kIndexInFileMessages = 32;
   friend void swap(SideDiagnostic& a, SideDiagnostic& b) { a.Swap(&b); }
   inline void Swap(SideDiagnostic* other) {
     if (other == this) return;
@@ -8134,7 +8278,7 @@ class Diagnostic final
     return reinterpret_cast<const Diagnostic*>(
         &_Diagnostic_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 17;
+  static constexpr int kIndexInFileMessages = 18;
   friend void swap(Diagnostic& a, Diagnostic& b) { a.Swap(&b); }
   inline void Swap(Diagnostic* other) {
     if (other == this) return;
@@ -8222,6 +8366,7 @@ class Diagnostic final
   // accessors -------------------------------------------------------
   enum : int {
     kSectionsFieldNumber = 2,
+    kHlMessagesFieldNumber = 3,
     kMetadataFieldNumber = 1,
   };
   // repeated .view.Section sections = 2;
@@ -8241,6 +8386,23 @@ class Diagnostic final
   const ::view::Section& sections(int index) const;
   ::view::Section* add_sections();
   const ::google::protobuf::RepeatedPtrField<::view::Section>& sections() const;
+  // repeated .view.HlInfo hl_messages = 3;
+  int hl_messages_size() const;
+  private:
+  int _internal_hl_messages_size() const;
+
+  public:
+  void clear_hl_messages() ;
+  ::view::HlInfo* mutable_hl_messages(int index);
+  ::google::protobuf::RepeatedPtrField<::view::HlInfo>* mutable_hl_messages();
+
+  private:
+  const ::google::protobuf::RepeatedPtrField<::view::HlInfo>& _internal_hl_messages() const;
+  ::google::protobuf::RepeatedPtrField<::view::HlInfo>* _internal_mutable_hl_messages();
+  public:
+  const ::view::HlInfo& hl_messages(int index) const;
+  ::view::HlInfo* add_hl_messages();
+  const ::google::protobuf::RepeatedPtrField<::view::HlInfo>& hl_messages() const;
   // .view.Metadata metadata = 1;
   bool has_metadata() const;
   void clear_metadata() ;
@@ -8261,7 +8423,7 @@ class Diagnostic final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 2,
+      2, 3, 3,
       0, 2>
       _table_;
 
@@ -8282,6 +8444,7 @@ class Diagnostic final
     ::google::protobuf::internal::HasBits<1> _has_bits_;
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::RepeatedPtrField< ::view::Section > sections_;
+    ::google::protobuf::RepeatedPtrField< ::view::HlInfo > hl_messages_;
     ::view::Metadata* metadata_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -8350,7 +8513,7 @@ class SideNote final
     return reinterpret_cast<const SideNote*>(
         &_SideNote_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 32;
+  static constexpr int kIndexInFileMessages = 33;
   friend void swap(SideNote& a, SideNote& b) { a.Swap(&b); }
   inline void Swap(SideNote* other) {
     if (other == this) return;
@@ -8548,7 +8711,7 @@ class ViewResponse final
     return reinterpret_cast<const ViewResponse*>(
         &_ViewResponse_default_instance_);
   }
-  static constexpr int kIndexInFileMessages = 33;
+  static constexpr int kIndexInFileMessages = 34;
   friend void swap(ViewResponse& a, ViewResponse& b) { a.Swap(&b); }
   inline void Swap(ViewResponse* other) {
     if (other == this) return;
@@ -9019,102 +9182,6 @@ inline void NoHlInteractiveComponent::set_allocated_primary_component(::view::No
 
   _impl_.primary_component_ = reinterpret_cast<::view::NoHlComponent*>(value);
   // @@protoc_insertion_point(field_set_allocated:view.NoHlInteractiveComponent.primary_component)
-}
-
-// .view.NoHlComponent alt_component = 3;
-inline bool NoHlInteractiveComponent::has_alt_component() const {
-  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
-  PROTOBUF_ASSUME(!value || _impl_.alt_component_ != nullptr);
-  return value;
-}
-inline void NoHlInteractiveComponent::clear_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ != nullptr) _impl_.alt_component_->Clear();
-  _impl_._has_bits_[0] &= ~0x00000002u;
-}
-inline const ::view::NoHlComponent& NoHlInteractiveComponent::_internal_alt_component() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  const ::view::NoHlComponent* p = _impl_.alt_component_;
-  return p != nullptr ? *p : reinterpret_cast<const ::view::NoHlComponent&>(::view::_NoHlComponent_default_instance_);
-}
-inline const ::view::NoHlComponent& NoHlInteractiveComponent::alt_component() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:view.NoHlInteractiveComponent.alt_component)
-  return _internal_alt_component();
-}
-inline void NoHlInteractiveComponent::unsafe_arena_set_allocated_alt_component(::view::NoHlComponent* value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.alt_component_);
-  }
-  _impl_.alt_component_ = reinterpret_cast<::view::NoHlComponent*>(value);
-  if (value != nullptr) {
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.NoHlInteractiveComponent.alt_component)
-}
-inline ::view::NoHlComponent* NoHlInteractiveComponent::release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::NoHlComponent* released = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
-    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
-    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    if (GetArena() == nullptr) {
-      delete old;
-    }
-  } else {
-    if (GetArena() != nullptr) {
-      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    }
-  }
-  return released;
-}
-inline ::view::NoHlComponent* NoHlInteractiveComponent::unsafe_arena_release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:view.NoHlInteractiveComponent.alt_component)
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::NoHlComponent* temp = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  return temp;
-}
-inline ::view::NoHlComponent* NoHlInteractiveComponent::_internal_mutable_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ == nullptr) {
-    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::NoHlComponent>(GetArena());
-    _impl_.alt_component_ = reinterpret_cast<::view::NoHlComponent*>(p);
-  }
-  return _impl_.alt_component_;
-}
-inline ::view::NoHlComponent* NoHlInteractiveComponent::mutable_alt_component() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  _impl_._has_bits_[0] |= 0x00000002u;
-  ::view::NoHlComponent* _msg = _internal_mutable_alt_component();
-  // @@protoc_insertion_point(field_mutable:view.NoHlInteractiveComponent.alt_component)
-  return _msg;
-}
-inline void NoHlInteractiveComponent::set_allocated_alt_component(::view::NoHlComponent* value) {
-  ::google::protobuf::Arena* message_arena = GetArena();
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (message_arena == nullptr) {
-    delete (_impl_.alt_component_);
-  }
-
-  if (value != nullptr) {
-    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
-    if (message_arena != submessage_arena) {
-      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
-    }
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-
-  _impl_.alt_component_ = reinterpret_cast<::view::NoHlComponent*>(value);
-  // @@protoc_insertion_point(field_set_allocated:view.NoHlInteractiveComponent.alt_component)
 }
 
 // -------------------------------------------------------------------
@@ -10037,102 +10104,6 @@ inline void InteractiveComponent::set_allocated_primary_component(::view::Compon
 
   _impl_.primary_component_ = reinterpret_cast<::view::Component*>(value);
   // @@protoc_insertion_point(field_set_allocated:view.InteractiveComponent.primary_component)
-}
-
-// .view.Component alt_component = 3;
-inline bool InteractiveComponent::has_alt_component() const {
-  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
-  PROTOBUF_ASSUME(!value || _impl_.alt_component_ != nullptr);
-  return value;
-}
-inline void InteractiveComponent::clear_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ != nullptr) _impl_.alt_component_->Clear();
-  _impl_._has_bits_[0] &= ~0x00000002u;
-}
-inline const ::view::Component& InteractiveComponent::_internal_alt_component() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  const ::view::Component* p = _impl_.alt_component_;
-  return p != nullptr ? *p : reinterpret_cast<const ::view::Component&>(::view::_Component_default_instance_);
-}
-inline const ::view::Component& InteractiveComponent::alt_component() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:view.InteractiveComponent.alt_component)
-  return _internal_alt_component();
-}
-inline void InteractiveComponent::unsafe_arena_set_allocated_alt_component(::view::Component* value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.alt_component_);
-  }
-  _impl_.alt_component_ = reinterpret_cast<::view::Component*>(value);
-  if (value != nullptr) {
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.InteractiveComponent.alt_component)
-}
-inline ::view::Component* InteractiveComponent::release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::Component* released = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
-    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
-    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    if (GetArena() == nullptr) {
-      delete old;
-    }
-  } else {
-    if (GetArena() != nullptr) {
-      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    }
-  }
-  return released;
-}
-inline ::view::Component* InteractiveComponent::unsafe_arena_release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:view.InteractiveComponent.alt_component)
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::Component* temp = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  return temp;
-}
-inline ::view::Component* InteractiveComponent::_internal_mutable_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ == nullptr) {
-    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::Component>(GetArena());
-    _impl_.alt_component_ = reinterpret_cast<::view::Component*>(p);
-  }
-  return _impl_.alt_component_;
-}
-inline ::view::Component* InteractiveComponent::mutable_alt_component() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  _impl_._has_bits_[0] |= 0x00000002u;
-  ::view::Component* _msg = _internal_mutable_alt_component();
-  // @@protoc_insertion_point(field_mutable:view.InteractiveComponent.alt_component)
-  return _msg;
-}
-inline void InteractiveComponent::set_allocated_alt_component(::view::Component* value) {
-  ::google::protobuf::Arena* message_arena = GetArena();
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (message_arena == nullptr) {
-    delete (_impl_.alt_component_);
-  }
-
-  if (value != nullptr) {
-    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
-    if (message_arena != submessage_arena) {
-      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
-    }
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-
-  _impl_.alt_component_ = reinterpret_cast<::view::Component*>(value);
-  // @@protoc_insertion_point(field_set_allocated:view.InteractiveComponent.alt_component)
 }
 
 // -------------------------------------------------------------------
@@ -11218,6 +11189,80 @@ inline void Metadata::set_allocated_file_info(std::string* value) {
 
 // -------------------------------------------------------------------
 
+// HlInfo
+
+// int32 tag = 1;
+inline void HlInfo::clear_tag() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.tag_ = 0;
+}
+inline ::int32_t HlInfo::tag() const {
+  // @@protoc_insertion_point(field_get:view.HlInfo.tag)
+  return _internal_tag();
+}
+inline void HlInfo::set_tag(::int32_t value) {
+  _internal_set_tag(value);
+  // @@protoc_insertion_point(field_set:view.HlInfo.tag)
+}
+inline ::int32_t HlInfo::_internal_tag() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.tag_;
+}
+inline void HlInfo::_internal_set_tag(::int32_t value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.tag_ = value;
+}
+
+// string message = 2;
+inline void HlInfo::clear_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.ClearToEmpty();
+}
+inline const std::string& HlInfo::message() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:view.HlInfo.message)
+  return _internal_message();
+}
+template <typename Arg_, typename... Args_>
+inline PROTOBUF_ALWAYS_INLINE void HlInfo::set_message(Arg_&& arg,
+                                                     Args_... args) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.Set(static_cast<Arg_&&>(arg), args..., GetArena());
+  // @@protoc_insertion_point(field_set:view.HlInfo.message)
+}
+inline std::string* HlInfo::mutable_message() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  std::string* _s = _internal_mutable_message();
+  // @@protoc_insertion_point(field_mutable:view.HlInfo.message)
+  return _s;
+}
+inline const std::string& HlInfo::_internal_message() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.message_.Get();
+}
+inline void HlInfo::_internal_set_message(const std::string& value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.Set(value, GetArena());
+}
+inline std::string* HlInfo::_internal_mutable_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _impl_.message_.Mutable( GetArena());
+}
+inline std::string* HlInfo::release_message() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:view.HlInfo.message)
+  return _impl_.message_.Release();
+}
+inline void HlInfo::set_allocated_message(std::string* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.message_.SetAllocated(value, GetArena());
+  if (::google::protobuf::internal::DebugHardenForceCopyDefaultString() && _impl_.message_.IsDefault()) {
+    _impl_.message_.Set("", GetArena());
+  }
+  // @@protoc_insertion_point(field_set_allocated:view.HlInfo.message)
+}
+
+// -------------------------------------------------------------------
+
 // Diagnostic
 
 // .view.Metadata metadata = 1;
@@ -11363,6 +11408,55 @@ inline ::google::protobuf::RepeatedPtrField<::view::Section>*
 Diagnostic::_internal_mutable_sections() {
   ::google::protobuf::internal::TSanRead(&_impl_);
   return &_impl_.sections_;
+}
+
+// repeated .view.HlInfo hl_messages = 3;
+inline int Diagnostic::_internal_hl_messages_size() const {
+  return _internal_hl_messages().size();
+}
+inline int Diagnostic::hl_messages_size() const {
+  return _internal_hl_messages_size();
+}
+inline void Diagnostic::clear_hl_messages() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.hl_messages_.Clear();
+}
+inline ::view::HlInfo* Diagnostic::mutable_hl_messages(int index)
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable:view.Diagnostic.hl_messages)
+  return _internal_mutable_hl_messages()->Mutable(index);
+}
+inline ::google::protobuf::RepeatedPtrField<::view::HlInfo>* Diagnostic::mutable_hl_messages()
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_mutable_list:view.Diagnostic.hl_messages)
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  return _internal_mutable_hl_messages();
+}
+inline const ::view::HlInfo& Diagnostic::hl_messages(int index) const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:view.Diagnostic.hl_messages)
+  return _internal_hl_messages().Get(index);
+}
+inline ::view::HlInfo* Diagnostic::add_hl_messages() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  ::view::HlInfo* _add = _internal_mutable_hl_messages()->Add();
+  // @@protoc_insertion_point(field_add:view.Diagnostic.hl_messages)
+  return _add;
+}
+inline const ::google::protobuf::RepeatedPtrField<::view::HlInfo>& Diagnostic::hl_messages() const
+    ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_list:view.Diagnostic.hl_messages)
+  return _internal_hl_messages();
+}
+inline const ::google::protobuf::RepeatedPtrField<::view::HlInfo>&
+Diagnostic::_internal_hl_messages() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return _impl_.hl_messages_;
+}
+inline ::google::protobuf::RepeatedPtrField<::view::HlInfo>*
+Diagnostic::_internal_mutable_hl_messages() {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return &_impl_.hl_messages_;
 }
 
 // -------------------------------------------------------------------
@@ -11538,102 +11632,6 @@ inline void SideNoHlInteractiveComponent::set_allocated_primary_component(::view
 
   _impl_.primary_component_ = reinterpret_cast<::view::SideNoHlComponent*>(value);
   // @@protoc_insertion_point(field_set_allocated:view.SideNoHlInteractiveComponent.primary_component)
-}
-
-// .view.SideNoHlComponent alt_component = 3;
-inline bool SideNoHlInteractiveComponent::has_alt_component() const {
-  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
-  PROTOBUF_ASSUME(!value || _impl_.alt_component_ != nullptr);
-  return value;
-}
-inline void SideNoHlInteractiveComponent::clear_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ != nullptr) _impl_.alt_component_->Clear();
-  _impl_._has_bits_[0] &= ~0x00000002u;
-}
-inline const ::view::SideNoHlComponent& SideNoHlInteractiveComponent::_internal_alt_component() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  const ::view::SideNoHlComponent* p = _impl_.alt_component_;
-  return p != nullptr ? *p : reinterpret_cast<const ::view::SideNoHlComponent&>(::view::_SideNoHlComponent_default_instance_);
-}
-inline const ::view::SideNoHlComponent& SideNoHlInteractiveComponent::alt_component() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:view.SideNoHlInteractiveComponent.alt_component)
-  return _internal_alt_component();
-}
-inline void SideNoHlInteractiveComponent::unsafe_arena_set_allocated_alt_component(::view::SideNoHlComponent* value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.alt_component_);
-  }
-  _impl_.alt_component_ = reinterpret_cast<::view::SideNoHlComponent*>(value);
-  if (value != nullptr) {
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.SideNoHlInteractiveComponent.alt_component)
-}
-inline ::view::SideNoHlComponent* SideNoHlInteractiveComponent::release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::SideNoHlComponent* released = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
-    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
-    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    if (GetArena() == nullptr) {
-      delete old;
-    }
-  } else {
-    if (GetArena() != nullptr) {
-      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    }
-  }
-  return released;
-}
-inline ::view::SideNoHlComponent* SideNoHlInteractiveComponent::unsafe_arena_release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:view.SideNoHlInteractiveComponent.alt_component)
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::SideNoHlComponent* temp = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  return temp;
-}
-inline ::view::SideNoHlComponent* SideNoHlInteractiveComponent::_internal_mutable_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ == nullptr) {
-    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::SideNoHlComponent>(GetArena());
-    _impl_.alt_component_ = reinterpret_cast<::view::SideNoHlComponent*>(p);
-  }
-  return _impl_.alt_component_;
-}
-inline ::view::SideNoHlComponent* SideNoHlInteractiveComponent::mutable_alt_component() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  _impl_._has_bits_[0] |= 0x00000002u;
-  ::view::SideNoHlComponent* _msg = _internal_mutable_alt_component();
-  // @@protoc_insertion_point(field_mutable:view.SideNoHlInteractiveComponent.alt_component)
-  return _msg;
-}
-inline void SideNoHlInteractiveComponent::set_allocated_alt_component(::view::SideNoHlComponent* value) {
-  ::google::protobuf::Arena* message_arena = GetArena();
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (message_arena == nullptr) {
-    delete (_impl_.alt_component_);
-  }
-
-  if (value != nullptr) {
-    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
-    if (message_arena != submessage_arena) {
-      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
-    }
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-
-  _impl_.alt_component_ = reinterpret_cast<::view::SideNoHlComponent*>(value);
-  // @@protoc_insertion_point(field_set_allocated:view.SideNoHlInteractiveComponent.alt_component)
 }
 
 // -------------------------------------------------------------------
@@ -12283,102 +12281,6 @@ inline void SideInteractiveComponent::set_allocated_primary_component(::view::Si
 
   _impl_.primary_component_ = reinterpret_cast<::view::SideComponent*>(value);
   // @@protoc_insertion_point(field_set_allocated:view.SideInteractiveComponent.primary_component)
-}
-
-// .view.SideComponent alt_component = 3;
-inline bool SideInteractiveComponent::has_alt_component() const {
-  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
-  PROTOBUF_ASSUME(!value || _impl_.alt_component_ != nullptr);
-  return value;
-}
-inline void SideInteractiveComponent::clear_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ != nullptr) _impl_.alt_component_->Clear();
-  _impl_._has_bits_[0] &= ~0x00000002u;
-}
-inline const ::view::SideComponent& SideInteractiveComponent::_internal_alt_component() const {
-  ::google::protobuf::internal::TSanRead(&_impl_);
-  const ::view::SideComponent* p = _impl_.alt_component_;
-  return p != nullptr ? *p : reinterpret_cast<const ::view::SideComponent&>(::view::_SideComponent_default_instance_);
-}
-inline const ::view::SideComponent& SideInteractiveComponent::alt_component() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  // @@protoc_insertion_point(field_get:view.SideInteractiveComponent.alt_component)
-  return _internal_alt_component();
-}
-inline void SideInteractiveComponent::unsafe_arena_set_allocated_alt_component(::view::SideComponent* value) {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (GetArena() == nullptr) {
-    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.alt_component_);
-  }
-  _impl_.alt_component_ = reinterpret_cast<::view::SideComponent*>(value);
-  if (value != nullptr) {
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.SideInteractiveComponent.alt_component)
-}
-inline ::view::SideComponent* SideInteractiveComponent::release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::SideComponent* released = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
-    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
-    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    if (GetArena() == nullptr) {
-      delete old;
-    }
-  } else {
-    if (GetArena() != nullptr) {
-      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
-    }
-  }
-  return released;
-}
-inline ::view::SideComponent* SideInteractiveComponent::unsafe_arena_release_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  // @@protoc_insertion_point(field_release:view.SideInteractiveComponent.alt_component)
-
-  _impl_._has_bits_[0] &= ~0x00000002u;
-  ::view::SideComponent* temp = _impl_.alt_component_;
-  _impl_.alt_component_ = nullptr;
-  return temp;
-}
-inline ::view::SideComponent* SideInteractiveComponent::_internal_mutable_alt_component() {
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (_impl_.alt_component_ == nullptr) {
-    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::SideComponent>(GetArena());
-    _impl_.alt_component_ = reinterpret_cast<::view::SideComponent*>(p);
-  }
-  return _impl_.alt_component_;
-}
-inline ::view::SideComponent* SideInteractiveComponent::mutable_alt_component() ABSL_ATTRIBUTE_LIFETIME_BOUND {
-  _impl_._has_bits_[0] |= 0x00000002u;
-  ::view::SideComponent* _msg = _internal_mutable_alt_component();
-  // @@protoc_insertion_point(field_mutable:view.SideInteractiveComponent.alt_component)
-  return _msg;
-}
-inline void SideInteractiveComponent::set_allocated_alt_component(::view::SideComponent* value) {
-  ::google::protobuf::Arena* message_arena = GetArena();
-  ::google::protobuf::internal::TSanWrite(&_impl_);
-  if (message_arena == nullptr) {
-    delete (_impl_.alt_component_);
-  }
-
-  if (value != nullptr) {
-    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
-    if (message_arena != submessage_arena) {
-      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
-    }
-    _impl_._has_bits_[0] |= 0x00000002u;
-  } else {
-    _impl_._has_bits_[0] &= ~0x00000002u;
-  }
-
-  _impl_.alt_component_ = reinterpret_cast<::view::SideComponent*>(value);
-  // @@protoc_insertion_point(field_set_allocated:view.SideInteractiveComponent.alt_component)
 }
 
 // -------------------------------------------------------------------
