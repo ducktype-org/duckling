@@ -152,11 +152,12 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name        = base::StrID(base::strConcat(
-                                            "<USING> ",
-                                            using_stmt->getPointed().unlock(ctx)->getNames().front()
-                    )
-                                            .c_str()),
+					.name
+					= base::StrID(base::strConcat(
+									  "<USING> ",
+									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+					)
+			                          .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
