@@ -22,11 +22,11 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief A class that can be used to create custom interfaces thrue inheritance.
+	 * @brief A class that can be used to create custom interfaces through inheritance.
 	 */
-	class CustomInterface {
+	class CustomInterfaceABC {
 	public:
-		virtual ~CustomInterface() = default;
+		virtual ~CustomInterfaceABC() = default;
 
 		/**
 		 * @brief Perform a lookup in the custom interface.
@@ -93,7 +93,7 @@ namespace compiler::helios {
 		 * @brief A custom interface -- anyone can create their own interface.
 		 */
 		struct CustomInterface {
-			Box<CustomInterface> custom;
+			Box<CustomInterfaceABC> custom;
 		};
 
 		using VariantT = std::variant<
@@ -123,14 +123,14 @@ namespace compiler::helios {
 		/**
 		 * A lookup function that performs a typical simple lookup, that is:
 		 * 1. It looks-ups the interface
-		 * 2. It reports error if more then one symbol is found
+		 * 2. It reports error if more than one symbol is found
 		 * 3. It performs deliasing if needed
 		 * 4. Return dealiased symbol list
 		 *
 		 * It some error occures, it will report it in @p error_position.
 		 *
 		 * @note This function is intended to be used as a quick placeholder
-		 * that we migth oneday change to custom code for better compilation errors.
+		 * that we migth one day change to custom code for better compilation errors.
 		 */
 		errors::HResult<SymbolList, errors::Failed> typicalSimpleLookup(
 			dia::SourcePosition error_position,
@@ -155,7 +155,7 @@ namespace compiler::helios {
 			return HInterface{ TypeMetaInterface{ type } };
 		}
 
-		static HInterface ofCustom(Box<CustomInterface> custom) {
+		static HInterface ofCustom(Box<CustomInterfaceABC> custom) {
 			return HInterface{ CustomInterface{ std::move(custom) } };
 		}
 	};
