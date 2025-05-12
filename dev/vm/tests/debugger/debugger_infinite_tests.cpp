@@ -1,8 +1,10 @@
+#include <tester/tester.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/api/api.hpp>
-#include <tester/tester.hpp>
-#include <base/int_conv.hpp>
 
 /**
  * @brief This test set is responsible for testing the debugger when the VM is running endlessly.
@@ -30,7 +32,7 @@ private:
 		auto pid = process_pid_response.value().pid;
 
 		fs::FilePath file(path(std::string(path_name)));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
+		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
 		return pid;
 	}
@@ -42,26 +44,30 @@ private:
 	void pausesExecution() {
 		auto pid = loadProgram("while_true.dbc");
 
-		vm::api::run(pid).expect("Run failed (1)");
+		vm::api::run(pid).value();  // "Run failed (1)"
 
-		auto position = vm::api::pause(pid).expect("Pause failed (1)");
-		std::cout << position.instr_number << '\n';
+		// We want to assure that the start function already managed to call main for the test to
+		// work correctly.
+		auto execution_position
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
+		assertEqual(1, execution_position.instr_number, "Line number is not correct");
+
+		vm::api::resume(pid).value();                 // "Resume failed (1)"
+		auto position = vm::api::pause(pid).value();  // "Pause failed (1)"
 		assertTrue(
-			2 <= position.instr_number && position.instr_number <= 3, "Line number is not correct"
+			3 <= position.instr_number && position.instr_number <= 4, "Line number is not correct"
 		);
 
 		auto expected_next_line = [this](u64 x) -> u64 {
-			if (x == 2) return 3;
-			if (x == 3) return 2;
+			if (x == 3) return 4;
+			if (x == 4) return 3;
 			this->fail("Unexpected line number");
 			CORE_UNREACHABLE();
 		};
 
 		auto line_number2 = stepAndGetLine(pid);
 		assertEqual(
-			expected_next_line(position.instr_number),
-			line_number2,
-			"Line number is not correct (2)"
+			expected_next_line(position.instr_number), line_number2, "Line number is not correct (2)"
 		);
 
 		auto line_number3 = stepAndGetLine(pid);
@@ -74,15 +80,15 @@ private:
 			expected_next_line(line_number3), line_number4, "Line number is not correct (4)"
 		);
 
-		vm::api::resume(pid).expect("Resume failed (1)");
+		vm::api::resume(pid).value();  // "Resume failed (1)"
 
-		vm::api::stop(pid).expect("Stop failed (1)");
+		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
+		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .expect("Get current position failed");
+		                              .value();                  // "Get current position failed"
 		return execution_position.instr_number;
 	}
 };

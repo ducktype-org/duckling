@@ -1,11 +1,16 @@
 /**
- * @file program.hpp
+ * @file low_program.hpp
  */
 #pragma once
 
 #include "instruction.hpp"
-#include <base/stable_hashmap.hpp>
+
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
+
+#include <utility>
 
 namespace vm::low {
 	using ByteCode = std::vector<Fix8Instruction>;
@@ -28,26 +33,25 @@ namespace vm::low {
 	 * @note In the future, this class will use micro bytecode instead.
 	 *
 	 * @note It's guaranteed to contain main, if validator is enabled.
+	 *
+	 * @note The order of functions in the `std::vector<FuncData>` is important, as the `ID` of
+	 * the function in the function calls is the index in this vector. Similar holds for
+	 * `std::vector<code::GlobalData>` - global data.
 	 */
-	class LowVMProgram {
-	public:
-		LowVMProgram(const std::vector<FuncData>& functions, Box<TypeMetadata> type_metadata):
-			  type_metadata(std::move(type_metadata)) {
-			for (auto& func: functions) addFunction(func.name, func);
+	struct LowVMProgram {
+		LowVMProgram(
+			const std::vector<FuncData>&         functions,
+			Box<TypeMetadata>                    types,
+			const std::vector<code::GlobalData>& global_data
+		):
+			  types(std::move(types)) {
+			for (const auto& func: functions) this->functions.insert(func, func.name);
+			for (const auto& global: global_data)
+				this->global_data.insert(this->types->at(global.type), global.name);
 		}
 
-		base::Optional<CRef<FuncData>> getFuncByName(base::StrID name) const;
-		base::Optional<CRef<FuncData>> getFuncByID(usize id) const;
-
-		base::Optional<CRef<Type>> getTypeByName(base::StrID name) const;
-		CRef<Type>                 getTypeByID(TypeID id) const;
-
-		bool addFunction(const base::StrID& func_name, const FuncData& func);
-
-		usize getNumberOfFunctions() const;
-
-		base::StableHashMap<base::StrID, usize> func_name_to_id;
-		base::StableVector<FuncData>            functions;
-		Box<TypeMetadata>                       type_metadata;
+		StableTypeIdNameMap<FuncData, usize>        functions;
+		Box<TypeMetadata>                           types;
+		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
 	};
 }

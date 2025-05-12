@@ -1,12 +1,11 @@
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
-
-
-#include <lexer/lexer.hpp>
-#include <sstream>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <sstream>
 #include <utility>
 
 class PSTErrorTests: public tester::TestSuite {
@@ -35,7 +34,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -66,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -102,6 +101,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::CodeBlock, false> no_code_block_eof{ "" };
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
+	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
@@ -133,6 +133,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::RoundGroupExpr, false> bad_round_group{ "a + b" };
 
 	Example<pst::Stmt, true>  simple_stmt{ "x = a + b;" };
+	Example<pst::Stmt, true>  expand_stmt{ "expand \"return 0;\";" };
 	Example<pst::Stmt, false> bad_stmt{ "x = a + b" };
 
 	Example<pst::TopLevel, true> simple_top_level{ "fun foo() = {}" };
@@ -149,6 +150,13 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Class, false> empty_extends_class{ "class x extends {}" };
 	Example<pst::Class, false> empty_extends_class2{ "class x extends implements z {}" };
 	Example<pst::Class, false> multiple_extends_class{ "class x extends y, z {}" };
+
+	Example<pst::Expand, true>  nested_expand{ R"(expand "expand \"return 0;\";")" };
+	Example<pst::Expand, false> empty_expand{ "expand ;" };
+	Example<pst::Expand, false> unclosed_expand{ "expand \"return 0;;" };
+
+	ClassStmtExample<pst::NonClassStmt, true> class_using{ "using std.math;" };
+	ClassStmtExample<pst::NonClassStmt, true> class_alias{ "alias sqrt=std.math.sqrt;" };
 
 	ClassStmtExample<pst::AccessBlock, true>  public_access_block{ "public {}" };
 	ClassStmtExample<pst::AccessBlock, true>  private_access_block{ "private {}" };
@@ -187,7 +195,9 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::While, true> simple_while{ "while (x < 5) {}" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_ternary{ "if 5 then x else y" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_ternary{
+		"if 5 then '\\n' else y"
+	};
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad1_ternary{
 		"if if 5 then x else y"
 	};
@@ -197,9 +207,20 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad3_ternary{ "if 5 else y" };
 
 	Example<pst::ExprStmt, true>  simple_assign{ "x = y" };
+	Example<pst::ExprStmt, true>  simple_string_assign{ "x = \"left\"" };
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
+	Example<pst::ExprStmt, false> bad_operator{ "x = y z + 3" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> new_operators{ "<> 3 <> 'x' <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_integer_operators{
+		"1 + 2 - 3 * 4 / 5 % 6 ** 7"
+	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_boolean_operators{
+		"true and true or false and not false"
+	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_block_expr{ "x + {return 2;}" };

@@ -4,6 +4,7 @@
  */
 
 #include "param_builder.hpp"
+
 #include "exceptions.hpp"
 
 #include <base/variant.hpp>

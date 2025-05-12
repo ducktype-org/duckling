@@ -4,9 +4,9 @@
 #include "../elements_common.hpp"
 
 #include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
 
 #include <base/string_id.hpp>
 
@@ -68,12 +68,15 @@ namespace pst {
 		TopLevel,
 		Const,
 		Variable,
+		Expand,
 		// Class Statements
 		Method,
 		Field,
 		Constructor,
+		CopyConstructor,
 		Destructor,
 		AccessBlock,
+		NonClassStmt
 	};
 
 	/**
@@ -83,7 +86,7 @@ namespace pst {
 		StmtKind kind;
 
 	protected:
-		using AttrList = std::vector<Box<Attribute>>;
+		using AttrList = std::vector<AccessInternal<Attribute>>;
 
 		AttrList attributes;
 

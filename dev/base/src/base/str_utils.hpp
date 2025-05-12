@@ -16,12 +16,14 @@
  */
 #pragma once
 
+#include "raw_view.hpp"
+#include "type_traits.hpp"
+
+#include <unicode/unistr.h>
+
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <stdexcept>
-#include <unicode/unistr.h>
-#include "type_traits.hpp"
-#include "raw_view.hpp"
 
 namespace base {
 	class StrID;
@@ -103,6 +105,5 @@ namespace base {
 	 * @param delimiter A string, that is used to separate the substrings.
 	 * @return A vector of separated strings.
 	 */
-	std::vector<std::string>
-		strSplit(const std::string_view str, const std::string& delimiter = " ");
+	std::vector<std::string> strSplit(const std::string_view str, const std::string& delimiter = " ");
 }

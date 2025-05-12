@@ -1,5 +1,8 @@
 #include "stmt.hpp"
+
 #include "../visitors.hpp"
+
+#include <helios/symbols/simple.hpp>
 
 namespace compiler::helios::code {
 #define STMT_VISITOR(type) \

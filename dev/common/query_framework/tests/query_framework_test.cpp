@@ -1,17 +1,18 @@
-#include <sstream>
-
+#include <query_framework/detail/query_graph/query_graph.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/query_impl.hpp>
+#include <query_framework/query_input.hpp>
+#include <query_framework/query_input_impl.hpp>
+#include <query_framework/query_int.hpp>
+#include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 
-#include <base/exceptions.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/ints.hpp>
 #include <base/anycast.hpp>
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/stable_hashmap.hpp>
 
-#include <query_framework/query_int.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/detail/dep_graph.hpp>
-#include <query_framework/utils/with_context_do.hpp>
+#include <sstream>
 
 struct Key1 {
 	u64            v;
@@ -271,6 +272,47 @@ namespace context_leak {
 	QUERY_IMPLEMENTATION_BOILERPLATE(UseLeakedContext);
 }
 
+DECLARE_QUERY_SIDE_INPUT(SideInput, u64);
+IMPLEMENT_QUERY_SIDE_INPUT(SideInput);
+
+DECLARE_QUERY(EmptyQuery, u64, u64);
+
+struct IMPLEMENT_QUERY(EmptyQuery, u64) {
+	static auto provide(Context&, QKey key) -> PResult { return key; }
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(EmptyQuery);
+
+DECLARE_QUERY(CallEmptyQueryNTimes, u64, u64);
+
+struct IMPLEMENT_QUERY(CallEmptyQueryNTimes, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		for (u64 i = 0; i < key; i++) ctx.query<EmptyQuery>(i);
+		return key;
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(CallEmptyQueryNTimes);
+
+DECLARE_QUERY(CallSideInputNTimes, u64, u64);
+
+struct IMPLEMENT_QUERY(CallSideInputNTimes, u64) {
+	static auto provide(Context& ctx, QKey key) -> PResult {
+		for (u64 i = 0; i < key; i++) ctx.query<SideInput>(i);
+		return key;
+	}
+
+	QUERY_AUTO_NO_CACHE
+};
+
+QUERY_IMPLEMENTATION_BOILERPLATE(CallSideInputNTimes);
+
+DECLARE_QUERY(CallEmptyQueryNTimesSideInput, u64, u64);
+
 using query::utils::withContextCompute;
 using query::utils::withContextDo;
 
@@ -284,6 +326,8 @@ public:
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(autoCacheTest);
 		TESTER_ADD_TEST(testConstructCache);
+		TESTER_ADD_TEST(testDeps);
+		TESTER_ADD_TEST(testSideInput);
 		TESTER_ADD_TEST(entryPointSanityTest);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryStable>);
 		TESTER_ADD_TEST(resultLifetimeTest<LifeTimeQueryUnstable>);
@@ -312,6 +356,53 @@ private:
 
 		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (5)");
 		assertTrue(query::entryPoint<FibonacciStringAutoCache>(10) == "55", "Bad query output (6)");
+	}
+
+	void testDeps() {
+		const auto& graph = query::Context::getGraph();
+
+		assertThrows<base::Panic>(
+			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
+		);
+
+		query::entryPoint<EmptyQuery>(1);
+		auto deps = graph.getNodeDeps<EmptyQuery>(1);
+		ASSERT_EQUAL(deps.size(), 1);
+
+		assertThrows<base::Panic>(
+			[&]() { graph.getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
+		);
+
+		query::entryPoint<CallEmptyQueryNTimes>(10);
+		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>(10);
+		// 10 + 1 for the query itself:
+		ASSERT_EQUAL(deps2.size(), 11);
+		{
+			auto deps2_filtered
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
+			ASSERT_EQUAL(deps2_filtered.size(), 10);
+		}
+		{
+			auto deps2_filtered
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, CallEmptyQueryNTimes::getID());
+			ASSERT_EQUAL(deps2_filtered.size(), 1);
+		}
+		{
+			auto deps2_filtered
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
+			ASSERT_EQUAL(deps2_filtered.size(), 0);
+		}
+	}
+
+	void testSideInput() {
+		const auto& graph = query::Context::getGraph();
+
+		// we test that nothing breaks on multiple calls
+		for (u64 i = 0; i < 10; i++) {
+			query::entryPoint<CallSideInputNTimes>(10);
+			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
+			ASSERT_EQUAL(deps.size(), 10);
+		}
 	}
 
 	void entryPointSanityTest() {
@@ -355,17 +446,22 @@ private:
 	}
 
 	void queryNamesTest() {
-		assertTrue(Fibonacci::getName() == "Fibonacci", "Bad query name (1)");
-		assertTrue(FibonacciSum::getName() == "FibonacciSum", "Bad query name (2)");
+		assertTrue(Fibonacci::getData().name == "Fibonacci", "Bad query name (1)");
+		assertTrue(FibonacciSum::getData().name == "FibonacciSum", "Bad query name (2)");
 		assertTrue(
-			FibonacciStringAutoCache::getName() == "FibonacciStringAutoCache", "Bad query name (3)"
+			FibonacciStringAutoCache::getData().name == "FibonacciStringAutoCache",
+			"Bad query name (3)"
 		);
-		assertTrue(CallingEntryPoint::getName() == "CallingEntryPoint", "Bad query name (4)");
-		assertTrue(ReferenceQuery::getName() == "ReferenceQuery", "Bad query name (5)");
-		assertTrue(VectorReferenceQuery::getName() == "VectorReferenceQuery", "Bad query name (6)");
-		assertTrue(LifeTimeQueryStable::getName() == "LifeTimeQueryStable", "Bad query name (7)");
+		assertTrue(CallingEntryPoint::getData().name == "CallingEntryPoint", "Bad query name (4)");
+		assertTrue(ReferenceQuery::getData().name == "ReferenceQuery", "Bad query name (5)");
 		assertTrue(
-			LifeTimeQueryUnstable::getName() == "LifeTimeQueryUnstable", "Bad query name (8)"
+			VectorReferenceQuery::getData().name == "VectorReferenceQuery", "Bad query name (6)"
+		);
+		assertTrue(
+			LifeTimeQueryStable::getData().name == "LifeTimeQueryStable", "Bad query name (7)"
+		);
+		assertTrue(
+			LifeTimeQueryUnstable::getData().name == "LifeTimeQueryUnstable", "Bad query name (8)"
 		);
 	}
 
@@ -378,10 +474,11 @@ private:
 	}
 
 	void debugPrintTest() {
+		const auto& graph = query::Context::getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
-		query::debugPrintDependencyGraphForDrawing(s);
-		query::debugPrintDependencyGraph(s);
+		graph.debugPrintForDrawing(s);
+		graph.debugPrint(s);
 	}
 
 	void testConstructCache() {

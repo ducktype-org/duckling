@@ -12,12 +12,15 @@
  */
 
 #include "lir_lowering.hpp"
+
 #include "../lir_structure/lir_structure.hpp"
 
 #include <mir/mir_structure/mir_structure.hpp>
 #include <query_framework/query_impl.hpp>
-#include <typesystem/lower/queries.hpp>
 #include <typesystem/higher/queries.hpp>
+#include <typesystem/lower/queries.hpp>
+
+#include <base/variant.hpp>
 
 // @opt: make switch-cases in this file "sorted"
 
@@ -44,7 +47,7 @@ namespace compiler::lir {
 	LirLocal LirLocal::fromMir(query::Context& ctx, mir::LocalRef mir_local) {
 		auto type_layout = ctx.query<tsl::QuerySymbolTypeLayout>(mir_local->type);
 
-		return LirLocal{ mir_local->helios_id, type_layout };
+		return LirLocal{ mir_local->helios_id, type_layout, mir_local->parameter_index };
 	}
 
 	LirLocal LirLocal::boolLocal(query::Context& ctx) {
@@ -88,6 +91,12 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
+		case mir::Operation::BooleanAnd:
+			return Operation::BooleanAnd;
+		case mir::Operation::BooleanOr:
+			return Operation::BooleanOr;
+		case mir::Operation::BooleanNot:
+			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -167,11 +176,14 @@ namespace compiler::lir {
 					auto lir_local     = LirLocal::fromMir(ctx, mir_local.ref());
 					auto lifetime_flag = LirLocal::boolLocal(ctx);
 
-					auto pos      = locals.pushBack(std::move(lir_local));
-					auto flag_pos = locals.pushBack(std::move(lifetime_flag));
+					locals.pushBack(std::move(lir_local));
+					auto local_index = locals.lastIndex();
 
-					mir_to_lir_local.put(mir_local.ref(), locals.getCRef(pos).value());
-					mir_to_lifetime_flag.put(mir_local.ref(), locals.getCRef(flag_pos).value());
+					locals.pushBack(std::move(lifetime_flag));
+					auto flag_index = locals.lastIndex();
+
+					mir_to_lir_local.put(mir_local.ref(), locals[local_index]);
+					mir_to_lifetime_flag.put(mir_local.ref(), locals[flag_index]);
 				}
 			}
 
@@ -179,25 +191,25 @@ namespace compiler::lir {
 				// make initial block mapping, and
 				// unfilled blocks that will map to
 				// beginning of each mir block
-				for (const auto& mir_block: key.function->blocks) {
+				for (const auto& mir_block_id: key.function->block_order) {
 					// note that this block will only be filled with instructions
 					// and terminator later:
-					auto pos = blocks.pushBack({});
-					mir_to_lir_block.put(mir_block.id, blocks.getRef(pos).value());
+					blocks.pushBack({});
+					mir_to_lir_block.put(mir_block_id, blocks.last());
 				}
 			}
 
 			void lowerBlocks() {
-				// here we iterate in reverse only to emit better block order:
-				for (const auto& block: key.function->blocks | std::views::reverse) {
-					const auto lir_block = mir_to_lir_block[block.id];
+				for (const auto& mir_block_id: key.function->block_order) {
+					const auto lir_block = mir_to_lir_block[mir_block_id];
 					block_order.emplace_back(lir_block);
 
-					auto curr_block = lir_block;
-					for (const auto& mir_instruction: block.instructions)
+					auto        curr_block = lir_block;
+					const auto& mir_block  = key.function->blocks[mir_block_id];
+					for (const auto& mir_instruction: mir_block.instructions)
 						curr_block = lowerInstruction(curr_block, mir_instruction);
 
-					lowerTerminator(curr_block, block.terminator);
+					lowerTerminator(curr_block, mir_block.terminator);
 				}
 			}
 
@@ -273,8 +285,9 @@ namespace compiler::lir {
 			 * @param curr_block
 			 * @return next curr_block
 			 */
-			MutBlockRef
-				lowerInstruction(MutBlockRef curr_block, const mir::Instruction& mir_instruction) {
+			MutBlockRef lowerInstruction(
+				MutBlockRef curr_block, const mir::Instruction& mir_instruction
+			) {
 				// curr_block already in order
 
 				CORE_ASSERT(
@@ -284,6 +297,9 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
+				case mir::Operation::Nop: {
+					return curr_block;
+				}
 				case mir::Operation::Assign:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerSub:
@@ -291,7 +307,10 @@ namespace compiler::lir {
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
 				case mir::Operation::IntegerLt:
-				case mir::Operation::IntegerNeg: {
+				case mir::Operation::IntegerNeg:
+				case mir::Operation::BooleanAnd:
+				case mir::Operation::BooleanOr:
+				case mir::Operation::BooleanNot: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 
@@ -323,7 +342,11 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented("instruction in LowerToLirFunction");
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLirFunction"
+					));
 				}
 			}
 
@@ -338,8 +361,7 @@ namespace compiler::lir {
 				// @TODO
 				// curr_block already in order
 				CORE_ASSERT(
-					mir::isTerminating(mir_terminator.operation),
-					"non-Terminator in lowerTerminator"
+					mir::isTerminating(mir_terminator.operation), "non-Terminator in lowerTerminator"
 				);
 				lowerFlags(curr_block, mir_terminator);
 
@@ -356,8 +378,7 @@ namespace compiler::lir {
 					break;
 				}
 				case mir::Operation::FunctionEnd: {
-					// @TODO...
-					curr_block->terminator = Instruction{ Operation::ReturnVoid, {}, {} };
+					CORE_PANIC("FunctionEnd is illegal outside of MirLowering phase");
 					break;
 				}
 				// @TODO: add more cases
@@ -372,13 +393,19 @@ namespace compiler::lir {
 			 * @return Function
 			 */
 			Function get() && {
+				auto return_type = ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type);
+				std::vector<tsl::TypeLayout> parameter_types;
+				parameter_types.reserve(key.function->parameter_types.size());
+				for (const auto& param: key.function->parameter_types)
+					parameter_types.push_back(ctx.query<tsl::QuerySymbolTypeLayout>(param));
+
 				return Function{
-					.name = key.function->name,
-					.return_type_layout
-					= ctx.query<tsl::QuerySymbolTypeLayout>(key.function->return_type),
-					.blocks      = std::move(blocks),
-					.local_list  = std::move(locals),
-					.block_order = std::move(block_order),
+					.name               = key.function->name,
+					.return_type_layout = return_type,
+					.parameter_layouts  = std::move(parameter_types),
+					.blocks             = std::move(blocks),
+					.local_list         = std::move(locals),
+					.block_order        = std::move(block_order),
 				};
 			}
 		};
@@ -408,6 +435,7 @@ namespace compiler::lir {
 
 			// @opt: remove it in optimized, release builds
 			CORE_ASSERT(fun.validateBlockOrder().isOk(), "Invalid block order");
+			CORE_ASSERT(fun.validateParameters().isOk(), "Invalid parameters");
 
 			return fun;
 		}

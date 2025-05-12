@@ -1,9 +1,13 @@
 #pragma once
 
+#include "../definitions.hpp"
+#include "../inheritance_metadata.hpp"
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
 #include <unordered_map>
 #include <vector>
-#include <base/string_id.hpp>
-#include "../definitions.hpp"
 
 namespace vm::kind {
 
@@ -19,5 +23,7 @@ namespace vm::kind {
 		// @todo when hashmap has operator = change to base::HashMap
 		std::unordered_map<base::StrID, FieldID> field_name_map;
 		std::vector<FieldDesc>                   fields;
+
+		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};
 }

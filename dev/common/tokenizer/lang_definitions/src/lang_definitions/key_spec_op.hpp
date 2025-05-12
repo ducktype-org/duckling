@@ -11,9 +11,10 @@
  */
 #pragma once
 
-#include <base/string_id.hpp>
-#include <base/flag.hpp>
 #include <init/init.hpp>
+
+#include <base/flag.hpp>
+#include <base/string_id.hpp>
 
 namespace lang_def {
 
@@ -62,6 +63,9 @@ namespace lang_def {
 		Debug,
 		Switch,
 		Case,
+
+		// Macro
+		Expand,
 
 		// Actions:
 		Return,
@@ -125,6 +129,12 @@ namespace lang_def {
 		Or,
 		Xor,
 
+		// General text prefix operators (Not doesn't count)
+		Ref,
+		Copy,
+		Move,
+		Refof,
+
 		// Class specific:
 		Public,
 		Private,
@@ -140,13 +150,6 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
-		BCLocalSize,
-		BCRetSize,
-		BCArgSize,
-		BCDefine,
-		BCArg,
-		BCLocal,
-		BCCode,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -155,6 +158,18 @@ namespace lang_def {
 		BCData,
 		BCVariant,
 		BCFunType,
+		BCGlobalData,
+		BCOpaque,
+		BCClass,
+		BCAbstract,
+		BCInterface,
+		BCExtends,
+		BCImplements,
+		BCVirtualMethods,
+		BCFields,
+		BCTrue,
+		BCFalse,
+		COUNT,
 	};
 
 	enum class Special {
@@ -170,14 +185,21 @@ namespace lang_def {
 	// only operator significant during parsing
 	enum class NamedOperator {
 		NotAnOperator,
+
 		Period,
 		PeriodStar,
 		Colon,
 		Assign,
-		Pipe,  // | for variants and bitwise or.
 		QuestionMark,
 		SingleArrow,
 		DoubleArrow,
+
+		Pipe,  // | for variants and bitwise or.
+		BitAnd,
+		BitXor,
+
+		LeftShift,
+		RightShift,
 
 		Lesser,
 		Greater,
@@ -197,7 +219,7 @@ namespace lang_def {
 	};
 }
 
-MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IS_ACTION)
+MAKE_FLAG_TYPE(lang_def, KeywordFlagsOptions, KeywordFlags, IsAction, IsGenPrefixOp)
 
 namespace lang_def {
 	namespace key_spec_op {

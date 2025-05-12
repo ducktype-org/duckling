@@ -7,4 +7,6 @@ add_library(Diagnostic
         src/diagnostic/interactive_code.cpp
 )
 
-make_module(Diagnostic USES Printer Filesystem TokenFile JSON HELIOS)
+make_module(Diagnostic USES Printer Filesystem TokenSource JSON HELIOS)
+        src/diagnostic/location.cpp
+)

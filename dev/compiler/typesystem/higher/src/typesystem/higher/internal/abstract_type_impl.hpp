@@ -1,14 +1,16 @@
 #pragma once
 
-#include <utility>
-#include <vector>
-
-#include <query_framework/query_int.hpp>
-
 #include "../all.hpp"
 #include "queries.hpp"
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/simple.hpp>
+#include <query_framework/context_fd.hpp>
+
+#include <base/box.hpp>
+
+#include <utility>
+#include <vector>
 
 namespace tsh::internal {
 	/**

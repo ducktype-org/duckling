@@ -1,0 +1,7 @@
+type fun: main {} ptr_i32
+
+function main {
+	init_lany_type x, i32;
+	deinit; # x
+	ret;
+}

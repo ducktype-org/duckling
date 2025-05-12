@@ -15,9 +15,11 @@
 
 #pragma once
 
-#include <base/string_id.hpp>
-#include <init/init.hpp>
 #include "key_spec_op.hpp"
+
+#include <init/init.hpp>
+
+#include <base/string_id.hpp>
 
 namespace lang_def {
 
@@ -39,6 +41,5 @@ namespace lang_def {
 	i64 operatorPrecedence(NamedOperator operator_, OperatorType operator_type);
 
 	OperatorAssociativity operatorAssociativity(base::StrID operator_, OperatorType operator_type);
-	OperatorAssociativity
-		operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
+	OperatorAssociativity operatorAssociativity(NamedOperator operator_, OperatorType operator_type);
 }

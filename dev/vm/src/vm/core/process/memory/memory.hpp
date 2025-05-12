@@ -1,33 +1,41 @@
 #pragma once
 
-#include <deque>
-#include <mutex>
-#include <shared_mutex>
-#include <cstring>
-#include <base/ints.hpp>
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
-#include <base/stable_container.hpp>
-#include <base/maps.hpp>
-#include <vm/core/process/type_metadata/definitions.hpp>
-#include "frame.hpp"
-
-#include "block.hpp"
-#include "pointer.hpp"
-#include "thread_stack.hpp"
 #include "allocator/block_data.hpp"
 #include "allocator/heap_allocator.hpp"
 #include "allocator/stack_allocator.hpp"
+#include "block.hpp"
+#include "frame.hpp"
+#include "pointer.hpp"
+#include "thread_stack.hpp"
+
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/maps.hpp>
+#include <base/raw_view.hpp>
+#include <base/ref.hpp>
+#include <base/stable_container.hpp>
+
+#include <vm/core/process/type_metadata/definitions.hpp>
+
+#include <cstring>
+#include <deque>
+#include <mutex>
+#include <shared_mutex>
 
 namespace vm {
-	class Memory {
+	/**
+	 * @brief A memory module for a process.
+	 * All of process'es memory - thread stacks (thread local data) and global data is stored here.
+	 */
+	class Memory final {
 	private:
 		mutable std::shared_mutex mutex;
 		HeapAllocator             heap_allocator;
 		StackAllocator            stack_allocator;
 
 		std::deque<ThreadStack> threads_frame_stacks;
+
+		base::HashMap<GlobalDataID, base::OwningView> global_data;
 
 		// Here we use a simple recycling mechanism for blocks to avoid unnecessary allocations.
 		// After the block is destroyed and the reference count drops to zero, instead of freeing
@@ -56,12 +64,21 @@ namespace vm {
 		// =================== Used by executor ===================
 
 		auto initializeFrameStack() -> Ref<ThreadStack>;
-
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
 		auto allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
 		void freeBlock(Ref<Block> block);
+
+		void insertGlobalData(GlobalDataID id, TypeCRef type);
+
+		/**
+		 * @brief Returns a view of global data by the id.
+		 */
+		[[nodiscard]]
+		__attribute__((always_inline)) auto getGlobalData(GlobalDataID id) -> base::ModRawView {
+			return global_data.atMaybe(id).expect("Id not stored!").modView();
+		}
 
 		// =================== Block operations ===================
 
@@ -113,6 +130,9 @@ namespace vm {
 
 		[[nodiscard]]
 		auto requestBlockIDs() -> std::vector<BlockID>;
+
+		[[nodiscard]]
+		auto requestBlockID(Ref<Block> block) -> BlockID;
 
 		[[nodiscard]]
 		auto requestBlockData(BlockID id) -> base::RawView;

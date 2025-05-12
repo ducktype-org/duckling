@@ -1,9 +1,9 @@
 #include "diagnostic_converters.hpp"
 
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 namespace dia {
 	/**
@@ -64,8 +64,9 @@ namespace dia {
 		}
 	}
 
-	printer::PrinterContentsSeq
-		DiagnosticToUserConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
+	printer::PrinterContentsSeq DiagnosticToUserConverter::toPrinterContents(
+		CRef<Message> message_ptr, bool detailed
+	) {
 		// Prepare the leading message.
 		const Message::Severity s = message_ptr->getSeverity();
 		const Message::Domain   d = message_ptr->getDomain();
@@ -73,8 +74,9 @@ namespace dia {
 		const auto severity_tag = severityToPrinterContent(s);
 		const auto domain_tag   = domainToString(d);
 
-		auto result_contents
-			= message_ptr->getSourcePosition().genPrinterContents(message_ptr->toString(detailed));
+		auto result_contents = message_ptr->getSourcePosition().genPrinterContents(
+			{ message_ptr->toString(detailed) }
+		);
 		result_contents.insert(result_contents.begin(), { severity_tag, " [", domain_tag, "]:\n" });
 
 		// Append the notes.
@@ -92,11 +94,12 @@ namespace dia {
 	) {
 		const printer::PrinterContent severity_tag = { "NOTE", printer::Color::BRIGHT_GREEN };
 
-		auto result_contents = note_ptr->getSourcePosition()
-		                           .map([&](SourcePosition pos) {
-									   return pos.genPrinterContents(note_ptr->toString(detailed));
-								   })
-		                           .value_or({ note_ptr->toString(detailed) });
+		auto result_contents
+			= note_ptr->getSourcePosition()
+		          .map([&](const SourcePosition& pos) {
+					  return pos.genPrinterContents({ note_ptr->toString(detailed) });
+				  })
+		          .valueOr({ note_ptr->toString(detailed) });
 		result_contents.insert(result_contents.begin(), { severity_tag, "\n" });
 
 		return result_contents;
@@ -191,8 +194,9 @@ namespace dia {
 		return o.str();
 	}
 
-	printer::PrinterContentsSeq
-		DiagnosticToJSONConverter::toPrinterContents(CRef<Message> message_ptr, bool detailed) {
+	printer::PrinterContentsSeq DiagnosticToJSONConverter::toPrinterContents(
+		CRef<Message> message_ptr, bool detailed
+	) {
 		// Prepare complex subJSONs.
 		auto range = sourcePositionToLspJson(message_ptr->getSourcePosition());
 		auto notes = notesToLspJson(message_ptr->getNotes(), message_ptr, detailed);
@@ -236,10 +240,8 @@ namespace dia {
 		CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
 	) {
 		auto source_position
-			= note_ptr->getSourcePosition().value_or(parent_message->getSourcePosition());
-		auto source_uri = (source_position.getSource() != nullptr)
-		                    ? source_position.getSource()->getPath().uri()
-		                    : "file:///dev/null";
+			= note_ptr->getSourcePosition().valueOr(parent_message->getSourcePosition());
+		auto source_uri = source_position.getSource()->getPath().uri();
 		auto range      = sourcePositionToLspJson(source_position);
 
 		// clang-format off

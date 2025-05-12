@@ -1,11 +1,12 @@
 #include <filesystem/file.hpp>
+#include <graphviz/gvc.h>
+#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
-#include <base/variant.hpp>
-#include <init/init.hpp>
-#include <iostream>
 
-#include <graphviz/gvc.h>
+#include <base/variant.hpp>
+
+#include <iostream>
 
 // Linting is turned off because the graph api uses c-style pointers for text.
 // NOLINTBEGIN(-avoid-c-arrays)
@@ -67,7 +68,7 @@ std::string stringPosition(dia::SourcePosition pos) {
  *
  * @note Adds information about position and element class
  */
-Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
+Agnode_t* dotElement(Handler& hdl, pst::Access<pst::LangElement> el) {
 	std::string name = stringPosition(el->getSourcePosition()) + "\n" + el->elementType();
 	auto        self = hdl.addNode(name);
 
@@ -83,8 +84,8 @@ Agnode_t* dotElement(Handler& hdl, MCRef<pst::LangElement> el) {
 				agsafeset(sub_node, shape_string.data(), box_string.data(), empty_string.data());
 			}
 
-			variant_case(pst::LangElement::ConstChild, child) {
-				auto sub_node = dotElement(hdl, child);
+			variant_case(pst::LangElement::Child, child) {
+				auto sub_node = dotElement(hdl, child.illegalAccess().value());
 				hdl.addEdge(self, sub_node);
 			}
 		}
@@ -103,15 +104,15 @@ int main(int argc, char** argv) {
 	fs::FilePath file(argv[1]);
 	pst::PST<>   pst(file);
 
-	if (pst.getLogger().bad()) {
-		pst.getLogger().dumpLog(false, std::cerr);
+	if (pst.getLogger()->bad()) {
+		pst.getLogger()->dumpLog(false, std::cerr);
 		std::cerr << "\nThere are errors.\n";
 		pst.dprint(std::cerr);
 		std::cerr << "\n";
 	}
 	if (pst.getRootElement().illegalAccess()) {
 		Handler hdl("graph");
-		dotElement(hdl, Ref(&*pst.getRootElement().illegalAccess().value()));
+		dotElement(hdl, pst.getRootElement().illegalAccess().value());
 		hdl.writeToSVG(argv[2]);
 	}
 }

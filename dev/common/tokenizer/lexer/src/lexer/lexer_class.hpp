@@ -1,13 +1,14 @@
 #pragma once
 
+#include "char.hpp"
+#include "token.hpp"
+
 #include <diagnostic/logger.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
-#include <token_file/file.hpp>
-#include <vector>
+#include <token_source/source.hpp>
 
-#include "char.hpp"
-#include "token.hpp"
+#include <vector>
 
 namespace lexer {
 
@@ -23,13 +24,13 @@ namespace lexer {
 		/**
 		 * @note if file decoding fails outputs the reason to cerr and throws LogicError
 		 */
-		explicit Lexer(Ref<tokenizer::TokenFile>);
+		explicit Lexer(Ref<tokenizer::TokenSource>);
 
 		[[nodiscard]]
 		TokenData tokenize();
 
 		[[nodiscard]]
-		const dia::Logger& getLogger() const {
+		const Ref<dia::Logger> getLogger() const {
 			return logger;
 		}
 
@@ -73,6 +74,7 @@ namespace lexer {
 		void operatorHandler(Tokens& output);
 		void nameHandler(Tokens& output);
 		void stringHandler(Tokens& output);
+		void charHandler(Tokens& output);
 		void specialHandler(Tokens& output);
 		void decLiteralHandler(Tokens& output);
 		void binLiteralHandler(Tokens& output);
@@ -95,6 +97,8 @@ namespace lexer {
 		bool isBlockCommentEnd() const;
 		[[nodiscard]]
 		bool isStringBegin() const;
+		[[nodiscard]]
+		bool isCharBegin() const;
 		/**@}*/
 
 		/**
@@ -106,11 +110,11 @@ namespace lexer {
 		[[nodiscard]]
 		dia::SourcePosition currentPosition() const;
 
-		usize                     where = 0;  ///< Current position in file
-		Ref<tokenizer::TokenFile> file;
-		dia::Logger&              logger;
-		const CharArray&          char_array;
-		Tokens                    tokens;
+		usize                       where = 0;  ///< Current position in file
+		Ref<tokenizer::TokenSource> file;
+		Ref<dia::Logger>            logger;
+		const CharArray&            char_array;
+		Tokens                      tokens;
 
 		/**
 		 * @brief Informs whether to print messages about what tokens are created to the debug

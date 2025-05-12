@@ -1,20 +1,16 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-	arg_size: 0;
-	local_size: 16;
-	ret_size: 8;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+	breakpoint;
+	init_lany_type			tmp, i64;
+	mov_l64_imm         	tmp, 0;
+	label Loop;
+		cmpEq_l64_imm		tmp, 0;
+		jmpIf_label 	  	Loop;
 
-	code: {
-		# [0, 8) main ret_val
-		init_type			int64; # [8, 16) tmp
-        mov_l64_imm         8, 0;
-        label Loop;
-            cmpEq_l64_imm		8, 0;
-            jmpRelIf_label 	  	Loop;
-			
-		deinit; # temp
-		ret;
-	}
+	deinit; # temp
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

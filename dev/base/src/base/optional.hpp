@@ -31,10 +31,12 @@
  */
 #pragma once
 
-#include <optional>
-#include <functional>
-
 #include "exceptions.hpp"
+
+#include <base/macros/diagnostics.hpp>
+
+#include <functional>
+#include <optional>
 
 /* Some cool macros.
  *
@@ -60,6 +62,19 @@
  * 	std::cout << "Test2 has no value.\n";
  * }
  *
+ *
+ * // Furthermore, it can be used with `std::expected<T, K>`!
+ *	std::expected<int, float> t = 1;
+ *	match_optional(t) {
+ *		opt_some(val) { assert(val == 1); }
+ *		opt_err(err) { CORE_PANIC("No error!") }
+ *	}
+ *  t = std::unexpected(1.5f);
+ *	match_optional(t) {
+ *		opt_some(val) { CORE_PANIC("No value!") }
+ *		opt_err(err) { assert(err == 1.5f); }
+ *	}
+ *
  */
 #define match_optional(optional)                                                             \
 	PUSH_DIAGNOSTIC                                                                          \
@@ -68,11 +83,33 @@
 		for (auto&& _internal_optional = (optional); _perform_match; _perform_match = false) \
 	POP_DIAGNOSTIC
 
-#define opt_some(_value_name)                                                                   \
-	PUSH_DIAGNOSTIC                                                                             \
-	NO_SHADOW                                                                                   \
-	if (bool _perform_if = _internal_optional.has_value())                                      \
-		for (auto&& _value_name = _internal_optional.value(); _perform_if; _perform_if = false) \
+#define opt_some(_value_name)                                                            \
+	PUSH_DIAGNOSTIC                                                                      \
+	NO_SHADOW                                                                            \
+	if (bool _perform_if = _internal_optional.has_value())                               \
+		for (auto&& _value_name = *_internal_optional; _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
+#define opt_some_move(_value_name)                                                                  \
+	PUSH_DIAGNOSTIC                                                                                 \
+	NO_SHADOW                                                                                       \
+	if (bool _perform_if = _internal_optional.has_value())                                          \
+		for (auto&& _value_name = *std::move(_internal_optional); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
+#define opt_err(_err_name)                                                                    \
+	PUSH_DIAGNOSTIC                                                                           \
+	NO_SHADOW                                                                                 \
+	if (bool _perform_if = !_internal_optional.has_value())                                   \
+		for (auto&& _err_name = _internal_optional.error(); _perform_if; _perform_if = false) \
+	POP_DIAGNOSTIC
+
+#define opt_err_move(_err_name)                                                     \
+	PUSH_DIAGNOSTIC                                                                 \
+	NO_SHADOW                                                                       \
+	if (bool _perform_if = !_internal_optional.has_value())                         \
+		for (auto&& _err_name = std::move(_internal_optional).error(); _perform_if; \
+		     _perform_if      = false)                                              \
 	POP_DIAGNOSTIC
 
 #define opt_none    \
@@ -80,13 +117,13 @@
 	NO_SHADOW       \
 	if (!_internal_optional.has_value()) POP_DIAGNOSTIC
 
-#define if_opt_some(optional, _value_name)                                           \
-	PUSH_DIAGNOSTIC                                                                  \
-	NO_SHADOW                                                                        \
-	if (auto&& _internal_optional = (optional))                                      \
-		if (bool _if_opt_some_stop = true)                                           \
-			for (auto&& _value_name = _internal_optional.value(); _if_opt_some_stop; \
-			     _if_opt_some_stop  = false)                                         \
+#define if_opt_some(optional, _value_name)                                    \
+	PUSH_DIAGNOSTIC                                                           \
+	NO_SHADOW                                                                 \
+	if (auto&& _internal_optional = (optional))                               \
+		if (bool _if_opt_some_stop = true)                                    \
+			for (auto&& _value_name = *_internal_optional; _if_opt_some_stop; \
+			     _if_opt_some_stop  = false)                                  \
 	POP_DIAGNOSTIC
 
 
@@ -178,25 +215,25 @@ namespace base {
 		 */
 		[[nodiscard]]
 		constexpr const T& value() const& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& value() const&& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
 		[[nodiscard]]
 		constexpr T& value() & {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value();
 		}
 
 		[[nodiscard]]
 		constexpr T&& value() && {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value());
 		}
 
@@ -206,25 +243,25 @@ namespace base {
 		 * @return
 		 */
 		[[nodiscard]]
-		const T& value_or(const T& or_value) const& {
+		constexpr const T& valueOr(const T& or_value) const& {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		const T&& value_or(const T&& or_value) const&& {
+		constexpr const T&& valueOr(const T&& or_value) const&& {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
 		[[nodiscard]]
-		T& value_or(T& or_value) & {
+		constexpr T& valueOr(T& or_value) & {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		T&& value_or(T&& or_value) && {
+		constexpr T&& valueOr(T&& or_value) && {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
@@ -287,19 +324,47 @@ namespace base {
 			return std::move(value());
 		}
 
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
 		/**
 		 * An operator that allows a direct data access.
 		 * @return Object T to perform an operation on.
 		 */
 		[[nodiscard]]
 		constexpr const T* operator->() const {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.operator->();
 		}
 
 		[[nodiscard]]
 		constexpr T* operator->() {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.operator->();
 		}
 
@@ -314,14 +379,16 @@ namespace base {
 		 * nothing.
 		 */
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) const
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		// A non-const version.
 		template<typename Function>
-		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function)
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
@@ -335,7 +402,8 @@ namespace base {
 		 * @return If object contains a value, then applies a function, otherwise does nothing.
 		 */
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const
+			-> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
@@ -343,14 +411,14 @@ namespace base {
 
 		// A non-const version.
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 	protected:
-		void _throwOnNoValue() const {
+		constexpr void throwOnNoValue() const {
 			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 
@@ -404,48 +472,48 @@ namespace base {
 		// Accessors.
 		[[nodiscard]]
 		constexpr const T& value() const& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value().get();
 		}
 
 		[[nodiscard]]
 		constexpr const T&& value() const&& {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value().get());
 		}
 
 		[[nodiscard]]
 		constexpr T& value() & {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return private_optional.value().get();
 		}
 
 		[[nodiscard]]
 		constexpr T&& value() && {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return std::move(private_optional.value().get());
 		}
 
 		[[nodiscard]]
-		const T& value_or(const T& or_value) const& {
+		constexpr const T& valueOr(const T& or_value) const& {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		const T&& value_or(const T&& or_value) const&& {
+		constexpr const T&& valueOr(const T&& or_value) const&& {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
 
 		[[nodiscard]]
-		T& value_or(T& or_value) & {
+		constexpr T& valueOr(T& or_value) & {
 			if (has_value()) return value();
 			return or_value;
 		}
 
 		[[nodiscard]]
-		T&& value_or(T&& or_value) && {
+		constexpr T&& valueOr(T&& or_value) && {
 			if (has_value()) return std::move(value());
 			return std::move(or_value);
 		}
@@ -475,14 +543,14 @@ namespace base {
 		[[nodiscard]]
 		constexpr const T*
 		operator->() const {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return &value();
 		}
 
 		[[nodiscard]]
 		constexpr T*
 		operator->() {
-			_throwOnNoValue();
+			throwOnNoValue();
 			return &value();
 		}
 
@@ -512,34 +580,65 @@ namespace base {
 			return std::move(value());
 		}
 
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T& expect(Args&&... args) const& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr const T&& expect(Args&&... args) const&& {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T& expect(Args&&... args) & {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return value();
+		}
+
+		template<class Err, class... Args>
+		[[nodiscard]]
+		constexpr T&& expect(Args&&... args) && {
+			if (!has_value()) throw Err(std::forward<Args>(args)...);
+			return std::move(value());
+		}
+
 		template<typename Function>
-		auto map(const Function& function) const -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function) const
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto map(const Function& function) -> Optional<std::invoke_result_t<Function, T>> {
+		constexpr auto map(const Function& function)
+			-> Optional<std::invoke_result_t<Function, T>> {
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) const -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) const
+			-> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 		template<typename Function>
-		auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
+		constexpr auto flatMap(const Function& function) -> std::invoke_result_t<Function, T> {
 			static_assert(IsOfSameClass<std::invoke_result_t<Function, T>, Optional>);
 			if (has_value()) return function(value());
 			return {};
 		}
 
 	private:
-		void _throwOnNoValue() const {
+		constexpr void throwOnNoValue() const {
 			if (!has_value()) CORE_PANIC("Tried to retrieve a value from an empty optional.");
 		}
 

@@ -8,12 +8,14 @@
  */
 #pragma once
 
-#include <base/maps.hpp>
 #include <base/ints.hpp>
-
+#include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <vm/core/process/memory/pointer.hpp>
+
 #include <vm/core/process/memory/block.hpp>
+#include <vm/core/process/memory/pointer.hpp>
+
+#include <cstddef>
 
 namespace vm {
 
@@ -67,7 +69,7 @@ namespace vm {
 
 		/**
 		 * @brief Mapping from stack offset to ID of block
-		 * responisble for data on that offset.
+		 * responsible for data on that offset.
 		 *
 		 * Used when creating pointers to local variables.
 		 */
@@ -86,8 +88,10 @@ namespace vm {
 		 * @brief First free byte in the local stack.
 		 * Used when new block is created on the local stack.
 		 */
-		u64 local_stack_head{};
+		u64 local_stack_head = 0;
 
 		Frame(): regs{ .p64_reg_0 = 0, .pointer_reg_0 = Pointer::null() } {}
+
+		void resetFrameData() { *this = Frame(); }
 	};
 }

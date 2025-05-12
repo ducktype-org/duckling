@@ -1,16 +1,17 @@
 #pragma once
 
 #include "lang_parser_element.hpp"
-#include <base/ref.hpp>
-#include <concepts>
+
 #include <pst_parser/access.hpp>
+
+#include <base/ref.hpp>
 
 namespace pst {
 	/**
 	 * This can be used as a key of a query taking just single PST element.
 	 * @todo this is a perfect template for explicit instantiations, to speed up compilation
 	 */
-	template<std::derived_from<LangElement> T = LangElement>
+	template<typename /*std::derived_from<LangElement>*/ T = LangElement>
 	struct GenericPSTQueryKey {
 		template<typename E>
 		GenericPSTQueryKey(const AccessLocked<E>& element) noexcept: element(element){};

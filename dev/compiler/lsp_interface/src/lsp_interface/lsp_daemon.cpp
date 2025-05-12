@@ -2,34 +2,34 @@
  * @file lsp_daemon.cpp
  * @brief This file defines LSP daemon, the c++ layer of the duckling language server.
  */
-#include <iostream>
+
 #include <base64.hpp>
+#include <clap/clap.hpp>
 
-// This is included to allow for pushing and popping of diagnostics
-#include <base/define_helper.hpp>
+#include <iostream>
 
-PUSH_DIAGNOSTIC
+PUSH_DIAGNOSTIC;  // Our code is included after crow because of errors if pst was included earlier.
 #pragma GCC diagnostic ignored "-Wuninitialized"
 #include <crow/app.h>
 #include <crow/http_response.h>
-POP_DIAGNOSTIC
+POP_DIAGNOSTIC;
 
-// Our code is included after crow because there were some weird errors if pst was included earlier.
-#include <pst_parser/pst.hpp>
-#include <clap/clap.hpp>
-#include <lexer/lexer.hpp>
+#include "export_keywords.hpp"
+#include "go_to_definition.hpp"
+#include "semantic_tokens.hpp"
+#include "utils.hpp"
+
 #include <filesystem/file.hpp>
-#include <base/variant.hpp>
-#include <base/int_conv.hpp>
+#include <lexer/lexer.hpp>
+#include <pst_parser/pst.hpp>
 
-// vm includes:
-#include <vm/server.hpp>
+#include <base/int_conv.hpp>
+#include <base/macros/diagnostics.hpp>
+#include <base/variant.hpp>
+
 #include <vm/cli.hpp>
 #include <vm/config.hpp>
-
-#include "utils.hpp"
-#include "export_keywords.hpp"
-#include "semantic_tokens.hpp"
+#include <vm/server.hpp>
 
 /**
  * @brief Wrapper for converting API error to HTTP response.
@@ -58,7 +58,7 @@ crow::response convertError(const vm::api::ApiError& apiError) {
  * @return crow::response The HTTP response corresponding to the result.
  */
 template<class E>
-crow::response toResponse(const cpp::result<void, E>& x) {
+crow::response toResponse(const std::expected<void, E>& x) {
 	static auto convert = []() { return crow::response(200, "{}"); };
 
 	if (x.has_value()) return convert();
@@ -153,7 +153,7 @@ void server(i32 port) {
 			auto              tokens = lexer::tokenizeFile(file);
 			pst::PST<>        pst(std::move(tokens));
 			std::stringstream ss;
-			if (pst.getLogger().bad()) pst.getLogger().dumpLog(true, ss);
+			if (pst.getLogger()->bad()) pst.getLogger()->dumpLog(true, ss);
 			return crow::response(200, ss.str());
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
@@ -176,15 +176,50 @@ void server(i32 port) {
 			auto        tokens = lexer::tokenizeFile(file);
 			pst::PST<>  pst(std::move(tokens));
 
-			if (pst.getLogger().bad()) {
+			if (pst.getLogger()->bad()) {
 				std::stringstream ss;
-				pst.getLogger().dumpLog(true, ss);
+				pst.getLogger()->dumpLog(true, ss);
 				return crow::response(200, ss.str());
 			};
 
-			return crow::response(
-				200, lsp::getSemanticTokens({ &*pst.getRootElement().illegalAccess().value() })
-			);
+			return crow::response(200, lsp::getSemanticTokens(pst.getRootElement()));
+		} catch (std::exception& e) {
+			std::string error_msg = e.what();
+			return crow::response(400, error_msg);
+		}
+	});
+
+	/**
+	 * @brief Route to get definition location for a symbol defined by a given file and offset.
+	 * * URL: /get_semantic_tokens/[base64 relative path]/[offset]
+	 * @param base64_path The base64 encoded relative path of the file.
+	 * @param offset The offset of the element
+	 * @return crow::response The HTTP response containing the definition range in JSON format.
+	 */
+	CROW_ROUTE(app, "/get_definitions/<string>/<uint>")
+	([&files](const std::string& base64_path, const uint& offset) {
+		try {
+			const auto  path   = base64::decode_into<std::string>(base64_path);
+			const auto& file   = files.at(path);
+			auto        tokens = lexer::tokenizeFile(file);
+			pst::PST<>  pst(std::move(tokens));
+
+			if (pst.getLogger()->bad()) {
+				std::stringstream ss;
+				pst.getLogger()->dumpLog(true, ss);
+				return crow::response(200, ss.str());
+			};
+			auto pst_root = pst.getRootElement();
+
+			auto element = lsp::findElement(pst_root, offset);
+
+			auto definition = lsp::findDefinition(element);
+
+			if (!definition.has_value()) return crow::response(200, "[]");
+
+			std::vector<std::string> out = { definition.value().toJSON() };
+
+			return crow::response(200, lsp::jsonList(out));
 		} catch (std::exception& e) {
 			std::string error_msg = e.what();
 			return crow::response(400, error_msg);

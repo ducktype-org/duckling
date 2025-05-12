@@ -1,15 +1,16 @@
 #pragma once
 
-#include <string>
 #include <base/ints.hpp>
 
+#include <string>
+
 namespace testing_utils {
-	inline i32 nextChar(std::string_view s, i32 i) {
+	inline usize nextChar(std::string_view s, usize i) {
 		while (i < s.size() && (s[i] == ' ' || s[i] == '\n' || s[i] == '\t')) i++;
 
 		// Skipping trailing commas
 		if (i < s.size() && s[i] == ',') {
-			i32 next = nextChar(s, i + 1);
+			usize next = nextChar(s, i + 1);
 
 			if (s[next] == ']') return next;
 		}
@@ -18,8 +19,8 @@ namespace testing_utils {
 	}
 
 	inline bool compareJson(std::string_view s1, std::string_view s2) {
-		i32 i = -1;
-		i32 j = -1;
+		usize i = -1ULL;
+		usize j = -1ULL;
 
 		while (true) {
 			i = nextChar(s1, i + 1);

@@ -1,12 +1,12 @@
 #pragma once
 
-#include <diagnostic/message.hpp>
-#include <diagnostic/source_position.hpp>
-#include "token_stream.hpp"
 #include "base_element.hpp"
 #include "common_elements.hpp"
+#include "token_stream.hpp"
 
 #include <diagnostic/logger.hpp>
+#include <diagnostic/message.hpp>
+#include <diagnostic/source_position.hpp>
 
 namespace tpc {
 
@@ -35,9 +35,9 @@ namespace tpc {
 
 		// clang-format on
 
-		dia::Logger& err;  ///< Stores parsing errors
+		Ref<dia::Logger> err;  ///< Stores parsing errors
 
-		ParserState(TokenStream&& tokens, dia::Logger& err): err(err) {
+		ParserState(TokenStream&& tokens, Ref<dia::Logger> err): err(err) {
 			stream_stack.emplace_back(std::move(tokens));
 		}
 
@@ -80,13 +80,13 @@ namespace tpc {
 		 * @brief Logs an error relatively to the current token
 		 */
 		void fail(i64 rel_pos, const std::string& message) {
-			err.failAndLog(ctokens().peek(rel_pos).getPosition(), message);
+			err->failAndLog(ctokens().peek(rel_pos).getPosition(), message);
 		}
 
 		/**
 		 * @brief Logs an error relatively to the current token
 		 */
-		void log(Box<dia::Message> message) { err.log(std::move(message)); }
+		void log(Box<dia::Message> message) { err->log(std::move(message)); }
 
 		/**
 		 * @brief Get position relative to the current token.

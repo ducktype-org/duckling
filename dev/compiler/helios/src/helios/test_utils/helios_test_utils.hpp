@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
-#include <helios/scopes/scopes.hpp>
-#include <helios/symbols/symbols.hpp>
+#include <filesystem/file.hpp>
+#include <frontend/module_tree/module_id.hpp>
+#include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
+#include <helios/scope_symbol_id.hpp>
 
-// @todo relax this dependency, just expr is needed (#404)
-#include <helios/hout/elements/expr.hpp>
+#include <vector>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -72,4 +72,10 @@ namespace compiler::helios::test_utils {
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfVariable(SymID sym);
+
+	/**
+	 * @brief Gets function body scope of given function.
+	 * @param sym The function symbol ID.
+	 */
+	helios::ScopeID getFunctionBodyScope(SymID sym);
 }

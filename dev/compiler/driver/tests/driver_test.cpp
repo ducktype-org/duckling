@@ -1,10 +1,11 @@
-#include <filesystem>
-#include <query_framework/query_entry_point.hpp>
+#include <driver/driver.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
+#include <helios/queries.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <tester/tester.hpp>
 
-#include <helios/queries.hpp>
-#include <driver/driver.hpp>
+#include <filesystem>
 
 class DriverTest final: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -35,6 +36,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
 		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");
@@ -59,6 +61,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module.s"), "Assembly file does not exist");
 		assertTrue(std::filesystem::exists("test_module.ll"), "LLVM IR file does not exist");
@@ -82,7 +85,10 @@ private:
 		                        .external_libs          = {} });
 
 		assertThrows<base::NotYetImplemented>(
-			[&]() { driver.compileHOUTUnit(top_level, base::StrID("test_module")); },
+			[&]() {
+				driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+				driver.link();
+			},
 			"compilation for BC driver"
 		);
 	}
@@ -103,6 +109,7 @@ private:
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+		driver.link();
 
 		assertTrue(std::filesystem::exists("test_module_exe"), "Output file does not exist");
 		assertTrue(std::filesystem::exists("test_module.o"), "Object file does not exist");

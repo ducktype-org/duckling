@@ -1,12 +1,11 @@
 #include <filesystem/file.hpp>
+#include <lexer/lexer.hpp>
 #include <pst_parser/pst.hpp>
 #include <pst_parser/pst_visitor.hpp>
-
-
-#include <lexer/lexer.hpp>
-#include <sstream>
 #include <tester/tester.hpp>
 #include <tester/testing_utils.hpp>
+
+#include <sstream>
 
 class PSTBuilderTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -30,7 +29,7 @@ class PSTBuilderTest: public tester::TestSuite {
 
 		bool operator()() {
 			auto parsed = pst::PST<Element>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -70,7 +69,7 @@ public:
 private:
 	template<typename Element>
 	pst::PST<Element> manualSteps(const std::string& filename) {
-		auto file = tokenizer::makeTokenFile(fs::FilePath(filename));
+		auto file = tokenizer::makeTokenSource(fs::FilePath(filename));
 		file->tokenize();
 		return { std::move(file) };
 	}
@@ -100,13 +99,13 @@ private:
 		pst::PST<Element> PSTmanual   = manualSteps<Element>(filepath);
 		pst::PST<Element> PSTcontent  = fromContents<Element>(filepath);
 		pst::PST<Element> PSTfilename = fromFilename<Element>(filepath);
-		assertTrue(PSTmanual.getLogger().good() == PSTcontent.getLogger().good(), error);
-		assertTrue(PSTmanual.getLogger().good() == PSTfilename.getLogger().good(), error);
-		std::string manualPrint   = stringDprint(PSTmanual);
-		std::string contentPrint  = stringDprint(PSTcontent);
-		std::string filenamePrint = stringDprint(PSTfilename);
-		assertTrue(manualPrint == contentPrint, error);
-		assertTrue(manualPrint == filenamePrint, error);
+		assertTrue(PSTmanual.getLogger()->good() == PSTcontent.getLogger()->good(), error);
+		assertTrue(PSTmanual.getLogger()->good() == PSTfilename.getLogger()->good(), error);
+		std::string manual_print   = stringDprint(PSTmanual);
+		std::string content_print  = stringDprint(PSTcontent);
+		std::string filename_print = stringDprint(PSTfilename);
+		assertTrue(manual_print == content_print, error);
+		assertTrue(manual_print == filename_print, error);
 	}
 
 	template<typename Element>

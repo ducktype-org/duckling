@@ -6,11 +6,12 @@
  * @note Outputs and returns -1 on error in code;
  */
 
-#include <iostream>
 #include <clap/clap.hpp>
 #include <filesystem/file.hpp>
 #include <printer/stream_printer.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
+
+#include <iostream>
 
 int count_tokens(const lexer::Tokens& tokens);
 
@@ -41,7 +42,7 @@ int main(int argc, const char** argv) {
 	clap::ParsingResult input;
 
 	try {
-		input = clap.parse(argc, argv);
+		input = clap.parse(base::safeIntConv<usize>(argc), argv);
 	} catch (clap::exceptions::ClapException& e) {
 		printer::StreamPrinter::print({
 			{ "duckling: ", printer::Color::DEFAULT },
@@ -56,7 +57,7 @@ int main(int argc, const char** argv) {
 	}
 
 	auto path = input.getPositional<fs::FilePath>(0);
-	auto file = tokenizer::makeTokenFile(path);
+	auto file = tokenizer::makeTokenSource(path);
 
 	if (!file->tokenize()) {
 		std::cout << -1;

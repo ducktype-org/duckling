@@ -5,8 +5,10 @@
  */
 #pragma once
 
-#include <vm/config.hpp>
 #include <base/ints.hpp>
+
+#include <vm/config.hpp>
+
 #include <array>
 
 // #define USE_COMPACT_INSTRUCTION
@@ -35,7 +37,8 @@ namespace {
 	constexpr u16 countOpCases() {
 		u16 count = 0;
 #define HANDLE_OPCODE(opcode) count++;
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
 		return count;
 	}
@@ -87,14 +90,16 @@ namespace vm {
 	 * Executor service calls these functions to execute the instructions.
 	 * For convenience they are implemented in the `executor.cpp` file.
 	 */
-	class OpFuns {
+	class OpFuns final {
 	public:
 #define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
 
 #define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
 
 		// NOLINTBEGIN(readability-identifier-naming)
@@ -110,7 +115,8 @@ namespace vm {
 		 */
 		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
 #define HANDLE_OPCODE(opcode) op_##opcode,
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
 		};
 
@@ -119,7 +125,8 @@ namespace vm {
 		 */
 		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
 #define HANDLE_OPCODE(opcode) op_debug_##opcode,
-#include <vm/program/opcodes_list.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
+
 #undef HANDLE_OPCODE
 		};
 

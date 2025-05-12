@@ -15,7 +15,7 @@
  * This file has **two versions**. One is for the OpFuns implementation and the other is
  * for the debug version of the OpFuns (DebugOpFun), which is a copy of the OpFuns but
  * with different `FUNCTION_CONT` and `ARGS`. This file **should not be included**.
- * If you want to inclue the OpFuns, include `opcodes_functions.hpp` or
+ * If you want to include the OpFuns, include `opcodes_functions.hpp` or
  * `opcodes_functions_debug.hpp`.
  *
  * If `DEBUG_OPCODES` is defined, the debug version will be included, otherwise the regular
@@ -27,14 +27,20 @@
  * `opcodes_functions_utils.hpp`.
  */
 
-#include <base/exceptions.hpp>
 #include "low_program/instruction.hpp"
-#include <vm/core/process/vmprocess.hpp>
-#include <base/ints.hpp>
 #include "op_case.hpp"
-#include "vmthread.hpp"
 #include "opcodes_functions_utils.hpp"
+#include "vmthread.hpp"
 
+#include <base/exceptions.hpp>
+#include <base/ints.hpp>
+#include <base/variant.hpp>
+
+#include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/vmvalue.hpp>
+
+#include <variant>
 
 #ifdef DEBUG_OPCODES
 	#define OPCODE_NAME(name)                  op_debug_##name
@@ -59,7 +65,7 @@ namespace vm {
 	//  FUNCTION_CONT(<step>);
 	// }
 	//
-	// Function body must be seperated from the scope of FUNCTION_CONT to make sure
+	// Function body must be separated from the scope of FUNCTION_CONT to make sure
 	// that all its destructors have been called before invoking next tail call.
 	// Otherwise, the compiler may get confused and may schedule destructors from
 	// the body after the next tail call, which then becomes a regular function
@@ -72,28 +78,44 @@ namespace vm {
 	// computed goto's and switch case, because in those approaches we can't end execution from
 	// within the function, but we have to add some instructions on the outside of it. Hence we use
 	// the `OP_CASE_END` macro that adds `goto End` instruction, residing after opcode function,
-	// inside interpeter loop.
+	// inside interpreter loop.
 	RETURN_TYPE OpFuns::OPCODE_NAME(exit)(FUNCTION_ARGS) { IF_TC(return;) }
 
-#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                 \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {             \
-		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); } \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
-		{                                                                                \
-			derefStack<TYPE>(local_stack, instr->arg0)                                   \
-				= derefStack<TYPE>(local_stack, instr->arg1);                            \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
-	}                                                                                    \
-	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {   \
-		{                                                                                \
-			if (frame->flags.flag)                                                       \
-				derefStack<TYPE>(local_stack, instr->arg0)                               \
-					= derefStack<TYPE>(local_stack, instr->arg1);                        \
-		}                                                                                \
-		FUNCTION_CONT(1);                                                                \
+#define DEFINE_MOVE_OPS(BITS_SIZE, TYPE)                                                  \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = static_cast<TYPE>(instr->arg1); }  \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_imm)(FUNCTION_ARGS) {              \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = static_cast<TYPE>(instr->arg1); }             \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{                                                                                 \
+			derefStack<TYPE>(local_stack, instr->arg0)                                    \
+				= derefStack<TYPE>(local_stack, instr->arg1);                             \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); }            \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_g##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ DEREF_GLOBAL(TYPE, instr->arg0) = derefStack<TYPE>(local_stack, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_l##BITS_SIZE##_g##BITS_SIZE)(FUNCTION_ARGS) {     \
+		{ derefStack<TYPE>(local_stack, instr->arg0) = DEREF_GLOBAL(TYPE, instr->arg1); } \
+		FUNCTION_CONT(1);                                                                 \
+	}                                                                                     \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmov_l##BITS_SIZE##_l##BITS_SIZE)(FUNCTION_ARGS) {    \
+		{                                                                                 \
+			if (frame->flags.flag)                                                        \
+				derefStack<TYPE>(local_stack, instr->arg0)                                \
+					= derefStack<TYPE>(local_stack, instr->arg1);                         \
+		}                                                                                 \
+		FUNCTION_CONT(1);                                                                 \
 	}
 
 	DEFINE_MOVE_OPS(64, i64)
@@ -108,6 +130,16 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(mov_r0_l64)(FUNCTION_ARGS) {
 		{ frame->regs.p64_reg_0 = derefStack<i64>(local_stack, instr->arg0); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_lptr_gptr)(FUNCTION_ARGS) {
+		{ derefStack<Pointer>(local_stack, instr->arg0) = DEREF_GLOBAL(Pointer, instr->arg1); }
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(mov_gptr_lptr)(FUNCTION_ARGS) {
+		{ DEREF_GLOBAL(Pointer, instr->arg0) = derefStack<Pointer>(local_stack, instr->arg1); }
 		FUNCTION_CONT(1);
 	}
 
@@ -158,19 +190,27 @@ namespace vm {
 	DEFINE_COMPARISON_OP(cmpEq, 8, std::int8_t, ==)
 	DEFINE_COMPARISON_OP(cmpG, 8, std::int8_t, >)
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRel_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(cmpNull_lptr)(FUNCTION_ARGS) {
+		{
+			auto pointer      = derefStack<Pointer>(local_stack, instr->arg0);
+			frame->flags.flag = pointer.isNull();
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmp_label)(FUNCTION_ARGS) {
 		{ instr += instr->arg0; }
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelIf_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIf_label)(FUNCTION_ARGS) {
 		{
 			if (frame->flags.flag) instr += instr->arg0;
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(jmpRelNotIf_label)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(jmpIfNot_label)(FUNCTION_ARGS) {
 		{
 			if (!frame->flags.flag) instr += instr->arg0;
 		}
@@ -227,10 +267,8 @@ namespace vm {
 			// Move shared blocks into callee's block stack and block_local_offset map.
 			// This is the id of the first shared block in the caller's block_stack. If the called
 			// function is non-void we also count the ret_val block.
-			auto called_func_type
-				= thread.executing_program->type_metadata->getTypeByName(called_func.name)
-			          .expect("No function type declared for a called function");
-			u64 arg_count
+			auto called_func_type = thread.executing_program->types->at(called_func.name);
+			u64  arg_count
 				= called_func_type->getParameterCount().expect("Parameter count not set!");
 			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
 			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
@@ -247,10 +285,12 @@ namespace vm {
 				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
 			}
 
-			// Remove the argument and return value blocks from caller's block stack.
-			// The return value block may have been uninitialized and initialized again.
-			prev_frame->local_stack_head -= called_func.arg_size + called_func.ret_size;
-			for (u64 i = 0; i < shared_block_count; i++) {
+			// Remove the argument blocks from caller's block stack. Only the return value stays in
+			// the block stack.
+			// @note: We require that the callee can't deinitialize the return value passed by the
+			// caller.
+			prev_frame->local_stack_head -= called_func.arg_size;
+			for (u64 i = 0; i < arg_count; i++) {
 				prev_frame->block_stack.pop_back();
 				// @note: Removing block_id to local_offset mappings from the frame is not needed,
 				// since a new init (after returning from a called function) to the same
@@ -264,6 +304,51 @@ namespace vm {
 		// call is saved on frame so that op_ret's have to move forward zero instructions after
 		// restoring `instr` from frame.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(call_builtin_func)(FUNCTION_ARGS) {
+		{
+			auto builtin_id         = static_cast<builtins::BuiltinFunctionID>(instr->arg0);
+			auto function_type      = builtins::getBuiltinFunctionType(builtin_id);
+			auto real_function_type = thread.executing_program->types->at(function_type->name);
+			auto arg_count          = function_type->parameters.size();
+
+			std::vector<VmValue> args;
+			u64                  first_arg_idx = frame->block_stack.size() - arg_count;
+
+			// Create VmValue objects from local arguments
+			for (u64 i = 0; i < arg_count; i++) {
+				const base::StrID arg_type  = function_type->parameters[i];
+				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
+				args.emplace_back(
+					real_type, local_stack + frame->block_idx_to_local_offset[first_arg_idx + i]
+				);
+			}
+
+			base::Optional<VmValue> return_value
+				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
+			match_optional(return_value) {
+				opt_none {}
+				opt_some(value) {
+					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
+					std::memcpy(
+						local_stack + ret_val_offset, value.data.data(), value.type->getSize()
+					);
+				}
+			}
+
+			// Similar as in call_func, but we deinit the arguments blocks as well,
+			// but without the return value.
+			for (u64 i = 0; i < arg_count; i++) {
+				auto block = frame->block_stack.back();
+				frame->block_stack.pop_back();
+				thread.process.getMemory().freeBlock(block);
+			}
+			if (arg_count > 0)
+				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
+		}
+
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(ret_tailcall_func)(FUNCTION_ARGS) {
@@ -291,33 +376,18 @@ namespace vm {
 			// call stack frame.
 			frame--;  // This is now the caller's frame.
 
-			// If the function we're returning from is non-void and not main, we don't deinitialize
-			// the first frame on the block_stack, since it's being used by the caller (it contains
-			// the return value). We just pop it.
 			bool non_void = frame->called_func_ret_size > 0;
 			while (!callee_frame->block_stack.empty()) {
 				auto block = callee_frame->block_stack.back();
 
-				// We're returning from a non-void, so the last block is the return value, which
-				// should be put in the callers block stack and left initialized.
-				if (non_void && callee_frame->block_stack.size() == 1) {
-					u64 callers_block_idx = frame->block_stack.size();
-					frame->block_stack.push_back(block);
-					frame->block_idx_to_local_offset.put(
-						callers_block_idx, frame->local_stack_head
-					);
-					frame->local_offset_to_block_idx.put(
-						frame->local_stack_head, callers_block_idx
-					);
-					frame->local_stack_head += frame->called_func_ret_size;
-				} else {
+				// We're returning from a non-void function, so the last block on the stack is the
+				// return value. It's being used by the caller so we don't free it.
+				if (!non_void || callee_frame->block_stack.size() != 1)
 					thread.process.getMemory().freeBlock(block);
-				}
 
 				callee_frame->block_stack.pop_back();
 			}
-			callee_frame->local_offset_to_block_idx.clear();
-			callee_frame->block_idx_to_local_offset.clear();
+			callee_frame->resetFrameData();
 
 			// Load previous frame
 			instr                       = frame->instr;  // This is already a pointer to next instr
@@ -325,15 +395,14 @@ namespace vm {
 			frame->called_func_arg_size = 0;
 			frame->called_func_ret_size = 0;
 		}
-		// Here the argument is `0` becasue of the convention defined in the op_call_func.
+		// Here the argument is `0` because of the convention defined in the op_call_func.
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(init_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(init_lany_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_program->type_metadata->getType(
-				vm::TypeID(static_cast<usize>(instr->arg0))
-			);
+			auto type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto data_ptr = local_stack + frame->local_stack_head;
 			auto block    = thread.process_memory.allocateStack(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
@@ -403,11 +472,14 @@ namespace vm {
 		CORE_PANIC("ext_l64 not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
-			auto type = thread.executing_program->type_metadata->getType(
-				vm::TypeID(static_cast<u32>(instr->arg1))
-			);
+			auto type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto block = thread.process_memory.allocateHeap(type);
 			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
 		}
@@ -478,7 +550,7 @@ namespace vm {
 		FUNCTION_CONT(next);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_any)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
@@ -495,6 +567,51 @@ namespace vm {
 			thread.process.getMemory().setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(setVTable_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto type
+				= thread.executing_program->types->at(TypeID(base::safeIntConv<usize>(instr->arg1)));
+
+			// Objects are guaranteed to hold vtable pointer as their first field
+			// by static verification.
+			auto vt_pointer = reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
+			);
+			*vt_pointer = type.get();
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			// Same as move_lptr_lptr, treated differently by static analysis.
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+			thread.process.getMemory().setPointer(dst, src);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(downcast_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+
+			auto dst_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+			// Classes are guaranteed to hold vtable pointer as their first field.
+			TypeCRef real_src_type = *reinterpret_cast<const Type**>(
+				thread.process_memory.getPointerData(src, sizeof(Type*)).getBegin()
+			);
+			auto cast_allowed = real_src_type->inheritsFrom(dst_type);
+
+			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
+		}
+		FUNCTION_CONT(2);  // skip ext_type
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {

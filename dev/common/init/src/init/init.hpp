@@ -1,7 +1,8 @@
 #pragma once
 
+#include <base/macros/utils.hpp>
+
 #include <functional>
-#include <base/define_helper.hpp>
 
 namespace init {
 	/**

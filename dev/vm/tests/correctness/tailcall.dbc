@@ -1,52 +1,37 @@
-type primitive: int64 8
-
-type fun: main {} int64
-type fun: dummy { int64 } int64
-
+type fun: dummy { i64 } i64
 
 function dummy {
-  arg_size: 8;
-  ret_size: 8;
-  local_size: 16;
+	# if arg0 == 0: end
+	cmpEq_l64_imm     arg0, 0;
+	jmpIf_label    End;
 
-  code: {
-    # [0, 8) ret_val
-    # [8, 16) arg0 -> n
+	sub_l64_imm       arg0, 1;
+	ret_tailcall_func      dummy;
 
-    # if arg0 == 0: end
-    cmpEq_l64_imm     8, 0;
-    jmpRelIf_label    End;
+	label End;
 
-    sub_l64_imm       8, 1;
-    ret_tailcall_func      dummy;
+	mov_l64_l64       ret_val, arg0;
 
-    label End;
-
-    mov_l64_l64       0, 8;
-    
-    deinit; # arg0
-    ret;
-  }
+	deinit; # arg0
+	ret;
 }
 
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 24;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
 
-  code: {
-    # [0, 8) main ret_val
-    init_type int64; # [8, 16) dummy ret_val
-    init_type int64; # [16, 24) dummy arg0
+	init_lany_type dummy_ret_val, i64;
+	init_lany_type dummy_arg0, i64;
 
-    input_l64          16; # arg0 := input
-    call_func          dummy;
+	input_l64          dummy_arg0; # arg0 := input
+	call_func          dummy;
 
-    output_l64         8;
+	output_l64         dummy_ret_val;
 
-    deinit; # dummy ret_val
-    ret;
-  }
-
+	deinit;       # dummy ret_val
+    deinit;       # *argv
+    deinit;       # argc
+	ret;
 }

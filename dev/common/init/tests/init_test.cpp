@@ -4,7 +4,9 @@
  */
 
 #include <init/init.hpp>
+
 #include <base/exceptions.hpp>
+
 #include <iostream>
 
 namespace {

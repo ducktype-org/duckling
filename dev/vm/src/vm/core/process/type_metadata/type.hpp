@@ -1,12 +1,15 @@
 #pragma once
 
-#include <variant>
-#include <base/string_id.hpp>
-#include <base/optional.hpp>
-#include <vm/core/process/memory/pointer.hpp>
 #include "kinds.hpp"
 
 #include <json/json.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
+#include <vm/core/process/memory/pointer.hpp>
+
+#include <variant>
 
 namespace vm {
 	class TypeMetadata;
@@ -15,9 +18,9 @@ namespace vm {
 	// @TODO: change to strongly typed int
 	using TypeSize = u64;
 
-	class Type {
+	class Type final {
 	public:
-		constexpr static TypeSize PointerSize = sizeof(Pointer);
+		constexpr static TypeSize POINTER_SIZE = sizeof(Pointer);
 
 		enum class Kind {
 			None,
@@ -27,7 +30,8 @@ namespace vm {
 			DynamicTable,
 			Data,
 			Variant,
-			Function
+			Function,
+			Opaque,
 		};
 
 	private:
@@ -38,7 +42,7 @@ namespace vm {
 		base::StrID name;
 		TypeSize    size      = TypeSize(-1);
 		Kind        kind_type = Kind::None;
-		TypeID      id;
+		TypeID      id{};
 
 		std::variant<
 			std::monostate,
@@ -48,7 +52,8 @@ namespace vm {
 			kind::DynamicTable,
 			kind::Data,
 			kind::Variant,
-			kind::Function>
+			kind::Function,
+			kind::Opaque>
 			kind;
 
 		Type() = default;
@@ -62,26 +67,30 @@ namespace vm {
 		void definePointer(TypeCRef inner);
 		void defineStaticTable(TypeRef inner, u64 table_size);
 		void defineDynamicTable(TypeRef inner);
-		void defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions);
+		void defineData(
+			const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+			base::Optional<InheritanceMetadata>                 inheritance_metadata
+		);
 		void defineVariant(const std::vector<TypeRef>& variants_definitions);
 		void defineFunction(std::vector<TypeCRef> parameters, TypeCRef result);
+		void defineOpaque(TypeSize size);
 
 		// Type finalization:
 		void finalize();
 
 		// Type query:
 		[[nodiscard]]
-		inline TypeID getID() const {
+		TypeID getID() const {
 			return id;
 		}
 
 		[[nodiscard]]
-		inline base::StrID getName() const {
+		base::StrID getName() const {
 			return name;
 		}
 
 		[[nodiscard]]
-		inline TypeSize getSize() const {
+		TypeSize getSize() const {
 			CORE_ASSERT(size != TypeSize(-1), "getSize called before type finalization");
 			return size;
 		}
@@ -93,12 +102,12 @@ namespace vm {
 		}
 
 		[[nodiscard]]
-		inline Kind getKind() const {
+		Kind getKind() const {
 			return kind_type;
 		}
 
 		[[nodiscard]]
-		inline bool isPrimitive(TypeSize qsize) const {
+		bool isPrimitive(TypeSize qsize) const {
 			return getKind() == Kind::Primitive and getSize() == qsize;
 		}
 
@@ -121,25 +130,39 @@ namespace vm {
 
 		// data
 		[[nodiscard]]
-		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID fieldID) const;
+		base::Optional<usize> getFieldCount() const;
 		[[nodiscard]]
-		base::Optional<Offset> getFieldOffset(kind::Data::FieldID fieldID) const;
+		base::Optional<TypeCRef> getFieldType(kind::Data::FieldID field_id) const;
+		[[nodiscard]]
+		base::Optional<Offset> getFieldOffset(kind::Data::FieldID field_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffset(Offset offset) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getFieldTypeByOffsetRecursive(Offset offset) const;
 
+		// inheritance
+		[[nodiscard]]
+		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
+		[[nodiscard]]
+		bool inheritsFrom(TypeCRef other) const;
+		[[nodiscard]]
+		bool isInstantiable() const;
+
 		// variant
 		[[nodiscard]]
 		base::Optional<u64> getVariantCount() const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getNthVariantType(u64 variantID) const;
+		base::Optional<TypeCRef> getNthVariantType(u64 variant_id) const;
 
 		// function
 		[[nodiscard]]
 		base::Optional<u64> getParameterCount() const;
 		[[nodiscard]]
-		base::Optional<TypeCRef> getNthParameterType(u64 parameterID) const;
+		base::Optional<const std::vector<TypeCRef>&> getParameters() const;
+		[[nodiscard]]
+		base::Optional<u64> getParametersSize() const;
+		[[nodiscard]]
+		base::Optional<TypeCRef> getNthParameterType(u64 parameter_id) const;
 		[[nodiscard]]
 		base::Optional<TypeCRef> getResultType() const;
 

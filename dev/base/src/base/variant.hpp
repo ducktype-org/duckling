@@ -41,10 +41,10 @@
  */
 #pragma once
 
-#include <variant>
-#include <type_traits>
+#include "macros/diagnostics.hpp"
 
-#include "define_helper.hpp"
+#include <type_traits>
+#include <variant>
 
 namespace base::detail {
 	template<typename... T>
@@ -68,8 +68,7 @@ namespace base::detail {
 
 	template<typename VariantT, typename T>
 	constexpr auto alternative_index() {
-		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>(
-		);
+		return alternative_index_aux<std::remove_const_t<std::remove_reference_t<VariantT>>, T, 0>();
 	}
 }
 

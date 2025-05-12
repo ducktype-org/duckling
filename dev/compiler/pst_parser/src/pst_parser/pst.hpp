@@ -1,10 +1,10 @@
 #pragma once
 
-#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 #include "access.hpp"
-
-#include <token_file/file.hpp>
+#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
 #include "lang_parser_state.hpp"
+
+#include <token_source/source.hpp>
 
 namespace pst {
 	/**
@@ -28,9 +28,9 @@ namespace pst {
 			= tpc::ParseAbleElement<Element, Parser, LangParserState, Args...>;
 
 	private:
-		Box<tokenizer::TokenFile> file;
-		AccessInternal<Element>   element;
-		std::vector<ImportType>   imports;
+		Box<tokenizer::TokenSource> file;
+		AccessInternal<Element>     element;
+		std::vector<ImportType>     imports;
 
 		/**
 		 * @note Requires that the file was successfully tokenized.
@@ -57,7 +57,18 @@ namespace pst {
 		 */
 		template<typename... Args>
 		explicit PST(std::string_view content, Args&&... args) requires ParseAble<Args...>
-			  : file(tokenizer::makeTokenFile(fs::FilePath::createTempFile(content))) {
+			  : file(tokenizer::makeTokenSource(fs::FilePath::createTempFile(content))) {
+			if (!file->tokenize()) return;
+			parse(std::forward<Args>(args)...);
+		}
+
+		/**
+		 * @brief Construct a new Pst from expanded text
+		 */
+		template<typename... Args>
+		explicit PST(dia::SourcePosition pos, std::string_view content, Args&&... args)
+			requires ParseAble<Args...>
+			  : file(tokenizer::makeTokenSource(pos, content)) {
 			if (!file->tokenize()) return;
 			parse(std::forward<Args>(args)...);
 		}
@@ -66,15 +77,15 @@ namespace pst {
 		/**
 		 * @brief Construct a new Pst from tokenized file
 		 */
-		PST(Box<tokenizer::TokenFile>&& file) requires ParseAble<>: file(std::move(file)) {
-			if (getLogger().bad()) return;
+		PST(Box<tokenizer::TokenSource>&& file) requires ParseAble<>: file(std::move(file)) {
+			if (getLogger()->bad()) return;
 			parse();
 		}
 
 		/**
 		 * @brief Construct a new Pst from file path
 		 */
-		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenFile(path)) {
+		PST(const fs::FilePath& path) requires ParseAble<>: file(tokenizer::makeTokenSource(path)) {
 			if (!file->tokenize()) return;
 			parse();
 		}
@@ -89,18 +100,29 @@ namespace pst {
 			return PST(contents, std::forward<Args>(args)...);
 		}
 
+		static PST fromExpand(dia::SourcePosition pos, std::string_view contents) {
+			return PST(pos, contents);
+		}
+
+		template<typename... Args>
+		static PST fromExpandWithContext(
+			dia::SourcePosition pos, std::string_view contents, Args&&... args
+		) requires ParseAble<Args...> {
+			return PST(pos, contents, std::forward<Args>(args)...);
+		}
+
 		[[nodiscard]]
 		const std::vector<ImportType>& getImports() const {
 			return imports;
 		}
 
 		[[nodiscard]]
-		const dia::Logger& getLogger() const {
+		const Ref<dia::Logger> getLogger() const {
 			return file->getLogger();
 		}
 
 		[[nodiscard]]
-		Ref<tokenizer::TokenFile> getFile() const {
+		Ref<tokenizer::TokenSource> getFile() const {
 			return file.ref();
 		}
 

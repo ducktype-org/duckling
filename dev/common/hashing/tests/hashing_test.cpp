@@ -1,18 +1,15 @@
-#include <unordered_map>
-#include <iostream>
-#include <variant>
-#include <vector>
-
-#include <tester/tester.hpp>
-#include <base/ints.hpp>
-
+#include <hashing/add_to_hash.hpp>
+#include <hashing/hash.hpp>
 #include <hashing/hash_algorithm_utils.hpp>
 #include <hashing/hashing_algorithms.hpp>
-#include <hashing/type_unique_code.hpp>
-#include <hashing/type_hash_code.hpp>
-#include <hashing/add_to_hash.hpp>
 #include <hashing/type_code.hpp>
-#include <hashing/hash.hpp>
+#include <hashing/type_hash_code.hpp>
+#include <hashing/type_unique_code.hpp>
+#include <tester/tester.hpp>
+
+#include <base/ints.hpp>
+
+#include <unordered_map>
 
 
 using namespace hashing;
@@ -118,6 +115,17 @@ struct type_with_bases: X, S {
 	}
 };
 
+struct type2 {
+	int         x{ 42 };
+	bool        b{ true };
+	std::string s{ "hello" };
+
+	friend constexpr void addToHash(hashing::hash_algorithm auto& h, const type2& t) noexcept {
+		addToHash(h, t.x);
+		if (t.b) addToHash(h, t.s);
+	}
+};
+
 struct type3 {
 	int x{ 123 }, y{ 456 };
 };
@@ -140,10 +148,13 @@ public:
 		TESTER_ADD_TEST(hashingAlgorithmsTest);
 		TESTER_ADD_TEST(hashTest<Fnv1a_32>);
 		TESTER_ADD_TEST(hashTest<Fnv1a_64>);
+		TESTER_ADD_TEST(hashTest<SHA256>);
 		TESTER_ADD_TEST(constexprTest);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_32>);
 		TESTER_ADD_TEST(defaultsTest<Fnv1a_64>);
+		TESTER_ADD_TEST(defaultsTest<SHA256>);
 		TESTER_ADD_TEST(uniqueCodeTest);
+		TESTER_ADD_TEST(sha256Test);
 	}
 
 private:
@@ -233,6 +244,40 @@ private:
 		assertTrue(id1 != id3, "unique codes should differ");
 		auto id4 = TYPE_UNIQUE_CODE<S>;
 		assertTrue(id1 != id4, "unique codes should differ");
+	}
+
+	void sha256Test() {
+		constexpr auto hash_value = hashing::StatefulHash<hashing::SHA256, TypeCode<u32, false>>{}(
+										7,
+										type2{},
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42,
+										7,
+										std::string{ "hello" },
+										42
+		)
+		                                .finalize();
+
+
+		const std::string expected_hash
+			= "b2288f243a2cf2ce6c04b098b2f5ea7d140e961fc234cf55d08a42599847ad89";
+		const std::string computed_hash = hash_value.toStringHex();
+
+		assertTrue(
+			computed_hash == expected_hash,
+			"SHA256 hash does not match expected value.\nExpected: " + expected_hash
+				+ "\nComputed: " + computed_hash
+		);
 	}
 };
 

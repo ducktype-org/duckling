@@ -26,6 +26,7 @@ namespace pst {
 	class Action;
 	class Decl;
 	class RiftTestingStmt;
+	class Expand;
 	// Declarations
 	class CodeDecl;
 	class TopLevel;
@@ -50,6 +51,7 @@ namespace pst {
 	class AccessBlock;
 	class ClassSpecial;
 	class Constructor;
+	class CopyConstructor;
 	class Destructor;
 	class Method;
 	class Field;
@@ -59,6 +61,8 @@ namespace pst {
 		class SuffixOperator;
 		class BinaryOperator;
 		class ExprValue;
+		class ExprStrValue;
+		class ExprCharValue;
 		class Literal;
 		class TemplateSpecifier;
 		class IdentifierLiteral;

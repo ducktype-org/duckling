@@ -2,37 +2,24 @@
 # input = n
 # output = n
 
-type primitive: int64 8
-type fun: main {} int64
-type fun: check {} int64
-
+type fun: check {} i64
 
 function check {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 8;
-
-	code: {
-		# [0, 8) check() ret_val
-        input_l64       0;
-		ret;
-	}
+	input_l64       ret_val;
+	ret;
 }
 
-
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 16;
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+	
+	init_lany_type  check_ret_val, i64;
+	call_func       check;
+	output_l64      check_ret_val;
 
-	code: {
-		# [0, 8) main ret_val
-		init_type       int64; # [8, 16) check() ret_val
-		call_func       check;
-        output_l64      8;
-
-		deinit;
-		ret;
-	}
-
+	deinit;
+	deinit; # *argv
+	deinit; # argc 
+	ret;
 }

@@ -4,10 +4,11 @@
  */
 
 #include <filesystem/file.hpp>
+#include <init/init.hpp>
 #include <lexer/lexer.hpp>
 #include <lexer/lexer_class.hpp>
-#include <token_file/file.hpp>
-#include <init/init.hpp>
+#include <token_source/source.hpp>
+
 #include <iostream>
 
 using namespace fs;
@@ -22,7 +23,7 @@ int main(int argc, char** argv) {
 	lexer::Lexer::setTokenMessages(true);
 
 	FilePath path(argv[1]);
-	auto     tokenFile = tokenizer::makeTokenFile(path);
-	tokenFile->tokenize();
-	if (tokenFile->getLogger().bad()) tokenFile->getLogger().dumpLog(true);
+	auto     source = tokenizer::makeTokenSource(path);
+	source->tokenize();
+	if (source->getLogger()->bad()) source->getLogger()->dumpLog(true);
 }

@@ -1,43 +1,41 @@
 #pragma once
 
 #include "blocking_queue.hpp"
-#include <vm/core/thread/low_program/low_program.hpp>
+#include "low_program/instruction.hpp"
+
+#include <base/box.hpp>
+#include <base/ints.hpp>
+#include <base/optional.hpp>
 
 #include <vm/api/data/core_operation_error.hpp>
+#include <vm/api/data/request.hpp>
 #include <vm/api/data/response.hpp>
-#include <base/box.hpp>
-#include <base/optional.hpp>
-#include <base/ints.hpp>
-#include <condition_variable>
+#include <vm/api/data/status.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/memory/thread_stack.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
-#include "low_program/instruction.hpp"
+#include <vm/core/thread/low_program/low_program.hpp>
 
-#include <vm/api/data/request.hpp>
-#include <vm/api/data/status.hpp>
-
-#include <mutex>
 #include <atomic>
-#include <result.hpp>
+#include <condition_variable>
+#include <mutex>
 
 /**
  * For now only single threaded execution is suported
  */
 
 namespace vm {
-	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
-	enum class ExecutionResponse : std::uint8_t {
-		Running,
-		Paused,
-		ExecutionStopped,
-		ExecutionCompleted,
-		ExecutionPanicked
-	};
+	// Forward declarations
+	namespace builtins {
+		class FunctionHandlers;
+	}
 
 	struct Frame;
 
 	class VMProcess;
+
+	enum class ExecutionRequest : std::uint8_t { Resume, Pause, ExecuteOneStep, Stop, NoRequest };
+
 
 	/**
 	 * @brief Frames are on stack, this is the maximum number of frame pointers available.
@@ -86,24 +84,24 @@ namespace vm {
 	 * It also provides endpoints for the VCPU to control the execution of the code
 	 * in a memory-safe way (see `external_api_mutex`).
 	 */
-	class VMThread {
+	class VMThread final {
 	private:
 		base::Optional<std::thread> exec_thread;
 
 		RuntimeData runtime_data;
 
-		/**
-		 * This is currently duplicated inside VCPUStatus
-		 */
 		api::ExecStatus status = api::NotStarted{};
 
 		/**
-		 * @brief Process link as well as some of it's resources.
+		 * @brief Link to parent process.
 		 */
 		VMProcess& process;
-		Memory&    process_memory;
 
-		// This might change:
+		/**
+		 * @brief Parent process'es memory.
+		 */
+		Memory& process_memory;
+
 		std::condition_variable pause_cv;
 
 		/**
@@ -115,7 +113,7 @@ namespace vm {
 		 *
 		 * As an optimization, when the VMThread is running and VMProcess want to break its
 		 * execution (by requesting pause or stop), it sets the execution_request_break flag to
-		 * true, so the running VMThread can only check this flag first and not aquire the mutex.
+		 * true, so the running VMThread can only check this flag first and not acquire the mutex.
 		 */
 		std::mutex        execution_request_mutex;
 		ExecutionRequest  execution_request       = ExecutionRequest::NoRequest;
@@ -125,18 +123,36 @@ namespace vm {
 		 * @brief Message queue to send responses to the VMProcess.
 		 * @todo rewrite this to C++ futures
 		 */
-		BlockingQueue<ExecutionResponse> execution_response_queue;
+		BlockingQueue<api::ExecStatus> execution_response_queue;
 
-		bool waitForBrakepointResponse();
+		bool waitForBreakpointResponse();
 
 		bool waitForStoppedResponse();
 
 		bool waitForRunningResponse();
 
-		void respondExecutionRequest(ExecutionResponse response);
+		void respondExecutionRequest(const api::ExecStatus& response);
 
 		void executeOneStep();
 
+		/**
+		 * @brief Creates a list of instructions, which initialize the argv table and populate it
+		 * with given command line `args`, push the argc and *argv blocks onto mains local stack,
+		 * perform the call and deinitialize the argv table when main returns.
+		 */
+		low::FuncData createProgramStartFunction(
+			const low::FuncData& func, const std::vector<std::string>& args
+		);
+
+		/**
+		 * @brief Creates a list of instructions, which push the passed `func_args` onto the local
+		 * stack and perform a call to `func`.
+		 * @note `func_args` should be changed to a vector of arguments of any VM type.
+		 * This should be changed after: https://github.com/ducktype-org/duckling/issues/721.
+		 */
+		low::FuncData createStartFunctionFor(
+			const low::FuncData& func, const std::vector<i64>& func_args
+		);
 		/**
 		 * @brief @TODO:
 		 * get loaded code from VCPU when possible
@@ -155,30 +171,46 @@ namespace vm {
 		base::ModRawView internalDerefPointer(Pointer);
 
 		/**
-		 * @brief This is the main function to call when starting the execution of a program.
-		 *
+		 * @brief This is the primary function to call to start execution on the VM.
+		 * It calls both the main function when running the program and single functions called by
+		 * the `runFunction` endpoint. It starts the execution beginning with the first instruction
+		 * in the start_function bytecode vector.
+		 * @param start_function - the code of the start function.
+		 * @param func - the function to execute.
 		 * @return value returned by the program
 		 */
-		u64 internalCallMain(CRef<low::FuncData>);
+		i64 executeFunction(const low::FuncData& start_function, const low::FuncData& func);
 
 		void setProcessStatus(const vm::api::ExecStatus& status);
+
+		void handleBreakpoint();
+
+		void handlePausedExecution(std::unique_lock<std::mutex>&);
 
 	public:
 		VMThread(VMProcess& process);
 
 		void breakActiveExecution();
 
-		void handlePausedExecution(std::unique_lock<std::mutex>&);
-
-		void handleBreakpoint();
-
 		/**
-		 * @brief Creates new thread that runs the code in the Executor service.
+		 * @brief Creates a new thread that runs the code in the Executor service.
 		 * Blocks until the thread is running.
-		 * @param code
-		 * @return true if the thread was successfully created and the program is running
+		 *
+		 * @param program - program for the thread to run,
+		 * @param func_name - name of the function to run,
+		 * @param func_args - if running a function (not a whole program), these are the arguments
+		 * to pass as parameters to the function,
+		 * @param program_args - if running a program, these are the command line arguments passed
+		 * to the program (argv equivalent).
+		 *
+		 * @return true if the thread was successfully created and the program is running, false if
+		 * there is already a thread running.
 		 */
-		bool initThreadAndRun(CRef<low::LowVMProgram> program);
+		bool spawnThreadAndRun(
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
+		);
 
 		/**
 		 * @brief Pauses the execution of a program.
@@ -192,7 +224,8 @@ namespace vm {
 		 * @brief Resumes the execution of a program.
 		 * Sets the status to running and waits for the execution thread to respond.
 		 * "Assumes execution status is `paused`"
-		 * @return true if and only if program was in the paused state and was successfully resumed
+		 * @return true if and only if program was in the paused state and was successfully
+		 * resumed
 		 */
 		bool resume();
 
@@ -206,34 +239,36 @@ namespace vm {
 
 		/**
 		 * @brief End the execution of a program.
-		 * Waits for the execution thread to responde.
+		 * Waits for the execution thread to respond.
 		 * @return true if the program is in the end stopped.
 		 */
 		bool stop();
 
 		/**
-		 * @brief Run the program.
+		 * @brief Run a single function with given parameters.
 		 */
-		void run(CRef<low::LowVMProgram>);
+		void run(
+			CRef<low::LowVMProgram>                                         program,
+			const std::string&                                              func_name,
+			const std::variant<std::vector<std::string>, std::vector<i64>>& run_arguments
+		);
 
-		cpp::result<api::Response, api::CoreOperationError> getCurrentPosition();
+		std::expected<api::Response, api::CoreOperationError> getCurrentPosition();
 
 		// Given lock cannot be a lock on external_api_mutex
 		// If you have access to external_api_mutex, implement this yourself.
 		template<class Condition>
-		void waitUntilNotPausedAndCondition(
-			std::unique_lock<std::mutex>& lock, Condition condition
-		) {
+		void waitUntilNotPausedAndCondition(std::unique_lock<std::mutex>& lock, Condition condition) {
 			pause_cv.wait(lock, [this, &condition] { return !isPauseRequested() && condition(); });
 		}
 
 		void notifyPaused();
-
 
 		bool isPauseRequested();
 		bool isTerminateRequested();
 
 		friend class VMProcess;
 		friend class OpFuns;
+		friend class builtins::FunctionHandlers;
 	};
 }

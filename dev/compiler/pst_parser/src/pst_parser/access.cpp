@@ -1,8 +1,14 @@
 #include "access.hpp"
-#include <query_framework/query_impl.hpp>
+
+#include "pst_access_side_input.hpp"
+
+#include <query_framework/query_input_impl.hpp>
 
 namespace pst::detail {
-	void notifyContext(query::Context& ctx) { ctx.setSidePSTInput(); }
 
-	void notifyBadAccess(query::Context&) { CORE_PANIC("BAD ACCESS"); }
+	IMPLEMENT_QUERY_SIDE_INPUT(PSTAccessSideInput);
+
+	void notifyContext(query::Context& ctx, PstID id) { ctx.query<PSTAccessSideInput>({ id }); }
+
+	void notifyBadAccess(query::Context&) { CORE_PANIC("PST-Access to a nullptr."); }
 }

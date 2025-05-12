@@ -1,8 +1,10 @@
 #include "key_spec_op.hpp"
-#include <base/maps.hpp>
+
 #include <base/exceptions.hpp>
-#include <base/raw_view.hpp>
 #include <base/init_guard.hpp>
+#include <base/maps.hpp>
+#include <base/raw_view.hpp>
+
 #include <array>
 
 namespace lang_def {
@@ -19,8 +21,8 @@ namespace lang_def {
 
 	// @TODO: what if there are many instances of one keyword (vec and vector)
 	// @TODO: shouldn't types such as vec, dict be Vec, Dict...
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 72>
-		LANG_KEYWORDS_ARRAY{ {
+	constexpr auto LANG_KEYWORDS_ARRAY
+		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::Fun, "fun", KeywordFlags() },
 			{ Keyword::Class, "class", KeywordFlags() },
 			{ Keyword::Namespace, "namespace", KeywordFlags() },
@@ -32,7 +34,7 @@ namespace lang_def {
 			{ Keyword::Lambda, "lambda", KeywordFlags() },
 			{ Keyword::Var, "var", KeywordFlags() },
 			{ Keyword::Let, "let", KeywordFlags() },
-			{ Keyword::Const, "const", KeywordFlags() },
+			{ Keyword::Const, "const", KeywordFlagsOptions::IsGenPrefixOp },
 
 			{ Keyword::While, "while", KeywordFlags() },
 			{ Keyword::For, "for", KeywordFlags() },
@@ -50,15 +52,17 @@ namespace lang_def {
 			{ Keyword::Switch, "switch", KeywordFlags() },
 			{ Keyword::Case, "case", KeywordFlags() },
 
-			{ Keyword::Return, "return", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Break, "break", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Continue, "continue", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Redo, "redo", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Restart, "restart", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Defer, "defer", KeywordFlagsOptions::IS_ACTION },
-			{ Keyword::Throw, "throw", KeywordFlagsOptions::IS_ACTION },
+			{ Keyword::Return, "return", KeywordFlagsOptions::IsAction },
+			{ Keyword::Break, "break", KeywordFlagsOptions::IsAction },
+			{ Keyword::Continue, "continue", KeywordFlagsOptions::IsAction },
+			{ Keyword::Redo, "redo", KeywordFlagsOptions::IsAction },
+			{ Keyword::Restart, "restart", KeywordFlagsOptions::IsAction },
+			{ Keyword::Defer, "defer", KeywordFlagsOptions::IsAction },
+			{ Keyword::Throw, "throw", KeywordFlagsOptions::IsAction },
 			{ Keyword::Assert, "assert", KeywordFlags() },
 			{ Keyword::CompileAssert, "compile_assert", KeywordFlags() },
+
+			{ Keyword::Expand, "expand", KeywordFlags() },
 
 			{ Keyword::i8, "i8", KeywordFlags() },
 			{ Keyword::i16, "i16", KeywordFlags() },
@@ -95,6 +99,11 @@ namespace lang_def {
 			{ Keyword::Or, "or", KeywordFlags() },
 			{ Keyword::Xor, "xor", KeywordFlags() },
 
+			{ Keyword::Ref, "ref", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Copy, "copy", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Move, "move", KeywordFlagsOptions::IsGenPrefixOp },
+			{ Keyword::Refof, "refof", KeywordFlagsOptions::IsGenPrefixOp },
+
 			{ Keyword::Extends, "extends", KeywordFlags() },
 			{ Keyword::Implements, "implements", KeywordFlags() },
 			{ Keyword::Public, "public", KeywordFlags() },
@@ -102,17 +111,11 @@ namespace lang_def {
 			{ Keyword::Protected, "protected", KeywordFlags() },
 			{ Keyword::Static, "static", KeywordFlags() },
 			{ Keyword::This, "this", KeywordFlags() },
-		} };
+		});
 
-	constexpr std::array<std::tuple<Keyword, std::string_view, KeywordFlags>, 15> BC_KEYWORDS_ARRAY{
-		{
+	constexpr auto BC_KEYWORDS_ARRAY
+		= std::to_array<std::tuple<Keyword, std::string_view, KeywordFlags>>({
 			{ Keyword::BCFunction, "function", KeywordFlags() },
-			{ Keyword::BCLocalSize, "local_size", KeywordFlags() },
-			{ Keyword::BCRetSize, "ret_size", KeywordFlags() },
-			{ Keyword::BCArgSize, "arg_size", KeywordFlags() },
-			{ Keyword::BCDefine, "define", KeywordFlags() },
-			{ Keyword::BCArg, "arg", KeywordFlags() },
-			{ Keyword::BCCode, "code", KeywordFlags() },
 			{ Keyword::BCType, "type", KeywordFlags() },
 			{ Keyword::BCPrimitive, "primitive", KeywordFlags() },
 			{ Keyword::BCPointer, "pointer", KeywordFlags() },
@@ -121,32 +124,54 @@ namespace lang_def {
 			{ Keyword::BCData, "data", KeywordFlags() },
 			{ Keyword::BCVariant, "variant", KeywordFlags() },
 			{ Keyword::BCFunType, "fun", KeywordFlags() },
-		}
-	};
+			{ Keyword::BCGlobalData, "global_data", KeywordFlags() },
+			{ Keyword::BCOpaque, "opaque", KeywordFlags() },
+			{ Keyword::BCClass, "class", KeywordFlags() },
+			{ Keyword::BCAbstract, "abstract", KeywordFlags() },
+			{ Keyword::BCInterface, "interface", KeywordFlags() },
+			{ Keyword::BCExtends, "extends", KeywordFlags() },
+			{ Keyword::BCImplements, "implements", KeywordFlags() },
+			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
+			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::BCTrue, "true", KeywordFlags() },
+			{ Keyword::BCFalse, "false", KeywordFlags() },
+		});
 
+	// `- 1` because of `Keyword::NotAKeword`
+	static_assert(
+		static_cast<usize>(Keyword::COUNT) - 1
+		== LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size()
+	);
 
 	/**
 	 * When modifing it modify also char.cpp -> makeCharTable
 	 */
-	constexpr std::array<std::pair<Special, std::string_view>, 6> SPECIAL_ARRAY{ {
+	constexpr auto SPECIAL_ARRAY = std::to_array<std::pair<Special, std::string_view>>({
 		{ Special::NotASpecial, "NotASpecial" },
 		{ Special::Semicolon, ";" },
 		{ Special::Comma, "," },
 		{ Special::AtSign, "@" },
 		{ Special::HashSign, "#" },
 		{ Special::DolarSign, "$" },
-	} };
+	});
 
-	constexpr std::array<std::pair<NamedOperator, std::string_view>, 23> OPERATOR_ARRAY{ {
+	constexpr auto OPERATOR_ARRAY = std::to_array<std::pair<NamedOperator, std::string_view>>({
 		{ NamedOperator::NotAnOperator, "NotAnOperator" },
+
 		{ NamedOperator::Period, "." },
 		{ NamedOperator::PeriodStar, ".*" },
 		{ NamedOperator::Colon, ":" },
 		{ NamedOperator::Assign, "=" },
-		{ NamedOperator::Pipe, "|" },
 		{ NamedOperator::QuestionMark, "?" },
 		{ NamedOperator::SingleArrow, "->" },
 		{ NamedOperator::DoubleArrow, "=>" },
+
+		{ NamedOperator::Pipe, "|" },
+		{ NamedOperator::BitAnd, "&" },
+		{ NamedOperator::BitXor, "^" },
+
+		{ NamedOperator::LeftShift, "<<" },
+		{ NamedOperator::RightShift, ">>" },
 
 		{ NamedOperator::Lesser, "<" },
 		{ NamedOperator::Greater, ">" },
@@ -163,7 +188,7 @@ namespace lang_def {
 		{ NamedOperator::Divide, "/" },
 		{ NamedOperator::Remainder, "%" },
 		{ NamedOperator::Exponentiate, "**" },
-	} };
+	});
 
 	// Distinct for all keyword modes:
 	base::VectorMap<base::StrID, Keyword, false, true> lang_keyword_map;

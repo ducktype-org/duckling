@@ -2,14 +2,16 @@
 
 #include "queries.hpp"
 
-#include <helios/symbols/symbols.hpp>
-#include <query_framework/query_impl.hpp>
+#include <helios/symbols/simple.hpp>
+#include <query_framework/context.hpp>
+
 #include <base/optional.hpp>
 
 namespace tsh {
 	namespace {
-		base::Map<base::StrID, std::set<InterfaceElement>>
-			groupElementsByName(const std::set<InterfaceElement>& elements) {
+		base::Map<base::StrID, std::set<InterfaceElement>> groupElementsByName(
+			const std::set<InterfaceElement>& elements
+		) {
 			base::Map<base::StrID, std::set<InterfaceElement>> result{};
 			for (const InterfaceElement& element: elements) {
 				base::StrID name = compiler::helios::name(element.getSymbol());

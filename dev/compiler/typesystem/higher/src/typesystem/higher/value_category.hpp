@@ -8,8 +8,9 @@
 
 #pragma once
 
+#include <helios/scope_symbol_id.hpp>
+
 #include <base/flag.hpp>
-#include <helios/symbols/symbols.hpp>
 
 namespace tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
@@ -33,7 +34,6 @@ namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 }
 
-// clang-format off
 MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
@@ -41,8 +41,6 @@ MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	USE,
 	DESTROY
 )
-
-// clang-format on
 
 namespace tsh {
 	/**

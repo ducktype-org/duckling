@@ -5,9 +5,11 @@
 
 #pragma once
 
-#include <token_file/forward.hpp>
-#include <filesystem/file.hpp>
 #include "token.hpp"
+
+#include <filesystem/file.hpp>
+#include <token_source/forward.hpp>
+
 #include <base/box.hpp>
 
 namespace lexer {
@@ -20,5 +22,5 @@ namespace lexer {
 	 * @param file File to tokenize
 	 * @return lexer::TokenData Containing the Tokens
 	 */
-	Box<tokenizer::TokenFile> tokenizeFile(const fs::FilePath& file);
+	Box<tokenizer::TokenSource> tokenizeFile(const fs::FilePath& file);
 }

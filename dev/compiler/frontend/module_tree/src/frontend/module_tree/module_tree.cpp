@@ -5,11 +5,12 @@
 
 #include "module_tree.hpp"
 
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
+#include "queries.hpp"
+
 #include <query_framework/query_impl.hpp>
 
-#include "queries.hpp"
+#include <base/maps.hpp>
+#include <base/stable_hashmap.hpp>
 
 using fs::FsTree;
 using std::regex;
@@ -28,6 +29,7 @@ inline static base::HashMap<ModuleID, std::shared_ptr<ModuleTree>> modules{};
 /**
  * @brief Holds global map of all Source files
  * @TODO: this holding a reference is dangerous:
+ * @TODO: change it during frontend queryfication #731 ?
  */
 inline static base::HashMap<FileID, SourceFile&> files{};
 
@@ -43,30 +45,21 @@ inline static base::Map<pst::PstID, FileID> root_element_file_back_map;
 /**
  * @brief Holds global map of module path to module id
  */
-inline static base::HashMap<fs::FilePath, ModuleID> modulePaths{};
-
-FileID FileID::nextID() {
-	// @OPT: move to global variable
-	static u64 nextID = 0;
-
-	FileID out{};
-	out.id = nextID++;
-	return out;
-}
+inline static base::HashMap<fs::FilePath, ModuleID> module_paths{};
 
 SourceFile::SourceFile(fs::FilePath path, ModuleID module_id):
 	  path(std::move(path)),
-	  id(FileID::nextID()),
+	  id(FileID::next()),
 	  linked_module(module_id) {
 	lang_file_name = base::StrID(this->path.stem().c_str());
 }
 
-const pst::PST<>& SourceFile::getPST() {
+CRef<pst::PST<>> SourceFile::getPST() {
 	if (parse_tree) {
-		return parse_tree.value();
+		return &parse_tree.value();
 	} else {
 		parse_tree.emplace(pst::PST(path));
-		return parse_tree.value();
+		return &parse_tree.value();
 	}
 }
 
@@ -78,7 +71,7 @@ std::shared_ptr<ModuleTree> ModuleTree::create(std::shared_ptr<fs::FsTree> root)
 	buildModuleTree(ptr, std::move(root));
 
 	modules.put(ptr->getID(), ptr);
-	if (ptr->hasMainSourceFile()) modulePaths.put(ptr->getMainSourceFile().path, ptr->getID());
+	if (ptr->hasMainSourceFile()) module_paths.put(ptr->getMainSourceFile().path, ptr->getID());
 
 	// at this point references inside module tree are stable, so we can fill "files" map:
 	if (ptr->hasMainSourceFile()) {
@@ -231,9 +224,8 @@ std::string compiler::frontend::printModuleTree(ModuleID module) {
  *********************/
 struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		std::shared_ptr<ModuleTree> module_tree = modules.at(key);
-		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); }
-		);
+		const auto& module_tree = modules.at(key);
+		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); });
 	}
 
 	static auto load(QKey) -> LoadResult { return {}; }
@@ -248,7 +240,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
  ***********************/
 struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 		return module_tree->getMainSourceFile().id;
 	}
 
@@ -264,7 +256,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
  ********************/
 struct IMPLEMENT_QUERY(QuerySourceFiles, std::vector<FileID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 
 		std::vector<FileID> out{};
 		for (const auto& file: module_tree->getSourceFiles()) out.push_back(file.id);
@@ -281,7 +273,7 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySourceFiles);
  *******************/
 struct IMPLEMENT_QUERY(QuerySubmodules, base::HashMap<base::StrID COMMA ModuleID>) {
 	static auto provide(Context&, QKey key) -> PResult {
-		auto module_tree = modules.at(key);
+		const auto& module_tree = modules.at(key);
 
 		PResult out{};
 		for (const auto& [name, module]: module_tree->getSubmodules())
@@ -300,17 +292,17 @@ QUERY_IMPLEMENTATION_BOILERPLATE(QuerySubmodules);
 struct IMPLEMENT_QUERY(QueryFilePST, CRef<pst::PST<>>) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
 		auto& file = files.at(key);
-		auto& pst  = file.getPST();
-		root_element_file_back_map.put(pst.getRootElement().unlock(ctx)->getID(), key);
+		auto  pst  = file.getPST();
+		root_element_file_back_map.put(pst->getRootElement().unlock(ctx)->getID(), key);
 
 		// @todo modify it, when making proper helios errors
-		if (pst.getLogger().bad()) {
+		if (pst->getLogger()->bad()) {
 			std::cerr << "PARSING ERRORS: \n";
-			pst.getLogger().dumpLog(true, std::cerr);
+			pst->getLogger()->dumpLog(true, std::cerr);
 			std::cerr << "\n\n";
 		}
 
-		return &pst;
+		return pst;
 	}
 
 	// @note: unstable ref here is only possible, because
@@ -324,8 +316,7 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	query::Context& ctx, pst::AccessLocked<pst::LangElement> element
 ) {
 	// get top-level:
-	while (element.unlock(ctx)->getParent().unlockOpt(ctx))
-		element = element.unlock(ctx)->getParent();
+	while (element.unlock(ctx)->getParent()) element = element.unlock(ctx)->getParent().value();
 
 	// this access depends of global state that might become a problem in incremental compilation:
 	auto file_id = root_element_file_back_map[element.unlock(ctx)->getID()];
@@ -333,4 +324,18 @@ ModuleID compiler::frontend::extendQueryModuleIDOfPST(
 	CORE_ASSERT(result.isGood(), "Bad module ID in SourceFile");
 
 	return result;
+}
+
+CRef<pst::PST<>> compiler::frontend::queryPSTFromFilePath(
+	query::Context&, const fs::FilePath& file_path
+) {
+	u64 count = 0;
+	for (const auto& [file_id, file]: files)
+		if (file.path == file_path) count++;
+	CORE_ASSERT(count == 1, "File not found in module tree");
+
+	for (const auto& [file_id, file]: files)
+		if (file.path == file_path) return file.getPST();
+
+	CORE_UNREACHABLE();
 }

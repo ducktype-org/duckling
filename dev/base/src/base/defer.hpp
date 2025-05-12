@@ -12,7 +12,8 @@
 
 #pragma once
 
-#include "define_helper.hpp"
+#include "macros/diagnostics.hpp"
+
 #include <utility>
 
 namespace detail {

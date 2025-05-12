@@ -9,17 +9,17 @@
  */
 #pragma once
 
-#include <map>
-#include <set>
-#include <string>
-
-#include <base/optional.hpp>
-
 #include "abstract_type.hpp"
 #include "symbol_type.hpp"
 
 #include <helios/scope_symbol_id.hpp>
+
+#include <base/optional.hpp>
 #include <base/string_id.hpp>
+
+#include <map>
+#include <set>
+#include <string>
 #include <variant>
 
 namespace tsh {
@@ -367,8 +367,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult
-			resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.

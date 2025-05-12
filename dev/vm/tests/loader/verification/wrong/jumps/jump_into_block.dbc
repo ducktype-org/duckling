@@ -1,0 +1,16 @@
+function main {
+    # ret_val -> main ret_val
+    # arg0 -> argc
+    # arg1 -> *argv
+
+    # conditional so that the code inbetween the target and jump does not get eliminated
+	jmpIf_label           Inside;
+
+	init_lany_type      x, i64;
+	label               Inside;
+	deinit; # x
+
+    deinit; # *argv
+    deinit; # argc
+	ret;
+}

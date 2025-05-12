@@ -1,13 +1,13 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
-#include <token_file/file.hpp>
 #include <tester/tester.hpp>
+#include <token_source/source.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	MBox<tokenizer::TokenFile> td;
+	MBox<tokenizer::TokenSource> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -24,6 +24,7 @@ public:
 		TESTER_ADD_TEST(testGroup5);
 		TESTER_ADD_TEST(testGroup6);
 		TESTER_ADD_TEST(testGroup7);
+		TESTER_ADD_TEST(testGroup8);
 		TESTER_ADD_TEST(testSourcePosition);
 	}
 
@@ -35,7 +36,7 @@ private:
 	};
 
 	void testBasicStructure() {
-		assertTrue(td->getTokenData().tokens.size() == 8, "Wrong amount of top-level token groups");
+		assertTrue(td->getTokenData().tokens.size() == 9, "Wrong amount of top-level token groups");
 	}
 
 	void checkTokenIsBracketGroup(usize index) {
@@ -49,8 +50,7 @@ private:
 		const auto& inner_tokens = td->getTokenData().tokens[0].getRecursive();
 
 		assertTrue(
-			inner_tokens.size() == 3,
-			"Expected 3 tokens, got " + std::to_string(inner_tokens.size())
+			inner_tokens.size() == 3, "Expected 3 tokens, got " + std::to_string(inner_tokens.size())
 		);
 
 		assertTrue(
@@ -106,7 +106,7 @@ private:
 	}
 
 	void testGroup3() {
-		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperator>();
+		testTokenGroup<3, lexer::Token::Type::Operator, &lexer::Token::isOperatorSymbol>();
 	}
 
 	void testGroup4() {
@@ -122,6 +122,8 @@ private:
 	}
 
 	void testGroup7() { testTokenGroup<7, lexer::Token::Type::String, &lexer::Token::isString>(); }
+
+	void testGroup8() { testTokenGroup<8, lexer::Token::Type::Char, &lexer::Token::isChar>(); }
 
 	void testSourcePosition() {
 		const auto& position = td->getTokenData().tokens[1].getRecursive().front().getPosition();

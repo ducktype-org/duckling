@@ -18,7 +18,7 @@ function(duck_add_vm suffix defines default)
 
   set(lib "Lib${exec}")
   add_library(${lib} ${vm_sources})
-  make_module(${lib} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Result Init)
+  make_module(${lib} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
   target_compile_definitions(${lib} PRIVATE ${defines})
 
   set(sources src/vm/main.cpp src/vm/server.cpp src/vm/cli.cpp)
@@ -38,3 +38,5 @@ duck_add_vm("sc" "USE_SWITCH_CASE" OFF)
 
 add_subdirectory(playground)
 add_subdirectory(tests)
+
+duck_add_test(vm program_builders tests/program_builders_test.cpp USES LibVM)

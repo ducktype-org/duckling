@@ -1,5 +1,6 @@
-#include <vm/api/api.hpp>
 #include <tester/tester.hpp>
+
+#include <vm/api/api.hpp>
 
 class SimpleVmTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -13,10 +14,10 @@ private:
 	void simpleRun() {
 		auto process_pid_response = vm::api::spawn();
 		assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-		auto pid = process_pid_response.expect("Spawn failed (2)").pid;
+		auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
 
-		fs::FilePath file(path("working_rbc.dbc"));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
+		fs::FilePath file(path("working_dbc.dbc"));
+		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
 
 		auto run_response = vm::api::run(pid);

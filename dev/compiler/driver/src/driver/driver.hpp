@@ -5,11 +5,12 @@
  */
 #pragma once
 
+#include <helios/hout/hout.hpp>
+#include <lir/lir_structure/lir_structure.hpp>
+
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
-#include <lir/lir_structure/lir_structure.hpp>
-#include <helios/hout/hout.hpp>
 
 namespace compiler::driver {
 	enum class BackendType : std::uint8_t { LLVM, DVM };
@@ -18,7 +19,7 @@ namespace compiler::driver {
 	 * @brief The last intermediate representation of the module before the backends.
 	 * It will be fed to the backends to generate the final output.
 	 */
-	struct BackendModuleData {
+	struct BackendModuleData final {
 		base::StrID                      module_id;
 		std::vector<CRef<lir::Function>> functions;
 	};
@@ -54,8 +55,11 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compileModule(const BackendModuleData& module_data) = 0;
+		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
 
+		/**
+		 * @brief Link all compiled modules into a single program.
+		 */
 		virtual void link() = 0;
 
 		virtual ~BackendDriver() = default;
@@ -72,7 +76,15 @@ namespace compiler::driver {
 			  options(std::move(opts)),
 			  backend_driver(createBackendDriver(&options)) {}
 
+		/**
+		 * @brief Compiles the HOUTUnit to the backend module.
+		 */
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
+
+		/**
+		 * @brief Links all module compiled so far into a complete program.
+		 */
+		void link();
 
 	private:
 		Options            options;

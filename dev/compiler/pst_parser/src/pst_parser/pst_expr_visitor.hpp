@@ -1,7 +1,8 @@
 #pragma once
 
-#include "elements/elements_list.hpp"
 #include "access.hpp"
+#include "elements/elements_list.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/visitor.hpp>
 
@@ -12,6 +13,8 @@ namespace pst::expr {
 		SuffixOperator,
 		BinaryOperator,
 		ExprValue,
+		ExprStrValue,
+		ExprCharValue,
 		TemplateSpecifier,
 		IdentifierLiteral,
 		KeywordLiteral,
@@ -25,4 +28,4 @@ namespace pst::expr {
 		Comma,
 		Assignment
 	);
-};
+}

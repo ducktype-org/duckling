@@ -8,9 +8,10 @@
  */
 #pragma once
 
-#include <cstdint>
-#include <cstddef>
 #include "strongly_typed_int.hpp"
+
+#include <cstddef>
+#include <cstdint>
 
 STRONG_TYPEDEF_INT(u8, uint8_t);
 using u16 = uint16_t;
@@ -30,6 +31,3 @@ using usize = std::size_t;
 // Code might break if following does not hold:
 static_assert(sizeof(byte) == sizeof(char));
 static_assert(sizeof(byte) == sizeof(u8));
-
-
-// @TODO: undefine cstdint

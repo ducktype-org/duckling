@@ -1,10 +1,13 @@
+#include <tester/tester.hpp>
+
+#include <base/int_conv.hpp>
+
+#include <vm/api/api.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
-#include <vm/api/api.hpp>
-#include <tester/tester.hpp>
+
 #include <chrono>
 #include <thread>
-#include <base/int_conv.hpp>
 
 class VmDebugTest: public tester::TestSuite {
 #undef TESTER_CLASS
@@ -26,7 +29,7 @@ private:
 		auto pid = process_pid_response.value().pid;
 
 		fs::FilePath file(path(std::string(path_name)));
-		auto         loaded_file_response = vm::api::loadFile(pid, file);
+		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
 		assertTrue(loaded_file_response.has_value(), "Load failed (loadProgram)");
 		return pid;
 	}
@@ -67,21 +70,21 @@ private:
 	 */
 	void pausesOnBreakpointAndResumes() {
 		auto pid = loadProgram("breakpoint.dbc");
-		vm::api::run(pid).expect("Run failed (1)");
+		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
-			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
 		assertEqual(6, execution_position.instr_number, "Line number is not correct");
 
-		vm::api::resume(pid).expect("Resume failed (1)");
+		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
-			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
 		assertEqual(10, execution_position.instr_number, "Line number is not correct");
 
-		vm::api::resume(pid).expect("Resume failed (2)");
+		vm::api::resume(pid).value();  // "Resume failed (2)"
 
-		vm::api::stop(pid).expect("Stop failed (1)");
+		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
 	/**
@@ -90,10 +93,10 @@ private:
 	void executesStepByStep() {
 		auto pid = loadProgram("breakpoint.dbc");
 
-		vm::api::run(pid).expect("Run failed (1)");
+		vm::api::run(pid).value();  // "Run failed (1)"
 
 		auto execution_position
-			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (1)");
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (1)"
 		assertEqual(6, execution_position.instr_number, "Line number is not correct");
 
 		u64 line = stepAndGetLine(pid);
@@ -102,21 +105,21 @@ private:
 		line = stepAndGetLine(pid);
 		assertEqual(8, line, "Line number is not correct (3)");
 
-		vm::api::resume(pid).expect("Resume failed (1)");
+		vm::api::resume(pid).value();  // "Resume failed (1)"
 
 		execution_position
-			= vm::api::waitForBreakpoint(pid).expect("Wait for breakpoint failed (2)");
+			= vm::api::waitForBreakpoint(pid).value();  // "Wait for breakpoint failed (2)"
 		assertEqual(10, execution_position.instr_number, "Line number is not correct (4)");
 
-		vm::api::resume(pid).expect("Resume failed (2)");
+		vm::api::resume(pid).value();  // "Resume failed (2)"
 
-		vm::api::stop(pid).expect("Stop failed (1)");
+		vm::api::stop(pid).value();    // "Stop failed (1)"
 	}
 
 	u64 stepAndGetLine(u64 pid) {
-		vm::api::step(base::safeIntConv<vm::PID>(pid)).expect("Step failed");
+		vm::api::step(base::safeIntConv<vm::PID>(pid)).value();  // "Step failed"
 		auto execution_position = vm::api::getCurrentPosition(base::safeIntConv<vm::PID>(pid))
-		                              .expect("Get current position failed");
+		                              .value();                  // "Get current position failed"
 		return execution_position.instr_number;
 	}
 };

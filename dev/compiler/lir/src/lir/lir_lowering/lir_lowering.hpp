@@ -1,7 +1,8 @@
 #pragma once
 
-#include <mir/mir_structure/mir_structure.hpp>
 #include "../lir_structure/lir_structure.hpp"
+
+#include <mir/mir_structure/mir_structure.hpp>
 
 namespace compiler::lir {
 	struct KeyOf_LowerToLirFunction {
@@ -12,7 +13,7 @@ namespace compiler::lir {
 
 		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
 			// this kind of doesn't work, but it won't be run anyway (mir functions are unique)
-			// @TODO: change it during hash-query refactor
+			// @TODO: delete it during hash-query refactor #523
 			return (*function) == (*oth.function);
 		}
 	};

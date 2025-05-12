@@ -187,20 +187,41 @@ ReferenceAlignment: Pointer
 
 
 # Includes and directives
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 IncludeCategories:
-  - Regex:           '^"(llvm|llvm-c|clang|clang-c)/'
-    Priority:        2
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '^(<|"(gtest|gmock|isl|json)/)'
-    Priority:        3
-    SortPriority:    0
-    CaseSensitive:   false
-  - Regex:           '.*'
+  # llvm and Clang:
+  - Regex:           '^("|<)(llvm|llvm-c|clang|clang-c)/'
     Priority:        1
-    SortPriority:    0
-    CaseSensitive:   false
+    SortPriority:    6
+  # External libs such as icu(unicode/uniset.h)/crow/asio/json:
+  # - Regex:           '^("|<)(unicode/uniset.h|crow/|asio/|json/)'
+  #   Priority:        2
+  #   SortPriority:    7
+  # std, headers without extension:
+  - Regex:           '^("|<)([A-Za-z0-9\Q/-_\E])+("|>)$'
+    Priority:        3
+    SortPriority:    8
+  # our base:
+  - Regex:           '^("|<)(base/.*)("|>)$'
+    Priority:        4
+    SortPriority:    3
+  # our common, add here new libraries:
+  # - Regex:           [tu będzie regexp na common]
+  # '^("|<)(clap|diagnostic|filesystem|hashing|init|json|listener|llvm|printer|query_framework|system_command|tester|tokenizer)("|>)$'
+    # Priority:        5
+    # SortPriority:    4
+  # VM:
+  - Regex:           '^("|<)(vm/.*)("|>)$'
+    Priority:        6
+    SortPriority:    5
+  # all other files with "":
+  - Regex:           '^".*"$'
+    Priority:        7
+    SortPriority:    1
+  # all other files with <>:
+  - Regex:           '^<.*>$'
+    Priority:        8
+    SortPriority:    2
 IncludeIsMainRegex: '(Test)?$'
 IncludeIsMainSourceRegex: ''
 IndentPPDirectives: BeforeHash
@@ -210,21 +231,21 @@ MacroBlockEnd:   ''
 
 # Sorting
 SortUsingDeclarations: LexicographicNumeric
-SortIncludes:    Never
+SortIncludes:    CaseInsensitive
 
 
 # Penalties
 PenaltyBreakAssignment: 2
-PenaltyBreakBeforeFirstCallParameter: 19
+PenaltyBreakBeforeFirstCallParameter: 0
+PenaltyBreakScopeResolution: 2000
 PenaltyBreakComment: 300
 PenaltyBreakFirstLessLess: 120
 PenaltyBreakOpenParenthesis: 0
-PenaltyBreakString: 1000
+PenaltyBreakString: 650
 PenaltyBreakTemplateDeclaration: 10
-PenaltyExcessCharacter: 1000000
+PenaltyExcessCharacter: 50
 PenaltyIndentedWhitespace: 0
-PenaltyReturnTypeOnItsOwnLine: 60
-
+PenaltyReturnTypeOnItsOwnLine: 2000
 
 # Misc
 AttributeMacros:
@@ -237,7 +258,7 @@ ForEachMacros:
   - Q_FOREACH
   - BOOST_FOREACH
 IfMacros:
-  - KJ_IF_MAYBE
+  - KJ_IF_MAYBE # addint things like if_opt_some here is breaken, becouse clang removes the braces
 RemoveBracesLLVM: true  # This will soon be deprecated
 StatementAttributeLikeMacros:
   - Q_EMIT
@@ -245,12 +266,10 @@ StatementMacros:
   - Q_UNUSED
   - QT_REQUIRE_VERSION
 WhitespaceSensitiveMacros:
-  - BOOST_PP_STRINGIZE
-  - CF_SWIFT_NAME
-  - NS_SWIFT_NAME
-  - PP_STRINGIZE
-  - STRINGIZE
-
+  - MAKE_FLAG_TYPE
+  - MAKE_STRINGIFYABLE_ENUM
+  - MAKE_VISITOR
+  
 
 # Other languages
 BreakAfterJavaFieldAnnotations: false

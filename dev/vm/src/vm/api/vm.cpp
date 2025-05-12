@@ -1,121 +1,148 @@
 #include "vm.hpp"
-#include <vm/api/data/response.hpp>
+
 #include <vm/api/data/request.hpp>
+#include <vm/api/data/response.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
 
 namespace vm::api {
 	void ignoreResponse([[maybe_unused]] const Response& response) {}
 
 	template<class T>
-	cpp::result<T, ApiError> mapOrWrongResponse(const Response& response) {
+	std::expected<T, ApiError> mapOrWrongResponse(const Response& response) {
 		if (std::holds_alternative<T>(response)) return std::get<T>(response);
-		return cpp::failure(WrongResponse{});
+		return std::unexpected(WrongResponse{});
 	}
 
-	cpp::result<ProcStatus, ApiError> getExecutionStatus(PID pid) {
+	std::expected<ProcStatus, ApiError> getExecutionStatus(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeStatusRequest(pid))
-		    .flat_map(mapOrWrongResponse<ProcStatus>);
+		    .and_then(mapOrWrongResponse<ProcStatus>);
 	}
 
-	cpp::result<response::CodePosition, ApiError> pause(PID pid) {
+	std::expected<response::CodePosition, ApiError> pause(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Pause{}))
-		    .flat_map(mapOrWrongResponse<response::CodePosition>);
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	cpp::result<void, ApiError> resume(PID pid) {
+	std::expected<void, ApiError> resume(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Resume{}))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> step(PID pid) {
+	std::expected<void, ApiError> step(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Step{}))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
+	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::WaitForBreakpoint{}))
-		    .flat_map(mapOrWrongResponse<response::CodePosition>);
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
 	}
 
-	cpp::result<ProcessInfo, ApiError> spawn() {
-		return Supervisor::get().newProcess().map([](auto& x) { return ProcessInfo{ x }; });
+	std::expected<ProcessInfo, ApiError> spawn() {
+		return Supervisor::get().newProcess().transform([](const auto& x) {
+			return ProcessInfo{ x };
+		});
 	}
 
-	cpp::result<void, ApiError> loadFile(PID pid, const fs::FilePath& path) {
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& paths) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Load{ path }))
-		    .map(ignoreResponse);
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadFiles{ paths }))
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> run(PID pid) {
+	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code) {
 		return Supervisor::get()
-		    .doRequest(api::makeExecutorRequest(pid, request::Run{}))
-		    .map(ignoreResponse);
+		    .doRequest(api::makeExecutorRequest(pid, request::LoadCode{ code }))
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> join(PID pid) {
+	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(pid, request::Run{ args }))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> runFunction(
+		PID pid, const std::string& function_name, const std::vector<i64>& args
+	) {
+		return Supervisor::get()
+		    .doRequest(api::makeExecutorRequest(
+				pid, request::RunFunction{ .func_name = function_name, .func_args = args }
+			))
+		    .transform(ignoreResponse);
+	}
+
+	std::expected<void, ApiError> join(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Join{}))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> stop(PID pid) {
+	std::expected<void, ApiError> stop(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Stop{}))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> kill(PID pid) {
+	std::expected<void, ApiError> kill(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::Stop{}))
-		    .map(ignoreResponse)
-		    .flat_map([pid] { return Supervisor::get().killProcess(pid); });
+		    .transform(ignoreResponse)
+		    .and_then([pid] { return Supervisor::get().killProcess(pid); });
 	}
 
-	cpp::result<void, ApiError> input(PID pid, const std::string& input) {
+	std::expected<void, ApiError> input(PID pid, const std::string& input) {
 		return Supervisor::get()
 		    .doRequest(api::makeIORequest(pid, request::Input{ input }))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<response::Output, ApiError> output(PID pid) {
+	std::expected<response::Output, ApiError> output(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeIORequest(pid, request::Output{}))
-		    .flat_map(mapOrWrongResponse<response::Output>);
+		    .and_then(mapOrWrongResponse<response::Output>);
 	}
 
-	cpp::result<TypeCRef, ApiError> getType(PID pid, const std::string& type_name) {
+	std::expected<TypeCRef, ApiError> getType(PID pid, const std::string& type_name) {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::TypeMetadata{ type_name }))
-		    .flat_map(mapOrWrongResponse<TypeCRef>);
+		    .and_then(mapOrWrongResponse<TypeCRef>);
 	}
 
-	cpp::result<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
+	std::expected<response::Block, ApiError> getBlock(PID pid, u64 block_id) {
 		return Supervisor::get()
 		    .doRequest(api::makeDataRequest(pid, request::Block{ BlockID(block_id) }))
-		    .flat_map(mapOrWrongResponse<response::Block>);
+		    .and_then(mapOrWrongResponse<response::Block>);
 	}
 
-	cpp::result<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
+	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output) {
 		return Supervisor::get()
-		    .doRequest(api::makeIORequest(pid, request::Attach{ input, output }))
-		    .map(ignoreResponse);
+		    .doRequest(
+				api::makeIORequest(pid, request::Attach{ .istream = input, .ostream = output })
+			)
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<void, ApiError> detach(PID pid) {
+	std::expected<void, ApiError> detach(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeIORequest(pid, request::Detach{}))
-		    .map(ignoreResponse);
+		    .transform(ignoreResponse);
 	}
 
-	cpp::result<response::CodePosition, ApiError> getCurrentPosition(PID pid) {
+	std::expected<response::CodePosition, ApiError> getCurrentPosition(PID pid) {
 		return Supervisor::get()
 		    .doRequest(api::makeExecutorRequest(pid, request::ExecutionPosition{}))
-		    .flat_map(mapOrWrongResponse<response::CodePosition>);
+		    .and_then(mapOrWrongResponse<response::CodePosition>);
+	}
+
+	std::expected<i64, ApiError> getExitCode(PID pid) {
+		return Supervisor::get()
+		    .doRequest(api::makeExitCodeRequest(pid))
+		    .and_then(mapOrWrongResponse<ExitCode>);
 	}
 }

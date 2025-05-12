@@ -1,14 +1,15 @@
 #pragma once
 
-#include <base/optional.hpp>
-#include <base/string_id.hpp>
+#include "lists.hpp"           // IWYU pragma: keep
+#include "meta.hpp"
+#include "not_statements.hpp"  // IWYU pragma: keep
+
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>
-
-#include "meta.hpp"
-#include "lists.hpp"           // IWYU pragma: keep
-#include "not_statements.hpp"  // IWYU pragma: keep
 #include <token_parser_core/common_elements.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
@@ -25,22 +26,16 @@ namespace pst {
 		ExprClassify() = delete;
 
 		CONDITION(isComparison) {
-			static std::set<lang_def::NamedOperator> comparisons = {
-				NamedOperator::Lesser, NamedOperator::LEqual, NamedOperator::Greater,
-				NamedOperator::GEqual, NamedOperator::Equal,  NamedOperator::NotEqual,
-			};
-			return state[fwd].isOperator()
-			    && comparisons.contains(state[fwd].asOperator().asNamed());
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isComparison(); }
+			).valueOr(false);
 		}
 
 		CONDITION(isAssignment) {
-			return state[fwd].isOperator() && !isComparison(state, fwd)
-			    && state[fwd].getStrValue().back() == '=';
+			return state[fwd].asBinaryOperator().map([](auto op) { return op.isAssignment(); }
+			).valueOr(false);
 		}
 
 		CONDITION(exprStmtEnd) { return state[fwd].is(Special::Semicolon); }
-
-		CONDITION(isOperator) { return state[fwd].isOperator(); }
 	};
 
 	namespace expr {
@@ -168,6 +163,62 @@ namespace pst {
 			[[nodiscard]]
 			std::string elementType() const override {
 				return "Value Expr";
+			}
+		};
+
+		/**
+		 * @brief Element representing a string value in an expression
+		 */
+		class ExprStrValue final: public ExprElement {
+			tpc::StringValue string;
+
+		public:
+			[[nodiscard]]
+			tpc::StringValue getValue() const {
+				return string;
+			}
+
+			explicit ExprStrValue(const dia::SourcePosition& position, tpc::StringValue value):
+				  ExprElement(position, 0),
+				  string(value) {}
+
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			~ExprStrValue() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			std::string elementType() const override {
+				return "String Value Expr";
+			}
+		};
+
+		/**
+		 * @brief Element representing a Char value in an expression
+		 */
+		class ExprCharValue final: public ExprElement {
+			tpc::CharValue string;
+
+		public:
+			[[nodiscard]]
+			tpc::CharValue getValue() const {
+				return string;
+			}
+
+			explicit ExprCharValue(const dia::SourcePosition& position, tpc::CharValue value):
+				  ExprElement(position, 0),
+				  string(value) {}
+
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			~ExprCharValue() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			std::string elementType() const override {
+				return "Char Value Expr";
 			}
 		};
 
@@ -458,32 +509,6 @@ namespace pst {
 			using Lower = GeneralSuffix;
 			using Self  = GeneralBinary;
 
-			/**
-			 * @brief is a general binary operators
-			 */
-			CONDITION(isGenBinOp) {
-				static const std::set<lang_def::NamedOperator> gen_bin_ops = {
-					NamedOperator::Exponentiate, NamedOperator::Multiply, NamedOperator::Divide,
-					NamedOperator::Remainder,    NamedOperator::Plus,     NamedOperator::Minus,
-					NamedOperator::Pipe,
-				};
-				return gen_bin_ops.contains(state[fwd].asOperator().asNamed());
-			}
-
-			static i64 getOpPrec(Operator op) {
-				static const std::unordered_map<lang_def::NamedOperator, i64> precedences = {
-					{ NamedOperator::Pipe, 540 },      { NamedOperator::Exponentiate, 550 },
-					{ NamedOperator::Multiply, 560 },  { NamedOperator::Divide, 560 },
-					{ NamedOperator::Remainder, 560 }, { NamedOperator::Plus, 570 },
-					{ NamedOperator::Minus, 570 },
-				};
-				if (not precedences.contains(op.asNamed()))
-					throw base::NotYetImplemented(
-						base::strConcat("Operator precedence for operator: ", op.value.strView())
-					);
-				return precedences.at(op.asNamed());
-			}
-
 			struct OperatorBuilder;
 
 			using BuilderExpr = std::variant<i64, Box<OperatorBuilder>>;
@@ -496,7 +521,7 @@ namespace pst {
 
 		public:
 			explicit GeneralBinary(const dia::SourcePosition& pos, Operator op):
-				  BinaryOperator(pos, op, getOpPrec(op)) {}
+				  BinaryOperator(pos, op, op.getGenBinOpPrecedence()) {}
 
 			/**
 			 * @brief
@@ -510,8 +535,7 @@ namespace pst {
 			 */
 			static i64 skipAtom(const LangParserState& state, i64 base, i64 length);
 
-			static MBox<ExprElement>
-				parseRecursive(LangParserState& state, const BuilderExpr& expr);
+			static MBox<ExprElement> parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
@@ -541,6 +565,16 @@ namespace pst {
 			}
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			[[nodiscard]]
+			const auto& getOperators() const {
+				return operators;
+			}
+
+			[[nodiscard]]
+			auto getSubExpr(u64 index) const {
+				return sub_expr.at(index).give();
+			}
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
@@ -624,6 +658,13 @@ namespace pst {
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			AccessLocked<ExprElement> getCondition() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfTrue() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfFalse() const;
 		};
 
 		/**

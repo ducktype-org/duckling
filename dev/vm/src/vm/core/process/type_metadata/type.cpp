@@ -1,9 +1,15 @@
 #include "type.hpp"
-#include <base/exceptions.hpp>
-#include "type_metadata.hpp"
-#include <vm/core/supervisor/supervisor.hpp>
-#include <base/variant.hpp>
+
+#include <bits/ranges_algo.h>
+
 #include <base/defer.hpp>
+#include <base/exceptions.hpp>
+#include <base/optional.hpp>
+#include <base/variant.hpp>
+
+#include <vm/core/supervisor/supervisor.hpp>
+
+#include <algorithm>
 #include <utility>
 
 namespace vm {
@@ -28,9 +34,9 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::Pointer;
-		kind      = kind::Pointer{ std::move(inner) };
+		kind      = kind::Pointer{ inner };
 	}
 
 	void Type::defineStaticTable(TypeRef inner, u64 table_size) {
@@ -38,19 +44,22 @@ namespace vm {
 		state = State::Defined;
 
 		kind_type = Kind::StaticTable;
-		kind      = kind::StaticTable{ std::move(inner), table_size };
+		kind      = kind::StaticTable{ .inner_type = inner, .size = table_size };
 	}
 
 	void Type::defineDynamicTable(TypeRef inner) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::DynamicTable;
-		kind      = kind::DynamicTable{ std::move(inner) };
+		kind      = kind::DynamicTable{ inner };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
+	void Type::defineData(
+		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+		base::Optional<InheritanceMetadata>                 inheritance_metadata
+	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
@@ -59,9 +68,10 @@ namespace vm {
 		for (auto [sub_name, sub_type]: fields_definitions) {
 			data.field_name_map[sub_name] = data.fields.size();
 			// offset is set during finalization
-			data.fields.emplace_back(kind::FieldDesc{ 0, sub_type });
+			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		kind = data;
+		data.inheritance_metadata = std::move(inheritance_metadata);
+		kind                      = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -78,9 +88,18 @@ namespace vm {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
-		size      = PointerSize;
+		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
-		kind      = kind::Function{ std::move(parameters), std::move(result) };
+		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+	}
+
+	void Type::defineOpaque(TypeSize pass_size) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		kind_type = Kind::Opaque;
+		size      = pass_size;
+		kind      = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -163,6 +182,12 @@ namespace vm {
 				else
 					return {};
 			}
+			variant_case_novalue(kind::Opaque) {
+				if (pos == 0)
+					return TypeCRef(this);
+				else
+					return {};
+			}
 			variant_default { CORE_PANIC("Unexpected Type kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -170,16 +195,16 @@ namespace vm {
 
 	// pointer, staticTable, dynamicTable
 	base::Optional<TypeCRef> Type::getInnerType() const {
-		auto getInnerType = [](const auto& t) { return t.inner_type; };
+		auto get_inner_type = [](const auto& t) { return t.inner_type; };
 
-		auto pointerOption = get<kind::Pointer>().map(getInnerType);
-		if (pointerOption.has_value()) return (TypeCRef) pointerOption.value();
+		auto pointer_option = get<kind::Pointer>().map(get_inner_type);
+		if (pointer_option.has_value()) return (TypeCRef) pointer_option.value();
 
-		auto staticTableOption = get<kind::StaticTable>().map(getInnerType);
-		if (staticTableOption.has_value()) return (TypeCRef) staticTableOption.value();
+		auto static_table_option = get<kind::StaticTable>().map(get_inner_type);
+		if (static_table_option.has_value()) return (TypeCRef) static_table_option.value();
 
-		auto dynamicTableOption = get<kind::DynamicTable>().map(getInnerType);
-		if (dynamicTableOption.has_value()) return (TypeCRef) dynamicTableOption.value();
+		auto dynamic_table_option = get<kind::DynamicTable>().map(get_inner_type);
+		if (dynamic_table_option.has_value()) return (TypeCRef) dynamic_table_option.value();
 
 		return {};
 	}
@@ -192,6 +217,10 @@ namespace vm {
 	}
 
 	// struct
+	base::Optional<usize> Type::getFieldCount() const {
+		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
+	}
+
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
@@ -244,6 +273,62 @@ namespace vm {
 		// });
 	}
 
+	// inheritance
+	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
+			}
+		}
+		return {};
+	}
+
+	bool Type::inheritsFrom(TypeCRef other) const {
+		std::vector<TypeCRef> stack{ this };
+		while (!stack.empty()) {
+			auto t = stack.back();
+			stack.pop_back();
+			if (t == other) return true;
+
+			if_opt_some(t->getInheritanceMetadata(), imd) {
+				variant_match(imd.kind) {
+					variant_case(InheritanceMetadata::Class, clazz) {
+						if_opt_some(clazz.extends, super) stack.emplace_back(super);
+					}
+				}
+				for (auto i: imd.implements) stack.emplace_back(i);
+			}
+		}
+		return false;
+	}
+
+	bool Type::isInstantiable() const {
+		auto is_concrete_class = [](const InheritanceMetadata& imd) {
+			variant_match(imd.kind) {
+				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
+			}
+			return false;
+		};
+
+		// This recursion follows only data and variants (not pointers),
+		// so its depth is bounded by type size, there cannot be a cycle.
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if_opt_some(data.inheritance_metadata, imd) {
+					if (!is_concrete_class(imd)) return false;
+				}
+
+				for (auto& field: data.fields)
+					if (!field.type->isInstantiable()) return false;
+			}
+			variant_case(kind::Variant, variant) {
+				for (auto& alt: variant.alternatives)
+					if (!alt->isInstantiable()) return false;
+			}
+		}
+		return true;
+	}
+
 	// variant
 	base::Optional<u64> Type::getVariantCount() const {
 		return get<kind::Variant>().map([](const kind::Variant& variant) {
@@ -265,6 +350,14 @@ namespace vm {
 		});
 	}
 
+	base::Optional<u64> Type::getParametersSize() const {
+		return get<kind::Function>().map([](const kind::Function& function) {
+			usize size = 0;
+			for (const auto& param: function.parameters) size += param->getSize();
+			return size;
+		});
+	}
+
 	base::Optional<TypeCRef> Type::getNthParameterType(u64 parameter_id) const {
 		return get<kind::Function>().flatMap([parameter_id](const kind::Function& function) {
 			if (parameter_id >= function.parameters.size()) return base::Optional<TypeCRef>();
@@ -276,5 +369,13 @@ namespace vm {
 		return get<kind::Function>().flatMap([](const kind::Function& function) {
 			return base::Optional<TypeCRef>(function.result);
 		});
+	}
+
+	base::Optional<const std::vector<TypeCRef>&> Type::getParameters() const {
+		return get<kind::Function>().map(
+			[](const kind::Function& func) -> const std::vector<TypeCRef>& {
+				return func.parameters;
+			}
+		);
 	}
 }

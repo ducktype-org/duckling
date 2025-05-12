@@ -2,19 +2,17 @@
 
 #include "../../lang_parser_state.hpp"
 #include "../elements_common.hpp"
+#include "expr_holders.hpp"
+#include "meta.hpp"
 
 #include <diagnostic/source_position.hpp>
-
-#include <token_parser_core/token_stream.hpp>
-#include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/token_stream.hpp>
 
 #include <base/string_id.hpp>
-
-#include "meta.hpp"
-#include "expr_holders.hpp"
 
 namespace pst {
 
@@ -66,6 +64,10 @@ namespace pst {
 		bool                         star = false;
 
 	public:
+		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::DottedName;
+		}
+
 		[[nodiscard]]
 		auto begin() const {
 			return names.cbegin();
@@ -80,8 +82,6 @@ namespace pst {
 		std::string elementType() const override {
 			return "Dotted Name";
 		}
-
-		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
 
 		static MBox<DottedName> parse(LangParserState& state);
 

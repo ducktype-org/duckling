@@ -2,16 +2,15 @@
 
 #include "size_constants.hpp"
 
-#include <base/box.hpp>
-#include <base/ref.hpp>
-#include <typesystem/higher/abstract_type.hpp>
-#include <typesystem/higher/types.hpp>
-#include <typesystem/higher/expression_type.hpp>
-
 #include <query_framework/query_int.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+#include <typesystem/higher/expression_type.hpp>
+#include <typesystem/higher/types.hpp>
 
-#include <base/maps.hpp>
 #include <base/bits_and_bytes.hpp>
+#include <base/box.hpp>
+#include <base/maps.hpp>
+#include <base/ref.hpp>
 
 /**
  * @brief The namespace of all definitions of the Lower Type System.
@@ -71,8 +70,9 @@ namespace tsl {
 		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
-		virtual std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const
+		virtual std::string toStringDefinition(
+			query::Context& ctx, bool recursive = true, u32 indent = 0
+		) const
 			= 0;
 
 		/**
@@ -230,8 +230,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -279,8 +279,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -320,8 +320,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -432,8 +432,8 @@ namespace tsl {
 		 * @copydoc TypeLayoutABC::toStringDefinition
 		 */
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const;
+		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
+			const;
 
 		/**
 		 * @copydoc TypeLayoutABC::toStringIdentification

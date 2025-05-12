@@ -1,10 +1,12 @@
 #pragma once
 
-#include <tuple>
 #include <base/ints.hpp>
 #include <base/optional.hpp>
+
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+
+#include <tuple>
 
 namespace vm {
 
@@ -22,8 +24,9 @@ namespace vm {
 		using DynamicDataStorage = std::tuple<Dynamic<DynamicData>...>;
 
 		template<class T>
-		using IsCoreData = std::
-			integral_constant<bool, std::is_same_v<Memory, T> || std::is_same_v<TypeMetadata, T>>;
+		using IsCoreData = std::integral_constant<
+			bool,
+			std::is_same_v<Memory, T> || std::is_same_v<TypeMetadata, T>>;
 
 		Memory       memory;
 		TypeMetadata typeMetadata;

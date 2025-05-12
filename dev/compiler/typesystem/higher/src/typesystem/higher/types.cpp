@@ -6,16 +6,16 @@
  * underlying implementation hierarchy.
  */
 
-#include "abstract_type.hpp"
-
-#include <sstream>
-#include <concepts>
-
-#include "internal/abstract_type_impl.hpp"
-#include "expression_type.hpp"
 #include "types.hpp"
 
+#include "abstract_type.hpp"
+#include "expression_type.hpp"
+#include "internal/abstract_type_impl.hpp"
+
 #include <base/exceptions.hpp>
+
+#include <concepts>
+#include <sstream>
 
 // NOLINTBEGIN: linter assumes it's a function like macro
 /**
@@ -120,18 +120,19 @@ namespace tsh {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	base::Optional<compiler::helios::SymID>
-		ClassAbstractType::getBaseClassSymbol(query::Context& ctx) const {
+	base::Optional<compiler::helios::SymID> ClassAbstractType::getBaseClassSymbol(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	std::vector<ClassAbstractType>
-		ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassAbstractType> ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
-	std::vector<compiler::helios::SymID>
-		ClassAbstractType::getImplementedInterfaceSymbols(query::Context& ctx) const {
+	std::vector<compiler::helios::SymID> ClassAbstractType::getImplementedInterfaceSymbols(
+		query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 

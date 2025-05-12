@@ -30,14 +30,15 @@
  */
 #pragma once
 
+#include "argument_splitter.hpp"  // IWYU pragma: export
+#include "int_conv.hpp"           // IWYU pragma: export
 #include "maps.hpp"
-#include "string_id.hpp"
 #include "ok_bad.hpp"
 #include "simple_char_classifications.hpp"
-#include "int_conv.hpp"  // IWYU pragma: export
+#include "string_id.hpp"
 
-#include <utility>       // IWYU pragma: export
-#include <type_traits>   // IWYU pragma: export
+#include <type_traits>  // IWYU pragma: export
+#include <utility>      // IWYU pragma: export
 
 namespace base::detail {
 	template<typename EnumType>

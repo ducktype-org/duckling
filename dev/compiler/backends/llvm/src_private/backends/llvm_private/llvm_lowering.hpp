@@ -1,6 +1,7 @@
 #pragma once
 
 #include <lir/lir_structure/lir_structure.hpp>  // @TODO #404 relax it
+#include <query_framework/context_fd.hpp>
 
 namespace compiler::backend_llvm {
 	struct ModuleImpl;
@@ -16,6 +17,7 @@ namespace compiler::backend_llvm {
 	 */
 	Box<ModuleImpl> parseIRCodeToModuleImpl(std::string_view llvm_ir_code);
 
-	void addFunctionToModuleImpl(Ref<ModuleImpl> module, CRef<lir::Function> lir_function);
-
+	void addFunctionToModuleImpl(
+		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
+	);
 }

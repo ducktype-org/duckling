@@ -1,14 +1,16 @@
 #pragma once
 
+#include "pst_id.hpp"
+
+#include <query_framework/context_fd.hpp>
+
 #include <base/box.hpp>
-#include <base/ref.hpp>
 #include <base/optional.hpp>
-
-#include <query_framework/query_int.hpp>
-
-#include "lang_parser_element.hpp"
+#include <base/ref.hpp>
 
 namespace pst {
+	class LangElement;
+
 	/**
 	 * @brief Wrapper for a reference to pst that allows access, it should never be passed between
 	 * different queries.
@@ -60,8 +62,10 @@ namespace pst {
 	namespace detail {
 		/**
 		 * @brief Notification to context About the access to an element.
+		 * @note For now we keep PstID as the key, but in the future it will likely be changed to
+		 * hash based on hash-framework.
 		 */
-		void notifyContext(query::Context& ctx);
+		void notifyContext(query::Context& ctx, PstID id);
 		/**
 		 * @brief Some smart throw about bad access(unsafe access of non-null) based on context.
 		 */
@@ -85,7 +89,7 @@ namespace pst {
 		template</*std::derived_from<LangElement>*/ typename E>
 		friend class AccessLocked;
 		friend class LangElement;
-		template<std::derived_from<LangElement> T>
+		template</*std::derived_from<LangElement>*/ typename T>
 		friend struct GenericPSTQueryKey;
 
 		AccessLocked(MCRef<Element> ref): ref(ref) {}
@@ -123,7 +127,7 @@ namespace pst {
 		 * the access.
 		 */
 		base::Optional<Access<Element>> unlockOpt(query::Context& ctx) const {
-			detail::notifyContext(ctx);
+			if (ref.toOpt().has_value()) detail::notifyContext(ctx, this->ref->getID());
 			return ref.toOpt().map([](CRef<Element> ref) -> Access<Element> { return { ref }; });
 		}
 
@@ -133,7 +137,7 @@ namespace pst {
 		 */
 		Access<Element> unlock(query::Context& ctx) const {
 			if (!ref.toOpt()) detail::notifyBadAccess(ctx);
-			detail::notifyContext(ctx);
+			detail::notifyContext(ctx, this->ref->getID());
 			return { ref.toOpt().value() };
 		}
 

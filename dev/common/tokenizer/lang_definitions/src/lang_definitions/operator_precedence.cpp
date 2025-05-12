@@ -4,8 +4,9 @@
  */
 
 #include "operator_precedence.hpp"
-#include <base/maps.hpp>
+
 #include <base/init_guard.hpp>
+#include <base/maps.hpp>
 
 namespace lang_def {
 
@@ -48,8 +49,7 @@ namespace lang_def {
 		);
 
 		associativity.put(
-			{ NamedOperator::Exponentiate, OperatorType::Binary },
-			OperatorAssociativity::RightToLeft
+			{ NamedOperator::Exponentiate, OperatorType::Binary }, OperatorAssociativity::RightToLeft
 		);
 
 		associativity.put(

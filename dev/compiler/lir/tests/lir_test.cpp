@@ -4,17 +4,16 @@
  * is not yet fully implemented and is hard to properly test.
  */
 
-#include <query_framework/query_entry_point.hpp>
-#include <query_framework/query_impl.hpp>
-#include <query_framework/utils/with_context_do.hpp>
-
-#include <tester/tester.hpp>
-
+#include <helios/queries.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
-#include <helios/queries.cpp>
-
-#include <mir/mir_lowering/mir_lowering.hpp>
 #include <lir/lir_lowering/lir_lowering.hpp>
+#include <mir/mir_lowering/mir_lowering.hpp>
+#include <query_framework/context.hpp>
+#include <query_framework/query_entry_point.hpp>
+#include <query_framework/utils/with_context_do.hpp>
+#include <tester/tester.hpp>
+#include <typesystem/higher/queries/types.hpp>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -37,6 +36,7 @@ public:
 		TESTER_ADD_TEST(noTest);
 		TESTER_ADD_TEST(simpleBools);
 		TESTER_ADD_TEST(functionCallTest);
+		TESTER_ADD_TEST(functionParametersTest);
 	}
 
 private:
@@ -68,7 +68,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto unit = ctx.query<helios::QueryTopLevelEntities>(module);
 			for (const auto& hout_func: unit->functions) {
-				auto mir_func = ctx.query<mir::LowerToMirFunction>({ hout_func });
+				CRef mir_func = &ctx.query<mir::LowerToMirFunction>({ hout_func })->value();
 				auto lir_func = ctx.query<lir::LowerToLirFunction>({ mir_func });
 				assertTrue(
 					lir_func->validateBlockOrder().isOk(),
@@ -92,15 +92,13 @@ private:
 			ASSERT_EQUAL(foo_lir->local_list.size(), 4);
 
 			for (auto& local: foo_lir->local_list) {
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "a") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 64, true })
 					);
 				}
-				if (local->helios_id.has_value()
-				    and helios::name(local->helios_id.value()) == "b") {
+				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
 						ctx.query<tsh::QueryIntegralType>({ 32, true })
@@ -119,11 +117,11 @@ private:
 
 	void simpleBools() {
 		auto module = getLirOfModule(path("modules/booleans"));
-		ASSERT_EQUAL(1, module.funcs.size());
+		ASSERT_EQUAL(2, module.funcs.size());
 		auto foo_lir = module.lirFunc("foo");
 
 		// note: it might change where those branch operations are placed:
-		// if this happen just see mir-output of tested module for mir block numbers
+		// if this happens, just see lir-output of tested module for lir block numbers
 
 		auto true_lir_value  = foo_lir->block_order.at(0)->terminator.arguments.at(0);
 		auto false_lir_value = foo_lir->block_order.at(3)->terminator.arguments.at(0);
@@ -140,6 +138,57 @@ private:
 			foo_lir->debugPrint(ctx, std::cerr);
 			foo_mir->debugPrint(std::cerr);
 		});
+	}
+
+	void functionParametersTest() {
+		auto module  = getLirOfModule(path("modules/function_with_parameters"));
+		auto foo_lir = module.lirFunc("foo");
+
+		// this is also called by LIR lowering,
+		// but we keep it here as a sanity check:
+		ASSERT_TRUE(foo_lir->validateParameters().isOk());
+
+		bool was_x = false;
+		bool was_y = false;
+		bool was_z = false;
+
+		for (auto& local: foo_lir->local_list) {
+			if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "x") {
+				ASSERT_TRUE(not was_x);
+				ASSERT_EQUAL(local->parameter_index.value(), 0);
+				was_x = true;
+			} else if (local->helios_id.has_value()
+			           and helios::name(local->helios_id.value()) == "y") {
+				ASSERT_TRUE(not was_y);
+				ASSERT_EQUAL(local->parameter_index.value(), 1);
+				was_y = true;
+			} else if (local->helios_id.has_value()
+			           and helios::name(local->helios_id.value()) == "z") {
+				ASSERT_TRUE(not was_z);
+				ASSERT_EQUAL(local->parameter_index.value(), 2);
+				was_z = true;
+			} else {
+				ASSERT_TRUE(local->parameter_index.empty());
+			}
+		}
+
+		ASSERT_TRUE(was_x and was_y and was_z);
+
+		// check if value used in the function body is indeed the parameter we expect:
+		for (auto& block: foo_lir->block_order) {
+			// only parameter of index 2 is ever used:
+
+			auto validate_value = [&](const compiler::lir::LIRValue& value) {
+				if (auto local = std::get_if<compiler::lir::LocalRef>(&value.getVariant())) {
+					if ((*local)->parameter_index.has_value())
+						ASSERT_EQUAL((*local)->parameter_index.value(), 2);
+				}
+			};
+
+			for (auto& instruction: block->instructions)
+				for (auto& arg: instruction.arguments) validate_value(arg);
+			for (auto& arg: block->terminator.arguments) validate_value(arg);
+		}
 	}
 };
 

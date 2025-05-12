@@ -6,15 +6,17 @@
  */
 #pragma once
 
-#include "strongly_typed_int.hpp"
 #include "ints.hpp"
+#include "strongly_typed_int.hpp"
+
+#include <string>
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bits, usize);
 
 STRONG_TYPEDEF_INT_DIMENSIONAL(Bytes, usize);
 
 namespace base {
-	inline constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
+	constexpr Bits bytes2bits(Bytes bytes) { return Bits(usize(bytes) * 8); }
 }
 
 namespace std {
