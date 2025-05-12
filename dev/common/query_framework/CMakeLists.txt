@@ -3,6 +3,7 @@ add_library(QueryFramework
 	src/query_framework/detail/query_graph/dep_graph.cpp
 	src/query_framework/detail/query_data/query_id.cpp
 	src/query_framework/utils/with_context_do.cpp
+	src/query_framework/tools/code_dependency.cpp
 	src/query_framework/context.cpp
 )
 
