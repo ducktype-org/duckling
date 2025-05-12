@@ -29,7 +29,7 @@ namespace nlohmann {
 	template<typename T>
 	struct adl_serializer<base::Optional<T>> {
 		static void to_json(json& j, const base::Optional<T>& opt) {
-			if_opt_some(opt, val) { j = json{ val }; }
+			if_opt_some(opt, val) { j = val; }
 			if_opt_none(opt) { j = json{}; }
 		}
 	};
@@ -37,8 +37,7 @@ namespace nlohmann {
 	template<>
 	struct adl_serializer<compiler::helios::SymID> {
 		static void to_json(json& j, const compiler::helios::SymID symbol) {
-			j = { { "name", std::vector<std::string>{ compiler::helios::name(symbol).str() } },
-				  { "kind", compiler::helios::kind(symbol) } };
+			j = { { "kind", compiler::helios::kind(symbol) } };
 
 			// Handle kind specific serialisation.
 			switch (compiler::helios::kind(symbol)) {

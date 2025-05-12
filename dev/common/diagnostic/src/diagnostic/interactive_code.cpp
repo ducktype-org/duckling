@@ -1,47 +1,120 @@
 #include "interactive_code.hpp"
 
+#include "helios/scope_symbol_id.hpp"
 #include "interactive_logger.hpp"
 #include "printer/stream_printer.hpp"
 #include "pst_parser/access.hpp"
 #include "pst_parser/lang_parser_element.hpp"
 #include "query_framework/query_int.hpp"
 
+#include <helios/queries.hpp>
+#include <helios/query_hout_of_expr.hpp>
+#include <helios/utils/go_to_definition.hpp>
+#include <query_framework/query_entry_point.hpp>
 #include <token_source/source.hpp>
 
 #include "base/optional.hpp"
 #include "base/ref.hpp"
 
+#include <ostream>
+
 using nlohmann::json;
 
-void dia::InteractiveCode::visit_leafs(
-	pst::Access<pst::LangElement> pst, std::vector<json>& out, usize& last
+base::Optional<compiler::helios::SymID> dia::InteractiveCode::get_symbol(
+	pst::Access<pst::LangElement> pst
 ) const {
-	std::cout << pst->elementType() << std::endl;
-	if (pst->viewChildren().empty()) {
-		if (pst->getSourcePosition().getStart() > last + 1) {
-			out.push_back(pst->getSourcePosition()
-			                  .getSource()
-			                  ->getCharRange(last + 1, pst->getSourcePosition().getStart())
-			                  .stdString());
+	auto c = dynamic_cast<const pst::ExprElement*>(&*pst);
+	if (c) {
+		auto m    = MCRef<pst::ExprElement>(c);
+		auto expr = ctx.query<compiler::helios::QueryHoutOfExpr>({ m });
+		if (expr.hasValue()) {
+			auto hid = compiler::helios::querySymIDOfExpr(ctx, expr.value().ref());
+			if (hid.has_value()) return hid.value();
 		}
-		out.push_back({ { "name",
-		                  pst->getSourcePosition()
-		                      .getSource()
-		                      ->getCharRange(
-								  pst->getSourcePosition().getStart(),
-								  pst->getSourcePosition().getEnd() + 1
-							  )
-		                      .stdString() },
-		                { "type", pst->elementType() } });
-		last = pst->getSourcePosition().getEnd();
+	}
+	return {};
+}
+
+void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& out) const {
+	auto source = pst->getSourcePosition().getSource();
+	// If this node is a leaf:
+	if (pst->viewChildren().empty()) {
+		auto hid_opt = get_symbol(pst);
+		if (hid_opt.has_value()) {
+			out.push_back({ { "content",
+			                  pst->getSourcePosition()
+			                      .getSource()
+			                      ->getCharRange(
+									  pst->getSourcePosition().getStart(),
+									  pst->getSourcePosition().getEnd() + 1
+								  )
+			                      .stdString() },
+			                { "type", "entity" },
+			                { "refers_to", hid_opt.value().customPerfectHash() } });
+			// TODO: add it to symbol list.
+		} else {
+			out.push_back({ { "content",
+			                  pst->getSourcePosition()
+			                      .getSource()
+			                      ->getCharRange(
+									  pst->getSourcePosition().getStart(),
+									  pst->getSourcePosition().getEnd() + 1
+								  )
+			                      .stdString() },
+			                { "type", "text" } });
+		}
+
 		return;
 	}
 
-	for (auto c: pst->viewChildren()) visit_leafs(c.unlock(ctx), out, last);
+	auto last_position = pst->getSourcePosition().getStart();
+
+	// Not working because of query cycles.
+	// auto hid_opt = get_symbol(pst);
+	base::Optional<compiler::helios::SymID> hid_opt = {};
+	for (auto c: pst->viewChildren()) {
+		auto child       = c.unlock(ctx);
+		auto child_start = child->getSourcePosition().getStart();
+		auto child_end   = child->getSourcePosition().getEnd();
+		if (child_start > last_position) {
+			if (hid_opt.has_value()) {
+				out.push_back({ { "type", "entity" },
+				                { "content",
+				                  source->getCharRange(last_position, child_start).stdString() },
+				                { "refers_to", hid_opt.value().customPerfectHash() } });
+
+			} else {
+				out.push_back({ { "type", "text" },
+				                { "content",
+				                  source->getCharRange(last_position, child_start).stdString() } });
+			}
+		}
+		json child_json{};
+		child_json["content"] = json::array();
+		child_json["type"]    = "grouping";
+		visit_leafs(c.unlock(ctx), child_json["content"]);
+		last_position = child_end + 1;
+		out.push_back(child_json);
+	}
+	if (pst->getSourcePosition().getEnd() > last_position) {
+		if (hid_opt.has_value()) {
+			out.push_back({ { "type", "entity" },
+			                { "content",
+			                  source->getCharRange(last_position, pst->getSourcePosition().getEnd())
+			                      .stdString() },
+			                { "refers_to", hid_opt.value().customPerfectHash() } });
+
+		} else {
+			out.push_back({ { "type", "text" },
+			                { "content",
+			                  source->getCharRange(last_position, pst->getSourcePosition().getEnd())
+			                      .stdString() } });
+		}
+	}
 }
 
 json dia::InteractiveCode::serialize_code() const {
-	std::vector<json> fragments;
+	json fragments = json::array();
 	// In the future we might want to get the code range based on its content, not just
 	// expand by fixed amound of lines.
 	auto parent = pst;
@@ -62,7 +135,6 @@ json dia::InteractiveCode::serialize_code() const {
 		range_start = parent->getSourcePosition().getStartLineColumn().first;
 		range_end   = parent->getSourcePosition().getEndLineColumn().first;
 	}
-	usize last = parent->getSourcePosition().getStart();
-	visit_leafs(parent, fragments, last);
+	visit_leafs(parent, fragments);
 	return fragments;
 }

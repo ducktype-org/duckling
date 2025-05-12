@@ -1,9 +1,11 @@
 #pragma once
 
-#include <base/box.hpp>
-#include <string_view>
-#include "interactive_message.hpp"
 #include "common.hpp"
+#include "interactive_message.hpp"
+
+#include <base/box.hpp>
+
+#include <string_view>
 
 namespace dia {
 	class InteractiveLogger {

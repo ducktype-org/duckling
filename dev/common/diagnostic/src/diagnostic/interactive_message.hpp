@@ -1,11 +1,14 @@
 #pragma once
 
-#include <json/json.hpp>
-#include <base/box.hpp>
-#include <helios/hout/elements/expr.hpp>
-#include "base/string_id.hpp"
 #include "interactive_content.hpp"
 #include "query_framework/query_int.hpp"
+
+#include <helios/hout/elements/expr.hpp>
+#include <json/json.hpp>
+
+#include "base/string_id.hpp"
+#include <base/box.hpp>
+
 #include <vector>
 
 namespace dia {
@@ -68,7 +71,13 @@ namespace dia {
 				query::Context&               ctx
 			):
 				  InteractiveContent(
-					  ContentType::ERROR, 1'001, std::move(params), position, pst, ctx
+					  ContentType::ERROR,
+					  "lookup",
+					  "symbol_not_found",
+					  std::move(params),
+					  position,
+					  pst,
+					  ctx
 				  ) {}
 		};
 

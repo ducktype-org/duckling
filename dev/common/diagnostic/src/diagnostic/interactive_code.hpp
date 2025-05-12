@@ -15,14 +15,13 @@ namespace dia {
 
 	class InteractiveCode {
 	private:
-		dia::SourcePosition               position;
-		std::set<compiler::helios::SymID> symbols;
-		std::set<tsh::AbstractType>       types;
-		pst::Access<pst::LangElement>     pst;
-		query::Context&                   ctx;
-
-		void visit_leafs(pst::Access<pst::LangElement> pst, std::vector<json>& out, usize& last)
-			const;
+		dia::SourcePosition                     position;
+		std::set<compiler::helios::SymID>       symbols;
+		std::set<tsh::AbstractType>             types;
+		pst::Access<pst::LangElement>           pst;
+		query::Context&                         ctx;
+		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
+		void visit_leafs(pst::Access<pst::LangElement> pst, json& out) const;
 		json serialize_code() const;
 
 	public:
@@ -34,7 +33,9 @@ namespace dia {
 			  ctx(ctx) {}
 
 		friend void to_json(json& j, const InteractiveCode& code) {
-			j = json{ { "location", code.position }, { "text", code.serialize_code() } };
+			j             = json::object();
+			j["location"] = code.position;
+			j["content"]  = code.serialize_code();
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }

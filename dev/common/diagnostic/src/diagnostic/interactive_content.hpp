@@ -12,6 +12,7 @@
 #include "base/optional.hpp"
 #include <base/box.hpp>
 
+#include <string_view>
 #include <utility>
 
 namespace dia {
@@ -48,47 +49,56 @@ namespace dia {
 
 	class InteractiveContent {
 	private:
-		const ContentType  content_type;
-		const uint64_t     message_code;  // TODO: Probably soon to be replaced by string.
-		Box<ContentParams> params;
+		const ContentType                     content_type;
+		const std::string                     family;
+		const std::string                     name;
+		Box<ContentParams>                    params;
 		const base::Optional<InteractiveCode> interactive_code;
 
 	public:
 		InteractiveContent(
 			ContentType                   content_type,
-			uint64_t                      message_code,
+			const std::string&            family,
+			const std::string&            name,
 			Box<ContentParams>            params,
 			dia::SourcePosition           position,
 			pst::Access<pst::LangElement> pst,
 			query::Context&               ctx
 		):
 			  content_type(content_type),
-			  message_code(message_code),
+			  family(family),
+			  name(name),
 			  params(std::move(params)),
 			  interactive_code(InteractiveCode{ position, pst, ctx }) {}
 
 		InteractiveContent(
-			ContentType content_type, uint64_t message_code, Box<ContentParams> params
+			ContentType        content_type,
+			const std::string& family,
+			const std::string& name,
+			Box<ContentParams> params
 		):
 			  content_type(content_type),
-			  message_code(message_code),
+			  family(family),
+			  name(name),
 			  params(std::move(params)),
 			  interactive_code() {}
 
 		InteractiveContent(
 			ContentType        content_type,
-			uint64_t           message_code,
+			const std::string& family,
+			const std::string& name,
 			Box<ContentParams> params,
 			InteractiveCode    interactive_code
 		):
 			  content_type(content_type),
-			  message_code(message_code),
+			  family(family),
+			  name(name),
 			  params(std::move(params)),
 			  interactive_code(std::move(interactive_code)) {}
 
 		json tojson() {
-			return json{ { "type", content_type },
-				         { "message_code", message_code },
+			return json{ { "metadata",
+				           { { "type", content_type }, { "family", family }, { "name", name } } },
 				         { "params", params },
 				         { "code", interactive_code } };
 		}
@@ -115,16 +125,22 @@ namespace dia {
 	class ExampleContent: public InteractiveContent {
 	public:
 		ExampleContent():
-			  InteractiveContent(ContentType::ERROR, 123, base::makeBox<EmptyParams>()) {}
+			  InteractiveContent(
+				  ContentType::ERROR, "example", "examplename", base::makeBox<EmptyParams>()
+			  ) {}
 	};
 
 	class InteractiveNote: public InteractiveContent {
 		InteractiveNote(
-			uint64_t message_code, Box<ContentParams> params, InteractiveCode&& interactive_code
+			const std::string& family,
+			const std::string& name,
+			Box<ContentParams> params,
+			InteractiveCode&&  interactive_code
 		):
 			  InteractiveContent(
 				  ContentType::NOTE,
-				  message_code,
+				  family,
+				  name,
 				  std::move(params),
 				  std::forward<InteractiveCode>(interactive_code)
 			  ) {}

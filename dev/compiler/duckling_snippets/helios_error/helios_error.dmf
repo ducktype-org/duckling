@@ -4,7 +4,7 @@ fun foo() = {
 
     alias x = b;
 
-    return a + x;
+    return a + a + x;
 }
 
 
