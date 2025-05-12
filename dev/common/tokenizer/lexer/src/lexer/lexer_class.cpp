@@ -194,12 +194,12 @@ namespace lexer {
 		};
 	};
 
-	Lexer::Lexer(Ref<tokenizer::TokenFile> file):
+	Lexer::Lexer(Ref<tokenizer::TokenSource> file):
 		  file(file),
 		  logger(file->getLogger()),
 		  char_array(file->getChars()) {
-		if (logger.bad()) {
-			logger.dumpLog(false, std::cerr);
+		if (logger->bad()) {
+			logger->dumpLog(false, std::cerr);
 			throw base::LogicError("Lexer initialized with existing error");
 		}
 	}
@@ -208,8 +208,8 @@ namespace lexer {
 		tokens.clear();
 		
 		codeblock();
-		dia::SourcePosition eof_pos(file, where);
-		dia::SourcePosition bof_pos(file, 0);
+		dia::SourcePosition eof_pos(file->getLocation(), where);
+		dia::SourcePosition bof_pos(file->getLocation(), 0);
 		return { std::move(tokens),
 			     Token::makeSentinelBof(bof_pos),
 			     Token::makeSentinelEof(eof_pos) };
@@ -268,7 +268,7 @@ namespace lexer {
 	}
 
 	void Lexer::parseSingleInto(Tokens& output) {
-		dia::SourcePosition source_start(file, where);
+		dia::SourcePosition source_start = currentPosition();
 		if (isEOF()) {
 			CORE_PANIC("EOF encountered inside parseSingleInto");
 		}
@@ -298,7 +298,7 @@ namespace lexer {
 				decLiteralHandler(output);
 		} else {
 			if (not peek().is(Class::whitespace))
-				logger.log(makeBox<TokenStartError>(source_start));
+				logger->log(makeBox<TokenStartError>(source_start));
 			next();
 		}
 	}
@@ -336,7 +336,7 @@ namespace lexer {
 		skip(2);  // "#{"
 		while (true) {
 			if (isEOF()) {
-				logger.log(makeBox<UnclosedCommentError>(opening));
+				logger->log(makeBox<UnclosedCommentError>(opening));
 				end = where - 1;
 				break;
 			} else if (isBlockCommentEnd()) {
@@ -472,12 +472,12 @@ namespace lexer {
 				dia::SourcePosition eol_pos = currentPosition();
 				auto                error   = makeBox<UnclosedStringEolError>(err_pos);
 				error->addNote(makeBox<UnclosedStringEolError::EolNote>(eol_pos));
-				logger.log(std::move(error));
+				logger->log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
-				logger.log(makeBox<UnclosedStringEofError>(err_pos));
+				logger->log(makeBox<UnclosedStringEofError>(err_pos));
 				closed = false;
 				break;
 			} else {
@@ -512,12 +512,12 @@ namespace lexer {
 				dia::SourcePosition eol_pos = currentPosition();
 				auto                error   = makeBox<UnclosedCharEolError>(err_pos);
 				error->addNote(makeBox<UnclosedCharEolError::EolNote>(eol_pos));
-				logger.log(std::move(error));
+				logger->log(std::move(error));
 				closed = false;
 				break;
 			} else if (isEOF()) {
 				dia::SourcePosition err_pos(source_start, where - 1);
-				logger.log(makeBox<UnclosedCharEofError>(err_pos));
+				logger->log(makeBox<UnclosedCharEofError>(err_pos));
 				closed = false;
 				break;
 			} else {
@@ -529,9 +529,9 @@ namespace lexer {
 		dia::SourcePosition source_position(source_start, end);
 
 		if (count == 0)
-			logger.log(makeBox<EmptyCharError>(source_position));
+			logger->log(makeBox<EmptyCharError>(source_position));
 		else if (count > 1)
-			logger.log(makeBox<MultiCharacterCharError>(source_position));
+			logger->log(makeBox<MultiCharacterCharError>(source_position));
 
 		if (closed) next();
 
@@ -568,17 +568,17 @@ namespace lexer {
 		if (peek().is(group_end))
 			next();  // par close
 		else if (isEOF()) {
-			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
+			logger->log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		} else {
-			logger.log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
+			logger->log(makeBox<UnmatchedBracketError>(source_start, currentPosition(), group_end));
 			end = where - 1;
 		}
 
 
 		dia::SourcePosition source_position(source_start, end);
 
-		dia::SourcePosition sentinel_end_position(file, end);
+		dia::SourcePosition sentinel_end_position(file->getLocation(), end);
 		auto                sentinel_end_view = file->getCharRange(end, end + 1);
 		Token sentinel_end = Token::makeSentinel(sentinel_end_view, sentinel_end_position);
 
@@ -606,5 +606,5 @@ namespace lexer {
 
 	bool Lexer::isCharBegin() const { return tryRawValue('\''); }
 
-	dia::SourcePosition Lexer::currentPosition() const { return { file, where }; }
+	dia::SourcePosition Lexer::currentPosition() const { return { file->getLocation(), where }; }
 }

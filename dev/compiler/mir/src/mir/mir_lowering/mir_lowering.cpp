@@ -725,7 +725,7 @@ namespace compiler::mir {
 	 * @brief Visitor that implements actual logic of lowering expression.
 	 * @note The result of the visitor is stored in out member.
 	 */
-	struct ExprBlockVisitor: public hc::HoutExprVisitor {
+	struct ExprBlockVisitor final: public hc::HoutExprVisitor {
 		BlockBuilderRef continuation;
 
 		base::Optional<ExprLowerRes> out;
@@ -744,9 +744,9 @@ namespace compiler::mir {
 			  function(function),
 			  expr_scope(expr_scope) {}
 
-		void output(ExprLowerRes value) {
+		void output(ExprLowerRes lowering_result) {
 			CORE_ASSERT(this->out.empty(), "Output already set.");
-			this->out.emplace(value);
+			this->out.emplace(lowering_result);
 		}
 
 		void visitLiteralIntExpr(const hc::LiteralIntExpr& expr) override {
@@ -781,9 +781,10 @@ namespace compiler::mir {
 			const auto other_argument_type = locationType(left_res, function.getContext());
 			CORE_ASSERT(
 				argument_type.getType() == other_argument_type.getType(),
-				"Binary operator with different types"
+				"Binary operator with different argument types"
 			);
-			const auto      target_location = function.addTmp(argument_type, expr_scope);
+			const auto      result_type     = expr.expression_type.getSymbolType();
+			const auto      target_location = function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinBinaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -802,8 +803,8 @@ namespace compiler::mir {
 				= lowerExpr(*expr.expr, continuation, function, expr_scope);
 
 			// Fill the hole with the unary operation.
-			const auto      argument_type   = locationType(sub_res, function.getContext());
-			const auto      target_location = function.addTmp(argument_type, expr_scope);
+			const auto      result_type     = expr.expression_type.getSymbolType();
+			const auto      target_location = function.addTmp(result_type, expr_scope);
 			const Operation operation       = builtinUnaryToOperation(expr.operation);
 			target_construction_hole.fill(Instruction{
 				operation,
@@ -814,6 +815,62 @@ namespace compiler::mir {
 			});
 
 			output({ .begin = sub_continuation, .value = target_location });
+		}
+
+		void visitTernaryOperatorExpr(const helios::code::TernaryOperatorExpr& expr) override {
+			// Get info about the target.
+			const auto result_type     = expr.expression_type.getSymbolType();
+			const auto target_location = function.addTmp(result_type, expr_scope);
+
+			// Build "else" block.
+			auto else_block = function.newBlock();
+			else_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto else_construction_hole = else_block->addHole();
+			const auto [else_continuation, else_res]
+				= lowerExpr(*expr.if_true, else_block, function, expr_scope);
+			else_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ target_location },
+				{ else_res },
+				{ flagConstruct(target_location) },
+				expr_scope,
+			});
+
+			// Build "then" block.
+			auto then_block = function.newBlock();
+			then_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, expr_scope }
+			);
+			auto then_construction_hole = then_block->addHole();
+			const auto [then_continuation, then_res]
+				= lowerExpr(*expr.if_false, then_block, function, expr_scope);
+			then_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ target_location },
+				{ then_res },
+				{ flagConstruct(target_location) },
+				expr_scope,
+			});
+
+			// Build branching.
+			auto condition_block = function.newBlock();
+			const auto [condition_continuation, condition_res]
+				= lowerExpr(*expr.condition, condition_block, function, expr_scope);
+			condition_block->setTerminator({
+				Operation::Branch,
+				{},
+				{ condition_res, then_block->getID(), else_block->getID() },
+				{},
+				expr_scope,
+			});
+
+			// Return.
+			output(ExprLowerRes{
+				.begin = condition_continuation,
+				.value = target_location,
+			});
 		}
 
 		void visitParenthesisExpr(const hc::ParenthesisExpr& expr) override {
@@ -881,6 +938,10 @@ namespace compiler::mir {
 				throw base::NotYetImplemented("Exponentiation on variables");
 			case IntegerLt:
 				return Operation::IntegerLt;
+			case BooleanAnd:
+				return Operation::BooleanAnd;
+			case BooleanOr:
+				return Operation::BooleanOr;
 			default:
 				CORE_UNREACHABLE();
 			}
@@ -891,6 +952,8 @@ namespace compiler::mir {
 			switch (builtin) {
 			case IntegerNegation:
 				return Operation::IntegerNeg;
+			case BooleanNot:
+				return Operation::BooleanNot;
 			default:
 				CORE_UNREACHABLE();
 			}

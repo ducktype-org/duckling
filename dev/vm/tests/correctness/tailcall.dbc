@@ -30,7 +30,7 @@ function main {
 
 	output_l64         dummy_ret_val;
 
-	deinit; # dummy ret_val
+	deinit;       # dummy ret_val
     deinit;       # *argv
     deinit;       # argc
 	ret;

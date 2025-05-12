@@ -74,11 +74,11 @@ namespace vm::code::builders {
 		friend TypeContextBuilder;
 		TypeContext() = default;
 
-		Box<TypeMetadata>       metadata = makeBox<TypeMetadata>();
-		std::vector<TypeOfData> types;
+		Box<TypeMetadata>               metadata = makeBox<TypeMetadata>();
+		StableTypeIdNameMap<TypeOfData> types;
 
 	public:
-		[[nodiscard]] const std::vector<TypeOfData>& getTypes() const;
+		[[nodiscard]] const StableTypeIdNameMap<TypeOfData>& getTypes() const;
 
 		[[nodiscard]] const TypeMetadata& getMetadata() const;
 
@@ -155,67 +155,19 @@ namespace vm::code::builders {
 	class FunctionBuilder {
 		std::vector<Instruction> instructions{};
 		Identifier               name;
-
-		STRONG_TYPEDEF_ID(LocalStackEntryID)
-
-		/**
-		 * @brief Represents a local stack variable.
-		 */
-		struct LocalStackEntry {
-			// This is does not equal to variable index.
-			// It is used to check stack state between jumps.
-			LocalStackEntryID unique_id;
-			base::StrID       type_name;
-			usize             local_stack_position;
-			usize             type_size;
-
-			bool operator==(const LocalStackEntry& other) const = default;
-		};
-
-		std::vector<LocalStackEntry> local_stack;
-
-		base::HashMap<base::StrID, i64> local_offset_map;
-
-		usize max_stack_size = 0;
-
-		const TypeContext&   type_context;
-		const GlobalDataMap& globals;
-
-		base::HashMap<base::StrID, base::Optional<LocalStackEntry>> stack_top_at_label;
-		base::HashMap<base::StrID, std::vector<Instruction>>        label_users;
-
-		void saveStackState(opargs::Label at_label);
-
-		void verifyCall(opargs::FunctionName function);
-		void handleCall(opargs::FunctionName function);
-		void handleLabel(instructions::Op_label label);
-		void handleDeinit();
-		void handleRet();
-
-		usize pushStackState(opargs::StackLocalAny name, opargs::Type type);
-
-		void validateLocalArgs(const Instruction& instruction) const;
-
-		void validateExtension(const Instruction& instruction);
-		void validateArgInstantiable(const opargs::Type& arg);
+		const TypeContext&       type_context;
+		const GlobalDataMap&     globals;
 
 	public:
 		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
 
 		/**
-		 * @brief Pushes `init_lany_type` instruction.
-		 */
-		void initType(instructions::Op_init_lany_type init);
-
-		/**
 		 * @brief Adds instruction to the function.
-		 * @note It can throw exceptions.
 		 */
 		void addInstruction(const Instruction& instruction);
 
 		/**
 		 * @brief Builds and adds instruction(s) to the function.
-		 * @note It can throw exceptions.
 		 */
 		void addInstruction(const InstructionBuilder& instruction);
 

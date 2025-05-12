@@ -1,5 +1,6 @@
-#include "file.hpp"
+#include "source.hpp"
 
+#include <diagnostic/location.hpp>
 #include <lexer/classifications.hpp>
 #include <lexer/decode.hpp>
 #include <lexer/lexer_class.hpp>
@@ -25,11 +26,17 @@ namespace tokenizer {
 		return 0;
 	}
 
-	TokenFile::TokenFile(const fs::FilePath& path): path(path) {
+	TokenSource::TokenSource(const fs::FilePath& path):
+		  location(makeBox<dia::FileLocation>(Ref<TokenSource>(this), path)) {
 		content.emplace(path.getContent());
 	}
 
-	void TokenFile::countLines() {
+	TokenSource::TokenSource(dia::SourcePosition parent, const std::string_view contents):
+		  location(makeBox<dia::MacroLocation>(parent, Ref<TokenSource>(this))) {
+		content.emplace(fs::FileContent::fromString(contents));
+	}
+
+	void TokenSource::countLines() {
 		if (log.bad()) return;
 		usize line  = 1;
 		usize start = 0;
@@ -50,21 +57,21 @@ namespace tokenizer {
 		lines.emplace_back(start, decoded->size() - 1);
 	}
 
-	std::pair<usize, usize> TokenFile::getLineColumn(usize source_pos) {
+	std::pair<usize, usize> TokenSource::getLineColumn(usize source_pos) {
 		auto  line_it = --line_begins.lower_bound({ source_pos, -1 });
 		usize line    = line_it->second;
 		usize col     = source_pos - line_it->first + 1;
 		return { line, col };
 	}
 
-	base::RawView TokenFile::getCharRange(usize begin_char, usize end_char) {
+	base::RawView TokenSource::getCharRange(usize begin_char, usize end_char) {
 		//@TODO: add checks
 		base::RawArray begin = content->view().getBegin() + decoded->at(begin_char).index;
 		usize          size  = decoded->at(end_char).index - decoded->at(begin_char).index;
 		return { begin, size };
 	}
 
-	std::vector<std::pair<usize, base::RawView>> TokenFile::viewSplitRange(
+	std::vector<std::pair<usize, base::RawView>> TokenSource::viewSplitRange(
 		usize begin_char, usize end_char
 	) {
 		usize                                        begin_line = getLineColumn(begin_char).first;
@@ -84,29 +91,28 @@ namespace tokenizer {
 		return res;
 	}
 
-	dia::Logger& TokenFile::getLogger() { return log; }
+	Ref<dia::Logger> TokenSource::getLogger() { return &log; }
 
-	void TokenFile::runLexer() {
+	void TokenSource::runLexer() {
 		if (log.bad()) return;
-		lexer::Lexer lexer{ Ref<TokenFile>(this) };
+		lexer::Lexer lexer{ Ref<TokenSource>(this) };
 		token_data.emplace(lexer.tokenize());
 	}
 
-	const fs::FileContent TokenFile::getContent() const {
-		if (content) return content.value();
-		return path.getContent();
-	}
+	const fs::FileContent TokenSource::getContent() const { return content.value(); }
 
-	fs::FilePath TokenFile::getPath() { return path; }
-
-	const lexer::CharArray& TokenFile::getChars() const {
+	const lexer::CharArray& TokenSource::getChars() const {
 		if (!decoded) CORE_PANIC("Tried to access nonexistant Character data.");
 		return decoded.value();
 	}
 
-	const lexer::TokenData& TokenFile::getTokenData() const {
+	const lexer::TokenData& TokenSource::getTokenData() const {
 		// @TODO: Maybe use lexer to create it.
 		if (!token_data) CORE_PANIC("Tried to access nonexistant token data.");
 		return token_data.value();
 	}
+
+	fs::FilePath TokenSource::getPath() const { return location->getSourceFile(); }
+
+	CRef<dia::Location> TokenSource::getLocation() const { return location.ref(); }
 }

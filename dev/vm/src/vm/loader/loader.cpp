@@ -25,9 +25,7 @@
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
-#include <vm/loader/validator/validator.hpp>
 
-#include <algorithm>
 #include <expected>
 #include <unordered_map>
 #include <variant>
@@ -46,7 +44,7 @@ namespace {
 	) {                                                                   \
 		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
 		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = *opcode.position;                            \
+		instr.bytecode_pos = opcode.position;                             \
 		return instr;                                                     \
 	}
 
@@ -58,7 +56,7 @@ namespace {
 		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
 		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
 			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
-			instr.bytecode_pos = *opcode.position;                                             \
+			instr.bytecode_pos = opcode.position;                                              \
 			return instr;                                                                      \
 		}                                                                                      \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
@@ -74,7 +72,7 @@ namespace {
 		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
 			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
 				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
-			instr.bytecode_pos = *opcode.position;                                                     \
+			instr.bytecode_pos = opcode.position;                                                      \
 			return instr;                                                                              \
 		}                                                                                              \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
@@ -97,31 +95,6 @@ namespace {
 
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
-	}
-
-	void insertInstruction(
-		const parser::OpCode&                opcode,
-		vm::code::builders::FunctionBuilder& func_builder,
-		LoaderLogger&                        logger
-	) {
-		auto instr = translateInstruction(opcode);
-		try {
-			func_builder.addInstruction(instr);
-		} catch (vm::code::builders::StackStructureMismatchError& e) {
-			logger.logMap<StackStructureMismatchError>(
-				instr,
-				[&](Box<StackStructureMismatchError>& err) {
-					for (const auto& instruction: e.linked_instructions)
-						logger.addNote<StackStructureMismatchNote>(err, instruction);
-				}
-			);
-		} catch (vm::code::builders::UnknownTypeError& e) {
-			logger.log<UnknownTypeError>(e.TYPE, e.TYPE.type_name);
-		} catch (vm::code::builders::MissingFunctionalTypeError& e) {
-			logger.log<UnknownFunctionError>(instr, e.FUNC.function_name);
-		} catch (vm::code::builders::BuilderError& e) {
-			logger.log<SomeBuilderError>(instr, e.what());
-		}
 	}
 
 	void insertType(
@@ -257,7 +230,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						);
 
 						for (const auto& instr: func->code->opcodes)
-							insertInstruction(*instr, func_builder, log);
+							func_builder.addInstruction(translateInstruction(*instr));
 
 						functions.emplace_back(func_builder.build());
 					}
@@ -265,17 +238,23 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 				if (log.good())
 					return code::CodeCollection{
 						.functions   = functions,
-						.types       = type_context.getTypes(),
-						.global_data = { globals.begin(), globals.end() },
+						.types       = type_context.getTypes() | std::ranges::to<std::vector>(),
+						.global_data = globals | std::ranges::to<std::vector>(),
 					};
-			} catch (code::builders::UnknownSubtypeError& e) {
-				log.log<UnknownSubtypeError>(e.BASE_TYPE, e.MISSING_NAME);
-			} catch (code::builders::MissingFunctionalTypeError& e) {
-				log.log<SomeBuilderError>(e.FUNC, e.what());
-			} catch (code::builders::TypeIsNotFunctionalError& e) {
-				log.log<SomeBuilderError>(e.FUNC, e.what());
-			} catch (code::builders::TypeValidationError& e) {
-				log.log<SomeBuilderError>(e.TYPE, e.what());
+			} catch (vm::code::builders::StackStructureMismatchError& e) {
+				log.logMap<SomeBuilderError>(
+					e.label,
+					[&](Box<SomeBuilderError>& err) {
+						for (const auto& instruction: e.jumps)
+							log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
+					},
+					e.what()
+				);
+			} catch (code::builders::BuilderError& e) {
+				match_optional(e.maybeElement()) {
+					opt_some(elem) { log.log<SomeBuilderError>(*elem, e.what()); }
+					opt_none { log.logSimple(e.what()); }
+				}
 			}
 			return std::unexpected(std::move(log));
 		}
@@ -288,12 +267,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger logger;
 	program.insertCode(code_collection, logger);
-	if (logger.good()) {
-		auto validation_result = validator::verify(program);
-		if (!validation_result.has_value())
-			return std::unexpected(std::move(validation_result).error());
-		return compiler::compile(program);
-	}
+	if (logger.good()) return compiler::compile(program);
 	return std::unexpected(std::move(logger));
 }
 

@@ -6,7 +6,7 @@
 
 #include "context.hpp"
 #include "detail/acd.hpp"
-#include "detail/query_graph/dep_graph.hpp"
+#include "detail/context_access.hpp"
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
@@ -24,12 +24,6 @@
 #include <utility>
 
 namespace query::detail {
-	/**
-	 * @brief Internal helper struct used to create context
-	 */
-	struct ContextMaker final {
-		static auto make(NodeID my_node) { return Context(my_node); }
-	};
 
 	/**
 	 * @brief Internal function implementing the call to a query.
@@ -53,7 +47,7 @@ namespace query::detail {
 			return std::move(v.value().data);
 		} else {
 			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
-			auto context = ContextMaker::make(node_id);
+			auto context = ContextAccess::make(node_id);
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
@@ -64,10 +58,10 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(dep_graph::setExit(node_id));
+			defer(ContextAccess::getGraph()->setExit(node_id));
 
 			// prolog:
-			dep_graph::setEntry(node_id, from);
+			ContextAccess::getGraph()->setEntry(node_id, from);
 
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
