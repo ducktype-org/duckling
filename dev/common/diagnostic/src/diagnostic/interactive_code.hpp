@@ -3,6 +3,7 @@
 #include <json/json.hpp>
 #include <set>
 #include <helios/symbols/symbols.hpp>
+#include "pst_parser/lang_parser_element.hpp"
 #include "source_position.hpp"
 
 namespace dia {
@@ -13,13 +14,21 @@ namespace dia {
 		dia::SourcePosition               position;
 		std::set<compiler::helios::SymID> symbols;
 		std::set<tsh::AbstractType>       types;
+		pst::Access<pst::LangElement>     pst;
+		query::Context&                   ctx;
+
+		json serialize_code() const;
 
 	public:
-		InteractiveCode(dia::SourcePosition position): position(position) {}
+		InteractiveCode(
+			dia::SourcePosition position, pst::Access<pst::LangElement> pst, query::Context& ctx
+		):
+			  position(position),
+			  pst(pst),
+			  ctx(ctx) {}
 
 		friend void to_json(json& j, const InteractiveCode& code) {
-			j = json{ { "location",
-				        code.position } };  // TODO: Get the source code and all of the symbols.
+			j = json{ { "location", code.position }, { "text", code.serialize_code() } };
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }

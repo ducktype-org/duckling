@@ -5,6 +5,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include "base/string_id.hpp"
 #include "interactive_content.hpp"
+#include "query_framework/query_int.hpp"
 #include <vector>
 
 namespace dia {
@@ -60,17 +61,29 @@ namespace dia {
 
 		class Content: public InteractiveContent {
 		public:
-			Content(Box<ContentParams> params, dia::SourcePosition position):
-				  InteractiveContent(ContentType::ERROR, 1'001, std::move(params), position) {}
+			Content(
+				Box<ContentParams>            params,
+				dia::SourcePosition           position,
+				pst::Access<pst::LangElement> pst,
+				query::Context&               ctx
+			):
+				  InteractiveContent(
+					  ContentType::ERROR, 1'001, std::move(params), position, pst, ctx
+				  ) {}
 		};
 
 	public:
 		OperatorNotFound(
-			dia::SourcePosition position, base::StrID op, Box<Expr> lhs, Box<Expr> rhs
+			dia::SourcePosition           position,
+			base::StrID                   op,
+			Box<Expr>                     lhs,
+			Box<Expr>                     rhs,
+			pst::Access<pst::LangElement> pst,
+			query::Context&               ctx
 		):
 			  InteractiveMessage(
 				  base::makeBox<Content>(
-					  base::makeBox<Params>(op, std::move(lhs), std::move(rhs)), position
+					  base::makeBox<Params>(op, std::move(lhs), std::move(rhs)), position, pst, ctx
 				  ),
 				  std::vector<Box<dia::InteractiveNote>>{}
 			  ) {}

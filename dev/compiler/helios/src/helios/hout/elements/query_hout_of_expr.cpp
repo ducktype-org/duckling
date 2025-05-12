@@ -246,7 +246,11 @@ namespace compiler::helios::code {
 						stmt->getSourcePosition(),
 						stmt->getOperator(),
 						std::move(lhs),
-						std::move(rhs)
+						std::move(rhs),
+						stmt.dynamicCast<pst::LangElement>().expect(
+							"Casting to base class should always succeed right?"
+						),
+						ctx
 					);  // failed
 				}
 			}

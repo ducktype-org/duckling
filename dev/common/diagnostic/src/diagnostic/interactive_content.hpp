@@ -51,15 +51,17 @@ namespace dia {
 
 	public:
 		InteractiveContent(
-			ContentType         content_type,
-			uint64_t            message_code,
-			Box<ContentParams>  params,
-			dia::SourcePosition position
+			ContentType                   content_type,
+			uint64_t                      message_code,
+			Box<ContentParams>            params,
+			dia::SourcePosition           position,
+			pst::Access<pst::LangElement> pst,
+			query::Context&               ctx
 		):
 			  content_type(content_type),
 			  message_code(message_code),
 			  params(std::move(params)),
-			  interactive_code(InteractiveCode{ position }) {}
+			  interactive_code(InteractiveCode{ position, pst, ctx }) {}
 
 		InteractiveContent(
 			ContentType content_type, uint64_t message_code, Box<ContentParams> params
@@ -109,12 +111,7 @@ namespace dia {
 	class ExampleContent: public InteractiveContent {
 	public:
 		ExampleContent():
-			  InteractiveContent(
-				  ContentType::ERROR,
-				  123,
-				  base::makeBox<EmptyParams>(),
-				  SourcePosition::fakePosition()
-			  ) {}
+			  InteractiveContent(ContentType::ERROR, 123, base::makeBox<EmptyParams>()) {}
 	};
 
 	class InteractiveNote: public InteractiveContent {
