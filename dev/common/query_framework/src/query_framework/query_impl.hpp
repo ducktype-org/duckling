@@ -4,90 +4,26 @@
  */
 #pragma once
 
-#include <utility>
-#include <type_traits>  // IWYU pragma: export
-#include <base/optional.hpp>
-#include <base/str_utils.hpp>
-#include <base/defer.hpp>
-#include <base/maps.hpp>
-#include <base/stable_hashmap.hpp>
-#include <base/ref.hpp>
-#include <base/exceptions.hpp>
-#include <base/unique_pointer.hpp>
-#include <diagnostic/logger.hpp>
-#include <diagnostic/message.hpp>
-
+#include "context.hpp"
+#include "detail/acd.hpp"
+#include "detail/context_access.hpp"
+#include "detail/query_graph/node_making.hpp"
+#include "detail/utils/logs.hpp"
+#include "query_cache_macros.hpp"  // IWYU pragma: export
 #include "query_int.hpp"
 
-#include "detail/acd.hpp"
-#include "detail/dep_graph.hpp"
-#include "detail/query_id_provider.hpp"  // IWYU pragma: export
-#include "detail/logs.hpp"
-#include "detail/node_making.hpp"
+#include <base/defer.hpp>
+#include <base/exceptions.hpp>
+#include <base/maps.hpp>
+#include <base/optional.hpp>
+#include <base/ref.hpp>
+#include <base/stable_hashmap.hpp>
+#include <base/str_utils.hpp>
 
-#include "query_cache_macros.hpp"  // IWYU pragma: export
+#include <type_traits>  // IWYU pragma: export
+#include <utility>
 
 namespace query::detail {
-	/**
-	 * @brief ContextType is type of a special object
-	 * that query implementation use to perform three key operations:
-	 * 	* call other query
-	 *  * log
-	 *  * report compiler error
-	 *
-	 * @FUTURE: there exist a concept of "custom context" types as
-	 * a way to hack-in the query model. This however will most likely be
-	 * discarded.
-	 */
-	struct ContextType final {
-	private:
-		NodeID my_node;
-		bool   active = true;
-
-		ContextType(NodeID my_node): my_node(my_node) {}
-		friend struct ContextMaker;
-
-	public:
-		// @TODO: Make the context (and thus the logger) be propagated through query calls,
-		// so that all queries run on the same file / in the same compilation thread / whatever
-		// use a single, *non-static* logger object.
-		static dia::Logger logger;
-
-		ContextType(const ContextType&) = delete;
-		ContextType(ContextType&&)      = delete;
-
-		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
-
-		template<typename OthQuery>
-		auto query(typename OthQuery::QKey key) -> decltype(auto) {
-			assertActive();
-			NodeID dep_id = makeNodeID(OthQuery::id, key);
-			dep_graph::addDependency(my_node, dep_id);
-
-			this->active = false;
-			defer(this->active = true);
-
-			return OthQuery::internal_query(key, my_node);
-		}
-
-		/**
-		 * Log message to be shown to the user.
-		 * @param message The dia::Message to be logged.
-		 */
-		void log(Box<dia::Message> message) {
-			assertActive();
-			logger.log(std::move(message));
-		}
-	};
-
-	inline dia::Logger ContextType::logger{};
-
-	/**
-	 * @brief Internal helper struct used to create context
-	 */
-	struct ContextMaker final {
-		static auto make(NodeID my_node) { return ContextType(my_node); }
-	};
 
 	/**
 	 * @brief Internal function implementing the call to a query.
@@ -108,14 +44,10 @@ namespace query::detail {
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
 			);
 
-			// @todo: This might bind & to a const&, via std::move "creating" &&.
-			// It should works for all cases in our codebase,
-			// but I'm not sure if it will work always and if it is
-			// standardized behaviour.
 			return std::move(v.value().data);
 		} else {
 			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
-			auto context = ContextMaker::make(node_id);
+			auto context = ContextAccess::make(node_id);
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
@@ -126,23 +58,18 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(dep_graph::setExit(node_id));
+			defer(ContextAccess::getGraph()->setExit(node_id));
 
 			// prolog:
-			dep_graph::setEntry(node_id, from);
+			ContextAccess::getGraph()->setEntry(node_id, from);
 
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
-			);
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
 			// This is all at the end, with defer above,
-			// to avoid false positive dangling reference warning.
-			// We can't do it move-less without using temporary
-			// lifetime extension, which causes the warning.
+			// to guarantee copy elision with "prvalue semantics".
 			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
 		}
 	}
@@ -166,7 +93,7 @@ namespace query::detail {
 		using PResWithACD = CacheEntry<PResult>;
 		using LoadResult  = base::Optional<QResWithACD>;
 
-		using Context = ::query::detail::ContextType;
+		using Context = ::query::Context;
 
 		/**
 		 * Standard query function signatures:
@@ -193,32 +120,36 @@ namespace query::detail {
  * @param type Name of a struct with query implementation
  * @param pretty_name Pretty name of the Query
  */
-#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-		-> type::QResult {                                                                          \
-		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
-	}                                                                                               \
-	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
-	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
-	static_assert(                                                                                  \
-		not std::is_reference_v<type::QResult>,                                                     \
-		"Query result type should not be a reference (use CRef instead)"                            \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		not std::is_reference_v<type::PResult>,                                                     \
-		"Provider result type should not be a reference (use CRef instead)"                         \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		std::is_same_v<                                                                             \
-			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>,   \
-			type::QResult>,                                                                         \
-		"Bad store result."                                                                         \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		std::is_same_v<                                                                             \
-			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,           \
-			type::PResult>,                                                                         \
-		"Bad provide result."                                                                       \
+#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                           \
+	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)            \
+		-> type::QResult {                                                                        \
+		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                   \
+	}                                                                                             \
+	decltype(type::QueryType::id) type::QueryType::id                                             \
+		= ::query::detail::registerQuery(type::QueryType::getData());                             \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::QResult>,                                                   \
+		"Query result type should not be a reference (use CRef instead)"                          \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::PResult>,                                                   \
+		"Provider result type should not be a reference (use CRef instead)"                       \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_same_v<                                                                           \
+			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>, \
+			type::QResult>,                                                                       \
+		"Bad store result."                                                                       \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_same_v<                                                                           \
+			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,         \
+			type::PResult>,                                                                       \
+		"Bad provide result."                                                                     \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::QKey>,                                                      \
+		"Query key type should not be a reference (use custom struct instead)"                    \
 	);
 
 
@@ -228,4 +159,4 @@ namespace query::detail {
  * @param type Name of the Query
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
-	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
+	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type)

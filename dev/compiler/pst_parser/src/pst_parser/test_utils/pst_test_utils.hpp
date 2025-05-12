@@ -1,7 +1,8 @@
 #pragma once
 
-#include <vector>
 #include "../lang_parser_element.hpp"
+
+#include <vector>
 
 namespace pst {
 
@@ -9,7 +10,9 @@ namespace pst {
 	 * @brief Generates vector that contain Refs to all elements in the subtree of the root element
 	 * (recursively). Order of elements is arbitrary. Should probably be used for tests only.
 	 */
-	std::vector<CRef<pst::LangElement>> viewAllSubTreeElements(CRef<pst::LangElement> root);
+	std::vector<AccessLocked<pst::LangElement>> viewAllSubTreeElements(
+		AccessLocked<pst::LangElement> root
+	);
 
 	/**
 	 * @brief Same as viewAllSubTreeElements,
@@ -17,11 +20,13 @@ namespace pst {
 	 * Should probably be used for tests only. Might be slow, due to dynamic_cast's.
 	 */
 	template<class T>
-	std::vector<CRef<T>> viewAllSubTreeElementsFillter(CRef<pst::LangElement> root) {
-		auto                 all = viewAllSubTreeElements(root);
-		std::vector<CRef<T>> result;
-		for (auto el: all)
-			if (auto casted = dynamic_cast<const T*>(&*el)) result.push_back(casted);
+	std::vector<AccessLocked<T>> viewAllSubTreeElementsFillter(AccessLocked<pst::LangElement> root) {
+		auto                         all = viewAllSubTreeElements(root);
+		std::vector<AccessLocked<T>> result;
+		for (auto el: all) {
+			auto casted = el.dynamicCast<T>().illegalAccess();
+			if (casted) result.push_back(casted.value());
+		}
 		return result;
 	}
 }

@@ -22,15 +22,18 @@ namespace pst::expr {
 	i64 GeneralBinary::skipAtom(const LangParserState& state, i64 base, i64 length) {
 		i64 fwd = base;
 		if (state[fwd].isIdentifier()) { fwd++; }  // Ignores first identifier
-		while (fwd < length && !isGenBinOp(state, fwd)
+		while (fwd < length
+		       && !(
+				   state[fwd].isOperatorSymbol()
+				   && state[fwd].asBinaryOperator().value().isNotReserved()
+			   )
 		       && !(state[fwd].isIdentifier() && !state[fwd - 1].is(NamedOperator::Period))) {
 			fwd++;
 		}
 		return fwd;
 	}
 
-	MBox<ExprElement>
-		GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
+	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
 			return Lower::parse(state, std::get<i64>(expr));
 		} else {
@@ -48,15 +51,15 @@ namespace pst::expr {
 	MBox<ExprElement> GeneralBinary::parse(LangParserState& state, i64 length) {
 		if (!checkLength(state, length)) return nullptr;
 
-		auto pos = dia::SourcePosition(
-			state.getPosition(), state.getPosition((i64) length - 1).getEnd()
-		);
+		auto pos
+			= dia::SourcePosition(state.getPosition(), state.getPosition((i64) length - 1).getEnd());
 
 		i64 fwd            = 0;
 		i64 reduced_length = length;
 		// Here this should include the prefix word operators in the future
-		while (fwd < length && state[fwd].isOperator()) fwd++;
-		while (fwd < reduced_length && state[reduced_length - 1].isOperator()) reduced_length--;
+		while (fwd < length && state[fwd].isPrefixOperator()) fwd++;
+		while (fwd < reduced_length && state[reduced_length - 1].isOperatorSymbol())
+			reduced_length--;
 		if (fwd == reduced_length) state.log(makeBox<OnlyPrefixError>(pos));
 
 		std::vector<i64> operators;
@@ -79,17 +82,19 @@ namespace pst::expr {
 
 		std::stack<Partial> stack;
 		fwd = operators[0];
-		stack.push({ fwd, fwd, getOpPrec(state[fwd].asOperator()) });
+		stack.push({ fwd, fwd, state[fwd].asBinaryOperator().value().getGenBinOpPrecedence() });
 
-		for (i64 i = 1; i < operators.size(); i++) {
+		for (u64 i = 1; i < operators.size(); i++) {
 			fwd                   = operators[i];
-			i64         curr_prec = getOpPrec(state[fwd].asOperator());
+			i64         curr_prec = state[fwd].asBinaryOperator().value().getGenBinOpPrecedence();
 			BuilderExpr lhs       = operators[i] - operators[i - 1] - 1;
 			while (!stack.empty() && stack.top().op_prec <= curr_prec) {
 				Partial partial = std::move(stack.top());
 				stack.pop();
 				lhs = makeBox<OperatorBuilder>(
-					std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(lhs)
+					std::move(partial.lhs),
+					state[partial.op_place].asBinaryOperator().value(),
+					std::move(lhs)
 				);
 			}
 			stack.push({ std::move(lhs), fwd, curr_prec });
@@ -100,7 +105,9 @@ namespace pst::expr {
 			Partial partial = std::move(stack.top());
 			stack.pop();
 			rhs = makeBox<OperatorBuilder>(
-				std::move(partial.lhs), state[partial.op_place].asOperator(), std::move(rhs)
+				std::move(partial.lhs),
+				state[partial.op_place].asBinaryOperator().value(),
+				std::move(rhs)
 			);
 		}
 

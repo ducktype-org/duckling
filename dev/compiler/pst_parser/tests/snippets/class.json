@@ -1,13 +1,13 @@
 {
 	"position": {
 		"sourceStart": 2,
-		"sourceEnd": 295
+		"sourceEnd": 375
 	},
 	"Top Level": [
 		{
 			"position": {
 				"sourceStart": 2,
-				"sourceEnd": 295
+				"sourceEnd": 375
 			},
 			"Class": {
 				"name": {
@@ -73,7 +73,7 @@
 				"body": {
 					"position": {
 						"sourceStart": 45,
-						"sourceEnd": 295
+						"sourceEnd": 375
 					},
 					"Class Block": [
 						{
@@ -275,7 +275,7 @@
 																		"sourceEnd": 114
 																	},
 																	"Call Expression": {
-																		"type": "[]",
+																		"type": "()",
 																		"arguments": {
 																			"position": {
 																				"sourceStart": 113,
@@ -468,7 +468,38 @@
 						{
 							"position": {
 								"sourceStart": 182,
-								"sourceEnd": 293
+								"sourceEnd": 196
+							},
+							"Non Class Statement": {
+								"internal stmt": {
+									"position": {
+										"sourceStart": 182,
+										"sourceEnd": 196
+									},
+									"Using": {
+										"position": {
+											"sourceStart": 188,
+											"sourceEnd": 195
+										},
+										"Dotted Name": {
+											"star": "false",
+											"names": [
+												{
+													"Name": "std"
+												},
+												{
+													"Name": "math"
+												},
+											]
+										}
+									}
+								}
+							}
+						},
+						{
+							"position": {
+								"sourceStart": 200,
+								"sourceEnd": 373
 							},
 							"specifiers": [
 								"public",
@@ -477,32 +508,70 @@
 								"specifier": "public",
 								"code block": {
 									"position": {
-										"sourceStart": 189,
-										"sourceEnd": 293
+										"sourceStart": 207,
+										"sourceEnd": 373
 									},
 									"Class Block": [
 										{
 											"position": {
-												"sourceStart": 193,
+												"sourceStart": 211,
 												"sourceEnd": 235
 											},
 											"specifiers": [
 												"public",
 											],
+											"Non Class Statement": {
+												"internal stmt": {
+													"position": {
+														"sourceStart": 211,
+														"sourceEnd": 235
+													},
+													"Alias": {
+														"name": "sqrt",
+														"points_to": {
+															"position": {
+																"sourceStart": 222,
+																"sourceEnd": 234
+															},
+															"Dotted Name": {
+																"star": "false",
+																"names": [
+																	{
+																		"Name": "std"
+																	},
+																	{
+																		"Name": "math"
+																	},
+																	{
+																		"Name": "sqrt"
+																	},
+																]
+															}
+														}
+													}
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 240,
+												"sourceEnd": 282
+											},
+											"specifiers": [
+												"public",
+											],
 											"Class Constructor": {
-												"name": {
-													"Name": "create"
-												},
+												"name": "create",
 												"params": {
 													"position": {
-														"sourceStart": 203,
-														"sourceEnd": 209
+														"sourceStart": 250,
+														"sourceEnd": 256
 													},
 													"function parameter list": [
 														{
 															"position": {
-																"sourceStart": 204,
-																"sourceEnd": 208
+																"sourceStart": 251,
+																"sourceEnd": 255
 															},
 															"Function Parameter": {
 																"Function Parameter": {
@@ -511,14 +580,14 @@
 																	},
 																	"type": {
 																		"position": {
-																			"sourceStart": 206,
-																			"sourceEnd": 208
+																			"sourceStart": 253,
+																			"sourceEnd": 255
 																		},
 																		"Top Level Expression": {
 																			"expr": {
 																				"position": {
-																					"sourceStart": 206,
-																					"sourceEnd": 208
+																					"sourceStart": 253,
+																					"sourceEnd": 255
 																				},
 																				"Keyword Expression": {
 																					"keyword": "i64"
@@ -533,26 +602,26 @@
 												},
 												"inits": {
 													"position": {
-														"sourceStart": 212,
-														"sourceEnd": 217
+														"sourceStart": 259,
+														"sourceEnd": 264
 													},
 													"initialization list": [
 														{
 															"position": {
-																"sourceStart": 212,
-																"sourceEnd": 217
+																"sourceStart": 259,
+																"sourceEnd": 264
 															},
 															"Top Level Expression": {
 																"expr": {
 																	"position": {
-																		"sourceStart": 212,
-																		"sourceEnd": 217
+																		"sourceStart": 259,
+																		"sourceEnd": 264
 																	},
 																	"Chain Expression": {
 																		"atom": {
 																			"position": {
-																				"sourceStart": 212,
-																				"sourceEnd": 214
+																				"sourceStart": 259,
+																				"sourceEnd": 261
 																			},
 																			"Identifier Expression": {
 																				"name": {
@@ -563,27 +632,27 @@
 																		"chain": [
 																			{
 																				"position": {
-																					"sourceStart": 215,
-																					"sourceEnd": 217
+																					"sourceStart": 262,
+																					"sourceEnd": 264
 																				},
 																				"Call Expression": {
-																					"type": "[]",
+																					"type": "()",
 																					"arguments": {
 																						"position": {
-																							"sourceStart": 216,
-																							"sourceEnd": 216
+																							"sourceStart": 263,
+																							"sourceEnd": 263
 																						},
 																						"call list": [
 																							{
 																								"position": {
-																									"sourceStart": 216,
-																									"sourceEnd": 216
+																									"sourceStart": 263,
+																									"sourceEnd": 263
 																								},
 																								"Top Level Expression": {
 																									"expr": {
 																										"position": {
-																											"sourceStart": 216,
-																											"sourceEnd": 216
+																											"sourceStart": 263,
+																											"sourceEnd": 263
 																										},
 																										"Identifier Expression": {
 																											"name": {
@@ -606,31 +675,31 @@
 												},
 												"body": {
 													"position": {
-														"sourceStart": 221,
-														"sourceEnd": 235
+														"sourceStart": 268,
+														"sourceEnd": 282
 													},
 													"Code Block": [
 														{
 															"position": {
-																"sourceStart": 226,
-																"sourceEnd": 231
+																"sourceStart": 273,
+																"sourceEnd": 278
 															},
 															"Expr Stmt": {
 																"position": {
-																	"sourceStart": 226,
-																	"sourceEnd": 230
+																	"sourceStart": 273,
+																	"sourceEnd": 277
 																},
 																"Top Level Expression": {
 																	"expr": {
 																		"position": {
-																			"sourceStart": 226,
-																			"sourceEnd": 230
+																			"sourceStart": 273,
+																			"sourceEnd": 277
 																		},
 																		"Assignment Expr": {
 																			"assigned variables": {
 																				"position": {
-																					"sourceStart": 226,
-																					"sourceEnd": 226
+																					"sourceStart": 273,
+																					"sourceEnd": 273
 																				},
 																				"Identifier Expression": {
 																					"name": {
@@ -641,8 +710,8 @@
 																			"assignment type": "=",
 																			"assigned value": {
 																				"position": {
-																					"sourceStart": 230,
-																					"sourceEnd": 230
+																					"sourceStart": 277,
+																					"sourceEnd": 277
 																				},
 																				"Identifier Expression": {
 																					"name": {
@@ -661,51 +730,49 @@
 										},
 										{
 											"position": {
-												"sourceStart": 241,
-												"sourceEnd": 268
+												"sourceStart": 288,
+												"sourceEnd": 316
 											},
 											"specifiers": [
 												"public",
 											],
-											"Class Constructor": {
-												"name": {
-													"Name": "abc"
-												},
+											"Copy Constructor": {
+												"name": "copy",
 												"params": {
 													"position": {
-														"sourceStart": 248,
-														"sourceEnd": 249
+														"sourceStart": 296,
+														"sourceEnd": 297
 													},
 													"function parameter list": []
 												},
 												"inits": "<nullptr>",
 												"body": {
 													"position": {
-														"sourceStart": 253,
-														"sourceEnd": 268
+														"sourceStart": 301,
+														"sourceEnd": 316
 													},
 													"Code Block": [
 														{
 															"position": {
-																"sourceStart": 258,
-																"sourceEnd": 264
+																"sourceStart": 306,
+																"sourceEnd": 312
 															},
 															"Expr Stmt": {
 																"position": {
-																	"sourceStart": 258,
-																	"sourceEnd": 263
+																	"sourceStart": 306,
+																	"sourceEnd": 311
 																},
 																"Top Level Expression": {
 																	"expr": {
 																		"position": {
-																			"sourceStart": 258,
-																			"sourceEnd": 263
+																			"sourceStart": 306,
+																			"sourceEnd": 311
 																		},
 																		"Assignment Expr": {
 																			"assigned variables": {
 																				"position": {
-																					"sourceStart": 258,
-																					"sourceEnd": 258
+																					"sourceStart": 306,
+																					"sourceEnd": 306
 																				},
 																				"Identifier Expression": {
 																					"name": {
@@ -716,8 +783,8 @@
 																			"assignment type": "=",
 																			"assigned value": {
 																				"position": {
-																					"sourceStart": 262,
-																					"sourceEnd": 263
+																					"sourceStart": 310,
+																					"sourceEnd": 311
 																				},
 																				"Value Expr": {
 																					"number": "81"
@@ -734,8 +801,79 @@
 										},
 										{
 											"position": {
-												"sourceStart": 273,
-												"sourceEnd": 290
+												"sourceStart": 321,
+												"sourceEnd": 348
+											},
+											"specifiers": [
+												"public",
+											],
+											"Class Constructor": {
+												"name": "abc",
+												"params": {
+													"position": {
+														"sourceStart": 328,
+														"sourceEnd": 329
+													},
+													"function parameter list": []
+												},
+												"inits": "<nullptr>",
+												"body": {
+													"position": {
+														"sourceStart": 333,
+														"sourceEnd": 348
+													},
+													"Code Block": [
+														{
+															"position": {
+																"sourceStart": 338,
+																"sourceEnd": 344
+															},
+															"Expr Stmt": {
+																"position": {
+																	"sourceStart": 338,
+																	"sourceEnd": 343
+																},
+																"Top Level Expression": {
+																	"expr": {
+																		"position": {
+																			"sourceStart": 338,
+																			"sourceEnd": 343
+																		},
+																		"Assignment Expr": {
+																			"assigned variables": {
+																				"position": {
+																					"sourceStart": 338,
+																					"sourceEnd": 338
+																				},
+																				"Identifier Expression": {
+																					"name": {
+																						"Name": "x"
+																					}
+																				}
+																			},
+																			"assignment type": "=",
+																			"assigned value": {
+																				"position": {
+																					"sourceStart": 342,
+																					"sourceEnd": 343
+																				},
+																				"Value Expr": {
+																					"number": "81"
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														},
+													]
+												}
+											}
+										},
+										{
+											"position": {
+												"sourceStart": 353,
+												"sourceEnd": 370
 											},
 											"specifiers": [
 												"public",
@@ -743,8 +881,8 @@
 											"Class Destructor": {
 												"body": {
 													"position": {
-														"sourceStart": 289,
-														"sourceEnd": 290
+														"sourceStart": 369,
+														"sourceEnd": 370
 													},
 													"Code Block": []
 												}

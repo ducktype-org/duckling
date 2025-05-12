@@ -6,26 +6,32 @@
  * @note: The ideas from here might be one day separated into a framework.
  */
 
-#include <filesystem/file.hpp>
-#include <pst_parser/parser.hpp>
-#include <pst_parser/pst.hpp>
-#include <lexer/lexer.hpp>
-#include <base/exceptions.hpp>
-#include <base/int_conv.hpp>
-#include <iostream>
 #include <clap/clap.hpp>
-#include <printer/stream_printer.hpp>
 #include <config/config.hpp>
-#include <query_framework/query_entry_point.hpp>
+#include <driver/driver.hpp>
+#include <filesystem/file.hpp>
+#include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <init/init.hpp>
-#include <driver/driver.hpp>
+#include <lexer/lexer.hpp>
+#include <printer/stream_printer.hpp>
+#include <pst_parser/pst.hpp>
+#include <query_framework/query_entry_point.hpp>
+
+#include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
+
+#include <iostream>
+
+constexpr auto LET_IT_THROW_NAME   = "let-it-throw";
+constexpr auto LET_IT_THROW_OPTION = "--let-it-throw";
 
 namespace {
 	/**
 	 * @brief Whether main should throw compiler exceptions.
+	 * Used by let-it-throw option.
 	 */
-	bool throwing_main = true;
+	constinit bool throwing_main = false;
 }
 
 /**
@@ -126,15 +132,13 @@ clap::Clap getClapForMain() {
 	auto clap = config::standardOptions();
 
 	// custom options of main:
-	clap.add(
-		clap::ParamBuilder::ofFlag()
-			.addLongName("let-it-throw")
-			.addShortDesc("If set, unhandled exceptions will not be caught by main procedure. "
-	                      "Useful for debugging.")
-			.addLongDesc("Note that sometimes exception can happen before logic behind this option "
-	                     "will happen. In that case exception will most likely not be caught.")
-			.build()
-	);
+	clap.add(clap::ParamBuilder::ofFlag()
+	             .addLongName(LET_IT_THROW_NAME)
+	             .addShortDesc("Disables exception handling in main (debug option).")
+	             .addLongDesc("If set, unhandled exceptions will not be caught by main procedure. "
+	                          "It should be used for debugging only in order to preserve "
+	                          "stack-trace. It can prevent stack-unwinding from happening.")
+	             .build());
 
 	return clap;
 }
@@ -149,8 +153,10 @@ clap::ParsingResult configureDuckMainWith(clap::Clap& clap, clap::CLIArgs args) 
 	// standard options:
 	auto res = config::configureWith(clap, args);
 
-	// custom options of main:
-	throwing_main = res.isFlag("let-it-throw");
+	CORE_ASSERT(
+		throwing_main == res.isFlag("let-it-throw"),
+		"Internal error: let-it-throw flag was not parsed correctly."
+	);
 
 	return res;
 }
@@ -177,13 +183,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
-		auto token_file = tokenizer::makeTokenFile(file_to_lex);
+		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
 		bool tokenize_ok = token_file->tokenize();
 
 		if (not tokenize_ok) {
 			std::cout << "Tokenization errors: ";
-			token_file->getLogger().dumpLog(true, std::cout);
+			token_file->getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n";
 			return 1;
 		} else {
@@ -218,9 +224,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		int exit_code = 0;
 
-		if (pst.getLogger().messageCount() != 0) {
+		if (pst.getLogger()->messageCount() != 0) {
 			std::cout << "Errors and messages: \n";
-			pst.getLogger().dumpLog(true, std::cout);
+			pst.getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n\n";
 			exit_code = 1;
 		}
@@ -250,7 +256,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		using namespace compiler;
 		auto root      = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-		std::cout << top_level.debugPrint();
+		std::cout << top_level->debugPrint();
 
 		return exit_code;
 	});
@@ -270,6 +276,21 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dump-llvm-ir")
+		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("compile-to-assembly")
+		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("add-builtin-library")
+		             .addShortDesc("Links builtin library into the final executable.")
+		             .build());
+
 		auto options = configureDuckMainWith(clap, command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
@@ -278,17 +299,71 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		using namespace compiler;
 		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-		// @TODO: change to hout of entire module, when available
-		auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
+		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
-		driver::Driver driver{ driver::Options{
-			.backend_type = driver::BackendType::LLVM,
-			.output_file  = base::StrID(options.getValue<std::string>("output").value().c_str()),
-			.compile_to_assembly = false,
-			.dump_llvm_ir        = false,
-		} };
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
+				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+				.add_builtin_library    = options.isFlag("add-builtin-library"),
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
 
 		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		driver.link();
+
+		return 0;
+	});
+	commands.add("compile_package", "compile given package into a binary.", [&]() {
+		// modify clap as needed:
+		clap.add(clap::ParamBuilder::ofValue(clap::FileParser::make())
+		             .addShortName('m')
+		             .addLongName("module")
+		             .addShortDesc("Path to the top-level source module of the package")
+		             .required()
+		             .build());
+
+		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		             .addShortName('o')
+		             .addLongName("output")
+		             .addShortDesc("Path to the output file")
+		             .required()
+		             .build());
+
+		auto options = configureDuckMainWith(clap, command_args);
+
+		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		// @TODO: error handling
+		using namespace compiler;
+		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
+
+		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+
+		driver::Driver driver{
+			driver::Options{
+				.backend_type = driver::BackendType::LLVM,
+				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.compile_to_assembly    = false,
+				.dump_llvm_ir           = false,
+				.add_builtin_library    = true,
+				.external_objects_files = {},
+				.external_libs          = {},
+			},
+		};
+
+		u64 i = 0;
+		for (const auto& module: modules) {
+			driver.compileHOUTUnit(
+				&module, base::StrID(base::strConcat("main_module", i++).c_str())
+			);
+		}
+
+		driver.link();
 
 		return 0;
 	});
@@ -303,12 +378,6 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
  * @brief Wrapper for logic of main function
  */
 int mainProcedure(int argc, const char* const* argv) {
-	// @TODO:
-	// those inits should be registered automagically via
-	// RUN_BEFORE_MAIN
-	init::registerForInit(lexer::init);
-	init::registerForInit(pst::init);
-
 	init::InitObject _;
 
 	clap::CLIArgs full_args{
@@ -371,22 +440,37 @@ int mainProcedure(int argc, const char* const* argv) {
 }
 
 int main(int argc, const char* argv[]) {
+	// We have to see if --let-it-throw was passed
+	// before anything else happens.
+	// Thats why we do it here, bypassing typical clap usage.
+	// --let-it-throw is still included in clap options.
+	// for showing help.
+
+	throwing_main = false;
+	for (int i = 1; i < argc; i++) {
+		if (std::string_view(argv[i]) == LET_IT_THROW_OPTION) {
+			throwing_main = true;
+			break;
+		}
+	}
+
+	if (throwing_main) return mainProcedure(argc, argv);
+
+	// else we just catch exceptions and print them:
+
 	try {
 		return mainProcedure(argc, argv);
 	} catch (const base::Exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Compiler Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (const std::exception& e) {
-		if (throwing_main) throw;
 		std::cerr << "[ERROR] Unexpected Exception was caught with message:\n";
 		std::cerr << e.what();
 		std::cerr << "\nAborting\n";
 		return 1;
 	} catch (...) {
-		if (throwing_main) throw;
 		std::cerr
 			<< "[ERROR] Unexpected Exception not inheriting from std::exception was caught.\n";
 		return 1;

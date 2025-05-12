@@ -5,8 +5,9 @@
 #pragma once
 
 #include "ints.hpp"
-#include <string_view>
+
 #include <string>
+#include <string_view>
 
 namespace base {
 	using RawArray = const byte*;
@@ -123,6 +124,11 @@ namespace base {
 
 		[[nodiscard]]
 		const RawView view() const {
+			return { begin, size };
+		}
+
+		[[nodiscard]]
+		const ModRawView modView() {
 			return { begin, size };
 		}
 

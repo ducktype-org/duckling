@@ -17,14 +17,27 @@ int main() {
 
 #pragma once
 
-#include <token_file/forward.hpp>
+#include "location_types.hpp"
+
 #include <filesystem/file.hpp>
-#include <memory>
 #include <printer/printer_content.hpp>
-#include <string>
+#include <printer/printer_ostream.hpp>
+#include <token_source/forward.hpp>
+
+#include <base/box.hpp>
 #include <base/ref.hpp>
 
+#include <string>
+
 namespace dia {
+	class Location;
+	class SourcePosition;
+
+	/**
+	 * @brief Get lines surrounding with position colored.
+	 */
+	void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
+
 	/**
 	 * @brief  Type used for storing token position in a source file
 	 *
@@ -32,7 +45,9 @@ namespace dia {
 	 */
 	class SourcePosition final {
 	private:
-		explicit SourcePosition(): source_start(0), source_end(0), source_file() {}
+		explicit SourcePosition();
+
+		friend void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
 
 	public:
 		/**
@@ -41,20 +56,14 @@ namespace dia {
 		 */
 		static SourcePosition fakePosition() { return SourcePosition(); }
 
-		SourcePosition(MRef<tokenizer::TokenFile> source_file, usize source_start);
-		SourcePosition(
-			MRef<tokenizer::TokenFile> source_file, usize source_start, usize source_end
-		);
+		SourcePosition(CRef<Location>, usize source_start);
+		SourcePosition(CRef<Location>, usize source_start, usize source_end);
 		SourcePosition(const SourcePosition& other) = default;
 		SourcePosition(const SourcePosition& other, usize source_end);
 
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
-		/**
-		 * @brief Get lines surrounding with error colored.
-		 */
-		[[nodiscard]]
-		std::vector<printer::PrinterContent> getPrettySourceLines() const;
+		bool operator==(const SourcePosition& other) const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.
@@ -66,8 +75,9 @@ namespace dia {
 		 * @return Formatted message contents.
 		 */
 		[[nodiscard]]
-		std::vector<printer::PrinterContent>
-			genPrinterContents(const printer::PrinterContent& reason) const;
+		std::vector<printer::PrinterContent> genPrinterContents(
+			const printer::PrinterContentsSeq& reason
+		) const;
 
 		/**
 		 * @brief Get formatted message string with a given reason.
@@ -78,6 +88,8 @@ namespace dia {
 		[[nodiscard]]
 		std::string genStr(std::string_view reason) const;
 
+		void printPosition(printer::PrinterOStream&) const;
+
 		[[nodiscard]]
 		std::pair<usize, usize> getStartLineColumn() const;
 		[[nodiscard]]
@@ -87,7 +99,9 @@ namespace dia {
 		[[nodiscard]]
 		usize getEnd() const;
 		[[nodiscard]]
-		MRef<tokenizer::TokenFile> getSource() const;
+		Ref<tokenizer::TokenSource> getSource() const;
+		[[nodiscard]]
+		LocationType getLocationType() const;
 
 		/**
 		 * @brief This checks exactly for position being EOF
@@ -98,8 +112,9 @@ namespace dia {
 		void printToJson(std::ostream&) const;
 
 	private:
-		usize                      source_start;  ///< Start of the range of characters in the file.
-		usize                      source_end;    ///< End of the range of characters in the file.
-		MRef<tokenizer::TokenFile> source_file;   ///< Ref to source file data.
+		usize          source_start;   ///< Start of the range of characters in the file.
+		usize          source_end;     ///< End of the range of characters in the file.
+		LocationType   location_type;  ///< Type of location the position is a part of.
+		CRef<Location> location;       ///< Location of the position
 	};
 }

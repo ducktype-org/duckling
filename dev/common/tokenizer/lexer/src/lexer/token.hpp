@@ -5,18 +5,18 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "char.hpp"
 #include "token_common.hpp"
 
 #include <diagnostic/source_position.hpp>
-#include <base/smart_pointers.hpp>
-#include <base/raw_view.hpp>
-#include <base/string_id.hpp>
 #include <filesystem/file.hpp>
 #include <lang_definitions/key_spec_op.hpp>
+
+#include <base/raw_view.hpp>
+#include <base/string_id.hpp>
+
+#include <string>
+#include <vector>
 
 namespace lexer {
 	using lang_def::Keyword;
@@ -43,6 +43,7 @@ namespace lexer {
 			Identifier,
 			NumLiteral,
 			String,
+			Char,
 			FormattedString,  ///< group
 			BracketGroup,     ///< group storing opening bracket value in group_type
 			Operator,
@@ -75,6 +76,7 @@ namespace lexer {
 		static Token makeKeyword(base::RawView keyword, const dia::SourcePosition&);
 		static Token makeNumber(const base::RawView number, dia::SourcePosition);
 		static Token makeString(base::RawView string, const dia::SourcePosition&);
+		static Token makeChar(base::RawView string, const dia::SourcePosition&);
 		static Token makeFormattedString(Tokens&& tokens, dia::SourcePosition);  ///< Unimplemented
 		static Token
 			makeBracketGroup(BracketType bracket_type, Tokens&& tokens, Token&& sentinel_begin, Token&& sentinel_end, const dia::SourcePosition&);
@@ -134,10 +136,42 @@ namespace lexer {
 		[[nodiscard]]
 		Keyword asKeyword() const;
 
+		/**
+		 * @brief Checks if the token is a proper operator (non-text)
+		 */
 		[[nodiscard]]
-		bool isOperator() const;
+		bool isOperatorSymbol() const;
+		/**
+		 * @brief Checks if the token is a symbol or text operator
+		 */
 		[[nodiscard]]
-		Operator asOperator() const;
+		bool isOperatorSymbolOrText() const;
+		/**
+		 * @brief Checks if the token is a prefix operator(any symbol operator and a limited number
+		 * of keyword text operators)
+		 */
+		[[nodiscard]]
+		bool isPrefixOperator() const;
+		/**
+		 * @brief Converts the internal value to the named operator enum
+		 */
+		[[nodiscard]]
+		NamedOperator asNamedOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a binary operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asBinaryOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a prefix operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asPrefixOperator() const;
+		/**
+		 * @brief Converts the token to an operator if it's a suffix operator
+		 */
+		[[nodiscard]]
+		base::Optional<Operator> asSuffixOperator() const;
 
 		[[nodiscard]]
 		bool isIdentifier() const;
@@ -147,6 +181,8 @@ namespace lexer {
 		bool isComment() const;
 		[[nodiscard]]
 		bool isString() const;
+		[[nodiscard]]
+		bool isChar() const;
 
 		[[nodiscard]] bool is(Type) const;
 		[[nodiscard]] bool is(Special) const;

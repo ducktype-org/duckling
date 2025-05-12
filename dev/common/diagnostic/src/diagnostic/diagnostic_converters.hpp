@@ -2,6 +2,8 @@
 
 #include "message.hpp"
 
+#include <ranges>
+
 namespace dia {
 	class DiagnosticToUserConverter {
 	public:
@@ -15,8 +17,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq
-			toPrinterContents(CRef<Message> message_ptr, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Message> message_ptr, bool detailed
+		);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence ready to be printed for
@@ -29,8 +32,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq
-			toPrinterContents(CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
+		);
 
 		template<std::ranges::input_range R>
 		requires std::same_as<CRef<Message>, std::ranges::range_value_t<R>> [[nodiscard]]
@@ -60,8 +64,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq
-			toPrinterContents(CRef<Message> message_ptr, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Message> message_ptr, bool detailed
+		);
 
 		/**
 		 * @brief Convert a Note to a printer::PrinterContent sequence representing an
@@ -75,8 +80,9 @@ namespace dia {
 		 * @return A printer::PrinterContentsSeq ready to be printed for the user.
 		 */
 		[[nodiscard]]
-		static printer::PrinterContentsSeq
-			toPrinterContents(CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed);
+		static printer::PrinterContentsSeq toPrinterContents(
+			CRef<Note> note_ptr, CRef<Message> parent_message, bool detailed
+		);
 
 		template<std::ranges::input_range R>
 		requires std::same_as<CRef<Message>, std::ranges::range_value_t<R>> [[nodiscard]]

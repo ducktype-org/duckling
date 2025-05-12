@@ -5,20 +5,18 @@
 
 #pragma once
 
+#include "abstract_type.hpp"
+#include "expression_type.hpp"
 #include "kind.hpp"
-#include "type_desc.hpp"
-#include "type_info.hpp"
-#include "types.hpp"
-#include "type_interface.hpp"
-
 #include "queries.hpp"
+#include "symbol_type.hpp"
+#include "type_interface.hpp"
+#include "types.hpp"
 
 /**
  * @brief The namespace of all definitions of the Higher Type System.
  * Short for "Type System: High(er)".
  */
 namespace tsh {
-	void init();  // if needed
-
 	void reset();
 }

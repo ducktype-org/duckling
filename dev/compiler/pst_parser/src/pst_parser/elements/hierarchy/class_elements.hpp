@@ -3,6 +3,8 @@
 #include "declarations.hpp"
 #include "not_statements.hpp"
 
+#include <base/variant.hpp>
+
 namespace pst {
 #define CLASS_STMT_CHILD_CONSTRUCTOR(class_name, kind)                        \
 	class_name(const dia::SourcePosition& position, const ClassContext& ctx): \
@@ -19,7 +21,7 @@ namespace pst {
 		  ClassSpecial(StmtKind::class_name, position, ctx) {}
 
 #define CLASS_STMT_PARSE(class_name) \
-	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx);
+	static MBox<class_name> parse(LangParserState& state, const ClassContext& ctx)
 
 	/**
 	 * @brief Access specifier block inside of a class.
@@ -33,8 +35,8 @@ namespace pst {
 			lang_def::Keyword::Protected,
 		};
 
-		lang_def::Keyword specifier = lang_def::Keyword::NotAKeyword;
-		MBox<ClassBlock>  block;
+		lang_def::Keyword          specifier = lang_def::Keyword::NotAKeyword;
+		AccessInternal<ClassBlock> block;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(AccessBlock, ElementKind::AccessBlock);
@@ -54,8 +56,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ClassBlock> getBlock() const {
-			return block.ref();
+		AccessLocked<ClassBlock> getBlock() const {
+			return block.give();
 		}
 
 		[[nodiscard]]
@@ -72,7 +74,9 @@ namespace pst {
 	 */
 	class ClassSpecial: public ClassStmt {
 	protected:
-		tpc::Identifier kind;  ///< What is after the `.`
+		std::variant<tpc::Identifier, Keyword>
+			kind;  ///< What is after the `.`, It may be a keyword in some cases(for now it's only
+		           ///< the move constructor)
 
 	public:
 		CLASS_STMT_PASS_CONSTRUCTOR(ClassSpecial);
@@ -85,7 +89,14 @@ namespace pst {
 
 		[[nodiscard]]
 		base::StrID getName() const {
-			return kind.value;
+			using namespace tpc;
+			base::StrID res;
+			VARIANT_VISIT(
+				kind,
+				VISIT_CASE(Identifier, ident, res = base::StrID(ident))
+					VISIT_CASE(Keyword, key, res = keywordToStr(key))
+			);
+			return res;
 		}
 
 		[[nodiscard]]
@@ -103,9 +114,9 @@ namespace pst {
 	 * @brief Class constructor element.
 	 */
 	class Constructor final: public ClassSpecial {
-		MBox<ParamList> params = nullptr;
-		MBox<InitList>  inits  = nullptr;
-		MBox<CodeBlock> body   = nullptr;
+		AccessInternal<ParamList> params;
+		AccessInternal<InitList>  inits;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Constructor);
@@ -128,10 +139,38 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Class constructor element.
+	 */
+	class CopyConstructor final: public ClassSpecial {
+		AccessInternal<ParamList> params;
+		AccessInternal<InitList>  inits;
+		AccessInternal<CodeBlock> body;
+
+	public:
+		CLASS_STMT_SPEC_CONSTRUCTOR(CopyConstructor);
+		CLASS_STMT_PARSE(CopyConstructor);
+
+		~CopyConstructor() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Copy Constructor";
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const override {
+			return true;
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+
+	/**
 	 * @brief Class destructor element.
 	 */
 	class Destructor final: public ClassSpecial {
-		MBox<CodeBlock> body = nullptr;
+		AccessInternal<CodeBlock> body;
 
 	public:
 		CLASS_STMT_SPEC_CONSTRUCTOR(Destructor);
@@ -152,10 +191,10 @@ namespace pst {
 	 * @brief Class method element.
 	 */
 	class Method final: public ClassStmt {
-		tpc::Identifier                       name;
-		MBox<ParamList>                       params = nullptr;
-		base::Optional<MBox<CommaExprHolder>> ret;
-		MBox<CodeBlock>                       body = nullptr;
+		tpc::Identifier                                 name;
+		AccessInternal<ParamList>                       params;
+		base::Optional<AccessInternal<CommaExprHolder>> ret;
+		AccessInternal<CodeBlock>                       body;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Method, ElementKind::ClassMethod);
@@ -191,10 +230,10 @@ namespace pst {
 	 * @brief Class field element.
 	 */
 	class Field final: public ClassStmt {
-		bool                                  is_mutable = true;
-		tpc::Identifier                       name;
-		MBox<CommaExprHolder>                 type;
-		base::Optional<MBox<CommaExprHolder>> init;
+		bool                                            is_mutable = true;
+		tpc::Identifier                                 name;
+		AccessInternal<CommaExprHolder>                 type;
+		base::Optional<AccessInternal<CommaExprHolder>> init;
 
 	public:
 		CLASS_STMT_CHILD_CONSTRUCTOR(Field, ElementKind::ClassField);
@@ -214,8 +253,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getType() const {
-			return type.ref();
+		AccessLocked<ExprHolder> getType() const {
+			return type.give();
 		}
 
 		[[nodiscard]]
@@ -226,6 +265,34 @@ namespace pst {
 		[[nodiscard]]
 		bool trailingSemicolon() override {
 			return true;
+		}
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+
+	/**
+	 * @brief Allows for limited non-class statements to be in a class.
+	 *
+	 * Currently allows: using, alias
+	 */
+	class NonClassStmt: public ClassStmt {
+		AccessInternal<Stmt> inner_stmt;
+
+	public:
+		CLASS_STMT_CHILD_CONSTRUCTOR(NonClassStmt, ElementKind::NonClassStmt);
+		CLASS_STMT_PARSE(NonClassStmt);
+
+		~NonClassStmt() override = default;
+		void dprint(std::ostream& out) const final;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Non Class Statement";
+		}
+
+		[[nodiscard]]
+		bool trailingSemicolon() override {
+			return false;
 		}
 
 		void acceptVisitor(PstVisitor& visitor) const override;

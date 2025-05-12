@@ -1,14 +1,14 @@
 #pragma once
 
-#include <type_traits>
+#include "add_to_hash.hpp"
+#include "hashing_algorithms.hpp"
+#include "type_code.hpp"
+#include "type_hash_code.hpp"
+#include "type_unique_code.hpp"
 
 #include <base/type_traits.hpp>
 
-#include "hashing_algorithms.hpp"
-#include "add_to_hash.hpp"
-#include "type_hash_code.hpp"
-#include "type_unique_code.hpp"
-#include "type_code.hpp"
+#include <type_traits>
 
 namespace hashing {
 
@@ -66,10 +66,7 @@ namespace hashing {
 		 * Adds to hash either a TYPE_UNIQUE_CODE or a TYPE_HASH_CODE
 		 * depending on the value of IS_UNIQUE constant in the provided TypeC
 		 */
-		template<
-			base::IsInstantiationOfTypeValue<TypeCode> TypeC,
-			typename HashAlgorithm,
-			typename T>
+		template<base::IsInstantiationOfTypeValue<TypeCode> TypeC, typename HashAlgorithm, typename T>
 		constexpr void addTypeCode(HashAlgorithm& h) noexcept {
 			if (TypeC::IS_UNIQUE)
 				addToHash(h, TYPE_UNIQUE_CODE<T, typename TypeC::value_type>);

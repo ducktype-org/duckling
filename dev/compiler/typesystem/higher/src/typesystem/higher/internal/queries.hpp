@@ -1,22 +1,22 @@
 #pragma once
 
-#include <query_framework/query_int.hpp>
-
 #include "../type_interface.hpp"
 
+#include <query_framework/query_int.hpp>
+
 namespace tsh::internal {
-	class ClassInfoImpl;
+	class ClassAbstractTypeImpl;
 
 	/**
 	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
 	 */
-	struct WrappedClassInfoImplPtr {
-		const tsh::internal::ClassInfoImpl* value;
-		WrappedClassInfoImplPtr() = delete;
+	struct WrappedClassAbstractTypeImplPtr {
+		const ClassAbstractTypeImpl* value;
+		WrappedClassAbstractTypeImplPtr() = delete;
 
-		WrappedClassInfoImplPtr(const tsh::internal::ClassInfoImpl* value): value(value) {}
+		WrappedClassAbstractTypeImplPtr(const ClassAbstractTypeImpl* value): value(value) {}
 
-		auto operator<=>(const WrappedClassInfoImplPtr& other) const = default;
+		auto operator<=>(const WrappedClassAbstractTypeImplPtr& other) const = default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
@@ -30,5 +30,5 @@ namespace tsh::internal {
 	 * @note This query is made for the purpose of caching. Analogous queries for most other
 	 * types do not exist, because getting their interfaces is trivial.
 	 */
-	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassInfoImplPtr, CRef<TypeInterface>)
+	DECLARE_QUERY(QueryInterfaceOfClass, WrappedClassAbstractTypeImplPtr, CRef<TypeInterface>)
 }

@@ -41,12 +41,13 @@
 
 #pragma once
 
+#include "diagnostic_converters.hpp"
+#include "message.hpp"
+
 #include <diagnostic/source_position.hpp>
 #include <printer/stream_printer.hpp>
 
 #include <base/box.hpp>
-#include "message.hpp"
-#include "diagnostic_converters.hpp"
 
 namespace dia {
 	/**
@@ -80,10 +81,11 @@ namespace dia {
 		 * @param detailed Whether to dump detailed logs if immediately dumping.
 		 * @param immediately_dump Whether to immediately dump the log to std::cerr.
 		 */
-		void
-			log(Box<Message> message_ptr,
-		        bool         detailed         = true,
-		        bool         immediately_dump = Logger::immediately_dump);
+		void log(
+			Box<Message> message_ptr,
+			bool         detailed         = true,
+			bool         immediately_dump = Logger::immediately_dump
+		);
 
 		/**
 		 * @brief Print all logged messages to a stream.

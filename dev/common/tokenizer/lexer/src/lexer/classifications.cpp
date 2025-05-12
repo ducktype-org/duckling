@@ -1,13 +1,13 @@
 #include "classifications.hpp"
 
+#include <init/init.hpp>
+#include <unicode/errorcode.h>
+#include <unicode/uclean.h>
+#include <unicode/ustream.h>
+#include <unicode/utypes.h>
+
 #include <base/exceptions.hpp>
 #include <base/init_guard.hpp>
-#include <init/init.hpp>
-
-#include <unicode/utypes.h>
-#include <unicode/errorcode.h>
-#include <unicode/ustream.h>
-#include <unicode/uclean.h>
 
 #include <iostream>
 
@@ -193,6 +193,11 @@ namespace lexer {
 		sanityChecks();
 		SIMPLE_INIT_GUARD_END
 	}
+
+	// This call we keep in cpp files,
+	// since it strictly realted to Classifications class
+	// which is implemented here.
+	RUN_BEFORE_MAIN(init::registerForInit(Classifications::init));
 
 	/**
 	 * A wrapper around u_cleanup macro

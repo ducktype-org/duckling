@@ -1,30 +1,27 @@
 #include "mir_lifetimes.hpp"
+
 #include "../mir_structure/mir_structure.hpp"
 
 namespace compiler::mir {
 
 	/**
 	 * @brief Lowest common ancestor of @p a and @p b
-	 *
-	 * @param a
-	 * @param b
-	 * @return helios::ScopeID
 	 */
-	helios::ScopeID lca(helios::ScopeID a, helios::ScopeID b) {
-		auto depth_a = helios::scopeDepth(a);
-		auto depth_b = helios::scopeDepth(b);
+	ScopeRef lca(ScopeRef a, ScopeRef b) {
+		auto depth_a = a->depth;
+		auto depth_b = b->depth;
 
 		while (depth_a > depth_b) {
-			a = helios::parent(a).value();
+			a = a->parent.toOpt().value();
 			depth_a--;
 		}
 		while (depth_b > depth_a) {
-			b = helios::parent(b).value();
+			b = b->parent.toOpt().value();
 			depth_b--;
 		}
 		while (a != b) {
-			a = helios::parent(a).value();
-			b = helios::parent(b).value();
+			a = a->parent.toOpt().value();
+			b = b->parent.toOpt().value();
 		}
 
 		return a;
@@ -41,15 +38,15 @@ namespace compiler::mir {
 	 *
 	 * @param begin
 	 * @param end
-	 * @return std::vector<helios::ScopeID>
+	 * @return std::vector<ScopeRef>
 	 */
-	std::vector<helios::ScopeID> getEndingScopes(helios::ScopeID begin, helios::ScopeID end) {
-		std::vector<helios::ScopeID> result;
+	std::vector<ScopeRef> getEndingScopes(ScopeRef begin, ScopeRef end) {
+		std::vector<ScopeRef> result;
 
 		auto ancestor = lca(begin, end);
 		while (begin != ancestor) {
 			result.push_back(begin);
-			begin = helios::parent(begin).value();
+			begin = begin->parent.toOpt().value();
 		}
 
 		return result;
@@ -59,35 +56,38 @@ namespace compiler::mir {
 		// Idea of implementation: for each block we iterate over instructions
 		// and add destructors after each instruction (often 0 of them),
 		// based on scopes that ends there.
-
 		// context is unused, but left since it might be useful in the future.
-
 		// preserving block order is important, because of how MIR BlockIDs works
-		std::vector<Block> new_blocks;
 
-		std::map<helios::ScopeID, std::vector<LocalRef>> locals_by_scope;
+		std::map<ScopeRef, std::vector<LocalRef>> locals_by_scope;
 		for (auto& local: function.local_list)
-			locals_by_scope[local->lifetime_scope].emplace_back(local.ref());
+			if (local->scope.value() != function.no_lifetime_scope)
+				locals_by_scope[local->scope.value()].emplace_back(local.ref());
 
 		// No lifetime analysis here, since it is quite complex.
 		// See doc-comment of this function for details.
 
-		for (auto& block: function.blocks) {
+		std::vector<std::vector<Instruction>> new_blocks_instructions;
+		for (auto& block_id: function.block_order) {
 			// each block is considered independently
+			auto& block = function.blocks[block_id];
 
 			std::vector<Instruction> new_instructions;
 			new_instructions.reserve(block.instructions.size());
 
 			// lambdas used just to not duplicate code:
-			auto add_destructor = [&](helios::ScopeID instr_scope, LocalRef local) {
+			auto add_destructor = [&](ScopeRef instr_scope, LocalRef local) {
 				new_instructions.push_back(Instruction{
 					Operation::DestructIf,
 					{},
 					{ local },
-					{ OperationFlag{ OperationFlag::Flag::Destruct, local } },
-					instr_scope });
+					{
+						OperationFlag{ .flag = OperationFlag::Flag::Destruct, .local = local },
+					},
+					instr_scope,
+				});
 			};
-			auto add_destructors = [&](const auto& ending_scopes, helios::ScopeID instr_scope) {
+			auto add_destructors = [&](const auto& ending_scopes, ScopeRef instr_scope) {
 				for (auto scope: ending_scopes) {
 					auto& locals = locals_by_scope[scope];
 					for (auto& local: locals) add_destructor(instr_scope, local);
@@ -114,10 +114,11 @@ namespace compiler::mir {
 			auto  successors = getTerminatorSuccessors(terminator);
 			if (successors.empty()) {
 				// the function ends
-				auto ending_scopes = getEndingScopes(terminator.scope, function.top_lifetime_scope);
+				auto ending_scopes
+					= getEndingScopes(terminator.scope, function.lifetime_scope_tree.root);
 				add_destructors(ending_scopes, terminator.scope);
 			} else {
-				base::Optional<std::vector<helios::ScopeID>> ending_scopes;
+				base::Optional<std::vector<ScopeRef>> ending_scopes;
 
 				// we have to validate here that each path has the same ending scopes
 				// @todo there are two possible futures:
@@ -128,9 +129,8 @@ namespace compiler::mir {
 				// implementation. This hole for is just for this validation. Maybe we should have
 				// some conditional compilation here based on debug/release modes
 				for (auto succ: successors) {
-					auto succ_ending_scopes = getEndingScopes(
-						terminator.scope, function.blocks.at(u64(succ)).beginScope()
-					);
+					auto succ_ending_scopes
+						= getEndingScopes(terminator.scope, function.blocks[succ].beginScope());
 
 					if (ending_scopes.has_value()) {
 						// we have to validate that all paths have the same ending scopes
@@ -144,11 +144,14 @@ namespace compiler::mir {
 				add_destructors(ending_scopes.value(), terminator.scope);
 			}
 
-			new_blocks.push_back({ block.id, std::move(new_instructions), block.terminator });
+			new_blocks_instructions.push_back(std::move(new_instructions));
 		}
 
+		for (usize i = 0; i < function.block_order.size(); i++) {
+			auto block_id                          = function.block_order[i];
+			function.blocks[block_id].instructions = std::move(new_blocks_instructions[i]);
+		}
 
-		function.blocks = std::move(new_blocks);
 		return function;
 	}
 }

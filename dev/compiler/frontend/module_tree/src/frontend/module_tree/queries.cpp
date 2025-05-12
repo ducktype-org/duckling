@@ -1,9 +1,10 @@
-#include <query_framework/query_impl.hpp>
-#include <base/string_id.hpp>
 #include "queries.hpp"
 
-// @TODO: decide what we do with it
-// NOLINTBEGIN(performance-unnecessary-value-param)
+#include "module_tree.hpp"
+
+#include <query_framework/query_impl.hpp>
+
+#include <base/string_id.hpp>
 
 namespace compiler::frontend {
 
@@ -13,13 +14,13 @@ namespace compiler::frontend {
 	struct IMPLEMENT_QUERY(QueryModuleTree, compiler::frontend::ModuleID) {
 		inline static base::HashMap<QKey, query::CacheEntry<QResult>> cache{};
 
-		static auto provide(Context&, QKey key) -> PResult {
+		static auto provide(Context&, const QKey& key) -> PResult {
 			std::shared_ptr<ModuleTree> module_tree = ModuleTree::create(key);
 
 			return module_tree->getID();
 		}
 
-		static auto load(QKey key) -> LoadResult {
+		static auto load(const QKey& key) -> LoadResult {
 			if (cache.contains(key))
 				return cache.at(key);
 			else
@@ -27,7 +28,7 @@ namespace compiler::frontend {
 		}
 
 		static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-			cache.put(key, { res, acd });
+			cache.put(key, { .data = res, .acd = acd });
 			return res;
 		}
 	};
@@ -80,5 +81,3 @@ namespace compiler::frontend {
 	}
 
 }
-
-// NOLINTEND(performance-unnecessary-value-param)

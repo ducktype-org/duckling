@@ -1,13 +1,14 @@
 #pragma once
 
-#include "expr.hpp"
 #include "../../scope_symbol_id.hpp"
+#include "expr.hpp"
+
+#include <typesystem/higher/symbol_type.hpp>
+
+#include <base/box.hpp>
+#include <base/ints.hpp>
 
 #include <vector>
-
-#include <base/ints.hpp>
-#include <base/box.hpp>
-#include <typesystem/higher/type_desc.hpp>
 
 namespace compiler::helios::code {
 	class HoutStmtVisitor;
@@ -16,9 +17,7 @@ namespace compiler::helios::code {
 	 * @brief Base class for all HOUT statements
 	 */
 	struct Stmt {
-		ScopeID lifetime_scope;
-
-		Stmt(ScopeID lifetime_scope): lifetime_scope(lifetime_scope) {}
+		Stmt() = default;
 
 		virtual ~Stmt()                                                    = default;
 		virtual void debugPrint(std::ostream& out, usize indent = 0) const = 0;
@@ -27,11 +26,9 @@ namespace compiler::helios::code {
 	};
 
 	/**
-	 * @brief A block of HOUT statements
+	 * @brief A block (i.e. list) of consecutive HOUT statements
 	 */
 	struct CodeBlock final {
-		ScopeID lifetime_scope;
-		// @TODO: Make sure that this template instantiation with incomplete type Stmt is not UB.
 		std::vector<Box<Stmt>> statements;
 	};
 
@@ -40,7 +37,7 @@ namespace compiler::helios::code {
 	 */
 	struct Parameter final {
 		base::StrID               name;
-		tsh::ComponentType        type;
+		tsh::SymbolType<>         type;
 		base::Optional<Box<Expr>> initial_value;
 		SymID                     helios_symbol;
 	};
@@ -56,18 +53,16 @@ namespace compiler::helios::code {
 		// @TODO: decide where we handle non-initial value (pre hout/post hout):
 		// currently PST always have it.
 		base::Optional<Box<Expr>> initial_value;
-		tsh::ComponentType        type;
+		tsh::SymbolType<>         type;
 
 		// @TODO decide if this is needed:
 		SymID helios_symbol;
 
 		VariableStmt(
-			const ScopeID             scope,
 			base::Optional<Box<Expr>> initial_value,
-			tsh::ComponentType        type,
+			tsh::SymbolType<>         type,
 			const SymID               helios_symbol
 		):
-			  Stmt(scope),
 			  initial_value(std::move(initial_value)),
 			  type(type),
 			  helios_symbol(helios_symbol) {}
@@ -84,8 +79,7 @@ namespace compiler::helios::code {
 		Box<Expr> new_value;
 		SymID     helios_symbol;
 
-		AssignmentStmt(const ScopeID scope, Box<Expr> new_value, const SymID helios_symbol):
-			  Stmt(scope),
+		AssignmentStmt(Box<Expr> new_value, const SymID helios_symbol):
 			  new_value(std::move(new_value)),
 			  helios_symbol(helios_symbol) {}
 
@@ -99,7 +93,7 @@ namespace compiler::helios::code {
 	struct ReturnStmt final: public Stmt {
 		Box<Expr> value;
 
-		ReturnStmt(ScopeID scope, Box<Expr> value): Stmt(scope), value(std::move(value)) {}
+		ReturnStmt(Box<Expr> value): value(std::move(value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -109,7 +103,7 @@ namespace compiler::helios::code {
 	 * @brief Represents `return;` in HOUT
 	 */
 	struct VoidReturnStmt final: public Stmt {
-		VoidReturnStmt(ScopeID scope): Stmt(scope) {}
+		VoidReturnStmt() = default;
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -121,7 +115,7 @@ namespace compiler::helios::code {
 	struct ExprStmt final: public Stmt {
 		Box<Expr> expr;
 
-		ExprStmt(ScopeID scope, Box<Expr> expr): Stmt(scope), expr(std::move(expr)) {}
+		ExprStmt(Box<Expr> expr): expr(std::move(expr)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -136,8 +130,7 @@ namespace compiler::helios::code {
 
 		// @TODO: optional else body
 
-		IfStmt(ScopeID scope, Box<Expr> condition, CodeBlock body):
-			  Stmt(scope),
+		IfStmt(Box<Expr> condition, CodeBlock body):
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 

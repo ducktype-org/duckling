@@ -1,9 +1,17 @@
 #include "helios_test_utils.hpp"
 
+#include <frontend/module_tree/queries.hpp>
+#include <helios/query_hout_of_expr.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/pst_visitor.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
-#include <pst_parser/pst_visitor.hpp>
-#include <helios/hout/elements/query_hout_of_expr.hpp>
+
 #include <base/anycast.hpp>
 
 namespace compiler::helios::test_utils {
@@ -43,11 +51,15 @@ namespace compiler::helios::test_utils {
 		return query::entryPoint<QueryConstValueOf>(getChain(chain, scope).back()).valueOrThrow();
 	}
 
-	tsh::TypeInfo getTypeOf(const std::string_view chain, ScopeID scope) {
+	tsh::SymbolType<> getSymbolTypeOf(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeOfSymbol>(getChain(chain, scope).back())->valueOrThrow();
 	}
 
-	tsh::TypeInfo getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
+	tsh::AbstractType getTypeOf(const std::string_view chain, ScopeID scope) {
+		return getSymbolTypeOf(chain, scope).getType();
+	}
+
+	tsh::SymbolType<> getTypeFromDefinition(const std::string_view chain, ScopeID scope) {
 		return query::entryPoint<QueryTypeFromDefinition>(getChain(chain, scope).back())
 		    ->valueOrThrow();
 	}
@@ -56,17 +68,17 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitConst(const pst::Const& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitConst(pst::Access<pst::Const> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
@@ -77,20 +89,30 @@ namespace compiler::helios::test_utils {
 		struct GetHOUTExprTree final: public pst::PstVisitorPanicky {
 			errors::HResult<base::Box<code::Expr>, errors::Failed> expr_tree;
 
-			void setExprTree(const MCRef<pst::ExprElement>& expr) {
-				expr_tree = query::entryPoint<QueryHoutOfExpr>({ expr });
+			void setExprTree(pst::AccessLocked<pst::ExprElement> expr) {
+				expr_tree = query::entryPoint<QueryHoutOfExpr>(expr);
 			}
 
 		public:
-			void visitVariable(const pst::Variable& stmt) override {
-				setExprTree(stmt.getValue()->getExpr());
+			void visitVariable(pst::Access<pst::Variable> stmt) override {
+				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
 			}
 		};
 
-		auto            pst_stmt = stmt(sym);
+		auto            pst_stmt = symbolPst(sym).illegalAccess().value();
 		GetHOUTExprTree visitor;
 		pst_stmt->acceptVisitor(visitor);
 
 		return std::move(visitor.expr_tree).value();
+	}
+
+	ScopeID getFunctionBodyScope(SymID sym) {
+		return base::anyCast<ScopeID>(
+			query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
+				auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
+				auto fun_body = func_pst->getBody().unlock(ctx);
+				return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
+			})
+		);
 	}
 }

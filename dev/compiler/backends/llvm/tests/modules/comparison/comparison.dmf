@@ -1,0 +1,18 @@
+fun main() -> i64 = {
+    let x: i64 = 1;
+    let y: i64 = 1;
+
+    if (1 < 2) {
+        builtin_output_i64(1);
+    }
+
+    if (1 < x) {
+        builtin_output_i64(2);
+    }
+
+    if (x < (y + 2)) {
+        builtin_output_i64(3);
+    }
+
+    return 0;
+}

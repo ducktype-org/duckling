@@ -17,11 +17,11 @@ namespace pst {
 
 	std::vector<base::StrID> Import::getModulePath() const {
 		std::vector<base::StrID> out;
-		for (auto& elem: *names) out.emplace_back(elem.value);
+		for (auto& elem: *names.internal()) out.emplace_back(elem.value);
 		return out;
 	}
 
-	bool Import::getStar() const { return names->getStar(); }
+	bool Import::getStar() const { return names.internal()->getStar(); }
 
 	void Import::dprint(std::ostream& out) const {
 		out << "{\"Import\": ";

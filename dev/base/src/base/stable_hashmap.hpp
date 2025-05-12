@@ -7,6 +7,7 @@
 
 #include "box.hpp"
 #include "maps.hpp"
+
 #include <type_traits>
 
 namespace base {
@@ -82,6 +83,13 @@ namespace base {
 		}
 
 		/**
+		 * @brief Erases value at @p key position if it exists.
+		 * The references to the erased value are invalidated.
+		 * @returns Whether a value was erased.
+		 */
+		bool erase(const KEY_T& key) { return data.erase(key); }
+
+		/**
 		 * Clears all data from the data structure.
 		 */
 		void clear() { data.clear(); }
@@ -101,6 +109,12 @@ namespace base {
 		usize size() const {
 			return data.size();
 		}
+
+		/**
+		 * It currently compares pointers, not the underlying data.
+		 * @todo Implement a proper comparison.
+		 */
+		bool operator==(const StableHashMap& other) const { return data == other.data; }
 
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;

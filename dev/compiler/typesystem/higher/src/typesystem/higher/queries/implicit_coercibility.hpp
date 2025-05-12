@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "../type_info.hpp"
-#include "../type_desc.hpp"
+#include "../abstract_type.hpp"
+#include "../expression_type.hpp"
 
 #include <base/maps.hpp>
 
@@ -42,28 +42,30 @@ namespace tsh {
 	/**
 	 * @brief Key for QueryImplicitCoercibilityOnInfo.
 	 */
-	struct KeyFor_QueryImplicitCoercibilityOnInfo final {
+	struct KeyFor_QueryImplicitCoercibilityOnAbstractType final {
 		/**
 		 * @brief Source type of the coercion.
 		 */
-		TypeInfo source;
+		AbstractType source;
 
 		/**
 		 * @brief Target type of the coercion.
 		 */
-		TypeInfo target;
+		AbstractType target;
 
-		KeyFor_QueryImplicitCoercibilityOnInfo(const TypeInfo& source, const TypeInfo& target):
+		KeyFor_QueryImplicitCoercibilityOnAbstractType(
+			const AbstractType& source, const AbstractType& target
+		):
 			  source(source),
 			  target(target) {}
 
 		[[nodiscard]]
-		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnInfo&) const
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnAbstractType&) const
 			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnInfo, u64> hashes{};
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnAbstractType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 
@@ -74,36 +76,40 @@ namespace tsh {
 	};
 
 	/**
-	 * @brief Query to check whether implicit coercion from one type described by TypeInfo to
+	 * @brief Query to check whether implicit coercion from one type described by AbstractType to
 	 * another is allowed.
 	 */
-	DECLARE_QUERY(QueryImplicitCoercibilityOnInfo, KeyFor_QueryImplicitCoercibilityOnInfo, bool)
+	DECLARE_QUERY(
+		QueryImplicitCoercibilityOnAbstractType, KeyFor_QueryImplicitCoercibilityOnAbstractType, bool
+	)
 
 	/**
-	 * @brief Key for QueryImplicitCoercibilityOnDesc.
+	 * @brief Key for QueryImplicitCoercibilityOnSymbolType.
 	 */
-	struct KeyFor_QueryImplicitCoercibilityOnDesc final {
+	struct KeyFor_QueryImplicitCoercibilityOnSymbolType final {
 		/**
 		 * @brief Source value description of the coercion.
 		 */
-		TypeDesc<> source;
+		SymbolType<> source;
 
 		/**
 		 * @brief Target value description of the coercion.
 		 */
-		TypeDesc<> target;
+		SymbolType<> target;
 
-		KeyFor_QueryImplicitCoercibilityOnDesc(const TypeDesc<>& source, const TypeDesc<>& target):
+		KeyFor_QueryImplicitCoercibilityOnSymbolType(
+			const SymbolType<>& source, const SymbolType<>& target
+		):
 			  source(source),
 			  target(target) {}
 
 		[[nodiscard]]
-		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnDesc&) const
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnSymbolType&) const
 			= default;
 
 		[[nodiscard]]
 		base::HashT customPerfectHash() const {
-			static base::Map<KeyFor_QueryImplicitCoercibilityOnDesc, u64> hashes{};
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnSymbolType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 
@@ -114,8 +120,56 @@ namespace tsh {
 	};
 
 	/**
-	 * @brief Query to check whether implicit coercion from one value described by TypeDesc to
+	 * @brief Query to check whether implicit coercion from one value described by SymbolType to
 	 * another is allowed.
 	 */
-	DECLARE_QUERY(QueryImplicitCoercibilityOnDesc, KeyFor_QueryImplicitCoercibilityOnDesc, bool)
+	DECLARE_QUERY(
+		QueryImplicitCoercibilityOnSymbolType, KeyFor_QueryImplicitCoercibilityOnSymbolType, bool
+	)
+
+	/**
+	 * @brief Key for QueryImplicitCoercibilityOnExpressionType.
+	 */
+	struct KeyFor_QueryImplicitCoercibilityOnExpressionType final {
+		/**
+		 * @brief Source value description of the coercion.
+		 */
+		ExpressionType<> source;
+
+		/**
+		 * @brief Target value description of the coercion.
+		 */
+		ExpressionType<> target;
+
+		KeyFor_QueryImplicitCoercibilityOnExpressionType(
+			const ExpressionType<>& source, const ExpressionType<>& target
+		):
+			  source(source),
+			  target(target) {}
+
+		[[nodiscard]]
+		auto operator<=>(const KeyFor_QueryImplicitCoercibilityOnExpressionType&) const
+			= default;
+
+		[[nodiscard]]
+		base::HashT customPerfectHash() const {
+			static base::Map<KeyFor_QueryImplicitCoercibilityOnExpressionType, u64> hashes{};
+
+			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+
+			u64 result = hashes.size();
+			hashes.put(*this, result);
+			return result;
+		}
+	};
+
+	/**
+	 * @brief Query to check whether implicit coercion from one value described by ExpressionType to
+	 * another is allowed.
+	 */
+	DECLARE_QUERY(
+		QueryImplicitCoercibilityOnExpressionType,
+		KeyFor_QueryImplicitCoercibilityOnExpressionType,
+		bool
+	)
 }

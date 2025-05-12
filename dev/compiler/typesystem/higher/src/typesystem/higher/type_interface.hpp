@@ -9,15 +9,17 @@
  */
 #pragma once
 
+#include "abstract_type.hpp"
+#include "symbol_type.hpp"
+
+#include <helios/scope_symbol_id.hpp>
+
+#include <base/optional.hpp>
+#include <base/string_id.hpp>
+
 #include <map>
 #include <set>
 #include <string>
-
-#include <base/optional.hpp>
-
-#include "type_info.hpp"
-#include <helios/scope_symbol_id.hpp>
-#include <base/string_id.hpp>
 #include <variant>
 
 namespace tsh {
@@ -35,7 +37,7 @@ namespace tsh {
 		 */
 		struct Parameter final {
 			base::StrID          name;
-			TypeInfo             type;
+			SymbolType<>         type;
 			bool                 has_default_value;
 			std::strong_ordering operator<=>(const Parameter& other) const = default;
 		};
@@ -53,7 +55,7 @@ namespace tsh {
 		 * then it is important that the foo method in A is in actuality I.foo.
 		 * In this context, I is the source of A.foo.
 		 */
-		TypeInfo source;
+		AbstractType source;
 
 		// @TODO: Add declaration order in source.
 		// That is: Add information which describes the index of a field / method in
@@ -73,7 +75,7 @@ namespace tsh {
 		/**
 		 * @brief The type of a field or the return type of a method.
 		 */
-		TypeInfo result_type;
+		SymbolType<> result_type;
 
 		/**
 		 * @brief The visibility of an element of the interface.
@@ -88,6 +90,7 @@ namespace tsh {
 	public:
 		/**
 		 * @brief Construct an element of an interface of a type.
+		 * @param symbol The symbol of this element.
 		 * @param parameters The parameters of this element.
 		 * @param result_type The result type of this element.
 		 * @param source The source of this element, i.e. the class which declares it.
@@ -95,9 +98,9 @@ namespace tsh {
 		 */
 		explicit InterfaceElement(
 			const compiler::helios::SymID          symbol,
-			const TypeInfo                         source,
+			const AbstractType                     source,
 			base::Optional<std::vector<Parameter>> parameters,
-			const TypeInfo                         result_type,
+			const SymbolType<>                     result_type,
 			const Visibility                       visibility
 		):
 			  symbol(symbol),
@@ -120,7 +123,7 @@ namespace tsh {
 		 * @return The source of this element.
 		 */
 		[[nodiscard]]
-		TypeInfo getSource() const {
+		AbstractType getSource() const {
 			return source;
 		}
 
@@ -168,7 +171,7 @@ namespace tsh {
 		 * @return The result type of this element.
 		 */
 		[[nodiscard]]
-		TypeInfo getResultType() const {
+		SymbolType<> getResultType() const {
 			return result_type;
 		}
 
@@ -183,7 +186,7 @@ namespace tsh {
 		 * @return The type of this element.
 		 */
 		[[nodiscard]]
-		TypeInfo getType(query::Context& ctx) const;
+		SymbolType<> getType(query::Context& ctx) const;
 
 		/**
 		 * @brief Gets the visibility of this element.
@@ -199,7 +202,7 @@ namespace tsh {
 		 * @param other The other InterfaceElement.
 		 * @return A strong_ordering result.
 		 *
-		 * @note We can guarantee the ordering to be strong because all the components can be
+		 * @note We can guarantee the ordering to be strong because all the fields can be
 		 * strongly ordered. Including Optionals, vectors, and Parameters.
 		 */
 		std::strong_ordering operator<=>(const InterfaceElement& other) const = default;
@@ -245,7 +248,7 @@ namespace tsh {
 		 * @return The elements of an interface with the requested name.
 		 */
 		[[nodiscard]]
-		const std::set<InterfaceElement>& getElements(base::StrID name) {
+		const std::set<InterfaceElement>& getElements(const base::StrID name) const {
 			static std::set<InterfaceElement> empty_set{};
 			if (!elements.contains(name)) return empty_set;
 			return elements.at(name);
@@ -261,8 +264,8 @@ namespace tsh {
 		 * A named argument is described with its name and type.
 		 */
 		struct NamedArgument final {
-			base::StrID name;
-			TypeInfo    type;
+			base::StrID  name;
+			AbstractType type;
 		};
 
 		/**
@@ -346,10 +349,10 @@ namespace tsh {
 		 * @return The elements which match the name.
 		 */
 		ResolutionResult resolve(
-			base::StrID                    name,
-			const std::vector<TypeInfo>&   positional_arg_types,
-			const std::set<NamedArgument>& named_args,
-			query::Context&                ctx
+			base::StrID                      name,
+			const std::vector<AbstractType>& positional_arg_types,
+			const std::set<NamedArgument>&   named_args,
+			query::Context&                  ctx
 		);
 
 		/**
@@ -364,7 +367,7 @@ namespace tsh {
 		 * @param ctx The query context for implicit coercion checks.
 		 * @return The elements which match the name.
 		 */
-		ResolutionResult resolve(base::StrID name, TypeInfo single_arg_type, query::Context& ctx);
+		ResolutionResult resolve(base::StrID name, AbstractType single_arg_type, query::Context& ctx);
 
 		/**
 		 * @brief Auxiliary function to stringify a member lookup request.
@@ -390,8 +393,7 @@ namespace tsh {
 		 */
 		static std::string stringifyRequestSignature(
 			base::StrID name,
-			const base::Optional<
-				std::pair<std::vector<TypeInfo>, std::vector<TypeInterface::NamedArgument>>>&
+			const base::Optional<std::pair<std::vector<AbstractType>, std::vector<NamedArgument>>>&
 				argument_info
 		);
 	};

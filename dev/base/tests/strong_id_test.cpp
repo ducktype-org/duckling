@@ -1,11 +1,15 @@
 #include <tester/tester.hpp>
+
 #include <base/strongly_typed_id.hpp>
-#include <string>
+
 
 STRONG_TYPEDEF_ID(A);
 STRONG_TYPEDEF_ID(B);
 
+STRONG_TYPEDEF_ID_DIRECT_CREATION(Direct);
+
 ID_STD_HASH(A);
+ID_STD_HASH(Direct);
 
 template<class T>
 auto hash(const T& t) {
@@ -17,7 +21,10 @@ class StrongIDTest: public tester::TestSuite {
 #define TESTER_CLASS StrongIDTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(basicTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(basicTest);
+		TESTER_ADD_TEST(directTest);
+	}
 
 	void basicTest() {
 		auto id0 = A::next();
@@ -62,6 +69,31 @@ public:
 
 		assertEqual(bad_id_b, B::bad(), "Bad not equal to bad");
 		assertEqual(id1, id_copy_1_a, "Good not equal to Good");
+	}
+
+	void directTest() {
+		for (u64 i = 0; i < 10; i++) {
+			auto id = Direct::fromU64(i);
+			ASSERT_EQUAL(id.asInt(), i);
+			ASSERT_EQUAL(u64(id), i);
+			ASSERT_EQUAL(id, Direct(i));
+			ASSERT_TRUE(id.isGood());
+			ASSERT_TRUE(not id.isBad());
+
+			ASSERT_TRUE(id <= id);
+			ASSERT_TRUE(id >= id);
+			ASSERT_TRUE(id == id);
+			ASSERT_TRUE(not(id != id));
+			ASSERT_TRUE(not(id < id));
+			ASSERT_TRUE(not(id > id));
+			ASSERT_TRUE(id < Direct::fromU64(i + 1));
+			ASSERT_TRUE(id < Direct::bad());
+		}
+
+		Direct bad_id_1;
+		Direct bad_id_2 = Direct::bad();
+
+		ASSERT_EQUAL(bad_id_1, bad_id_2);
 	}
 };
 

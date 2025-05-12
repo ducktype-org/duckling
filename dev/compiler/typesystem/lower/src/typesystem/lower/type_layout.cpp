@@ -1,24 +1,28 @@
 #include "type_layout.hpp"
+
 #include "queries.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <query_framework/context.hpp>
 #include <typesystem/higher/type_interface.hpp>
+
+#include <base/variant.hpp>
 
 using base::bytes2bits;
 
 namespace tsl {
 	namespace {
 		/**
-		 * @brief Get a vector of TypeLayouts for a vector of TypeInfo.
-		 * @param types The input TypeInfo vector.
+		 * @brief Get a vector of TypeLayouts for a vector of SymbolType.
+		 * @param types The input SymbolType vector.
 		 * @param ctx The query context.
 		 * @return The output TypeLayout vector.
 		 */
-		std::vector<TypeLayout>
-			getLayoutVector(const std::vector<tsh::TypeInfo>& types, query::Context& ctx) {
-			std::vector<tsl::TypeLayout> layouts;
+		std::vector<TypeLayout> getLayoutVector(
+			const std::vector<tsh::SymbolType<>>& types, query::Context& ctx
+		) {
+			std::vector<TypeLayout> layouts;
 			layouts.reserve(types.size());
-			for (const auto& type: types) layouts.push_back(ctx.query<QueryTypeLayout>(type));
+			for (const auto& type: types) layouts.push_back(ctx.query<QuerySymbolTypeLayout>(type));
 			return layouts;
 		}
 
@@ -39,7 +43,7 @@ namespace tsl {
 		 * @param ctx The Query Context necessary to deduce composite type sizes.
 		 * @return The maximum size of a type in the vector.
 		 */
-		Bits maxTypeSizeInVector(const std::vector<tsh::TypeInfo>& types, query::Context& ctx) {
+		Bits maxTypeSizeInVector(const std::vector<tsh::SymbolType<>>& types, query::Context& ctx) {
 			return maxTypeLayoutSizeInVector(getLayoutVector(types, ctx));
 		}
 
@@ -105,7 +109,8 @@ namespace tsl {
 				offsets_with_idxs.emplace_back(offsets[component_idx], component_idx);
 			std::sort(offsets_with_idxs.begin(), offsets_with_idxs.end());
 
-			for (auto [offset, component_idx]: offsets_with_idxs) result.push_back(component_idx);
+			for (auto component_idx: offsets_with_idxs | std::views::values)
+				result.push_back(component_idx);
 
 			return result;
 		}
@@ -124,43 +129,48 @@ namespace tsl {
 			std::vector<compiler::helios::SymID> result;
 			result.reserve(permutation.size());
 
-			for (usize field_idx: permutation) result.push_back(fields.at(field_idx).getSymbol());
+			for (const usize field_idx: permutation)
+				result.push_back(fields.at(field_idx).getSymbol());
 
 			return result;
 		}
 	}
 
 	struct VariantTypeLayoutConstructionHelper {
-		tsh::VariantInfo   variant_info;
-		Bits               max_component_size;
-		std::vector<Bytes> offsets;
+		tsh::VariantAbstractType variant_type;
+		Bits                     max_component_size;
+		std::vector<Bytes>       offsets;
 
-		VariantTypeLayoutConstructionHelper(tsh::VariantInfo variant_info, query::Context& ctx):
-			  variant_info(variant_info),
-			  max_component_size(maxTypeSizeInVector(variant_info.getUnderlyingTypes(), ctx)),
+		VariantTypeLayoutConstructionHelper(
+			const tsh::VariantAbstractType variant_type, query::Context& ctx
+		):
+			  variant_type(variant_type),
+			  max_component_size(maxTypeSizeInVector(variant_type.getUnderlyingTypes(), ctx)),
 			  offsets(alignOffsetsForSizeVector({ Bits(8), max_component_size })) {}
 	};
 
-	VariantTypeLayout::VariantTypeLayout(tsh::VariantInfo variant_info, query::Context& ctx):
-		  VariantTypeLayout(VariantTypeLayoutConstructionHelper(variant_info, ctx)) {}
+	VariantTypeLayout::VariantTypeLayout(
+		const tsh::VariantAbstractType variant_type, query::Context& ctx
+	):
+		  VariantTypeLayout(VariantTypeLayoutConstructionHelper(variant_type, ctx)) {}
 
 	VariantTypeLayout::VariantTypeLayout(VariantTypeLayoutConstructionHelper helper):
 		  TypeLayoutABC(
-			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_info
+			  bytes2bits(helper.offsets[1]) + helper.max_component_size, helper.variant_type
 		  ),
 		  tag_offset{ 0 },                   // 0 bytes
 		  tag_size{ 8 },                     // 8 bits
 		  data_offset{ helper.offsets[1] },  // up to 8 bytes
 		  data_size{ helper.max_component_size },
-		  index_to_type{ helper.variant_info.getUnderlyingTypes() } {
-		for (int i = 0; i < index_to_type.size(); i++) {
+		  index_to_type{ helper.variant_type.getUnderlyingTypes() } {
+		for (u32 i = 0; i < index_to_type.size(); i++) {
 			const auto& type = index_to_type[i];
 			type_to_index.put(type, i);
 		}
 	}
 
 	std::string VariantTypeLayout::toStringDefinition(
-		query::Context& ctx, bool recursive, u32 indent
+		query::Context& ctx, const bool recursive, const u32 indent
 	) const {
 		std::stringstream ss{};
 
@@ -169,8 +179,8 @@ namespace tsl {
 		   << ", data : " << std::to_string(data_size) << ") {\n";
 
 		// Display the components
-		for (auto component_type: index_to_type) {
-			auto component_layout = ctx.query<QueryTypeLayout>(component_type);
+		for (const auto component_type: index_to_type) {
+			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
 				ss << component_layout.toStringDefinition(ctx, recursive, indent + 1) << "\n";
 			else
@@ -184,15 +194,17 @@ namespace tsl {
 	}
 
 	struct TupleTypeLayoutConstructionHelper {
-		tsh::TupleInfo          tuple_info;
+		tsh::TupleAbstractType  tuple_type;
 		std::vector<TypeLayout> component_layouts;
 		std::vector<Bytes>      component_offsets;
 		std::vector<usize>      offset_idx_to_component_idx;
 		Bits                    total_size;
 
-		TupleTypeLayoutConstructionHelper(tsh::TupleInfo tuple_info, query::Context& ctx):
-			  tuple_info(tuple_info),
-			  component_layouts(getLayoutVector(tuple_info.getComponentTypes(), ctx)),
+		TupleTypeLayoutConstructionHelper(
+			const tsh::TupleAbstractType tuple_type, query::Context& ctx
+		):
+			  tuple_type(tuple_type),
+			  component_layouts(getLayoutVector(tuple_type.getComponents(), ctx)),
 			  component_offsets(alignOffsetsForLayoutVector(component_layouts)),
 			  offset_idx_to_component_idx(offsetsToPermutation(component_offsets)),
 			  total_size(
@@ -202,25 +214,27 @@ namespace tsl {
 			  ) {}
 	};
 
-	TupleTypeLayout::TupleTypeLayout(tsh::TupleInfo tuple_info, query::Context& ctx):
-		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_info, ctx)) {}
+	TupleTypeLayout::TupleTypeLayout(const tsh::TupleAbstractType tuple_type, query::Context& ctx):
+		  TupleTypeLayout(TupleTypeLayoutConstructionHelper(tuple_type, ctx)) {}
 
 	TupleTypeLayout::TupleTypeLayout(TupleTypeLayoutConstructionHelper&& helper):
-		  TypeLayoutABC(helper.total_size, helper.tuple_info),
+		  TypeLayoutABC(helper.total_size, helper.tuple_type),
 		  component_offsets(std::move(helper).component_offsets),
 		  offset_idx_to_component_idx(std::move(helper).offset_idx_to_component_idx) {}
 
-	std::string
-		TupleTypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
-		tsh::TupleInfo    tuple_type = getSourceType();
-		std::stringstream ss{};
+	std::string TupleTypeLayout::toStringDefinition(
+		query::Context& ctx, const bool recursive, const u32 indent
+	) const {
+		const tsh::TupleAbstractType tuple_type = getSourceType();
+		std::stringstream            ss{};
 
 		// Display the tuple header and components
 		ss << getIndent(indent) << "tuple {\n";
-		for (auto component_idx: offset_idx_to_component_idx) {
-			Bytes         component_offset = getComponentOffset(component_idx);
-			tsh::TypeInfo component_type   = tuple_type.getComponentTypes().at(component_idx);
-			auto          component_layout = ctx.query<QueryTypeLayout>(component_type);
+		for (const auto component_idx: offset_idx_to_component_idx) {
+			const Bytes             component_offset = getComponentOffset(component_idx);
+			const tsh::AbstractType component_type
+				= tuple_type.getComponentAbstractTypes().at(component_idx);
+			auto component_layout = ctx.query<QueryAbstractTypeLayout>(component_type);
 			if (recursive)
 				ss << component_layout.toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -236,39 +250,41 @@ namespace tsl {
 	}
 
 	struct ClassTypeLayoutConstructionHelper {
-		tsh::ClassInfo                       class_info;
+		tsh::ClassAbstractType               class_type;
 		std::vector<tsh::InterfaceElement>   field_elements;
 		std::vector<TypeLayout>              field_layouts;
 		std::vector<Bytes>                   field_offsets;
 		std::vector<compiler::helios::SymID> offset_idx_to_sym_id;
 		Bits                                 total_size;
 
-		static std::vector<tsh::InterfaceElement>
-			getFieldsOfInterface(const tsh::TypeInterface& interface) {
+		static std::vector<tsh::InterfaceElement> getFieldsOfInterface(const tsh::TypeInterface&
+		                                                                   interface) {
 			const auto&                        elements = interface.getElements();
 			std::vector<tsh::InterfaceElement> fields;
 			fields.reserve(elements.size());
 
-			for (const auto& elements_with_name: elements) {
-				for (const auto& element: elements_with_name.second)
+			for (const auto& val: elements | std::views::values) {
+				for (const auto& element: val)
 					if (element.isField()) fields.push_back(element);
 			}
 
 			return fields;
 		}
 
-		static std::vector<tsh::TypeInfo> getElementTypes(
+		static std::vector<tsh::SymbolType<>> getElementTypes(
 			const std::vector<tsh::InterfaceElement>& elements, query::Context& ctx
 		) {
-			std::vector<tsh::TypeInfo> types;
+			std::vector<tsh::SymbolType<>> types;
 			types.reserve(elements.size());
 			for (const auto& element: elements) types.push_back(element.getType(ctx));
 			return types;
 		}
 
-		ClassTypeLayoutConstructionHelper(tsh::ClassInfo class_info, query::Context& ctx):
-			  class_info(class_info),
-			  field_elements(getFieldsOfInterface(class_info.getInterface(ctx))),
+		ClassTypeLayoutConstructionHelper(
+			const tsh::ClassAbstractType class_type, query::Context& ctx
+		):
+			  class_type(class_type),
+			  field_elements(getFieldsOfInterface(class_type.getInterface(ctx))),
 			  field_layouts(getLayoutVector(getElementTypes(field_elements, ctx), ctx)),
 			  field_offsets(alignOffsetsForLayoutVector(field_layouts)),
 			  offset_idx_to_sym_id(offsetsToSymIDs(field_elements, field_offsets)),
@@ -279,27 +295,28 @@ namespace tsl {
 			  ) {}
 	};
 
-	ClassTypeLayout::ClassTypeLayout(tsh::ClassInfo class_info, query::Context& ctx):
-		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_info, ctx)) {}
+	ClassTypeLayout::ClassTypeLayout(const tsh::ClassAbstractType class_type, query::Context& ctx):
+		  ClassTypeLayout(ClassTypeLayoutConstructionHelper(class_type, ctx)) {}
 
 	ClassTypeLayout::ClassTypeLayout(ClassTypeLayoutConstructionHelper&& helper):
-		  TypeLayoutABC(helper.total_size, helper.class_info),
+		  TypeLayoutABC(helper.total_size, helper.class_type),
 		  offset_idx_to_sym_id(std::move(helper).offset_idx_to_sym_id) {
-		for (int i = 0; i < helper.field_elements.size(); i++)
+		for (u32 i = 0; i < helper.field_elements.size(); i++)
 			field_offsets.put(helper.field_elements[i].getSymbol(), helper.field_offsets[i]);
 	}
 
-	std::string
-		ClassTypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
-		tsh::ClassInfo    class_type = getSourceType();
-		std::stringstream ss{};
+	std::string ClassTypeLayout::toStringDefinition(
+		query::Context& ctx, const bool recursive, const u32 indent
+	) const {
+		const tsh::ClassAbstractType class_type = getSourceType();
+		std::stringstream            ss{};
 
 		// Display the class header and components
 		ss << getIndent(indent) << class_type.toString() << " {\n";
-		for (auto field_sym_id: offset_idx_to_sym_id) {
-			Bytes         field_offset = getFieldOffset(field_sym_id);
-			tsh::TypeInfo field_type   = class_type.getMemberType(field_sym_id, ctx);
-			auto          field_layout = ctx.query<QueryTypeLayout>(field_type);
+		for (const auto field_sym_id: offset_idx_to_sym_id) {
+			const Bytes             field_offset = getFieldOffset(field_sym_id);
+			const tsh::SymbolType<> field_type   = class_type.getMemberType(field_sym_id, ctx);
+			auto                    field_layout = ctx.query<QuerySymbolTypeLayout>(field_type);
 			if (recursive)
 				ss << field_layout.toStringDefinition(ctx, recursive, indent + 1);
 			else
@@ -314,19 +331,32 @@ namespace tsl {
 		return ss.str();
 	}
 
-	PointerTypeLayout::PointerTypeLayout(tsh::PointerInfo pointer_info, query::Context& ctx):
-		  TypeLayoutABC(POINTER_SIZE, pointer_info),
-		  pointee(makeBox<TypeLayout>(ctx.query<QueryTypeLayout>(pointer_info.getUnderlyingType()))
-	      ) {}
+	PointerTypeLayout::PointerTypeLayout(
+		const tsh::PointerAbstractType pointer_type, query::Context& ctx
+	):
+		  TypeLayoutABC(POINTER_SIZE, pointer_type),
+		  pointee(makeBox<TypeLayout>(
+			  ctx.query<QueryAbstractTypeLayout>(pointer_type.getUnderlyingType())
+		  )) {}
+
+	PointerTypeLayout::PointerTypeLayout(const tsh::SymbolType<> symbol_type, query::Context& ctx):
+		  TypeLayoutABC(POINTER_SIZE, symbol_type.getType(), symbol_type.getRefKind()),
+		  pointee(makeBox<TypeLayout>(ctx.query<QueryAbstractTypeLayout>(symbol_type.getType()))) {
+		CORE_ASSERT(
+			symbol_type.getRefKind() != tsh::ReferenceKind::Direct,
+			"Construction of pointer layout from symbol type "
+			"without reference indirection is forbidden."
+		);
+	}
 
 	Bits TypeLayout::getSize() const { return VISIT(*this, l, return l.getSize()); }
 
-	tsh::TypeInfo TypeLayout::getSourceType() const {
+	tsh::AbstractType TypeLayout::getSourceType() const {
 		return VISIT(*this, l, return l.getSourceType());
 	}
 
-	std::string
-		TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const {
+	std::string TypeLayout::toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+		const {
 		return VISIT(*this, l, return l.toStringDefinition(ctx, recursive, indent));
 	}
 

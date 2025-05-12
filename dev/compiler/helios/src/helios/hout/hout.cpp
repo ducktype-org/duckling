@@ -1,6 +1,13 @@
 #include "hout.hpp"
+
 #include "elements.hpp"
-#include <query_framework/query_impl.hpp>
+
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>  // for parent
+#include <helios_private/symbols/symbols.hpp>
+#include <query_framework/context.hpp>
+
 #include <sstream>
 
 namespace compiler::helios {
@@ -53,8 +60,11 @@ namespace compiler::helios {
 		  original_symbol(symbol),
 		  original_name(name(original_symbol)),
 		  type(ctx.query<QueryTypeOfSymbol>(original_symbol)
-	               ->expect("Handling errors in HOUT is not supported yet")),
-		  top_lifetime_scope(parent(scope(symbol)).value()) {}
+	               ->expect("Handling errors in HOUT is not supported yet")
+	               .getType()),
+		  top_lifetime_scope(parent(scope(symbol)).value()) {
+		CORE_ASSERT(kind(symbol) == SymbolKind::Function, "Symbol is not a function");
+	}
 
 	std::string HOUTGlobalData::debugPrint() const {
 		return base::strConcat(

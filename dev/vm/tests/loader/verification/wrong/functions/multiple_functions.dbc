@@ -1,0 +1,18 @@
+type fun: inner_func {} i64
+
+function inner_func {
+	mov_l64_imm    	ret_val, 45;
+	ret;
+}
+
+function inner_func {
+	mov_l64_imm     ret_val, 42;
+	ret;
+}
+
+function main {
+	init_lany_type      x, i64;
+	call_func           inner_func;
+	deinit;
+	ret;
+}

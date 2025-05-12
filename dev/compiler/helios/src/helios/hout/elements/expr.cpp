@@ -4,9 +4,14 @@
  */
 
 #include "expr.hpp"
+
 #include "../visitors.hpp"
 
-#include <query_framework/query_impl.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/symbols/symbols.hpp>
+#include <query_framework/context.hpp>
+#include <typesystem/higher/queries.hpp>
 
 namespace compiler::helios::code {
 
@@ -19,17 +24,23 @@ namespace compiler::helios::code {
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
 	EXPR_VISITOR(UnaryOperatorExpr)
+	EXPR_VISITOR(TernaryOperatorExpr)
 	EXPR_VISITOR(TupleTypeConstructorExpr)
 	EXPR_VISITOR(VariantTypeConstructorExpr)
 	EXPR_VISITOR(ParenthesisExpr)
 	EXPR_VISITOR(LinkedIdentifierExpr)
+	EXPR_VISITOR(CallExpr)
 
-	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value):
+	LiteralIntExpr::LiteralIntExpr(query::Context& ctx, i64 value):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
+
+			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on type of literal.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryIntegralType>({ 64 }),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -37,11 +48,15 @@ namespace compiler::helios::code {
 
 	void LiteralIntExpr::debugPrint(std::ostream& out) const { out << std::to_string(value); }
 
-	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value):
+	LiteralBoolExpr::LiteralBoolExpr(query::Context& ctx, bool value):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
-				  ctx.query<tsh::QueryBoolType>({}),
+
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryBoolType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
@@ -49,22 +64,30 @@ namespace compiler::helios::code {
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
 
-	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::TypeInfo type):
+	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, tsh::AbstractType type):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
-				  ctx.query<tsh::QueryMetaType>({}),
+
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value_type(type) {}
+		  value_type(tsh::SymbolType{
+			  type,
+			  tsh::ReferenceKind::Direct,
+			  tsh::Mutability::Mutable,
+		  }) {}
 
 	void LiteralTypeExpr::debugPrint(std::ostream& out) const { out << value_type.toString(); }
 
-	IdentifierExpr::IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol):
+	IdentifierExpr::IdentifierExpr(query::Context& ctx, SymID symbol):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
+
+			  tsh::ExpressionType<>(
 				  ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					  "Handling errors in HOUT is not supported yet"
 				  ),
@@ -77,14 +100,40 @@ namespace compiler::helios::code {
 		out << strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
 	}
 
+	tsh::AbstractType builtinOperationToReturnType(
+		query::Context& ctx, BuiltinBinary operation, tsh::AbstractType argument_type
+	) {
+		using enum BuiltinBinary;
+		switch (operation) {
+		case IntegerAdd:
+		case IntegerSub:
+		case IntegerMul:
+		case IntegerDiv:
+		case IntegerMod:
+		case IntegerPow:
+			return argument_type;
+		case IntegerLt:
+			return ctx.query<tsh::QueryBoolType>({});
+		case BooleanAnd:
+		case BooleanOr:
+			return argument_type;
+		default:
+			CORE_UNREACHABLE();
+		}
+	}
+
 	BinaryOperatorExpr::BinaryOperatorExpr(
-		query::Context& ctx, ScopeID scope, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
+		query::Context& ctx, BuiltinBinary operation, Box<Expr> lhs, Box<Expr> rhs
 	):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc<>(
+
+			  tsh::ExpressionType<>(
 				  // @TODO: Select type of expression based on result type of the operation.
-				  ctx.query<tsh::QueryIntegralType>({ 64 }),
+				  tsh::SymbolType{
+					  builtinOperationToReturnType(ctx, operation, lhs->expression_type.getType()),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Mutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
 			  )
 		  ),
@@ -118,6 +167,12 @@ namespace compiler::helios::code {
 		case BuiltinBinary::IntegerLt:
 			out << "<";
 			break;
+		case BuiltinBinary::BooleanAnd:
+			out << " and ";
+			break;
+		case BuiltinBinary::BooleanOr:
+			out << " or ";
+			break;
 		}
 		rhs->debugPrint(out);
 	}
@@ -128,17 +183,38 @@ namespace compiler::helios::code {
 		out << ")";
 	}
 
-	ParenthesisExpr::ParenthesisExpr(query::Context&, ScopeID scope, Box<Expr> inner):
-		  Expr(scope, inner->type_desc),
+	ParenthesisExpr::ParenthesisExpr(query::Context&, Box<Expr> inner):
+		  Expr(inner->expression_type),
 		  inner(std::move(inner)) {}
 
+	TernaryOperatorExpr::TernaryOperatorExpr(
+		query::Context&, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
+	):
+		  Expr(if_true->expression_type),
+		  condition(std::move(condition)),
+		  if_true(std::move(if_true)),
+		  if_false(std::move(if_false)) {}
+
+	void TernaryOperatorExpr::debugPrint(std::ostream& out) const {
+		out << "if ";
+		condition->debugPrint(out);
+		out << " then ";
+		if_true->debugPrint(out);
+		out << " else ";
+		if_false->debugPrint(out);
+	}
+
 	TupleTypeConstructorExpr::TupleTypeConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<Box<Expr>> elements
+		query::Context& ctx, std::vector<Box<Expr>> elements
 	):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc{
-				  ctx.query<tsh::QueryMetaType>({}),
+
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -165,12 +241,16 @@ namespace compiler::helios::code {
 	}
 
 	VariantTypeConstructorExpr::VariantTypeConstructorExpr(
-		query::Context& ctx, ScopeID scope, std::vector<Box<Expr>> subtypes
+		query::Context& ctx, std::vector<Box<Expr>> subtypes
 	):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc{
-				  ctx.query<tsh::QueryMetaType>({}),
+
+			  tsh::ExpressionType{
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryMetaType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
 				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary),
 			  }
 		  ),
@@ -184,12 +264,10 @@ namespace compiler::helios::code {
 		}
 	}
 
-	LinkedIdentifierExpr::LinkedIdentifierExpr(
-		query::Context& ctx, ScopeID scope, SymbolList symbols
-	):
+	LinkedIdentifierExpr::LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols):
 		  Expr(
-			  scope,
-			  tsh::TypeDesc(
+
+			  tsh::ExpressionType(
 				  ctx.query<QueryTypeOfSymbol>(symbols.back())
 					  ->expect("Not handling errors here yet"),
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
@@ -197,8 +275,8 @@ namespace compiler::helios::code {
 		  ),
 		  symbols(std::move(symbols)) {}
 
-	UnaryOperatorExpr::UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, Box<Expr> expr):
-		  Expr(scope, expr->type_desc),
+	UnaryOperatorExpr::UnaryOperatorExpr(BuiltinUnary operation, Box<Expr> expr):
+		  Expr(expr->expression_type),
 		  operation(operation),
 		  expr(std::move(expr)) {}
 
@@ -208,6 +286,48 @@ namespace compiler::helios::code {
 			out << "-";
 			expr->debugPrint(out);
 			break;
+		case BuiltinUnary::BooleanNot:
+			out << "not ";
+			expr->debugPrint(out);
+			break;
 		}
+	}
+
+	namespace {
+		/**
+		 * @brief Infers a resulting type from a call operation.
+		 * @note This will be here until we have a proper overload resolution.
+		 */
+		tsh::SymbolType<> getCallResultType(tsh::AbstractType tp) {
+			if (tp.getKind() == tsh::Kind::Function) {
+				auto func = tsh::FunctionAbstractType(tp);
+				return func.getResultType();
+			}
+			CORE_PANIC("Invalid kind to call: ", base::enumToStr(tp.getKind()));
+		}
+	}
+
+	CallExpr::CallExpr(query::Context& ctx, SymID callee, std::vector<Box<Expr>> arguments):
+		  Expr(
+
+			  tsh::ExpressionType(
+				  getCallResultType(ctx.query<QueryTypeOfSymbol>(callee)
+	                                    ->expect(strConcat("Calling invalid symbol: ", name(callee)))
+	                                    .getType()),
+				  tsh::ValueCategory(tsh::PrimaryCategory::Temporary)
+			  )
+		  ),
+		  callee(callee),
+		  arguments(std::move(arguments)) {}
+
+	void CallExpr::debugPrint(std::ostream& out) const {
+		out << name(callee).strView() << "(";
+		bool add_comma = false;
+		for (auto&& arg: arguments) {
+			if (add_comma) out << ", ";
+			arg->debugPrint(out);
+			add_comma = true;
+		}
+		out << ")";
 	}
 }

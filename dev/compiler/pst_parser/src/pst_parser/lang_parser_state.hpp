@@ -1,13 +1,15 @@
 #pragma once
 
-#include <token_parser_core/base_element.hpp>
-#include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/automatic.hpp>
-#include <base/strongly_typed_id.hpp>
-#include <utility>
-
 #include "lang_parser_element.hpp"
 #include "pst_automatic.hpp"
+
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/parser_state.hpp>
+
+#include <base/strongly_typed_id.hpp>
+
+#include <utility>
 
 namespace pst {
 	/**
@@ -17,7 +19,7 @@ namespace pst {
 		std::vector<ImportType> imports;
 
 	public:
-		LangParserState(tpc::TokenStream&& tokens, dia::Logger& err):
+		LangParserState(tpc::TokenStream&& tokens, Ref<dia::Logger> err):
 			  tpc::ParserState(std::move(tokens), err) {}
 
 		/**

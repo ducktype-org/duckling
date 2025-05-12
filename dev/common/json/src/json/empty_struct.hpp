@@ -1,7 +1,9 @@
 #pragma once
 
-#include <nlohmann/json.hpp>
 #include "type_parse.hpp"
+
+#include <nlohmann/json.hpp>
+
 #include <base/exceptions.hpp>
 
 template<class T>

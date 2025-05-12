@@ -1,5 +1,6 @@
-#include "preamble.hpp"
 #include "../../hierarchy/actions.hpp"
+
+#include "preamble.hpp"
 
 namespace pst {
 	MBox<Action> Action::parse(LangParserState& state) {
@@ -46,9 +47,9 @@ namespace pst {
 
 	namespace detail {
 		void simpleActionDprint(
-			std::ostream&                                out,
-			const std::string&                           kind,
-			const base::Optional<MBox<CommaExprHolder>>* expr
+			std::ostream&                                          out,
+			const std::string&                                     kind,
+			const base::Optional<AccessInternal<CommaExprHolder>>* expr
 		) {
 			out << "{";
 			out << R"("kind": ")" << kind << "\"";

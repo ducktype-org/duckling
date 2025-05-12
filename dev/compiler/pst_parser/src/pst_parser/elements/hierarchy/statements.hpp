@@ -1,19 +1,17 @@
 #pragma once
 
 #include "../../lang_parser_state.hpp"
-
-#include <diagnostic/source_position.hpp>
-
-#include <token_parser_core/token_stream.hpp>
-#include <token_parser_core/parser_state.hpp>
-#include <token_parser_core/base_element.hpp>
-#include <token_parser_core/common_elements.hpp>
-#include <token_parser_core/automatic.hpp>
-
-#include <base/string_id.hpp>
-
 #include "meta.hpp"
 #include "not_statements.hpp"
+
+#include <diagnostic/source_position.hpp>
+#include <token_parser_core/automatic.hpp>
+#include <token_parser_core/base_element.hpp>
+#include <token_parser_core/common_elements.hpp>
+#include <token_parser_core/parser_state.hpp>
+#include <token_parser_core/token_stream.hpp>
+
+#include <base/string_id.hpp>
 
 namespace pst {
 	/**
@@ -24,8 +22,8 @@ namespace pst {
 	 * the optional "star" is ignored.
 	 */
 	class Import final: public Stmt {
-		MBox<DottedName> names;
-		tpc::Identifier  alias;
+		AccessInternal<DottedName> names;
+		tpc::Identifier            alias;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Import, ElementKind::Import);
@@ -67,7 +65,7 @@ namespace pst {
 	 * @brief Using statement
 	 */
 	class Using final: public Stmt {
-		MBox<DottedName> names;
+		AccessInternal<DottedName> names;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Using, ElementKind::Using);
@@ -75,12 +73,12 @@ namespace pst {
 
 		[[nodiscard]]
 		auto getPointed() const {
-			return names->getNames();
+			return names.internal()->getNames();
 		}
 
 		[[nodiscard]]
 		bool isStar() const {
-			return names->getStar();
+			return names.internal()->getStar();
 		}
 
 		~Using() final = default;
@@ -100,10 +98,41 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Simple expand macro
+	 */
+	class Expand final: public Stmt {
+		AccessInternal<CommaExprHolder> value;
+
+	public:
+		STMT_CHILD_CONSTRUCTOR(Expand, ElementKind::Expand);
+		static MBox<Expand> parse(LangParserState& state);
+
+		~Expand() final = default;
+		void dprint(std::ostream& out) const final;
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+
+		[[nodiscard]]
+		AccessLocked<CommaExprHolder> getValue() const {
+			return value.give();
+		}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Expand";
+		}
+
+		[[nodiscard]]
+		bool isDeclaration() const final {
+			return true;
+		}
+	};
+
+	/**
 	 * @brief Statement that is an expression.
 	 */
 	class ExprStmt final: public Stmt {
-		MBox<AssignmentExprHolder> expr;
+		AccessInternal<AssignmentExprHolder> expr;
 
 	public:
 		explicit ExprStmt(dia::SourcePosition pos): Stmt(StmtKind::ExprStmt, pos) {
@@ -121,8 +150,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<AssignmentExprHolder> getExpr() const {
-			return expr.ref();
+		AccessLocked<AssignmentExprHolder> getExpr() const {
+			return expr.give();
 		}
 
 		void acceptVisitor(PstVisitor&) const override;
@@ -132,8 +161,8 @@ namespace pst {
 	 * @brief Alias statement.
 	 */
 	class Alias final: public Stmt {
-		tpc::Identifier  name;
-		MBox<DottedName> points_to;
+		tpc::Identifier            name;
+		AccessInternal<DottedName> points_to;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Alias, ElementKind::Alias);
@@ -145,7 +174,7 @@ namespace pst {
 
 		[[nodiscard]]
 		auto getPointed() const {
-			return points_to->getNames();
+			return points_to.internal()->getNames();
 		}
 
 		static MBox<Alias> parse(LangParserState& state);
@@ -170,7 +199,7 @@ namespace pst {
 	 */
 	class Action: public Stmt {
 	protected:
-		base::Optional<MBox<CommaExprHolder>> expr;
+		base::Optional<AccessInternal<CommaExprHolder>> expr;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Action, ElementKind::Action);
@@ -186,8 +215,8 @@ namespace pst {
 		/**
 		 * @note Optional of MRef here is intentional
 		 */
-		base::Optional<MCRef<ExprHolder>> getValue() const {
-			return expr.map([](const auto& e) -> MCRef<ExprHolder> { return e.ref(); });
+		base::Optional<AccessLocked<ExprHolder>> getValue() const {
+			return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
 		}
 	};
 
@@ -197,9 +226,9 @@ namespace pst {
 	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
 	 */
 	class Const final: public Stmt {
-		tpc::Identifier       name;
-		MBox<CommaExprHolder> type;
-		MBox<CommaExprHolder> value;
+		tpc::Identifier                 name;
+		AccessInternal<CommaExprHolder> type;
+		AccessInternal<CommaExprHolder> value;
 
 	public:
 		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
@@ -211,13 +240,13 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getType() const {
-			return type.ref();
+		AccessLocked<ExprHolder> getType() const {
+			return type.give();
 		}
 
 		[[nodiscard]]
-		MCRef<ExprHolder> getValue() const {
-			return value.ref();
+		AccessLocked<ExprHolder> getValue() const {
+			return value.give();
 		}
 
 		~Const() final = default;

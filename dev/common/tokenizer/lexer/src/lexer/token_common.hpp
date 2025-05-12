@@ -1,7 +1,8 @@
 #pragma once
 
-#include <base/string_id.hpp>
 #include <lang_definitions/key_spec_op.hpp>
+
+#include <base/string_id.hpp>
 
 namespace lexer {
 	/**
@@ -21,6 +22,24 @@ namespace lexer {
 		operator base::StrID() { return value; }
 
 		[[nodiscard]]
+		bool isComparison() const;
+
+		[[nodiscard]]
+		bool isAssignment() const;
+
+		[[nodiscard]]
+		bool isSpecialOp() const;
+
+		[[nodiscard]]
+		bool isNotReserved() const;
+
+		[[nodiscard]]
+		base::Optional<Operator> filterNotReserved() const;
+
+		[[nodiscard]]
+		i64 getGenBinOpPrecedence() const;
+
+		[[nodiscard]]
 		std::string str() const {
 			return value.str();
 		}
@@ -33,11 +52,11 @@ namespace lexer {
 		/**
 		 * @note This should do the corrected UTF-8 check in the future.
 		 */
-		inline bool operator==(lang_def::NamedOperator& op) {
+		bool operator==(lang_def::NamedOperator& op) {
 			return lang_def::operatorToStr(op) == value;
 		}
 
-		inline bool operator==(Operator& other) { return *this == other.value; }
+		bool operator==(Operator& other) { return *this == other.value; }
 	};
 
 	/**
@@ -64,6 +83,6 @@ namespace lexer {
 		/**
 		 * @note This should probably do something more in the future
 		 */
-		inline bool operator==(Value& other) { return value == other.value; }
+		bool operator==(Value& other) { return value == other.value; }
 	};
 }

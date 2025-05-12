@@ -3,13 +3,14 @@
  * @brief Value category definition.
  *
  * Value category describes properties of the value that are not directly tied to its type.
- * Every TypeDesc has a ValueCategory object associated with it.
+ * Every ExpressionType has a ValueCategory object associated with it.
  */
 
 #pragma once
 
+#include <helios/scope_symbol_id.hpp>
+
 #include <base/flag.hpp>
-#include <helios/symbols/symbols.hpp>
 
 namespace tsh {
 	// There used to be "Identifiable" category, but it is now replaced with "Local" and "Global"
@@ -33,7 +34,6 @@ namespace tsh {
 	PrimaryCategory primaryCategoryOfSymbol(compiler::helios::SymID symbol);
 }
 
-// clang-format off
 MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	MOVE,
 	COPY,
@@ -41,8 +41,6 @@ MAKE_FLAG_TYPE(tsh, ValueSemanticsOptions, ValueSemantics,
 	USE,
 	DESTROY
 )
-
-// clang-format on
 
 namespace tsh {
 	/**
@@ -55,10 +53,6 @@ namespace tsh {
 		 * Primary category of a value.
 		 */
 		PrimaryCategory category;
-		/**
-		 * If a value is mutable it can be implicitly changed by the coder.
-		 */
-		bool is_mutable{ false };
 		/**
 		 * If a value is pure it is guaranteed to not be changed behind the scenes.
 		 */
@@ -84,7 +78,6 @@ namespace tsh {
 
 		ValueCategory(
 			PrimaryCategory category,
-			bool            is_mutable,
 			bool            is_pure,
 			ValueSemantics  allows_semantic,
 			ValueSemantics  force_semantic
@@ -96,14 +89,6 @@ namespace tsh {
 		[[nodiscard]]
 		PrimaryCategory getCategory() const {
 			return category;
-		}
-
-		/**
-		 * A simple getter for is_mutable.
-		 */
-		[[nodiscard]]
-		bool isMutable() const {
-			return is_mutable;
 		}
 
 		/**
@@ -138,8 +123,7 @@ namespace tsh {
 		[[nodiscard]]
 		bool contains(const ValueCategory& other) const {
 			return allows_semantic >= other.allows_semantic
-			    && force_semantic <= other.force_semantic && (is_mutable || !other.is_mutable)
-			    && (!is_pure || other.is_pure);
+			    && force_semantic <= other.force_semantic && (!is_pure || other.is_pure);
 		}
 
 		auto operator<=>(const ValueCategory& other) const = default;

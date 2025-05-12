@@ -30,8 +30,8 @@ namespace pst {
 		return out;
 	}
 
-	base::Optional<MCRef<UniversalExprHolder>> FunParam::getValue() const {
-		return initial.map([](const auto& v) { return v.ref(); });
+	base::Optional<AccessLocked<UniversalExprHolder>> FunParam::getValue() const {
+		return initial.map([](const auto& v) { return v.give(); });
 	}
 
 	void FunParam::dprint(std::ostream& out) const {

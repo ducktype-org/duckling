@@ -4,14 +4,22 @@
  */
 #pragma once
 
-#include <string_view>          // IWYU pragma: export
-#include "detail/query_id.hpp"  // IWYU pragma: export
-#include "detail/node_id.hpp"   // IWYU pragma: export
+// clang-format off
+// clang format from GH action gets confused here for some reason, see:
+// https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
+// https://github.com/ducktype-org/duckling/pull/657#pullrequestreview-2732904586
+
+#include "context_fd.hpp"       // IWYU pragma: export
+#include "detail/query_graph/node_id.hpp" // IWYU pragma: export
+#include "detail/query_data/query_id.hpp"  // IWYU pragma: export
 #include "empty_key.hpp"        // IWYU pragma: export
+
+#include <string_view>          // IWYU pragma: export
+
+// clang-format on
 
 namespace query::detail {
 
-	struct ContextType;
 	struct EntryPointHelper;
 
 	/**
@@ -29,9 +37,22 @@ namespace query::detail {
 	};
 }
 
-namespace query {
-	using Context = detail::ContextType;
-}
+/**
+ * @brief Internal macro used do delcare queries.
+ */
+#define DECLARE_QUERY_AUX(query_type, key, value, query_data_mp)                                  \
+	struct query_type final: ::query::detail::QueryInterface<query_type, key, value> {            \
+	private:                                                                                      \
+		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
+		static ::query::detail::QueryID id;                                                       \
+		static constexpr ::query::detail::QueryData query_data = query_data_mp;                   \
+		friend struct ::query::Context;                                                           \
+		friend struct ::query::detail::EntryPointHelper;                                          \
+                                                                                                  \
+	public:                                                                                       \
+		static auto        getID() { return id; }                                                 \
+		static const auto& getData() { return query_data; }                                       \
+	};
 
 /**
  * @brief Macro used do delcare queries.
@@ -39,16 +60,10 @@ namespace query {
  * For example:
  * `DECLARE_QUERY (QueryName, QueryKey, QueryReturnValue)`
  */
-#define DECLARE_QUERY(query_type, key, value)                                                     \
-	struct query_type: ::query::detail::QueryInterface<query_type, key, value> {                  \
-	private:                                                                                      \
-		static auto                     internal_query(QKey, ::query::detail::NodeID) -> QResult; \
-		static ::std::string_view       name;                                                     \
-		static ::query::detail::QueryID id;                                                       \
-		friend struct ::query::detail::ContextType;                                               \
-		friend struct ::query::detail::EntryPointHelper;                                          \
-                                                                                                  \
-	public:                                                                                       \
-		static auto getName() { return name; }                                                    \
-		static auto getID() { return id; }                                                        \
-	};
+#define DECLARE_QUERY(query_type, key, value)                                       \
+	DECLARE_QUERY_AUX(                                                              \
+		query_type,                                                                 \
+		key,                                                                        \
+		value,                                                                      \
+		::query::detail::QueryData(::query::detail::QueryType::Normal, #query_type) \
+	)
