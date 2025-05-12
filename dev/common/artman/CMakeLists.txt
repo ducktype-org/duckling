@@ -1,4 +1,3 @@
-add_library(ArtMan INTERFACE)
+add_library(ArtMan src/artman/artman.cpp)
 
-# make_module(ArtMan USES Base Filesystem)
-target_link_libraries(ArtMan INTERFACE Base Filesystem)
+make_module(ArtMan USES Base Filesystem Hashing)

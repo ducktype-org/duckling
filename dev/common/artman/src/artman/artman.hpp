@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem/file.hpp>
+#include <hashing/hash.hpp>
 
 #include "base/box.hpp"
 #include "base/exceptions.hpp"
@@ -29,39 +30,6 @@ Variants vs inheritance:
 */
 
 namespace artman {
-	// class ArtifactBase {
-	// 	fs::FilePath path;
-
-	// public:
-	// 	ArtifactBase(fs::FilePath path): path(std::move(path)) {}
-
-	// 	virtual ~ArtifactBase() = default;
-	// 	/**
-	// 	 * @brief Called by the ArtMan upon e.g. synchronization with filesystem.
-	// 	 */
-	// 	virtual std::expected<void, std::string> dump() = 0;
-	// };
-
-	// class BytesArtifact: public ArtifactBase {
-	// public:
-	// 	[[nodiscard]] virtual std::vector<byte> getBytes() const = 0;
-
-	// 	std::expected<void, std::string> dump() override {
-	// 		auto bytes = getBytes();
-	// 		return {};
-	// 	}
-	// };
-
-	// class ArtMan {
-	// 	fs::FilePath artifacts_root;
-
-	// 	ArtMan(fs::FilePath artifacts_root): artifacts_root(std::move(artifacts_root)) {}
-
-	// public:
-	//     std::expected<ArtMan, std::string> reader(fs::FilePath artifacts_root); // using fs_tree
-	//     std::expected<ArtMan, std::string> writer(fs::FilePath artifacts_root);
-	// };
-
 	/**
 	 * @brief A collection of bytes.
 	 * @note It cannot be read-only, because `std::vector<const byte>` does not compile.
@@ -74,36 +42,34 @@ namespace artman {
 	struct ArtifactId {
 		const ArtifactCollectionId PARENT_ID;
 		const ArtifactInnerId      INNER_ID;
+
+		friend constexpr auto hashDecompose(const ArtifactId& t) noexcept {
+			return std::tie(t.PARENT_ID, t.INNER_ID);
+		}
 	};
 
 	class ArtifactCollection;
 
-	class Artifact {
+	struct FileArtifact {
 		const Ref<ArtifactCollection> PARENT;
-		const ArtifactId              ID{};
+		const ArtifactId              ID;
 
-	public:
-		const Bytes BYTES;
-
-		Artifact(Ref<ArtifactCollection> parent, ArtifactId id, Bytes bytes):
-			  PARENT(parent),
-			  ID(std::move(id)),
-			  BYTES(std::move(bytes)) {}
-
-		virtual ~Artifact() = default;
-
-		/**
-		 * @brief Called by the ArtMan upon e.g. synchronization with filesystem.
-		 */
-		virtual std::expected<void, std::string> flush() = 0;
-
-		// @todo Add hashing of ID
+		const fs::FilePath FILE;
 	};
 
-	enum class GroupingMode { Individual, Combined };
+	struct BlobArtifact {
+		const Ref<ArtifactCollection> PARENT;
+		const ArtifactId              ID;
+
+		void                                        setData(const byte* ptr, usize n_bytes);
+		[[nodiscard]] std::pair<const byte*, usize> getData() const;
+	};
+
+	enum class CollectionType { SingleFile, Blob };
 
 	/**
-	 * @brief Represents an artifact group. (It basically maps to a directory.)
+	 * @brief Represents an artifact group. (It basically maps to a directory.).
+	 * All collections can be modified independently (because as of now there is no state hashing).
 	 */
 	class ArtifactCollection {
 		static constexpr i64 PROTOCOL_VERSION = 1;
@@ -111,55 +77,76 @@ namespace artman {
 		/**
 		 * @brief Represents how
 		 */
-		std::vector<Box<Artifact>>           sub_artifacts;
-		std::vector<Box<ArtifactCollection>> sub_collections;
+		std::vector<FileArtifact>                              file_artifacts;
+		std::vector<BlobArtifact>                              blob_artifacts;
+		base::HashMap<ArtifactId, Box<Bytes>, hashing::Hash<>> blob_data;
+
+		std::vector<Box<ArtifactCollection>> sub_collections;  /// Box, because we need stable refs.
+
+		ArtifactId nextId() const {
+			// It's the simplest way to allow inserting new artifacts after loading the state from a
+			// disk.
+			return {
+				.PARENT_ID = ID,
+				.INNER_ID  = ArtifactInnerId(file_artifacts.size() + blob_artifacts.size()),
+			};
+		}
 
 	public:
-		const fs::FilePath                            PATH;
-		const base::Optional<Ref<ArtifactCollection>> PARENT;
+		const fs::FilePath PATH;
 
 		const ArtifactCollectionId ID;
 
-		const GroupingMode GROUPING_MODE = GroupingMode::Individual;
+		const CollectionType COLLECTION_TYPE;
 
 		ArtifactCollection(
-			fs::FilePath                            root,
-			GroupingMode                            grouping_mode,
-			base::Optional<Ref<ArtifactCollection>> parent = {}
+			fs::FilePath root, CollectionType collection_type = CollectionType::SingleFile
 		):
 			  PATH(std::move(root)),
-			  PARENT(parent),
 			  ID(0),
-			  GROUPING_MODE(grouping_mode) {}
+			  COLLECTION_TYPE(collection_type) {}
 
-		ArtifactCollection(fs::FilePath root):
-			  ArtifactCollection(std::move(root), GroupingMode::Individual) {}
-
-		Ref<ArtifactCollection> newCollection(base::StrID name, GroupingMode grouping_mode) {
+		CRef<ArtifactCollection> newCollection(base::StrID name, CollectionType grouping_mode) {
 			auto new_path = PATH.createDirectoryIn(name.strView());
-			sub_collections.push_back(makeBox<ArtifactCollection>(new_path, grouping_mode, this));
+			sub_collections.push_back(Box<ArtifactCollection>::fromPointer(
+				new ArtifactCollection(new_path, grouping_mode)
+			));
 			return sub_collections.back().ref();
 		}
 
-		template<class T, class... Args>
-		requires std::is_base_of_v<Artifact, T> Ref<T> newArtifact(Args&&... args) {
-			sub_artifacts.push_back(base::makeBox<T>(
-				this,
-				ArtifactId(ID, ArtifactInnerId(sub_artifacts.size())),
-				std::forward<Args>(args)...
-			));
-            return sub_artifacts.back().ref();
+		FileArtifact newFileArtifact() {
+			file_artifacts.push_back(FileArtifact{
+				.PARENT = this,
+				.ID     = nextId(),
+				.FILE   = PATH,
+			});
+			return file_artifacts.back();
 		}
 
-		// ~ArtifactCollection() { flush(); }
+		BlobArtifact newBlobArtifact() {
+			blob_artifacts.push_back(BlobArtifact{
+				.PARENT = this,
+				.ID     = nextId(),
+			});
+			return blob_artifacts.back();
+		}
+
+		void setBlobData(BlobArtifact blob, const byte* ptr, usize n_bytes) {
+			CORE_ASSERT(blob.ID.PARENT_ID == ID, "Blob does not belong to this collection");
+			blob_data[blob.ID] = makeBox<Bytes>();
+			if (blob_data.contains(blob.ID)) *blob_data[blob.ID] = Bytes(n_bytes, *ptr);
+		}
+
+		template<class T>
+		requires std::is_standard_layout_v<T> && std::is_trivial_v<T>
+		void setBlobData(BlobArtifact blob, const T& data) {
+			setBlobData(blob, &data, sizeof(data));
+		}
 
 		void flush() {
-			if (PARENT) PARENT.value()->flush();
-			if (FLUSH_MODE == FlushMode::Lazy) {
-				// for (auto artif: artifacts) {
-				// 	artif.dump();
-				// }
-			}
+			// Dump a DB to disk.
+			throw base::NotYetImplemented("flushing");
+			for (auto& collection: sub_collections) collection->flush();
 		}
 	};
 }
