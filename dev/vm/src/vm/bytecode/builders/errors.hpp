@@ -197,4 +197,7 @@ namespace vm::code::builders {
 		"calling: "
 	);
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of type: ");
+	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
+	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
+	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
 }
