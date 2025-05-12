@@ -86,7 +86,7 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -147,10 +147,12 @@ namespace compiler::helios {
 			));
 		}
 		case pst::StmtKind::Using: {
-			// auto using_stmt = stmt.dynamicCast<pst::Using>().value();
+			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name        = base::StrID("<USING> "),
+					.name        = base::StrID(
+						base::strConcat("<USING> ", using_stmt->getPointed().unlock(ctx)->getNames().front()).c_str()
+					),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -288,7 +290,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}

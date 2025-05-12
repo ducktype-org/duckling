@@ -18,7 +18,9 @@ namespace compiler::helios {
 	};
 
 	/**
-	 * @brief Query extension for looking-up chain of names
+	 * @brief Query extension for looking-up chain of names, that is
+	 * a list of names that are assumed to form expression of form `name1.name2.name3...`.
+	 * It is currently used for looking up symbols in usings/aliases.
 	 */
 	errors::HResult<SymbolList, errors::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
