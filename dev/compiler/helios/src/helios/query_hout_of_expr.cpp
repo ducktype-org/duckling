@@ -1,5 +1,6 @@
 #include "query_hout_of_expr.hpp"
 
+#include "diagnostic/interactive_logger.hpp"
 #include "diagnostic/interactive_message.hpp"
 
 #include <helios/hout/elements/expr.hpp>

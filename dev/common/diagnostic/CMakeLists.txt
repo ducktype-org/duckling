@@ -5,8 +5,7 @@ add_library(Diagnostic
         src/diagnostic/interactive_message.cpp
         src/diagnostic/interactive_logger.cpp
         src/diagnostic/interactive_code.cpp
+        src/diagnostic/location.cpp
 )
 
 make_module(Diagnostic USES Printer Filesystem TokenSource JSON HELIOS)
-        src/diagnostic/location.cpp
-)

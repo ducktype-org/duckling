@@ -1,10 +1,14 @@
 #pragma once
 
-#include <json/json.hpp>
-#include <set>
-#include <helios/symbols/symbols.hpp>
 #include "pst_parser/lang_parser_element.hpp"
 #include "source_position.hpp"
+
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/symbol_kind.hpp>
+#include <json/json.hpp>
+#include <typesystem/higher/abstract_type.hpp>
+
+#include <set>
 
 namespace dia {
 	using nlohmann::json;
@@ -17,6 +21,8 @@ namespace dia {
 		pst::Access<pst::LangElement>     pst;
 		query::Context&                   ctx;
 
+		void visit_leafs(pst::Access<pst::LangElement> pst, std::vector<json>& out, usize& last)
+			const;
 		json serialize_code() const;
 
 	public:

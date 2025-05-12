@@ -1,11 +1,16 @@
 #pragma once
 
+#include "typesystem/higher/abstract_type.hpp"
+
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/simple.hpp>
+#include <json/json.hpp>
+
 #include "base/optional.hpp"
 #include "base/stringifyable_enum.hpp"
-#include "typesystem/higher/abstract_type.hpp"
-#include <json/json.hpp>
 #include <base/box.hpp>
-#include <helios/symbols/symbols.hpp>
+
+#include <set>
 #include <type_traits>
 
 namespace dia {

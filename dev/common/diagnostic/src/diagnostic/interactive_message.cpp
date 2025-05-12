@@ -1,4 +1,5 @@
 #include "interactive_message.hpp"
+
 #include "interactive_logger.hpp"
 
 using nlohmann::json;
