@@ -1,3 +1,5 @@
+# Test if previously injected functions are present in program state.
+
 type fun: summer { i64, i64 } i64
 
 function summer {

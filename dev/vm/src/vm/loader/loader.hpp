@@ -1,11 +1,8 @@
 #pragma once
 
-#include "diagnostic/logger.hpp"
 #include "logger.hpp"
 
 #include <filesystem/file.hpp>
-
-#include "base/box.hpp"
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -73,7 +70,6 @@ namespace vm::loader {
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		bool    validate_program;
 		Program program;
 
 		/**
@@ -85,7 +81,7 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader(bool validate_program);
+		explicit Loader() = default;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state and
@@ -102,7 +98,5 @@ namespace vm::loader {
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
 			const std::vector<code::CodeCollection>& code_collection
 		);
-
-		void clear();
 	};
 }

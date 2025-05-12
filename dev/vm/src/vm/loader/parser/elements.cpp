@@ -528,7 +528,6 @@ namespace vm::loader::parser {
 
 	MBox<ParsedFile> ParsedFile::parse(F8ParserState& state) {
 		auto out = makeBox<ParsedFile>(state.getPosition().getSource()->getPath());
-
 		while (state.notEmpty()) {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();

@@ -151,11 +151,11 @@ private:
 	void cyclicRepl() {
 		vm::PID pid = initProcess();
 
-		fs::FilePath file1(path("cyclic_repl_1.dbc"));
+		fs::FilePath file1(path("loaded_func_call_1.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
 		runAndCheckExitCode(pid, "summer", std::vector<i64>{ 4, 8 }, {}, {}, 12);
 
-		fs::FilePath file2(path("cyclic_repl_2.dbc"));
+		fs::FilePath file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 2, 3 }, {}, {}, 10);
 	}

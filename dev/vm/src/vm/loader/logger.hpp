@@ -23,9 +23,7 @@ namespace vm::loader {
 
 
 	public:
-		LoaderLogger() {
-			this->clear();
-		};
+		LoaderLogger() = default;
 
 		LoaderLogger(dia::Logger&& logger): logger(std::move(logger)) {}
 
@@ -109,22 +107,12 @@ namespace vm::loader {
 		 */
 		void logSimple(std::string err) { errors.emplace_back(std::move(err)); }
 
-		void dumpLog(std::ostream& stream) const {
+		void dump(std::ostream& stream) const {
 			if (logger.bad()) {
 				logger.dumpLog(true, stream);
 				stream << '\n';
 			}
 			for (auto& msg: errors) stream << msg << '\n';
-		}
-
-		void dumpLogAndClear(std::ostream& stream) {
-			dumpLog(stream);
-			clear();
-		}
-
-		void clear() {
-			logger.clear();
-			errors.clear();
 		}
 
 		bool good() { return logger.good() && errors.empty(); }

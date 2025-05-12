@@ -50,8 +50,7 @@ namespace vm {
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
-			code_result.error().dumpLogAndClear(ss);
-			std::cout << ss.str() << '\n';
+			code_result.error().dump(ss);
 			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
 		}
 	}
@@ -274,10 +273,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess():
-		  status(api::ExecutionNotStarted{}) {
-		vm_threads.emplace_back(*this);
-	}
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}) { vm_threads.emplace_back(*this); }
 
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)

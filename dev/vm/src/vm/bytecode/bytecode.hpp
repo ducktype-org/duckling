@@ -10,8 +10,6 @@
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
 
-#include <iostream>
-
 namespace vm::code {
 	/**
 	 * @brief Represents an identifier (e.g. symbol name) as string with ElementBase
@@ -58,12 +56,5 @@ namespace vm::code {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;
 		std::vector<GlobalData> global_data;
-
-		void dprint() {
-			std::cerr << "++++++++++++++++++++++";
-			std::cerr << "Functions: \n";
-			for (const auto& func: functions) std::cerr << func.name.str.strView() << " | " << '\n';
-			std::cerr << "++++++++++++++++++++++";
-		}
 	};
 }

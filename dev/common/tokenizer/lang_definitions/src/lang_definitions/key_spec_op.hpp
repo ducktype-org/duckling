@@ -1,7 +1,7 @@
 /**
  * @file keywords.hpp
  * @brief
- * Module for detecting and defining keywords.
+ * Module allowing for detecting and defining keywords.
  *
  *
  * Usage:

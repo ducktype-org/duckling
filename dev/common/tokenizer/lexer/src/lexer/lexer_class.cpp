@@ -206,7 +206,6 @@ namespace lexer {
 
 	TokenData Lexer::tokenize() {
 		tokens.clear();
-		
 		codeblock();
 		dia::SourcePosition eof_pos(file->getLocation(), where);
 		dia::SourcePosition bof_pos(file->getLocation(), 0);

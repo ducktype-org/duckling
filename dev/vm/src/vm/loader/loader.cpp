@@ -191,8 +191,6 @@ const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const 
 	return globals_map;
 }
 
-Loader::Loader(const bool validate_program): validate_program(validate_program) {}
-
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	const std::vector<fs::FilePath>& files
 ) {
