@@ -21,13 +21,9 @@ namespace base {
 		constexpr bool operator==(const Bit256& other) const noexcept = default;
 		constexpr bool operator!=(const Bit256& other) const noexcept = default;
 
-		[[nodiscard]] constexpr std::string toStringHex() const {
-			std::string ret;
-			ret.reserve(64);
-			for (const auto& d: data)
-				for (int i = 0; i < 16; ++i)
-					ret += std::string_view("0123456789abcdef").at(((d >> (60 - i * 4)) & 0xF));
-			return ret;
-		}
+		/**
+		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
+		 */
+		[[nodiscard]] std::string toStringHex() const;
 	};
 }
