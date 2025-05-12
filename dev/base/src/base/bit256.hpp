@@ -5,7 +5,7 @@
 
 namespace base {
 	/**
-	 * Bit256 is a 256-bit integer type used for SHA-256 hash values.
+	 * Bit256 is a 256-bit integer type used for example for SHA-256 hash values.
 	 * It is represented as an array of 4 64-bit integers.
 	 */
 	struct Bit256 {
