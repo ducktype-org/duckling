@@ -18,6 +18,8 @@
  *
  * The goal of this implementation is to have one source file for the builtin functions -
  * this file. They have to be consistent with the HELIOS builtin list and LLVM builtins manually.
+ *
+ * @warning The verification of the call_builtin_func opcode is not decided yet.
  */
 #pragma once
 

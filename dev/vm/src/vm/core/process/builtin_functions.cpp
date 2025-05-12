@@ -4,6 +4,7 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
+#include "vm/bytecode/builders/builders.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/opcode_definitions.hpp>
@@ -107,12 +108,16 @@ namespace vm::builtins {
 	auto getBuiltinFunctionTypes()
 		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
 		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
-			{ BuiltinFunctionID::InputI64,
-			  code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")) },
-			{ BuiltinFunctionID::OutputI64,
-			  code::FunctionType(
-				  base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
-			  ) }
+			{
+				BuiltinFunctionID::InputI64,
+				code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")),
+			},
+			{
+				BuiltinFunctionID::OutputI64,
+				code::FunctionType(
+					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
+				),
+			}
 		};
 
 		return &map;
@@ -136,24 +141,25 @@ namespace vm::builtins {
 
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection               module;
-			code::builders::TypeContextBuilder types_builder(code::getBuiltinTypes());
+			code::CodeCollection               code_collection;
+			code::builders::TypeContextBuilder type_context_builder(code::getBuiltinTypes());
 			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
-				types_builder.addType(func_type);
-			module.types = types_builder.build().getTypes() | std::ranges::to<std::vector>();
+				type_context_builder.addType(func_type);
+
+			auto type_context     = type_context_builder.build();
+			code_collection.types = type_context.getTypes() | std::ranges::to<std::vector>();
 
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
-				module.functions.emplace_back(code::Function{
-					{},
-					code::Identifier(func_type.name),
-					{
-						code::instructions::Op_call_builtin_func(
-							vm::opargs::BuiltinFunctionName(func_type.name)
-						),
-						code::instructions::Op_ret{},
-					} });
+				code::builders::FunctionBuilder func_builder(
+					code::Identifier(func_type.name), {}, type_context
+				);
+				func_builder.addInstruction({ code::instructions::Op_call_builtin_func(
+					vm::opargs::BuiltinFunctionName(func_type.name)
+				) });
+				func_builder.addInstruction(code::instructions::Op_ret{});
+				code_collection.functions.push_back(func_builder.build());
 			}
-			return module;
+			return code_collection;
 		}();
 
 		return &builtin_module;
