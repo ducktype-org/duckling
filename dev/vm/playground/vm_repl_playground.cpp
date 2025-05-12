@@ -1,12 +1,7 @@
-#include "lang_definitions/key_spec_op.hpp"
-#include "lexer/classifications.hpp"
-
 #include "base/exceptions.hpp"
-#include "base/int_conv.hpp"
 
 #include "vm/api/vm.hpp"
 
-#include <cstring>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -15,7 +10,6 @@
 #include <string>
 #include <string_view>
 #include <system_error>
-#include <thread>
 #include <vector>
 
 /*
@@ -63,7 +57,9 @@ public:
 
 		std::string line;
 		while (true) {
-			std::cout << ">>> ";
+			// TODO: Add a clear command.
+			// TODO: Reset loader.
+			std::cout << "\n>>> ";
 			if (!std::getline(std::cin, line)) {
 				std::cout << "Exiting REPL (EOF reached) or error.\n";
 				break;
@@ -101,16 +97,15 @@ private:
 	u64     load_counter = 0;  // Maybe that should be a static var in loadOnVm().
 	u64     step_counter = 0;
 
-	static constexpr const std::string_view TEMP_FILE_NAME_PREFIX = "temp_repl_file_";
-	static constexpr const std::string_view TEMP_FILE_NAME_SUFFIX = ".dbc";
-	static constexpr const std::string_view TEMPLATE_EXEC_INSTRUCTION_FUNC
+	static constexpr const std::string_view FORMAT_TEMP_FILE_NAME_PREFIX = "temp_repl_file_{}.dbc";
+	static constexpr const std::string_view FORMAT_EXEC_INSTRUCTION_FUNC
 		= "type fun: step_{0} {{}} void\n"
 		  "function step_{0} {{\n"
 		  "		{1}\n"
 		  "		ret;\n"
 		  "}}";
 
-	static constexpr const std::string_view TEMPLATE_GLOBAL_OUTPUT_FUNC
+	static constexpr const std::string_view FORMAT_GLOBAL_OUTPUT_FUNC
 		= "type fun: step_{0} {{}} void\n"
 		  "function step_{0} {{\n"
 		  "		init_lany_type x, i64;\n"
@@ -119,12 +114,12 @@ private:
 		  "		deinit;\n"
 		  "		ret;\n"
 		  "}}";
-	static constexpr const std::string_view TEMPLATE_GLOBAL_INIT_FUNC = "global_data {} {};\n";
+	static constexpr const std::string_view FORMAT_GLOBAL_INIT    = "global_data {} {};\n";
+	static constexpr const std::string_view FORMAT_STEP_FUNC_NAME = "step_{}";
 
 	// ============== HELPERS ==============
-	std::string getCurrentFilePath() {
-		return TEMP_FILE_NAME_PREFIX.data() + std::to_string(load_counter)
-		     + TEMP_FILE_NAME_SUFFIX.data();
+	std::string getCurrentTempFilePath() {
+		return std::format(FORMAT_TEMP_FILE_NAME_PREFIX, load_counter);
 	}
 
 	std::string strip(std::string string) {
@@ -179,42 +174,31 @@ private:
 
 		std::string args_str = line.substr(paren_open + 1, paren_close - paren_open - 1);
 
-		std::vector<std::string> arg_strings;
-		u64                      start = 0;
-		u64                      end   = args_str.find(',');
-		while (end != std::string::npos) {
+		u64              start = 0;
+		std::vector<i64> arguments;
+		while (start < args_str.length()) {
+			u64 end = args_str.find(',', start);
+			if (end == std::string::npos) break;
+
 			std::string arg = args_str.substr(start, end - start);
 			strip(arg);
-			if (!arg.empty()) arg_strings.push_back(arg);
-			start = end + 1;
-			end   = args_str.find(',', start);
-		}
-
-		// TODO: Potential do while to remove that duplicated code.
-		std::string last_arg = args_str.substr(start);
-		strip(last_arg);
-		if (!last_arg.empty()) arg_strings.push_back(last_arg);
-
-		// Convert to i64.
-		std::vector<i64> arguments;
-		arguments.reserve(arg_strings.size());
-		for (const auto& arg_str: arg_strings) {
 			try {
-				i64 arg = std::stoi(arg_str);
-				arguments.push_back(arg);
+				if (!arg.empty()) arguments.push_back(std::stoi(arg));
 			} catch (const std::exception& e) {
-				std::cerr << "Error: Invalid argument '" << arg_str << "' - must be integer\n";
+				std::cerr << "Error: Invalid argument '" << arg << "' - must be integer\n";
 				return {};
 			}
+			start = end + 1;
 		}
 
 		return { .func_name = function_name, .func_args = arguments };
 	}
 
 	void saveToTempFile(const std::string& content) {
-		std::ofstream file(getCurrentFilePath());
+		std::ofstream file(getCurrentTempFilePath());
 		if (!file) {
-			std::cerr << "Error: Could not create a temp file: " << TEMP_FILE_NAME_PREFIX << "\n";
+			std::cerr << "Error: Could not create a temp file: " << getCurrentTempFilePath()
+					  << "\n";
 			return;
 		}
 		file << content;
@@ -222,25 +206,28 @@ private:
 	}
 
 	// ============== VM API Functions ==============
-	void loadOnVm(const std::string& code) {
+	bool loadOnVm(const std::string& code) {
+		bool bad = false;
 		saveToTempFile(code);
-		fs::FilePath file(getCurrentFilePath());
+		fs::FilePath file(getCurrentTempFilePath());
 		auto         load_files_response = vm::api::loadFiles(pid, { file });
 		if (!load_files_response.has_value()) {
 			auto err     = load_files_response.error();
 			auto core_op = std::get<vm::api::CoreOperationError>(err);
 			auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
 			std::cout << "Error: Failed to load a file " << err_str << '\n';
+			bad = true;
 		}
 
 		std::error_code err_code;
-		std::filesystem::remove(getCurrentFilePath(), err_code);
+		std::filesystem::remove(getCurrentTempFilePath(), err_code);
 		if (err_code) {
-			std::cout << "Error: Failed to remove a temporary file " << getCurrentFilePath() << ": "
-					  << err_code.message() << '\n';
+			std::cout << "Error: Failed to remove a temporary file " << getCurrentTempFilePath()
+					  << ": " << err_code.message() << '\n';
 		}
-
+		if (bad) return false;
 		load_counter++;
+		return true;
 	}
 
 	i64 runOnVm(const std::string& func_name, const std::vector<i64>& func_args = {}) {
@@ -252,6 +239,13 @@ private:
 		auto exit_code_response = vm::api::getExitCode(pid);
 		CORE_ASSERT(exit_code_response.has_value(), "Error: Empty exit_code\n");
 		return *exit_code_response;
+	}
+
+	void loadAndRun(const std::string& code) {
+		if (loadOnVm(code)) {
+			runOnVm(std::format(FORMAT_STEP_FUNC_NAME, step_counter));
+			step_counter++;
+		}
 	}
 
 	// ============== Process User Requests ==============
@@ -266,38 +260,32 @@ private:
 		u64         comma_pos   = line.find(' ');
 		std::string global_type = strip(line.substr(comma_pos + 1));
 
-		std::string func_code = std::format(TEMPLATE_GLOBAL_INIT_FUNC, global_name, global_type);
+		std::string func_code = std::format(FORMAT_GLOBAL_INIT, global_name, global_type);
 		loadOnVm(func_code);
 	}
 
 	void processGlobalOutput(std::string& line) {
 		std::string global_name = strip(line.substr(1));
 		std::string func_code   = std::vformat(
-            TEMPLATE_GLOBAL_OUTPUT_FUNC, std::make_format_args(step_counter, global_name)
+            FORMAT_GLOBAL_OUTPUT_FUNC, std::make_format_args(step_counter, global_name)
         );
-		loadOnVm(func_code);
-		runOnVm(std::format("step_{}", step_counter));
-		step_counter++;
+		loadAndRun(func_code);
 	}
 
 	void processExecuteInstruction(std::string& line) {
 		std::string opcode    = strip(line.substr(1));
 		std::string func_code = std::vformat(
-			TEMPLATE_EXEC_INSTRUCTION_FUNC, std::make_format_args(step_counter, opcode)
+			FORMAT_EXEC_INSTRUCTION_FUNC, std::make_format_args(step_counter, opcode)
 		);
-		loadOnVm(func_code);
-		runOnVm("step_[STEP_COUNTER]");
-		step_counter++;
+		loadAndRun(func_code);
 	}
 
 	void processExecuteInstructionList() {
 		std::string opcodes   = loadCodeLinesUntil("]");
 		std::string func_code = std::vformat(
-			TEMPLATE_EXEC_INSTRUCTION_FUNC, std::make_format_args(step_counter, opcodes)
+			FORMAT_EXEC_INSTRUCTION_FUNC, std::make_format_args(step_counter, opcodes)
 		);
-		loadOnVm(func_code);
-		runOnVm(std::format("step_{}", step_counter));
-		step_counter++;
+		loadAndRun(func_code);
 	}
 
 	void processFunctionCall(const std::string& line) {

@@ -59,13 +59,12 @@ namespace vm::loader {
 		 * object.
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
-		
 
 		void dprint() {
 			std::cerr << "==============Program DPrint============\n";
-			for (const auto& func : functions) {
-				std::cerr << func.name.str.strView() << " | ";
-			}
+			for (const auto& func: functions) std::cerr << func.name.str.strView() << " | ";
+			std::cerr << "\n++++++++++++++++++=\n";
+			for (const auto& glob: globals_map) std::cerr << glob.name.str.strView() << " | ";
 			std::cerr << "==============Program DPrint============\n";
 		}
 
@@ -108,5 +107,7 @@ namespace vm::loader {
 		std::expected<vm::low::LowVMProgram, LoaderLogger> getProgram(
 			const std::vector<code::CodeCollection>& code_collection
 		);
+
+		void clear();
 	};
 }

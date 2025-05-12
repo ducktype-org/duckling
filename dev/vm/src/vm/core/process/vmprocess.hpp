@@ -4,6 +4,7 @@
 
 #include <base/optional.hpp>
 
+#include "vm/loader/loader.hpp"
 #include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
@@ -69,7 +70,7 @@ namespace vm {
 
 		Memory memory;
 
-		Box<loader::Loader> loader;
+		loader::Loader loader{VALIDATE_CODE};
 
 		//@TODO: For now assume that bytecode validation is always turned on.
 		static constexpr const bool VALIDATE_CODE = true;

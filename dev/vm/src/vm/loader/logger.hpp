@@ -23,7 +23,9 @@ namespace vm::loader {
 
 
 	public:
-		LoaderLogger() = default;
+		LoaderLogger() {
+			this->clear();
+		};
 
 		LoaderLogger(dia::Logger&& logger): logger(std::move(logger)) {}
 
@@ -113,6 +115,11 @@ namespace vm::loader {
 				stream << '\n';
 			}
 			for (auto& msg: errors) stream << msg << '\n';
+		}
+
+		void clear() {
+			logger.clear();
+			errors.clear();
 		}
 
 		bool good() { return logger.good() && errors.empty(); }
