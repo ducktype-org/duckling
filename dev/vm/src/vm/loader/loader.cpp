@@ -226,7 +226,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto                          type_context_builder = vm::code::getBuiltinTypes();
+			auto type_context_builder = vm::code::getBuiltinTypes();
+			//
+			// Add types which where already added to a program state.
+			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
+
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
 			for (const auto& parsed_file: parsed_files) {
@@ -283,11 +287,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<code::CodeCollection>& code_collection
 ) {
 	LoaderLogger logger;
-	std::cerr << "Program before adding: \n";
-	program.dprint();
 	program.insertCode(code_collection, logger);
-	std::cerr << "Program after adding: \n";
-	program.dprint();
 	if (logger.good()) {
 		auto validation_result = validator::verify(program);
 		if (!validation_result.has_value())
@@ -307,5 +307,5 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 }
 
 // void Loader::clear() {
-// 	this.	
+// 	this.
 // }

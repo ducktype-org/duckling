@@ -23,8 +23,8 @@ REPL - Quick overview:
 }   								-> close code injection mode by closing the brace.
 >>>
 --------------------------------------------------
->>> [FUNC-NAME]([ARG0], [ARG1]) -> calls a function with specified parameters.
->>> foo(1, 2, 3)                -> currently only i64 arguments are supported.
+>>> [FUNC-NAME]([ARG0], [ARG1], ...) 	-> calls a function with specified parameters.
+>>> foo(1, 2, 3)                		-> currently only i64 arguments are supported.
 --------------------------------------------------
 >>> #[global_name] [type]		->  initializes a global value with the specified name.
 --------------------------------------------------
@@ -36,10 +36,11 @@ it.
 >>> ![ 							-> loads a void function which performem specified operations and
 executes it. init_lptr_any x, i64; mov_l64_g64 	x, global; output_l64		x; deinit;
 ]
-
-
-
 */
+
+// TODO: Add a fast global +-/ operations
+// TODO: Flush stdin after each run so invalid input doesn't appear
+
 
 class DuckRepl {
 public:
@@ -178,7 +179,9 @@ private:
 		std::vector<i64> arguments;
 		while (start < args_str.length()) {
 			u64 end = args_str.find(',', start);
-			if (end == std::string::npos) break;
+
+			// Last argument.
+			if (end == std::string::npos) end = args_str.length();
 
 			std::string arg = args_str.substr(start, end - start);
 			strip(arg);
@@ -256,7 +259,6 @@ private:
 
 	void processGlobalInitialization(std::string& line) {
 		std::string global_name = strip(std::string(line).substr(1, line.find(' ')));
-		std::cerr << global_name << '\n';
 		u64         comma_pos   = line.find(' ');
 		std::string global_type = strip(line.substr(comma_pos + 1));
 

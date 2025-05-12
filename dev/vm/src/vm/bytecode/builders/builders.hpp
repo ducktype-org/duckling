@@ -219,6 +219,8 @@ namespace vm::code::builders {
 		 */
 		void addInstruction(const InstructionBuilder& instruction);
 
+		void expandTypeContext(const TypeContext& types);
+
 		[[nodiscard]] Function build() const;
 	};
 

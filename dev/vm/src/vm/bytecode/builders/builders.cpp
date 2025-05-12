@@ -227,6 +227,11 @@ FunctionBuilder::FunctionBuilder(
 		pushStackState(base::StrID(base::strConcat("arg", index).c_str()), type->getName());
 }
 
+void FunctionBuilder::expandTypeContext(const TypeContext& types) {
+	
+}
+
+
 usize vm::code::builders::FunctionBuilder::pushStackState(
 	vm::opargs::StackLocalAny name, vm::opargs::Type type
 ) {

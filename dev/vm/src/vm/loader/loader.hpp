@@ -60,14 +60,6 @@ namespace vm::loader {
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
-		void dprint() {
-			std::cerr << "==============Program DPrint============\n";
-			for (const auto& func: functions) std::cerr << func.name.str.strView() << " | ";
-			std::cerr << "\n++++++++++++++++++=\n";
-			for (const auto& glob: globals_map) std::cerr << glob.name.str.strView() << " | ";
-			std::cerr << "==============Program DPrint============\n";
-		}
-
 	private:
 		StableTypeIdNameMap<code::Function> functions;
 		code::builders::GlobalDataMap       globals_map;
