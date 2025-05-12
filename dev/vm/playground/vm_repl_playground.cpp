@@ -38,10 +38,6 @@ executes it. init_lptr_any x, i64; mov_l64_g64 	x, global; output_l64		x; deinit
 ]
 */
 
-// TODO: Add a fast global +-/ operations
-// TODO: Flush stdin after each run so invalid input doesn't appear
-
-
 class DuckRepl {
 public:
 	DuckRepl() {
@@ -58,8 +54,6 @@ public:
 
 		std::string line;
 		while (true) {
-			// TODO: Add a clear command.
-			// TODO: Reset loader.
 			std::cout << "\n>>> ";
 			if (!std::getline(std::cin, line)) {
 				std::cout << "Exiting REPL (EOF reached) or error.\n";
@@ -85,6 +79,7 @@ public:
 			} else {
 				std::cout << "Invalid input: \"" << line << "\"\n";
 			}
+			flushStdin();
 		}
 	}
 
@@ -119,6 +114,11 @@ private:
 	static constexpr const std::string_view FORMAT_STEP_FUNC_NAME = "step_{}";
 
 	// ============== HELPERS ==============
+	void flushStdin() {
+		if (std::cin.fail() && !std::cin.eof()) std::cin.clear();
+		std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	}
+
 	std::string getCurrentTempFilePath() {
 		return std::format(FORMAT_TEMP_FILE_NAME_PREFIX, load_counter);
 	}
