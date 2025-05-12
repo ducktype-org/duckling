@@ -424,7 +424,7 @@ namespace compiler::mir {
 		);
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 
 		/**
 		 * @todo: delete it during hash refactror  #523

@@ -31,8 +31,8 @@ namespace compiler::lir {
 	 */
 	using MutBlockRef = Ref<Block>;
 
-	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
-		return base::perfectHash(*function);
+	u64 KeyOf_LowerToLirFunction::queryUnstablePerfectHash() const {
+		return function->queryUnstablePerfectHash();
 	}
 
 	/**

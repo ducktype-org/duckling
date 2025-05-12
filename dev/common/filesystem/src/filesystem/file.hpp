@@ -7,7 +7,6 @@
 
 #include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <base/perfect_hash.hpp>
 #include <base/raw_view.hpp>
 
 #include <expected>
@@ -315,7 +314,7 @@ namespace fs {
 		bool operator<(const FilePath& oth) const { return path < oth.path; }
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

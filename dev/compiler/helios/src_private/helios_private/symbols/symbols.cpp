@@ -497,8 +497,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLinkedScope);
 
-	base::HashT KeyOf_LookupInSymbol::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(symbol);
+	u64 KeyOf_LookupInSymbol::queryUnstablePerfectHash() const {
+		auto hash_1 = symbol.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:

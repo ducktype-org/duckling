@@ -19,8 +19,8 @@ namespace tsh::internal {
 		auto operator<=>(const WrappedClassAbstractTypeImplPtr& other) const = default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return base::HashT(value);
+		u64 queryUnstablePerfectHash() const {
+			return u64(value);
 		}
 	};
 

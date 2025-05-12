@@ -11,7 +11,7 @@ namespace pst::detail {
 		PSTAccessKey(PstID pst_id): pst_id(pst_id) {}
 
 		[[nodiscard]]
-		u64 customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return pst_id.asInt();
 		}
 	};

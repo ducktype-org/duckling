@@ -64,7 +64,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnAbstractType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -108,7 +108,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnSymbolType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -152,7 +152,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnExpressionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

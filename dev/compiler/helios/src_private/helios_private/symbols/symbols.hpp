@@ -42,8 +42,8 @@ namespace compiler::helios {
 		bool follow_wildcards;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_LookupInSymbol&) const = default;
+		u64  queryUnstablePerfectHash() const;
+		bool operator==(const KeyOf_LookupInSymbol&) const = default;
 	};
 
 	/**

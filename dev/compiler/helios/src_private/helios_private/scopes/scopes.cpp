@@ -514,7 +514,7 @@ namespace compiler::helios {
 		static inline base::HashMap<
 			QKey,
 			query::CacheEntry<pst::PST<pst::Stmt>>,
-			base::PerfectHashFunctor<QKey>>
+			::query::queryUnstableHashFunctor<QKey>>
 			cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -580,8 +580,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
+	u64 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
+		auto hash_1 = scope.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
@@ -602,7 +602,7 @@ namespace compiler::helios {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.customPerfectHash() << "("
+			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
 					  << (iter_scope.ref->related_pst_element.has_value()
 			                  ? iter_scope.ref->related_pst_element.value()
 			                        .illegalAccess()

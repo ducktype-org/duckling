@@ -185,7 +185,7 @@ namespace tsh {
 		const std::string& toString() const;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 
 	protected:
 		/**

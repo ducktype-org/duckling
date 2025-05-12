@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ints.hpp"  // IWYU pragma: export
 
 #include <array>

@@ -9,7 +9,6 @@
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
-#include <base/perfect_hash.hpp>
 #include <base/raw_view.hpp>
 
 #include <algorithm>
@@ -251,9 +250,9 @@ namespace fs {
 		return { r_array, content.size() };
 	}
 
-	base::HashT FilePath::customPerfectHash() const {
-		static base::HashT                          next_hash = 0;
-		static base::HashMap<FilePath, base::HashT> hash_map;
+	u64 FilePath::queryUnstablePerfectHash() const {
+		static u64                          next_hash = 0;
+		static base::HashMap<FilePath, u64> hash_map;
 
 		// @Future: use atMaybe
 		if (hash_map.contains(*this)) return hash_map.at(*this);

@@ -8,7 +8,7 @@
 
 #include <query_framework/detail/query_data/query_id.hpp>
 
-#include <base/perfect_hash.hpp>
+#include <base/bit256.hpp>
 
 namespace query::detail {
 
@@ -21,8 +21,13 @@ namespace query::detail {
 	 * and use "legit hashing algorithm".
 	 */
 	template<typename KeyType>
-	detail::KeyHash hashKey(const KeyType& key) {
-		return { base::perfectHash<std::remove_cvref_t<KeyType>>(key) };
+	u64 hashKey(const KeyType& key) {
+		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
+			return key;
+		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
+			return static_cast<u64>(key);
+		else
+			return key.queryUnstablePerfectHash();
 	}
 
 	/**

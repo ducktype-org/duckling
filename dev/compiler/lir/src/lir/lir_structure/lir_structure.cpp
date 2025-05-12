@@ -102,7 +102,7 @@ namespace compiler::lir {
 				variant_case(LocalRef, local) { printLocal(local, output); }
 				variant_case(BlockRef, block) { output << "Block(" << block_id[block] << ")"; }
 				variant_case(FunctionLiteral, func) {
-					output << "Func(" << func.helios_id.customPerfectHash() << ")";
+					output << "Func(" << func.helios_id.queryUnstablePerfectHash() << ")";
 				}
 				variant_default { CORE_PANIC("Unhandled variant in printLocation"); }
 			}
