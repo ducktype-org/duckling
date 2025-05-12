@@ -11,6 +11,7 @@
 #include <base/exceptions.hpp>
 #include <base/str_utils.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
@@ -35,6 +36,7 @@ private:
 
 		std::vector<CRef<lir::Function>> funcs;
 		base::StrID                      module_name;
+		vm::code::CodeCollection code;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			module_name    = moduleName(module);
@@ -46,8 +48,10 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
+			backend_vm::Module m{ctx, module_name, funcs};
+			code = m.build();
 		});
-		return backend_vm::Module(module_name, funcs);
+		return code;
 	}
 
 	void runTest(
@@ -58,8 +62,7 @@ private:
 		i64                                exit_code = 0
 	) {
 		using namespace compiler;
-		auto module = getModuleFromPath(std::move(module_path));
-		auto code   = module.build();
+		auto code = getModuleFromPath(std::move(module_path));
 
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);

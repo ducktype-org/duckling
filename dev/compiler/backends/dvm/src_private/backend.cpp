@@ -479,7 +479,12 @@ namespace compiler::backend_vm {
 		}
 	}
 
-	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
+	Module::Module(
+		query::Context&                         query_ctx,
+		base::StrID                             module_id,
+		const std::vector<CRef<lir::Function>>& functions
+	):
+		  query_ctx(query_ctx),
 		  module_id(module_id),
 		  type_context_builder(vm::code::getBuiltinTypes()) {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
