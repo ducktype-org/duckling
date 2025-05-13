@@ -116,7 +116,7 @@ private:
 	static constexpr std::string_view FORMAT_STEP_FUNC_NAME = "step_{}";
 
 	// ============== HELPERS ==============
-	std::string getCurrentTempFilePath() {
+	[[nodiscard]] std::string getCurrentTempFilePath() const {
 		return std::format(FORMAT_TEMP_FILE_NAME_PREFIX, load_counter);
 	}
 
@@ -160,7 +160,7 @@ private:
 		return function_code;
 	}
 
-	CallInfo parseFunctionCallLine(const std::string& line) {
+	CallInfo parseFunctionCallLine(const std::string& line) const {
 		u64 paren_open  = line.find('(');
 		u64 paren_close = line.rfind(')');
 
