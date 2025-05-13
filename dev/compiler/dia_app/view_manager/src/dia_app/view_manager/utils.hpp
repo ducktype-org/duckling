@@ -4,6 +4,7 @@
 #include <expected>
 #include <set>
 #include <json/json.hpp>
+#include <yaml-cpp/yaml.h>
 
 namespace dia_app {
     using json = nlohmann::json;

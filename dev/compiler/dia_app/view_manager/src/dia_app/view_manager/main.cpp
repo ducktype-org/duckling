@@ -1,275 +1,196 @@
-#include "grpcpp/server.h"
-#include "grpcpp/server_builder.h"
-#include <bits/stdc++.h>
-#include <json/json.hpp>
+#include "view_constructor.hpp"
 
+#include <bits/stdc++.h>
 #include <grpcpp/grpcpp.h>
-#include <memory>
-#include <proto/view.pb.h>
+#include <grpcpp/server_builder.h>
+#include <grpcpp/server.h>
+#include <json/json.hpp>
 #include <proto/view.grpc.pb.h>
-#include <string>
+#include <proto/view.pb.h>
 
 using namespace std;
+using dia_app::message_template::Info;
+using dia_app::ViewConstructor;
 
 using nlohmann::json;
-using uuid_t = int64_t;
 
-class Component {
+class Metadata {
     private:
-    uuid_t uuid;
+    optional<string> error_code, file_info;
 
     public:
-    Component(uuid_t uuid) : uuid(uuid) {}
+    static Metadata createFromInfo(const Info &info) {
 
-    virtual ~Component() {}
-};
-
-class TextComponent;
-class ConcatComponent;
-class InteractiveComponent;
-
-const string TEXT_COMPONENT_ANNOTATION = "text";
-const string CONCAT_COMPONENT_ANNOTATION = "concat";
-const string INTERACTIVE_COMPONENT_ANNOTATION = "interactive";
-
-using text_comp_ptr = shared_ptr<TextComponent>;
-using concat_comp_ptr = shared_ptr<ConcatComponent>;
-using inter_comp_ptr = shared_ptr<InteractiveComponent>;
-using comp_ptr = variant<text_comp_ptr,
-                         concat_comp_ptr,
-                         inter_comp_ptr>;
-
-using uuid_to_component_t = unordered_map<uuid_t, comp_ptr>;
-
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-
-
-
-class TextComponent : Component {
-    private:
-    string content;
-
-    TextComponent(uuid_t uuid, string content) : Component(uuid), content(std::move(content)) {}
-
-    public:
-    static unique_ptr<TextComponent> fromJson(const json &input) {
-        uuid_t uuid = input["uuid"];
-        string content = input["content"];
-        return make_unique<TextComponent>(TextComponent(uuid, content));
     }
-};
 
-
-class ConcatComponent : Component {
-    private:
-
-    public:
-    vector<comp_ptr> sub_components;
-    ConcatComponent(uuid_t uuid, vector<comp_ptr> components) : Component(uuid), sub_components(std::move(components)) {}
-
-    static unique_ptr<ConcatComponent> fromJson(const json &input) {
-        uuid_t uuid = input["uuid"];
-        vector<comp_ptr> empty;
-        return make_unique<ConcatComponent>(ConcatComponent(uuid, empty));
-    }
-};
-
-class InteractiveComponent : Component {
-    private:
-
-    public:
-    vector<comp_ptr> showed, hidden, ori_showed;
-
-    InteractiveComponent(uuid_t uuid, vector<comp_ptr> showed, vector<comp_ptr> hidden, vector<comp_ptr> ori_showed) : Component(uuid), showed(std::move(showed)), hidden(std::move(hidden)), ori_showed(std::move(ori_showed)) {}
-
-    static unique_ptr<InteractiveComponent> fromJson(const json &input) {
-        uuid_t uuid = input["uuid"];
-        vector<comp_ptr> empty;
-        return make_unique<InteractiveComponent>(InteractiveComponent(uuid, empty, empty, empty));
-    }
-};
-
-uuid_t getUuid() {
-    static uuid_t cnt = 0;
-    ++cnt;
-    return cnt;
-}
-
-comp_ptr recursiveCopy(comp_ptr component);
-
-vector<comp_ptr> copySubs(const vector<comp_ptr>& subs) {
-    vector<comp_ptr> result;
-    transform(subs.begin(), subs.end(), result.begin(), [](const comp_ptr& sub) {
-        return recursiveCopy(sub);
-    });
-    return result;
-};
-
-comp_ptr recursiveCopy(comp_ptr component) {
-    return std::visit(overloaded{
-        [](text_comp_ptr comp){
-            return comp_ptr(comp);
-        },
-        [](const concat_comp_ptr &comp){
-            return comp_ptr(make_shared<ConcatComponent>(getUuid(), copySubs(comp->sub_components)));
-        },
-        [](const inter_comp_ptr& comp){
-            return comp_ptr(make_shared<InteractiveComponent>(getUuid(), copySubs(comp->ori_showed), comp->hidden, comp->ori_showed));
+    ::view::Metadata getView() const {
+        ::view::Metadata result;
+        if (this->error_code.has_value()) {
+            result.set_error_code(this->error_code.value());
         }
-    }, component);
-}
+        if (this->file_info.has_value()) {
+            result.set_file_info(this->file_info.value());
+        }
+        return result;
+    }
+};
+
+
+class HlInfo {
+    private:
+
+    public:
+    ::view::HlInfo getView() const;
+};
+
+class Diagnostic {
+    private:
+    Metadata metadata;
+    vector<Section> sections;
+    vector<HlInfo> hl_messages;
+
+    public:
+    Diagnostic(Metadata metadata, vector<Section> sections, vector<HlInfo> hl_messages) : metadata(metadata), sections(sections), hl_messages(hl_messages) {}
+    static Diagnostic createFromInfo(const Info &info, CreationContext &creation_context) {
+        auto metadata = Metadata::createFromInfo(info);
+        vector<Section> sections;
+        // if (info.header_message) {
+        //     sections.emplace_back(TextSection(info.header_message->toComponent(creation_context)));
+        // }
+        // if (info.code.has_value()) {
+        //     sections.emplace_back(CodeSection(info.code->content->toComponent(creation_context)));
+        // }
+        // if (info.description) {
+        //     sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
+        // }
+        vector<HlInfo> hl_messages;
+        return Diagnostic(metadata, sections, hl_messages);
+    }
+
+    ::view::Diagnostic getView() const {
+        ::view::Diagnostic diagnostic;
+        // {
+        //     auto metadata = this->metadata.getView();
+        //     diagnostic.set_allocated_metadata(&metadata);
+        // }
+        // {
+        //     vector<::view::Section> tmp;
+        //     transform(sections.begin(), sections.end(), tmp.begin(),
+        //         [](const Section &section) {
+        //         return section.getView();
+        //     });
+        //     diagnostic.mutable_sections()->Add(tmp.begin(), tmp.end());
+        // }
+        // {
+        //     vector<::view::HlInfo> tmp;
+        //     transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
+        //         [](const HlInfo &hl_info) {
+        //         return hl_info.getView();
+        //     });
+        //     diagnostic.mutable_hl_messages()->Add(tmp.begin(), tmp.end());
+        // }
+        return diagnostic;
+    }
+};
 
 class ViewManager {
     private:
-    uuid_to_component_t uuid_to_component;
-    vector<comp_ptr> errors;
+    vector<Diagnostic> diagnostics;
+    // unique_ptr<unordered_map<component_id_t, weak_ptr<InteractiveComponent>>> id_to_interactive_component;
 
-    ViewManager() {}
-
-    static comp_ptr parseComponent(const json& input) {
-        if (input["type"] == TEXT_COMPONENT_ANNOTATION) {
-            return text_comp_ptr(TextComponent::fromJson(input));
-        }
-        else if (input["type"] == CONCAT_COMPONENT_ANNOTATION) {
-            return concat_comp_ptr(ConcatComponent::fromJson(input));
-        }
-        else if (input["type"] == INTERACTIVE_COMPONENT_ANNOTATION) {
-            return inter_comp_ptr(InteractiveComponent::fromJson(input));
-        }
-        else {
-            throw "Unsupported component type!";
-        }
-    }
-
-    static vector<comp_ptr> parseComponents(const json::array_t& input) {
-        vector<comp_ptr> result;
-        transform(input.begin(), input.end(), result.begin(), [](const json& comp_json) {
-            return parseComponent(comp_json);
-        });
-        return result;
-    }
 
     public:
-    static unique_ptr<ViewManager> createFromJson(json input) {
-        // unordered_set<uuid_t> processed;
+    ViewManager(vector<Diagnostic> diagnostics) : diagnostics(std::move(diagnostics)) {}
+    static ViewManager createFromJson(const json &input) {
+        // TODO: WTF?
+        ViewConstructor view_constructor(0, input);
 
-        // function<comp_ptr(json)> build = [&](json &input) {
+        Info info = *view_constructor.load_main_info();
 
-        // };
-        // for (auto error : input["errors"]) {
+        auto creation_context = CreationContext{.id_to_interactive_component=make_unique<unordered_map<component_id_t, weak_ptr<InteractiveComponent>>>()};
 
-        // }
+        auto diagnostics = vector<Diagnostic>{Diagnostic::createFromInfo(info, creation_context)};
 
-        // map<uuid_t, vector<uuid_t>> graph;
-        // map<uuid_t, size_t> deg;
-        // vector<uuid_t> nodes;
-        // queue<uuid_t> que;
-
-        // for (auto component : input["components"]) {
-        //     nodes.emplace_back(component["uuid"]);
-        //     if (component["type"] == CONCAT_COMPONENT_ANNOTATION) {
-        //         for (auto other : component["subcomponents"]) {
-        //             ++deg[other];
-        //             graph[component["uuid"]].emplace_back(other);
-        //         }
-        //     }
-        //     else if (component["type"] == INTERACTIVE_COMPONENT_ANNOTATION) {
-        //         for (auto other : component["closed"]) {
-        //             ++deg[other];
-        //             graph[component["uuid"]].emplace_back(other);
-        //         }
-        //         for (auto other : component["expanded"]) {
-        //             ++deg[other];
-        //             graph[component["uuid"]].emplace_back(other);
-        //         }
-        //     }
-        // }
-        // for (auto node : nodes) {
-        //     if (deg[node] == 0) {
-        //         que.emplace(node);
-        //     }
-        // }
-
-        // while (!que.empty()) {
-
-        // }
-
-
-        // auto components = parseComponents(input["components"]);
-
-        // auto parse_errors = [](json input) {
-
-        // };
-        return unique_ptr<ViewManager>();
+        return ViewManager(diagnostics);
     }
 
-    void registerInteraction(uuid_t uuid) {
-        comp_ptr component = this->uuid_to_component.at(uuid);
-        std::visit(overloaded{
-            [](const text_comp_ptr& ){},
-            [](const concat_comp_ptr& ){},
-            [](const inter_comp_ptr& comp){
-                comp->showed = copySubs(comp->hidden);
-                swap(comp->ori_showed, comp->hidden);
-            }
-        }, component);
+    void getView(::view::ViewResponse* response) {
+        // vector<::view::Diagnostic> tmp;
+        // transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
+        // [](const Diagnostic &diagnostic) {
+        //     return diagnostic.getView();
+        // });
+        // response->mutable_diagnostics()->Add(tmp.begin(), tmp.end());
     }
 
-    // json dump() {
-
-    // }
+    void registerInteraction(component_id_t id, InteractionType interaction_type) {
+        // auto ptr = id_to_interactive_component->find(id);
+        // if (ptr == id_to_interactive_component->end()) {
+        //     return;
+        // }
+        // auto component = ptr->second.lock();
+        // if (component) {
+        //     component->registerInteraction(interaction_type);
+        // }
+    }
 };
 
-// class ViewServiceImpl : public view::ViewService::Service {
-//     ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::Empty* request, ::view::ViewResponse* response) override {
-//         cerr << "Received GetView" << endl;
-//         auto component = make_unique<::view::Component>();
-//         component->set_id(5);
-//         auto text_component = make_unique<::view::TextComponent>();
-//         ::view::TextEntry text_entry1;
-//         text_entry1.set_text("Pierwszy tekst.");
-//         text_entry1.set_group_id(17);
-//         text_entry1.set_type(::view::TextDisplayType::PLAIN);
-//         ::view::TextEntry text_entry2;
-//         text_entry2.set_text("Drugi tekst.");
-//         text_entry2.set_group_id(17);
-//         text_entry2.set_type(::view::TextDisplayType::PLAIN);
-//         auto tmp = {text_entry1, text_entry2};
-//         text_component->mutable_entries()->Add(tmp.begin(), tmp.end());
-//         component->set_allocated_text_component(text_component.release());
-//         response->set_allocated_component(component.release());
-//         return ::grpc::Status::OK;
-//     }
+class ViewServiceImpl : public ::view::ViewService::Service {
+    private:
+    ViewManager vm;
 
-//     ::grpc::Status Click(::grpc::ServerContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response) override {
-//         cerr << "Received Click" << endl;
-//         int32_t component_id = request->object_id();
-//         response->set_status("Status of the response of request with object_id: " + to_string(component_id));
-//         return ::grpc::Status::OK;
-//     }
-// };
+
+    public:
+    ViewServiceImpl(ViewManager vm) : vm(std::move(vm)) {}
+    static ViewServiceImpl createFromJson(const json &input) {
+        return ViewServiceImpl(ViewManager::createFromJson(input));
+    }
+
+    ::grpc::Status GetView(::grpc::ServerContext* context,
+                           const ::view::ViewRequest* request,
+                           ::view::ViewResponse* response) override {
+        vm.getView(response);
+        return ::grpc::Status::OK;
+    }
+
+    ::grpc::Status Click(::grpc::ServerContext* context,
+                           const ::view::ClickRequest* request,
+                           ::view::ClickResponse* response) override {
+        InteractionType interaction_type = [&request](){
+            switch(request->click_type()) {
+                case ::view::ClickType::CLICK: return InteractionType::Click;
+                case ::view::ClickType::CTRL_CLICK: return InteractionType::CtrlClick;
+                case ::view::ClickType::SHIFT_CLICK: return InteractionType::ShiftClick;
+            }
+        }();
+        vm.registerInteraction(request->component_id(), interaction_type);
+        return ::grpc::Status::OK;
+    }
+
+    ::grpc::Status CloseSideNote(::grpc::ServerContext* context,
+                           const ::view::CloseSideNoteRequest* request,
+                           ::view::CloseSideNoteResponse* response) override {
+        return ::grpc::Status::OK;
+    }
+};
+
 
 int main(int argc, char* argv[]) {
-    // if (argc != 2) {
-    //     std::cerr << "Pass a single file as argument" << std::endl;
-    //     return 1;
-    // }
+    if (argc != 2) {
+        std::cerr << "Pass a single file as argument\n";
+        return 1;
+    }
     
-    // std::ifstream file(argv[1]);
-    // json input = json::parse(file);
-    // file.close();
+    std::ifstream file(argv[1]);
+    json input = json::parse(file);
+    file.close();
 
-    // ViewManager view_manager = ViewManager::create_from_json(input);
-
-    // stawić serwis
-
-    // ViewServiceImpl service;
+    ViewServiceImpl service = ViewServiceImpl::createFromJson(input);
     // grpc::ServerBuilder builder;
     // builder.AddListeningPort("localhost:50051", grpc::InsecureServerCredentials());
     // builder.RegisterService(&service);
     // unique_ptr<grpc::Server> server(builder.BuildAndStart());
-    // cout << "ViewManager started on port 50051" << endl;
+    // cout << "ViewManager started on port 50051\n";
     // server->Wait();
     
     return 0;

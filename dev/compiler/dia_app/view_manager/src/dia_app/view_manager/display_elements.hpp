@@ -15,7 +15,7 @@ namespace dia_file {
         std::vector<InfoHandle> assoc_infos;
 
         DisplayElement(const std::vector<InfoHandle> assoc_infos) : assoc_infos(assoc_infos) {}
-        virtual ~DisplayElement() {}
+        virtual ~DisplayElement();
         
         // Make a deep copy of this element.
         virtual Ptr copy() const = 0;
@@ -125,8 +125,8 @@ namespace dia_file {
             auto primary = this->content->toComponent(creation_context);
             auto alternative = this->alt_content->toComponent(creation_context);
             auto result = make_shared<InteractiveComponent>(getNewId(), primary, alternative);
-            creation_context.id_to_interactive_component->emplace(result.weak_ptr());
-            return static_pointer_cast<Component>();
+            creation_context.id_to_interactive_component->emplace(result->getId(), std::weak_ptr<InteractiveComponent>(result));
+            return static_pointer_cast<Component>(result);
         }
     };
 

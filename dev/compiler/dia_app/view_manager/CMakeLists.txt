@@ -17,6 +17,6 @@ add_executable(yaml_test
     src/dia_app/view_manager/vm_yaml_test.cpp
 )
 
-target_link_libraries(view_manager PUBLIC JSON grpc++ Proto)
-target_link_libraries(view_constructor_test PUBLIC JSON)
+target_link_libraries(view_manager PUBLIC JSON yaml-cpp::yaml-cpp grpc++ Proto)
+target_link_libraries(view_constructor_test PUBLIC JSON yaml-cpp::yaml-cpp)
 target_link_libraries(yaml_test PUBLIC JSON yaml-cpp::yaml-cpp Proto)

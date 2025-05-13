@@ -28,7 +28,7 @@ class Component {
         }
     }
 
-    virtual ~Component() {}
+    virtual ~Component();
 
     virtual shared_ptr<Component> deepCopy();
 };
@@ -114,6 +114,7 @@ class InteractiveComponent : public Component {
     shared_ptr<Component> visible, primary, alternative;
 
     public:
+    component_id_t getId() { return this->id; }
     InteractiveComponent(component_id_t id, const shared_ptr<Component>& primary, const shared_ptr<Component>& alternative) :
         id(id), visible(primary->deepCopy()), primary(primary), alternative(alternative) {}
         

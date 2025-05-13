@@ -6,6 +6,9 @@ namespace dia_file {
     void fetch_entity(EntityHandle entity_handle, DataHandle data_handle);
     std::vector<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle);
 
+    DisplayElement::~DisplayElement() {}
+    shared_ptr<Component> DisplayElement::toComponent(CreationContext&) const { return {}; }
+
     // ---------------- TextElement ---------------- //
 
     TextElement::TextElement(const json &elem_json) : DisplayElement({}) {
