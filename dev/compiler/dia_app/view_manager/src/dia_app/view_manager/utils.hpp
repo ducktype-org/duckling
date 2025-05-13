@@ -63,6 +63,17 @@ namespace dia_app {
             ASSUME_HAS_STR_ASSIGN(metadata, name);
         }
 
+        ShortMetadata(const YAML::Node &node) {
+            // Required fields
+            assert(node["type"] && node["type"].IsScalar());
+            assert(node["family"] && node["family"].IsScalar());
+            assert(node["name"] && node["name"].IsScalar());
+
+            type = node["type"].as<std::string>();
+            family = node["family"].as<std::string>();
+            name = node["name"].as<std::string>();
+        }
+
         std::string get_path() const {
             return MESSAGE_TEMPLATE_PATH + type + '/' + family + '/' + name + ".json";
         }
@@ -82,13 +93,21 @@ namespace dia_app {
         std::string active_until;
 
         Metadata() {}
-        Metadata(const json &metadata) {
-            ASSUME_HAS_STR_ASSIGN(metadata, type);
-            ASSUME_HAS_STR_ASSIGN(metadata, name);
-            ASSUME_HAS_STR_ASSIGN(metadata, family);
-            ASSUME_HAS_STR_ASSIGN(metadata, code);
-            ASSUME_HAS_STR_ASSIGN(metadata, active_from);
-            ASSUME_HAS_STR_ASSIGN(metadata, active_until);
+        Metadata(const YAML::Node &node) {
+            // Required fields
+            assert(node["type"] && node["type"].IsScalar());
+            assert(node["family"] && node["family"].IsScalar());
+            assert(node["name"] && node["name"].IsScalar());
+            assert(node["code"] && node["code"].IsScalar());
+            assert(node["active_from"] && node["active_from"].IsScalar());
+            assert(node["active_until"] && node["active_until"].IsScalar());
+
+            type = node["type"].as<std::string>();
+            family = node["family"].as<std::string>();
+            name = node["name"].as<std::string>();
+            code = node["code"].as<std::string>();
+            active_from = node["active_from"].as<std::string>();
+            active_until = node["active_until"].as<std::string>();
         }
 
         bool same_as(const ShortMetadata &metadata) const {

@@ -1,4 +1,5 @@
 #pragma once
+#include <yaml-cpp/yaml.h>
 #include "utils.hpp"
 #include "dia_parser.hpp"
 #include "template_parser.hpp"
@@ -8,7 +9,7 @@ namespace message_template {
     
     struct TemplateElement;
     using Ptr = std::shared_ptr<TemplateElement>;
-    Ptr parse(const json &msg);
+    Ptr parse(const YAML::Node &msg);
     
     struct TemplateElement {
         using DisplayPtr = dia_file::Ptr;
@@ -22,134 +23,127 @@ namespace message_template {
 
         TextElement(const std::string &text) : text(text) {}
 
-        DisplayPtr to_display(TemplateDataHandle _) const {
+        DisplayPtr to_display(TemplateDataHandle _) const override {
             return std::make_shared<dia_file::TextElement>(text);
         }
     };
+
     struct ConcatElement : public TemplateElement {
         std::vector<Ptr> elems;
         
-        ConcatElement(const json &elem_json) {
-            ASSUME(elem_json.is_array(), "concat element is not an array");
-            for (const json &el : elem_json) {
+        ConcatElement(const YAML::Node &elem_node) {
+            assert(elem_node.IsSequence() && "concat element is not a sequence");
+            for (const auto &el : elem_node) {
                 elems.push_back(parse(el));
             }
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const {
+        DisplayPtr to_display(TemplateDataHandle handle) const override {
             std::vector<DisplayPtr> display_elems;
-            for (auto &elem : elems) {
+            for (const auto &elem : elems) {
                 display_elems.push_back(elem->to_display(handle));
             }
             return std::make_shared<dia_file::ConcatElement>(display_elems, std::vector<uint>());
         }
     };
+
     struct ParamElement : public TemplateElement {
         std::string param;
 
-        ParamElement(const json &elem_json) {
-            ASSUME_HAS_STR_ASSIGN(elem_json, param);
+        ParamElement(const YAML::Node &elem_node) {
+            assert(elem_node["param"] && elem_node["param"].IsScalar());
+            param = elem_node["param"].as<std::string>();
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const {
-            ASSUME_HAS(handle.param_data.params, param);
-            // A deep copy is performed, so that later transformations
-            // on multiple occurences of the same parameter happen independently.
+        DisplayPtr to_display(TemplateDataHandle handle) const override {
+            assert(handle.param_data.params.count(param));
+            // Deep copy so independent transformations
             return handle.param_data.params.at(param)->copy();
         }
     };
+
     struct MacroElement : public TemplateElement {
         std::string macro;
 
-        MacroElement(const json &elem_json) {
-            ASSUME_HAS_STR_ASSIGN(elem_json, macro);
+        MacroElement(const YAML::Node &elem_node) {
+            assert(elem_node["macro"] && elem_node["macro"].IsScalar());
+            macro = elem_node["macro"].as<std::string>();
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const {
-            ASSUME_HAS(handle.template_data.macros, macro);
+        DisplayPtr to_display(TemplateDataHandle handle) const override {
+            assert(handle.template_data.macros.count(macro));
             return handle.template_data.macros.at(macro)->to_display(handle);
         }
     };
+
     struct IncludeElement : public TemplateElement {
         ShortMetadata include;
         Ptr on;
 
-        IncludeElement(const json &elem_json) {
-            ASSUME_HAS(elem_json, "include");
-            include = elem_json["include"];
-            ASSUME_HAS(elem_json, "on");
-            on = parse(elem_json["on"]);
+        IncludeElement(const YAML::Node &elem_node) {
+            assert(elem_node["include"]);
+            include = elem_node["include"];
+            assert(elem_node["on"]);
+            on = parse(elem_node["on"]);
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const {
-            // Generate the display element.
+        DisplayPtr to_display(TemplateDataHandle handle) const override {
             DisplayPtr res = on->to_display(handle);
-
-            // Create (or access if present) a new info handle
-            // with include metadata.
             InfoHandle info = InfoParamsHandle::add(include, handle.to_data_handle());
-            // Assign the new info handle to the display element.
             res->add_assoc_info(info);
-
             return res;
         }
     };
+
     struct CaseOfElement : public TemplateElement {
         Ptr pattern;
         std::map<std::string, Ptr> cases;
 
-        CaseOfElement(const json &elem_json) {
-            ASSUME_HAS(elem_json, "case");
-            pattern = parse(elem_json["case"]);
+        CaseOfElement(const YAML::Node &elem_node) {
+            assert(elem_node["case"]);
+            pattern = parse(elem_node["case"]);
 
-            ASSUME_HAS(elem_json, "of");
-            for (auto &[key, val] : elem_json["of"].items()) {
-                cases[key] = parse(val);
+            assert(elem_node["of"] && elem_node["of"].IsMap());
+            for (const auto &it : elem_node["of"]) {
+                const std::string key = it.first.as<std::string>();
+                cases[key] = parse(it.second);
             }
-
-            ASSUME_HAS(elem_json["of"], "[other]");
+            assert(elem_node["of"]["[other]"] && "CaseOfElement missing [other] case");
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const {
-            // Generate the pattern display content.
-            // Note: this display content will *not* be displayed,
-            //       only pattern-matched, so it might e.g. introduce some
-            //       redundant (unreachable) infos, but we are OK with that cost.
+        DisplayPtr to_display(TemplateDataHandle handle) const override {
             DisplayPtr pattern_display = pattern->to_display(handle);
-            // Match on cases and generate the matching display content.
-            // Exact matches first.
-            for (auto &[key, val] : cases) {
+            for (const auto &kv : cases) {
+                const std::string &key = kv.first;
+                const Ptr &val = kv.second;
                 if (is_case_exact(key)) {
                     if (key == pattern_display->to_text(handle.to_data_handle())) {
                         return val->to_display(handle);
                     }
                 }
             }
-            // Note: some other [class] matches can be introduced and matched here.
-            // [other] last.
             return cases.at("[other]")->to_display(handle);
         }
     };
 
-    /* Order of message type evaluation:
-        text -> concat -> parameter -> macro -> case of */
-    inline Ptr parse(const json &msg) {
-        if (msg.is_string()) {
-            return std::make_shared<TextElement>(msg);
+    inline Ptr parse(const YAML::Node &msg) {
+        if (msg.IsScalar()) {
+            return std::make_shared<TextElement>(msg.as<std::string>());
         }
-        if (msg.is_array()) {
+        if (msg.IsSequence()) {
             return std::make_shared<ConcatElement>(msg);
         }
-        if (msg.contains("param")) {
+        if (msg["param"]) {
             return std::make_shared<ParamElement>(msg);
         }
-        if (msg.contains("macro")) {
+        if (msg["macro"]) {
             return std::make_shared<MacroElement>(msg);
         }
-        if (msg.contains("include")) {
+        if (msg["include"]) {
             return std::make_shared<IncludeElement>(msg);
         }
         return std::make_shared<CaseOfElement>(msg);
     }
+
 } // namespace message_template
 } // namespace dia_app

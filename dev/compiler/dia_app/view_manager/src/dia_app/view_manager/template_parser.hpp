@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <yaml-cpp/yaml.h>
 #include "utils.hpp"
 #include "dia_parser.hpp"
 
@@ -8,7 +9,7 @@ namespace message_template {
 
     struct TemplateElement;
     using Ptr = std::shared_ptr<TemplateElement>;
-    Ptr parse(const json &msg);
+    Ptr parse(const YAML::Node &msg);
 
     #define MAX_PRIORITY_UINT 1000000000
     struct PointerMessage {
@@ -20,16 +21,18 @@ namespace message_template {
         Ptr message;
 
         PointerMessage() {}
-        PointerMessage(const json &msg) : priority(MAX_PRIORITY_UINT) {
-            ASSUME_HAS(msg, "content");
+        PointerMessage(const YAML::Node &msg) : priority(MAX_PRIORITY_UINT) {
+            // require content
+            assert(msg["content"]);
             message = parse(msg["content"]);
 
-            ASSUME_HAS_STR(msg, "type");
-            type = msg["type"];
+            // require type
+            assert(msg["type"] && msg["type"].IsScalar());
+            type = msg["type"].as<std::string>();
 
-            if (msg.contains("priority")) {
-                ASSUME_HAS_UINT_ASSIGN(msg, priority);
-                ASSUME(priority <= MAX_PRIORITY_UINT, "priority exceeds MAX_PRIORITY_UINT");
+            if (msg["priority"]) {
+                priority = msg["priority"].as<unsigned>();
+                assert(priority <= MAX_PRIORITY_UINT);
             }
         }
     };
@@ -58,48 +61,56 @@ namespace message_template {
                 throw TemplateFileNotFoundException();
             }
 
-            json template_json = json::parse(file);
+            YAML::Node template_yaml = YAML::Load(file);
         
             // Parse metadata.
-            ASSUME_HAS(template_json, "metadata");
-            metadata = Metadata(template_json["metadata"]);
-            ASSUME(metadata.same_as(params.metadata), "param and template metadata differ");
+            assert(template_yaml["metadata"]);
+            metadata = Metadata(template_yaml["metadata"]);
+            assert(metadata.same_as(params.metadata));
 
             // Parse macros.
-            const json &macros_json = or_empty(template_json, "macros");
-            for (auto &[key, val] : macros_json.items()) {
-                macros[key] = parse(val);
+            const YAML::Node &macros_node = template_yaml["macros"];
+            if (macros_node && macros_node.IsMap()) {
+                for (const auto &it : macros_node) {
+                    const std::string key = it.first.as<std::string>();
+                    macros[key] = parse(it.second);
+                }
             }
             
             // Parse parameters.
-            const json &declared_params = or_empty(template_json, "params");
-            // Did not provide more than available.
-            for (auto &[key, _] : params.params) {
-                ASSUME_HAS(declared_params, key);
-            }
-            // Did not provide fewer than necessary.
-            for (auto &[key, val] : declared_params.items()) {
-                if (!val.contains("optional") || val["optional"] != true) {
-                    ASSUME_HAS(params.params, key);
+            const YAML::Node &declared_params = template_yaml["params"];
+            if (declared_params && declared_params.IsMap()) {
+                // Did not provide more than available.
+                for (const auto &it : params.params) {
+                    assert(declared_params[it.first]);
+                }
+                // Did not provide fewer than necessary.
+                for (const auto &it : declared_params) {
+                    const YAML::Node &val = it.second;
+                    if (!val["optional"] || !val["optional"].as<bool>()) {
+                        assert(params.params.count(it.first.as<std::string>()));
+                    }
                 }
             }
 
             // Parse message parts.
             // - header message
-            ASSUME_HAS(template_json, "header_message");
-            header_message = parse(template_json["header_message"]);
+            assert(template_yaml["header_message"]);
+            header_message = parse(template_yaml["header_message"]);
             
             // - pointer messages
-            if (template_json.contains("pointer_messages")) {
-                ASSUME_OBJ(template_json["pointer_messages"]);
-                for (auto &[key, val] : template_json["pointer_messages"].items()) {
-                    pointer_messages[key] = PointerMessage(val);
+            if (template_yaml["pointer_messages"]) {
+                const YAML::Node &pm_node = template_yaml["pointer_messages"];
+                assert(pm_node.IsMap());
+                for (const auto &it : pm_node) {
+                    const std::string key = it.first.as<std::string>();
+                    pointer_messages[key] = PointerMessage(it.second);
                 }
             }
 
             // - description
-            if (template_json.contains("description")) {
-                description = parse(template_json["description"]);
+            if (template_yaml["description"]) {
+                description = parse(template_yaml["description"]);
             }
         }
     };
