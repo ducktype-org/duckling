@@ -6,8 +6,8 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 		// TODO: Call view manager.
 		// This is just temporary:
 		json j{ message };
-		printer::StreamPrinter::print(j.dump(2));
-		printer::StreamPrinter::newline(1);
+		printer::StreamPrinter::print(j.dump(2), std::cout);
+		printer::StreamPrinter::newline(1, std::cout);
 		return;
 	}
 	messages.emplace_back(std::move(message));
