@@ -14,10 +14,10 @@ namespace vm::loader::parser {
 
 	MBox<ParsedFile> parseFile(Ref<tokenizer::TokenSource> file, Ref<dia::Logger> log) {
 		const lexer::TokenData& td = file->getTokenData();
-		
-		F8ParserState           state(
-            tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
-        );
+
+		F8ParserState state(
+			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
+		);
 		return ParsedFile::parse(state);
 	}
 
