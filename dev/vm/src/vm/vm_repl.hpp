@@ -5,35 +5,36 @@
 #include <string>
 #include <vector>
 
-/*
-REPL - Quick overview:
---------------------------------------------------
->>> exit / q                        -> exits repl.
---------------------------------------------------
->>> {                           	-> starts reading code to inject.
-                                    -> type valid DBC here.
-q									-> typing 'q' as line aborts the code injection mode and goes
-back to the repl loop. }   								-> close code injection mode by closing the
-brace.
->>>
---------------------------------------------------
->>> [FUNC-NAME]([ARG0], [ARG1], ...) 	-> calls a function with specified parameters.
->>> foo(1, 2, 3)                		-> currently only i64 arguments are supported.
---------------------------------------------------
->>> #[global_name] [type]		->  initializes a global value with the specified name.
---------------------------------------------------
->>> $[global_name]				-> outputs a value of a global with the specified name.
---------------------------------------------------
->>> ![opcode] 					-> loads a void function with just the specified opcode and executes
-it.
---------------------------------------------------
->>> !{ 							-> loads a void function which performs specified operations and
-executes it.
-                                -> type valid dbc here.
-q								-> typing 'q' as line aborts the code injection mode and goes back
-to the repl loop.
-}
-*/
+/**
+ * @brief REPL interface for the VM.
+ *
+ * Provides an interactive shell that allows for:
+ * - Loading and executing DBC code
+ * - Managing global variables
+ * - Executing individual instructions
+ * - Calling functions with arguments
+ *
+ * The REPL supports several commands:
+ * =========================================
+ * >>> {			-> Direct code injection
+ *					-> Type valid DBC here.
+ * q				-> Type 'q' to abort the code injection mode.
+ * }				-> Finish code injection by closing the curly brace.
+ * =========================================
+ * >>> !{			-> Instruction injection and immediate run.
+ *					-> Type valid bytecode instructions here.
+ * q				-> Type 'q' to abort the code injection mode.
+ * }				-> Finish code injection by closing the curly brace.
+ * =========================================
+ * >>> !{instruction} 		-> Execute single instruction.
+ * =========================================
+ * >>> {func_name}({arg0}, {arg1}, ...) -> Call a specified function with arguments.
+ * =========================================
+ * >>> #{name} {type} 		-> Initialize a global variable with specified name and type.
+ * =========================================
+ * >>> ${name} 				-> Output a global variable with a specified name.
+ * =========================================
+ */
 class DuckVMRepl {
 public:
 	static DuckVMRepl get();
@@ -41,7 +42,12 @@ public:
 	DuckVMRepl& operator=(DuckVMRepl&&)      = delete;
 	DuckVMRepl(const DuckVMRepl&)            = delete;
 	DuckVMRepl& operator=(const DuckVMRepl&) = delete;
-
+	/**
+	 * @brief Starts the REPL loop
+	 *
+	 * Reads commands from standard input and executes them until exit command is received or EOF is
+	 * reached.
+	 */
 	void run();
 
 private:
