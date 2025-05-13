@@ -18,22 +18,6 @@ namespace pst {
 		ForBracketError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
-	class ForNoInError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected keyword `in` before the end of bracket group.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		ForNoInError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	namespace {
 		bool isForTypeEnd(const LangParserState& state, i64 fwd = 0) {
 			return state[fwd].is(Special::Semicolon) || state[fwd].is(NamedOperator::Assign)

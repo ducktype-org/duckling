@@ -44,7 +44,7 @@ namespace {
 	) {                                                                   \
 		CORE_ASSERT(opcode.args.size() == 0, "Invalid number of args");   \
 		auto instr         = VM_INSTR_FROM_NAME(opcode)();                \
-		instr.bytecode_pos = *opcode.position;                            \
+		instr.bytecode_pos = opcode.position;                             \
 		return instr;                                                     \
 	}
 
@@ -56,7 +56,7 @@ namespace {
 		CORE_ASSERT(opcode.args.size() == 1, "Invalid number of args");                        \
 		if (std::holds_alternative<arg0_type>(opcode.args.at(0))) {                            \
 			auto instr = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)) }; \
-			instr.bytecode_pos = *opcode.position;                                             \
+			instr.bytecode_pos = opcode.position;                                              \
 			return instr;                                                                      \
 		}                                                                                      \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                        \
@@ -72,7 +72,7 @@ namespace {
 		    && std::holds_alternative<arg1_type>(opcode.args.at(1))) {                                 \
 			auto instr         = VM_INSTR_FROM_NAME(opcode){ std::get<arg0_type>(opcode.args.at(0)),   \
 				                                             std::get<arg1_type>(opcode.args.at(1)) }; \
-			instr.bytecode_pos = *opcode.position;                                                     \
+			instr.bytecode_pos = opcode.position;                                                      \
 			return instr;                                                                              \
 		}                                                                                              \
 		CORE_PANIC("Couldn't create opcode: " #opcode);                                                \
@@ -191,6 +191,10 @@ const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const 
 	return globals_map;
 }
 
+vm::code::builders::TypeContext vm::loader::Program::getTypeContext() const {
+	return type_context_builder.build();
+}
+
 Loader::Loader(const bool validate_program): validate_program(validate_program) {}
 
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
@@ -199,7 +203,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto                          type_context_builder = vm::code::getBuiltinTypes();
+			auto type_context_builder = vm::code::getBuiltinTypes();
+			auto program_type_context = program.getTypeContext();
+			for (const auto& type: program_type_context.getTypes())
+				type_context_builder.addType(type);
+
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
 			for (const auto& parsed_file: parsed_files) {

@@ -1,0 +1,4 @@
+add_library(TokenSource
+		src/token_source/source.cpp)
+
+make_module(TokenSource USES Filesystem Lexer TPC)
