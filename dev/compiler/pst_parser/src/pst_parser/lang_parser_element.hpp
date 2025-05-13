@@ -29,7 +29,7 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	private:
-		static base::HashMap<PstID, AccessLocked<LangElement>> pst_id_map;
+		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
 	public:
 		using Child = AccessLocked<LangElement>;
@@ -57,7 +57,7 @@ namespace pst {
 		 * @brief Get pst node the by id. Throws on non-existent id.
 		 */
 		[[nodiscard]]
-		static AccessLocked<LangElement> getById(PstID);
+		static AccessLocked<LangElement> getById(u64);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {

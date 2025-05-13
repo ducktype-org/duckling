@@ -101,6 +101,8 @@ namespace dia {
 		[[nodiscard]]
 		Ref<tokenizer::TokenSource> getSource() const;
 		[[nodiscard]]
+		CRef<Location> getLocation() const;
+		[[nodiscard]]
 		LocationType getLocationType() const;
 
 		/**

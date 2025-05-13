@@ -117,6 +117,8 @@ namespace dia {
 
 	Ref<tokenizer::TokenSource> SourcePosition::getSource() const { return location->getSource(); }
 
+	CRef<Location> SourcePosition::getLocation() const { return location; }
+
 	LocationType SourcePosition::getLocationType() const { return location_type; }
 
 	void SourcePosition::printPosition(printer::PrinterOStream& out) const {
