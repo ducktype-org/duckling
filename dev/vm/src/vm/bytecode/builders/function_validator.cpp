@@ -112,9 +112,9 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 
     auto args = std::visit(
         []<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
-            if constexpr (instructions::TwoArgumentOpcode<T>)
+            if constexpr (TwoArgumentOpcode<T>)
                 return { instr.arg0, instr.arg1 };
-            else if constexpr (instructions::OneArgumentOpcode<T>)
+            else if constexpr (OneArgumentOpcode<T>)
                 return { instr.arg0 };
             else
                 return {};
@@ -157,7 +157,6 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			}
 		}
 	}
-}
 
 	if (arg_types.size() == 2) {
 		if (arg_types.at(0).size == arg_types.at(1).size && arg_types.at(0).name != arg_types.at(1).name)
