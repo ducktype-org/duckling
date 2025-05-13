@@ -20,7 +20,7 @@ namespace vm {
 	 * Holds all the block metadata and pointers to the real data.
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
-	class Block final {
+	class Block {
 	private:
 		/**
 		 * @brief The unique identifier for the block.
@@ -67,5 +67,13 @@ namespace vm {
 			  id(id),
 			  data(data),
 			  shared_mutex(mutex) {}
+	};
+
+	class VariantBlock: public Block {
+		friend class Memory;
+
+		public:
+		VariantBlock(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
+			  Block(id, data, mutex) {}
 	};
 }
