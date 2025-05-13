@@ -1,22 +1,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class FieldTypeEndError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Expected type expression followed by `=` or `;`.";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		FieldTypeEndError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
-
 	MBox<Field> Field::parse(LangParserState& state, const ClassContext& ctx) {
 		auto position = state.getPosition();
 		auto out      = makeBox<Field>(position, ctx);

@@ -1,24 +1,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	namespace {
-		class FunctionReturnTypeListEndError final: public dia::Error {
-		protected:
-			[[nodiscard]]
-			std::string toStringBrief() const override {
-				return "Unexpected end of function return type expression.";
-			}
-
-		public:
-			[[nodiscard]]
-			Domain getDomain() const override {
-				return Domain::Parser;
-			}
-
-			FunctionReturnTypeListEndError(dia::SourcePosition pos): dia::Error(pos) {}
-		};
-	}
-
 	// @TODO: make better
 	MBox<Fun> Fun::parse(LangParserState& state) {
 		auto position = state.getPosition();

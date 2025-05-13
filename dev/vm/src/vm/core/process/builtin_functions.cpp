@@ -4,6 +4,10 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
+#include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/opcode_args.hpp>
+#include <vm/bytecode/opcode_definitions.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -77,25 +81,6 @@ namespace vm::builtins {
 		return base::safeIntConv<i64>(output.size());
 	}
 
-	// ============================== BUILTIN DECLARATIONS AND ROUTER ==============================
-
-	auto getBuiltinFunctionTypes()
-		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
-		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
-			{ BuiltinFunctionID::InputI64,
-			  code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")) },
-			{ BuiltinFunctionID::OutputI64,
-			  code::FunctionType(
-				  base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
-			  ) }
-		};
-
-		return &map;
-	}
-
-	/**
-	 * @note The order and id should match the order in the getBuiltinFunctionTypes() array.
-	 */
 	base::Optional<VmValue> callBuiltinFunction(
 		BuiltinFunctionID           id,
 		TypeCRef                    builtin_func_type,
@@ -120,7 +105,23 @@ namespace vm::builtins {
 		}
 	}
 
-	// ============================== OTHER ==============================
+	auto getBuiltinFunctionTypes()
+		-> CRef<std::unordered_map<BuiltinFunctionID, code::FunctionType>> {
+		static const std::unordered_map<BuiltinFunctionID, code::FunctionType> map{
+			{
+				BuiltinFunctionID::InputI64,
+				code::FunctionType(base::StrID("builtin_input_i64"), {}, base::StrID("i64")),
+			},
+			{
+				BuiltinFunctionID::OutputI64,
+				code::FunctionType(
+					base::StrID("builtin_output_i64"), { base::StrID("i64") }, base::StrID("i64")
+				),
+			}
+		};
+
+		return &map;
+	}
 
 	base::Optional<BuiltinFunctionID> getBuiltinFunctionID(base::StrID name) {
 		// Lazy initialization of the "builtin name -> id" map.
@@ -136,5 +137,31 @@ namespace vm::builtins {
 		auto it = builtin_function_indices.find(name);
 		if (it != builtin_function_indices.end()) return it->second;
 		return {};
+	}
+
+	CRef<code::CodeCollection> getStdlibModule() {
+		static const code::CodeCollection builtin_module = []() {
+			code::CodeCollection               code_collection;
+			code::builders::TypeContextBuilder type_context_builder(code::getBuiltinTypes());
+			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
+				type_context_builder.addType(func_type);
+
+			auto type_context     = type_context_builder.build();
+			code_collection.types = type_context.getTypes() | std::ranges::to<std::vector>();
+
+			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
+				code::builders::FunctionBuilder func_builder(
+					code::Identifier(func_type.name), {}, type_context
+				);
+				func_builder.addInstruction({ code::instructions::Op_call_builtin_func(
+					vm::opargs::BuiltinFunctionName(func_type.name)
+				) });
+				func_builder.addInstruction(code::instructions::Op_ret{});
+				code_collection.functions.push_back(func_builder.build());
+			}
+			return code_collection;
+		}();
+
+		return &builtin_module;
 	}
 }
