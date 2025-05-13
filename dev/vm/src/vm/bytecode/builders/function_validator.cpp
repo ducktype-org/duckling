@@ -2,10 +2,10 @@
 
 #include <base/variant.hpp>
 
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 using namespace vm::code::builders;
 
@@ -110,17 +110,17 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 	}
 
-    auto args = std::visit(
-        []<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
-            if constexpr (TwoArgumentOpcode<T>)
-                return { instr.arg0, instr.arg1 };
-            else if constexpr (OneArgumentOpcode<T>)
-                return { instr.arg0 };
-            else
-                return {};
-        },
-        instruction
-    );
+	auto args = std::visit(
+		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+			if constexpr (TwoArgumentOpcode<T>)
+				return { instr.arg0, instr.arg1 };
+			else if constexpr (OneArgumentOpcode<T>)
+				return { instr.arg0 };
+			else
+				return {};
+		},
+		instruction
+	);
 
 	std::vector<PrimitiveType> arg_types;
 
@@ -143,16 +143,11 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			STACK_LOCAL_CASE(32);
 			STACK_LOCAL_CASE(64);
 			variant_case(opargs::StackLocalPtr, local) {
-				if (!local_name_to_type.contains(local.var_name))
-					throw UnknownLocalNameError(arg);
+				if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);
 				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
 				variant_match(*entry) {
-					variant_case(PointerType, pointer_type) {
-						(void) pointer_type;
-					}
-					variant_default {
-						throw InvalidArgumentTypeError(arg);
-					}
+					variant_case(PointerType, pointer_type) { (void) pointer_type; }
+					variant_default { throw InvalidArgumentTypeError(arg); }
 				}
 			}
 		}
@@ -160,7 +155,8 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 
 	// We assert no cross-type operations on primitive types.
 	if (arg_types.size() == 2) {
-		if (arg_types.at(0).size == arg_types.at(1).size && arg_types.at(0).name != arg_types.at(1).name)
+		if (arg_types.at(0).size == arg_types.at(1).size
+		    && arg_types.at(0).name != arg_types.at(1).name)
 			throw ArgumentMismatchError(instruction);
 	}
 }

@@ -163,7 +163,7 @@ private:
 			}
 		);
 	}
-	#endif
+#endif
 
 	// Type verification
 	void wrongTypeMov() {
@@ -174,7 +174,7 @@ private:
 			}
 		);
 	}
-	
+
 	void wrongTypeSize() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
