@@ -38,10 +38,15 @@ json dia::InteractiveMessage::tojson() const {
 
 json dia::OperatorNotFound::Params::tojson() {
 	json lhs_type, rhs_type;
-	lhs_type["type"] = std::to_string(lhs->expression_type.getType().customPerfectHash());
-	rhs_type["type"] = std::to_string(rhs->expression_type.getType().customPerfectHash());
+	lhs_type["refers_to"] = std::to_string(lhs->expression_type.getType().customPerfectHash());
+	lhs_type["type"]      = "entity";
+	rhs_type["refers_to"] = std::to_string(rhs->expression_type.getType().customPerfectHash());
+	rhs_type["type"]      = "entity";
 	// TODO: add types to types.
 	return json{ { "operator", op.strView() },
 		         { "left_type", lhs_type },
-		         { "right_type", rhs_type } };
+		         { "right_type", rhs_type },
+		         { "is_static", "false" },
+		         { "has_expanded_left_type", "false" },
+		         { "has_expanded_right_type", "false" } };
 }

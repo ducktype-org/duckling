@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include "pst_parser/lang_parser_element.hpp"
 #include "source_position.hpp"
 
@@ -11,6 +12,7 @@
 #include <set>
 
 namespace dia {
+	using pointer_message = dia::pointer_message;
 	using nlohmann::json;
 
 	class InteractiveCode {
@@ -20,17 +22,23 @@ namespace dia {
 		std::set<tsh::AbstractType>             types;
 		pst::Access<pst::LangElement>           pst;
 		query::Context&                         ctx;
+		pointer_message                         pointer;
 		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
+		json                                    make_string_array(usize start, usize end) const;
 		void visit_leafs(pst::Access<pst::LangElement> pst, json& out) const;
 		json serialize_code() const;
 
 	public:
 		InteractiveCode(
-			dia::SourcePosition position, pst::Access<pst::LangElement> pst, query::Context& ctx
+			dia::SourcePosition           position,
+			pst::Access<pst::LangElement> pst,
+			query::Context&               ctx,
+			pointer_message               pointer
 		):
 			  position(position),
 			  pst(pst),
-			  ctx(ctx) {}
+			  ctx(ctx),
+			  pointer(pointer) {}
 
 		friend void to_json(json& j, const InteractiveCode& code) {
 			j             = json::object();

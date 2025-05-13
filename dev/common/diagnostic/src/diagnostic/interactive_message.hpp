@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include "interactive_content.hpp"
 #include "query_framework/query_int.hpp"
 
@@ -77,7 +78,8 @@ namespace dia {
 					  std::move(params),
 					  position,
 					  pst,
-					  ctx
+					  ctx,
+					  { "cause", position }
 				  ) {}
 		};
 

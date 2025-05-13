@@ -17,6 +17,7 @@
 #include "base/ref.hpp"
 
 #include <ostream>
+#include <vector>
 
 using nlohmann::json;
 
@@ -35,35 +36,41 @@ base::Optional<compiler::helios::SymID> dia::InteractiveCode::get_symbol(
 	return {};
 }
 
+json dia::InteractiveCode::make_string_array(usize start, usize end) const {
+	auto              lines = pst->getSourcePosition().getSource()->viewSplitRange(start, end);
+	std::vector<json> v;
+	for (auto& l: lines) {
+		v.push_back(l.second.stdString());
+		v.push_back({ { "type", "start_line" }, { "number", l.first + 1 } });
+	}
+	if (!v.empty()) v.pop_back();
+	return v;
+}
+
 void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& out) const {
 	auto source = pst->getSourcePosition().getSource();
 	// If this node is a leaf:
 	if (pst->viewChildren().empty()) {
-		auto hid_opt = get_symbol(pst);
+		auto hid_opt    = get_symbol(pst);
+		auto node_start = pst->getSourcePosition().getStart();
+		auto node_end   = pst->getSourcePosition().getEnd();
+		json node       = { { "testcontent",
+			                  pst->getSourcePosition()
+			                      .getSource()
+			                      ->getCharRange(node_start, node_end + 1)
+			                      .stdString() } };
+		node["content"] = make_string_array(node_start, node_end + 1);
 		if (hid_opt.has_value()) {
-			out.push_back({ { "content",
-			                  pst->getSourcePosition()
-			                      .getSource()
-			                      ->getCharRange(
-									  pst->getSourcePosition().getStart(),
-									  pst->getSourcePosition().getEnd() + 1
-								  )
-			                      .stdString() },
-			                { "type", "entity" },
-			                { "refers_to", hid_opt.value().customPerfectHash() } });
 			// TODO: add it to symbol list.
+			node["type"]      = "entity";
+			node["refers_to"] = hid_opt.value().customPerfectHash();
 		} else {
-			out.push_back({ { "content",
-			                  pst->getSourcePosition()
-			                      .getSource()
-			                      ->getCharRange(
-									  pst->getSourcePosition().getStart(),
-									  pst->getSourcePosition().getEnd() + 1
-								  )
-			                      .stdString() },
-			                { "type", "text" } });
+			node["type"] = "grouping";
 		}
 
+		if (pointer.second.getStart() <= node_start && pointer.second.getEnd() >= node_end)
+			node["groups"] = { pointer.first };
+		out.push_back(node);
 		return;
 	}
 
@@ -77,17 +84,18 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 		auto child_start = child->getSourcePosition().getStart();
 		auto child_end   = child->getSourcePosition().getEnd();
 		if (child_start > last_position) {
+			json node       = { { "testcontent",
+				                  source->getCharRange(last_position, child_start).stdString() } };
+			node["content"] = make_string_array(last_position, child_start);
 			if (hid_opt.has_value()) {
-				out.push_back({ { "type", "entity" },
-				                { "content",
-				                  source->getCharRange(last_position, child_start).stdString() },
-				                { "refers_to", hid_opt.value().customPerfectHash() } });
-
+				node["type"]      = "entity";
+				node["refers_to"] = hid_opt.value().customPerfectHash();
 			} else {
-				out.push_back({ { "type", "text" },
-				                { "content",
-				                  source->getCharRange(last_position, child_start).stdString() } });
+				node["type"] = "grouping";
 			}
+			if (pointer.second.getStart() <= last_position && pointer.second.getEnd() >= child_start)
+				node["groups"] = { pointer.first };
+			out.push_back(node);
 		}
 		json child_json{};
 		child_json["content"] = json::array();
@@ -97,19 +105,18 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 		out.push_back(child_json);
 	}
 	if (pst->getSourcePosition().getEnd() > last_position) {
+		json node = {
+			{ "testcontent",
+			  source->getCharRange(last_position, pst->getSourcePosition().getEnd()).stdString() }
+		};
+		node["content"] = make_string_array(last_position, pst->getSourcePosition().getEnd());
 		if (hid_opt.has_value()) {
-			out.push_back({ { "type", "entity" },
-			                { "content",
-			                  source->getCharRange(last_position, pst->getSourcePosition().getEnd())
-			                      .stdString() },
-			                { "refers_to", hid_opt.value().customPerfectHash() } });
-
+			node["type"]      = "entity";
+			node["refers_to"] = hid_opt.value().customPerfectHash();
 		} else {
-			out.push_back({ { "type", "text" },
-			                { "content",
-			                  source->getCharRange(last_position, pst->getSourcePosition().getEnd())
-			                      .stdString() } });
+			node["type"] = "grouping";
 		}
+		out.push_back(node);
 	}
 }
 
@@ -135,6 +142,8 @@ json dia::InteractiveCode::serialize_code() const {
 		range_start = parent->getSourcePosition().getStartLineColumn().first;
 		range_end   = parent->getSourcePosition().getEndLineColumn().first;
 	}
+	fragments.push_back({ { "type", "start_line" },
+	                      { "number", parent->getSourcePosition().getStartLineColumn().first } });
 	visit_leafs(parent, fragments);
 	return fragments;
 }

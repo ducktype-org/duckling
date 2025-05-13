@@ -82,10 +82,7 @@ namespace tokenizer {
 			auto view = getCharRange(
 				std::max(begin_char, getLine(line).first), std::min(end_char, getLine(line).second)
 			);
-			if (begin_line != end_line && view.size() == 0
-			    && getLine(line).first != getLine(line).second) {
-				continue;
-			}
+
 			res.emplace_back(line, view);
 		}
 		return res;

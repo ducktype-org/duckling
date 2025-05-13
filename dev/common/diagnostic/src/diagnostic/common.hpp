@@ -1,5 +1,9 @@
 #pragma once
+#include <diagnostic/source_position.hpp>
+
 #include <cstddef>
+#include <string>
+#include <utility>
 
 namespace dia {
 	struct SerializationParams {
@@ -9,4 +13,6 @@ namespace dia {
 		bool   include_types      = true;
 		size_t default_code_lines = 1;
 	};
+
+	using pointer_message = std::pair<std::string, dia::SourcePosition>;
 }

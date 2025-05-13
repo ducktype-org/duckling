@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common.hpp"
 #include "diagnostic/source_position.hpp"
 #include "interactive_code.hpp"
 #include "serializable.hpp"
@@ -63,13 +64,14 @@ namespace dia {
 			Box<ContentParams>            params,
 			dia::SourcePosition           position,
 			pst::Access<pst::LangElement> pst,
-			query::Context&               ctx
+			query::Context&               ctx,
+			dia::pointer_message          pointer
 		):
 			  content_type(content_type),
 			  family(family),
 			  name(name),
 			  params(std::move(params)),
-			  interactive_code(InteractiveCode{ position, pst, ctx }) {}
+			  interactive_code(InteractiveCode{ position, pst, ctx, pointer }) {}
 
 		InteractiveContent(
 			ContentType        content_type,
