@@ -13,12 +13,14 @@
 
 namespace vm::api {
 	namespace request {
+		struct LoadStdlib {};
+
 		struct LoadFiles {
 			std::vector<fs::FilePath> filenames;
 		};
 
 		struct LoadCode {
-			std::vector<code::CodeCollection> code_collection;
+			std::vector<code::CodeCollection> code_collections;
 		};
 
 		struct Pause {};
@@ -76,6 +78,7 @@ namespace vm::api {
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
 	using ExecutorRequest = std::variant<
+		request::LoadStdlib,
 		request::LoadFiles,
 		request::LoadCode,
 		request::Resume,
