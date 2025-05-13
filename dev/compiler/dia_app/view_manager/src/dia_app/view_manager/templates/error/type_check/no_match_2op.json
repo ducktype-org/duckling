@@ -35,9 +35,15 @@
         "is_static": {
             "description": "Whether the error is displayed in a static message."
         },
+        "has_expanded_left_type": {
+            "description": "Whether the type of the left operand can be expanded."
+        },
         "expanded_left_type": {
             "description": "Expanded type of the left operand.",
             "optional": true
+        },
+        "has_expanded_right_type": {
+            "description": "Whether the type of the right operand can be expanded."
         },
         "expanded_right_type": {
             "description": "Expanded type of the right operand.",
@@ -49,11 +55,17 @@
             {
                 "case": { "param": "is_static" },
                 "of": {
-                    "true": [
-                        " (`",
-                        { "param": "expanded_left_type" },
-                        "`)"
-                    ],
+                    "true": {
+                        "case": { "param": "has_expanded_left_type" },
+                        "of": {
+                            "true": [
+                                " (`",
+                                { "param": "expanded_left_type" },
+                                "`)"
+                            ],
+                            "[other]": []
+                        } 
+                    },
                     "[other]": []
                 }
             }
@@ -62,11 +74,17 @@
             {
                 "case": { "param": "is_static" },
                 "of": {
-                    "true": [
-                        " (`",
-                        { "param": "expanded_right_type" },
-                        "`)"
-                    ],
+                    "true": {
+                        "case": { "param": "has_expanded_right_type" },
+                        "of": {
+                            "true": [
+                                " (`",
+                                { "param": "expanded_right_type" },
+                                "`)"
+                            ],
+                            "[other]": []
+                        }
+                    },
                     "[other]": []
                 }
             }

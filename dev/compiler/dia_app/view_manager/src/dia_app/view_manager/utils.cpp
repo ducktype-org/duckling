@@ -5,7 +5,7 @@
 
 namespace dia_app {
     json EMPTY_OBJ = json::object_t();
-    std::string MESSAGE_TEMPLATE_PATH = "../../../../research/misje/07-serializacja/messages/templates/";
+    std::string MESSAGE_TEMPLATE_PATH = "./";
 
     DataHandle::DataHandle(
         std::map<std::string, json> &entities,
