@@ -264,8 +264,8 @@ void FunctionValidator::preprocessLabels() {
 
 void FunctionValidator::traverseControlFlowGraph() {
 	visited_instructions.resize(instructions.size());
-	std::vector<std::pair<usize, decltype(stack_state)>> dfs_stack{
-		{ instructions.size(), {} }  // sentinel
+	std::vector<std::tuple<usize, decltype(stack_state), decltype(local_name_to_type)>> dfs_stack{
+		{ instructions.size(), {}, {} }  // sentinel
 	};
 	usize index = 0;
 
@@ -292,7 +292,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 							throw StackStructureMismatchError(
 								instr, jumps_to_label.at(instr.arg0.label_name)
 							);
-						std::tie(index, stack_state) = dfs_stack.back();
+						std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 						dfs_stack.pop_back();
 					}
 					opt_none {
@@ -304,14 +304,14 @@ void FunctionValidator::traverseControlFlowGraph() {
 			variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
 			variant_case(Op_jmpIf_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
 			}
 			variant_case(Op_jmpIfNot_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
 			}
 			variant_case(Op_ret, instr) {
-				std::tie(index, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
@@ -324,7 +324,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
 				validateTailcall(instr.arg0);
-				std::tie(index, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_default { index++; }
