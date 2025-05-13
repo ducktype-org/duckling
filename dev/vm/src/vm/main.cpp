@@ -1,6 +1,7 @@
 #include "cli.hpp"
 #include "config.hpp"
 #include "server.hpp"
+#include "vm_repl.hpp"
 
 #include <clap/clap.hpp>
 #include <init/init.hpp>
@@ -40,6 +41,20 @@ int main(int argc, const char** argv) {
 	                         .addShortName('v')
 	                         .addLongName("version")
 	                         .addShortDesc("Shows version and config")
+	                         .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .conditional(
+								 [](const clap::ParsingResult& result) {
+									 return !(
+										 result.isFlag('r')
+										 && (result.isParam('f') || result.isParam('s'))
+									 );
+								 },
+								 "REPL cannot be used with -s/--server or -f/--file flags"
+							 )
+	                         .addShortName('r')
+	                         .addLongName("repl")
+	                         .addShortDesc("Executes the VM in REPL mode")
 	                         .build());
 
 	clap::ParsingResult result;
@@ -64,7 +79,9 @@ int main(int argc, const char** argv) {
 
 	if (result.isFlag('v'))
 		showVersion();
-	else if (auto port = result.getValue<i64>("server"))
+	else if (result.isFlag('r')) {
+		DuckVMRepl::get().run();
+	} else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
 		cli(file.value());
