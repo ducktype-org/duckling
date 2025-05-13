@@ -40,6 +40,8 @@ public:
 
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
+		TESTER_ADD_TEST(globalWrongTypeMov);
+		TESTER_ADD_TEST(globalWrongTypeSize);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
 	}
 
@@ -178,6 +180,24 @@ private:
 	void wrongTypeSize() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
+			{
+				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalWrongTypeMov() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_mov.dbc",
+			{
+				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalWrongTypeSize() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_size.dbc",
 			{
 				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
 			}

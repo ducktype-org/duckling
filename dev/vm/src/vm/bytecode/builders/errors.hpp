@@ -200,4 +200,5 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
+	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 }

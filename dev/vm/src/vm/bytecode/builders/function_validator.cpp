@@ -138,6 +138,34 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			variant_default { throw InvalidArgumentTypeError(arg); }                             \
 		}                                                                                        \
 	}
+#define GLOBAL_CASE(BIT_COUNT)                                                                   \
+	variant_case(opargs::GlobalI##BIT_COUNT, global) {                                           \
+		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
+		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
+		auto             type  = type_context.getTypes().at(entry->type);                        \
+		variant_match(*type) {                                                                   \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+			GLOBAL_CASE(8);
+			GLOBAL_CASE(16);
+			GLOBAL_CASE(32);
+			GLOBAL_CASE(64);
+
+			variant_case(opargs::GlobalPtr, global) {
+				if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);
+				CRef<GlobalData> entry = globals.at(global.global_data_name);
+				auto             type  = type_context.getTypes().at(entry->type);
+				variant_match(*type) {
+					variant_case(PointerType, pointer_type) { (void) pointer_type; }
+					variant_default { throw InvalidArgumentTypeError(arg); }
+				}
+			}
+
 			STACK_LOCAL_CASE(8);
 			STACK_LOCAL_CASE(16);
 			STACK_LOCAL_CASE(32);
@@ -150,6 +178,15 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 					variant_default { throw InvalidArgumentTypeError(arg); }
 				}
 			}
+			// All possible opargs must be handled. Unhandled opargs throw an exception.
+			variant_case_novalue(opargs::StackLocalAny) {}
+			variant_case_novalue(opargs::Immediate) {}
+			variant_case_novalue(opargs::Type) {}
+			variant_case_novalue(opargs::FunctionName) {}
+			variant_case_novalue(opargs::BuiltinFunctionName) {}
+			variant_case_novalue(opargs::Label) {}
+
+			variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
 		}
 	}
 
