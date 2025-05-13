@@ -37,8 +37,8 @@ to the repl loop.
 class DuckVMRepl {
 public:
 	static DuckVMRepl get();
-	DuckVMRepl(DuckVMRepl&&)                 = default;
-	DuckVMRepl& operator=(DuckVMRepl&&)      = default;
+	DuckVMRepl(DuckVMRepl&&)                 = delete;
+	DuckVMRepl& operator=(DuckVMRepl&&)      = delete;
 	DuckVMRepl(const DuckVMRepl&)            = delete;
 	DuckVMRepl& operator=(const DuckVMRepl&) = delete;
 
