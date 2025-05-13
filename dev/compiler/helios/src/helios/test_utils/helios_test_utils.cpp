@@ -74,7 +74,7 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitConst(pst::Access<pst::Const> stmt) override {
-				// @TODO: handle potential lack of value
+				CORE_ASSERT(stmt->getValue().has_value(), "Visited Const had no declared value");
 				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};
@@ -96,7 +96,7 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				// @TODO: handle potential lack of value
+				CORE_ASSERT(stmt->getValue().has_value(), "Visited Const had no declared value");
 				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};

@@ -4,6 +4,9 @@
 
 namespace pst {
 
+	/**
+	 * @brief Every variable needs to have either a type or value.
+	 */
 	class VariableNoTypeAndValueError final: public dia::Error {
 	protected:
 		[[nodiscard]]
@@ -20,6 +23,9 @@ namespace pst {
 		VariableNoTypeAndValueError(dia::SourcePosition pos): dia::Error(pos) {}
 	};
 
+	/**
+	 * @brief Common parsing method for const/var/let variable declarations.
+	 */
 	template<typename T, lang_def::Keyword key>
 	MBox<T> parseVariableTemplate(pst::LangParserState& state) {
 		auto position = state.getPosition();
