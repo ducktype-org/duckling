@@ -158,6 +158,7 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 		}
 	}
 
+	// We assert no cross-type operations on primitive types.
 	if (arg_types.size() == 2) {
 		if (arg_types.at(0).size == arg_types.at(1).size && arg_types.at(0).name != arg_types.at(1).name)
 			throw ArgumentMismatchError(instruction);
