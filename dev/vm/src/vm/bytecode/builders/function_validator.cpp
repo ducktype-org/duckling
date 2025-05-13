@@ -124,64 +124,24 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 
 	std::vector<PrimitiveType> arg_types;
 
-    for (auto arg: args) {
-        variant_match(arg) {
-			variant_case(opargs::StackLocalI8, local) {
-				if (!local_name_to_type.contains(local.var_name))
-					throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
-				variant_match(*entry) {
-					variant_case(PrimitiveType, primitive_type) {
-						if (primitive_type.size != 1) throw InvalidArgumentSizeError(arg);
-						arg_types.push_back(primitive_type);
-					}
-					variant_default {
-						throw InvalidArgumentTypeError(arg);
-					}
-				}
-			}
-			variant_case(opargs::StackLocalI16, local) {
-				if (!local_name_to_type.contains(local.var_name))
-					throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
-				variant_match(*entry) {
-					variant_case(PrimitiveType, primitive_type) {
-						if (primitive_type.size != 2) throw InvalidArgumentSizeError(arg);
-						arg_types.push_back(primitive_type);
-					}
-					variant_default {
-						throw InvalidArgumentTypeError(arg);
-					}
-				}
-			}
-			variant_case(opargs::StackLocalI32, local) {
-				if (!local_name_to_type.contains(local.var_name))
-					throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
-				variant_match(*entry) {
-					variant_case(PrimitiveType, primitive_type) {
-						if (primitive_type.size != 4) throw InvalidArgumentSizeError(arg);
-						arg_types.push_back(primitive_type);
-					}
-					variant_default {
-						throw InvalidArgumentTypeError(arg);
-					}
-				}
-			}
-			variant_case(opargs::StackLocalI64, local) {
-				if (!local_name_to_type.contains(local.var_name))
-					throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
-				variant_match(*entry) {
-					variant_case(PrimitiveType, primitive_type) {
-						if (primitive_type.size != 8) throw InvalidArgumentSizeError(arg);
-						arg_types.push_back(primitive_type);
-					}
-					variant_default {
-						throw InvalidArgumentTypeError(arg);
-					}
-				}
-			}
+	for (auto arg: args) {
+		variant_match(arg) {
+#define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
+	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
+		if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);      \
+		CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);                          \
+		variant_match(*entry) {                                                                  \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+			STACK_LOCAL_CASE(8);
+			STACK_LOCAL_CASE(16);
+			STACK_LOCAL_CASE(32);
+			STACK_LOCAL_CASE(64);
 			variant_case(opargs::StackLocalPtr, local) {
 				if (!local_name_to_type.contains(local.var_name))
 					throw UnknownLocalNameError(arg);
@@ -195,8 +155,9 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 					}
 				}
 			}
-        }
-    }
+		}
+	}
+}
 
 	if (arg_types.size() == 2) {
 		if (arg_types.at(0).size == arg_types.at(1).size && arg_types.at(0).name != arg_types.at(1).name)
