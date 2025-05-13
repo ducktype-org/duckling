@@ -15,24 +15,22 @@ namespace query {
 	 * For other types it might be necessary to increase hash size to 128 bits
 	 * and use "legit hashing algorithm".
 	 */
-	 template<typename KeyType>
-	 QueryUnstableHash unstableHashKey(const KeyType& key) {
-		 if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
-			 return key;
-		 else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
-			 return static_cast<QueryUnstableHash>(key);
-		 else
-			 return key.queryUnstablePerfectHash();
-	 }
+	template<typename KeyType>
+	QueryUnstableHash unstableHashKey(const KeyType& key) {
+		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
+			return key;
+		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
+			return static_cast<QueryUnstableHash>(key);
+		else
+			return key.queryUnstablePerfectHash();
+	}
 
 	// Concept to validate queryUnstablePerfectHash signature
 	template<typename KeyType>
-	concept HasUnstablePerfectHash = 
-    std::is_same_v<KeyType, bool> || 
-    std::is_same_v<KeyType, u64> || 
-    requires(KeyType t) {
-        { t.queryUnstablePerfectHash() } -> std::same_as<QueryUnstableHash>;
-    };
+	concept HasUnstablePerfectHash
+		= std::is_same_v<KeyType, bool> || std::is_same_v<KeyType, u64> || requires(KeyType t) {
+			  { t.queryUnstablePerfectHash() } -> std::same_as<QueryUnstableHash>;
+		  };
 
 	// Concept to validate queryStablePerfectHash signature
 	template<typename KeyType>
@@ -42,8 +40,6 @@ namespace query {
 
 	template<class KeyType>
 	struct queryUnstableHashFunctor final {
-		std::size_t operator()(const KeyType& key) const {
-			return unstableHashKey(key);
-		}
+		std::size_t operator()(const KeyType& key) const { return unstableHashKey(key); }
 	};
 }

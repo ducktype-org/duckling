@@ -155,12 +155,13 @@ namespace query::detail {
 		"Query key type should not be a reference (use custom struct instead)"                    \
 	);                                                                                            \
 	static_assert(                                                                                \
-		::query::HasUnstablePerfectHash<type::QKey>,                                       \
-		"queryUnstablePerfectHash must be implemented and return u64 (QueryUnstableHash)."                            \
+		::query::HasUnstablePerfectHash<type::QKey>,                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 (QueryUnstableHash)."        \
 	);                                                                                            \
 	static_assert(                                                                                \
 		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
-		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 (QueryStableHash)." \
+		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
+	    "(QueryStableHash)."                                                                      \
 	);
 
 /**
