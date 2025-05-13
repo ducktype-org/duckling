@@ -1,5 +1,6 @@
 #pragma once
 #include "utils.hpp"
+#include "components.hpp"
 
 namespace dia_app {
 namespace dia_file {
@@ -48,6 +49,8 @@ namespace dia_file {
 
         // Serialize this element (DEBUG ONLY).
         virtual json show(DataHandle dh) const = 0;
+
+        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const;
     };
 
     struct TextElement : public DisplayElement {
@@ -62,6 +65,10 @@ namespace dia_file {
         std::string to_text(DataHandle _) const;
 
         json show(DataHandle _) const;
+
+        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
+            return static_pointer_cast<Component>(make_shared<TextComponent>(content));
+        }
     };
 
     struct ConcatElement : public DisplayElement {
@@ -74,6 +81,15 @@ namespace dia_file {
         std::string to_text(DataHandle dh) const;
 
         json show(DataHandle dh) const;
+
+        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
+            vector<shared_ptr<Component>> sons;
+            transform(this->elems.begin(), this->elems.end(), sons.begin(),
+                [&creation_context](const Ptr &son) {
+                return son->toComponent(creation_context);
+            });
+            return static_pointer_cast<Component>(make_shared<ConcatComponent>(sons));
+        }
     };
 
     struct StartLineElement : public DisplayElement {
@@ -87,6 +103,10 @@ namespace dia_file {
         std::string to_text(DataHandle dh) const;
 
         json show(DataHandle dh) const;
+
+        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
+            return static_pointer_cast<Component>(make_shared<StartLineComponent>(this->number));
+        }
     };
 
     struct InteractElement : public DisplayElement {
@@ -100,6 +120,14 @@ namespace dia_file {
         std::string to_text(DataHandle dh) const;
 
         json show(DataHandle dh) const;
+
+        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
+            auto primary = this->content->toComponent(creation_context);
+            auto alternative = this->alt_content->toComponent(creation_context);
+            auto result = make_shared<InteractiveComponent>(getNewId(), primary, alternative);
+            creation_context.id_to_interactive_component->emplace(result.weak_ptr());
+            return static_pointer_cast<Component>();
+        }
     };
 
     struct LazyElement : public DisplayElement {
