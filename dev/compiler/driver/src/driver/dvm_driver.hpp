@@ -18,6 +18,6 @@ namespace compiler::driver {
 
 		void link() final;
 
-		void run() final;
+		std::expected<RunOutput, std::string> run() final;
 	};
 }

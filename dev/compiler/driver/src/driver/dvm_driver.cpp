@@ -1,5 +1,6 @@
 #include "dvm_driver.hpp"
 #include <fstream>
+#include "base/int_conv.hpp"
 
 #include <backends/dvm/backend.hpp>
 #include <vm/api/vm.hpp>
@@ -31,7 +32,7 @@ namespace compiler::driver {
 		// DVM doesn't require linking.
 	}
 
-	void DVMDriver::run() {
+	std::expected<RunOutput, std::string> DVMDriver::run() {
 		if (!code_collection.has_value()) {
 			CORE_PANIC("No code collection to run");
 		}
@@ -52,7 +53,9 @@ namespace compiler::driver {
 		// 	}
 		// }
 
-		auto r3 = vm::api::loadCode(pid, {code});
+		auto r3 = vm::api::loadCode(pid, {code}).transform_error(vm::api::errorToString);
+		match
+		if (auto x = r3.)
 		if (!r3.has_value()) {
 			std::cout << errorToString(r3.error()) << "\n";
 			CORE_PANIC("Failed to load code");
@@ -72,6 +75,8 @@ namespace compiler::driver {
 			std::cout << errorToString(r6.error()) << "\n";
 			CORE_PANIC("Failed to get exit code");
 		}
-		std::cout << "Exit code: " << r6.value() << "\n";
+		return RunOutput{
+			.exit_code =  base::safeIntConv<int>(r6.value())
+		};
     }
 }

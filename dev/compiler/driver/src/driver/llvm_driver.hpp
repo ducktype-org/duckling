@@ -17,8 +17,10 @@ namespace compiler::driver {
 
 		void link() final;
 
-		void run() final;
+		std::expected<RunOutput, std::string> run() final;
 	};
 
-	inline void LLVMDriver::run() {};
+	inline std::expected<RunOutput, std::string> LLVMDriver::run() {
+		return std::unexpected<std::string>{ "Run command is not supported in the LLVM Backend." };
+	}
 }

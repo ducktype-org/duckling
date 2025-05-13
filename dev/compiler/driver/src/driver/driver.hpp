@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <expected>
 #include <helios/hout/hout.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
@@ -37,6 +38,10 @@ namespace compiler::driver {
 		std::vector<base::StrID> external_libs;
 	};
 
+	struct RunOutput final {
+		int exit_code;
+	};
+
 	/**
 	 * @brief Backend strategy interface.
 	 * Backends will have unique logic for compiling the module, so they only need to implement
@@ -65,7 +70,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Run the compiled program.
 		 */
-		virtual void run() = 0;
+		virtual std::expected<RunOutput, std::string> run() = 0;
 
 		virtual ~BackendDriver() = default;
 	};
@@ -94,7 +99,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Run the compiled program. (only for DVM)
 		 */
-		void run();
+		 std::expected<RunOutput, std::string> run();
 
 	private:
 		Options            options;
