@@ -108,8 +108,8 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
-	Example<pst::Const, false>  let_const{ "let x: i32 = 5" };
-	Example<pst::Const, false>  var_const{ "var x: i32 = 5" };
+	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
+	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
 
 	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
 	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
@@ -120,7 +120,7 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::Variable, false> no_type_var{ "var x:= 5" };
 	Example<pst::Variable, false> no_value_var{ "var x: i32=;" };
 	Example<pst::Variable, false> no_value_var_eof{ "var x: i32=" };
-	Example<pst::Variable, false>  const_var{ "const x: i32 = 5" };
+	Example<pst::Variable, false> const_var{ "const x: i32 = 5" };
 
 	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*;" };
 	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };

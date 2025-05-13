@@ -12,8 +12,7 @@ namespace pst {
 			out = parseVariableTemplate<Variable, Keyword::Var>(state);
 		else
 			out = parseVariableTemplate<Variable, Keyword::Let>(state);
-		if (is_let)
-			out->is_const = true;
+		if (is_let) out->is_const = true;
 		return out;
 	}
 
