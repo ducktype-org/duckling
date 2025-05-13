@@ -30,6 +30,7 @@ namespace pst {
 	class LangElement: public tpc::Element {
 	private:
 		static base::HashMap<PstID, AccessLocked<LangElement>> pst_id_map;
+
 	public:
 		using Child = AccessLocked<LangElement>;
 
@@ -42,9 +43,9 @@ namespace pst {
 			  id(PstID::next()) {
 			pst_id_map.put(id, Ref<const LangElement>(this));
 		}
-		
+
 		LangElement(const LangElement&) = delete;
-		LangElement(LangElement&&) = delete;
+		LangElement(LangElement&&)      = delete;
 
 		/**
 		 * @brief Position covering the whole element
