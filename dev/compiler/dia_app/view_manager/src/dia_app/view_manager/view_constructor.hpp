@@ -28,9 +28,11 @@ namespace dia_app {
         std::map<InfoHandle, InfoParamsHandle> info_handles;
 
         ViewConstructor(uint error_no, const json &data) {
-            const json &info_group = data["info_group_list"][error_no];
+            const json &info_group = data[error_no];
 
             main_info = ParamData(info_group["main_info"]);
+
+            ASSUME_HAS(info_group, "secondary_infos");
             for (auto &info : info_group["secondary_infos"]) {
                 secondary_infos.push_back(ParamData(info));
             }

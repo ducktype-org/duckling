@@ -52,9 +52,24 @@ namespace dia_file {
     // ---------------- ConcatElement ---------------- //
 
     ConcatElement::ConcatElement(const json &elem_json) : DisplayElement({}) {
-        ASSUME(elem_json.is_array(), "concat element is not an array");
-        for (auto &el : elem_json) {
-            elems.push_back(parse(el));
+        if (elem_json.is_array()) {
+            // A simple array of elements.
+            for (auto &el : elem_json) {
+                elems.push_back(parse(el));
+            }
+        } else {
+            // An element grouping with possible pointer message groups.
+            ASSUME_HAS(elem_json, "type");
+            ASSUME_VAL(elem_json, "type", "grouping");
+
+            if (elem_json.contains("groups")) {
+                ASSUME_ARR(elem_json, "groups");
+                groups = elem_json["groups"];
+            }
+
+            // We only create thin concat elements from element groupings.
+            ASSUME_HAS(elem_json, "content");
+            elems.push_back(parse(elem_json["content"]));
         }
     }
     ConcatElement::ConcatElement(
@@ -252,6 +267,33 @@ namespace dia_file {
     }
 
 
+    // ---------------- CodeElement ---------------- //
+
+    CodeElement::CodeElement(const json &elem_json) : DisplayElement({}) {
+        ASSUME_HAS(elem_json, "type");
+        ASSUME_VAL(elem_json, "type", "code");
+        ASSUME_HAS(elem_json, "content");
+        content = parse(elem_json["content"]);
+    }
+    CodeElement::CodeElement(
+        Ptr content, const std::vector<InfoHandle> &assoc_infos
+    ) : DisplayElement(assoc_infos), content(content) {}
+
+    Ptr CodeElement::copy() const {
+        return std::make_shared<CodeElement>(content->copy(), assoc_infos);
+    }
+
+    std::string CodeElement::to_text(DataHandle dh) const {
+        return content->to_text(dh);
+    }
+
+    json CodeElement::show(DataHandle dh) const {
+        json res;
+        res["type"] = "code";
+        res["content"] = content->show(dh);
+        return res;
+    }
+
     // ---------------- functions ---------------- //
 
     /* Order of message type evaluation:
@@ -269,7 +311,10 @@ namespace dia_file {
         if (msg.contains("type") && msg["type"] == "start_line") {
             return std::make_shared<StartLineElement>(msg);
         }
-        if (msg.is_array()) {
+        if (msg.contains("type") && msg["type"] == "code") {
+            return std::make_shared<CodeElement>(msg);
+        }
+        if (msg.is_array() || (msg.contains("type") && msg["type"] == "grouping")) {
             return std::make_shared<ConcatElement>(msg);
         }
         return std::make_shared<TextElement>(msg);

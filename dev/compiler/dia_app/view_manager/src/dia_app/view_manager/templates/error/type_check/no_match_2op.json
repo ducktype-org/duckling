@@ -20,7 +20,11 @@
         { "macro": "opt_expanded_right_type" }
     ],
     "pointer_messages": {
-        "cause": ["used here"]
+        "cause": {
+            "priority": 1,
+            "type": "error",
+            "content": "used here"
+        }
     },
     "params": {
         "operator": {

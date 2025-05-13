@@ -73,6 +73,7 @@ namespace dia_file {
 
     struct ConcatElement : public DisplayElement {
         std::vector<Ptr> elems;
+        std::vector<std::string> groups;
 
         ConcatElement(const json &elem_json);
         ConcatElement(const std::vector<Ptr> &elems, const std::vector<InfoHandle> &assoc_infos);
@@ -156,6 +157,19 @@ namespace dia_file {
 
         std::string to_text(DataHandle dh) const;
     
+        json show(DataHandle dh) const;
+    };
+
+    struct CodeElement : public DisplayElement {
+        Ptr content;
+
+        CodeElement(const json &elem_json);
+        CodeElement(Ptr content, const std::vector<InfoHandle> &assoc_infos);
+
+        Ptr copy() const;
+
+        std::string to_text(DataHandle dh) const;
+
         json show(DataHandle dh) const;
     };
 
