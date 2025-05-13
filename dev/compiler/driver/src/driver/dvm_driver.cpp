@@ -1,27 +1,24 @@
 #include "dvm_driver.hpp"
-#include <fstream>
-#include "base/int_conv.hpp"
 
 #include <backends/dvm/backend.hpp>
-#include <vm/api/vm.hpp>
+
+#include "base/int_conv.hpp"
+
+#include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
+#include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
+
+#include <fstream>
 
 namespace compiler::driver {
 	void DVMDriver::compileModule(query::Context& ctx, const BackendModuleData& data) {
-		backend_vm::Module module{
-			ctx,
-			data.module_id,
-			data.functions
-		};
+		backend_vm::Module       module{ ctx, data.module_id, data.functions };
 		vm::code::CodeCollection code_collection = module.build();
-		std::ofstream dvm_file(
-			base::strConcat(data.module_id.strView(), ".dbc").c_str(),
-			std::ios::binary
-		);
-		if (!dvm_file.is_open()) {
-			CORE_PANIC("Failed to open DVM file for writing");
-		}
+		std::ofstream            dvm_file(
+            base::strConcat(data.module_id.strView(), ".dbc").c_str(), std::ios::binary
+        );
+		if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 		vm::code::serialize(code_collection, dvm_file);
 
 		this->code_collection = code_collection;
@@ -33,50 +30,25 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> DVMDriver::run() {
-		if (!code_collection.has_value()) {
-			CORE_PANIC("No code collection to run");
-		}
-		auto& code = code_collection.value();
+		if (!code_collection.has_value())
+			return std::unexpected<std::string>{ "No code collection available." };
 
-		auto r1 = vm::api::spawn();
-		if (!r1.has_value()) {
-			std::cout << errorToString(r1.error()) << "\n";
-			CORE_PANIC("Failed to spawn process");
-		}
-		auto pid = r1.value().pid;
+		auto&   code = code_collection.value();
+		vm::PID pid{};
 
-		// if (options->add_builtin_library) {
-		// 	auto r0 = vm::api::loadStdlib();
-		// 	if (!r0.has_value()) {
-		// 		std::cout << errorToString(r0.error()) << "\n";
-		// 		CORE_PANIC("Failed to load standard library");
-		// 	}
-		// }
-
-		auto r3 = vm::api::loadCode(pid, {code}).transform_error(vm::api::errorToString);
-		match
-		if (auto x = r3.)
-		if (!r3.has_value()) {
-			std::cout << errorToString(r3.error()) << "\n";
-			CORE_PANIC("Failed to load code");
-		}
-		auto r4 = vm::api::run(pid);
-		if (!r4.has_value()) {
-			std::cout << errorToString(r4.error()) << "\n";
-			CORE_PANIC("Failed to run process");
-		}
-		auto r5 = vm::api::join(pid);
-		if (!r5.has_value()) {
-			std::cout << errorToString(r5.error()) << "\n";
-			CORE_PANIC("Failed to join process");
-		}
-		auto r6 = vm::api::getExitCode(pid);
-		if (!r6.has_value()) {
-			std::cout << errorToString(r6.error()) << "\n";
-			CORE_PANIC("Failed to get exit code");
-		}
-		return RunOutput{
-			.exit_code =  base::safeIntConv<int>(r6.value())
-		};
-    }
+		return vm::api::spawn()
+		    .and_then([&](vm::api::ProcessInfo process) {
+				pid = process.pid;
+				return vm::api::loadCode(pid, { code });
+			})
+		    .and_then([&]() { return vm::api::run(pid); })
+		    .and_then([&]() { return vm::api::join(pid); })
+		    .and_then([&]() { return vm::api::getExitCode(pid); })
+		    .transform_error([](const vm::api::ApiError& error) {
+				return vm::api::errorToString(error);
+			})
+		    .transform([](auto exit_code) {
+				return RunOutput{ .exit_code = base::safeIntConv<int>(exit_code) };
+			});
+	}
 }
