@@ -45,5 +45,5 @@ namespace compiler::driver {
 
 	void Driver::link() { backend_driver->link(); }
 
-	std::expected<RunOutput, std::string> Driver::run() { backend_driver->run();}
+	std::expected<RunOutput, std::string> Driver::run() { return backend_driver->run();}
 }

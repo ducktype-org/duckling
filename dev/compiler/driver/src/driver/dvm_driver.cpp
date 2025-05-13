@@ -4,11 +4,13 @@
 
 #include "base/int_conv.hpp"
 
+#include "vm/api/data/api_error.hpp"
 #include "vm/api/data/process_info.hpp"
 #include "vm/bytecode/bytecode.hpp"
 #include <vm/api/vm.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
+#include <expected>
 #include <fstream>
 
 namespace compiler::driver {
@@ -20,9 +22,10 @@ namespace compiler::driver {
         );
 		if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 		vm::code::serialize(code_collection, dvm_file);
+		dvm_file.close();
+		std::cout << "DVM file written to: " << data.module_id.strView() << ".dbc\n";
 
 		this->code_collection = code_collection;
-		dvm_file.close();
 	}
 
 	void DVMDriver::link() {
@@ -39,14 +42,16 @@ namespace compiler::driver {
 		return vm::api::spawn()
 		    .and_then([&](vm::api::ProcessInfo process) {
 				pid = process.pid;
-				return vm::api::loadCode(pid, { code });
+
+				if (options->add_builtin_library) return vm::api::loadStdlib(pid);
+				return std::expected<void, vm::api::ApiError>{};
 			})
+		    .and_then([&]() { return vm::api::loadCode(pid, { code }); })
+		    .and_then([&]() { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&]() { return vm::api::run(pid); })
 		    .and_then([&]() { return vm::api::join(pid); })
 		    .and_then([&]() { return vm::api::getExitCode(pid); })
-		    .transform_error([](const vm::api::ApiError& error) {
-				return vm::api::errorToString(error);
-			})
+		    .transform_error(vm::api::errorToString)
 		    .transform([](auto exit_code) {
 				return RunOutput{ .exit_code = base::safeIntConv<int>(exit_code) };
 			});

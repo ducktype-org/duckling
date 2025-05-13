@@ -281,7 +281,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
-		             .addLongName("dvm")
+		             .addLongName("dvm-backend")
 		             .addShortDesc("Compile to DVM bytcode.")
 		             .build());
 
@@ -294,6 +294,10 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addLongName("add-builtin-library")
 		             .addShortDesc("Links builtin library into the final executable.")
 		             .build());
+		clap.add(clap::ParamBuilder::ofFlag()
+			.addLongName("dvm-run")
+			.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+			.build());
 
 		auto options = configureDuckMainWith(clap, command_args);
 
@@ -307,7 +311,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver::Driver driver{
 			driver::Options{
-				.backend_type = options.isFlag("dvm") ? driver::BackendType::DVM : driver::BackendType::LLVM,
+				.backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM,
 				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
@@ -319,6 +323,16 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
 		driver.link();
+
+		if (options.isFlag("dvm-run")) {
+			auto run_result = driver.run();
+			if (run_result.has_value()) {
+				std::cout << "Execution ended. Exit code: " << run_result.value().exit_code << "\n";
+			} else {
+				std::cerr << "Error: " << run_result.error() << "\n";
+				return 1;
+			}
+		}
 
 		return 0;
 	});

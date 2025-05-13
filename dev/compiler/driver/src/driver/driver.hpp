@@ -70,7 +70,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Run the compiled program.
 		 */
-		virtual std::expected<RunOutput, std::string> run() = 0;
+		virtual auto run() -> std::expected<RunOutput, std::string>  = 0;
 
 		virtual ~BackendDriver() = default;
 	};
@@ -99,7 +99,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Run the compiled program. (only for DVM)
 		 */
-		 std::expected<RunOutput, std::string> run();
+		auto run() -> std::expected<RunOutput, std::string>;
 
 	private:
 		Options            options;
