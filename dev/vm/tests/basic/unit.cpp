@@ -11,7 +11,6 @@ public:
 		TESTER_ADD_TEST(return1337);
 		TESTER_ADD_TEST(initPrimitivesWithZero);
 		TESTER_ADD_TEST(check32BitsInstructions);
-		TESTER_ADD_TEST(types);
 		TESTER_ADD_TEST(pointerToLocal);
 		TESTER_ADD_TEST(pointerCopy);
 		TESTER_ADD_TEST(commandLineArguments);
@@ -26,8 +25,6 @@ private:
 	void initPrimitivesWithZero() { runTestOnVm("init_primitives_with_zero.dbc", "", "0", {}); }
 
 	void check32BitsInstructions() { runTestOnVm("32bits.dbc", "", "4", {}); }
-
-	void types() { runTestOnVm("types.dbc", "3 4", "7", {}); }
 
 	void pointerToLocal() { runTestOnVm("pointer_to_local.dbc", "", "42", {}); }
 

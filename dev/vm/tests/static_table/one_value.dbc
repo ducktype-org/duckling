@@ -1,4 +1,5 @@
 type static_table: tablei64 i64 4
+type pointer: ptr_tablei64 tablei64
 
 function main {
     # ret_val -> main ret_val
@@ -7,7 +8,7 @@ function main {
 
 	init_lany_type      x, i64;
 	init_lany_type      i, i64;
-	init_lany_type      arr_ptr, i64;
+	init_lany_type      arr_ptr, ptr_tablei64;
 
 	alloc_lptr_type     arr_ptr, tablei64; # arr_ptr := alloc *int[]
 	mov_l64_imm         i, 0;        # i := 0
