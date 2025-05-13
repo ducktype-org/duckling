@@ -21,8 +21,9 @@ REPL - Quick overview:
 --------------------------------------------------
 >>> {                           	-> starts reading code to inject.
                                     -> type valid DBC here.
-
-}   								-> close code injection mode by closing the brace.
+q									-> typing 'q' as line aborts the code injection mode and goes
+back to the repl loop. }   								-> close code injection mode by closing the
+brace.
 >>>
 --------------------------------------------------
 >>> [FUNC-NAME]([ARG0], [ARG1], ...) 	-> calls a function with specified parameters.
@@ -36,7 +37,10 @@ REPL - Quick overview:
 it.
 --------------------------------------------------
 >>> !{ 							-> loads a void function which performs specified operations and
-executes it. init_lptr_any x, i64; mov_l64_g64 	x, global; output_l64		x; deinit;
+executes it.
+                                -> type valid dbc here.
+q								-> typing 'q' as line aborts the code injection mode and goes back
+to the repl loop.
 }
 */
 
@@ -116,10 +120,6 @@ private:
 	static constexpr std::string_view FORMAT_STEP_FUNC_NAME = "step_{}";
 
 	// ============== HELPERS ==============
-	[[nodiscard]] std::string getCurrentTempFilePath() const {
-		return std::format(FORMAT_TEMP_FILE_NAME_PREFIX, load_counter);
-	}
-
 	[[nodiscard]] std::string strip(std::string string) const {
 		string.erase(0, string.find_first_not_of(" \t\n\r"));
 		string.erase(string.find_last_not_of(" \t\n\r") + 1);
@@ -160,7 +160,7 @@ private:
 		return function_code;
 	}
 
-	CallInfo parseFunctionCallLine(const std::string& line) const {
+	[[nodiscard]] CallInfo parseFunctionCallLine(const std::string& line) const {
 		u64 paren_open  = line.find('(');
 		u64 paren_close = line.rfind(')');
 
@@ -194,36 +194,17 @@ private:
 		return { .func_name = function_name, .func_args = arguments };
 	}
 
-	void saveToTempFile(const std::string& content) {
-		std::ofstream file(getCurrentTempFilePath());
-		if (!file) {
-			std::cerr << "Error: Could not create a temp file: " << getCurrentTempFilePath()
-					  << "\n";
-			return;
-		}
-		file << content;
-		file.close();
-	}
-
 	// ============== VM API Functions ==============
 	bool loadOnVm(const std::string& code) {
-		bool bad = false;
-		saveToTempFile(code);
-		fs::FilePath file(getCurrentTempFilePath());
+		bool         bad                 = false;
+		fs::FilePath file                = fs::FilePath::createTempFile(code);
 		auto         load_files_response = vm::api::loadFiles(pid, { file });
 		if (!load_files_response.has_value()) {
 			auto err     = load_files_response.error();
 			auto core_op = std::get<vm::api::CoreOperationError>(err);
 			auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-			std::cout << "Error: Failed to load a file\n";
+			std::cout << "Error: Failed to load a file: " << err_str << "\n";
 			bad = true;
-		}
-
-		std::error_code err_code;
-		std::filesystem::remove(getCurrentTempFilePath(), err_code);
-		if (err_code) {
-			std::cout << "Error: Failed to remove a temporary file " << getCurrentTempFilePath()
-					  << ": " << err_code.message() << '\n';
 		}
 		load_counter++;
 		return !bad;
