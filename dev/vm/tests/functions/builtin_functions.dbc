@@ -1,9 +1,7 @@
+# Builtin function prototypes are loaded with the builtin module
 # Tests if values from functions are returned correctly.
 # input = n
 # output = n
-
-type fun: builtin_input_i64 { } i64
-type fun: builtin_output_i64 { i64 } i64
 
 function main {
     # [0, 8) main ret_val
