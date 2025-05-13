@@ -102,11 +102,25 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
 	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
+	Example<pst::Const, true>  type_const{ "const x: i32" };
+	Example<pst::Const, true>  value_const{ "const x = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
-	Example<pst::Const, false> no_equals_const{ "const x: i32" };
+	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
+	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
+
+	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
+	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
+	Example<pst::Variable, true>  ref_var{ "var x: ref i32 = 5" };
+	Example<pst::Variable, true>  type_var{ "var x: i32" };
+	Example<pst::Variable, true>  value_var{ "var x = 5" };
+	Example<pst::Variable, false> no_name_var{ "var: i32 = 5" };
+	Example<pst::Variable, false> no_type_var{ "var x:= 5" };
+	Example<pst::Variable, false> no_value_var{ "var x: i32=;" };
+	Example<pst::Variable, false> no_value_var_eof{ "var x: i32=" };
+	Example<pst::Variable, false> const_var{ "const x: i32 = 5" };
 
 	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*;" };
 	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };
