@@ -38,8 +38,9 @@ public:
 		// TESTER_ADD_TEST(derefWrongType);
 		// TESTER_ADD_TEST(refOnPrimitive);
 
-		// TESTER_ADD_TEST(wrongTypeMov);
-		// TESTER_ADD_TEST(wrongTypeSize);
+		TESTER_ADD_TEST(wrongTypeMov);
+		TESTER_ADD_TEST(wrongTypeSize);
+		TESTER_ADD_TEST(usingPointerAsPrimitive);
 	}
 
 private:
@@ -162,27 +163,35 @@ private:
 			}
 		);
 	}
+	#endif
 
 	// Type verification
 	void wrongTypeMov() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_mov.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::builders::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
-
+	
 	void wrongTypeSize() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
 
-#endif
+	void usingPointerAsPrimitive() {
+		loadInvalidDbc(
+			"wrong/types/using_pointer_as_primitive.dbc",
+			{
+				vm::code::builders::InvalidArgumentTypeError::ERR_MSG,
+			}
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/verification/");
