@@ -2,6 +2,7 @@
 
 #include <base/variant.hpp>
 
+#include "vm/bytecode/instructions.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -105,10 +106,6 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 }
 
 void FunctionValidator::validateInstruction(const Instruction& instruction) const {
-	variant_match(instruction) {
-		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-	}
 
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
@@ -181,10 +178,20 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			// All possible opargs must be handled. Unhandled opargs throw an exception.
 			variant_case_novalue(opargs::StackLocalAny) {}
 			variant_case_novalue(opargs::Immediate) {}
-			variant_case_novalue(opargs::Type) {}
-			variant_case_novalue(opargs::FunctionName) {}
+			variant_case(opargs::Type, type_value) {
+				(void) type_context.getMetadata().atMaybe(type_value.type_name).expect<UnknownTypeError>(arg);
+			}
+			variant_case(opargs::FunctionName, function_value) {}
 			variant_case_novalue(opargs::BuiltinFunctionName) {}
-			variant_case_novalue(opargs::Label) {}
+			variant_case(opargs::Label, label_value) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_label) {}
+					// The default instruction for a label argument is a jump instruction.
+					variant_default {
+						if (!index_of_label.contains(label_value.label_name)) throw UnknownLabelError(label_value);
+					}
+				}
+			}
 
 			variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
 		}
@@ -196,11 +203,15 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 		    && arg_types.at(0).name != arg_types.at(1).name)
 			throw ArgumentMismatchError(instruction);
 	}
+
+	variant_match(instruction) {
+		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+	}
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
-	// @TODO remove `atMaybe` after #732
-	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
@@ -211,7 +222,7 @@ void FunctionValidator::initStackState() {
 }
 
 void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
-	auto tod = type_context.getTypes().atMaybe(type.type_name).expect<UnknownTypeError>(type);
+	auto tod = type_context.getTypes().at(type.type_name);
 
 	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
@@ -230,6 +241,7 @@ void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	// TODO: remove atMaybe after checking.
 	auto maybe_func_type
 		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
 	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
@@ -273,7 +285,7 @@ void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& functi
 }
 
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
-	return index_of_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
+	return index_of_label.at(label.label_name);
 }
 
 void FunctionValidator::preprocessLabels() {
