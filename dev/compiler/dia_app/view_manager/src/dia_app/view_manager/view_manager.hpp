@@ -47,14 +47,14 @@ namespace view_manager {
     class Diagnostic {
         private:
         Metadata metadata;
-        vector<Section> sections;
-        vector<HlInfo> hl_messages;
+        std::vector<Section> sections;
+        std::vector<HlInfo> hl_messages;
 
         public:
-        Diagnostic(Metadata metadata, vector<Section> sections, vector<HlInfo> hl_messages) : metadata(metadata), sections(sections), hl_messages(hl_messages) {}
+        Diagnostic(Metadata metadata, std::vector<Section> sections, std::vector<HlInfo> hl_messages) : metadata(metadata), sections(sections), hl_messages(hl_messages) {}
         static Diagnostic createFromInfo(const Info &info, CreationContext &creation_context) {
             auto metadata = Metadata::createFromInfo(info);
-            vector<Section> sections;
+            std::vector<Section> sections;
             // if (info.header_message) {
             //     sections.emplace_back(TextSection(info.header_message->toComponent(creation_context)));
             // }
@@ -64,7 +64,7 @@ namespace view_manager {
             // if (info.description) {
             //     sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
             // }
-            vector<HlInfo> hl_messages;
+            std::vector<HlInfo> hl_messages;
             return Diagnostic(metadata, sections, hl_messages);
         }
 
@@ -75,7 +75,7 @@ namespace view_manager {
             //     diagnostic.set_allocated_metadata(&metadata);
             // }
             // {
-            //     vector<::view::Section> tmp;
+            //     std::vector<::view::Section> tmp;
             //     transform(sections.begin(), sections.end(), tmp.begin(),
             //         [](const Section &section) {
             //         return section.getView();
@@ -83,7 +83,7 @@ namespace view_manager {
             //     diagnostic.mutable_sections()->Add(tmp.begin(), tmp.end());
             // }
             // {
-            //     vector<::view::HlInfo> tmp;
+            //     std::vector<::view::HlInfo> tmp;
             //     transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
             //         [](const HlInfo &hl_info) {
             //         return hl_info.getView();
@@ -96,27 +96,27 @@ namespace view_manager {
 
     class ViewManager {
         private:
-        vector<Diagnostic> diagnostics;
+        std::vector<Diagnostic> diagnostics;
         // unique_ptr<unordered_map<component_id_t, weak_ptr<InteractiveComponent>>> id_to_interactive_component;
 
 
         public:
-        ViewManager(vector<Diagnostic> diagnostics) : diagnostics(std::move(diagnostics)) {}
+        ViewManager(std::vector<Diagnostic> diagnostics) : diagnostics(std::move(diagnostics)) {}
         static ViewManager createFromJson(const json &input) {
             // TODO: WTF?
             ViewConstructor view_constructor(0, input);
 
             Info info = *view_constructor.load_main_info();
 
-            auto creation_context = CreationContext{.id_to_interactive_component=make_unique<unordered_map<component_id_t, weak_ptr<InteractiveComponent>>>()};
+            auto creation_context = CreationContext{.id_to_interactive_component=std::make_unique<std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>>()};
 
-            auto diagnostics = vector<Diagnostic>{Diagnostic::createFromInfo(info, creation_context)};
+            auto diagnostics = std::vector<Diagnostic>{Diagnostic::createFromInfo(info, creation_context)};
 
             return ViewManager(diagnostics);
         }
 
         void getView(::view::ViewResponse* response) {
-            // vector<::view::Diagnostic> tmp;
+            // std::vector<::view::Diagnostic> tmp;
             // transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
             // [](const Diagnostic &diagnostic) {
             //     return diagnostic.getView();
@@ -180,8 +180,8 @@ namespace view_manager {
         grpc::ServerBuilder builder;
         builder.AddListeningPort("localhost:50051", grpc::InsecureServerCredentials());
         builder.RegisterService(&service);
-        unique_ptr<grpc::Server> server(builder.BuildAndStart());
-        cout << "ViewManager started on port 50051\n";
+        std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
+        std::cout << "ViewManager started on port 50051\n";
         server->Wait();
     }
 }
