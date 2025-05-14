@@ -39,7 +39,7 @@ namespace query {
 	};
 
 	template<class KeyType>
-	struct queryUnstableHashFunctor final {
+	struct QueryUnstableHashFunctor final {
 		std::size_t operator()(const KeyType& key) const { return unstableHashKey(key); }
 	};
 }
