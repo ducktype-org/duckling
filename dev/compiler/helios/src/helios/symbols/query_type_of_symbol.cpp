@@ -43,11 +43,13 @@ namespace compiler::helios {
 			base::Optional<tsh::SymbolType<>> symbol_type;
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
-				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
+				// @TODO: handle potential lack of type
+				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) final {
-				setTypeOfSymbol(stmt->getType().unlock(ctx)->getExpr().unlock(ctx));
+				// @TODO: handle potential lack of type
+				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
