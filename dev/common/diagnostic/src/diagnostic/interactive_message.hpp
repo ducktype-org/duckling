@@ -73,8 +73,8 @@ namespace dia {
 			):
 				  InteractiveContent(
 					  ContentType::ERROR,
-					  "lookup",
-					  "symbol_not_found",
+					  "type_check",
+					  "no_match_2op",
 					  std::move(params),
 					  position,
 					  pst,

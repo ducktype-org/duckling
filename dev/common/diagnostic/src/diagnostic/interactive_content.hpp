@@ -102,7 +102,7 @@ namespace dia {
 			return json{ { "metadata",
 				           { { "type", content_type }, { "family", family }, { "name", name } } },
 				         { "params", params },
-				         { "code", { { "type", "code" }, { "content", interactive_code } } } };
+				         { "code", interactive_code } };
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() {
