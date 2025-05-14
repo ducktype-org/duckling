@@ -136,6 +136,29 @@ namespace tsl {
 		}
 	}
 
+	DynamicArrayTypeLayout::
+		DynamicArrayTypeLayout(const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context&):
+		  TypeLayoutABC(POINTER_SIZE + bytes2bits(OFFSET_SIZE) * 3, dynamic_array_type) {}
+
+	std::string DynamicArrayTypeLayout::toStringDefinition(
+		query::Context& ctx, bool recursive, const u32 indent
+	) const {
+		std::stringstream ss{};
+		ss << getIndent(indent) << "dynamic_array {\n";
+
+		// Display the element type
+		const auto element_type   = tsh::DynamicArrayAbstractType(getSourceType()).getElementType();
+		const auto element_layout = ctx.query<QuerySymbolTypeLayout>(element_type);
+		if (recursive)
+			ss << element_layout.toStringDefinition(ctx, recursive, indent + 1) << "\n";
+		else
+			ss << getIndent(indent + 1) << element_layout.toStringIdentification() << "\n";
+
+		// Display the total size
+		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		return ss.str();
+	}
+
 	struct VariantTypeLayoutConstructionHelper {
 		tsh::VariantAbstractType variant_type;
 		Bits                     max_component_size;
@@ -232,9 +255,8 @@ namespace tsl {
 		ss << getIndent(indent) << "tuple {\n";
 		for (const auto component_idx: offset_idx_to_component_idx) {
 			const Bytes             component_offset = getComponentOffset(component_idx);
-			const tsh::AbstractType component_type
-				= tuple_type.getComponentAbstractTypes().at(component_idx);
-			auto component_layout = ctx.query<QueryAbstractTypeLayout>(component_type);
+			const tsh::SymbolType<> component_type   = tuple_type.getComponents().at(component_idx);
+			auto component_layout = ctx.query<QuerySymbolTypeLayout>(component_type);
 			if (recursive)
 				ss << component_layout.toStringDefinition(ctx, recursive, indent + 1);
 			else

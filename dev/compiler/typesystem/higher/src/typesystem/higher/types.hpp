@@ -27,8 +27,10 @@ namespace tsh {
 		class RawPointerAbstractTypeImpl;
 		class PointerAbstractTypeImpl;
 		class ReferenceAbstractTypeImpl;
+		class StringAbstractTypeImpl;
 		class TupleAbstractTypeImpl;
 		class FunctionAbstractTypeImpl;
+		class DynamicArrayAbstractTypeImpl;
 		class VariantAbstractTypeImpl;
 		class ClassAbstractTypeImpl;
 		class NamespaceAbstractTypeImpl;
@@ -328,6 +330,22 @@ namespace tsh {
 		CONSTRUCT_FROM_IMPLEMENTATION(FunctionAbstractType)
 	};
 
+	class DynamicArrayAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(DynamicArrayAbstractType, AbstractType)
+
+		/**
+		 * @brief Gets the type of the elements of the dynamic array.
+		 * @return The type of the elements of the dynamic array.
+		 */
+		[[nodiscard]]
+		SymbolType<> getElementType() const;
+
+		CONSTRUCT_WITH_CHECKED_CAST(DynamicArrayAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(DynamicArrayAbstractType)
+	};
+
 	/**
 	 * @brief The Variant types.
 	 *
@@ -420,6 +438,15 @@ namespace tsh {
 	/***********************\
 	|  MISCELLANEOUS TYPES  |
 	\***********************/
+
+	class StringAbstractType: public AbstractType {
+	public:
+		SETUP_TYPE_WITH_BASE(StringAbstractType, AbstractType)
+
+		CONSTRUCT_WITH_CHECKED_CAST(StringAbstractType)
+
+		CONSTRUCT_FROM_IMPLEMENTATION(StringAbstractType)
+	};
 
 	class NamespaceAbstractType: public AbstractType {
 	public:
