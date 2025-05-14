@@ -10,7 +10,7 @@
 namespace compiler::driver {
 
 	class DVMDriver final: public BackendDriver {
-		base::Optional<vm::code::CodeCollection> code_collection{};
+		std::vector<vm::code::CodeCollection> code_collection{};
 	public:
 		DVMDriver(CRef<Options> options): BackendDriver(options) {}
 

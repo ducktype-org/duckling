@@ -25,7 +25,7 @@ namespace compiler::driver {
 		dvm_file.close();
 		std::cout << "DVM file written to: " << data.module_id.strView() << ".dbc\n";
 
-		this->code_collection = code_collection;
+		this->code_collection.emplace_back(std::move(code_collection));
 	}
 
 	void DVMDriver::link() {
@@ -33,10 +33,9 @@ namespace compiler::driver {
 	}
 
 	std::expected<RunOutput, std::string> DVMDriver::run() {
-		if (!code_collection.has_value())
+		if (code_collection.size() == 0)
 			return std::unexpected<std::string>{ "No code collection available." };
 
-		auto&   code = code_collection.value();
 		vm::PID pid{};
 
 		return vm::api::spawn()
@@ -46,7 +45,7 @@ namespace compiler::driver {
 				if (options->add_builtin_library) return vm::api::loadStdlib(pid);
 				return std::expected<void, vm::api::ApiError>{};
 			})
-		    .and_then([&]() { return vm::api::loadCode(pid, { code }); })
+		    .and_then([&]() { return vm::api::loadCode(pid, { code_collection }); })
 		    .and_then([&]() { return vm::api::attach(pid, std::cin, std::cout); })
 		    .and_then([&]() { return vm::api::run(pid); })
 		    .and_then([&]() { return vm::api::join(pid); })

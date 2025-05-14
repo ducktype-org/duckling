@@ -15,7 +15,7 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(executableGenerated);
 		TESTER_ADD_TEST(assemblyAndLLVMGenerated);
-		TESTER_ADD_TEST(dvmBackendThrows);
+		TESTER_ADD_TEST(dvmBackendRuns);
 		TESTER_ADD_TEST(builtinCompiles);
 	}
 
@@ -70,7 +70,7 @@ private:
 		std::filesystem::remove("test_module.ll");
 	}
 
-	void dvmBackendThrows() {
+	void dvmBackendRuns() {
 		using namespace compiler;
 		auto module
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
@@ -84,13 +84,12 @@ private:
 		                        .external_objects_files = {},
 		                        .external_libs          = {} });
 
-		assertThrows<base::NotYetImplemented>(
-			[&]() {
-				driver.compileHOUTUnit(top_level, base::StrID("test_module"));
-				driver.link();
-			},
-			"compilation for BC driver"
-		);
+		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
+
+		auto run_result = driver.run();
+		assertTrue(run_result.has_value(), "DVM backend should not throw");
+		assertTrue(run_result.value().exit_code == 0, "DVM backend should not throw");
+		
 	}
 
 	void builtinCompiles() {
