@@ -17,12 +17,12 @@ namespace dia {
 
 	class InteractiveCode {
 	private:
-		dia::SourcePosition                     position;
-		std::set<compiler::helios::SymID>       symbols;
-		std::set<tsh::AbstractType>             types;
-		pst::Access<pst::LangElement>           pst;
-		query::Context&                         ctx;
-		pointer_message                         pointer;
+		dia::SourcePosition                       position;
+		mutable std::set<compiler::helios::SymID> symbols;
+		mutable std::set<tsh::AbstractType>       types;
+		pst::Access<pst::LangElement>             pst;
+		query::Context&                           ctx;
+		pointer_message                           pointer;
 		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
 		json                                    make_string_array(usize start, usize end) const;
 		void visit_leafs(pst::Access<pst::LangElement> pst, json& out) const;

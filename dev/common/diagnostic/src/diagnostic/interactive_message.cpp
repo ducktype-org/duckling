@@ -8,7 +8,7 @@ using nlohmann::json;
 json dia::InteractiveMessage::tojson() const {
 	const SerializationParams& params = InteractiveLogger::params();
 	json                       res    = json::object();
-	res["entities"]                   = json::array();
+	res["entities"]                   = json::object();
 	if (params.include_symbols) {
 		auto content_symbols = content->get_symbols();
 		for (auto& note: notes) {
@@ -16,8 +16,8 @@ json dia::InteractiveMessage::tojson() const {
 			content_symbols.insert(note_symbols.begin(), note_symbols.end());
 		}
 		if (!content_symbols.empty()) {
-			json j{ content_symbols };
-			res["entities"].insert(res["entities"].begin(), j.begin(), j.end());
+			json j = content_symbols;
+			res["entities"].update(j);
 		}
 	}
 	if (params.include_types) {
@@ -27,20 +27,28 @@ json dia::InteractiveMessage::tojson() const {
 			content_types.insert(note_types.begin(), note_types.end());
 		}
 		if (!content_types.empty()) {
-			json j{ content_types };
-			res["entities"].insert(res["entities"].begin(), j.begin(), j.end());
+			json j = content_types;
+			res["entities"].update(j);
 		}
 	}
 	res["main_info"]                 = content;
-	res["displayed_secondery_infos"] = notes;
+	res["displayed_secondary_infos"] = notes;
+	res["secondary_infos"]           = json::array();
 	return res;
 }
 
 json dia::OperatorNotFound::Params::tojson() {
 	json lhs_type, rhs_type;
+	// TODO: make this better, eg. creating class for entities
+	json code             = json::object();
+	code["type"]          = "code";
+	code["content"]       = lhs->expression_type.getType().toString();
 	lhs_type["refers_to"] = std::to_string(lhs->expression_type.getType().customPerfectHash());
+	lhs_type["content"]   = code;
 	lhs_type["type"]      = "entity";
+	code["content"]       = rhs->expression_type.getType().toString();
 	rhs_type["refers_to"] = std::to_string(rhs->expression_type.getType().customPerfectHash());
+	rhs_type["content"]   = code;
 	rhs_type["type"]      = "entity";
 	// TODO: add types to types.
 	return json{ { "operator", op.strView() },

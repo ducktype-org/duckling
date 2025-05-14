@@ -61,9 +61,9 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 			                      .stdString() } };
 		node["content"] = make_string_array(node_start, node_end + 1);
 		if (hid_opt.has_value()) {
-			// TODO: add it to symbol list.
 			node["type"]      = "entity";
-			node["refers_to"] = hid_opt.value().customPerfectHash();
+			node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
+			symbols.insert(hid_opt.value());
 		} else {
 			node["type"] = "grouping";
 		}
@@ -89,7 +89,8 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 			node["content"] = make_string_array(last_position, child_start);
 			if (hid_opt.has_value()) {
 				node["type"]      = "entity";
-				node["refers_to"] = hid_opt.value().customPerfectHash();
+				node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
+				symbols.insert(hid_opt.value());
 			} else {
 				node["type"] = "grouping";
 			}
@@ -112,7 +113,8 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 		node["content"] = make_string_array(last_position, pst->getSourcePosition().getEnd());
 		if (hid_opt.has_value()) {
 			node["type"]      = "entity";
-			node["refers_to"] = hid_opt.value().customPerfectHash();
+			node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
+			symbols.insert(hid_opt.value());
 		} else {
 			node["type"] = "grouping";
 		}

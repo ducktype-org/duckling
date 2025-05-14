@@ -155,10 +155,10 @@ namespace dia {
 		auto [line, column] = pos.getStartLineColumn();
 		j = json{ // { "file", pos.source_file->getPath().strView().data() }, // TODO: Should we
 			      // check if this is not null?
-			      { "file", "test.duck" },
-			      { "line", std::to_string(line) },
-			      { "column", std::to_string(column) },
-			      { "last_modified", "??" }
+			      { "file", pos.getSource()->getPath().strView() },
+			      { "line", line },
+			      { "column", column },
+			      { "last_modified", 0 }
 		};  // TODO: Set last modified to real value.
 	}
 
