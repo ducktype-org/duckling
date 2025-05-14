@@ -20,6 +20,14 @@ namespace base {
 				data.at(i) = (static_cast<u64>(arr.at(i * 2)) << 32) | arr.at(i * 2 + 1);
 		}
 
+		constexpr Bit256(u64 a, u64 b, u64 c, u64 d) noexcept: data{ a, b, c, d } {}
+
+		constexpr Bit256(u64 a, u64 b, u64 c) noexcept: data{ a, b, c, 0 } {}
+
+		constexpr Bit256(u64 a, u64 b) noexcept: data{ a, b, 0, 0 } {}
+
+		constexpr Bit256(u64 a) noexcept: data{ a, 0, 0, 0 } {}
+
 		constexpr bool operator==(const Bit256& other) const noexcept = default;
 		constexpr bool operator!=(const Bit256& other) const noexcept = default;
 
