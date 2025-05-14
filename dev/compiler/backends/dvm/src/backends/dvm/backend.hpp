@@ -13,8 +13,7 @@ namespace compiler::backend_vm {
 	 * @note Currently it does not support dynamic function insertion, but I will.
 	 */
 	class Module {
-		query::Context& query_ctx;
-		base::StrID     module_id;
+		base::StrID module_id;
 
 	public:
 		Module(
