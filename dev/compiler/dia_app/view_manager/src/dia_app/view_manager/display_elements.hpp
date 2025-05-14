@@ -13,6 +13,7 @@ namespace dia_file {
 
     struct DisplayElement {
         std::vector<InfoHandle> assoc_infos;
+        std::shared_ptr<view_manager::Component> generated_component = std::shared_ptr<view_manager::Component>();
 
         DisplayElement(const std::vector<InfoHandle> assoc_infos) : assoc_infos(assoc_infos) {}
         virtual ~DisplayElement();
@@ -50,7 +51,7 @@ namespace dia_file {
         // Serialize this element (DEBUG ONLY).
         virtual json show(DataHandle dh) const = 0;
 
-        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const;
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context);
     };
 
     struct TextElement : public DisplayElement {
@@ -66,9 +67,7 @@ namespace dia_file {
 
         json show(DataHandle _) const;
 
-        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
-            return static_pointer_cast<Component>(make_shared<TextComponent>(content));
-        }
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
     struct ConcatElement : public DisplayElement {
@@ -83,14 +82,7 @@ namespace dia_file {
 
         json show(DataHandle dh) const;
 
-        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
-            vector<shared_ptr<Component>> sons;
-            transform(this->elems.begin(), this->elems.end(), sons.begin(),
-                [&creation_context](const Ptr &son) {
-                return son->toComponent(creation_context);
-            });
-            return static_pointer_cast<Component>(make_shared<ConcatComponent>(sons));
-        }
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
     struct StartLineElement : public DisplayElement {
@@ -105,9 +97,7 @@ namespace dia_file {
 
         json show(DataHandle dh) const;
 
-        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
-            return static_pointer_cast<Component>(make_shared<StartLineComponent>(this->number));
-        }
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
     struct InteractElement : public DisplayElement {
@@ -122,13 +112,7 @@ namespace dia_file {
 
         json show(DataHandle dh) const;
 
-        virtual std::shared_ptr<Component> toComponent(CreationContext &creation_context) const override {
-            auto primary = this->content->toComponent(creation_context);
-            auto alternative = this->alt_content->toComponent(creation_context);
-            auto result = make_shared<InteractiveComponent>(getNewId(), primary, alternative);
-            creation_context.id_to_interactive_component->emplace(result->getId(), std::weak_ptr<InteractiveComponent>(result));
-            return static_pointer_cast<Component>(result);
-        }
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
     struct LazyElement : public DisplayElement {
@@ -171,6 +155,8 @@ namespace dia_file {
         std::string to_text(DataHandle dh) const;
 
         json show(DataHandle dh) const;
+
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
 } // namespace dia_file

@@ -2,12 +2,24 @@
 
 namespace dia_app {
 namespace dia_file {
+    using view_manager::Component,
+          view_manager::InteractiveComponent,
+          view_manager::ConcatComponent,
+          view_manager::TextComponent,
+          view_manager::CodeComponent,
+          view_manager::StartLineComponent,
+          view_manager::CreationContext;
+
     Ptr fetch_resource(ResourceHandle, DataHandle data_handle);
     void fetch_entity(EntityHandle entity_handle, DataHandle data_handle);
     std::vector<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle);
 
+    // ---------------- DisplayElement ---------------- //
+
     DisplayElement::~DisplayElement() {}
-    shared_ptr<Component> DisplayElement::toComponent(CreationContext&) const { return {}; }
+    std::shared_ptr<Component> DisplayElement::toComponent(CreationContext&) {
+        return {};
+    }
 
     // ---------------- TextElement ---------------- //
 
@@ -46,6 +58,13 @@ namespace dia_file {
         res["content"] = content;
         res["groups"] = groups;
         return res;
+    }
+
+    std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
+        if (!this->generated_component) {
+            this->generated_component = static_pointer_cast<Component>(make_shared<TextComponent>(content));
+        }
+        return this->generated_component;
     }
 
 
@@ -101,6 +120,18 @@ namespace dia_file {
         return res;
     }
 
+    std::shared_ptr<Component> ConcatElement::toComponent(CreationContext &creation_context) {
+        if (!this->generated_component) {
+            std::vector<std::shared_ptr<Component>> sons;
+            transform(this->elems.begin(), this->elems.end(), sons.begin(),
+                [&creation_context](const Ptr &son) {
+                return son->toComponent(creation_context);
+            });
+            this->generated_component = static_pointer_cast<Component>(make_shared<ConcatComponent>(sons));
+        }
+        return this->generated_component;
+    }
+
 
     // ---------------- StartLineElement ---------------- //
 
@@ -129,6 +160,13 @@ namespace dia_file {
             res["number"] = number.value();
         }
         return res;
+    }
+
+    std::shared_ptr<Component> StartLineElement::toComponent(CreationContext &creation_context) {
+        if (!this->generated_component) {
+            this->generated_component = static_pointer_cast<Component>(make_shared<StartLineComponent>(this->number));
+        }
+        return this->generated_component;
     }
 
 
@@ -167,6 +205,17 @@ namespace dia_file {
         res["content"] = content->show(dh);
         res["alt_content"] = alt_content->show(dh);
         return res;
+    }
+
+    std::shared_ptr<Component> InteractElement::toComponent(CreationContext &creation_context) {
+        if (!this->generated_component) {
+            auto primary = this->content->toComponent(creation_context);
+            auto alternative = this->alt_content->toComponent(creation_context);
+            auto result = make_shared<InteractiveComponent>(view_manager::getNewId(), primary, alternative);
+            creation_context.id_to_interactive_component->emplace(result->getId(), std::weak_ptr<InteractiveComponent>(result));
+            this->generated_component = static_pointer_cast<Component>(result);
+        }
+        return this->generated_component;
     }
 
 
@@ -292,6 +341,13 @@ namespace dia_file {
         res["type"] = "code";
         res["content"] = content->show(dh);
         return res;
+    }
+
+    std::shared_ptr<Component> CodeElement::toComponent(CreationContext &creation_context) {
+        if (!this->generated_component) {
+            this->generated_component = static_pointer_cast<Component>(make_shared<CodeElement>(content));
+        }
+        return this->generated_component;
     }
 
     // ---------------- functions ---------------- //
