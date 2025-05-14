@@ -8,4 +8,4 @@ add_library(Diagnostic
         src/diagnostic/location.cpp
 )
 
-make_module(Diagnostic USES Printer Filesystem TokenSource JSON HELIOS)
+make_module(Diagnostic USES Printer Filesystem TokenSource JSON HELIOS VIEW_MANAGER)
