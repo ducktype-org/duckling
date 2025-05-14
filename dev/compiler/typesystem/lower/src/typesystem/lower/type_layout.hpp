@@ -232,31 +232,8 @@ namespace tsl {
 		 */
 		static constexpr auto OFFSET_SIZE = Bytes(8);
 
-		Box<TypeLayout> element_layout;
-
 	public:
 		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
-
-		explicit DynamicArrayTypeLayout(const DynamicArrayTypeLayout& other):
-			  TypeLayoutABC(other),
-			  element_layout(makeBox<TypeLayout>(*other.element_layout)) {}
-
-		DynamicArrayTypeLayout(DynamicArrayTypeLayout&& other) noexcept:
-			  TypeLayoutABC(other),
-			  element_layout(std::move(other.element_layout)) {}
-
-		DynamicArrayTypeLayout& operator=(DynamicArrayTypeLayout&& other) noexcept {
-			if (this != &other) {
-				TypeLayoutABC::operator=(other);
-				element_layout = std::move(other.element_layout);
-			}
-			return *this;
-		}
-
-		[[nodiscard]]
-		Ref<TypeLayout> getElementLayout() const {
-			return &*element_layout;
-		}
 
 		[[nodiscard]]
 		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override;

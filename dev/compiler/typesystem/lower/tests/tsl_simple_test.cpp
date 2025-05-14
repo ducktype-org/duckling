@@ -211,15 +211,7 @@ private:
 				dynamic_array_layout.getSourceType() == dynamic_array_type,
 				"Layout should have source type as constructed."
 			);
-			variant_match(dynamic_array_layout()) {
-				variant_case(DynamicArrayTypeLayout, l) {
-					assertTrue(
-						*l.getElementLayout() == unit_layout,
-						"Element layout should be a layout of the element type."
-					);
-				}
-				variant_default { fail("Layout of dynamic array type should be array-like."); }
-			}
+
 			testPrinting(dynamic_array_layout, ctx, true);
 		});
 	}

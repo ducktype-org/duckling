@@ -136,26 +136,14 @@ namespace tsl {
 		}
 	}
 
-	DynamicArrayTypeLayout::DynamicArrayTypeLayout(
-		const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx
-	):
-		  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, dynamic_array_type),
-		  element_layout(makeBox<TypeLayout>(
-			  ctx.query<QueryAbstractTypeLayout>(dynamic_array_type.getElementType().getType())
-		  )) {}
+	DynamicArrayTypeLayout::
+		DynamicArrayTypeLayout(const tsh::DynamicArrayAbstractType dynamic_array_type, query::Context&):
+		  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, dynamic_array_type) {}
 
-	std::string DynamicArrayTypeLayout::toStringDefinition(
-		query::Context& ctx, bool recursive, const u32 indent
-	) const {
+	std::string DynamicArrayTypeLayout::toStringDefinition(query::Context&, bool, const u32 indent)
+		const {
 		std::stringstream ss{};
-		ss << getIndent(indent) << "dynamic_array {\n";
-
-		if (recursive)
-			ss << element_layout->toStringDefinition(ctx, recursive, indent + 1) << "\n";
-		else
-			ss << getIndent(indent + 1) << element_layout->toStringIdentification() << "\n";
-
-		ss << getIndent(indent) << "} : " << std::to_string(getSize());
+		ss << getIndent(indent) << "dynamic_array : " << std::to_string(getSize());
 
 		return ss.str();
 	}
