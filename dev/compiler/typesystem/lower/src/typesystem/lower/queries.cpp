@@ -23,8 +23,12 @@ namespace tsl {
 				return PointerTypeLayout(key);
 			case Pointer:
 				return PointerTypeLayout(key, ctx);
+			case String:
+				return StringTypeLayout(key);
 			case Function:
 				return FunctionalTypeLayout(key);
+			case DynamicArray:
+				return DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType(key), ctx);
 			case Variant:
 				return VariantTypeLayout(key, ctx);
 			case Tuple:
