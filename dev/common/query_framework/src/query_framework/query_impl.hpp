@@ -161,7 +161,7 @@ namespace query::detail {
 	static_assert(                                                                                \
 		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
 		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
-	    "(QueryStableHash)."                                                                      \
+		"(QueryStableHash)."                                                                      \
 	);
 
 /**

@@ -9,7 +9,7 @@
 	static inline base::HashMap<                                                 \
 		QKey,                                                                    \
 		query::CacheEntry<PResult>,                                              \
-		::query::queryUnstableHashFunctor<QKey>>                                 \
+		::query::QueryUnstableHashFunctor<QKey>>                                 \
 				cache;                                                           \
 	static auto load(const QKey& key) -> LoadResult {                            \
 		if (const auto& value = cache.atMaybe(key)) {                            \
@@ -41,7 +41,7 @@
 	static inline base::HashMap<                                                        \
 		QKey,                                                                           \
 		query::CacheEntry<PResult>,                                                     \
-		::query::queryUnstableHashFunctor<QKey>>                                        \
+		::query::QueryUnstableHashFunctor<QKey>>                                        \
 				cache;                                                                  \
 	static auto load(const QKey& key) -> LoadResult {                                   \
 		if (const auto& value = cache.atMaybe(key)) {                                   \
@@ -70,7 +70,7 @@
 	static inline base::StableHashMap<                                           \
 		QKey,                                                                    \
 		query::CacheEntry<PResult>,                                              \
-		::query::queryUnstableHashFunctor<QKey>>                                 \
+		::query::QueryUnstableHashFunctor<QKey>>                                 \
 				cache;                                                           \
 	static auto load(const QKey& key) -> LoadResult {                            \
 		if (auto value = cache.atMaybe(key)) {                                   \

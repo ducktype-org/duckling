@@ -514,7 +514,7 @@ namespace compiler::helios {
 		static inline base::HashMap<
 			QKey,
 			query::CacheEntry<pst::PST<pst::Stmt>>,
-			::query::queryUnstableHashFunctor<QKey>>
+			::query::QueryUnstableHashFunctor<QKey>>
 			cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
