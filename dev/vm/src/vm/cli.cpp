@@ -43,15 +43,16 @@ void expect(std::expected<void, E> r) {
 	}
 }
 
-void cli() {
+void cli(bool load_stdlib) {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	cli(fs::FilePath(filepath));
+	cli(fs::FilePath(filepath), load_stdlib);
 }
 
-void cli(const fs::FilePath& filepath) {
+void cli(const fs::FilePath& filepath, bool load_stdlib) {
 	vm::PID pid = expect(vm::api::spawn()).pid;
+	if (load_stdlib) expect(vm::api::loadStdlib(pid));
 	expect(vm::api::loadFiles(pid, { filepath }));
 	expect(vm::api::attach(pid, std::cin, std::cout));
 	expect(vm::api::run(pid));

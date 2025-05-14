@@ -5,7 +5,6 @@
 
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/type_of_data.hpp>
-#include <vm/core/process/builtin_functions.hpp>
 
 namespace vm::code {
 	/*

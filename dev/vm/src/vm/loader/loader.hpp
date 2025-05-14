@@ -60,6 +60,8 @@ namespace vm::loader {
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
 
+		code::builders::TypeContext getTypeContext() const;
+
 	private:
 		StableTypeIdNameMap<code::Function> functions;
 		code::builders::GlobalDataMap       globals_map;
