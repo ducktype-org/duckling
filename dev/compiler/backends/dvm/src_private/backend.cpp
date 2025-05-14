@@ -481,6 +481,10 @@ namespace compiler::backend_vm {
 		}
 	}
 
+	/**
+	 * @brief Insert function types for all functions that are called somewhere in the LIR code.
+	 * Used to add function types for functions that are not in the current module.
+	 */
 	void instertCalledFuncTypes(
 		query::Context&                         query_ctx,
 		TypeContextBuilder&                     type_context,

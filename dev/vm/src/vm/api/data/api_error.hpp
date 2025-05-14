@@ -11,6 +11,9 @@ namespace vm::api {
 
 	using ApiError = std::variant<ProcessError, CoreOperationError, WrongResponse, StateError>;
 
+	/**
+	 * @brief Converts the ApiError to a string representation in a JSON format. 
+	 */
 	std::string errorToString(const ApiError& api_error);
 }
 

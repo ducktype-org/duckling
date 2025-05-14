@@ -69,7 +69,7 @@ namespace compiler::driver {
 		virtual void link() = 0;
 
 		/**
-		 * @brief Run the compiled program.
+		 * @brief Run the compiled program. (only for DVM)
 		 */
 		virtual auto run() -> std::expected<RunOutput, std::string> = 0;
 
@@ -98,7 +98,9 @@ namespace compiler::driver {
 		void link();
 
 		/**
-		 * @brief Run the compiled program. (only for DVM)
+		 * @brief Execute modules compiled with `compileModule` method.
+		 * Only relevant for DVM backend.
+		 * Returns the exit code of the executed program or an error message.
 		 */
 		auto run() -> std::expected<RunOutput, std::string>;
 
