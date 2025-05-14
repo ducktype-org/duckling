@@ -10,6 +10,7 @@ set(CROW_COMMIT "4f3f5deaaa01825c63c83431bfa96ccec195f741")
 set(BASE64_COMMIT "387b32f337b83d358ac1ffe574e596ba99c41d31")
 set(gRPC_TAG "v1.71.0")
 set(yaml_cpp_TAG "0.8.0")
+set(rang_TAG "v3.2")
 
 # Tree sitter for parsing cpp
 set(TREE_SITTER_COMMIT "12fb31826b8469cc7b9788e72bceee5af1cf0977")
@@ -53,6 +54,12 @@ FetchContent_Declare(
   GIT_TAG 	     ${yaml_cpp_TAG}
 )
 
+FetchContent_Declare(
+  rang
+  GIT_REPOSITORY https://github.com/agauniyal/rang.git
+  GIT_TAG 	     ${rang_TAG}
+)
+
 # @CMAKE 25: change to usage of FetchContent_Declare SYSTEM parameter
 function(setAsSystemLibrary libname)
 	get_target_property(TEMP ${libname} INTERFACE_INCLUDE_DIRECTORIES)
@@ -72,6 +79,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # TODO: This should be more isolate
 FetchContent_MakeAvailable(gRPC)
 
 FetchContent_MakeAvailable(yaml-cpp)
+
+FetchContent_MakeAvailable(rang)
 
 find_library(gvc gvc)
 

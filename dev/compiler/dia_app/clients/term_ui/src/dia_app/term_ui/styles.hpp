@@ -1,5 +1,5 @@
 #pragma once
-#include "rang.hpp"
+#include <rang.hpp>
 
 namespace term_ui {
 
