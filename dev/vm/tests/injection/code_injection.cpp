@@ -23,6 +23,7 @@ public:
 		TESTER_ADD_TEST(manyRunFunctions);
 		TESTER_ADD_TEST(repl);
 		TESTER_ADD_TEST(replWithGlobals);
+		TESTER_ADD_TEST(separateGlobals);
 		TESTER_ADD_TEST(cyclicRepl);
 		TESTER_ADD_TEST(injectExistingFunction);
 	}
@@ -158,6 +159,16 @@ private:
 		fs::FilePath file2(path("loaded_func_call_2.dbc"));
 		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
 		runAndCheckExitCode(pid, "spring", std::vector<i64>{ 2, 3 }, {}, {}, 10);
+	}
+
+	void separateGlobals() {
+		vm::PID      pid = initProcess();
+		fs::FilePath file1(path("separate_globals_1.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file1 }).has_value());
+
+		fs::FilePath file2(path("separate_globals_2.dbc"));
+		ASSERT_TRUE(vm::api::loadFiles(pid, { file2 }).has_value());
+		runAndCheckExitCode(pid, "globaler_setter", std::vector<i64>{}, "12", "12", 0);
 	}
 
 	void injectExistingFunction() {
