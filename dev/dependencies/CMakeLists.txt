@@ -68,9 +68,6 @@ setAsSystemLibrary(Crow)
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
 
-FetchContent_MakeAvailable(result)
-setAsSystemLibrary(Result)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # TODO: This should be more isolated
 FetchContent_MakeAvailable(gRPC)
 
