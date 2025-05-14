@@ -295,9 +295,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Links builtin library into the final executable.")
 		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
-			.addLongName("dvm-run")
-			.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
-			.build());
+		             .addLongName("dvm-run")
+		             .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+		             .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
 
@@ -311,7 +311,8 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver::Driver driver{
 			driver::Options{
-				.backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM,
+				.backend_type = options.isFlag("dvm-backend") ? driver::BackendType::DVM
+			                                                  : driver::BackendType::LLVM,
 				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),

@@ -89,7 +89,6 @@ private:
 		auto run_result = driver.run();
 		assertTrue(run_result.has_value(), "DVM backend should not throw");
 		assertTrue(run_result.value().exit_code == 0, "DVM backend should not throw");
-		
 	}
 
 	void builtinCompiles() {

@@ -13,11 +13,15 @@ namespace compiler::backend_vm {
 	 * @note Currently it does not support dynamic function insertion, but I will.
 	 */
 	class Module {
-		query::Context &query_ctx;
-		base::StrID module_id;
+		query::Context& query_ctx;
+		base::StrID     module_id;
 
 	public:
-		Module(query::Context &ctx, base::StrID module_id, const std::vector<CRef<lir::Function>>& functions);
+		Module(
+			query::Context&                         ctx,
+			base::StrID                             module_id,
+			const std::vector<CRef<lir::Function>>& functions
+		);
 
 		/**
 		 * @brief Builds a module representation.
