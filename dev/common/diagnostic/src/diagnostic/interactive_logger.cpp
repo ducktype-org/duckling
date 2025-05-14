@@ -1,5 +1,6 @@
 #include "interactive_logger.hpp"
 #include <dia_app/view_manager/view_manager.hpp>
+#include <dia_app/term_ui/code_fragment.hpp>
 
 void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json message_json = message;
