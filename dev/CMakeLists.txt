@@ -46,6 +46,8 @@ add_custom_test_pack(base)
 add_custom_test_pack(common)
 add_custom_test_pack(compiler)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w") # TODO: This should be more isolated
+
 # Dependencies
 add_subdirectory(dependencies)
 insertLLVM()
