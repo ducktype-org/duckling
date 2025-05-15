@@ -4,7 +4,7 @@
 namespace term_ui {
 
     inline void reset_styles() {
-        std::cout << rang::fg::reset << rang::style::reset;
+        std::cerr << rang::fg::reset << rang::style::reset;
     }
 
     enum class StyleType {
@@ -31,30 +31,30 @@ namespace term_ui {
             lowering_char(lowering_char), lowering_attach_char(lowering_attach_char) {}
         
         void prepare() const {
-            std::cout << color << style;
+            std::cerr << color << style;
         }
 
         void print_with(const std::string &text) const {
             prepare();
-            std::cout << text;
+            std::cerr << text;
             reset_styles();
         }
 
         void prepare_main_text() const {
-            std::cout << main_text_style;
+            std::cerr << main_text_style;
         }
 
         void print_main_with(const std::string &text) const {
             prepare_main_text();
-            std::cout << text;
+            std::cerr << text;
             reset_styles();
         }
 
-        void print_name(int id = -1) const {
+        void print_name(std::string id = "") const {
             prepare();
-            std::cout << name;
+            std::cerr << name;
             if (print_id) {
-                std::cout << '[' << id << ']';
+                std::cerr << '[' << id << ']';
             }
             reset_styles();
         }

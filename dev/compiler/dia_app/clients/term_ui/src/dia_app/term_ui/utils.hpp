@@ -81,14 +81,14 @@ namespace term_ui {
                 // Fill the gap with empty characters.
                 if (beg > col) {
                     auto fill = std::string(beg - col, ' ');
-                    std::cout << fill;
+                    std::cerr << fill;
                 }
                 // Print the piece.
                 piece.print();
                 col = beg + piece.text.size();
             }
 
-            std::cout << std::endl;
+            std::cerr << std::endl;
         }
     };
 }

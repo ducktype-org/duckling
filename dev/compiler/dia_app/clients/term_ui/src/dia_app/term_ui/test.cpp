@@ -178,12 +178,12 @@ Message sample_5() {
 int main() {
 
     sample_1().print();
-    std::cout << std::endl;
+    std::cerr << std::endl;
     sample_2().print();
-    std::cout << std::endl;
+    std::cerr << std::endl;
     sample_3().print();
-    std::cout << std::endl;
+    std::cerr << std::endl;
     sample_4().print();
-    std::cout << std::endl;
+    std::cerr << std::endl;
     sample_5().print();
 }

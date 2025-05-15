@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "utils.hpp"
 #include "styles.hpp"
+#include <proto/view.pb.h>
 
 namespace term_ui {
 
@@ -80,6 +81,10 @@ namespace term_ui {
         PointerMessage(std::string text, StyleType type) :
             text(text), type(type) {}
 
+        // TODO: extract type from hl_info.
+        PointerMessage(const ::view::HlInfo &hl_info) :
+            text(hl_info.message()), type(StyleType::Error) {}
+        
         LinePiece into_line_piece(PointerStage stage, int count = -1) const {
             std::string str;
             Style style = get_style(type);
@@ -114,6 +119,80 @@ namespace term_ui {
 
         CodePiece(std::string text) : text(text) {}
         CodePiece(std::string text, std::set<uint> groups) : text(text), groups(groups) {}
+    
+        CodePiece(const ::view::Component &component, const vec<uint> &group_stack) {
+            // Extract component data.
+            if (component.has_code_component()) {
+                text = component.code_component().content();
+                add_groups(component.code_component());
+            } else if (component.has_text_component()) {
+                text = component.text_component().content();
+                add_groups(component.text_component());
+            } else {
+                ASSUME(false, "code piece can only be one of: code | text");
+            }
+
+            // Add remaining groups.
+            for (auto g : group_stack) {
+                groups.insert(g);
+            }
+        }
+
+        template<class T>
+        void add_groups(const T &c) {
+            for (uint i = 0; i < c.hl_tags_size(); ++i) {
+                groups.insert(c.hl_tags(i));
+            }
+        }
+
+        std::string to_string() const {
+            return text;
+        }
+    };
+
+    struct CodePieces {
+        vec<CodePiece> pieces;
+
+        CodePieces(const ::view::Component &component) {
+            vec<uint> group_stack;
+            add_component(component, group_stack);
+        }
+
+        void add_component(const ::view::Component &component, vec<uint> &group_stack) {
+            if (component.has_concat_component()) {
+                auto &concat = component.concat_component();
+                // Push new groups.
+                for (uint i = 0; i < concat.hl_tags_size(); ++i) {
+                    group_stack.push_back(concat.hl_tags(i));
+                }
+
+                // Compute for all children.
+                for (uint i = 0; i < concat.components_size(); ++i) {
+                    add_component(concat.components(i), group_stack);
+                }
+
+                // Rollback to previous groups.
+                for (uint i = 0; i < concat.hl_tags_size(); ++i) {
+                    group_stack.pop_back();
+                }
+            } else if (component.has_interactive_component()) {
+                // Ignore interactions.
+                add_component(component.interactive_component().primary_component(), group_stack);
+            } else if (component.has_side_entry_component()) {
+                // TODO: handle side entries after protocol rework.
+                return;
+            } else {
+                pieces.emplace_back(component, group_stack);
+            }
+        }
+
+        std::string to_string() const {
+            std::string res;
+            for (auto &piece : pieces) {
+                res += piece.to_string();
+            }
+            return res;
+        }
     };
 
     struct CodeLine {
@@ -122,6 +201,14 @@ namespace term_ui {
         vec<CodePiece> pieces;
 
         CodeLine(uint line_no, vec<CodePiece> pieces) : line_no(line_no), pieces(pieces) {}
+
+        CodeLine(const ::view::CodeLine &code_line) :
+            line_no(0), pieces(CodePieces(code_line.content().root()).pieces) {
+            
+            if (code_line.has_line_number()) {
+                line_no = code_line.line_number();
+            }
+        }
 
         CodePiece &operator[](const uint i) {
             return pieces[i];
@@ -154,7 +241,7 @@ namespace term_ui {
 
                 if (piece.groups.empty()) {
                     // Print the code piece.
-                    std::cout << piece.text;
+                    std::cerr << piece.text;
                     col += piece.text.size();
                 } else {
                     // Buffer all pointer messages.
@@ -176,12 +263,12 @@ namespace term_ui {
                     }
                     
                     // Print the code piece.
-                    std::cout << piece.text;
+                    std::cerr << piece.text;
                     col += piece.text.size();
                 }
             }
 
-            std::cout << std::endl;
+            std::cerr << std::endl;
             return lowered;
         }
     };
@@ -194,8 +281,8 @@ namespace term_ui {
             Location(const std::string &file, uint line, uint col) : file(file), line(line), col(col) {}
 
             void print(uint tab_space) const {
-                std::cout << std::string(tab_space, ' ');
-                std::cout << "/ " << file << ':' << line << ':' << col << " /" << std::endl;
+                std::cerr << std::string(tab_space, ' ');
+                std::cerr << "/ " << file << ':' << line << ':' << col << " /" << std::endl;
             }
         };
         Location location;
@@ -213,6 +300,15 @@ namespace term_ui {
 
         CodeFragment(Location location, vec<CodeLine> lines, vec<PointerMessage> pointers) :
             location(location), lines(lines), pointers(pointers), tab_space(0) {
+            compute_last_of_and_tab_space();
+        }
+
+        CodeFragment(const std::string &file, const vec<CodeLine> &lines, const vec<PointerMessage> &ptrs) :
+            location(Location(file, 6, 23)), lines(lines), pointers(ptrs) {
+            compute_last_of_and_tab_space();
+        }
+
+        void compute_last_of_and_tab_space() {
             // For each group find the last of its pieces.
             // That's where the message will appear.
             last_of_group.assign(pointers.size(), {-1, -1});
@@ -292,7 +388,7 @@ namespace term_ui {
         void print() const {
             location.print(tab_space);
             print_line_start(tab_space);
-            std::cout << std::endl;
+            std::cerr << std::endl;
             for (uint l = 0; l < lines.size(); ++l) {
                 auto lowered = lines[l].print(tab_space);
                 
