@@ -21,7 +21,7 @@ namespace view_manager {
 
         static Metadata createFromInfo(const Info &info);
 
-        ::view::Metadata getView() const;
+        ptr<::view::Metadata> getView() const;
     };
 
 
@@ -33,7 +33,7 @@ namespace view_manager {
         public:
         HlInfo(hl_id_t tag, std::string message);
 
-        ::view::HlInfo getView() const;
+        ptr<::view::HlInfo> getView() const;
     };
 
     class Diagnostic {
@@ -47,7 +47,7 @@ namespace view_manager {
 
         static Diagnostic createFromInfo(const Info &info, CreationContext &creation_context);
 
-        ::view::Diagnostic getView() const;
+        ptr<::view::Diagnostic> getView() const;
     };
 
     class ViewManager {

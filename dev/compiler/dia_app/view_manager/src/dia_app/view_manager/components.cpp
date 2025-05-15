@@ -12,11 +12,11 @@ namespace view_manager {
         return {};
     }
 
-    std::vector<line_data_t<::view::Component>> Component::getView() const {
+    std::vector<line_data_t<ptr<::view::Component>>> Component::getView() const {
         return {};
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> Component::getNoHlView() const {
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> Component::getNoHlView() const {
         return {};
     }
 
@@ -31,16 +31,16 @@ namespace view_manager {
 
     TextComponent::TextComponent(std::string content, std::vector<hl_id_t> tags) : content(std::move(content)), tags(std::move(tags)) {}
 
-    std::vector<line_data_t<::view::Component>> TextComponent::getView() const {
-        ::view::Component result;
-        result.mutable_text_component()->set_content(this->content);
-        result.mutable_text_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
+    std::vector<line_data_t<ptr<::view::Component>>> TextComponent::getView() const {
+        ::view::Component *result = new ::view::Component;
+        result->mutable_text_component()->set_content(this->content);
+        result->mutable_text_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
         return {{line_metadata_t{}, result}};
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> TextComponent::getNoHlView() const {
-        ::view::NoHlComponent result;
-        result.mutable_text_component()->set_content(this->content);
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> TextComponent::getNoHlView() const {
+        ::view::NoHlComponent *result = new ::view::NoHlComponent;
+        result->mutable_text_component()->set_content(this->content);
         return {{line_metadata_t{}, result}};
     }
 
@@ -52,16 +52,16 @@ namespace view_manager {
 
     CodeComponent::CodeComponent(std::string content, std::vector<hl_id_t> tags) : content(std::move(content)), tags(std::move(tags)) {}
 
-    std::vector<line_data_t<::view::Component>> CodeComponent::getView() const {
-        ::view::Component result;
-        result.mutable_code_component()->set_content(this->content);
-        result.mutable_code_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
+    std::vector<line_data_t<ptr<::view::Component>>> CodeComponent::getView() const {
+        ::view::Component* result = new ::view::Component;
+        result->mutable_code_component()->set_content(this->content);
+        result->mutable_code_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
         return {{line_metadata_t{}, result}};
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> CodeComponent::getNoHlView() const {
-        ::view::NoHlComponent result;
-        result.mutable_code_component()->set_content(this->content);
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> CodeComponent::getNoHlView() const {
+        ::view::NoHlComponent* result = new ::view::NoHlComponent;
+        result->mutable_code_component()->set_content(this->content);
         return {{line_metadata_t{}, result}};
     }
 
@@ -74,92 +74,96 @@ namespace view_manager {
     ConcatComponent::ConcatComponent(std::vector<std::shared_ptr<Component>> components,
     std::vector<hl_id_t> tags) : components(std::move(components)), tags(std::move(tags)) {}
 
-    std::vector<line_data_t<::view::Component>> ConcatComponent::getView() const {
-        std::vector<line_data_t<::view::Component>> result;
+    std::vector<line_data_t<ptr<::view::Component>>> ConcatComponent::getView() const {
+        std::vector<line_data_t<ptr<::view::Component>>> result;
         if (components.empty()) {
             return result;
         }
-        std::vector<std::vector<line_data_t<::view::Component>>> sons_results(ssize(components));
+        std::vector<std::vector<line_data_t<ptr<::view::Component>>>> sons_results(ssize(components));
         transform(components.begin(), components.end(), sons_results.begin(),
         [](const std::shared_ptr<Component> &component) {
             return component->getView();
         });
-        std::vector<std::vector<line_data_t<::view::Component>>> results_by_lines;
+        std::vector<std::vector<line_data_t<ptr<::view::Component>>>> results_by_lines;
         results_by_lines.resize(0);
         for (auto elm : sons_results) {
             if (!elm.empty()) {
                 results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
                 results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
                 transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
-                [](const line_data_t<::view::Component> &elm) {
-                    return std::vector<line_data_t<::view::Component>>{elm};
+                [](const line_data_t<ptr<::view::Component>> &elm) {
+                    return std::vector<line_data_t<ptr<::view::Component>>>{elm};
                 });
             }
         }
         results_by_lines.erase(std::remove_if(results_by_lines.begin(), results_by_lines.end(),
-            [](const std::vector<line_data_t<::view::Component>> &elms) {
+            [](const std::vector<line_data_t<ptr<::view::Component>>> &elms) {
                 return elms.empty();
             }),
         results_by_lines.end());
         result.resize(ssize(results_by_lines));
         transform(results_by_lines.begin(), results_by_lines.end(), result.begin(),
-            [this](const std::vector<line_data_t<::view::Component>> &elms) {
-            std::vector<::view::Component> sub_components(ssize(elms));
+            [this](const std::vector<line_data_t<ptr<::view::Component>>> &elms) {
+            std::vector<ptr<::view::Component>> sub_components(ssize(elms));
             transform(elms.begin(), elms.end(), sub_components.begin(),
-                [](const line_data_t<::view::Component> &line) {
+                [](const line_data_t<ptr<::view::Component>> &line) {
                     return line.second;
                 });
             assert(!elms.empty());
             line_metadata_t line_metadata = elms[0].first;
-            ::view::Component component;
-            component.mutable_concat_component()->mutable_components()->Add(sub_components.begin(), sub_components.end());
-            component.mutable_concat_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
-            return line_data_t<::view::Component>{line_metadata, component};
+            ::view::Component *component = new ::view::Component;
+            for (auto tmp : sub_components) {
+                component->mutable_concat_component()->mutable_components()->AddAllocated(tmp);
+            }
+            component->mutable_concat_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
+            return line_data_t<ptr<::view::Component>>{line_metadata, component};
         });
         return result;
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> ConcatComponent::getNoHlView() const {
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> ConcatComponent::getNoHlView() const {
         // TODO: dirty copy-paste
-        std::vector<line_data_t<::view::NoHlComponent>> result;
+        std::vector<line_data_t<ptr<::view::NoHlComponent>>> result;
         if (components.empty()) {
             return result;
         }
-        std::vector<std::vector<line_data_t<::view::NoHlComponent>>> sons_results(ssize(components));
+        std::vector<std::vector<line_data_t<ptr<::view::NoHlComponent>>>> sons_results(ssize(components));
         transform(components.begin(), components.end(), sons_results.begin(),
         [](const std::shared_ptr<Component> &component) {
             return component->getNoHlView();
         });
-        std::vector<std::vector<line_data_t<::view::NoHlComponent>>> results_by_lines;
+        std::vector<std::vector<line_data_t<ptr<::view::NoHlComponent>>>> results_by_lines;
         results_by_lines.resize(0);
         for (auto elm : sons_results) {
             if (!elm.empty()) {
                 results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
                 results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
                 transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
-                [](const line_data_t<::view::NoHlComponent> &elm) {
-                    return std::vector<line_data_t<::view::NoHlComponent>>{elm};
+                [](const line_data_t<ptr<::view::NoHlComponent>> &elm) {
+                    return std::vector<line_data_t<ptr<::view::NoHlComponent>>>{elm};
                 });
             }
         }
         results_by_lines.erase(std::remove_if(results_by_lines.begin(), results_by_lines.end(),
-            [](const std::vector<line_data_t<::view::NoHlComponent>> &elms) {
+            [](const std::vector<line_data_t<ptr<::view::NoHlComponent>>> &elms) {
                 return elms.empty();
             }),
         results_by_lines.end());
         result.resize(ssize(results_by_lines));
         transform(results_by_lines.begin(), results_by_lines.end(), result.begin(),
-            [](const std::vector<line_data_t<::view::NoHlComponent>> &elms) {
-            std::vector<::view::NoHlComponent> sub_components(ssize(elms));
+            [this](const std::vector<line_data_t<ptr<::view::NoHlComponent>>> &elms) {
+            std::vector<ptr<::view::NoHlComponent>> sub_components(ssize(elms));
             transform(elms.begin(), elms.end(), sub_components.begin(),
-                [](const line_data_t<::view::NoHlComponent> &line) {
+                [](const line_data_t<ptr<::view::NoHlComponent>> &line) {
                     return line.second;
                 });
             assert(!elms.empty());
             line_metadata_t line_metadata = elms[0].first;
-            ::view::NoHlComponent component;
-            component.mutable_concat_component()->mutable_components()->Add(sub_components.begin(), sub_components.end());
-            return line_data_t<::view::NoHlComponent>{line_metadata, component};
+            ::view::NoHlComponent *component = new ::view::NoHlComponent;
+            for (auto tmp : sub_components) {
+                component->mutable_concat_component()->mutable_components()->AddAllocated(tmp);
+            }
+            return line_data_t<ptr<::view::NoHlComponent>>{line_metadata, component};
         });
         return result;
     }
@@ -184,30 +188,30 @@ namespace view_manager {
         return make_unique<InteractiveComponent>(getNewId(), primary, alternative);
     }
 
-    std::vector<line_data_t<::view::Component>> InteractiveComponent::getView() const {
+    std::vector<line_data_t<ptr<::view::Component>>> InteractiveComponent::getView() const {
         auto visible_result = visible->getView();
-        std::vector<line_data_t<::view::Component>> wrapped_results(ssize(visible_result));
+        std::vector<line_data_t<ptr<::view::Component>>> wrapped_results(ssize(visible_result));
         transform(visible_result.begin(), visible_result.end(), wrapped_results.begin(),
-            [this](line_data_t<::view::Component> &elm) {
+            [this](line_data_t<ptr<::view::Component>> &elm) {
             auto &[line_metadata, component] = elm;
             ::view::Component result;
             result.mutable_interactive_component()->set_component_id(this->id);
-            result.mutable_interactive_component()->set_allocated_primary_component(&component);
-            return line_data_t<::view::Component>{line_metadata, component};
+            result.mutable_interactive_component()->set_allocated_primary_component(component);
+            return line_data_t<ptr<::view::Component>>{line_metadata, component};
         });
         return wrapped_results;
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> InteractiveComponent::getNoHlView() const {
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> InteractiveComponent::getNoHlView() const {
         auto visible_result = visible->getNoHlView();
-        std::vector<line_data_t<::view::NoHlComponent>> wrapped_results(ssize(visible_result));
+        std::vector<line_data_t<ptr<::view::NoHlComponent>>> wrapped_results(ssize(visible_result));
         transform(visible_result.begin(), visible_result.end(), wrapped_results.begin(),
-            [this](line_data_t<::view::NoHlComponent> &elm) {
+            [this](line_data_t<ptr<::view::NoHlComponent>> &elm) {
             auto &[line_metadata, component] = elm;
             ::view::NoHlComponent result;
             result.mutable_interactive_component()->set_component_id(this->id);
-            result.mutable_interactive_component()->set_allocated_primary_component(&component);
-            return line_data_t<::view::NoHlComponent>{line_metadata, component};
+            result.mutable_interactive_component()->set_allocated_primary_component(component);
+            return line_data_t<ptr<::view::NoHlComponent>>{line_metadata, component};
         });
         return wrapped_results;
     }
@@ -238,18 +242,18 @@ namespace view_manager {
 
     StartLineComponent::StartLineComponent(std::optional<uint> number) : number(number) {}
 
-    std::vector<line_data_t<::view::Component>> StartLineComponent::getView() const {
-        ::view::Component nop;
-        std::string content = "";
-        nop.mutable_text_component()->set_allocated_content(&content);
-        return std::vector<line_data_t<::view::Component>>{{line_metadata_t{}, nop}, {this->number, nop}};
+    std::vector<line_data_t<ptr<::view::Component>>> StartLineComponent::getView() const {
+        ::view::Component *nop = new ::view::Component;
+        std::string *content = new std::string;
+        nop->mutable_text_component()->set_allocated_content(content);
+        return std::vector<line_data_t<ptr<::view::Component>>>{{line_metadata_t{}, nop}, {this->number, nop}};
     }
 
-    std::vector<line_data_t<::view::NoHlComponent>> StartLineComponent::getNoHlView() const {
-        ::view::NoHlComponent nop;
-        std::string content = "";
-        nop.mutable_text_component()->set_allocated_content(&content);
-        return std::vector<line_data_t<::view::NoHlComponent>>{{line_metadata_t{}, nop}, {this->number, nop}};
+    std::vector<line_data_t<ptr<::view::NoHlComponent>>> StartLineComponent::getNoHlView() const {
+        ::view::NoHlComponent *nop = new ::view::NoHlComponent;
+        std::string *content = new std::string;
+        nop->mutable_text_component()->set_allocated_content(content);
+        return std::vector<line_data_t<ptr<::view::NoHlComponent>>>{{line_metadata_t{}, nop}, {this->number, nop}};
     }
 
     std::shared_ptr<Component> StartLineComponent::deepCopy() {
@@ -263,7 +267,7 @@ namespace view_manager {
 
     Section::~Section() {}
 
-    ::view::Section Section::getView() const {
+    ptr<::view::Section> Section::getView() const {
         return {};
     }
 
@@ -271,25 +275,27 @@ namespace view_manager {
 
     TextSection::TextSection(std::shared_ptr<Component> root) : root(std::move(root)) {}
 
-    ::view::TextSection TextSection::getOwnView() const {
+    ptr<::view::TextSection> TextSection::getOwnView() const {
         auto lines = this->root->getView();
-        std::vector<::view::Component> components(ssize(lines));
+        std::vector<ptr<::view::Component>> components(ssize(lines));
         transform(lines.begin(), lines.end(), components.begin(),
-        [](const line_data_t<::view::Component> &line_data) {
+        [](const line_data_t<ptr<::view::Component>> &line_data) {
             return line_data.second;
         });
-        ::view::Component concatenated_lines;
-        concatenated_lines.mutable_concat_component()->mutable_components()->Add(components.begin(), components.end());
-        ::view::TextSection result;
-        result.set_allocated_root(&concatenated_lines);
+        ::view::Component *concatenated_lines = new ::view::Component;
+        for (auto tmp : components) {
+            concatenated_lines->mutable_concat_component()->mutable_components()->AddAllocated(tmp);
+        }
+        ::view::TextSection *result = new ::view::TextSection;
+        result->set_allocated_root(concatenated_lines);
         return result;
     }
 
 
-    ::view::Section TextSection::getView() const {
-        ::view::Section result;
+    ptr<::view::Section> TextSection::getView() const {
+        ::view::Section *result = new ::view::Section;
         auto tmp = this->getOwnView();
-        result.set_allocated_text_section(&tmp);
+        result->set_allocated_text_section(tmp);
         return result;
     }
 
@@ -297,39 +303,43 @@ namespace view_manager {
 
     CodeSection::CodeSection(std::shared_ptr<Component> root) : root(std::move(root)) {}
 
-    ::view::Section CodeSection::getView() const {
+    ptr<::view::Section> CodeSection::getView() const {
         auto lines = this->root->getView();
-        std::vector<::view::CodeLine> code_lines(ssize(lines));
+        std::vector<ptr<::view::CodeLine>> code_lines(ssize(lines));
         transform(lines.begin(), lines.end(), code_lines.begin(),
-            [](line_data_t<::view::Component> &line_data) {
+            [](line_data_t<ptr<::view::Component>> &line_data) {
             auto [line_metadata, component] = line_data;
-            ::view::TextSection text_section;
-            text_section.set_allocated_root(&component);
-            ::view::CodeLine result;
-            result.set_allocated_content(&text_section);
+            ::view::TextSection *text_section = new ::view::TextSection;
+            text_section->set_allocated_root(component);
+            ::view::CodeLine *result = new ::view::CodeLine;
+            result->set_allocated_content(text_section);
             if (line_metadata.has_value()) {
-                result.set_line_number(line_id_t(line_metadata.value()));
+                result->set_line_number(line_id_t(line_metadata.value()));
             }
             return result;
         });
-        ::view::Section result;
-        result.mutable_code_section()->mutable_lines()->Add(code_lines.begin(), code_lines.end());
+        ::view::Section *result = new ::view::Section;
+        for (auto tmp : code_lines) {
+            result->mutable_code_section()->mutable_lines()->AddAllocated(tmp);
+        }
         return result;
     }
 
     // NoHlTextSection
 
-    ::view::Section NoHlTextSection::getView() const {
+    ptr<::view::Section> NoHlTextSection::getView() const {
         auto lines = this->root->getNoHlView();
-        std::vector<::view::NoHlComponent> components(ssize(lines));
+        std::vector<ptr<::view::NoHlComponent>> components(ssize(lines));
         transform(lines.begin(), lines.end(), components.begin(),
-        [](const line_data_t<::view::NoHlComponent> &line_data) {
+        [](const line_data_t<ptr<::view::NoHlComponent>> &line_data) {
             return line_data.second;
         });
-        ::view::NoHlComponent concatenated_lines;
-        concatenated_lines.mutable_concat_component()->mutable_components()->Add(components.begin(), components.end());
-        ::view::Section result;
-        result.mutable_no_hl_text_section()->set_allocated_root(&concatenated_lines);
+        ::view::NoHlComponent *concatenated_lines = new ::view::NoHlComponent;
+        for (auto tmp : components) {
+            concatenated_lines->mutable_concat_component()->mutable_components()->AddAllocated(tmp);
+        }
+        ::view::Section *result = new ::view::Section;
+        result->mutable_no_hl_text_section()->set_allocated_root(concatenated_lines);
         return result;
     }
 }

@@ -13,43 +13,42 @@ namespace view_manager {
     Metadata::Metadata(std::optional<std::string> error_code, std::optional<std::string> file_info) : error_code(std::move(error_code)), file_info(std::move(file_info)) {}
 
     Metadata Metadata::createFromInfo(const Info &info) {
-        std::cerr << "Test" << std::endl;
         std::optional<std::string> error_code;
         error_code = info.metadata.code;
         std::optional<std::string> file_info;
         if (info.code.has_value()) {
             file_info = info.code.value().location.file;
         }
-        std::cerr << "Test Metadata" << std::endl;
         return Metadata(error_code, file_info);
     }
 
-    ::view::Metadata Metadata::getView() const {
-        ::view::Metadata result;
+    ptr<::view::Metadata> Metadata::getView() const {
+        ::view::Metadata *result = new ::view::Metadata;
         if (this->error_code.has_value()) {
-            result.set_error_code(this->error_code.value());
+            result->set_error_code(this->error_code.value());
         }
         if (this->file_info.has_value()) {
-            result.set_file_info(this->file_info.value());
+            result->set_file_info(this->file_info.value());
         }
         return result;
     }
 
     // HlInfo
     HlInfo::HlInfo(hl_id_t tag, std::string message) : tag(tag), message(std::move(message)) {}
-    ::view::HlInfo HlInfo::getView() const {
-        ::view::HlInfo result;
-        result.set_message(this->message);
-        result.set_tag(this->tag);
+    ptr<::view::HlInfo> HlInfo::getView() const {
+        ::view::HlInfo *result = new ::view::HlInfo;
+        result->set_message(this->message);
+        result->set_tag(this->tag);
         return result;
     }
 
     // Diagnostic
+    using std::cerr;
+    using std::endl;
 
     Diagnostic::Diagnostic(Metadata metadata, std::vector<Section> sections, std::vector<HlInfo> hl_messages) : metadata(std::move(metadata)), sections(std::move(sections)), hl_messages(std::move(hl_messages)) {}
     
     Diagnostic Diagnostic::createFromInfo(const Info &info, CreationContext &creation_context) {
-        std::cerr << "Test diagnostic" << std::endl;
         std::vector<HlInfo> hl_messages;
         {
             hl_id_t id = 0;
@@ -57,49 +56,51 @@ namespace view_manager {
                 ++id;
                 creation_context.hl_name_to_id->emplace(name, id);
                 std::string message = pointer_message.message->to_text(creation_context.data_handle);
-                // std::string message = "test pointer message";
                 hl_messages.emplace_back(id, message);
             }
         }
-        for (auto [a, b] : *creation_context.hl_name_to_id.get()) {
-            std::cerr << a << " | " << b << std::endl;
-        }
-        std::cerr << "Test diagnostic 2" << std::endl;
         auto metadata = Metadata::createFromInfo(info);
         std::vector<Section> sections;
         if (info.header_message) {
             sections.emplace_back(TextSection(info.header_message->toComponent(creation_context)));
         }
         if (info.code.has_value()) {
-            // sections.emplace_back(CodeSection(info.code->content->toComponent(creation_context)));
+            sections.emplace_back(CodeSection(info.code->content->toComponent(creation_context)));
         }
         if (info.description) {
-            // sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
+            sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
         }
+        cerr << "Number of sections: " << ssize(sections) << endl;
         return Diagnostic(metadata, sections, hl_messages);
     }
 
-    ::view::Diagnostic Diagnostic::getView() const {
-        ::view::Diagnostic diagnostic;
+    ptr<::view::Diagnostic> Diagnostic::getView() const {
+        cerr << "Diagnostic::getView()" << endl;
+        ::view::Diagnostic *diagnostic = new ::view::Diagnostic;
         {
             auto metadata = this->metadata.getView();
-            diagnostic.set_allocated_metadata(&metadata);
+            diagnostic->set_allocated_metadata(metadata);
         }
         {
-            std::vector<::view::Section> tmp(ssize(sections));
+            std::vector<ptr<::view::Section>> tmp(ssize(sections));
             transform(sections.begin(), sections.end(), tmp.begin(),
                 [](const Section &section) {
                 return section.getView();
             });
-            diagnostic.mutable_sections()->Add(tmp.begin(), tmp.end());
+            cerr << "Whille adding view sections: allocated sections cnt: " << ssize(tmp) << endl;
+            for (auto elm : tmp) {
+                diagnostic->mutable_sections()->AddAllocated(elm);
+            }
         }
         {
-            std::vector<::view::HlInfo> tmp(ssize(hl_messages));
+            std::vector<ptr<::view::HlInfo>> tmp(ssize(hl_messages));
             transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
                 [](const HlInfo &hl_info) {
                 return hl_info.getView();
             });
-            diagnostic.mutable_hl_messages()->Add(tmp.begin(), tmp.end());
+            for (auto elm : tmp) {
+                diagnostic->mutable_hl_messages()->AddAllocated(elm);
+            }
         }
         return diagnostic;
     }
@@ -123,13 +124,39 @@ namespace view_manager {
         return ViewManager(diagnostics);
     }
 
+
+    void print(const ::google::protobuf::RepeatedPtrField<::view::Section> &sections) {
+        cerr << "Print Sections" << endl;
+        for (const auto &elm : sections) {
+            elm.PrintDebugString();
+        }
+    }
+
+    void print(const ::google::protobuf::RepeatedPtrField< ::view::Diagnostic> &diagnostics) {
+        cerr << "Print Diagnostics" << endl;
+        cerr << diagnostics.size() << endl;
+        for (const auto &elm : diagnostics) {
+            print(elm.sections());
+        }
+        cerr << "End print Diagnostics" << endl;
+    }
+
+    void print(::view::ViewResponse* response) {
+        cerr << "Print ViewResponse" << endl;
+        print(response->diagnostics());
+        // print(response->side_notes());
+    }
+
     void ViewManager::getView(::view::ViewResponse* response) {
-        std::vector<::view::Diagnostic> tmp(ssize(diagnostics));
+        std::vector<ptr<::view::Diagnostic>> tmp(ssize(diagnostics));
         transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
         [](const Diagnostic &diagnostic) {
             return diagnostic.getView();
         });
-        response->mutable_diagnostics()->Add(tmp.begin(), tmp.end());
+        for (auto elm : tmp) {
+            response->mutable_diagnostics()->AddAllocated(elm);
+        }
+        print(response);
     }
 
     void ViewManager::registerInteraction(component_id_t id, InteractionType interaction_type) {
