@@ -9,7 +9,7 @@ namespace compiler::helios {
 	errors::HResult<SymbolList, errors::Failed> lookupChain(
 		query::Context& ctx, const LookupChainKey& key
 	) {
-		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
+		CORE_ASSERT(!key.names.empty(), "lookupChain received zero names");
 
 		bool       first_symbol = true;
 		SymbolList result;
@@ -18,7 +18,7 @@ namespace compiler::helios {
 			                                     : HInterface::ofSymbol(result.back());
 
 			UNPACK_RESULT_MOVE(auto lookup =,
-			                   lookup_interface.typicalSimpleLookup(
+			                   lookup_interface.lookupExpectUnique(
 								   pointed.position, ctx, pointed.value, key.params
 							   ););
 			result.insert(result.end(), lookup.begin(), lookup.end());

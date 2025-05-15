@@ -191,7 +191,7 @@ namespace compiler::helios::code {
 								  << pst_access->getName().value.strView() << "\n";
 
 						auto new_symbols = HInterface::ofSymbol(looked_up_symbol.back())
-						                       .typicalSimpleLookup(
+						                       .lookupExpectUnique(
 												   pst_access->getName().position,
 												   ctx,
 												   pst_access->getName().value
@@ -246,7 +246,7 @@ namespace compiler::helios::code {
 				// note: this is a mock, it should be unified with ChainExpr
 				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-				const auto& sym_list = HInterface::ofScopeWithParents(scope).typicalSimpleLookup(
+				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
 					stmt->getName().position, ctx, stmt->getName().value
 				);
 				if (!sym_list) {

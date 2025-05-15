@@ -38,7 +38,7 @@ namespace compiler::helios {
 		CORE_UNREACHABLE();
 	}
 
-	errors::HResult<SymbolList, errors::Failed> HInterface::typicalSimpleLookup(
+	errors::HResult<SymbolList, errors::Failed> HInterface::lookupExpectUnique(
 		dia::SourcePosition        error_position,
 		query::Context&            ctx,
 		base::StrID                name,

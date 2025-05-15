@@ -121,18 +121,19 @@ namespace compiler::helios {
 		);
 
 		/**
-		 * A lookup function that performs a typical simple lookup, that is:
-		 * 1. It looks-ups the interface
-		 * 2. It reports error if more than one symbol is found
-		 * 3. It performs deliasing if needed
-		 * 4. Return dealiased symbol list
+		 * A lookup function that performs a most common lookup operation,
+		 * hiding a lot of boilerplate associated with it. It performs the following steps:
+		 * 1. It looks-ups the interface.
+		 * 2. It reports error if more than one symbol is found.
+		 * 3. It performs deliasing if needed.
+		 * 4. Return dealiased symbol list.
 		 *
-		 * It some error occures, it will report it in @p error_position.
+		 * It some error occurs, it will report it in @p error_position.
 		 *
 		 * @note This function is intended to be used as a quick placeholder
-		 * that we migth one day change to custom code for better compilation errors.
+		 * that we might one day change to custom code for better compilation errors or logic.
 		 */
-		errors::HResult<SymbolList, errors::Failed> typicalSimpleLookup(
+		errors::HResult<SymbolList, errors::Failed> lookupExpectUnique(
 			dia::SourcePosition error_position,
 			query::Context&     ctx,
 			base::StrID         name,
