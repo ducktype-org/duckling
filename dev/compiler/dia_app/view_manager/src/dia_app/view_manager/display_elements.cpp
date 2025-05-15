@@ -17,7 +17,7 @@ namespace dia_file {
 
     // ---------------- DisplayElement ---------------- //
 
-    DisplayElement::~DisplayElement() {}
+    DisplayElement::~DisplayElement() = default;
     std::shared_ptr<Component> DisplayElement::toComponent(CreationContext&) {
         return {};
     }
@@ -63,7 +63,7 @@ namespace dia_file {
 
     std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            std::vector<hl_id_t> tags;
+            std::vector<hl_id_t> tags(ssize(this->groups));
             transform(this->groups.begin(), this->groups.end(), tags.begin(),
             [&creation_context](const std::string &name) {
                 return creation_context.hl_name_to_id->at(name);
@@ -128,12 +128,12 @@ namespace dia_file {
 
     std::shared_ptr<Component> ConcatElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            std::vector<std::shared_ptr<Component>> sons;
+            std::vector<std::shared_ptr<Component>> sons(ssize(this->elems));
             transform(this->elems.begin(), this->elems.end(), sons.begin(),
-                [&creation_context](const Ptr &son) {
+                [&creation_context](Ptr &son) {
                 return son->toComponent(creation_context);
             });
-            std::vector<hl_id_t> tags;
+            std::vector<hl_id_t> tags(ssize(this->groups));
             transform(this->groups.begin(), this->groups.end(), tags.begin(),
             [&creation_context](const std::string &name) {
                 return creation_context.hl_name_to_id->at(name);

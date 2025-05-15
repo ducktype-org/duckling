@@ -15,6 +15,8 @@ add_executable(view_manager
     src/dia_app/view_manager/main.cpp
 )
 add_executable(view_constructor_test
+    src/dia_app/view_manager/components.cpp
+    src/dia_app/view_manager/components.hpp
     src/dia_app/view_manager/dia_parser.hpp
     src/dia_app/view_manager/display_elements.cpp
     src/dia_app/view_manager/display_elements.hpp
@@ -42,7 +44,7 @@ add_executable(yaml_test
 )
 
 target_link_libraries(view_manager PUBLIC JSON yaml-cpp::yaml-cpp grpc++ Proto)
-target_link_libraries(view_constructor_test PUBLIC JSON yaml-cpp::yaml-cpp)
+target_link_libraries(view_constructor_test PUBLIC JSON yaml-cpp::yaml-cpp Proto)
 target_link_libraries(yaml_test PUBLIC JSON yaml-cpp::yaml-cpp Proto)
 
 add_library(VIEW_MANAGER

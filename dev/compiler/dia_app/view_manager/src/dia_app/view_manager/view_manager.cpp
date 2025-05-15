@@ -13,11 +13,14 @@ namespace view_manager {
     Metadata::Metadata(std::optional<std::string> error_code, std::optional<std::string> file_info) : error_code(std::move(error_code)), file_info(std::move(file_info)) {}
 
     Metadata Metadata::createFromInfo(const Info &info) {
-        std::optional<std::string> error_code = info.metadata.code;
+        std::cerr << "Test" << std::endl;
+        std::optional<std::string> error_code;
+        error_code = info.metadata.code;
         std::optional<std::string> file_info;
         if (info.code.has_value()) {
             file_info = info.code.value().location.file;
         }
+        std::cerr << "Test Metadata" << std::endl;
         return Metadata(error_code, file_info);
     }
 
@@ -46,6 +49,7 @@ namespace view_manager {
     Diagnostic::Diagnostic(Metadata metadata, std::vector<Section> sections, std::vector<HlInfo> hl_messages) : metadata(std::move(metadata)), sections(std::move(sections)), hl_messages(std::move(hl_messages)) {}
     
     Diagnostic Diagnostic::createFromInfo(const Info &info, CreationContext &creation_context) {
+        std::cerr << "Test diagnostic" << std::endl;
         std::vector<HlInfo> hl_messages;
         {
             hl_id_t id = 0;
@@ -53,19 +57,24 @@ namespace view_manager {
                 ++id;
                 creation_context.hl_name_to_id->emplace(name, id);
                 std::string message = pointer_message.message->to_text(creation_context.data_handle);
+                // std::string message = "test pointer message";
                 hl_messages.emplace_back(id, message);
             }
         }
+        for (auto [a, b] : *creation_context.hl_name_to_id.get()) {
+            std::cerr << a << " | " << b << std::endl;
+        }
+        std::cerr << "Test diagnostic 2" << std::endl;
         auto metadata = Metadata::createFromInfo(info);
         std::vector<Section> sections;
         if (info.header_message) {
             sections.emplace_back(TextSection(info.header_message->toComponent(creation_context)));
         }
         if (info.code.has_value()) {
-            sections.emplace_back(CodeSection(info.code->content->toComponent(creation_context)));
+            // sections.emplace_back(CodeSection(info.code->content->toComponent(creation_context)));
         }
         if (info.description) {
-            sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
+            // sections.emplace_back(TextSection(info.description->toComponent(creation_context)));
         }
         return Diagnostic(metadata, sections, hl_messages);
     }
@@ -77,7 +86,7 @@ namespace view_manager {
             diagnostic.set_allocated_metadata(&metadata);
         }
         {
-            std::vector<::view::Section> tmp;
+            std::vector<::view::Section> tmp(ssize(sections));
             transform(sections.begin(), sections.end(), tmp.begin(),
                 [](const Section &section) {
                 return section.getView();
@@ -85,7 +94,7 @@ namespace view_manager {
             diagnostic.mutable_sections()->Add(tmp.begin(), tmp.end());
         }
         {
-            std::vector<::view::HlInfo> tmp;
+            std::vector<::view::HlInfo> tmp(ssize(hl_messages));
             transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
                 [](const HlInfo &hl_info) {
                 return hl_info.getView();
@@ -115,7 +124,7 @@ namespace view_manager {
     }
 
     void ViewManager::getView(::view::ViewResponse* response) {
-        std::vector<::view::Diagnostic> tmp;
+        std::vector<::view::Diagnostic> tmp(ssize(diagnostics));
         transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
         [](const Diagnostic &diagnostic) {
             return diagnostic.getView();
@@ -136,7 +145,10 @@ namespace view_manager {
 
     // ViewServiceImpl
 
-    ViewServiceImpl::ViewServiceImpl(ViewManager vm) : vm(std::move(vm)) {}
+    ViewServiceImpl::ViewServiceImpl(ViewManager vm) : vm(std::move(vm)) {
+        ::view::ViewResponse temp;
+        vm.getView(&temp);
+    }
 
     ViewServiceImpl ViewServiceImpl::createFromJson(const json &input) {
         return ViewServiceImpl(ViewManager::createFromJson(input));

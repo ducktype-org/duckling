@@ -79,7 +79,7 @@ namespace view_manager {
         if (components.empty()) {
             return result;
         }
-        std::vector<std::vector<line_data_t<::view::Component>>> sons_results;
+        std::vector<std::vector<line_data_t<::view::Component>>> sons_results(ssize(components));
         transform(components.begin(), components.end(), sons_results.begin(),
         [](const std::shared_ptr<Component> &component) {
             return component->getView();
@@ -89,6 +89,7 @@ namespace view_manager {
         for (auto elm : sons_results) {
             if (!elm.empty()) {
                 results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
+                results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
                 transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
                 [](const line_data_t<::view::Component> &elm) {
                     return std::vector<line_data_t<::view::Component>>{elm};
@@ -100,9 +101,10 @@ namespace view_manager {
                 return elms.empty();
             }),
         results_by_lines.end());
+        result.resize(ssize(results_by_lines));
         transform(results_by_lines.begin(), results_by_lines.end(), result.begin(),
             [this](const std::vector<line_data_t<::view::Component>> &elms) {
-            std::vector<::view::Component> sub_components;
+            std::vector<::view::Component> sub_components(ssize(elms));
             transform(elms.begin(), elms.end(), sub_components.begin(),
                 [](const line_data_t<::view::Component> &line) {
                     return line.second;
@@ -123,7 +125,7 @@ namespace view_manager {
         if (components.empty()) {
             return result;
         }
-        std::vector<std::vector<line_data_t<::view::NoHlComponent>>> sons_results;
+        std::vector<std::vector<line_data_t<::view::NoHlComponent>>> sons_results(ssize(components));
         transform(components.begin(), components.end(), sons_results.begin(),
         [](const std::shared_ptr<Component> &component) {
             return component->getNoHlView();
@@ -133,6 +135,7 @@ namespace view_manager {
         for (auto elm : sons_results) {
             if (!elm.empty()) {
                 results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
+                results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
                 transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
                 [](const line_data_t<::view::NoHlComponent> &elm) {
                     return std::vector<line_data_t<::view::NoHlComponent>>{elm};
@@ -144,9 +147,10 @@ namespace view_manager {
                 return elms.empty();
             }),
         results_by_lines.end());
+        result.resize(ssize(results_by_lines));
         transform(results_by_lines.begin(), results_by_lines.end(), result.begin(),
             [](const std::vector<line_data_t<::view::NoHlComponent>> &elms) {
-            std::vector<::view::NoHlComponent> sub_components;
+            std::vector<::view::NoHlComponent> sub_components(ssize(elms));
             transform(elms.begin(), elms.end(), sub_components.begin(),
                 [](const line_data_t<::view::NoHlComponent> &line) {
                     return line.second;
@@ -161,7 +165,7 @@ namespace view_manager {
     }
 
     std::shared_ptr<Component> ConcatComponent::deepCopy() {
-        std::vector<std::shared_ptr<Component>> new_components;
+        std::vector<std::shared_ptr<Component>> new_components(ssize(this->components));
         transform(this->components.begin(), this->components.end(), new_components.begin(),
             [](const std::shared_ptr<Component> &component) {
             return component->deepCopy();
@@ -182,7 +186,7 @@ namespace view_manager {
 
     std::vector<line_data_t<::view::Component>> InteractiveComponent::getView() const {
         auto visible_result = visible->getView();
-        std::vector<line_data_t<::view::Component>> wrapped_results;
+        std::vector<line_data_t<::view::Component>> wrapped_results(ssize(visible_result));
         transform(visible_result.begin(), visible_result.end(), wrapped_results.begin(),
             [this](line_data_t<::view::Component> &elm) {
             auto &[line_metadata, component] = elm;
@@ -196,7 +200,7 @@ namespace view_manager {
 
     std::vector<line_data_t<::view::NoHlComponent>> InteractiveComponent::getNoHlView() const {
         auto visible_result = visible->getNoHlView();
-        std::vector<line_data_t<::view::NoHlComponent>> wrapped_results;
+        std::vector<line_data_t<::view::NoHlComponent>> wrapped_results(ssize(visible_result));
         transform(visible_result.begin(), visible_result.end(), wrapped_results.begin(),
             [this](line_data_t<::view::NoHlComponent> &elm) {
             auto &[line_metadata, component] = elm;
@@ -269,7 +273,7 @@ namespace view_manager {
 
     ::view::TextSection TextSection::getOwnView() const {
         auto lines = this->root->getView();
-        std::vector<::view::Component> components;
+        std::vector<::view::Component> components(ssize(lines));
         transform(lines.begin(), lines.end(), components.begin(),
         [](const line_data_t<::view::Component> &line_data) {
             return line_data.second;
@@ -295,7 +299,7 @@ namespace view_manager {
 
     ::view::Section CodeSection::getView() const {
         auto lines = this->root->getView();
-        std::vector<::view::CodeLine> code_lines;
+        std::vector<::view::CodeLine> code_lines(ssize(lines));
         transform(lines.begin(), lines.end(), code_lines.begin(),
             [](line_data_t<::view::Component> &line_data) {
             auto [line_metadata, component] = line_data;
@@ -317,7 +321,7 @@ namespace view_manager {
 
     ::view::Section NoHlTextSection::getView() const {
         auto lines = this->root->getNoHlView();
-        std::vector<::view::NoHlComponent> components;
+        std::vector<::view::NoHlComponent> components(ssize(lines));
         transform(lines.begin(), lines.end(), components.begin(),
         [](const line_data_t<::view::NoHlComponent> &line_data) {
             return line_data.second;
