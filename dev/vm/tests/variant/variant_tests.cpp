@@ -11,7 +11,10 @@ class VmVariantTest: public VmTestSuite {
 #define TESTER_CLASS VmVariantTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simpleVariant); }
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simpleVariant);
+		TESTER_ADD_TEST(blocksDontDisappearTest);
+	}
 
 private:
 	void assertExecutionPanickedWith(const TestResult& test_result, std::string_view err_piece) {
@@ -53,6 +56,8 @@ private:
 			runTestOnVmGetResult("simple_variant.dbc", "2", "13"), "Data was freed"
 		);
 	}
+
+	void blocksDontDisappearTest() { runTestOnVm("variant_blocks_dont_disappear.dbc", "5", "5"); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/variant/");

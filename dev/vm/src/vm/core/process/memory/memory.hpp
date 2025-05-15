@@ -106,6 +106,9 @@ namespace vm {
 			block_data.view
 				= base::ModRawView(parent_block->data.view.getBegin() + offset, type->getSize());
 
+			// Set memory to 0.
+			std::memset(block_data.view.getBegin(), 0, block_data.view.size());
+
 			auto new_block = createBlock(block_data);
 			new_block->refcount++;  // so that the block does not disappear accidentally
 			children.put(offset, new_block);
