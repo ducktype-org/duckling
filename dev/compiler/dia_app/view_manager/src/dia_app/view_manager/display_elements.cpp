@@ -332,25 +332,25 @@ namespace dia_file {
     CodeElement::CodeElement(const json &elem_json) : DisplayElement({}) {
         ASSUME_HAS(elem_json, "type");
         ASSUME_VAL(elem_json, "type", "code");
-        ASSUME_HAS(elem_json, "content");
-        content = parse(elem_json["content"]);
+        ASSUME_HAS_STR(elem_json, "content");
+        content = elem_json["content"];
     }
     CodeElement::CodeElement(
-        Ptr content, const std::vector<InfoHandle> &assoc_infos
+        const std::string &content, const std::vector<InfoHandle> &assoc_infos
     ) : DisplayElement(assoc_infos), content(content) {}
 
     Ptr CodeElement::copy() const {
-        return std::make_shared<CodeElement>(content->copy(), assoc_infos);
+        return std::make_shared<CodeElement>(content, assoc_infos);
     }
 
     std::string CodeElement::to_text(DataHandle dh) const {
-        return content->to_text(dh);
+        return content;
     }
 
     json CodeElement::show(DataHandle dh) const {
         json res;
         res["type"] = "code";
-        res["content"] = content->show(dh);
+        res["content"] = content;
         return res;
     }
 

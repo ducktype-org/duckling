@@ -145,10 +145,10 @@ namespace dia_file {
     };
 
     struct CodeElement : public DisplayElement {
-        Ptr content;
+        std::string content;
 
         CodeElement(const json &elem_json);
-        CodeElement(Ptr content, const std::vector<InfoHandle> &assoc_infos);
+        CodeElement(const std::string &content, const std::vector<InfoHandle> &assoc_infos);
 
         Ptr copy() const;
 
