@@ -88,7 +88,7 @@ namespace dia {
 	}
 
 	static constexpr usize safeMinus(usize a, usize b) {
-		if (a < b) return 1;
+		if (a <= b) return 1;
 		return a - b;
 	}
 
