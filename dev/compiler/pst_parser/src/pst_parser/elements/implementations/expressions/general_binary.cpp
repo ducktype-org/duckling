@@ -33,6 +33,11 @@ namespace pst::expr {
 		return fwd;
 	}
 
+	/**
+	 * @todo Improve error reporting/strategy here If something isn't completely parsed some weird errors might occur:
+	 * fun foo() -> i64 {}
+	 * fun foo2() -> i64 = {}
+	 */
 	MBox<ExprElement> GeneralBinary::parseRecursive(LangParserState& state, const BuilderExpr& expr) {
 		if (std::holds_alternative<i64>(expr)) {
 			return Lower::parse(state, std::get<i64>(expr));

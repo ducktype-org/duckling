@@ -48,7 +48,6 @@
 			return out;                                                  \
 		}                                                                \
 		[[nodiscard]]                                                    \
-		static NAME fromU64(u64 num) { return {num}; }                   \
 		static NAME bad() { return NAME{ BAD_ID }; }                     \
 		[[nodiscard]]                                                    \
 		inline constexpr explicit operator u64() const noexcept {        \

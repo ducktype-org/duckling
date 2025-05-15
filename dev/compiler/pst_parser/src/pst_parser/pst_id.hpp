@@ -14,4 +14,3 @@ namespace pst {
 
 
 ID_STD_HASH(::pst::PstID);
-ID_PERFECT_HASH(::pst::PstID);

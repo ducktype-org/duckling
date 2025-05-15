@@ -44,6 +44,6 @@ namespace pst {
 	}
 
 	AccessLocked<LangElement> LangElement::getById(u64 id) { 
-		return pst_id_map.at(PstID::fromU64(id)); 
+		return pst_id_map.at(id); 
 	}
 }
