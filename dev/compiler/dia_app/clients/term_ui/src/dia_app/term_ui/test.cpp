@@ -34,7 +34,7 @@ Message sample_1() {
 
     Message m(
         StyleType::Error,
-        1010,
+        "1010",
         "alice, bob, and cat",
         "",
         code
@@ -68,7 +68,7 @@ Message sample_2() {
 
     Message m(
         StyleType::Warning,
-        5051,
+        "5051",
         "that is quite some underlining",
         "The underlining strategy is complex and non-trivial. It may be used to convey additional information.",
         code
@@ -106,7 +106,7 @@ Message sample_3() {
 
     Message m(
         StyleType::Hint,
-        15,
+        "15",
         "hint here, hint there",
         "",
         code
@@ -133,7 +133,7 @@ Message sample_4() {
 
     Message m(
         StyleType::Note,
-        15,
+        "15",
         "this is a note, even though an error underlining is used in the code sample",
         "Do not do this in production. Error style is to be used only for errors.",
         code
@@ -166,7 +166,7 @@ Message sample_5() {
 
     Message m(
         StyleType::Docs,
-        15,
+        "15",
         "docs color, nice one",
         "Again, do not use error underlining within non-error messages. This is for demonstration purposes only.",
         code

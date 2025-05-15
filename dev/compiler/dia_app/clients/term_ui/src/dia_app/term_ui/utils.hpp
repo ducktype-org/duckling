@@ -6,6 +6,20 @@
 #include "styles.hpp"
 
 namespace term_ui {
+    #ifndef NDEBUG
+    #   define ASSERT(condition, message) \
+        do { \
+            if (! (condition)) { \
+                std::cerr << "Assertion `" #condition "` failed in " << __FILE__ \
+                        << " line " << __LINE__ << ": " << message << std::endl; \
+                std::terminate(); \
+            } \
+        } while (false)
+    #else
+    #   define ASSERT(condition, message) do { } while (false)
+    #endif
+
+    #define ASSUME(expr, msg) ASSERT(expr, msg)
 
     template <typename T>
     using vec = std::vector<T>;
