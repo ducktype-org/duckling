@@ -203,8 +203,9 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
+				// @TODO: handle potential lack of value
 				auto initial_value
-					= ctx.query<QueryHoutOfExpr>(stmt->getValue().unlock(ctx)->getExpr())
+					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
 				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));

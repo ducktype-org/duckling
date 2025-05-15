@@ -55,6 +55,10 @@ int main(int argc, const char** argv) {
 	                         .addShortName('r')
 	                         .addLongName("repl")
 	                         .addShortDesc("Executes the VM in REPL mode")
+							 .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .addLongName("stdlib")
+	                         .addShortDesc("When passed, loads standard library")
 	                         .build());
 
 	clap::ParsingResult result;
@@ -84,7 +88,7 @@ int main(int argc, const char** argv) {
 	else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
-		cli(file.value());
+		cli(file.value(), result.isFlag("stdlib"));
 	else
-		cli();
+		cli(result.isFlag("stdlib"));
 }

@@ -198,8 +198,6 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
 			auto type_context_builder = vm::code::getBuiltinTypes();
-
-			// Add types which were already added to a program state.
 			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
 
 			code::builders::GlobalDataMap globals;

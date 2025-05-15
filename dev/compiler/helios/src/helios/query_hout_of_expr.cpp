@@ -5,6 +5,7 @@
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/builtin_operations/builtins.hpp>
+#include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/expr.hpp>
@@ -189,20 +190,19 @@ namespace compiler::helios::code {
 						std::cerr << "Lookup in: " << name(looked_up_symbol.back()).strView() << " "
 								  << pst_access->getName().value.strView() << "\n";
 
-						auto new_symbols = *ctx.query<QueryLookupInSymbol>(
-							{ looked_up_symbol.back(), pst_access->getName().value, true }
-						);
+						auto new_symbols = HInterface::ofSymbol(looked_up_symbol.back())
+						                       .lookupExpectUnique(
+												   pst_access->getName().position,
+												   ctx,
+												   pst_access->getName().value
+											   );
 
-						auto new_symbols_single = new_symbols.getAsSingle();
-						CORE_ASSERT(
-							new_symbols_single.hasValue(),
-							"Access failed because couldn\'t getAsSingle()"
-						);
+						if (!new_symbols) return;  // failed
 
 						looked_up_symbol.insert(
 							looked_up_symbol.end(),
-							new_symbols_single.value().begin(),
-							new_symbols_single.value().end()
+							new_symbols.value().begin(),
+							new_symbols.value().end()
 						);
 					} else if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
 						auto pst_call = pst_call_opt.value();
@@ -228,12 +228,12 @@ namespace compiler::helios::code {
 					}
 				}
 
-				if_opt_some(dealiasSymbolList(ctx, looked_up_symbol).optValueMove(), dealiased) {
-					if (call_arguments)
-						node = makeBox<CallExpr>(ctx, dealiased.back(), std::move(*call_arguments));
-					else
-						node = makeBox<LinkedIdentifierExpr>(ctx, std::move(dealiased));
-				}
+				if (call_arguments)
+					node = makeBox<CallExpr>(
+						ctx, looked_up_symbol.back(), std::move(*call_arguments)
+					);
+				else
+					node = makeBox<LinkedIdentifierExpr>(ctx, std::move(looked_up_symbol));
 			}
 
 			void visitRoundExpr(pst::Access<pst::expr::RoundExpr> stmt) override {
@@ -244,21 +244,17 @@ namespace compiler::helios::code {
 
 			void visitIdentifierLiteral(pst::Access<pst::expr::IdentifierLiteral> stmt) override {
 				// note: this is a mock, it should be unified with ChainExpr
+				auto scope = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
 
-				auto        scope    = ctx.query<QueryPrimaryCodeScopeFor>({ stmt });
-				const auto& sym_list = *ctx.query<QueryLookupInScopeAndParents>(
-					{ scope, stmt->getName().value, true }
+				const auto& sym_list = HInterface::ofScopeWithParents(scope).lookupExpectUnique(
+					stmt->getName().position, ctx, stmt->getName().value
 				);
-
-				auto res = sym_list.getAsSingle();
-				if (res.hasError()) {
-					// Report an error
+				if (!sym_list) {
+					// failed
 					return;
 				}
 
-				if_opt_some(dealiasSymbolList(ctx, res.value()).optValueMove(), dealiased) {
-					node = makeBox<IdentifierExpr>(ctx, dealiased.back());
-				}
+				node = makeBox<IdentifierExpr>(ctx, sym_list.value().back());
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {

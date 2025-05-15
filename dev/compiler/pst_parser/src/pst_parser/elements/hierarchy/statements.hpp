@@ -73,7 +73,7 @@ namespace pst {
 
 		[[nodiscard]]
 		auto getPointed() const {
-			return names.internal()->getNames();
+			return names.give();
 		}
 
 		[[nodiscard]]
@@ -173,8 +173,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto getPointed() const {
-			return points_to.internal()->getNames();
+		AccessLocked<DottedName> getPointed() const {
+			return points_to.give();
 		}
 
 		static MBox<Alias> parse(LangParserState& state);
@@ -217,51 +217,6 @@ namespace pst {
 		 */
 		base::Optional<AccessLocked<ExprHolder>> getValue() const {
 			return expr.map([](const auto& e) -> AccessLocked<ExprHolder> { return e.give(); });
-		}
-	};
-
-	/**
-	 * @brief Const variable declaration.
-	 *
-	 * @note: Merge it with variable. Or perhaps make a new class DataStorage.
-	 */
-	class Const final: public Stmt {
-		tpc::Identifier                 name;
-		AccessInternal<CommaExprHolder> type;
-		AccessInternal<CommaExprHolder> value;
-
-	public:
-		STMT_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
-		static MBox<Const> parse(LangParserState& state);
-
-		[[nodiscard]]
-		base::StrID getName() const {
-			return name.value;
-		}
-
-		[[nodiscard]]
-		AccessLocked<ExprHolder> getType() const {
-			return type.give();
-		}
-
-		[[nodiscard]]
-		AccessLocked<ExprHolder> getValue() const {
-			return value.give();
-		}
-
-		~Const() final = default;
-		void dprint(std::ostream& out) const final;
-
-		void acceptVisitor(PstVisitor& visitor) const override;
-
-		[[nodiscard]]
-		std::string elementType() const override {
-			return "Const";
-		}
-
-		[[nodiscard]]
-		bool isDeclaration() const final {
-			return true;
 		}
 	};
 
