@@ -18,6 +18,9 @@ namespace pst {
 		}
 	};
 
+	/**
+	 * @brief Common function for getting a list of tokens that a query depends on.
+	 */
 	static auto viewDependentTokens(query::detail::NodeID id) {
 		using namespace std::views;
 

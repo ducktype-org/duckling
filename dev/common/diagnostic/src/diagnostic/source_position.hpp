@@ -42,6 +42,8 @@ namespace dia {
 
 	/**
 	 * @brief Get lines surrounding with position colored.
+	 *
+	 * @todo Maybe rewrite to use the general highlighted printing that is newer.
 	 */
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
 
@@ -72,6 +74,11 @@ namespace dia {
 
 		bool operator==(const SourcePosition& other) const;
 
+		/**
+		 * @brief Order by tuple (filepath, source_start, source_end)
+		 *
+		 * @note Fine for now, In the future might break with macros as they share filepaths.
+		 */
 		std::strong_ordering operator<=>(const SourcePosition& other) const;
 
 		/**

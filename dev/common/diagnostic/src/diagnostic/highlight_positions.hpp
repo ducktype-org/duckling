@@ -6,12 +6,12 @@
 
 namespace dia {
 	/**
-	 * @brief Print code snippets to printer with marked positions.
+	 * @brief Print code snippets to printer with positions highlighted.
 	 *
-	 * @param positions - Positions to mark
+	 * @param positions - Positions to highlight.
 	 * @param neighborhood - Adjacent lines to include.
-	 * @param line_color - Color of line numbers
-	 * @param highlight_color - Color of highlighted text
+	 * @param line_color - Color of line numbers.
+	 * @param highlight_color - Color of highlighted code.
 	 */
 	void printHighlightedPositions(
 		printer::PrinterOStream&,

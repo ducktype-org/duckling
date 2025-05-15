@@ -8,7 +8,7 @@
 
 namespace dia {
 	/**
-	 * @brief Prints specified lines highlighted
+	 * @brief Prints specified lines from a single source highlighted.
 	 *
 	 * @param out Output printer.
 	 * @param source Source to print from.
