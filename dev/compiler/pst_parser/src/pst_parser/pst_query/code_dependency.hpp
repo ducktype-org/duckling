@@ -9,22 +9,22 @@ namespace pst {
 	/**
 	 * @brief Returns the minimal set of Source Positions that contain the tokens that are included in dependencies of a given query.
 	 */
-	std::vector<dia::SourcePosition> queryPositionDependencies(query::Context&, query::detail::NodeID);
+	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID);
 
 	template<typename Query>
-	std::vector<dia::SourcePosition> queryPositionDependencies(query::Context& ctx, typename Query::QKey key) {
+	std::vector<dia::SourcePosition> queryPositionDependencies(typename Query::QKey key) {
 		query::detail::NodeID node_id = query::detail::makeNodeID(Query::getID(), key);
-		return queryPositionDependencies(ctx, node_id);
+		return queryPositionDependencies(node_id);
 	}
 
 	/**
 	 * @brief Returns the set of tokens that are included in dependencies of a given query.
 	 */
-	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::Context&, query::detail::NodeID);
+	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::detail::NodeID);
 
 	template<typename Query>
-	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::Context& ctx, typename Query::QKey key) {
+	std::vector<CRef<lexer::Token>> queryTokenDependencies(typename Query::QKey key) {
 		query::detail::NodeID node_id = query::detail::makeNodeID(Query::getID(), key);
-		return queryTokenDependencies(ctx, node_id);
+		return queryTokenDependencies(node_id);
 	}
 }

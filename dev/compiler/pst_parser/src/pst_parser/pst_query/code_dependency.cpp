@@ -9,43 +9,24 @@
 #include <set>
 
 namespace pst {
-	std::strong_ordering filePosOrder(dia::SourcePosition one, dia::SourcePosition other) {
-		auto one_path = one.getLocation()->getSourceFile();
-		auto other_path = other.getLocation()->getSourceFile();
-
-		auto path_ord = one_path.absolutePath() <=> other_path.absolutePath();
-		if (path_ord != std::strong_ordering::equal) return path_ord;
-
-		auto start_ord = one.getStart() <=> other.getStart();
-		if (start_ord != std::strong_ordering::equal) return start_ord;
-
-		return one.getEnd() <=> other.getEnd();
-	}
-
-	class ltFilePos {
-	public:
-		bool operator()(dia::SourcePosition one, dia::SourcePosition other) const {
-			return filePosOrder(one, other) == std::strong_ordering::less;
-		}
-	};
 
 	class ltFileTok {
 	public:
 		bool operator()(CRef<lexer::Token> one, CRef<lexer::Token> other) const {
-			return filePosOrder(one->getPosition(), other->getPosition()) == std::strong_ordering::less;
+			return one->getPosition() < other->getPosition();
 		}
 	};
 
-	static auto viewDependentTokens(query::Context& ctx, query::detail::NodeID id) {
+	static auto viewDependentTokens(query::detail::NodeID id) {
 		using namespace std::views;
 
-		auto nodes = ctx.getGraph().getNodeDepsFiltered(id, detail::PSTAccessSideInput::getID());	
+		auto nodes = query::Context::getGraph().getNodeDepsFiltered(id, detail::PSTAccessSideInput::getID());	
 
-		static auto get_pst_node = [](query::detail::NodeID id) {
-			return LangElement::getById(id.hash.val);
+		static auto get_pst_node = [](query::detail::NodeID lid) {
+			return LangElement::getById(lid.hash.val);
 		};
-		static auto get_tokens = [](AccessLocked<LangElement> el) {
-			return el.illegalAccess().map([](auto el){ 
+		static auto get_tokens = [](AccessLocked<LangElement> locked) {
+			return locked.illegalAccess().map([](auto el){ 
 				return el->viewTokens(); 
 			});
 		};
@@ -59,20 +40,21 @@ namespace pst {
 			| filter([](auto opt){ return opt.has_value(); })
 			| transform([](auto opt) { return opt.value(); })
 			| std::views::join
-			| filter(file_location);
+			| filter(file_location)
+			| std::ranges::to<std::vector<CRef<lexer::Token>>>();
 	}
 
-	std::vector<dia::SourcePosition> queryPositionDependencies(query::Context& ctx, query::detail::NodeID id) {
+	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID id) {
 		using namespace std::views;
 
 		static auto get_token_pos = [](CRef<tpc::Token> tok) {
 			return tok->getPosition();
 		};
 
-		auto x = viewDependentTokens(ctx, id)
+		auto x = viewDependentTokens(id)
 			| transform(get_token_pos);
 		
-		std::set<dia::SourcePosition, ltFilePos> positions;
+		std::set<dia::SourcePosition> positions;
 		for(auto el: x) positions.insert(el);
 
 		if (positions.size() == 0) return {};
@@ -93,12 +75,12 @@ namespace pst {
 		return merged_positions;
 	}
 
-	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::Context& ctx, query::detail::NodeID id) {
+	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::detail::NodeID id) {
 		using namespace std::views;
 
-		auto x = viewDependentTokens(ctx, id);
+		auto x = viewDependentTokens(id);
 		
-		std::set<CRef<lexer::Token>, ltFilePos> positions;
+		std::set<CRef<lexer::Token>, ltFileTok> positions;
 		for(auto el: x) positions.insert(el);
 
 		return { positions.begin(), positions.end() };

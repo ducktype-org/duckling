@@ -34,6 +34,13 @@ namespace dia {
 	class SourcePosition;
 
 	/**
+	 * @brief Print line number prefix.
+	 *
+	 * @param length - Number of characters to align to.
+	 */
+	void printLineNumber(printer::PrinterOStream&, usize length, usize line, printer::Color);
+
+	/**
 	 * @brief Get lines surrounding with position colored.
 	 */
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
@@ -64,6 +71,8 @@ namespace dia {
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		bool operator==(const SourcePosition& other) const;
+
+		std::strong_ordering operator<=>(const SourcePosition& other) const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.

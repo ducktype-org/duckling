@@ -13,7 +13,6 @@ add_library(PstParser
 	src/pst_parser/test_utils/pst_test_utils.cpp
 	src/pst_parser/access.cpp
 	src/pst_parser/pst_query/code_dependency.cpp
-
 	${ElementImplementationFiles}
 	src/pst_parser/pst_visitor.hpp
 )

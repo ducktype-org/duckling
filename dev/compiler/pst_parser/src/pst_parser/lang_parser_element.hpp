@@ -14,8 +14,6 @@
 #include <ranges>
 #include <variant>
 
-ID_STD_HASH(::pst::PstID);
-
 namespace pst {
 	class Import;
 
@@ -29,7 +27,7 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	private:
-		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+		inline static base::HashMap<PstID, AccessLocked<LangElement>> pst_id_map{};
 
 	public:
 		using Child = AccessLocked<LangElement>;
@@ -41,7 +39,7 @@ namespace pst {
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {
-			pst_id_map.put(id, Ref<const LangElement>(this));
+			pst_id_map.emplace(id, AccessLocked<LangElement>(Ref<const LangElement>(this)));
 		}
 
 		LangElement(const LangElement&) = delete;
