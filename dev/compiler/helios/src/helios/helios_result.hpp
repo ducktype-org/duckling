@@ -269,13 +269,13 @@ namespace compiler::helios::errors {
 		/**
 		 * @brief Access the value, throw on no value.
 		 */
-		constexpr const ResTp& value() const& { return expect("Result it empty!"); }
+		constexpr const ResTp& value() const& { return expect("Result is empty!"); }
 
-		constexpr const ResTp&& value() const&& { return std::move(expect("Result it empty!")); }
+		constexpr const ResTp&& value() const&& { return std::move(expect("Result is empty!")); }
 
-		constexpr ResTp& value() & { return expect("Result it empty!"); }
+		constexpr ResTp& value() & { return expect("Result is empty!"); }
 
-		constexpr ResTp&& value() && { return std::move(expect("Result it empty!")); }
+		constexpr ResTp&& value() && { return std::move(expect("Result is empty!")); }
 
 		/**
 		 * @brief Access the value as an optional.
