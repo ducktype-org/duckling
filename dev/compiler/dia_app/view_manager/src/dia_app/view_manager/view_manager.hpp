@@ -17,6 +17,8 @@ namespace view_manager {
         std::optional<std::string> error_code, file_info;
 
         public:
+        Metadata(std::optional<std::string> error_code, std::optional<std::string> file_info);
+
         static Metadata createFromInfo(const Info &info);
 
         ::view::Metadata getView() const;

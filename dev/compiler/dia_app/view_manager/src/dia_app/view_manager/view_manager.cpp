@@ -10,8 +10,15 @@ namespace dia_app {
 namespace view_manager {
 
     // Metadata
+    Metadata::Metadata(std::optional<std::string> error_code, std::optional<std::string> file_info) : error_code(std::move(error_code)), file_info(std::move(file_info)) {}
+
     Metadata Metadata::createFromInfo(const Info &info) {
-        
+        std::optional<std::string> error_code = info.metadata.code;
+        std::optional<std::string> file_info;
+        if (info.code.has_value()) {
+            file_info = info.code.value().location.file;
+        }
+        return Metadata(error_code, file_info);
     }
 
     ::view::Metadata Metadata::getView() const {

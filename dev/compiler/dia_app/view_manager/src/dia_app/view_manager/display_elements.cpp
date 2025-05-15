@@ -356,7 +356,7 @@ namespace dia_file {
 
     std::shared_ptr<Component> CodeElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            this->generated_component = static_pointer_cast<Component>(make_shared<CodeComponent>(this->content));
+            this->generated_component = static_pointer_cast<Component>(make_shared<CodeComponent>(this->content, std::vector<hl_id_t>{}));
         }
         return this->generated_component;
     }

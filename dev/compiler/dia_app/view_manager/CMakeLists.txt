@@ -11,6 +11,7 @@ add_executable(view_manager
     src/dia_app/view_manager/utils.hpp
     src/dia_app/view_manager/view_constructor.hpp
     src/dia_app/view_manager/view_manager.hpp
+    src/dia_app/view_manager/view_manager.cpp
     src/dia_app/view_manager/main.cpp
 )
 add_executable(view_constructor_test
