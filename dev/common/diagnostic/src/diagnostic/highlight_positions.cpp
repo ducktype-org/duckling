@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <ranges>
+#include <format>
 
 namespace dia {
 	/**
@@ -73,6 +74,7 @@ namespace dia {
 
 		for(auto& [line, view, col]: colored) {
 			if (old != line) {
+				if (old != (usize)-1) out << "\n";
 				old = line;
 				printLineNumber(out, length, line, line_col);
 			} 
@@ -82,6 +84,7 @@ namespace dia {
 				out << view.stdString();
 			}
 		}
+		out << "\n";
 	}
 
 	static constexpr usize safeMinus(usize a, usize b) {
@@ -112,8 +115,13 @@ namespace dia {
 			if (nl) out << "\n";
 			else nl = true;
 
+			auto file = chunk.back().getSource()->getPath();
+
 			auto first_line = safeMinus(chunk.front().getStartLineColumn().first, neighborhood);
 			auto last_line = std::min(safePlus(chunk.back().getEndLineColumn().first, neighborhood), chunk.back().getSource()->getLines().size());
+
+			out << "File: " << file.absolutePath() << "\n";
+			out << std::format("Lines: {}-{}\n", first_line, last_line);
 
 			std::vector<SourcePosition> sub_positions;
 			for(auto pos: chunk) sub_positions.push_back(pos);

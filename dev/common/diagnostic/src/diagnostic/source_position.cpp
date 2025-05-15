@@ -15,7 +15,6 @@
 
 namespace dia {
 	void printLineNumber(printer::PrinterOStream& out, usize length, usize line, printer::Color col) {
-		out << "\n";
 		std::stringstream number;
 		number << std::setw((int) length) << line;
 		out.add({ number.str(), col });
@@ -56,6 +55,7 @@ namespace dia {
 		for (auto [line, view]: before) {
 			if (line != prev_line) {
 				prev_line = line;
+				out << "\n";
 				printLineNumber(out, length, line, line_col);
 			}
 			out << view.stdString();
@@ -63,6 +63,7 @@ namespace dia {
 		for (auto [line, view]: error) {
 			if (line != prev_line) {
 				prev_line = line;
+				out << "\n";
 				printLineNumber(out, length, line, line_col);
 			}
 			out.add({ view.stdString(), printer::Color::BRIGHT_RED });
@@ -70,6 +71,7 @@ namespace dia {
 		for (auto [line, view]: after) {
 			if (line != prev_line) {
 				prev_line = line;
+				out << "\n";
 				printLineNumber(out, length, line, line_col);
 			}
 			out << view.stdString();
