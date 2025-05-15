@@ -3,10 +3,11 @@
 #include <dia_app/term_ui/message.hpp>
 
 void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
-	json message_json = message;
+	json j{ message };
+	j = nlohmann::json::parse(j.dump(2));
 
 	// Create a view manager instance for static message.
-	auto view_manager = dia_app::view_manager::ViewManager::createFromJson(message_json);
+	auto view_manager = dia_app::view_manager::ViewManager::createFromJson(j);
 	::view::ViewResponse vm_data;
 	view_manager.getView(&vm_data);
 
@@ -17,7 +18,6 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	if (dump_static) {
 		// Now we have view data in the format declared in view.proto
 		// This is just temporary:
-		json j{ message };
 		printer::StreamPrinter::print(j.dump(2), std::cout);
 		printer::StreamPrinter::newline(1, std::cout);
 		return;
