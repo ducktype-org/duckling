@@ -287,7 +287,7 @@ namespace term_ui {
         };
         Location location;
         vec<CodeLine> lines;
-        vec<PointerMessage> pointers;
+        std::map<uint, PointerMessage> pointers;
         vec<std::pair<int, int>> last_of_group;
         uint tab_space;
         
@@ -298,13 +298,13 @@ namespace term_ui {
             Success
         };
 
-        CodeFragment(Location location, vec<CodeLine> lines, vec<PointerMessage> pointers) :
+        CodeFragment(Location location, vec<CodeLine> lines, std::map<uint, PointerMessage> pointers) :
             location(location), lines(lines), pointers(pointers), tab_space(0) {
             compute_last_of_and_tab_space();
         }
 
-        CodeFragment(const std::string &file, const vec<CodeLine> &lines, const vec<PointerMessage> &ptrs) :
-            location(Location(file, 6, 23)), lines(lines), pointers(ptrs) {
+        CodeFragment(const std::string &file, const vec<CodeLine> &lines, const std::map<uint, PointerMessage> &ptrs) :
+            location(Location(file, 6, 23)), lines(lines), pointers(ptrs), tab_space(0) {
             compute_last_of_and_tab_space();
         }
 
@@ -340,7 +340,7 @@ namespace term_ui {
         UnderlineResult underline(Line &str, Underlining underlining, uint line_no) const {
             auto [beg, end, group, idx, lowering] = underlining;
             uint len = end - beg;
-            auto &msg = pointers[group];
+            auto &msg = pointers.at(group);
 
             // Handle lowering stages first.
             if (lowering == LoweringStage::Medium) {

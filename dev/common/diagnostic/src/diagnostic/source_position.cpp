@@ -158,7 +158,7 @@ namespace dia {
 			      { "file", pos.getSource()->getPath().strView() },
 			      { "line", line },
 			      { "column", column },
-			      { "last_modified", 0 }
+			      { "last_modified", (usize)0 }
 		};  // TODO: Set last modified to real value.
 	}
 

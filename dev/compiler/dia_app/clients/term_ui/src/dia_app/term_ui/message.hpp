@@ -14,15 +14,14 @@ namespace term_ui {
                 const CodeFragment &code) :
             type(type), id(id), message(message), description(description), code(code) {}
         
-        Message(const ::view::ViewResponse &vm_data) {
+        Message(::view::ViewResponse *vm_data) {
             // TODO: make full solution
             // Temporary solution, assumptions:
             // - there's only one diagnostic,
-            auto &diag = vm_data.diagnostics(0);
+            auto &diag = vm_data->diagnostics(0);
             // - exactly 3 sections (error fragments: header, code, description),
             auto &header_message = diag.sections(0).text_section();
             auto &code_section = diag.sections(1).code_section();
-            auto &description_message = diag.sections(2).text_section();
             type = StyleType::Error;
             // - the diagnostic's metadata describe the section,
             // - the metadata does contain both error code and file info (none are missing).
@@ -30,11 +29,10 @@ namespace term_ui {
             auto &file = diag.metadata().file_info();
 
             message = CodePieces(header_message.root()).to_string();
-            description = CodePieces(description_message.root()).to_string();
             
-            vec<PointerMessage> ptrs;
+            std::map<uint, PointerMessage> ptrs;
             for (uint i = 0; i < diag.hl_messages_size(); ++i) {
-                ptrs.emplace_back(diag.hl_messages(i));
+                ptrs.emplace(diag.hl_messages(i).tag(), diag.hl_messages(i));
             }
             vec<CodeLine> lines;
             for (uint i = 0; i < code_section.lines_size(); ++i) {

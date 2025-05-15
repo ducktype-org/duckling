@@ -4,12 +4,11 @@
 
 void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json j{ message };
-	j = nlohmann::json::parse(j.dump(2));
 
 	// Create a view manager instance for static message.
 	auto view_manager = dia_app::view_manager::ViewManager::createFromJson(j);
-	::view::ViewResponse vm_data;
-	view_manager.getView(&vm_data);
+	::view::ViewResponse *vm_data = new ::view::ViewResponse;
+	view_manager.getView(vm_data);
 
 	// Format and print the static message to the terminal.
 	term_ui::Message term_msg(vm_data);

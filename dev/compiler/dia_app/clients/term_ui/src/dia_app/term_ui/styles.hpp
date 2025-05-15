@@ -1,5 +1,6 @@
 #pragma once
 #include <rang.hpp>
+#include <assert.h>
 
 namespace term_ui {
 
