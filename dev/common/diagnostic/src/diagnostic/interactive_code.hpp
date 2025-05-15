@@ -43,7 +43,7 @@ namespace dia {
 		friend void to_json(json& j, const InteractiveCode& code) {
 			j             = json::object();
 			j["location"] = code.position;
-			j["content"]  = { { "type", "code" }, { "content", code.serialize_code() } };
+			j["content"]  = code.serialize_code();
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }
