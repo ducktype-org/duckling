@@ -84,7 +84,7 @@ namespace dia_app {
         }
 
         std::string get_path() const {
-            return MESSAGE_TEMPLATE_PATH + type + '/' + family + '/' + name + ".json";
+            return MESSAGE_TEMPLATE_PATH + type + '/' + family + '/' + name + ".yaml";
         }
 
         bool operator==(const ShortMetadata &other) const {
