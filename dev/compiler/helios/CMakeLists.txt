@@ -2,7 +2,10 @@ add_library(HELIOS
 	src_private/helios_private/symbols/symbols.cpp
 	src_private/helios_private/scopes/scopes.cpp
 	src_private/helios_private/utils/pst_walkers.cpp
-	src_private/helios_private/lookup_utils/lookup_result.cpp
+	src_private/helios_private/lookup/lookup_result.cpp
+	src_private/helios_private/lookup/interface.cpp
+	src_private/helios_private/lookup/lookup_chain.cpp
+	src/helios/query_hout_of_expr.cpp
 	src_private/helios_private/comp_time/type_eval.cpp
 	src_private/helios_private/comp_time/int_eval.cpp
 	src_private/helios_private/builtin_operations/builtins.cpp

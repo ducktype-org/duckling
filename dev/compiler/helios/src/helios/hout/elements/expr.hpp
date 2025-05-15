@@ -232,7 +232,6 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a call in an expression.
-	 * @note This is a mock, with this representation it's impossible to handle overloads.
 	 */
 	struct CallExpr final: public Expr {
 		SymID                        callee;
