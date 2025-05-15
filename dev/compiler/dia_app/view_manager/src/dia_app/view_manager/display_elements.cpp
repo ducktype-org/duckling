@@ -130,9 +130,12 @@ namespace dia_file {
         if (!this->generated_component) {
             std::vector<std::shared_ptr<Component>> sons(ssize(this->elems));
             transform(this->elems.begin(), this->elems.end(), sons.begin(),
-                [&creation_context](Ptr &son) {
+                [&creation_context](const Ptr &son) {
                 return son->toComponent(creation_context);
             });
+            sons.erase(std::remove_if(sons.begin(), sons.end(), [](const std::shared_ptr<Component> &ptr) {
+                return !ptr;
+            }), sons.end());
             std::vector<hl_id_t> tags(ssize(this->groups));
             transform(this->groups.begin(), this->groups.end(), tags.begin(),
             [&creation_context](const std::string &name) {
@@ -326,6 +329,9 @@ namespace dia_file {
         return res;
     }
 
+    std::shared_ptr<view_manager::Component> EntityElement::toComponent(view_manager::CreationContext &creation_context) {
+        return this->content->toComponent(creation_context);
+    }
 
     // ---------------- CodeElement ---------------- //
 

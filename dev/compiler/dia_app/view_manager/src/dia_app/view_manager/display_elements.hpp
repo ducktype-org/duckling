@@ -142,6 +142,8 @@ namespace dia_file {
         std::string to_text(DataHandle dh) const;
     
         json show(DataHandle dh) const;
+
+        virtual std::shared_ptr<view_manager::Component> toComponent(view_manager::CreationContext &creation_context) override;
     };
 
     struct CodeElement : public DisplayElement {

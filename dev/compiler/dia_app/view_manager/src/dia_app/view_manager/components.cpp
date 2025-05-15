@@ -82,18 +82,22 @@ namespace view_manager {
         std::vector<std::vector<line_data_t<ptr<::view::Component>>>> sons_results(ssize(components));
         transform(components.begin(), components.end(), sons_results.begin(),
         [](const std::shared_ptr<Component> &component) {
+            assert(component);
             return component->getView();
         });
         std::vector<std::vector<line_data_t<ptr<::view::Component>>>> results_by_lines;
-        results_by_lines.resize(0);
+        results_by_lines.resize(1);
         for (auto elm : sons_results) {
             if (!elm.empty()) {
-                results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
-                results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
-                transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
-                [](const line_data_t<ptr<::view::Component>> &elm) {
-                    return std::vector<line_data_t<ptr<::view::Component>>>{elm};
-                });
+                results_by_lines.back().emplace_back(*elm.begin());
+                if (ssize(elm) > 1) {
+                    size_t sz = ssize(results_by_lines);
+                    results_by_lines.resize(sz + ssize(elm) - 1);
+                    transform(elm.begin() + 1, elm.end(), results_by_lines.begin() + sz,
+                    [](const line_data_t<ptr<::view::Component>> &elm) {
+                        return std::vector<line_data_t<ptr<::view::Component>>>{elm};
+                    });
+                }
             }
         }
         results_by_lines.erase(std::remove_if(results_by_lines.begin(), results_by_lines.end(),
@@ -133,15 +137,18 @@ namespace view_manager {
             return component->getNoHlView();
         });
         std::vector<std::vector<line_data_t<ptr<::view::NoHlComponent>>>> results_by_lines;
-        results_by_lines.resize(0);
+        results_by_lines.resize(1);
         for (auto elm : sons_results) {
             if (!elm.empty()) {
-                results_by_lines.back().insert(results_by_lines.back().end(), *elm.begin());
-                results_by_lines.resize(ssize(results_by_lines) + ssize(elm) - 1);
-                transform(elm.begin() + 1, elm.end(), results_by_lines.end(),
-                [](const line_data_t<ptr<::view::NoHlComponent>> &elm) {
-                    return std::vector<line_data_t<ptr<::view::NoHlComponent>>>{elm};
-                });
+                results_by_lines.back().emplace_back(*elm.begin());
+                if (ssize(elm) > 1) {
+                    size_t sz = ssize(results_by_lines);
+                    results_by_lines.resize(sz + ssize(elm) - 1);
+                    transform(elm.begin() + 1, elm.end(), results_by_lines.begin() + sz,
+                    [](const line_data_t<ptr<::view::NoHlComponent>> &elm) {
+                        return std::vector<line_data_t<ptr<::view::NoHlComponent>>>{elm};
+                    });
+                }
             }
         }
         results_by_lines.erase(std::remove_if(results_by_lines.begin(), results_by_lines.end(),
@@ -268,7 +275,8 @@ namespace view_manager {
     Section::~Section() {}
 
     ptr<::view::Section> Section::getView() const {
-        return {};
+        assert(false);
+        return nullptr;
     }
 
     // TextSection

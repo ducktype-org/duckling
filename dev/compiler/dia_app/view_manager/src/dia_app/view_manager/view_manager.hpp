@@ -39,11 +39,11 @@ namespace view_manager {
     class Diagnostic {
         private:
         Metadata metadata;
-        std::vector<Section> sections;
+        std::vector<std::shared_ptr<Section>> sections;
         std::vector<HlInfo> hl_messages;
 
         public:
-        Diagnostic(Metadata metadata, std::vector<Section> sections, std::vector<HlInfo> hl_messages);
+        Diagnostic(Metadata metadata, std::vector<std::shared_ptr<Section>> sections, std::vector<HlInfo> hl_messages);
 
         static Diagnostic createFromInfo(const Info &info, CreationContext &creation_context);
 
