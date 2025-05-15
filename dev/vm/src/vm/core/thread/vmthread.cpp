@@ -551,11 +551,11 @@ namespace vm {
 
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
-				run(program, func_name, run_arguments);
 				// @TODO: catch not general std::exception&
+				run(program, func_name, run_arguments);
 			} catch (const std::exception& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
-				respondExecutionRequest(api::ExecutionPanicked{});
+				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 			}
 		});
 		return waitForRunningResponse();

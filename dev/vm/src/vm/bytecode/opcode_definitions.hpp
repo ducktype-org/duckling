@@ -150,6 +150,9 @@ DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 // sets the flag if pointer is null
 DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 
+DEF_OPCODE(set_inner_lvnt_type, vm::opargs::StackLocalVariant, vm::opargs::Type)
+// `ext_type` required to know which type is to be expected.
+DEF_OPCODE(get_inner_lptr_lvnt, vm::opargs::StackLocalPtr, vm::opargs::StackLocalVariant)
 
 DEF_OPCODE(label, vm::opargs::Label)
 

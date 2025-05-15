@@ -9,6 +9,22 @@
 #include <string_view>
 #include <variant>
 
+#define DEFINE_STR_ARG_TYPE(NAME, FIELD_NAME, OP_SHORT_VALUE)         \
+	struct NAME final: code::ElementBase {                            \
+		static constexpr std::string_view OP_SHORT = OP_SHORT_VALUE;  \
+		NAME()                                     = default;         \
+		NAME(const base::StrID FIELD_NAME): FIELD_NAME(FIELD_NAME) {} \
+		base::StrID    FIELD_NAME;                                    \
+		constexpr bool operator==(const NAME& other) const noexcept { \
+			return FIELD_NAME == other.FIELD_NAME;                    \
+		}                                                             \
+	}
+
+#define DEFINE_STACK_LOCAL(SUFFIX, OP_SHORT_VALUE) \
+	DEFINE_STR_ARG_TYPE(StackLocal##SUFFIX, var_name, OP_SHORT_VALUE)
+#define DEFINE_GLOBAL(SUFFIX, OP_SHORT_VALUE) \
+	DEFINE_STR_ARG_TYPE(Global##SUFFIX, global_data_name, OP_SHORT_VALUE)
+
 /**
  * @brief This namespace encapsulates types of opcode arguments.
  * @note All types should be default constructible.
@@ -32,197 +48,23 @@ namespace vm::opargs {
 		}
 	};
 
-	/**
-	 * @brief Represents `l8` argument.
-	 */
-	struct StackLocalI8 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "l8";
+	DEFINE_STACK_LOCAL(I8, "l8");
+	DEFINE_STACK_LOCAL(I16, "l16");
+	DEFINE_STACK_LOCAL(I32, "l32");
+	DEFINE_STACK_LOCAL(I64, "l64");
+	DEFINE_STACK_LOCAL(Any, "lany");
+	DEFINE_STACK_LOCAL(Ptr, "lptr");
+	DEFINE_STACK_LOCAL(Variant, "lvnt");
 
-		StackLocalI8() = default;
+#define VM_OPARG_LOCAL_TYPES                                                                 \
+	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
+		StackLocalVariant
 
-		StackLocalI8(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalI8& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `l16` argument.
-	 */
-	struct StackLocalI16 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "l16";
-
-		StackLocalI16() = default;
-
-		StackLocalI16(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalI16& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `l32` argument.
-	 */
-	struct StackLocalI32 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "l32";
-
-		StackLocalI32() = default;
-
-		StackLocalI32(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalI32& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `l64` argument.
-	 */
-	struct StackLocalI64 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "l64";
-
-		StackLocalI64() = default;
-
-		StackLocalI64(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalI64& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `any` argument.
-	 */
-	struct StackLocalAny final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "lany";
-
-		StackLocalAny() = default;
-
-		StackLocalAny(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalAny& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `lptr` argument.
-	 */
-	struct StackLocalPtr final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "lptr";
-		StackLocalPtr()                            = default;
-
-		StackLocalPtr(const base::StrID var_name): var_name(var_name) {}
-
-		base::StrID var_name;
-
-		constexpr bool operator==(const StackLocalPtr& other) const noexcept {
-			return var_name == other.var_name;
-		}
-	};
-
-	/**
-	 * @brief List of all argument types that target stack offset.
-	 */
-#define VM_OPARG_LOCAL_TYPES \
-	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr
-
-	/**
-	 * @brief Represents `g64` - global i64 argument.
-	 */
-	struct GlobalI64 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "g64";
-
-		GlobalI64() = default;
-
-		GlobalI64(const base::StrID global_data_name): global_data_name(global_data_name) {}
-
-		base::StrID global_data_name = base::StrID("");
-
-		constexpr bool operator==(const GlobalI64& other) const noexcept {
-			return global_data_name == other.global_data_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `g32` - global i32 argument.
-	 */
-	struct GlobalI32 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "g32";
-
-		GlobalI32() = default;
-
-		GlobalI32(const base::StrID global_data_name): global_data_name(global_data_name) {}
-
-		base::StrID global_data_name = base::StrID("");
-
-		constexpr bool operator==(const GlobalI32& other) const noexcept {
-			return global_data_name == other.global_data_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `g16` - global i16 argument.
-	 */
-	struct GlobalI16 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "g16";
-
-		GlobalI16() = default;
-
-		GlobalI16(const base::StrID global_data_name): global_data_name(global_data_name) {}
-
-		base::StrID global_data_name = base::StrID("");
-
-		constexpr bool operator==(const GlobalI16& other) const noexcept {
-			return global_data_name == other.global_data_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `g8` - global i8 argument.
-	 */
-	struct GlobalI8 final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "g8";
-
-		GlobalI8() = default;
-
-		GlobalI8(const base::StrID global_data_name): global_data_name(global_data_name) {}
-
-		base::StrID global_data_name = base::StrID("");
-
-		constexpr bool operator==(const GlobalI8& other) const noexcept {
-			return global_data_name == other.global_data_name;
-		}
-	};
-
-	/**
-	 * @brief Represents `gptr` - global ptr argument.
-	 */
-	struct GlobalPtr final: code::ElementBase {
-		static constexpr std::string_view OP_SHORT = "gptr";
-
-		GlobalPtr() = default;
-
-		GlobalPtr(const base::StrID global_data_name): global_data_name(global_data_name) {}
-
-		base::StrID global_data_name = base::StrID("");
-
-		constexpr bool operator==(const GlobalPtr& other) const noexcept {
-			return global_data_name == other.global_data_name;
-		}
-	};
+	DEFINE_GLOBAL(I64, "g64");
+	DEFINE_GLOBAL(I32, "g32");
+	DEFINE_GLOBAL(I16, "g16");
+	DEFINE_GLOBAL(I8, "g8");
+	DEFINE_GLOBAL(Ptr, "gptr");
 
 	/**
 	 * @brief List of all argument types that target global data.
@@ -308,3 +150,7 @@ namespace vm::opargs {
 	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
 	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
 }
+
+#undef DEFINE_STR_ARG_TYPE
+#undef DEFINE_STACK_LOCAL
+#undef DEFINE_GLOBAL

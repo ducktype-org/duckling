@@ -51,6 +51,7 @@ namespace vm {
 		} else {
 			std::stringstream ss;
 			code_result.error().dump(ss);
+			std::cerr << ss.str() << '\n';
 			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
 		}
 	}
@@ -85,8 +86,9 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::CoreOperationError(api::OtherError("Execution panicked!"
-				)));
+				return std::unexpected(api::CoreOperationError(
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(
@@ -111,7 +113,14 @@ namespace vm {
 		auto        lock = io.lock();
 		std::string content;
 		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
-		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
+		variant_match(status) {
+			variant_case(api::Executing, executing) {
+				// If we are still executing, then wait for at least some output.
+				if (!api::isStatusTerminal(executing.exec_status))
+					io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
+			}
+		}
+		content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });

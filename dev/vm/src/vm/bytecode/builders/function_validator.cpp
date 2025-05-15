@@ -55,7 +55,7 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_type> {
-		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr>;
+		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr, Op_get_inner_lptr_lvnt>;
 		using OptionalAfter = std::tuple<>;
 	};
 

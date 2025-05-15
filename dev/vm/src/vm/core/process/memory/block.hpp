@@ -1,5 +1,7 @@
 #pragma once
 
+#include "variant_data.hpp"
+
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
 #include <base/strongly_typed_int.hpp>
@@ -61,19 +63,15 @@ namespace vm {
 		// name ...
 
 		friend class Memory;
+		friend class VariantAllocator;
+
+		base::HashMap<usize, Ref<Block>> children_blocks{};  // offset to block
+		MRef<Block>                      parent = nullptr;
 
 	public:
 		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
 			  id(id),
 			  data(data),
 			  shared_mutex(mutex) {}
-	};
-
-	class VariantBlock: public Block {
-		friend class Memory;
-
-		public:
-		VariantBlock(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
-			  Block(id, data, mutex) {}
 	};
 }

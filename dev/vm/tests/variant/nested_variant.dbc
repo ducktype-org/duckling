@@ -1,0 +1,7 @@
+type primitive: i8 1
+type variant: simple_variant { i64, i8 }
+type variant: nested_variant { i64, simple_variant }
+
+function main {
+    init_lany_type nested_variant
+}
