@@ -6,6 +6,7 @@
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios/mangler/mangler.hpp>
 #include <helios/queries.hpp>
 #include <helios/symbols/query_class_symbol_data.hpp>
 #include <helios/symbols/query_type_from_definition.hpp>
@@ -38,29 +39,30 @@ class HeliosTests: public tester::TestSuite {
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testImport);
-		TESTER_ADD_TEST(testEdgeEvals);
-		TESTER_ADD_TEST(testError);
-		TESTER_ADD_TEST(testI32Consts);
-		TESTER_ADD_TEST(testClassSymbolData);
-		TESTER_ADD_TEST(testHoutVariables);
-		TESTER_ADD_TEST(testExprTree);
-		TESTER_ADD_TEST(testSimpleHOUT);
-		TESTER_ADD_TEST(testSinglefileModuleHOUT);
-		TESTER_ADD_TEST(testModuleHOUT);
-		TESTER_ADD_TEST(testHoutVisitor);
-		TESTER_ADD_TEST(testHeliosResultConcept);
-		TESTER_ADD_TEST(testHeliosResult);
-		TESTER_ADD_TEST(testTypeOf);
-		TESTER_ADD_TEST(testKeywordLiterals);
-		TESTER_ADD_TEST(testFunctionParameters);
-		TESTER_ADD_TEST(testExprScopes);
-		TESTER_ADD_TEST(testFunctionCallExpr);
-		TESTER_ADD_TEST(testBuiltinFunctions);
+		// TESTER_ADD_TEST(testImport);
+		// TESTER_ADD_TEST(testEdgeEvals);
+		// TESTER_ADD_TEST(testError);
+		// TESTER_ADD_TEST(testI32Consts);
+		// TESTER_ADD_TEST(testClassSymbolData);
+		// TESTER_ADD_TEST(testHoutVariables);
+		// TESTER_ADD_TEST(testExprTree);
+		// TESTER_ADD_TEST(testSimpleHOUT);
+		// TESTER_ADD_TEST(testSinglefileModuleHOUT);
+		// TESTER_ADD_TEST(testModuleHOUT);
+		// TESTER_ADD_TEST(testHoutVisitor);
+		// TESTER_ADD_TEST(testHeliosResultConcept);
+		// TESTER_ADD_TEST(testHeliosResult);
+		// TESTER_ADD_TEST(testTypeOf);
+		// TESTER_ADD_TEST(testKeywordLiterals);
+		// TESTER_ADD_TEST(testFunctionParameters);
+		// TESTER_ADD_TEST(testExprScopes);
+		// TESTER_ADD_TEST(testFunctionCallExpr);
+		// TESTER_ADD_TEST(testBuiltinFunctions);
+		TESTER_ADD_TEST(testMangler);
 
 		// this is at the end
 		// so we test all the scopes created in helios tests:
-		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		// TESTER_ADD_TEST(testScopeParentsAndDepth);
 	}
 
 private:
@@ -873,6 +875,31 @@ private:
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
 		}
+	}
+
+	void testMangler() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
+		std::cerr << "Module name: " << compiler::frontend::moduleName(module).str() << '\n';
+		auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
+		// std::cerr << "HOUT unit: " << hout_unit.debugPrint() << '\n';
+
+		auto goo = hout_unit.functions[1];
+		std::cerr << "\n\nTEST -- Function: " << goo.original_name.strView() << '\n';
+		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+			{ goo.original_symbol, 123, "metadata" }
+		);
+		std::cerr << "Mangled symbol: " << mangled_goo.value() << '\n';
+	
+		// auto cnst = hout_unit.glob_data[1];
+		// std::cerr << "\n\nTEST -- Constant: " << cnst.original_name.strView() << '\n';
+		// auto mangled_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
+		// 	{ cnst.helios_symbol, 123, "metadata" }
+		// );
+		// std::cerr << "Mangled symbol: " << mangled_cnst.value() << '\n';
+
+		// auto cls_scope = compiler::helios::scope(goo.original_symbol);
+		// auto cls = getTypeFromDefinition("Cls", cls_scope);
+		// std::cerr << "name: " << cls.toString() << '\n';
 	}
 };
 

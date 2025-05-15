@@ -1,0 +1,35 @@
+const A: i64 = 1;
+
+namespace Nmspc {
+    var B: i64 = 2;
+}
+
+fun foooo(a: i32) -> i32 = {
+    return a;
+}
+
+namespace Mspc {
+    namespace Ooo {
+        const Cnst: i64 = 3;
+
+        fun goooo(a: i32, b: f64) -> i32 = {
+            return a;
+        }
+        
+        class Cls {
+            data: i32 = 0;
+        }
+    }
+
+    const ABC: i64 = 4;
+}
+
+namespace P {
+    class MyClass {
+        a: i32 = 0;
+    }
+
+    fun barrr() -> i32 = {
+        return Mspc.Ooo.Cnst;
+    }
+}
