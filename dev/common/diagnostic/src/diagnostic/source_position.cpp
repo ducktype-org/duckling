@@ -21,7 +21,6 @@ namespace dia {
 		out << " | ";
 	}
 
-
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream& out, const SourcePosition& pos) {
 		auto source       = pos.getSource();
 		auto source_start = pos.source_start;
@@ -49,7 +48,7 @@ namespace dia {
 		auto after  = source->viewSplitRange(fixed_end + 1, end_char);
 
 		usize prev_line = -1ULL;
-		
+
 		printer::Color line_col = printer::Color::BRIGHT_BLUE;
 
 		for (auto [line, view]: before) {
@@ -160,7 +159,7 @@ namespace dia {
 	}
 
 	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {
-		auto one_path = getLocation()->getSourceFile();
+		auto one_path   = getLocation()->getSourceFile();
 		auto other_path = other.getLocation()->getSourceFile();
 
 		auto path_ord = one_path.absolutePath() <=> other_path.absolutePath();

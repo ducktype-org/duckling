@@ -1,11 +1,11 @@
 #include <clap/clap.hpp>
+#include <diagnostic/highlight_positions.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <pst_parser/pst_query/pst_access_side_input.hpp>
-#include <diagnostic/highlight_positions.hpp>
 #include <pst_parser/pst_query/code_dependency.hpp>
+#include <pst_parser/pst_query/pst_access_side_input.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 
@@ -61,10 +61,11 @@ int notMain(int argc, const char* const* argv) {
 
 	for (auto& i: top_level->functions) {
 		if (i.original_name == base::StrID("main")) {
-			auto positions = pst::queryPositionDependencies<helios::QueryCodeOFFun>(i.original_symbol);
+			auto positions
+				= pst::queryPositionDependencies<helios::QueryCodeOFFun>(i.original_symbol);
 
 			printer::PrinterOStream str;
-			dia::printHighlightedPositions(str, positions);			
+			dia::printHighlightedPositions(str, positions);
 
 			printer::StreamPrinter p;
 			p.print(str.getContents());

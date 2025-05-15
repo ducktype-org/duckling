@@ -12,5 +12,4 @@ namespace pst {
 	STRONG_TYPEDEF_ID(PstID);
 }
 
-
 ID_STD_HASH(::pst::PstID);
