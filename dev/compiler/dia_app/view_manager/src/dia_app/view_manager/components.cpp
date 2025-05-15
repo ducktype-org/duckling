@@ -71,7 +71,8 @@ namespace view_manager {
 
     // ConcatComponent
 
-    ConcatComponent::ConcatComponent(std::vector<std::shared_ptr<Component>> components) : components(std::move(components)) {}
+    ConcatComponent::ConcatComponent(std::vector<std::shared_ptr<Component>> components,
+    std::vector<hl_id_t> tags) : components(std::move(components)), tags(std::move(tags)) {}
 
     std::vector<line_data_t<::view::Component>> ConcatComponent::getView() const {
         std::vector<line_data_t<::view::Component>> result;
@@ -100,7 +101,7 @@ namespace view_manager {
             }),
         results_by_lines.end());
         transform(results_by_lines.begin(), results_by_lines.end(), result.begin(),
-            [](const std::vector<line_data_t<::view::Component>> &elms) {
+            [this](const std::vector<line_data_t<::view::Component>> &elms) {
             std::vector<::view::Component> sub_components;
             transform(elms.begin(), elms.end(), sub_components.begin(),
                 [](const line_data_t<::view::Component> &line) {
@@ -110,6 +111,7 @@ namespace view_manager {
             line_metadata_t line_metadata = elms[0].first;
             ::view::Component component;
             component.mutable_concat_component()->mutable_components()->Add(sub_components.begin(), sub_components.end());
+            component.mutable_concat_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
             return line_data_t<::view::Component>{line_metadata, component};
         });
         return result;
@@ -164,7 +166,7 @@ namespace view_manager {
             [](const std::shared_ptr<Component> &component) {
             return component->deepCopy();
         });
-        return std::static_pointer_cast<Component>(make_shared<ConcatComponent>(new_components));
+        return std::static_pointer_cast<Component>(make_shared<ConcatComponent>(new_components, this->tags));
     }
 
     // InteractiveComponent

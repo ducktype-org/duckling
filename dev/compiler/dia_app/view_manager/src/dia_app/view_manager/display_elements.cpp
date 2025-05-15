@@ -8,7 +8,8 @@ namespace dia_file {
           view_manager::TextComponent,
           view_manager::CodeComponent,
           view_manager::StartLineComponent,
-          view_manager::CreationContext;
+          view_manager::CreationContext,
+          view_manager::hl_id_t;
 
     Ptr fetch_resource(ResourceHandle, DataHandle data_handle);
     void fetch_entity(EntityHandle entity_handle, DataHandle data_handle);
@@ -62,7 +63,12 @@ namespace dia_file {
 
     std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            this->generated_component = static_pointer_cast<Component>(make_shared<TextComponent>(content));
+            std::vector<hl_id_t> tags;
+            transform(this->groups.begin(), this->groups.end(), tags.begin(),
+            [&creation_context](const std::string &name) {
+                return creation_context.hl_name_to_id->at(name);
+            });
+            this->generated_component = static_pointer_cast<Component>(make_shared<TextComponent>(content, tags));
         }
         return this->generated_component;
     }
@@ -127,7 +133,12 @@ namespace dia_file {
                 [&creation_context](const Ptr &son) {
                 return son->toComponent(creation_context);
             });
-            this->generated_component = static_pointer_cast<Component>(make_shared<ConcatComponent>(sons));
+            std::vector<hl_id_t> tags;
+            transform(this->groups.begin(), this->groups.end(), tags.begin(),
+            [&creation_context](const std::string &name) {
+                return creation_context.hl_name_to_id->at(name);
+            });
+            this->generated_component = static_pointer_cast<Component>(make_shared<ConcatComponent>(sons, tags));
         }
         return this->generated_component;
     }
@@ -345,7 +356,7 @@ namespace dia_file {
 
     std::shared_ptr<Component> CodeElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            this->generated_component = static_pointer_cast<Component>(make_shared<CodeElement>(content));
+            this->generated_component = static_pointer_cast<Component>(make_shared<CodeComponent>(this->content));
         }
         return this->generated_component;
     }

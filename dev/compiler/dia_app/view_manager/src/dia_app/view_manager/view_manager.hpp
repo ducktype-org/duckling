@@ -25,8 +25,12 @@ namespace view_manager {
 
     class HlInfo {
         private:
+        hl_id_t tag;
+        std::string message;
 
         public:
+        HlInfo(hl_id_t tag, std::string message);
+
         ::view::HlInfo getView() const;
     };
 
@@ -64,7 +68,6 @@ namespace view_manager {
         private:
         ViewManager vm;
 
-
         public:
         ViewServiceImpl(ViewManager vm);
 
@@ -83,6 +86,6 @@ namespace view_manager {
                             ::view::CloseSideNoteResponse* response) override;
     };
 
-    void runViewManagerRPCServer(const json input);
+    void runViewManagerRPCServer(const json &input);
 }
 }

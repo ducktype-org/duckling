@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     nlohmann::json input = nlohmann::json::parse(file);
     file.close();
 
-    dia_app::view_manager::runViewManager(input);
+    dia_app::view_manager::runViewManagerRPCServer(input);
 
     return 0;
 }

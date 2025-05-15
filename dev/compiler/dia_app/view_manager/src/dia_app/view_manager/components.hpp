@@ -1,4 +1,5 @@
 #pragma once
+#include "utils.hpp"
 #include <proto/view.pb.h>
 #include <memory>
 
@@ -71,10 +72,10 @@ namespace view_manager {
     class ConcatComponent : public Component {
         private:
         std::vector<std::shared_ptr<Component>> components;
-
+        std::vector<hl_id_t> tags;
 
         public:
-        ConcatComponent(std::vector<std::shared_ptr<Component>> components);
+        ConcatComponent(std::vector<std::shared_ptr<Component>> components, std::vector<hl_id_t> tags);
 
         std::vector<line_data_t<::view::Component>> getView() const override;
 
@@ -101,6 +102,7 @@ namespace view_manager {
 
         public:
         component_id_t getId();
+
         InteractiveComponent(component_id_t id, const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative);
             
         std::unique_ptr<InteractiveComponent> create(const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative);
@@ -147,25 +149,7 @@ namespace view_manager {
 
         virtual ::view::Section getView() const override;
     };
-
-    // class CodeLine {
-    //     private:
-    //     std::unique_ptr<TextSection> root;
-    //     std::optional<int32_t> line_number;
-
-    //     public:
-
-    //     ::view::CodeLine getView() const {
-    //         ::view::CodeLine result;
-    //         auto tmp = this->root->getOwnView();
-    //         result.set_allocated_content(&tmp);
-    //         if (this->line_number.has_value()) {
-    //             result.set_line_number(this->line_number.value());
-    //         }
-    //         return result;
-    //     }
-    // };
-
+    
     class CodeSection : public Section {
         private:
         std::shared_ptr<Component> root;
@@ -185,6 +169,8 @@ namespace view_manager {
 
     struct CreationContext {
         std::unique_ptr<std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>> id_to_interactive_component;
+        std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
+        dia_app::DataHandle data_handle;
     };
 }
 }
