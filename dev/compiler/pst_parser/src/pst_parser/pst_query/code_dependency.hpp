@@ -8,7 +8,7 @@
 namespace pst {
 	/**
 	 * @brief Returns the minimal set of Source Positions that contain the tokens that are included
-	 * in dependencies of a given query.
+	 * in PST dependencies of a given query. Should be used for insight/diagnostics.
 	 */
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID);
 
@@ -20,6 +20,8 @@ namespace pst {
 
 	/**
 	 * @brief Returns the set of tokens that are included in dependencies of a given query.
+	 * Should be used for insight/diagnostics, this version is more usefull for things that want to
+	 * further analyze like lsp.
 	 */
 	std::vector<CRef<lexer::Token>> queryTokenDependencies(query::detail::NodeID);
 

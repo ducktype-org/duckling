@@ -39,7 +39,7 @@ namespace pst {
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
 			  id(PstID::next()) {
-			pst_id_map.emplace(id, AccessLocked<LangElement>(Ref<const LangElement>(this)));
+			pst_id_map.emplace(id, AccessLocked<LangElement>(CRef<LangElement>(this)));
 		}
 
 		LangElement(const LangElement&) = delete;
@@ -55,7 +55,7 @@ namespace pst {
 		 * @brief Get pst node the by id. Throws on non-existent id.
 		 */
 		[[nodiscard]]
-		static AccessLocked<LangElement> getById(u64);
+		static AccessLocked<LangElement> getByID(u64);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {

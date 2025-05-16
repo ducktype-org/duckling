@@ -2,7 +2,10 @@
 
 #include <base/strongly_typed_id.hpp>
 
-#include <memory>
+namespace std {
+	template<class Key>
+	struct hash;
+}
 
 namespace pst {
 	/**

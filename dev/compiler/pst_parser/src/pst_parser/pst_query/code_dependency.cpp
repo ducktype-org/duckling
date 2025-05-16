@@ -11,36 +11,38 @@
 
 namespace pst {
 
-	class ltFileTok {
-	public:
-		bool operator()(CRef<lexer::Token> one, CRef<lexer::Token> other) const {
-			return one->getPosition() < other->getPosition();
+	namespace {
+		class TokenLtComparisonFunctor {
+		public:
+			bool operator()(CRef<lexer::Token> one, CRef<lexer::Token> other) const {
+				return one->getPosition() < other->getPosition();
+			}
+		};
+
+		/**
+		 * @brief Common function for getting a list of tokens that a query depends on.
+		 */
+		auto viewDependentTokens(query::detail::NodeID id) {
+			using namespace std::views;
+
+			auto nodes = query::Context::getGraph().getNodeDepsFiltered(
+				id, detail::PSTAccessSideInput::getID()
+			);
+
+			static auto get_pst_node
+				= [](query::detail::NodeID lid) { return LangElement::getByID(lid.hash.val); };
+			static auto get_tokens = [](AccessLocked<LangElement> locked) {
+				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
+			};
+			static auto file_location = [](CRef<lexer::Token> tok) {
+				return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
+			};
+
+			return nodes | transform(get_pst_node) | transform(get_tokens)
+			     | filter([](auto opt) { return opt.has_value(); })
+			     | transform([](auto opt) { return opt.value(); }) | std::views::join
+			     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
 		}
-	};
-
-	/**
-	 * @brief Common function for getting a list of tokens that a query depends on.
-	 */
-	static auto viewDependentTokens(query::detail::NodeID id) {
-		using namespace std::views;
-
-		auto nodes = query::Context::getGraph().getNodeDepsFiltered(
-			id, detail::PSTAccessSideInput::getID()
-		);
-
-		static auto get_pst_node
-			= [](query::detail::NodeID lid) { return LangElement::getById(lid.hash.val); };
-		static auto get_tokens = [](AccessLocked<LangElement> locked) {
-			return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
-		};
-		static auto file_location = [](CRef<lexer::Token> tok) {
-			return tok->getPosition().getLocationType() == dia::LocationType::FileLocationType;
-		};
-
-		return nodes | transform(get_pst_node) | transform(get_tokens)
-		     | filter([](auto opt) { return opt.has_value(); })
-		     | transform([](auto opt) { return opt.value(); }) | std::views::join
-		     | filter(file_location) | std::ranges::to<std::vector<CRef<lexer::Token>>>();
 	}
 
 	std::vector<dia::SourcePosition> queryPositionDependencies(query::detail::NodeID id) {
@@ -76,7 +78,7 @@ namespace pst {
 
 		auto x = viewDependentTokens(id);
 
-		std::set<CRef<lexer::Token>, ltFileTok> positions;
+		std::set<CRef<lexer::Token>, TokenLtComparisonFunctor> positions;
 		for (auto el: x) positions.insert(el);
 
 		return { positions.begin(), positions.end() };
