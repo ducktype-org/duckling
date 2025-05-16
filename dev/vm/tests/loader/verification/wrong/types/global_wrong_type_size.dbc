@@ -1,18 +1,12 @@
+global_data global_x i32;
+
 function main {
     # ret_val -> main ret_val
     # arg0 -> argc
     # arg1 -> *argv
-	init_lany_type 	x, i32;
 
-	mov_l32_imm x, 5;
+	mov_g64_imm     	global_x, 1;
 
-	jmp_label end;
-
-	label end;
-
-	output_l32 	x;
-
-	deinit; # x
     deinit; # *argv
     deinit; # argc
 	ret;

@@ -13,7 +13,7 @@ function main {
     # arg1 -> *argv
     
     init_lany_type           check_arg0, i32;
-    input_l64           check_arg0;
+    input_l32           check_arg0;
     call_func           check;
 
     mov_l64_imm         ret_val, 42;

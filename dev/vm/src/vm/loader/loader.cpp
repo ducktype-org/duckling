@@ -174,7 +174,8 @@ void Program::insertFunctions(
 }
 
 void Program::insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger) {
-	for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
+	(void) logger;
+	for (const auto& global: new_globals) globals_map.insert(global, global.name);
 }
 
 Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
@@ -204,12 +205,15 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
 			auto type_context_builder = vm::code::getBuiltinTypes();
+			code::builders::GlobalDataMap globals;
+			LoaderLogger                  log;
 			auto program_type_context = program.getTypeContext();
 			for (const auto& type: program_type_context.getTypes())
 				type_context_builder.addType(type);
+			for (const auto& g: program.globalMap()) {
+				insertGlobalData(g, globals, log);
+			}
 
-			code::builders::GlobalDataMap globals;
-			LoaderLogger                  log;
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
 					auto code_global
