@@ -328,7 +328,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		if (options.isFlag("dvm-run")) {
 			auto run_result = driver.run();
 			if (run_result.has_value()) {
-				std::cout << "Execution ended. Exit code: " << run_result.value().exit_code << "\n";
+				return run_result.value().exit_code;
 			} else {
 				std::cerr << "Error: " << run_result.error() << "\n";
 				return 1;
