@@ -27,17 +27,19 @@ public:
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
 
+		// Local variable verification
+		TESTER_ADD_TEST(noInit);
+		TESTER_ADD_TEST(beforeInit);
+		TESTER_ADD_TEST(afterDeinit);
+		TESTER_ADD_TEST(invalidName);
+		
 		// @note: Not implemented yet
-		// TESTER_ADD_TEST(noInit);
-		// TESTER_ADD_TEST(beforeInit);
-		// TESTER_ADD_TEST(afterDeinit);
-		// TESTER_ADD_TEST(invalidOffset);
-
 		// TESTER_ADD_TEST(derefAfterDeinit);
 		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
 		// TESTER_ADD_TEST(derefWrongType);
 		// TESTER_ADD_TEST(refOnPrimitive);
 
+		// Type varification
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -96,7 +98,7 @@ private:
 		);
 	}
 
-	// Deinitialized valued verification
+	// Deinitialized value verification
 	void noInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
@@ -106,15 +108,11 @@ private:
 		);
 	}
 
-	// @TODO Use these tests when typecheck gets implemented,
-	// but swap those deleted loader errors for (then freshly added by you) builder ones.
-#if 0
 	void beforeInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -123,12 +121,23 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
 
+	void invalidName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/after_deinit.dbc",
+			{
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+// @TODO Use these tests when typecheck gets implemented,
+// but swap those deleted loader errors for (then freshly added by you) builder ones.
+#if 0
 	// Pointer verification
 	void derefAfterDeinit() {
 		loadInvalidDbc(
