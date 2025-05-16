@@ -192,12 +192,6 @@ const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const 
 	return globals_map;
 }
 
-vm::code::builders::TypeContext vm::loader::Program::getTypeContext() const {
-	return type_context_builder.build();
-}
-
-Loader::Loader(const bool validate_program): validate_program(validate_program) {}
-
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	const std::vector<fs::FilePath>& files
 ) {
@@ -207,8 +201,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 			auto                          type_context_builder = vm::code::getBuiltinTypes();
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
-			auto                          program_type_context = program.getTypeContext();
-			for (const auto& type: program_type_context.getTypes())
+			for (const auto& type: program.typeMap())
 				type_context_builder.addType(type);
 			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
 
