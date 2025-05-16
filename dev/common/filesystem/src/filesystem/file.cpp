@@ -17,7 +17,7 @@
 #include <random>
 
 namespace {
-	std::filesystem::path random_name(
+	std::filesystem::path randomName(
 		const std::filesystem::path& prefix_path, const size_t name_len = 16
 	) {
 		static std::random_device device;
@@ -73,7 +73,7 @@ namespace fs {
 
 		std::filesystem::path file_name;
 		if (custom_name.empty())
-			file_name = random_name(path);
+			file_name = randomName(path);
 		else {
 			file_name = path / custom_name;
 
