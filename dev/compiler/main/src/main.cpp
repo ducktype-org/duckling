@@ -298,9 +298,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addLongName("dvm-run")
 		             .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
 		             .conditional(
-						 [](const clap::ParsingResult& result) {
-							 return result.isParam('m');
-						 },
+						 [](const clap::ParsingResult& result) { return result.isParam('m'); },
 						 "Cannot run the code on the DVM without the --dvm-backend option."
 					 )
 		             .build());
@@ -322,6 +320,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+				.dvm_code_only_memory   = options.isFlag("dvm_run"),
 				.add_builtin_library    = options.isFlag("add-builtin-library"),
 				.external_objects_files = {},
 				.external_libs          = {},
@@ -375,6 +374,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
 				.compile_to_assembly    = false,
 				.dump_llvm_ir           = false,
+				.dvm_code_only_memory   = false,
 				.add_builtin_library    = true,
 				.external_objects_files = {},
 				.external_libs          = {},

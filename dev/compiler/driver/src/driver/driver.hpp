@@ -34,6 +34,12 @@ namespace compiler::driver {
 		base::StrID              output_file;
 		bool                     compile_to_assembly;
 		bool                     dump_llvm_ir;
+
+		/**
+		 * Do not saves the compiled DBC to file.
+		 * Useful when wanting to run the compiled bytecode.
+		 */
+		bool                     dvm_code_only_memory;
 		bool                     add_builtin_library;
 		std::vector<base::StrID> external_objects_files;
 		std::vector<base::StrID> external_libs;
