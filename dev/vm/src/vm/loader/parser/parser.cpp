@@ -18,7 +18,6 @@ namespace vm::loader::parser {
 		F8ParserState state(
 			tpc::TokenStream(td.tokens, td.bof_sentinel, td.eof_sentinel, 0, td.tokens.size()), log
 		);
-
 		return ParsedFile::parse(state);
 	}
 
@@ -33,7 +32,6 @@ namespace vm::loader::parser {
 		for (const auto& file: files) {
 			tokenized_files.emplace_back(tokenizeFile(file));
 			auto maybe_parsed = parseFile(tokenized_files.back().refMut(), &log);
-
 			if (log.bad()) return std::unexpected(std::move(log));
 			parsed_files.push_back(std::move(*maybe_parsed));
 		}
