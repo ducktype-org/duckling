@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(jumpSkipBlock);
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
+		TESTER_ADD_TEST(twoInits);
 
 		// @note: This tests breaks the current implementation of jump verification, but will be
 		// used soon when better verification is implemented.
@@ -57,6 +58,8 @@ private:
 	void initDeinit() { loadValidDbc("right/init_deinit.dbc"); }
 
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
+
+	void twoInits() { loadValidDbc("right/two_inits.dbc"); }
 
 	// Function verification
 	void multipleFunctions() {
