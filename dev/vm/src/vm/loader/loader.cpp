@@ -201,8 +201,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 			auto                          type_context_builder = vm::code::getBuiltinTypes();
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
-			for (const auto& type: program.typeMap())
-				type_context_builder.addType(type);
+			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
 			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
 
 			for (const auto& parsed_file: parsed_files) {
