@@ -297,6 +297,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dvm-run")
 		             .addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+		             .conditional(
+						 [](const clap::ParsingResult& result) {
+							 return result.isParam('m');
+						 },
+						 "Cannot run the code on the DVM without the --dvm-backend option."
+					 )
 		             .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
