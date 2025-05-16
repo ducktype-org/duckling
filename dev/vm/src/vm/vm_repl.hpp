@@ -34,6 +34,8 @@
  * =========================================
  * >>> ${name} 				-> Output a global variable with a specified name.
  * =========================================
+ * @todo: Currently REPL only supports passing and returning arguments of type i64.
+ * This should change after: https://github.com/ducktype-org/duckling/issues/776
  */
 class DuckVMRepl {
 public:

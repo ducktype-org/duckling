@@ -55,7 +55,7 @@ int main(int argc, const char** argv) {
 	                         .addShortName('r')
 	                         .addLongName("repl")
 	                         .addShortDesc("Executes the VM in REPL mode")
-							 .build())
+	                         .build())
 	                .add(clap::ParamBuilder::ofFlag()
 	                         .addLongName("stdlib")
 	                         .addShortDesc("When passed, loads standard library")
