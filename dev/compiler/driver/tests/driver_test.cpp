@@ -90,8 +90,6 @@ private:
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
 
 		auto run_result = driver.run();
-		assertTrue(, "DVM backend should not throw");
-		assertTrue(run_result.value().exit_code == 0, "DVM backend should not throw");
 		ASSERT_TRUE(run_result.has_value());
 		ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 	}
@@ -106,7 +104,7 @@ private:
 		                        .output_file            = base::StrID("test_module_exe"),
 		                        .compile_to_assembly    = false,
 		                        .dump_llvm_ir           = false,
-		                        .dvm_code_only_memory   = true,
+		                        .dvm_code_only_memory   = false,
 		                        .add_builtin_library    = true,
 		                        .external_objects_files = {},
 		                        .external_libs          = {} });

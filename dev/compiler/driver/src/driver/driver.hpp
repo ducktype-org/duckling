@@ -30,10 +30,10 @@ namespace compiler::driver {
 	 * @brief Compilation options.
 	 */
 	struct Options {
-		BackendType              backend_type;
-		base::StrID              output_file;
-		bool                     compile_to_assembly;
-		bool                     dump_llvm_ir;
+		BackendType backend_type;
+		base::StrID output_file;
+		bool        compile_to_assembly;
+		bool        dump_llvm_ir;
 
 		/**
 		 * Do not saves the compiled DBC to file.
