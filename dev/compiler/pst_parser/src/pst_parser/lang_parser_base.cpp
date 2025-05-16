@@ -43,5 +43,5 @@ namespace pst {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
 
-	AccessLocked<LangElement> LangElement::getById(u64 id) { return pst_id_map.at(id); }
+	AccessLocked<LangElement> LangElement::getByID(u64 id) { return pst_id_map.at(id); }
 }

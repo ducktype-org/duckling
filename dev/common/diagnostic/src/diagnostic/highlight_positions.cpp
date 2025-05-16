@@ -10,6 +10,8 @@ namespace dia {
 	/**
 	 * @brief Prints specified lines from a single source highlighted.
 	 *
+	 * @note This function should work on any set of positions, but test it properly before exporting.
+	 *
 	 * @param out Output printer.
 	 * @param source Source to print from.
 	 * @param start_line Line at which to start.
@@ -48,7 +50,10 @@ namespace dia {
 		std::vector<std::tuple<usize, base::RawView, base::Optional<printer::Color>>> colored;
 
 		for (auto pos: interesting_positions) {
+			// If the current_position is past the end of pos then we skip the pos.
 			if (pos.getEnd() < current_pos || pos.getStart() >= bound_pos) continue;
+			// If the current_position is before the position then we add the [current_pos,
+			// min(pos.start, bound_pos)) chunk of code uncolored.
 			if (pos.getStart() > current_pos) {
 				auto code_lines
 					= source->viewSplitRange(current_pos, std::min(bound_pos, pos.getStart()));
@@ -56,14 +61,17 @@ namespace dia {
 				for (auto& [line, view]: code_lines) colored.emplace_back(line, view, std::nullopt);
 				current_pos = std::min(pos.getStart(), bound_pos);
 			}
+			// If the current position is at the bound position end.
 			if (current_pos == bound_pos) break;
 
+			// Add the [current_pos, min(pos.end, bound_pos)) chunk colored
 			auto code_lines
 				= source->viewSplitRange(current_pos, std::min(bound_pos, pos.getEnd() + 1));
 
 			for (auto& [line, view]: code_lines) colored.emplace_back(line, view, high_col);
 			current_pos = std::min(bound_pos, pos.getEnd() + 1);
 		}
+		// Add the final chunk of code uncolored if needed.
 		if (current_pos < bound_pos) {
 			auto code_lines = source->viewSplitRange(current_pos, bound_pos);
 
@@ -71,6 +79,7 @@ namespace dia {
 			current_pos = bound_pos;
 		}
 
+		// Print the chunks with line numbers.
 		usize old{ (usize) -1 };
 
 		for (auto& [line, view, col]: colored) {
@@ -87,14 +96,22 @@ namespace dia {
 		out << "\n";
 	}
 
-	static constexpr usize safeMinus(usize a, usize b) {
-		if (a <= b) return 1;
-		return a - b;
-	}
+	namespace {
+		/**
+		 * @brief Substraction that safely operates on line numbers.
+		 */
+		constexpr usize safeMinus(const usize a, const usize b) {
+			if (a <= b) return 1;
+			return a - b;
+		}
 
-	static constexpr usize safePlus(usize a, usize b) {
-		if (a + b < a) return (usize) -1;
-		return a + b;
+		/**
+		 * @brief Addition that safely operates on line numbers.
+		 */
+		constexpr usize safePlus(const usize a, const usize b) {
+			if (a + b < a) return (usize) -1;
+			return a + b;
+		}
 	}
 
 	void printHighlightedPositions(
@@ -110,16 +127,17 @@ namespace dia {
 
 		std::ranges::sort(positions);
 
-		auto split_positions
-			= positions | chunk_by([&](auto one, auto oth) {
-				  return one.getLocation() == oth.getLocation()
-			          && safePlus(
-							 safePlus(
-								 safePlus(one.getEndLineColumn().first, neighborhood), neighborhood
-							 ),
-							 1
-						 ) >= oth.getEndLineColumn().first;
-			  });
+		// This is basically the logic to check if two positions would merge into a single chunk of
+		// code to print
+		const auto same_group = [&](auto one, auto oth) {
+			return one.getLocation() == oth.getLocation()
+			    && safePlus(
+					   safePlus(safePlus(one.getEndLineColumn().first, neighborhood), neighborhood),
+					   1
+				   ) >= oth.getEndLineColumn().first;
+		};
+
+		auto split_positions = positions | chunk_by(same_group);
 
 		bool nl = false;
 		for (auto chunk: split_positions) {
@@ -130,6 +148,7 @@ namespace dia {
 
 			auto file = chunk.back().getSource()->getPath();
 
+			// Calculate the bounds [first_line, last_line] of printing in this chunk
 			auto first_line = safeMinus(chunk.front().getStartLineColumn().first, neighborhood);
 			auto last_line  = std::min(
                 safePlus(chunk.back().getEndLineColumn().first, neighborhood),

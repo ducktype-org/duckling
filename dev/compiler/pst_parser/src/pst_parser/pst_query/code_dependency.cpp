@@ -52,6 +52,9 @@ namespace pst {
 
 		auto x = viewDependentTokens(id) | transform(get_token_pos);
 
+		// Merge the overlapping/adjacent positions
+		// Might be made into a separate function in the future.
+
 		std::set<dia::SourcePosition> positions;
 		for (auto el: x) positions.insert(el);
 
@@ -77,6 +80,8 @@ namespace pst {
 		using namespace std::views;
 
 		auto x = viewDependentTokens(id);
+
+		// Remove repeating tokens
 
 		std::set<CRef<lexer::Token>, TokenLtComparisonFunctor> positions;
 		for (auto el: x) positions.insert(el);
