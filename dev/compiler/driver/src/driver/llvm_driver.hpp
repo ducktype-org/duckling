@@ -21,6 +21,7 @@ namespace compiler::driver {
 	};
 
 	inline std::expected<RunOutput, std::string> LLVMDriver::run() {
+		CORE_PANIC("LLVM backend doesn't support run.");
 		return std::unexpected<std::string>{ "Run command is not supported in the LLVM Backend." };
 	}
 }

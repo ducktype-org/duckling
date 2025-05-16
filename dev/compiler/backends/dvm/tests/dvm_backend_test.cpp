@@ -61,7 +61,7 @@ private:
 		const base::Optional<std::string>& output     = {},
 		const std::vector<std::string>&    args       = {},
 		i64                                exit_code  = 0,
-		bool                               add_stdlib = false
+		bool                               add_stdlib = true
 	) {
 		using namespace compiler;
 		auto code = getModuleFromPath(std::move(module_path));
@@ -75,7 +75,7 @@ private:
 
 	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
 
-	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82, true); }
+	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
 };
 
 

@@ -87,8 +87,10 @@ private:
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
 
 		auto run_result = driver.run();
-		assertTrue(run_result.has_value(), "DVM backend should not throw");
+		assertTrue(, "DVM backend should not throw");
 		assertTrue(run_result.value().exit_code == 0, "DVM backend should not throw");
+		ASSERT_TRUE(run_result.has_value());
+		ASSERT_EQUAL_PRINT(0, run_result.value().exit_code);
 	}
 
 	void builtinCompiles() {
