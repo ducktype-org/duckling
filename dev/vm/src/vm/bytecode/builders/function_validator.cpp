@@ -105,6 +105,11 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 	if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
 }
 
+/**
+ * @brief Validates the instruction in the current stack state. 
+ * Checks each argument of the instruction if it has the expected type of an argument.
+ * @param instruction Instruction that is validated.
+ */
 void FunctionValidator::validateInstruction(const Instruction& instruction) const {
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
@@ -254,7 +259,7 @@ void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	// TODO: remove atMaybe after checking.
+	// TODO: remove atMaybe after adding a check for the call instruction.
 	auto maybe_func_type
 		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
 	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
