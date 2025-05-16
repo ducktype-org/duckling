@@ -202,5 +202,5 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
-    DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:")
+	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:")
 }

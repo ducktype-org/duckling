@@ -38,7 +38,7 @@ public:
 		// TESTER_ADD_TEST(derefWrongType);
 		// TESTER_ADD_TEST(refOnPrimitive);
 
-        // Type verification
+		// Type verification
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
@@ -216,7 +216,7 @@ private:
 	}
 
 	void inplaceCasts() {
-        runTestOnVm("right/inplace_cast.dbc", {}, "42");
+		runTestOnVm("right/inplace_cast.dbc", {}, "42");
 		loadInvalidDbc(
 			"wrong/types/inplace_cast_size_mismatch.dbc",
 			{

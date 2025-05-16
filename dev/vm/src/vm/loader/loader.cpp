@@ -204,15 +204,13 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto type_context_builder = vm::code::getBuiltinTypes();
+			auto                          type_context_builder = vm::code::getBuiltinTypes();
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
-			auto program_type_context = program.getTypeContext();
+			auto                          program_type_context = program.getTypeContext();
 			for (const auto& type: program_type_context.getTypes())
 				type_context_builder.addType(type);
-			for (const auto& g: program.globalMap()) {
-				insertGlobalData(g, globals, log);
-			}
+			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
 
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
