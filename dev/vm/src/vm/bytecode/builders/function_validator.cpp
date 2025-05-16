@@ -179,7 +179,8 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			variant_case_novalue(opargs::StackLocalAny) {}
 			variant_case_novalue(opargs::Immediate) {}
 			variant_case(opargs::Type, type_value) {
-				(void) type_context.getMetadata().atMaybe(type_value.type_name).expect<UnknownTypeError>(arg);
+				if (!type_context.getTypes().contains(type_value.type_name))
+				   throw UnknownTypeError>(arg);
 			}
 			variant_case(opargs::FunctionName, function_value) {}
 			variant_case_novalue(opargs::BuiltinFunctionName) {}
