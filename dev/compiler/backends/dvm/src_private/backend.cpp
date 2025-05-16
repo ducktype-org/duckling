@@ -1,5 +1,3 @@
-#include "get_parameter_types.hpp"
-
 #include <backends/dvm/backend.hpp>
 #include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -481,54 +479,10 @@ namespace compiler::backend_vm {
 		}
 	}
 
-	/**
-	 * @brief Insert function types for all functions that are called somewhere in the LIR code.
-	 * Used to add function types for functions that are not in the current module.
-	 */
-	void instertCalledFuncTypes(
-		query::Context&                         query_ctx,
-		TypeContextBuilder&                     type_context,
-		const std::vector<CRef<lir::Function>>& functions
-	) {
-		for (const auto& lir_function: functions) {
-			for (const auto& lir_block: lir_function->block_order) {
-				for (const auto& lir_instruction: lir_block->instructions) {
-					if (lir_instruction.operation == lir::Operation::Call) {
-						const auto callee_helios_id
-							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
-						auto name  = compiler::helios::name(callee_helios_id);
-						auto types = getParameterAndResultFromSymID(query_ctx, callee_helios_id);
-
-						auto param_types
-							= types.parameters | std::views::transform([](auto&& layout) {
-								  return getTypeFromLayout(layout);
-							  });
-
-						auto param_names
-							= param_types
-						    | std::views::transform([](auto&& type) { return typeName(type); })
-						    | std::ranges::to<std::vector>();
-
-						auto result_type = getTypeFromLayout(types.result_type);
-
-						auto result_type_name = typeName(result_type);
-
-						type_context.addType(FunctionType{ name, param_names, result_type_name });
-					}
-				}
-			}
-		}
-	}
-
-	Module::Module(
-		query::Context&                         query_ctx,
-		base::StrID                             module_id,
-		const std::vector<CRef<lir::Function>>& functions
-	):
+	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
 		  module_id(module_id),
 		  type_context_builder(vm::code::getBuiltinTypes()) {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
-		instertCalledFuncTypes(query_ctx, type_context_builder, functions);
 
 		TypeContext type_context = type_context_builder.build();
 		code.types               = type_context.getTypes() | std::ranges::to<std::vector>();

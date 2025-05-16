@@ -49,7 +49,7 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
-			backend_vm::Module m{ ctx, module_name, funcs };
+			backend_vm::Module m{ module_name, funcs };
 			code = m.build();
 		});
 		return code;
