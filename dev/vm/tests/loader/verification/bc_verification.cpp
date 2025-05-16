@@ -32,6 +32,7 @@ public:
 		TESTER_ADD_TEST(beforeInit);
 		TESTER_ADD_TEST(afterDeinit);
 		TESTER_ADD_TEST(invalidName);
+		TESTER_ADD_TEST(repeatedName);
 		
 		// @note: Not implemented yet
 		// TESTER_ADD_TEST(derefAfterDeinit);
@@ -128,9 +129,18 @@ private:
 
 	void invalidName() {
 		loadInvalidDbc(
-			"wrong/init_deinit/after_deinit.dbc",
+			"wrong/init_deinit/invalid_name.dbc",
 			{
 				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+	void repeatedName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/repeated_name.dbc",
+			{
+				vm::code::builders::DuplicatedLocalNameError::ERR_MSG,
 			}
 		);
 	}

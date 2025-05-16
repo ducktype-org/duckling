@@ -176,7 +176,10 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			}
 			variant_case(opargs::StackLocalAny, local) {
 				variant_match(instruction) {
-					variant_case_novalue(Op_init_lany_type) {}
+					variant_case_novalue(Op_init_lany_type) {
+						if (local_name_to_type.contains(local.var_name))
+							throw DuplicatedLocalNameError(arg);
+					}
 					// The default instruction for a label argument is a jump instruction.
 					variant_default {
 						if (!local_name_to_type.contains(local.var_name))
