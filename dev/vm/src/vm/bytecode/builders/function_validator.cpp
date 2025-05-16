@@ -5,6 +5,8 @@
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 
 using namespace vm::code::builders;
 
@@ -104,6 +106,114 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 }
 
 void FunctionValidator::validateInstruction(const Instruction& instruction) const {
+	auto args = std::visit(
+		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+			if constexpr (TwoArgumentOpcode<T>)
+				return { instr.arg0, instr.arg1 };
+			else if constexpr (OneArgumentOpcode<T>)
+				return { instr.arg0 };
+			else
+				return {};
+		},
+		instruction
+	);
+
+	std::vector<PrimitiveType> arg_types;
+
+	for (auto arg: args) {
+		variant_match(arg) {
+#define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
+	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
+		if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);      \
+		CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);                          \
+		variant_match(*entry) {                                                                  \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+#define GLOBAL_CASE(BIT_COUNT)                                                                   \
+	variant_case(opargs::GlobalI##BIT_COUNT, global) {                                           \
+		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
+		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
+		auto             type  = type_context.getTypes().at(entry->type);                        \
+		variant_match(*type) {                                                                   \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+			GLOBAL_CASE(8);
+			GLOBAL_CASE(16);
+			GLOBAL_CASE(32);
+			GLOBAL_CASE(64);
+
+			variant_case(opargs::GlobalPtr, global) {
+				if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);
+				CRef<GlobalData> entry = globals.at(global.global_data_name);
+				auto             type  = type_context.getTypes().at(entry->type);
+				variant_match(*type) {
+					variant_case_novalue(PointerType) {}
+					variant_default { throw InvalidArgumentTypeError(arg); }
+				}
+			}
+
+			STACK_LOCAL_CASE(8);
+			STACK_LOCAL_CASE(16);
+			STACK_LOCAL_CASE(32);
+			STACK_LOCAL_CASE(64);
+			variant_case(opargs::StackLocalPtr, local) {
+				if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
+				variant_match(*entry) {
+					variant_case(PointerType, pointer_type) { (void) pointer_type; }
+					variant_default { throw InvalidArgumentTypeError(arg); }
+				}
+			}
+			variant_case(opargs::StackLocalAny, local) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_init_lany_type) {}
+					// The default instruction for a label argument is a jump instruction.
+					variant_default {
+						if (!local_name_to_type.contains(local.var_name))
+							throw UnknownLocalNameError(arg);
+					}
+				}
+			}
+			variant_case_novalue(opargs::Immediate) {}
+			variant_case(opargs::Type, type_value) {
+				if (!type_context.getTypes().contains(type_value.type_name))
+					throw UnknownTypeError(arg);
+			}
+			variant_case(opargs::FunctionName, function_value) {}
+			variant_case_novalue(opargs::BuiltinFunctionName) {}
+			variant_case(opargs::Label, label_value) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_label) {}
+					// The default instruction for a label argument is a jump instruction.
+					variant_default {
+						if (!index_of_label.contains(label_value.label_name))
+							throw UnknownLabelError(label_value);
+					}
+				}
+			}
+
+			// All possible opargs must be handled. Unhandled opargs throw an exception.
+			variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
+		}
+	}
+
+	// We assert no cross-type operations on primitive types.
+	if (arg_types.size() == 2) {
+		if (arg_types.at(0).size == arg_types.at(1).size
+		    && arg_types.at(0).name != arg_types.at(1).name)
+			throw ArgumentMismatchError(instruction);
+	}
+
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
@@ -111,8 +221,7 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
-	// @TODO remove `atMaybe` after #732
-	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
@@ -123,7 +232,7 @@ void FunctionValidator::initStackState() {
 }
 
 void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
-	auto tod = type_context.getTypes().atMaybe(type.type_name).expect<UnknownTypeError>(type);
+	auto tod = type_context.getTypes().at(type.type_name);
 
 	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
@@ -142,6 +251,7 @@ void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	// TODO: remove atMaybe after checking.
 	auto maybe_func_type
 		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
 	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
@@ -185,7 +295,7 @@ void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& functi
 }
 
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
-	return index_of_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
+	return index_of_label.at(label.label_name);
 }
 
 void FunctionValidator::preprocessLabels() {
@@ -209,8 +319,8 @@ void FunctionValidator::preprocessLabels() {
 
 void FunctionValidator::traverseControlFlowGraph() {
 	visited_instructions.resize(instructions.size());
-	std::vector<std::pair<usize, decltype(stack_state)>> dfs_stack{
-		{ instructions.size(), {} }  // sentinel
+	std::vector<std::tuple<usize, decltype(stack_state), decltype(local_name_to_type)>> dfs_stack{
+		{ instructions.size(), {}, {} }  // sentinel
 	};
 	usize index = 0;
 
@@ -237,7 +347,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 							throw StackStructureMismatchError(
 								instr, jumps_to_label.at(instr.arg0.label_name)
 							);
-						std::tie(index, stack_state) = dfs_stack.back();
+						std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 						dfs_stack.pop_back();
 					}
 					opt_none {
@@ -249,14 +359,14 @@ void FunctionValidator::traverseControlFlowGraph() {
 			variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
 			variant_case(Op_jmpIf_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
 			}
 			variant_case(Op_jmpIfNot_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
 			}
 			variant_case(Op_ret, instr) {
-				std::tie(index, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
@@ -269,7 +379,7 @@ void FunctionValidator::traverseControlFlowGraph() {
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
 				validateTailcall(instr.arg0);
-				std::tie(index, stack_state) = dfs_stack.back();
+				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_default { index++; }

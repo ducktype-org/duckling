@@ -2,18 +2,13 @@ function main {
     # ret_val -> main ret_val
     # arg0 -> argc
     # arg1 -> *argv
-	init_lany_type 	x, i32;
 
-	mov_l32_imm x, 5;
+    init_lany_type  x, ptr_i64;
+    mov_l64_imm     x, 1;
+    output_l64      x;
 
-	jmp_label end;
-
-	label end;
-
-	output_l32 	x;
-
-	deinit; # x
+    deinit; # x
     deinit; # *argv
     deinit; # argc
-	ret;
+    ret;
 }
