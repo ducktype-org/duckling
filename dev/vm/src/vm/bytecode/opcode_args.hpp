@@ -307,4 +307,6 @@ namespace vm::opargs {
 		Label>;
 	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
 	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
+	using OpCodePrimitiveArg
+		= std::variant<StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64>;
 }

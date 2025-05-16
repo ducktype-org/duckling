@@ -49,8 +49,13 @@ namespace vm::code::builders {
 		void  pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type);
 		void  popStackState(const instructions::Op_deinit& cause);
 		void  popCallArgs(const opargs::OpCodeFunctionArg& function);
-		void  preprocessLabels();
-		void  traverseControlFlowGraph();
+		void  castPrimitive(
+			 const opargs::OpCodePrimitiveArg& local,
+			 const opargs::Type&               type,
+			 const Instruction&                instruction
+		 );
+		void preprocessLabels();
+		void traverseControlFlowGraph();
 
 	public:
 		FunctionValidator(

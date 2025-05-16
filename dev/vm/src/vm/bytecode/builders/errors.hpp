@@ -175,6 +175,8 @@ namespace vm::code::builders {
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
 	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
+	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
+	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.")
 
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
@@ -199,6 +201,6 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of type: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
-	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
+    DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:")
 }

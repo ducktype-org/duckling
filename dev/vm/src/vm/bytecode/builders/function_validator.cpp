@@ -1,5 +1,6 @@
 #include "function_validator.hpp"
 
+#include <base/macros/for_each.hpp>
 #include <base/variant.hpp>
 
 #include "vm/bytecode/instructions.hpp"
@@ -106,7 +107,6 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 }
 
 void FunctionValidator::validateInstruction(const Instruction& instruction) const {
-
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
 			if constexpr (TwoArgumentOpcode<T>)
@@ -179,7 +179,9 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			variant_case_novalue(opargs::StackLocalAny) {}
 			variant_case_novalue(opargs::Immediate) {}
 			variant_case(opargs::Type, type_value) {
-				(void) type_context.getMetadata().atMaybe(type_value.type_name).expect<UnknownTypeError>(arg);
+				(void) type_context.getMetadata()
+					.atMaybe(type_value.type_name)
+					.expect<UnknownTypeError>(arg);
 			}
 			variant_case(opargs::FunctionName, function_value) {}
 			variant_case_novalue(opargs::BuiltinFunctionName) {}
@@ -188,7 +190,8 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 					variant_case_novalue(Op_label) {}
 					// The default instruction for a label argument is a jump instruction.
 					variant_default {
-						if (!index_of_label.contains(label_value.label_name)) throw UnknownLabelError(label_value);
+						if (!index_of_label.contains(label_value.label_name))
+							throw UnknownLabelError(label_value);
 					}
 				}
 			}
@@ -284,6 +287,19 @@ void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& functi
 			throw InvalidTailcallArgumentsError(generic_arg);
 }
 
+void FunctionValidator::castPrimitive(
+	const opargs::OpCodePrimitiveArg& local, const opargs::Type& type, const Instruction& instruction
+) {
+	// These are guaranteed to exist by `validateInstruction`.
+	auto& curr_type      = local_name_to_type.at(VISIT(local, l, return l.var_name));
+	auto  new_type       = type_context.getTypes().at(type.type_name);
+	auto  curr_primitive = getTypeKind<PrimitiveType>(*curr_type).value();
+
+	auto new_primitive = getTypeKind<PrimitiveType>(*new_type).expect<NonPrimitiveCastError>(type);
+	if (curr_primitive.size != new_primitive.size) throw CastSizeMismatchError(instruction);
+	curr_type = new_type;
+}
+
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
 	return index_of_label.at(label.label_name);
 }
@@ -372,6 +388,16 @@ void FunctionValidator::traverseControlFlowGraph() {
 				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
+
+#define HANDLE_CAST(SIZE)                             \
+	variant_case(Op_cast_l##SIZE##_type, instr) {     \
+		castPrimitive(instr.arg0, instr.arg1, instr); \
+		index++;                                      \
+	}
+
+			FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
+#undef HANDLE_CAST
+
 			variant_default { index++; }
 		}
 	}

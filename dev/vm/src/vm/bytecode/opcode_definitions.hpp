@@ -203,6 +203,13 @@ DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPt
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
+// Casts a primitive type in-place. This does nothing at runtime, but is needed
+// for type checking.
+DEF_OPCODE(cast_l8_type, vm::opargs::StackLocalI8, vm::opargs::Type)
+DEF_OPCODE(cast_l16_type, vm::opargs::StackLocalI16, vm::opargs::Type)
+DEF_OPCODE(cast_l32_type, vm::opargs::StackLocalI32, vm::opargs::Type)
+DEF_OPCODE(cast_l64_type, vm::opargs::StackLocalI64, vm::opargs::Type)
+
 // terminates execution
 DEF_OPCODE(exit)
 

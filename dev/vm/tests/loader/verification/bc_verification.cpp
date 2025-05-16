@@ -38,11 +38,13 @@ public:
 		// TESTER_ADD_TEST(derefWrongType);
 		// TESTER_ADD_TEST(refOnPrimitive);
 
+        // Type verification
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
 		TESTER_ADD_TEST(globalWrongTypeSize);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
+		TESTER_ADD_TEST(inplaceCasts);
 	}
 
 private:
@@ -209,6 +211,16 @@ private:
 			"wrong/types/using_pointer_as_primitive.dbc",
 			{
 				vm::code::builders::InvalidArgumentTypeError::ERR_MSG,
+			}
+		);
+	}
+
+	void inplaceCasts() {
+        runTestOnVm("right/inplace_cast.dbc", {}, "42");
+		loadInvalidDbc(
+			"wrong/types/inplace_cast_size_mismatch.dbc",
+			{
+				vm::code::builders::CastSizeMismatchError::ERR_MSG,
 			}
 		);
 	}
