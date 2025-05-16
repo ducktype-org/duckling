@@ -185,7 +185,6 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 						if (local_name_to_type.contains(local.var_name))
 							throw DuplicatedLocalNameError(arg);
 					}
-					// The default instruction for a label argument is a jump instruction.
 					variant_default {
 						if (!local_name_to_type.contains(local.var_name))
 							throw UnknownLocalNameError(arg);
