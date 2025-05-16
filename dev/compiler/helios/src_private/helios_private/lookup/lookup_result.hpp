@@ -19,10 +19,6 @@
 
 namespace compiler::helios {
 
-	errors::HResult<SymbolList, errors::Failed> dealiasSymbolList(
-		query::Context& ctx, const SymbolList& symbol_list
-	);
-
 	struct NestedResult;
 
 	/**
@@ -37,6 +33,7 @@ namespace compiler::helios {
 		 * Direct symbols found.
 		 */
 		std::vector<SymID> leaves;
+
 		/**
 		 * Symbols through which results were found.
 		 */
@@ -63,7 +60,11 @@ namespace compiler::helios {
 		 */
 		[[nodiscard]]
 		errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> getAsSingle() const;
-		void insert(LookupResult other);
+
+		/**
+		 * Adds another LookupResult to self (leaves to leaves, children ot children).
+		 */
+		void merge(LookupResult other);
 
 		/**
 		 * Turns LookupResult into NestedResult referencing node.

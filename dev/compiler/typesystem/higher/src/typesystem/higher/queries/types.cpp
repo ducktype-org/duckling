@@ -206,6 +206,29 @@ namespace tsh {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryPointerType)
 
+	struct IMPLEMENT_QUERY(QueryStringType, StringAbstractType::Pimpl) {
+		static auto provide(Context&, QKey) -> PResult {
+			static auto string_impl = internal::StringAbstractTypeImpl{};
+			return &string_impl;
+		}
+
+		QUERY_AUTO_NO_CACHE
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryStringType)
+
+	struct IMPLEMENT_QUERY(QueryDynamicArrayType, DynamicArrayAbstractType::Pimpl) {
+		static auto provide(Context&, const QKey key) -> PResult {
+			const auto dynamic_array_pimpl = new internal::DynamicArrayAbstractTypeImpl{ key };
+			pushType(Box<internal::DynamicArrayAbstractTypeImpl>::fromPointer(dynamic_array_pimpl));
+			return dynamic_array_pimpl;
+		}
+
+		QUERY_AUTO_CACHE_CONSTRUCT
+	};
+
+	QUERY_IMPLEMENTATION_BOILERPLATE(QueryDynamicArrayType)
+
 	struct IMPLEMENT_QUERY(QueryTupleType, TupleAbstractType::Pimpl) {
 		static auto provide(Context&, const QKey& key) -> PResult {
 			const auto tuple_pimpl = new internal::TupleAbstractTypeImpl{ key.components };

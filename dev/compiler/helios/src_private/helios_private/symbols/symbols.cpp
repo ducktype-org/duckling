@@ -3,6 +3,8 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios_private/comp_time/int_eval.hpp>
 #include <helios_private/comp_time/type_eval.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/elements.hpp>
@@ -84,7 +86,9 @@ namespace compiler::helios {
 	 * @param stmt
 	 * @return Ref<SymbolData>
 	 */
-	CRef<SymbolData> makeSymbolFromStatement(ScopeID scope, pst::Access<pst::Stmt> stmt) {
+	CRef<SymbolData> makeSymbolFromStatement(
+		query::Context& ctx, ScopeID scope, pst::Access<pst::Stmt> stmt
+	) {
 		// @TODO: change this function to visitor to avoid dynamic_casts
 
 		PstSymbolData pst_data{
@@ -148,9 +152,12 @@ namespace compiler::helios {
 			auto using_stmt = stmt.dynamicCast<pst::Using>().value();
 			return putInSymtable(SymbolData::makePSTSymbolData(
 				{
-					.name = base::StrID(
-						base::strConcat("<USING> ", using_stmt->getPointed().front()).c_str()
-					),
+					.name
+					= base::StrID(base::strConcat(
+									  "<USING> ",
+									  using_stmt->getPointed().unlock(ctx)->getNames().front().value
+					)
+			                          .c_str()),
 					.kind        = SymbolKind::Using,
 					.is_wildcard = true,
 					.is_alias    = true,
@@ -288,7 +295,7 @@ namespace compiler::helios {
 			);
 			auto scope = getPSTElementParentScope(ctx, key.element);
 			if (auto stmt = key.element.unlock(ctx).dynamicCast<pst::Stmt>())
-				return PResult{ makeSymbolFromStatement(scope, stmt.value()) };
+				return PResult{ makeSymbolFromStatement(ctx, scope, stmt.value()) };
 			else
 				return PResult{ makeSymbolFromPSTElement(scope, key.element.unlock(ctx)) };
 		}
@@ -379,9 +386,8 @@ namespace compiler::helios {
 				// per-symbol-kind cases.
 
 				auto linked_scope = ctx.query<QueryLinkedScope>(key.symbol);
-				return *ctx.query<QueryLookupInScope>(
-					{ linked_scope, key.name, key.follow_wildcards }
-				);
+				return *HInterface::ofScope(linked_scope)
+				            .lookup(ctx, key.name, { key.follow_wildcards });
 			}
 
 			// @note: here case for variables will be calling TS
@@ -394,42 +400,6 @@ namespace compiler::helios {
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInSymbol);
-
-	struct LookupChainKey final {
-		std::vector<base::StrID> names;
-		ScopeID                  begin_scope;
-		bool                     follow_wildcards;
-	};
-
-	/**
-	 * @brief Query extension for looking-up chain of names
-	 */
-	errors::HResult<SymbolList, errors::Ambiguity, errors::SymbolNotFound> lookupChain(
-		query::Context& ctx, const LookupChainKey& key
-	) {
-		CORE_ASSERT(!key.names.empty(), "lookupDotted received zero names");
-
-		// initial symbol:
-		auto first = ctx.query<QueryLookupInScopeAndParents>(
-			{ key.begin_scope, key.names[0], key.follow_wildcards }
-		);
-
-		UNPACK_RESULT(SymbolList result =, first->getAsSingle());
-
-		if (key.names.size() == 1) return result;
-
-		for (usize i = 1; i < key.names.size(); i++) {
-			auto append_res = ctx.query<QueryLookupInSymbol>({
-				result.back(),
-				key.names[i],
-				key.follow_wildcards,
-			});
-
-			UNPACK_RESULT(auto single_append_res =, append_res->getAsSingle());
-			result.insert(result.end(), single_append_res.begin(), single_append_res.end());
-		}
-		return result;
-	}
 
 	struct IMPLEMENT_QUERY(QueryLinkedScope, ScopeID) {
 		struct QueryLinkedScopeVisitor final: pst::PstVisitorPanicky {
@@ -446,11 +416,12 @@ namespace compiler::helios {
 			}
 
 			void visitUsing(pst::Access<pst::Using> using_stmt) final {
-				auto names      = using_stmt->getPointed();
+				auto names      = using_stmt->getPointed().unlock(ctx)->getNames();
 				auto lookup_res = lookupChain(
 					ctx,
-					LookupChainKey{
-						.names = names, .begin_scope = scope(key), .follow_wildcards = false }
+					LookupChainKey{ .names       = names,
+				                    .begin_scope = scope(key),
+				                    .params      = { .with_wildcards = false } }
 				);
 				CORE_ASSERT(
 					lookup_res.hasValue() && not lookup_res.value().empty(),
@@ -507,59 +478,33 @@ namespace compiler::helios {
 
 	struct IMPLEMENT_QUERY(QueryDealias, QueryDealias_Result) {
 		static auto provide(Context& ctx, QKey key) -> PResult {
-			// @TODO: this does not handle usings.
-			if (kind(key) == SymbolKind::Using)
-				std::cerr << "Warning: QueryDealias does not handle usings (@TODO).\n";
-
-			if (kind(key) != SymbolKind::Alias) return SymbolList{ key };
-
-			auto alias_definition
-				= getSymRef(key)->getPSTData()->pst_element.unlock(ctx).dynamicCast<pst::Alias>().value(
-				);
-
-			bool       first_symbol = true;
-			SymbolList result;
-			for (auto pointed: alias_definition->getPointed()) {
-				auto pointed_symbol_lookup
-					= first_symbol
-				        ? ctx.query<QueryLookupInScopeAndParents>({ scope(key), pointed, false })
-				        : ctx.query<QueryLookupInSymbol>({ result.back(), pointed, false });
-				auto path = pointed_symbol_lookup->getAsSingle();
-				if (path.hasError()) {
-					variant_match(path.error()) {
-						variant_case(errors::Ambiguity, _) {
-							// this error might need to be reported earlier:
-							ctx.log(
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-									alias_definition->getSourcePosition(), "Ambiguity in dealias"
-								)
-							);
-
-							return errors::HError(errors::Failed());
-						}
-						variant_case(errors::SymbolNotFound, _) {
-							// this error might need to be reported earlier:
-							ctx.log(
-								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>::make(
-									alias_definition->getSourcePosition(),
-									"Symbol not found in dealias"
-								)
-							);
-
-							return errors::HError(errors::Failed());
-						}
-					}
-					CORE_PANIC("Invalid state");
-				}
-				for (auto path_symbol: path.value()) {
-					UNPACK_RESULT(const auto& dealiased =, *ctx.query<QueryDealias>(path_symbol));
-					result.insert(result.end(), dealiased.begin(), dealiased.end());
-				}
-
-				first_symbol = false;
+			std::vector<tpc::Identifier> pointed_chain;
+			if (kind(key) == SymbolKind::Using) {
+				auto using_stmt = getSymRef(key)
+				                      ->getPSTData()
+				                      ->pst_element.unlock(ctx)
+				                      .dynamicCast<pst::Using>()
+				                      .value();
+				pointed_chain = using_stmt->getPointed().unlock(ctx)->getNames();
+			} else if (kind(key) == SymbolKind::Alias) {
+				auto alias_stmt = getSymRef(key)
+				                      ->getPSTData()
+				                      ->pst_element.unlock(ctx)
+				                      .dynamicCast<pst::Alias>()
+				                      .value();
+				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
+			} else {
+				return SymbolList{ key };
 			}
 
-			return result;
+			UNPACK_RESULT_MOVE(
+				auto lookup_chain =,
+				lookupChain(
+					ctx, LookupChainKey{ pointed_chain, scope(key), { .with_wildcards = false } }
+				)
+			);
+
+			return lookup_chain;
 		}
 
 		QUERY_AUTO_CACHE_REF
