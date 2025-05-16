@@ -180,7 +180,7 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			variant_case_novalue(opargs::Immediate) {}
 			variant_case(opargs::Type, type_value) {
 				if (!type_context.getTypes().contains(type_value.type_name))
-				   throw UnknownTypeError>(arg);
+				   throw UnknownTypeError(arg);
 			}
 			variant_case(opargs::FunctionName, function_value) {}
 			variant_case_novalue(opargs::BuiltinFunctionName) {}
