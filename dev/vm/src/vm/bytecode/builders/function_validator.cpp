@@ -217,12 +217,23 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr); }
 	}
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
+}
+
+void FunctionValidator::validateUpcast(const Op_upcast_lptr_lptr& instruction) const {
+	auto dst_ptr_tod = local_name_to_type.at(instruction.arg0.var_name);
+	auto src_ptr_tod = local_name_to_type.at(instruction.arg1.var_name);
+
+	auto dst_type = type_context.getMetadata().at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
+	auto src_type = type_context.getMetadata().at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
+
+	if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 }
 
 void FunctionValidator::initStackState() {

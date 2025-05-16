@@ -41,6 +41,7 @@ namespace vm::code::builders {
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction) const;
 		void validateArgInstantiable(const opargs::Type& arg) const;
+		void validateUpcast(const instructions::Op_upcast_lptr_lptr& instruction) const;
 		void validateFunctionEnd() const;
 		void validateTailcall(const opargs::OpCodeFunctionArg& function) const;
 
