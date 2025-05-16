@@ -2,10 +2,10 @@
 
 #include <base/variant.hpp>
 
-#include "vm/bytecode/instructions.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 using namespace vm::code::builders;
@@ -106,7 +106,6 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 }
 
 void FunctionValidator::validateInstruction(const Instruction& instruction) const {
-
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
 			if constexpr (TwoArgumentOpcode<T>)
@@ -180,33 +179,35 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 					variant_case_novalue(Op_init_lany_type) {}
 					// The default instruction for a label argument is a jump instruction.
 					variant_default {
-						if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);
+						if (!local_name_to_type.contains(local.var_name))
+							throw UnknownLocalNameError(arg);
 					}
 				}
 			}
 			variant_case_novalue(opargs::Immediate) {}
 			variant_case(opargs::Type, type_value) {
 				if (!type_context.getTypes().contains(type_value.type_name))
-				throw UnknownTypeError(arg);
-		}
-		variant_case(opargs::FunctionName, function_value) {}
-		variant_case_novalue(opargs::BuiltinFunctionName) {}
-		variant_case(opargs::Label, label_value) {
-			variant_match(instruction) {
-				variant_case_novalue(Op_label) {}
-				// The default instruction for a label argument is a jump instruction.
-				variant_default {
-					if (!index_of_label.contains(label_value.label_name)) throw UnknownLabelError(label_value);
+					throw UnknownTypeError(arg);
+			}
+			variant_case(opargs::FunctionName, function_value) {}
+			variant_case_novalue(opargs::BuiltinFunctionName) {}
+			variant_case(opargs::Label, label_value) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_label) {}
+					// The default instruction for a label argument is a jump instruction.
+					variant_default {
+						if (!index_of_label.contains(label_value.label_name))
+							throw UnknownLabelError(label_value);
+					}
 				}
 			}
-		}
-		
-		// All possible opargs must be handled. Unhandled opargs throw an exception.
-		variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
-	}
-}
 
-// We assert no cross-type operations on primitive types.
+			// All possible opargs must be handled. Unhandled opargs throw an exception.
+			variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
+		}
+	}
+
+	// We assert no cross-type operations on primitive types.
 	if (arg_types.size() == 2) {
 		if (arg_types.at(0).size == arg_types.at(1).size
 		    && arg_types.at(0).name != arg_types.at(1).name)
