@@ -12,8 +12,12 @@ namespace dia {
 		const SourcePosition&              pos,
 		const printer::PrinterContentsSeq& reason
 	) const {
+		// Printing position in the same line as file path in order to allow clicking on the path
+		// in e.g. VSCode's terminal.
 		printPrefixInfo(out);
 		out << ":";
+		pos.printPosition(out);
+		out << "\nAt position ";
 		pos.printPosition(out);
 		out << ":\n" << reason << "\n";
 		printPrettySourceLinesFromPosition(out, pos);
