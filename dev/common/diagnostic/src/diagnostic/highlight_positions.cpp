@@ -76,7 +76,6 @@ namespace dia {
 			auto code_lines = source->viewSplitRange(current_pos, bound_pos);
 
 			for (auto& [line, view]: code_lines) colored.emplace_back(line, view, std::nullopt);
-			current_pos = bound_pos;
 		}
 
 		// Print the chunks with line numbers.
