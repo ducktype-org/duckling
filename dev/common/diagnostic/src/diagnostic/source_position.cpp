@@ -159,15 +159,17 @@ namespace dia {
 	}
 
 	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {
-		auto one_path   = getLocation()->getSourceFile();
-		auto other_path = other.getLocation()->getSourceFile();
-
-		auto path_ord = one_path.absolutePath() <=> other_path.absolutePath();
-		if (path_ord != std::strong_ordering::equal) return path_ord;
+		auto loc_ord = &*getLocation() <=> &*other.getLocation();
+		if (loc_ord != std::strong_ordering::equal) return loc_ord;
 
 		auto start_ord = getStart() <=> other.getStart();
 		if (start_ord != std::strong_ordering::equal) return start_ord;
 
 		return getEnd() <=> other.getEnd();
+	}
+
+	bool SourcePosition::operator==(const SourcePosition& other) const {
+		return getLocation() == other.getLocation() && getStart() == other.getStart()
+		    && getEnd() == other.getEnd();
 	}
 }

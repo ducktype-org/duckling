@@ -41,7 +41,10 @@ class LexerPositionTest: public tester::TestSuite {
 	MBox<tokenizer::TokenSource> td;
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(simplePositionTest); }
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(simplePositionTest);
+		TESTER_ADD_TEST(positionCompTest);
+	}
 
 private:
 	void simplePositionTest() {
@@ -55,6 +58,35 @@ private:
 		auto corr      = corr_json.view().stringView();
 
 		assertTrue(testing_utils::compareJson(result_stream.str(), corr), "outputs are not equal");
+	}
+
+	void positionCompTest() {
+		using namespace std::views;
+		auto content = repeat(' ') | take(20) | std::ranges::to<std::string>();
+		auto file1   = fs::FilePath::createVirtualFile(content);
+		auto file2   = fs::FilePath::createVirtualFile(content);
+
+		auto td1 = lexer::tokenizeFile(file1);
+		auto td2 = lexer::tokenizeFile(file2);
+
+		auto loc1 = td1->getLocation();
+		auto loc2 = td2->getLocation();
+
+		auto pos11 = dia::SourcePosition(loc1, 0, 5);
+		auto pos12 = dia::SourcePosition(loc2, 0, 7);
+		auto pos13 = dia::SourcePosition(loc1, 20, 20);
+
+		auto pos21 = dia::SourcePosition(loc2, 0, 7);
+		auto pos22 = dia::SourcePosition(loc2, 5, 5);
+
+		ASSERT_TRUE(pos11 < pos12);
+		ASSERT_TRUE(pos12 < pos13);
+		ASSERT_TRUE(pos21 < pos22);
+
+		ASSERT_TRUE(pos11 == pos11);
+		ASSERT_TRUE(pos13 == pos13);
+
+		ASSERT_TRUE((pos13 <=> pos21) == (pos11 <=> pos22));
 	}
 
 public:
