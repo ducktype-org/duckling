@@ -5,7 +5,7 @@
 
 namespace compiler::backend_vm {
 
-	ParametersAndReturn getParameterAndResultFromSymID(
+	FunctionSignature getParameterAndResultFromSymID(
 		query::Context& ctx, helios::SymID helios_symbol
 	) {
 		auto        type           = ctx.query<helios::QueryTypeOfSymbol>(helios_symbol)->value();

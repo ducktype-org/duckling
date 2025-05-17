@@ -7,7 +7,7 @@
 
 namespace compiler::backend_vm {
 
-	struct ParametersAndReturn {
+	struct FunctionSignature {
 		std::vector<tsl::TypeLayout> parameters;
 		tsl::TypeLayout              result_type;
 	};
@@ -16,7 +16,7 @@ namespace compiler::backend_vm {
 	 * Helper function to get type layouts of parameters and return value from HELIOS Symbol ID.
 	 * It is used to fetch function signatures for function outside of current module.
 	 */
-	ParametersAndReturn getParameterAndResultFromSymID(
+	FunctionSignature getParameterAndResultFromSymID(
 		query::Context& ctx, helios::SymID helios_symbol
 	);
 
