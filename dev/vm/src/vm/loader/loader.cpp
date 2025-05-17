@@ -127,7 +127,7 @@ namespace {
 		vm::code::builders::GlobalDataMap& globals_map,
 		LoaderLogger&                      log
 	) {
-		if (globals_map.contains(global.name))
+		if (globals_map.contains(global.name) && globals_map.at(global.name)->type != global.type)
 			log.log<DuplicatedGlobalDataError>(global.name, global.name.str);
 		globals_map.insert(global, global.name);
 	}
@@ -174,8 +174,7 @@ void Program::insertFunctions(
 }
 
 void Program::insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger) {
-	(void) logger;
-	for (const auto& global: new_globals) globals_map.insert(global, global.name);
+	for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
 }
 
 Box<vm::TypeMetadata> Program::produceTypeMetadata() const {

@@ -1,5 +1,6 @@
 #include "function_validator.hpp"
 
+#include "base/exceptions.hpp"
 #include <base/variant.hpp>
 
 #include <vm/bytecode/builders/builders.hpp>
@@ -106,7 +107,7 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 }
 
 /**
- * @brief Validates the instruction in the current stack state. 
+ * @brief Validates the instruction in the current stack state.
  * Checks each argument of the instruction if it has the expected type of an argument.
  * @param instruction Instruction that is validated.
  */
@@ -426,6 +427,7 @@ FunctionValidator::FunctionValidator(
 
 void FunctionValidator::validate() {
 	if (validated) CORE_PANIC("The validator can only run once.");
+	assertArgumentsExist();
 	preprocessLabels();
 	initStackState();
 	traverseControlFlowGraph();
@@ -439,4 +441,8 @@ std::vector<Instruction> FunctionValidator::extractReachableCode() {
 	for (auto [instruction, visited]: std::views::zip(instructions, visited_instructions))
 		if (visited) out.push_back(instruction);
 	return out;
+}
+
+void vm::code::builders::FunctionValidator::assertArgumentsExist() const {
+	throw base::NotYetImplemented("assertArgumentsExist");
 }

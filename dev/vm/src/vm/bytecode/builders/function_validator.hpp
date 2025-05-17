@@ -31,6 +31,7 @@ namespace vm::code::builders {
 		FunctionType                    type;
 
 		std::vector<bool>                                    visited_instructions;
+		// make this a class:
 		std::vector<LocalStackEntry>                         stack_state;
 		base::HashMap<base::StrID, CRef<TypeOfData>>         local_name_to_type;
 		base::HashMap<base::StrID, decltype(stack_state)>    stack_at_label;
@@ -51,6 +52,7 @@ namespace vm::code::builders {
 		void  popCallArgs(const opargs::OpCodeFunctionArg& function);
 		void  preprocessLabels();
 		void  traverseControlFlowGraph();
+		void  assertArgumentsExist() const;
 
 	public:
 		FunctionValidator(
