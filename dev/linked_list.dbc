@@ -9,14 +9,14 @@ type data: Node {
 type fun: cons {i64, LinkedList} LinkedList
 
 function cons {
-    # ret_val: result
-    # arg0: head
-    # arg1: tail
+    # ret_val: result -- null
+    # arg0: head -- 1
+    # arg1: tail -- null
 
     # using LinkedList = *Node
 
     # ret_val = new Node()
-    alloc_lptr_type ret_val, LinkedList;
+    alloc_lptr_type ret_val, Node;
 
     # head_ptr = &(ret_val->head)
     init_lany_type head_ptr, ptr_i64;
@@ -50,8 +50,8 @@ function tail {
     ret;
 }
 
-type fun: dump_list {LinkedList} void
-function dump_list {
+type fun: print_list {LinkedList} void
+function print_list {
     # arg0: LinkedList
 
     cmpNull_lptr arg0;
@@ -73,7 +73,8 @@ label non_empty;
 
     deinit;  # curr
     call_func tail;
-    ret_tailcall_func dump_list;
+   
+    ret_tailcall_func print_list;
 }
 
 function main {
@@ -99,9 +100,11 @@ label loop_begin;
     mov_lptr_lptr tail, list;
     call_func cons;
 
+    sub_l64_imm length, 1;
+
     jmp_label loop_begin;
 label loop_end;
 
-    call_func dump_list;
+    call_func print_list;
     ret;
 }
