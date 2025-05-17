@@ -47,7 +47,7 @@ namespace vm {
 		}();
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(std::move(code_result).value());
+			loaded_program.emplace(std::move(*code_result));
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
