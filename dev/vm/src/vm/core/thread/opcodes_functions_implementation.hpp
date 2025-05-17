@@ -476,6 +476,10 @@ namespace vm {
 		CORE_PANIC("ext_type not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_field not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type
@@ -613,6 +617,41 @@ namespace vm {
 		}
 		FUNCTION_CONT(2);  // skip ext_type
 	}
+
+RETURN_TYPE OpFuns::OPCODE_NAME(lea_lptr_lptr)(FUNCTION_ARGS) {
+        {
+            auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
+            auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+            // @note offset can be negative
+            auto offset = static_cast<i64>(instr[1].arg0);
+
+            dst = src;
+            dst.movePointer(offset);
+        }
+        FUNCTION_CONT(2);
+}
+
+RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+        {
+            auto  dst = derefStack<Pointer>(local_stack, instr->arg0);
+            auto type_id  = static_cast<usize>(instr[1].arg0);
+			auto type = thread.executing_program->types->at(TypeID{type_id});
+			auto dst_view = Memory::getPointerData(dst, type->getSize());
+            std::memcpy(dst_view.getBegin(), &local_stack[instr->arg1], dst_view.size());
+        }
+        FUNCTION_CONT(2);
+}
+
+RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+        {
+            auto  src = derefStack<Pointer>(local_stack, instr->arg1);
+            auto type_id  = static_cast<usize>(instr[1].arg0);
+			auto type = thread.executing_program->types->at(TypeID{type_id});
+			auto src_view = Memory::getPointerData(src, type->getSize());
+            std::memcpy(&local_stack[instr->arg0], src_view.getBegin(), src_view.size());
+        }
+        FUNCTION_CONT(2);
+}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{

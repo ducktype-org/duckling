@@ -191,6 +191,7 @@ DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocal
 // passes additional argument to preceding opcode
 DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(ext_type, vm::opargs::Type)
+DEF_OPCODE(ext_field, vm::opargs::Field)
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // does a shallow pointer copy
@@ -202,6 +203,16 @@ DEF_OPCODE(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+
+// stores local data at pointer
+// expects `ext_type` to be the next instruction (technically unnecessary)
+DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+// dereferences pointer and stores into local
+// expects `ext_type` to be the next instruction (technically unnecessary)
+DEF_OPCODE(load_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+// loads effective address of struct field
+// expects `ext_field` to be the next instruction
+DEF_OPCODE(lea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
 // terminates execution
 DEF_OPCODE(exit)

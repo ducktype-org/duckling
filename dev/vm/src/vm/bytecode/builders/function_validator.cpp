@@ -40,7 +40,7 @@ namespace {
 	}
 
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type>;
+	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 
@@ -55,7 +55,13 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_type> {
-		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr>;
+		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr, Op_store_lptr_lany, Op_load_lany_lptr>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<>
+	struct ExtensionMetadata<Op_ext_field> {
+		using RequiredAfter = std::tuple<Op_lea_lptr_lptr>;
 		using OptionalAfter = std::tuple<>;
 	};
 

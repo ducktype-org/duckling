@@ -53,15 +53,12 @@ namespace vm::loader::parser {
 			return { parseInt<i64, vm::opargs::Immediate>(state) };
 		}
 
-#define HANDLE_LOCAL(TYPE)                                    \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
-	}
-
-		FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
-
-#undef HANDLE_LOCAL
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+            tpc::Identifier type_name, field_name;
+            state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			return { type_name, field_name };
+		}
 
 #define HANDLE_STR_ARG(TYPE)                                  \
 	template<>                                                \
@@ -70,7 +67,7 @@ namespace vm::loader::parser {
 	}
 
 		FOR_EACH(
-			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES, VM_OPARG_LOCAL_TYPES
 		)
 
 #undef HANDLE_STR_ARG

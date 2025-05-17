@@ -74,6 +74,17 @@ namespace vm::loader::compiler {
 					ctx.log.log<UnknownTypeError>(type_arg, type_arg.type_name);
 					return 0;
 				}
+				variant_case(vm::opargs::Field, field_arg) {
+					// @TODO remove atMaybe after validating `ext_field` instruction
+					if (auto type_obj = ctx.type_map.atMaybe(field_arg.type_name)) {
+						auto opt_field_offset
+							= type_obj.value()->getFieldOffsetByName(field_arg.field_name);
+						if_opt_some(opt_field_offset, offset) { return static_cast<i64>(offset); }
+						// the wrong error, but this is temporary
+						ctx.log.log<UnknownTypeError>(field_arg, field_arg.field_name);
+					}
+					ctx.log.log<UnknownTypeError>(field_arg, field_arg.type_name);
+				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str

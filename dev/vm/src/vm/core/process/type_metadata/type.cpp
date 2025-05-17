@@ -66,7 +66,7 @@ namespace vm {
 		kind_type = Kind::Data;
 		auto data = kind::Data{};
 		for (auto [sub_name, sub_type]: fields_definitions) {
-			data.field_name_map[sub_name] = data.fields.size();
+			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
@@ -233,6 +233,17 @@ namespace vm {
 			if (field_id >= data.fields.size()) return base::Optional<Offset>();
 			return base::Optional<Offset>(Offset(data.fields[field_id].offset));
 		});
+	}
+
+	base::Optional<Offset> Type::getFieldOffsetByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](const kind::Data& data) -> base::Optional<Offset> {
+				if_opt_some(data.field_name_map.atMaybe(field_name), field_index) {
+					return data.fields[field_index].offset;
+				}
+				return {};
+			}
+		);
 	}
 
 	base::Optional<TypeCRef> Type::getFieldTypeByOffset([[maybe_unused]] Offset offset) const {

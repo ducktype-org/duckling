@@ -247,6 +247,26 @@ namespace vm::opargs {
 	};
 
 	/**
+	 * @brief Represents field name argument.
+	 */
+	struct Field final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "field";
+
+		Field() = default;
+
+		Field(const base::StrID type_name, const base::StrID field_name):
+			  type_name(type_name),
+			  field_name(field_name) {}
+
+		base::StrID type_name  = base::StrID("");
+		base::StrID field_name = base::StrID("");
+
+		constexpr bool operator==(const Field& other) const noexcept {
+			return type_name == other.type_name && field_name == other.field_name;
+		}
+	};
+
+	/**
 	 * @brief Represents function name argument.
 	 */
 	struct FunctionName final: code::ElementBase {
@@ -302,6 +322,7 @@ namespace vm::opargs {
 		VM_OPARG_GLOBAL_TYPES,
 		Immediate,
 		Type,
+		Field,
 		FunctionName,
 		BuiltinFunctionName,
 		Label>;
