@@ -62,6 +62,9 @@ function(duck_add_vm_tests suffix)
 
         duck_add_test_custom(vm ${test_set}_code_injection_test injection/code_injection.cpp
             USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_pointers_test pointers/vm_pointers_test.cpp
+            USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")

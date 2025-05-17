@@ -5,12 +5,12 @@ type data: Node {
     tail: LinkedList
 }
 
-type fun: cons {i64, LinkedList} LinkedList
+type fun: cons { i64, LinkedList } LinkedList
 
 function cons {
-    # ret_val: result -- null
-    # arg0: head -- 1
-    # arg1: tail -- null
+    # ret_val: result
+    # arg0: head
+    # arg1: tail
 
     # using LinkedList = *Node
 
@@ -59,8 +59,9 @@ label non_empty;
 }
 
 function main {
-    # INPUT: list_length
-    #        x1 x2 ... xn
+    # INPUT: n - list_length
+    #        x1 x2 ... xn - list elements
+    # OUTPUT: Inverted and concatenated elements
 
     init_lany_type length, i64;
     input_l64 length;
