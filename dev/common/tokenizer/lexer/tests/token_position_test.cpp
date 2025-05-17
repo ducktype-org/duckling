@@ -73,7 +73,7 @@ private:
 		auto loc2 = td2->getLocation();
 
 		auto pos11 = dia::SourcePosition(loc1, 0, 5);
-		auto pos12 = dia::SourcePosition(loc2, 0, 7);
+		auto pos12 = dia::SourcePosition(loc1, 0, 7);
 		auto pos13 = dia::SourcePosition(loc1, 20, 20);
 
 		auto pos21 = dia::SourcePosition(loc2, 0, 7);
