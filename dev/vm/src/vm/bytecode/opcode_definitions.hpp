@@ -54,6 +54,8 @@
 #endif
 
 
+// ========= MOV OPERATIONS ========
+
 DEF_OPCODE(mov_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 DEF_OPCODE(mov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
 DEF_OPCODE(cmov_l8_l8, vm::opargs::StackLocalI8, vm::opargs::StackLocalI8)
@@ -94,6 +96,11 @@ DEF_OPCODE(mov_l16_g16, vm::opargs::StackLocalI16, vm::opargs::GlobalI16)
 DEF_OPCODE(mov_l8_g8, vm::opargs::StackLocalI8, vm::opargs::GlobalI8)
 DEF_OPCODE(mov_lptr_gptr, vm::opargs::StackLocalPtr, vm::opargs::GlobalPtr)
 
+// does a shallow pointer copy
+DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+
+
+// ========= ARITHMETIC OPERATIONS ========
 
 DEF_OPCODE(add_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(add_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
@@ -132,6 +139,8 @@ DEF_OPCODE(div_l32_imm, vm::opargs::StackLocalI32, vm::opargs::Immediate)
 DEF_OPCODE(neg_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(neg_l32, vm::opargs::StackLocalI32)
 
+// ========= LOGICAL OPERATIONS ========
+
 DEF_OPCODE(cmpEq_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
 DEF_OPCODE(cmpEq_l64_imm, vm::opargs::StackLocalI64, vm::opargs::Immediate)
 DEF_OPCODE(cmpG_l64_l64, vm::opargs::StackLocalI64, vm::opargs::StackLocalI64)
@@ -150,12 +159,15 @@ DEF_OPCODE(cmpG_l8_imm, vm::opargs::StackLocalI8, vm::opargs::Immediate)
 // sets the flag if pointer is null
 DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 
+// ========= LABELS AND JUMPS ========
 
 DEF_OPCODE(label, vm::opargs::Label)
 
 DEF_OPCODE(jmp_label, vm::opargs::Label)
 DEF_OPCODE(jmpIf_label, vm::opargs::Label)
 DEF_OPCODE(jmpIfNot_label, vm::opargs::Label)
+
+// ========= FUNCTION OPERATIONS ========
 
 DEF_OPCODE(call_func, vm::opargs::FunctionName)
 DEF_OPCODE(call_builtin_func, vm::opargs::BuiltinFunctionName)
@@ -165,10 +177,14 @@ DEF_OPCODE(ret_tailcall_func, vm::opargs::FunctionName)
 // return
 DEF_OPCODE(ret)
 
+// ========= STACK OPERATIONS ========
+
 // initialize local variable on local stack with given type
 DEF_OPCODE(init_lany_type, vm::opargs::StackLocalAny, vm::opargs::Type)
 // pop variable from local stack
 DEF_OPCODE(deinit)
+
+// ========= IO OPERATIONS ========
 
 DEF_OPCODE(input_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(output_l64, vm::opargs::StackLocalI64)
@@ -176,26 +192,8 @@ DEF_OPCODE(output_l64, vm::opargs::StackLocalI64)
 DEF_OPCODE(input_l32, vm::opargs::StackLocalI32)
 DEF_OPCODE(output_l32, vm::opargs::StackLocalI32)
 
-DEF_OPCODE(nop)
 
-// allocates given type, stores pointer
-DEF_OPCODE(alloc_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
-// frees block under pointer
-DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
-// load 64-bit primitive value from `lptr + ofs`
-// expects `ext_l64` to be the next instruction
-DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalPtr)
-// stores 64-bit primitive value under `lptr + ofs`
-// expects `ext_l64` to be the next instruction
-DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
-// passes additional argument to preceding opcode
-DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
-DEF_OPCODE(ext_type, vm::opargs::Type)
-DEF_OPCODE(ext_field, vm::opargs::Field)
-// stores reference to local object of any type T in pointer<T>
-DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
-// does a shallow pointer copy
-DEF_OPCODE(mov_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// ========= CLASS OPERATIONS ========
 
 // initialises vtable pointer
 DEF_OPCODE(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
@@ -204,6 +202,13 @@ DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPt
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 
+// ========= GENERAL POINTER OPERATIONS ========
+
+// allocates given type, stores pointer
+DEF_OPCODE(alloc_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
+// frees block under pointer
+DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
+
 // stores local data at pointer
 // expects `ext_type` to be the next instruction (technically unnecessary)
 DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
@@ -211,8 +216,41 @@ DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny
 // expects `ext_type` to be the next instruction (technically unnecessary)
 DEF_OPCODE(load_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
 // loads effective address of struct field
+
+// stores reference to local object of any type T in pointer<T>
+DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+
+// ========= STRUCTURE OPERATIONS ========
+
 // expects `ext_field` to be the next instruction
-DEF_OPCODE(lea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(structLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// expects `ext_type_field` to be the next instruction
+DEF_OPCODE(structLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+// expects `ext_type_field` to be the next instruction
+DEF_OPCODE(structStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+
+// ========= TABLE OPERATIONS ========
+
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(tableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// expects `ext_type_l64` to be the next instruction
+DEF_OPCODE(tableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+// expects `ext_type_l64` to be the next instruction
+DEF_OPCODE(tableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+
+// ========= EXTS DEFINITIONS ========
+
+// passes additional argument to preceding opcode
+DEF_OPCODE(ext_l64, vm::opargs::StackLocalI64)
+DEF_OPCODE(ext_type, vm::opargs::Type)
+DEF_OPCODE(ext_field, vm::opargs::Field)
+DEF_OPCODE(ext_type_field, vm::opargs::Type, vm::opargs::Field)
+DEF_OPCODE(ext_type_l64, vm::opargs::Type, vm::opargs::StackLocalI64)
+
+// ========= MISC ========
+
+
+DEF_OPCODE(nop)
 
 // terminates execution
 DEF_OPCODE(exit)
