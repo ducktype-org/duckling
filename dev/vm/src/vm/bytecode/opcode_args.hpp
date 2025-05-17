@@ -60,10 +60,10 @@ namespace vm::opargs {
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
 		StackLocalVariant
 
-	DEFINE_GLOBAL(I64, "g64");
-	DEFINE_GLOBAL(I32, "g32");
-	DEFINE_GLOBAL(I16, "g16");
 	DEFINE_GLOBAL(I8, "g8");
+	DEFINE_GLOBAL(I16, "g16");
+	DEFINE_GLOBAL(I32, "g32");
+	DEFINE_GLOBAL(I64, "g64");
 	DEFINE_GLOBAL(Ptr, "gptr");
 
 	/**
