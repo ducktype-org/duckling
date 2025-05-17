@@ -38,9 +38,9 @@ namespace vm {
 		std::unique_lock                                       lock(rw_global);
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::FilePath>, files) { return loader->getProgram(files); }
+				variant_case(std::vector<fs::FilePath>, files) { return loader.getProgram(files); }
 				variant_case(std::vector<code::CodeCollection>, code) {
-					return loader->getProgram(code);
+					return loader.getProgram(code);
 				}
 			}
 			CORE_UNREACHABLE();
@@ -278,11 +278,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess():
-		  status(api::ExecutionNotStarted{}),
-		  loader(makeBox<loader::Loader>(VALIDATE_CODE)) {
-		vm_threads.emplace_back(*this);
-	}
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}) { vm_threads.emplace_back(*this); }
 
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)
