@@ -27,7 +27,7 @@ namespace pst {
 	 */
 	class LangElement: public tpc::Element {
 	private:
-		inline static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map{};
+		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
 
 	public:
 		using Child = AccessLocked<LangElement>;
