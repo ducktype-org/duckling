@@ -614,6 +614,15 @@ namespace vm {
 		FUNCTION_CONT(2);  // skip ext_type
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_func)(FUNCTION_ARGS) {
+		{
+			auto& obj_ptr = instr->arg0;
+			auto& method_name = instr->arg1;
+			std::cerr << "This is a placeholder\n";
+		}
+		FUNCTION_CONT(1);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;

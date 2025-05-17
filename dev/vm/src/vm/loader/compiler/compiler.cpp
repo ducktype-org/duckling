@@ -274,6 +274,7 @@ namespace vm::loader::compiler {
 	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.funcMap().size());
+		// Here VTable building should appear.
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
