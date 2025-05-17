@@ -1,0 +1,107 @@
+type pointer: LinkedList Node
+type pointer: LinkedListPtr LinkedList
+
+type data: Node {
+    head: i64,
+    tail: LinkedList
+}
+
+type fun: cons {i64, LinkedList} LinkedList
+
+function cons {
+    # ret_val: result
+    # arg0: head
+    # arg1: tail
+
+    # using LinkedList = *Node
+
+    # ret_val = new Node()
+    alloc_lptr_type ret_val, LinkedList;
+
+    # head_ptr = &(ret_val->head)
+    init_lany_type head_ptr, ptr_i64;
+    lea_lptr_lptr head_ptr, ret_val;
+    ext_field Node.head;
+
+    # *head_ptr = head
+    store_lptr_lany head_ptr, arg0;
+    ext_type i64;
+    deinit;  # head_ptr
+
+    # ret_val->tail = arg1
+    init_lany_type tail_ptr, LinkedListPtr;
+    lea_lptr_lptr tail_ptr, ret_val;
+    ext_field Node.tail;
+
+    store_lptr_lany tail_ptr, arg1;
+    ext_type LinkedList;
+    deinit;  # tail_ptr
+
+    # return ret_val
+    ret;
+}
+
+# OPTIMISED!!!
+type fun: tail {} LinkedList
+function tail {
+    lea_lptr_lptr ret_val, ret_val;
+    ext_field Node.tail;
+
+    ret;
+}
+
+type fun: dump_list {LinkedList} void
+function dump_list {
+    # arg0: LinkedList
+
+    cmpNull_lptr arg0;
+    jmpIfNot_label non_empty;
+    ret;
+label non_empty;
+
+    init_lany_type curr, i64;
+    init_lany_type x_ptr, ptr_i64;
+
+    # curr = arg0->x
+    lea_lptr_lptr x_ptr, arg0;
+    ext_field Node.head;
+    load_lany_lptr curr, x_ptr;
+    ext_type i64;
+    deinit;  # x_ptr
+
+    output_l64 curr;
+
+    deinit;  # curr
+    call_func tail;
+    ret_tailcall_func dump_list;
+}
+
+function main {
+    # INPUT: list_length
+    #        x1 x2 ... xn
+
+    init_lany_type length, i64;
+    input_l64 length;
+
+    # list = []  # aka NULL
+    init_lany_type list, LinkedList;
+
+label loop_begin;
+    cmpEq_l64_imm length, 0;
+    jmpIf_label loop_end;
+
+    # curr = input()
+    init_lany_type curr, i64;
+    input_l64 curr;
+
+    # list = cons(curr, list)
+    init_lany_type tail, LinkedList;
+    mov_lptr_lptr tail, list;
+    call_func cons;
+
+    jmp_label loop_begin;
+label loop_end;
+
+    call_func dump_list;
+    ret;
+}

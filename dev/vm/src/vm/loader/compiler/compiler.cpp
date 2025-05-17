@@ -82,8 +82,10 @@ namespace vm::loader::compiler {
 						if_opt_some(opt_field_offset, offset) { return static_cast<i64>(offset); }
 						// the wrong error, but this is temporary
 						ctx.log.log<UnknownTypeError>(field_arg, field_arg.field_name);
+						return 0;
 					}
 					ctx.log.log<UnknownTypeError>(field_arg, field_arg.type_name);
+					return 0;
 				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
@@ -111,6 +113,7 @@ namespace vm::loader::compiler {
 					// because our instruction counter is a pointer.
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
+				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
 
 			CORE_UNREACHABLE();
