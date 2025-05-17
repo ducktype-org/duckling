@@ -1,5 +1,4 @@
 type pointer: LinkedList Node
-type pointer: LinkedListPtr LinkedList
 
 type data: Node {
     head: i64,
@@ -18,96 +17,21 @@ function cons {
     # ret_val = new Node()
     alloc_lptr_type ret_val, Node;
 
-    # head_ptr = &(ret_val->head)
-    init_lany_type head_ptr, ptr_i64;
-    lea_lptr_lptr head_ptr, ret_val;
-    ext_field Node.head;
+    structStore_lptr_lany ret_val, arg0;
+    ext_type_field i64, Node.head;
 
-    # *head_ptr = head
-    store_lptr_lany head_ptr, arg0;
-    ext_type i64;
-    deinit;  # head_ptr
+    structStore_lptr_lany ret_val, arg1;
+    ext_type_field LinkedList, Node.tail;
 
-    # ret_val->tail = arg1
-    init_lany_type tail_ptr, LinkedListPtr;
-    lea_lptr_lptr tail_ptr, ret_val;
-    ext_field Node.tail;
-
-    store_lptr_lany tail_ptr, arg1;
-    ext_type LinkedList;
-    deinit;  # tail_ptr
-
-    # return ret_val
     ret;
 }
 
 # OPTIMISED!!!
 type fun: tail {} LinkedList
 function tail {
-    # ---- TABLE ----
-    # tableLoad_lany_lptr_type_l64
-    # ext_type_l64
+    structLoad_lany_lptr ret_val, ret_val;
+    ext_type_field LinkedList, Node.tail;
 
-    # tableStore_lptr_lany_type_l64
-    # ext_type_l64
-
-    # tableLea_lptr_lptr_l64  # dst = &src[l64]
-    # lea_lptr_lptr_imm  #
-
-    # ---- STRUCT ----
-    # structLea_lptr_lptr_field # dst = &src->field; -- istnieje
-    # structLoad_lany_lptr_type_field #   std::memset(dst, &src->field, sizeof(type));
-    #                   alternatywnie --  dst = src->field
-
-    # structStore_lptr_lany_type_field # dst->field = src
-
-    # init_lany_type ptr_ptr_node, LinkedListPtr;
-    # structLea_lptr_lptr_field ptr_ptr_node, ret_val;
-    # ext_field Node.tail;
-
-
-    init_lany_type ptr_ptr_node, LinkedListPtr;
-    lea_lptr_lptr ptr_ptr_node, ret_val;
-    ext_field Node.tail;
-
-    load_lany_lptr ret_val, ptr_ptr_node;
-    ext_type LinkedList;
-
-    # lea:
-    # &node->left;
-    # lea-deref:
-    # node = node->left;
-    # leaDeref_lptr_lptr
-
-    ret;
-}
-
-type static_table: table_i64 i64 5
-type pointer: ptr_table_i64 table_i64;
-type fun: print_table { ptr_i64 } void
-function print_table {
-    # prints all values in a table
-    init_lany_type index, i64;
-    mov_l64_imm index, 5;
-
-    init_lany_type value, i64;
-
-label loop;
-    cmpEq_l64_imm index, 0;
-    jmpIf_label end;
-    # --- value = arg0[0];
-    load_lany_ptr value, arg0;
-    ext_type i64;
-
-    # --- arg0 = &arg0[1];
-    init_lany_type ppi64, ptr_ptr_i64;
-    lea_lptr_lptr ppi64, arg0;
-    ext_field table_i64.1;
-
-
-
-    jmp_label loop;
-label end;
     ret;
 }
 
@@ -121,14 +45,10 @@ function print_list {
 label non_empty;
 
     init_lany_type curr, i64;
-    init_lany_type x_ptr, ptr_i64;
 
     # curr = arg0->x
-    lea_lptr_lptr x_ptr, arg0;
-    ext_field Node.head;
-    load_lany_lptr curr, x_ptr;
-    ext_type i64;
-    deinit;  # x_ptr
+    structLoad_lany_lptr curr, arg0;
+    ext_type_field i64, Node.head;
 
     output_l64 curr;
 

@@ -480,6 +480,14 @@ namespace vm {
 		CORE_PANIC("ext_field not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type
@@ -562,7 +570,87 @@ namespace vm {
 		FUNCTION_CONT(2);  // skip ext_type
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(lea_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto dst_ptr  = derefStack<Pointer>(local_stack, instr->arg0);
+			auto src      = &local_stack[instr->arg1];
+			auto type_id  = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type     = thread.executing_program->types->at(type_id);
+			auto dst_view = Memory::getPointerData(dst_ptr, type->getSize());
+			std::memcpy(dst_view.getBegin(), src, dst_view.size());
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst      = &local_stack[instr->arg0];
+			auto src_ptr  = derefStack<Pointer>(local_stack, instr->arg1);
+			auto type_id  = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type     = thread.executing_program->types->at(type_id);
+			auto src_view = Memory::getPointerData(src_ptr, type->getSize());
+			std::memcpy(dst, src_view.getBegin(), src_view.size());
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_l64_lptr_ofs)(FUNCTION_ARGS) {
+		constexpr const uint8_t view_size = 8;
+		int                     next      = 1;
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
+			auto view    = Memory::getPointerData(pointer, view_size);
+			u64  idx     = 0;
+#ifdef USE_TAIL_CALLS
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
+				idx = derefStack<u64>(local_stack, instr[1].arg0);
+				next++;
+			}
+#else
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
+				idx = derefStack<u64>(local_stack, instr[1].arg0);
+				next++;
+			}
+#endif
+
+			// @TODO: this assert degrades performance by 5-10%
+			// CORE_ASSERT(view.size() == view_size, "bad type");
+
+			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
+		}
+		FUNCTION_CONT(next);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_l64_ofs)(FUNCTION_ARGS) {
+		constexpr const uint8_t view_size = 8;
+		int                     next      = 1;
+		{
+			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto view    = Memory::getPointerData(pointer, view_size);
+			u64  idx     = 0;
+#ifdef USE_TAIL_CALLS
+			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
+				idx = derefStack<u64>(local_stack, instr[1].arg0);
+				next++;
+			}
+#else
+			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+				[[likely]] {
+				idx = derefStack<u64>(local_stack, instr[1].arg0);
+				next++;
+			}
+#endif
+
+			// @TODO: this assert degrades performance by 5-10%
+			// CORE_ASSERT(view.size() == view_size, "bad type");
+
+			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
+		}
+		FUNCTION_CONT(next);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
@@ -575,24 +663,29 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto dst      = derefStack<Pointer>(local_stack, instr->arg0);
-			auto type_id  = static_cast<usize>(instr[1].arg0);
-			auto type     = thread.executing_program->types->at(TypeID{ type_id });
-			auto dst_view = Memory::getPointerData(dst, type->getSize());
-			std::memcpy(dst_view.getBegin(), &local_stack[instr->arg1], dst_view.size());
+			auto dst_ptr = derefStack<Pointer>(local_stack, instr->arg0);
+			auto src     = &local_stack[instr->arg1];
+
+			auto type_id      = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type         = thread.executing_program->types->at(type_id);
+			auto field_offset = static_cast<usize>(instr[1].arg1);
+			auto dst_view     = Memory::getPointerData(dst_ptr, type->getSize());
+			std::memcpy(dst_view.getBegin() + field_offset, src, dst_view.size());
 		}
 		FUNCTION_CONT(2);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
 		{
-			auto src      = derefStack<Pointer>(local_stack, instr->arg1);
-			auto type_id  = static_cast<usize>(instr[1].arg0);
-			auto type     = thread.executing_program->types->at(TypeID{ type_id });
-			auto src_view = Memory::getPointerData(src, type->getSize());
-			std::memcpy(&local_stack[instr->arg0], src_view.getBegin(), src_view.size());
+			auto dst          = &local_stack[instr->arg0];
+			auto src_ptr      = derefStack<Pointer>(local_stack, instr->arg1);
+			auto type_id      = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type         = thread.executing_program->types->at(type_id);
+			auto field_offset = static_cast<usize>(instr[1].arg1);
+			auto src_view     = Memory::getPointerData(src_ptr, type->getSize());
+			std::memcpy(dst, src_view.getBegin() + field_offset, src_view.size());
 		}
 		FUNCTION_CONT(2);
 	}
