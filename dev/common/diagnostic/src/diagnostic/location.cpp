@@ -4,7 +4,7 @@
 
 namespace dia {
 	void Location::printPrefixInfo(printer::PrinterOStream& out) const {
-		out << "In file: " << getSourceFile().strView().data() << "\n";
+		out << "In file: " << getSourceFile().strView().data();
 	}
 
 	void Location::printMessage(
@@ -13,7 +13,7 @@ namespace dia {
 		const printer::PrinterContentsSeq& reason
 	) const {
 		printPrefixInfo(out);
-		out << "At position ";
+		out << ":";
 		pos.printPosition(out);
 		out << ":\n" << reason << "\n";
 		printPrettySourceLinesFromPosition(out, pos);
