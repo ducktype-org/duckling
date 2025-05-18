@@ -37,7 +37,9 @@ void VmTestSuite::runTestOnVm(
 	i64                                exit_code,
 	bool                               add_stdlib
 ) {
-	handleTestResult(runTestOnVmGetResult(code, optional_input, optional_output, args), exit_code);
+	handleTestResult(
+		runTestOnVmGetResult(code, optional_input, optional_output, args, add_stdlib), exit_code
+	);
 }
 
 void VmTestSuite::loadInvalidDbc(
@@ -70,8 +72,7 @@ auto VmTestSuite::runTestImpl(
 	vm::PID                            pid,
 	const base::Optional<std::string>& optional_input,
 	const base::Optional<std::string>& optional_output,
-	const std::vector<std::string>&    args,
-	bool                               add_stdlib
+	const std::vector<std::string>&    args
 ) -> TestResult {
 	EXPECT_VOID(vm::api::run(pid, args));
 
@@ -110,7 +111,7 @@ auto VmTestSuite::runTestOnVmGetResult(
 	bool                               add_stdlib
 ) -> TestResult {
 	auto pid = initProcess();
-
+	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
 	EXPECT_VOID(vm::api::loadCode(pid, { code }));
 	return runTestImpl(pid, optional_input, optional_output, args);
 }

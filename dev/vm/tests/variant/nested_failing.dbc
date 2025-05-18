@@ -35,6 +35,8 @@ function main {
     store_lptr_lany ptr, value;
     ext_type i64;
 
+    variantSet_inner_lvnt_type v0, i64;
+
     # let read_val: i64 = *ptr;
     init_lany_type read_val, i64;
     load_lany_lptr read_val, ptr;

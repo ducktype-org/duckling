@@ -54,7 +54,6 @@ namespace vm::opargs {
 	DEFINE_STACK_LOCAL(I64, "l64");
 	DEFINE_STACK_LOCAL(Any, "lany");
 	DEFINE_STACK_LOCAL(Ptr, "lptr");
-	DEFINE_STACK_LOCAL(Variant, "lvnt");
 
 #define VM_OPARG_LOCAL_TYPES                                                                 \
 	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \

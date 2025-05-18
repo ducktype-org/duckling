@@ -12,11 +12,11 @@ function main {
     # Scenario 1 Do not initialize variant type.
     cmpEq_l64_imm scenario, 1;
     jmpIf_label not_scenario_1;
-        set_inner_lvnt_type v1, i64;        # v1.setType<i64>();
+        variantSet_inner_lvnt_type v1, i64;        # v1.setType<i64>();
     label not_scenario_1;
 
     init_lany_type ptr, ptr_i64;        # var ptr: i64*;
-    get_inner_lptr_lvnt ptr, v1;        # ptr = v1.getData<i64>();  -- this causes panic in scenario 1
+    variantGet_inner_lptr_lvnt ptr, v1;        # ptr = v1.getData<i64>();  -- this causes panic in scenario 1
     ext_type i64;
 
     init_lany_type int, i64;            # var int: i64;
@@ -25,7 +25,7 @@ function main {
     # Scenario 2 - Invalidate all data pointers.
     cmpEq_l64_imm scenario, 2;
     jmpIfNot_label not_scenario_2;
-        set_inner_lvnt_type v1, i64;
+        variantSet_inner_lvnt_type v1, i64;
     label not_scenario_2;
 
     store_lptr_l64_ofs ptr, int;        # *ptr = int;  -- this causes panic in scenario 2

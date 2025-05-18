@@ -30,8 +30,7 @@ private:
 		vm::PID                            pid,
 		const base::Optional<std::string>& optional_input,
 		const base::Optional<std::string>& optional_output,
-		const std::vector<std::string>&    args,
-		bool                               add_stdlib = false
+		const std::vector<std::string>&    args
 	);
 
 protected:
