@@ -42,4 +42,8 @@ namespace pst {
 	void LangElement::acceptVisitor(PstVisitor&) const {
 		CORE_PANIC("PstVisitor not supported for " + elementType());
 	}
+
+	base::HashMap<u64, AccessLocked<LangElement>> LangElement::pst_id_map{};
+
+	AccessLocked<LangElement> LangElement::getByID(u64 id) { return pst_id_map.at(id); }
 }

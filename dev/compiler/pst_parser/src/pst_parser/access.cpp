@@ -1,6 +1,6 @@
 #include "access.hpp"
 
-#include "pst_access_side_input.hpp"
+#include "pst_query/pst_access_side_input.hpp"
 
 #include <query_framework/query_input_impl.hpp>
 

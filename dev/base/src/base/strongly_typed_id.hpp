@@ -47,7 +47,10 @@
 			out.id = NAME::NEXT_ID++;                                    \
 			return out;                                                  \
 		}                                                                \
-		static NAME bad() { return NAME{ BAD_ID }; }                     \
+		[[nodiscard]]                                                    \
+		static NAME bad() {                                              \
+			return NAME{ BAD_ID };                                       \
+		}                                                                \
 		[[nodiscard]]                                                    \
 		inline constexpr explicit operator u64() const noexcept {        \
 			return id;                                                   \

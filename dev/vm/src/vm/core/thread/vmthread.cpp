@@ -436,7 +436,7 @@ namespace vm {
 
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
-			                        .expect("Called function does not exist!");
+			                        .expect("Called function does not exist: " + func_name);
 			low::FuncData start_function;
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {

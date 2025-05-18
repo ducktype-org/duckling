@@ -1,8 +1,10 @@
 #include <clap/clap.hpp>
+#include <diagnostic/highlight_positions.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
+#include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/pst_query/pst_access_side_input.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -56,22 +58,18 @@ int notMain(int argc, const char* const* argv) {
 	defer(printContextErrors());
 
 	auto top_level = query::entryPoint<helios::QueryTopLevelEntities>(root);
-	std::cerr << top_level->debugPrint() << "\n\n";
-
-	std::cerr << "Inputs of entire hout:\n";
-
-	auto pst_access_id = pst::detail::PSTAccessSideInput::getID();
-	auto deps = query::Context::getGraph().getNodeDepsFiltered<helios::QueryTopLevelEntities>(
-		root, pst_access_id
-	);
-	printQueryDeps(deps);
 
 	for (auto& i: top_level->functions) {
-		std::cerr << "\nInputs of function: " << i.original_name.strView() << "\n";
-		auto i_deps = query::Context::getGraph().getNodeDepsFiltered<helios::QueryCodeOFFun>(
-			i.original_symbol, pst_access_id
-		);
-		printQueryDeps(i_deps);
+		if (i.original_name == base::StrID("main")) {
+			auto positions
+				= pst::queryPositionDependencies<helios::QueryCodeOFFun>(i.original_symbol);
+
+			printer::PrinterOStream str;
+			dia::printHighlightedPositions(str, positions);
+
+			printer::StreamPrinter p;
+			p.print(str.getContents());
+		}
 	}
 	return 0;
 }
