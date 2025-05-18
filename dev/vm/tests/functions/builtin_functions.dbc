@@ -19,7 +19,7 @@ function main {
     call_func  builtin_output_i64; # should output "input1 + input2"
 
     init_lany_type          z, i64; # [16, 24)
-    mov_l64_l64        y,   x;
+    mov_l64_l64        z,   x;
 
     call_func  builtin_output_i64; # should output the size of outputed value
 

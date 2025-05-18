@@ -235,28 +235,6 @@ void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
-// void FunctionValidator::initStackState() {
-// 	pushStackState(base::StrID("ret_val"), type.result);
-// 	for (auto [idx, param]: std::views::enumerate(type.parameters))
-// 		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
-// }
-
-// void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
-// 	auto tod = type_context.getTypes().at(type.type_name);
-
-// 	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
-
-// 	stack_state.emplace_back(local.var_name, tod);
-// 	local_name_to_type.put(local.var_name, tod);
-// }
-
-// void FunctionValidator::popStackState(const Op_deinit& cause) {
-// 	if (stack_state.size() == 1) throw RetValDeinitError(cause);
-// 	const auto& top = stack_state.back();
-// 	local_name_to_type.erase(top.local_name);
-// 	stack_state.pop_back();
-// }
-
 void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function, LocalStack& local_stack) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
@@ -431,7 +409,6 @@ FunctionValidator::FunctionValidator(
 
 void FunctionValidator::validate() {
 	if (validated) CORE_PANIC("The validator can only run once.");
-	// assertArgumentsExist();
 	preprocessLabels();
 	traverseControlFlowGraph();
 	validateFunctionEnd();
@@ -444,10 +421,6 @@ std::vector<Instruction> FunctionValidator::extractReachableCode() {
 	for (auto [instruction, visited]: std::views::zip(instructions, visited_instructions))
 		if (visited) out.push_back(instruction);
 	return out;
-}
-
-void vm::code::builders::FunctionValidator::assertArgumentsExist() const {
-	throw base::NotYetImplemented("assertArgumentsExist");
 }
 
 FunctionValidator::LocalStack::LocalStack(const FunctionType& type, const TypeContext& type_context) {

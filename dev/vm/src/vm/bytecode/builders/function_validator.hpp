@@ -47,9 +47,6 @@ namespace vm::code::builders {
 
 
 		std::vector<bool>                                    visited_instructions;
-		// make this a class:
-		// std::vector<LocalStackEntry>                         stack_state;
-		// base::HashMap<base::StrID, CRef<TypeOfData>>         local_name_to_type;
 		base::HashMap<base::StrID, std::vector<LocalStackEntry>>    stack_at_label;
 		base::HashMap<base::StrID, usize>                    index_of_label;
 		base::HashMap<base::StrID, std::vector<Instruction>> jumps_to_label;
@@ -62,13 +59,9 @@ namespace vm::code::builders {
 		void validateTailcall(const opargs::OpCodeFunctionArg& function, const LocalStack& local_stack) const;
 
 		usize getLabelTarget(const opargs::Label& label) const;
-		// void  initStackState();
-		// void  pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type);
-		// void  popStackState(const instructions::Op_deinit& cause);
 		void  popCallArgs(const opargs::OpCodeFunctionArg& function, LocalStack& local_stack);
 		void  preprocessLabels();
 		void  traverseControlFlowGraph();
-		void  assertArgumentsExist() const;
 
 	public:
 		FunctionValidator(

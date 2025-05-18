@@ -22,6 +22,7 @@ public:
 
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
+		TESTER_ADD_TEST(useArgumentAfterCall);
 
 		// Jump verfification
 		TESTER_ADD_TEST(jumpBetween);
@@ -67,6 +68,16 @@ private:
 			"wrong/functions/multiple_functions.dbc",
 			{
 				vm::loader::DuplicatedFunctionError::ERR_MSG,
+			}
+		);
+	}
+
+	// Function verification
+	void useArgumentAfterCall() {
+		loadInvalidDbc(
+			"wrong/functions/use_argument_after_call.dbc",
+			{
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
