@@ -1,5 +1,8 @@
 add_files(
 		supervisor/supervisor.cpp
+		thread/opcode_functions/opcodes_functions.cpp
+		thread/low_program/opcodes.cpp
+		thread/low_program/instruction.cpp
 		thread/vmthread.cpp
 		process/vmprocess.cpp
 		process/proc_io.cpp

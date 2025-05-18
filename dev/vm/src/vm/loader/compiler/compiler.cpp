@@ -2,6 +2,7 @@
 
 #include <diagnostic/logger.hpp>
 
+#include "base/int_conv.hpp"
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -133,14 +134,11 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 				}
 
-				func_data.bc.emplace_back(Fix8Instruction{
-#ifdef USE_TAIL_CALLS
-					.opfun = vm::OpFuns::OPFUNS.at(low::fix8FromInstr(op)),
-#else
-					.opcode = static_cast<u16>(low::fix8FromInstr(op)),
-#endif
-					.arg0 = static_cast<i32>(arg_0),
-					.arg1 = static_cast<i32>(arg_1) });
+				func_data.bc.emplace_back(makeLowInstruction(
+					low::fix8FromInstr(op),
+					base::safeIntConv<i32>(arg_0),
+					base::safeIntConv<i32>(arg_1)
+				));
 			}
 			return func_data;
 		}

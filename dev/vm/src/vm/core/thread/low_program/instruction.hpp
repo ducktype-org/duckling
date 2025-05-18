@@ -7,17 +7,11 @@
 
 #include <base/ints.hpp>
 
-#include <vm/config.hpp>
-
-#include <array>
-
-// #define USE_COMPACT_INSTRUCTION
 #include <vm/core/process/memory/frame.hpp>
 
-#define OPFUN_ARGS                                                    \
-	const Fix8Instruction *IF_NOT_TC(&) instr [[maybe_unused]],       \
-		std::byte *        IF_NOT_TC(&) local_stack [[maybe_unused]], \
-		Frame *IF_NOT_TC(&) frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
+#define OPFUN_TC_ARGS                                                                       \
+	const Fix8Instruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
+		Frame *frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
 
 #define OPFUN_REF_ARGS                                                                        \
 	const Fix8Instruction *&instr [[maybe_unused]], std::byte *&local_stack [[maybe_unused]], \
@@ -25,7 +19,9 @@
 		,                                                                                     \
 		VMThread &thread [[maybe_unused]]
 
-#define RETURN_TYPE IF_NOT_TC([[gnu::always_inline]] inline) void
+
+#define RETURN_TYPE_OPFUN_REF void
+#define RETURN_TYPE_OPFUN_TC  void
 
 namespace {
 	/**
@@ -55,88 +51,26 @@ namespace vm {
 	 */
 	struct Fix8Instruction;
 
-	class OpFuns;
-	using OpFun      = void(OPFUN_ARGS);
-	using DebugOpFun = void(OPFUN_REF_ARGS);
-
+	using OpFunTC = void(OPFUN_TC_ARGS);
 
 	// Describes number of DuckBC opcodes + meta-opcodes recognized by Executor.
 	// This constant is relevant for `vm::Opfuns::opfuns[]` (instructions.hpp) and `opcode_label[]`
 	// (CG, executor.cpp)
 	constexpr u16 OP_CASES_COUNT = countOpCases();
 
-#ifdef USE_TAIL_CALLS
 	struct Fix8Instruction {
-		OpFun* opfun;
-		i32    arg0;
-		i32    arg1;
-	};
-#else
-	#ifdef USE_COMPACT_INSTRUCTION
-	struct Fix8Instruction {
-		i64 opcode: 16, arg0: 24, arg1: 24;
-	};
-	#else
-	struct Fix8Instruction {
-		u16 opcode;
+		union {
+			u64      opcode;
+			OpFunTC* opfun;
+		};
+
 		i32 arg0;
 		i32 arg1;
 	};
-	#endif
-#endif
 
 	/**
-	 * @brief A class that contains all opcode functions implementations
-	 * Executor service calls these functions to execute the instructions.
-	 * For convenience they are implemented in the `executor.cpp` file.
+	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
+	 * @return Fix8Instruction
 	 */
-	class OpFuns final {
-	public:
-#define HANDLE_OPCODE(opcode) static OpFun op_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
-
-#define HANDLE_OPCODE(opcode) static DebugOpFun op_debug_##opcode;
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
-
-		// NOLINTBEGIN(readability-identifier-naming)
-		// Opcodes utilities functions (named the similar way as all OpFuns)
-		static OpFun handle_execution_break;
-		static OpFun save_execution_state;
-		// NOLINTEND(readability-identifier-naming)
-
-		/**
-		 * @brief A mapping between opcode ids and function pointers.
-		 *
-		 * @warning Ordering of elements must stay the same as in vm::OpcodeFix8
-		 */
-		static constexpr std::array<OpFun*, OP_CASES_COUNT> OPFUNS{
-#define HANDLE_OPCODE(opcode) op_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
-		};
-
-		/**
-		 * @brief A mapping between opcode ids and debug function pointers.
-		 */
-		static constexpr std::array<DebugOpFun*, OP_CASES_COUNT> DEBUG_OPFUNS{
-#define HANDLE_OPCODE(opcode) op_debug_##opcode,
-#include <vm/bytecode/opcode_definitions.hpp>
-
-#undef HANDLE_OPCODE
-		};
-
-		/**
-		 * @brief Get the Opcode from the OpFun pointer.
-		 */
-		static u16 getOpcodeFromOpFun(OpFun* fun) {
-			for (u16 i = 0; i < OP_CASES_COUNT; i++)
-				if (OPFUNS.at(i) == fun) return i;
-			return 0;
-		}
-	};
-}  // namespace vm
+	Fix8Instruction makeLowInstruction(u64 opcode, i32 arg0 = 0, i32 arg1 = 0);
+}

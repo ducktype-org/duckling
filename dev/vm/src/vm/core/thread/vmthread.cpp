@@ -1,11 +1,8 @@
 
 #include "vmthread.hpp"
 
-#include "low_program/instruction.hpp"
-#include "low_program/opcodes.hpp"
-#include "op_case.hpp"
-#include "opcodes_functions.hpp"
-#include "opcodes_functions_debug.hpp"
+#include "opcode_functions/opcodes_functions.hpp"
+#include "opcode_functions/opcodes_functions_utils.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -14,6 +11,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/process/vmprocess.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
