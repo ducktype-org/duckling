@@ -235,54 +235,6 @@ void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
-void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function, LocalStack& local_stack) {
-	auto fun_name = VISIT(function, f, return f.function_name);
-	// Used for errors.
-	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	// TODO: remove atMaybe after adding a check for the call instruction.
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type     = std::get<FunctionType>(*maybe_func_type);
-	bool check_ret_val = func_type.result != base::StrID("void");
-
-	if (func_type.parameters.size() > local_stack.stack_state.size() + check_ret_val)
-		throw InvalidFunctionCallArgumentsError(generic_arg);
-	for (auto param: func_type.parameters | std::views::reverse) {
-		if (code::typeName(*local_stack.stack_state.back().type) != param)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
-		local_stack.local_name_to_type.erase(local_stack.stack_state.back().local_name);
-		local_stack.stack_state.pop_back();
-	}
-	if (check_ret_val && code::typeName(*local_stack.stack_state.back().type) != func_type.result)
-		throw InvalidFunctionCallArgumentsError(generic_arg);
-}
-
-void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& function, const LocalStack& local_stack) const {
-	auto fun_name = VISIT(function, f, return f.function_name);
-	// Used for errors.
-	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type = std::get<FunctionType>(*maybe_func_type);
-
-	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
-		throw InvalidTailcallSignatureError(generic_arg);
-
-	if (func_type.parameters.size() + 1 != local_stack.stack_state.size())
-		throw InvalidTailcallArgumentsError(generic_arg);
-
-	if (code::typeName(*local_stack.stack_state.front().type) != func_type.result)
-		throw InvalidTailcallArgumentsError(generic_arg);
-	for (auto [param, stack_elem]:
-	     std::views::zip(func_type.parameters, local_stack.stack_state | std::views::drop(1)))
-		if (code::typeName(*stack_elem.type) != param)
-			throw InvalidTailcallArgumentsError(generic_arg);
-}
-
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
 	return index_of_label.at(label.label_name);
 }
@@ -360,15 +312,15 @@ void FunctionValidator::traverseControlFlowGraph() {
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
-				popCallArgs(instr.arg0, local_stack);
+				local_stack.popCallArgs(instr.arg0, type_context);
 				index++;
 			}
 			variant_case(Op_call_builtin_func, instr) {
-				popCallArgs(instr.arg0, local_stack);
+				local_stack.popCallArgs(instr.arg0, type_context);
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
-				validateTailcall(instr.arg0, local_stack);
+				local_stack.validateTailcall(instr.arg0, type_context, type);
 				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
@@ -450,4 +402,52 @@ bool FunctionValidator::LocalStack::contains(base::StrID local_name) {
 }
 CRef<TypeOfData> FunctionValidator::LocalStack::at(base::StrID local_name) {
 	return local_name_to_type.at(local_name);
+}
+
+void FunctionValidator::LocalStack::popCallArgs(const opargs::OpCodeFunctionArg& function, const TypeContext& type_context) {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	// TODO: remove atMaybe after adding a check for the call instruction.
+	auto maybe_func_type
+		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+		throw UnknownFunctionError(generic_arg);
+	auto func_type     = std::get<FunctionType>(*maybe_func_type);
+	bool check_ret_val = func_type.result != base::StrID("void");
+
+	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+	for (auto param: func_type.parameters | std::views::reverse) {
+		if (code::typeName(*stack_state.back().type) != param)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		local_name_to_type.erase(stack_state.back().local_name);
+		stack_state.pop_back();
+	}
+	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+}
+
+void FunctionValidator::LocalStack::validateTailcall(const opargs::OpCodeFunctionArg& function, const TypeContext& type_context, const FunctionType& type) const {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto maybe_func_type
+		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+		throw UnknownFunctionError(generic_arg);
+	auto func_type = std::get<FunctionType>(*maybe_func_type);
+
+	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
+		throw InvalidTailcallSignatureError(generic_arg);
+
+	if (func_type.parameters.size() + 1 != stack_state.size())
+		throw InvalidTailcallArgumentsError(generic_arg);
+
+	if (code::typeName(*stack_state.front().type) != func_type.result)
+		throw InvalidTailcallArgumentsError(generic_arg);
+	for (auto [param, stack_elem]:
+	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
+		if (code::typeName(*stack_elem.type) != param)
+			throw InvalidTailcallArgumentsError(generic_arg);
 }

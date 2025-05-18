@@ -43,6 +43,8 @@ namespace vm::code::builders {
 			void pop(const instructions::Op_deinit& cause);
 			bool contains(base::StrID local_name);
 			CRef<TypeOfData> at(base::StrID local_name);
+			void popCallArgs(const opargs::OpCodeFunctionArg& function, const TypeContext& type_context);
+			void validateTailcall(const opargs::OpCodeFunctionArg& function, const TypeContext& type_context, const FunctionType& type) const;
 		};
 
 
@@ -56,10 +58,8 @@ namespace vm::code::builders {
 		void validateInstruction(const Instruction& instruction, LocalStack&) const;
 		void validateArgInstantiable(const opargs::Type& arg) const;
 		void validateFunctionEnd() const;
-		void validateTailcall(const opargs::OpCodeFunctionArg& function, const LocalStack& local_stack) const;
 
 		usize getLabelTarget(const opargs::Label& label) const;
-		void  popCallArgs(const opargs::OpCodeFunctionArg& function, LocalStack& local_stack);
 		void  preprocessLabels();
 		void  traverseControlFlowGraph();
 
