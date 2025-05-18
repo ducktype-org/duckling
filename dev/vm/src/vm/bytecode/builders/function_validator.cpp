@@ -1,6 +1,8 @@
 #include "function_validator.hpp"
+#include <iostream>
 
 #include "base/exceptions.hpp"
+#include "base/ref.hpp"
 #include <base/variant.hpp>
 
 #include <vm/bytecode/builders/builders.hpp>
@@ -111,7 +113,7 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
  * Checks each argument of the instruction if it has the expected type of an argument.
  * @param instruction Instruction that is validated.
  */
-void FunctionValidator::validateInstruction(const Instruction& instruction) const {
+void FunctionValidator::validateInstruction(const Instruction& instruction, LocalStack& local_stack) const {
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
 			if constexpr (TwoArgumentOpcode<T>)
@@ -130,8 +132,8 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 		variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
 	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
-		if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);      \
-		CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);                          \
+		if (!local_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);      \
+		CRef<TypeOfData> entry = local_stack.at(local.var_name);                          \
 		variant_match(*entry) {                                                                  \
 			variant_case(PrimitiveType, primitive_type) {                                        \
 				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
@@ -173,8 +175,8 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			STACK_LOCAL_CASE(32);
 			STACK_LOCAL_CASE(64);
 			variant_case(opargs::StackLocalPtr, local) {
-				if (!local_name_to_type.contains(local.var_name)) throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_name_to_type.at(local.var_name);
+				if (!local_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> entry = local_stack.at(local.var_name);
 				variant_match(*entry) {
 					variant_case(PointerType, pointer_type) { (void) pointer_type; }
 					variant_default { throw InvalidArgumentTypeError(arg); }
@@ -183,11 +185,11 @@ void FunctionValidator::validateInstruction(const Instruction& instruction) cons
 			variant_case(opargs::StackLocalAny, local) {
 				variant_match(instruction) {
 					variant_case_novalue(Op_init_lany_type) {
-						if (local_name_to_type.contains(local.var_name))
+						if (local_stack.contains(local.var_name))
 							throw DuplicatedLocalNameError(arg);
 					}
 					variant_default {
-						if (!local_name_to_type.contains(local.var_name))
+						if (!local_stack.contains(local.var_name))
 							throw UnknownLocalNameError(arg);
 					}
 				}
@@ -233,29 +235,29 @@ void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
-void FunctionValidator::initStackState() {
-	pushStackState(base::StrID("ret_val"), type.result);
-	for (auto [idx, param]: std::views::enumerate(type.parameters))
-		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
-}
+// void FunctionValidator::initStackState() {
+// 	pushStackState(base::StrID("ret_val"), type.result);
+// 	for (auto [idx, param]: std::views::enumerate(type.parameters))
+// 		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
+// }
 
-void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
-	auto tod = type_context.getTypes().at(type.type_name);
+// void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
+// 	auto tod = type_context.getTypes().at(type.type_name);
 
-	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
+// 	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
 
-	stack_state.emplace_back(local.var_name, tod);
-	local_name_to_type.put(local.var_name, tod);
-}
+// 	stack_state.emplace_back(local.var_name, tod);
+// 	local_name_to_type.put(local.var_name, tod);
+// }
 
-void FunctionValidator::popStackState(const Op_deinit& cause) {
-	if (stack_state.size() == 1) throw RetValDeinitError(cause);
-	const auto& top = stack_state.back();
-	local_name_to_type.erase(top.local_name);
-	stack_state.pop_back();
-}
+// void FunctionValidator::popStackState(const Op_deinit& cause) {
+// 	if (stack_state.size() == 1) throw RetValDeinitError(cause);
+// 	const auto& top = stack_state.back();
+// 	local_name_to_type.erase(top.local_name);
+// 	stack_state.pop_back();
+// }
 
-void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
+void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function, LocalStack& local_stack) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
@@ -267,18 +269,19 @@ void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
 	auto func_type     = std::get<FunctionType>(*maybe_func_type);
 	bool check_ret_val = func_type.result != base::StrID("void");
 
-	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+	if (func_type.parameters.size() > local_stack.stack_state.size() + check_ret_val)
 		throw InvalidFunctionCallArgumentsError(generic_arg);
 	for (auto param: func_type.parameters | std::views::reverse) {
-		if (code::typeName(*stack_state.back().type) != param)
+		if (code::typeName(*local_stack.stack_state.back().type) != param)
 			throw InvalidFunctionCallArgumentsError(generic_arg);
-		stack_state.pop_back();
+		local_stack.local_name_to_type.erase(local_stack.stack_state.back().local_name);
+		local_stack.stack_state.pop_back();
 	}
-	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+	if (check_ret_val && code::typeName(*local_stack.stack_state.back().type) != func_type.result)
 		throw InvalidFunctionCallArgumentsError(generic_arg);
 }
 
-void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& function) const {
+void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& function, const LocalStack& local_stack) const {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
@@ -291,13 +294,13 @@ void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& functi
 	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
 		throw InvalidTailcallSignatureError(generic_arg);
 
-	if (func_type.parameters.size() + 1 != stack_state.size())
+	if (func_type.parameters.size() + 1 != local_stack.stack_state.size())
 		throw InvalidTailcallArgumentsError(generic_arg);
 
-	if (code::typeName(*stack_state.front().type) != func_type.result)
+	if (code::typeName(*local_stack.stack_state.front().type) != func_type.result)
 		throw InvalidTailcallArgumentsError(generic_arg);
 	for (auto [param, stack_elem]:
-	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
+	     std::views::zip(func_type.parameters, local_stack.stack_state | std::views::drop(1)))
 		if (code::typeName(*stack_elem.type) != param)
 			throw InvalidTailcallArgumentsError(generic_arg);
 }
@@ -326,40 +329,41 @@ void FunctionValidator::preprocessLabels() {
 }
 
 void FunctionValidator::traverseControlFlowGraph() {
+	LocalStack local_stack(type, type_context);
 	visited_instructions.resize(instructions.size());
-	std::vector<std::tuple<usize, decltype(stack_state), decltype(local_name_to_type)>> dfs_stack{
-		{ instructions.size(), {}, {} }  // sentinel
+	std::vector<std::tuple<usize, LocalStack>> dfs_stack{
+		{ instructions.size(), local_stack}  // sentinel
 	};
 	usize index = 0;
 
 	while (index != instructions.size()) {
 		validateExtension(index);
 		// Validate non-control flow instruction there.
-		validateInstruction(instructions[index]);
+		validateInstruction(instructions[index], local_stack);
 
 		visited_instructions[index] = true;
 
 		variant_match(instructions[index]) {
 			variant_case(Op_init_lany_type, instr) {
-				pushStackState(instr.arg0, instr.arg1);
+				local_stack.push(instr.arg0, instr.arg1, type_context);
 				index++;
 			}
 			variant_case(Op_deinit, instr) {
-				popStackState(instr);
+				local_stack.pop(instr);
 				index++;
 			}
 			variant_case(Op_label, instr) {
 				match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 					opt_some(label_state) {
-						if (label_state != stack_state)
+						if (label_state != local_stack.stack_state)
 							throw StackStructureMismatchError(
 								instr, jumps_to_label.at(instr.arg0.label_name)
 							);
-						std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
+						std::tie(index, local_stack) = dfs_stack.back();
 						dfs_stack.pop_back();
 					}
 					opt_none {
-						stack_at_label.put(instr.arg0.label_name, stack_state);
+						stack_at_label.put(instr.arg0.label_name, local_stack.stack_state);
 						index++;
 					}
 				}
@@ -367,27 +371,27 @@ void FunctionValidator::traverseControlFlowGraph() {
 			variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
 			variant_case(Op_jmpIf_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
 			}
 			variant_case(Op_jmpIfNot_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state, local_name_to_type);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
 			}
 			variant_case(Op_ret, instr) {
-				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
+				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
-				popCallArgs(instr.arg0);
+				popCallArgs(instr.arg0, local_stack);
 				index++;
 			}
 			variant_case(Op_call_builtin_func, instr) {
-				popCallArgs(instr.arg0);
+				popCallArgs(instr.arg0, local_stack);
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
-				validateTailcall(instr.arg0);
-				std::tie(index, stack_state, local_name_to_type) = dfs_stack.back();
+				validateTailcall(instr.arg0, local_stack);
+				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_default { index++; }
@@ -427,9 +431,8 @@ FunctionValidator::FunctionValidator(
 
 void FunctionValidator::validate() {
 	if (validated) CORE_PANIC("The validator can only run once.");
-	assertArgumentsExist();
+	// assertArgumentsExist();
 	preprocessLabels();
-	initStackState();
 	traverseControlFlowGraph();
 	validateFunctionEnd();
 	validated = true;
@@ -445,4 +448,33 @@ std::vector<Instruction> FunctionValidator::extractReachableCode() {
 
 void vm::code::builders::FunctionValidator::assertArgumentsExist() const {
 	throw base::NotYetImplemented("assertArgumentsExist");
+}
+
+FunctionValidator::LocalStack::LocalStack(const FunctionType& type, const TypeContext& type_context) {
+	push(base::StrID("ret_val"), type.result, type_context);
+	for (auto [idx, param]: std::views::enumerate(type.parameters))
+		push(base::StrID(base::strConcat("arg", idx).c_str()), param, type_context);
+}
+
+void FunctionValidator::LocalStack::push(const opargs::StackLocalAny& local, const opargs::Type& type, const TypeContext& type_context) {
+	auto tod = type_context.getTypes().at(type.type_name);
+
+	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
+
+	stack_state.emplace_back(local.var_name, tod);
+	local_name_to_type.put(local.var_name, tod);
+}
+
+void FunctionValidator::LocalStack::pop(const Op_deinit& cause) {
+	if (stack_state.size() == 1) throw RetValDeinitError(cause);
+	const auto& top = stack_state.back();
+	local_name_to_type.erase(top.local_name);
+	stack_state.pop_back();
+}
+
+bool FunctionValidator::LocalStack::contains(base::StrID local_name) {
+	return local_name_to_type.contains(local_name);
+}
+CRef<TypeOfData> FunctionValidator::LocalStack::at(base::StrID local_name) {
+	return local_name_to_type.at(local_name);
 }
