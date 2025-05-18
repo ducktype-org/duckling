@@ -22,6 +22,7 @@ private:
 		using namespace vm::code::builders;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "invalid_hierarchy/missing_ancestor_field.dbc", MissingAncestorFieldError::ERR_MSG },
+			{ "invalid_hierarchy/different_order_ancestor_field.dbc", MissingAncestorFieldError::ERR_MSG },
 			{ "invalid_hierarchy/extends_plain.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/extends_interface.dbc", InvalidExtends::ERR_MSG },
 			{ "invalid_hierarchy/implements_plain.dbc", InvalidImplementsError::ERR_MSG },

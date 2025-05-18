@@ -133,6 +133,7 @@ namespace lang_def {
 			{ Keyword::BCImplements, "implements", KeywordFlags() },
 			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
 			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::BCMethodImplementations, "implementations", KeywordFlags() },
 			{ Keyword::BCTrue, "true", KeywordFlags() },
 			{ Keyword::BCFalse, "false", KeywordFlags() },
 		});

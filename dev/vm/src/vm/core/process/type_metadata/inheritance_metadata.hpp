@@ -35,26 +35,25 @@ namespace vm {
 		Kind                                 kind;
 		std::vector<TypeCRef>                implements;
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
+		// Virtual Methods to actual implementations for this class.
+		base::HashMap<base::StrID, TypeCRef> vmethods_implementations;
 
 		// base::Optional<VTable> vtable_data;  // Exists only for classes with virtual methods.
 		// base::HashMap<std::pair<TypeCRef, base::StrID>, ActualVmFunctionPointer>
 		// 	method_implementations;
+		// 	TODO: Check if implementations have the same type as virtual methods declarations.
 
 		InheritanceMetadata(
 			TypeCRef                             type,
 			Kind                                 kind,
 			std::vector<TypeCRef>                implements,
-			base::HashMap<base::StrID, TypeCRef> virtual_methods
-			// base::HashMap<std::pair<TypeCRef, base::StrID>, ActualVmFunctionPointer>
-		    // 	vmethods_implementations
-		    // = {}
+			base::HashMap<base::StrID, TypeCRef> virtual_methods,
+			base::HashMap<base::StrID, TypeCRef> vmethods_implementations = {}
 		):
 			  type{ type },
 			  kind{ kind },
 			  implements{ std::move(implements) },
-			  virtual_methods{ std::move(virtual_methods) }
-
-		//   method_implementations{ std::move(vmethods_implementations)
-		{}
+			  virtual_methods{ std::move(virtual_methods) },
+			  vmethods_implementations{ std::move(vmethods_implementations) } {}
 	};
 }

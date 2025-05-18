@@ -89,6 +89,40 @@ namespace vm::code::builders {
 		}
 	};
 
+	class InvalidVirtualMethodImplementationError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "Method implementation lacks it's definition: ";
+		const TypeOfData  CLASS_TYPE;
+		const base::StrID METHOD_NAME;
+
+		InvalidVirtualMethodImplementationError(TypeOfData class_type, base::StrID method_name):
+			  BuilderError(base::strConcat(ERR_MSG, method_name)),
+			  CLASS_TYPE(std::move(class_type)),
+			  METHOD_NAME(method_name) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(CLASS_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
+	};
+
+	class VirtualMethodSignatureError: public BuilderError {
+	public:
+		constexpr static const std::string_view ERR_MSG
+			= "This class implements a method with wrong signature: ";
+		const TypeOfData  CLASS_TYPE;
+		const base::StrID METHOD_NAME;
+
+		VirtualMethodSignatureError(TypeOfData class_type, base::StrID method_name):
+			  BuilderError(base::strConcat(ERR_MSG, method_name)),
+			  CLASS_TYPE(std::move(class_type)),
+			  METHOD_NAME(method_name) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(CLASS_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
+	};
+
 	class TypeErrorBase: public BuilderError {
 	public:
 		const TypeOfData TYPE;
@@ -159,14 +193,30 @@ namespace vm::code::builders {
 	DEFINE_TYPE_ERROR(
 		InvalidImplementsError, "This interface/class can implement only other interfaces: "
 	);
+	DEFINE_TYPE_ERROR(
+		UnimplementedVirtualMethodError, "This method is unimplemented in an instantiable class: "
+	);
 	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
 	DEFINE_TYPE_ERROR(
 		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
 	);
 	DEFINE_TYPE_ERROR(
-		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
+		MissingAncestorVirtualMethodError,
+		"This class does not contain all of its ancestors' virtual methods: "
+	);
+	DEFINE_TYPE_ERROR(DuplicatedVirtualMethodError, "Duplicated virtual method: ");
+	DEFINE_TYPE_ERROR(
+		DuplicatedVirtualMethodImplementationError, "Duplicated virtual method implementation: "
+	);
+	DEFINE_TYPE_ERROR(
+		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(DuplicatedTypeError, "Duplicated type: ");
+	DEFINE_TYPE_ERROR(
+		MethodTypeError,
+		"Implementations and virtual method declarations should have the same signature: "
+	);
+	DEFINE_TYPE_ERROR(MethodFirstArgumentError, "Methods first argument should be a self*: ");
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
@@ -174,7 +224,7 @@ namespace vm::code::builders {
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
-	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
+	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.")
 
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");

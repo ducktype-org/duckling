@@ -6,6 +6,7 @@
 #include <vm/bytecode/element_base.hpp>
 
 #include <utility>
+#include <vector>
 
 namespace vm::code {
 	/**
@@ -180,14 +181,16 @@ namespace vm::code {
 			bool                        is_abstract,
 			base::Optional<base::StrID> extends,
 			std::vector<base::StrID>    implements,
-			std::vector<Field>          virtual_methods
+			std::vector<Field>          virtual_methods,
+			std::vector<Field>          vmethods_implementations
 		):
 			  name{ name },
 			  fields{ std::move(fields) },
 			  is_abstract{ is_abstract },
 			  extends{ extends },
 			  implements{ std::move(implements) },
-			  virtual_methods{ std::move(virtual_methods) } {}
+			  virtual_methods{ std::move(virtual_methods) },
+			  vmethods_implementations{ std::move(vmethods_implementations) } {}
 
 		base::StrID                 name;
 		std::vector<Field>          fields;
@@ -195,11 +198,13 @@ namespace vm::code {
 		base::Optional<base::StrID> extends;
 		std::vector<base::StrID>    implements;
 		std::vector<Field>          virtual_methods;
+		std::vector<Field>          vmethods_implementations;
 
 		bool operator==(const ClassType& other) const {
 			return name == other.name && fields == other.fields && is_abstract == other.is_abstract
 			    && extends == other.extends && implements == other.implements
-			    && virtual_methods == other.virtual_methods;
+			    && virtual_methods == other.virtual_methods
+			    && vmethods_implementations == other.vmethods_implementations;
 		}
 	};
 
@@ -210,19 +215,25 @@ namespace vm::code {
 		InterfaceType() = default;
 
 		InterfaceType(
-			base::StrID name, std::vector<base::StrID> implements, std::vector<Field> virtual_methods
+			base::StrID              name,
+			std::vector<base::StrID> implements,
+			std::vector<Field>       virtual_methods,
+			std::vector<Field>       vmethods_implementations
 		):
 			  name{ name },
 			  implements{ std::move(implements) },
-			  virtual_methods{ std::move(virtual_methods) } {}
+			  virtual_methods{ std::move(virtual_methods) },
+			  vmethods_implementations{ std::move(vmethods_implementations) } {}
 
 		base::StrID              name;
 		std::vector<base::StrID> implements;
 		std::vector<Field>       virtual_methods;
+		std::vector<Field>       vmethods_implementations;
 
 		bool operator==(const InterfaceType& other) const {
 			return name == other.name && implements == other.implements
-			    && virtual_methods == other.virtual_methods;
+			    && virtual_methods == other.virtual_methods
+			    && vmethods_implementations == other.vmethods_implementations;
 		}
 	};
 

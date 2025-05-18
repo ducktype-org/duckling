@@ -26,16 +26,25 @@ private:
 		assertFalse(type->getInheritanceMetadata().has_value(), "Plain data should be plain");
 	}
 
-	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type) {
+	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type, vm::TypeCRef method_impl_type) {
+		std::cerr << "Check I1\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
 			assertTrue(imd.implements.empty(), "I1 should not implement anything");
 			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
+			assertTrue(imd.vmethods_implementations.size() == 1, "I1 should implement virtual methods");
+			for (const auto& vmeth_impl: imd.vmethods_implementations) {
+				std::cerr << "{" << vmeth_impl.first.strView() << ", "
+						  << vmeth_impl.second->getName().strView() << "} | \n";
+			}
+
 			auto foo_type = imd.virtual_methods[base::StrID("foo")];
 			auto bar_type = imd.virtual_methods[base::StrID("bar")];
+			auto foo_impl_type = imd.vmethods_implementations[base::StrID("foo")];
 
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == method_type, "I1's method have the wrong type");
+			assertTrue(foo_impl_type == method_impl_type, "I1's method implementation have the wrong type");
 
 			assertTrue(
 				std::holds_alternative<vm::InheritanceMetadata::Interface>(imd.kind),
@@ -57,6 +66,7 @@ private:
 			);
 			assertTrue(imd.implements.empty(), "I2 should not implement anything");
 			assertTrue(imd.virtual_methods.empty(), "I2 should not have any virtual methods");
+			assertTrue(imd.vmethods_implementations.empty(), "I2 should not implement any virtual methods");
 
 			return;
 		}
@@ -64,7 +74,8 @@ private:
 		fail("I1 should not be plain");
 	}
 
-	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type) {
+	void checkParent(vm::TypeCRef type, vm::TypeCRef method_type, vm::TypeCRef method_impl_type) {
+		std::cerr << "Check parent\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
 			variant_match(imd.kind) {
@@ -75,12 +86,21 @@ private:
 				variant_default { fail("Parent should be a class"); }
 			}
 			assertTrue(imd.implements.empty(), "Parent should not implement anything");
+			assertTrue(imd.virtual_methods.size() == 1, "Parent should declare one virtual method");
+			// TODO: Remove that.
+			for (const auto& vmeth_impl: imd.vmethods_implementations) {
+				std::cerr << "{" << vmeth_impl.first.strView() << ", "
+						  << vmeth_impl.second->getName().strView() << "} | \n";
+			}
 			assertTrue(
-				imd.virtual_methods.size() == 1, "Parent should implement one virtual method"
+				imd.vmethods_implementations.size() == 1,
+				"Parent should implement one virtual method"
 			);
 
-			auto lorem = imd.virtual_methods[base::StrID("lorem")];
-			assertTrue(lorem == method_type, "Invalid Parent method type");
+			auto get_age_type = imd.virtual_methods[base::StrID("getAge")];
+			auto get_age_impl_type = imd.vmethods_implementations[base::StrID("getAge")];
+			assertTrue(get_age_type == method_type, "Invalid Parent method type");
+			assertTrue(get_age_impl_type == method_impl_type, "Invalid Parent method type");
 
 			return;
 		}
@@ -89,17 +109,18 @@ private:
 	}
 
 	void checkChild(
-		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces
+		vm::TypeCRef type, vm::TypeCRef super_type, const std::vector<vm::TypeCRef>& interfaces, vm::TypeCRef method_impl_type
 	) {
+		std::cerr << "Check child\n";
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
 			variant_match(imd.kind) {
 				variant_case(vm::InheritanceMetadata::Class, clazz) {
 					assertFalse(clazz.is_abstract, "Child should be a concrete class");
-					assertTrue(clazz.extends.has_value(), "Child has no superclass");
-					assertTrue(*clazz.extends == super_type, "Child is not Parent's child");
+					assertTrue(clazz.extends.has_value(), "Child should have a superclass");
+					assertTrue(*clazz.extends == super_type, "Child should be a Parent's child");
 				}
-				variant_default { fail("Parent should be a class"); }
+				variant_default { fail("Child should be a class"); }
 			}
 			assertTrue(
 				std::ranges::equal(
@@ -112,7 +133,17 @@ private:
 			);
 
 			assertTrue(imd.virtual_methods.empty(), "Child should have no virtual methods");
+			// TODO: Remove that.
+			for (const auto& vmeth_impl: imd.vmethods_implementations) {
+				std::cerr << "{" << vmeth_impl.first.strView() << ", "
+						  << vmeth_impl.second->getName().strView() << "} | \n";
+			}
+			assertTrue(
+				imd.vmethods_implementations.size() == 1, "Child should implement one virtual method from it's superclass"
+			);
 
+			auto get_age_impl_type = imd.vmethods_implementations[base::StrID("getAge")];
+			assertTrue(get_age_impl_type == method_impl_type, "	Invalid Child method type");
 			return;
 		}
 
@@ -132,8 +163,12 @@ private:
 				variant_default { fail("PietMondrian should be a class"); }
 			}
 
-			assertTrue(imd.virtual_methods.empty(), "PietMondrian should implement no interfaces");
+			assertTrue(imd.implements.empty(), "PietMondrian should implement no interfaces");
 			assertTrue(imd.virtual_methods.empty(), "PietMondrian should have no virtual methods");
+			assertTrue(
+				imd.vmethods_implementations.empty(),
+				"PietMondrian should not implement any virtual methods"
+			);
 
 			return;
 		}
@@ -148,7 +183,14 @@ private:
 
 		fs::FilePath file(path("inheritance_metadata.dbc"));
 		auto         loaded_file_response = vm::api::loadFiles(pid, { file });
-		assertTrue(loaded_file_response.has_value(), "Load failed (1)");
+		// assertTrue(loaded_file_response.has_value(), "Load failed (1)");
+		if (!loaded_file_response.has_value()) {
+			auto err     = loaded_file_response.error();
+			auto core_op = std::get<vm::api::CoreOperationError>(err);
+			auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
+			std::cerr << err_str << '\n';
+			assertTrue(false, "Break program");
+		}
 
 		auto run_response = vm::api::run(pid);
 		assertTrue(run_response.has_value(), "Run failed (1)");
@@ -165,12 +207,15 @@ private:
 		std::vector interfaces{ i1, i2 };
 		auto        i1_method     = getType(pid, "method_I1_int");
 		auto        parent_method = getType(pid, "method_parent_int_int");
+		auto        parent_get_age_impl = getType(pid, "Parent_getAge_impl");
+		auto        child_get_age_impl = getType(pid, "Child_getAge_impl");
+		auto        i1_foo_impl = getType(pid, "I1_foo_impl");
 
 		checkPod(pod);
-		checkI1(i1, i1_method);
+		checkI1(i1, i1_method, i1_foo_impl);
 		checkI2(i2);
-		checkParent(parent, parent_method);
-		checkChild(child, parent, interfaces);
+		checkParent(parent, parent_method, parent_get_age_impl);
+		checkChild(child, parent, interfaces, child_get_age_impl);
 		checkPietMondrian(piet_mondrian);
 	}
 };
