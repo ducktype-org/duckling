@@ -21,7 +21,7 @@ namespace view_manager {
 
         static Metadata createFromInfo(const Info &info);
 
-        ptr<::view::Metadata> getView() const;
+        std::unique_ptr<::view::Metadata> getView() const;
     };
 
 
@@ -33,7 +33,7 @@ namespace view_manager {
         public:
         HlInfo(hl_id_t tag, std::string message);
 
-        ptr<::view::HlInfo> getView() const;
+        std::unique_ptr<::view::HlInfo> getView() const;
     };
 
     class Diagnostic {
@@ -47,17 +47,16 @@ namespace view_manager {
 
         static Diagnostic createFromInfo(const Info &info, CreationContext &creation_context);
 
-        ptr<::view::Diagnostic> getView() const;
+        std::unique_ptr<::view::Diagnostic> getView() const;
     };
 
     class ViewManager {
         private:
         std::vector<Diagnostic> diagnostics;
-        std::unique_ptr<std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>> id_to_interactive_component;
-
+        std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
 
         public:
-        ViewManager(std::vector<Diagnostic> diagnostics);
+        ViewManager(std::vector<Diagnostic> diagnostics, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component);
 
         static ViewManager createFromJson(const json &input);
 

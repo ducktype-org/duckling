@@ -22,21 +22,24 @@ namespace view_manager {
         return Metadata(error_code, file_info);
     }
 
-    ptr<::view::Metadata> Metadata::getView() const {
-        ::view::Metadata *result = new ::view::Metadata;
+    std::unique_ptr<::view::Metadata> Metadata::getView() const {
+        debug("Metadata::getView() begin");
+        auto result = std::make_unique<::view::Metadata>();
         if (this->error_code.has_value()) {
+            debug("Error code: ", this->error_code.value());
             result->set_error_code(this->error_code.value());
         }
         if (this->file_info.has_value()) {
             result->set_file_info(this->file_info.value());
         }
+        debug("Metadata::getView() end");
         return result;
     }
 
     // HlInfo
     HlInfo::HlInfo(hl_id_t tag, std::string message) : tag(tag), message(std::move(message)) {}
-    ptr<::view::HlInfo> HlInfo::getView() const {
-        ::view::HlInfo *result = new ::view::HlInfo;
+    std::unique_ptr<::view::HlInfo> HlInfo::getView() const {
+        auto result = std::make_unique<::view::HlInfo>();
         result->set_message(this->message);
         result->set_tag(this->tag);
         return result;
@@ -70,121 +73,112 @@ namespace view_manager {
         if (info.description) {
             sections.emplace_back(make_shared<TextSection>(info.description->toComponent(creation_context)));
         }
-        cerr << "Number of sections: " << ssize(sections) << endl;
+        debug("Number of sections: ", ssize(sections));
         return Diagnostic(metadata, sections, hl_messages);
     }
 
-    ptr<::view::Diagnostic> Diagnostic::getView() const {
-        cerr << "Diagnostic::getView()" << endl;
-        ::view::Diagnostic *diagnostic = new ::view::Diagnostic;
+    std::unique_ptr<::view::Diagnostic> Diagnostic::getView() const {
+        debug("Diagnostic::getView() begin");
+        auto diagnostic = std::make_unique<::view::Diagnostic>();
         {
             auto metadata = this->metadata.getView();
-            diagnostic->set_allocated_metadata(metadata);
+            diagnostic->set_allocated_metadata(metadata.release());
         }
         {
-            std::vector<ptr<::view::Section>> tmp(ssize(sections));
+            std::vector<std::unique_ptr<::view::Section>> tmp(ssize(sections));
             transform(sections.begin(), sections.end(), tmp.begin(),
                 [](const std::shared_ptr<Section> &section) {
                 return section->getView();
             });
-            cerr << "Whille adding view sections: allocated sections cnt: " << ssize(tmp) << endl;
-            for (auto elm : tmp) {
+            debug("While adding view sections: allocated sections cnt: ", ssize(tmp));
+            for (auto &elm : tmp) {
                 if (elm != nullptr) {
-                    cerr << "non-nullptr" << endl;
-                    diagnostic->mutable_sections()->AddAllocated(elm);
+                    debug("non-nullptr");
+                    diagnostic->mutable_sections()->AddAllocated(elm.release());
                 }
                 else {
-                    cerr << "nullptr" << endl;
+                    debug("nullptr");
                 }
             }
         }
         {
-            std::vector<ptr<::view::HlInfo>> tmp(ssize(hl_messages));
+            std::vector<std::unique_ptr<::view::HlInfo>> tmp(ssize(hl_messages));
             transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
                 [](const HlInfo &hl_info) {
                 return hl_info.getView();
             });
-            for (auto elm : tmp) {
-                diagnostic->mutable_hl_messages()->AddAllocated(elm);
+            for (auto &elm : tmp) {
+                diagnostic->mutable_hl_messages()->AddAllocated(elm.release());
             }
         }
+        debug("Diagnostic::getView() end");
         return diagnostic;
     }
 
     // ViewManager
 
-    ViewManager::ViewManager(std::vector<Diagnostic> diagnostics) : diagnostics(std::move(diagnostics)) {}
+    ViewManager::ViewManager(std::vector<Diagnostic> diagnostics, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component) : diagnostics(std::move(diagnostics)), id_to_interactive_component(std::move(id_to_interactive_component)) {}
     
     ViewManager ViewManager::createFromJson(const json &input) {
-        cerr << "ViewManager::createFromJson" << endl;
+        debug("ViewManager::createFromJson begin");
         // TODO: WTF?
         ViewConstructor view_constructor(0, input);
 
         Info info = *view_constructor.load_main_info();
 
-        auto creation_context = CreationContext{.id_to_interactive_component=std::make_unique<std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>>(),
+        auto creation_context = CreationContext{
+        .id_to_interactive_component=std::make_shared<id_to_interactive_component_mapping_t>(),
         .hl_name_to_id=std::make_unique<std::map<std::string, hl_id_t>>(),
         .data_handle = view_constructor.data_handle()};
 
         auto diagnostics = std::vector<Diagnostic>{Diagnostic::createFromInfo(info, creation_context)};
-        cerr << "diagnostics cnt: " << ssize(diagnostics) << endl;
+        debug("diagnostics cnt: ", ssize(diagnostics));
 
-        return ViewManager(diagnostics);
-    }
-
-
-    void print(const ::google::protobuf::RepeatedPtrField<::view::Section> &sections) {
-        cerr << "Print Sections" << endl;
-        for (const auto &elm : sections) {
-            elm.PrintDebugString();
-        }
-    }
-
-    void print(const ::google::protobuf::RepeatedPtrField< ::view::Diagnostic> &diagnostics) {
-        cerr << "Print Diagnostics" << endl;
-        cerr << diagnostics.size() << endl;
-        for (const auto &elm : diagnostics) {
-            print(elm.sections());
-        }
-        cerr << "End print Diagnostics" << endl;
-    }
-
-    void print(::view::ViewResponse* response) {
-        cerr << "Print ViewResponse" << endl;
-        print(response->diagnostics());
-        // print(response->side_notes());
+        debug("ViewManager::createFromJson end");
+        return ViewManager(diagnostics, std::move(creation_context.id_to_interactive_component));
     }
 
     void ViewManager::getView(::view::ViewResponse* response) {
-        cerr << "ViewManager::getView()" << endl;
-        std::vector<ptr<::view::Diagnostic>> tmp(ssize(diagnostics));
-        cerr << "Diagnostics cnt: " << ssize(diagnostics) << endl;
+        debug("ViewManager::getView() begin");
+        std::vector<std::unique_ptr<::view::Diagnostic>> tmp(ssize(diagnostics));
+        debug("Diagnostics cnt: ", ssize(diagnostics));
         transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
         [](const Diagnostic &diagnostic) {
             return diagnostic.getView();
         });
-        for (auto elm : tmp) {
-            response->mutable_diagnostics()->AddAllocated(elm);
+        for (auto &elm : tmp) {
+            response->mutable_diagnostics()->AddAllocated(elm.release());
         }
-        print(response);
+        debug("ViewManager::getView() end");
     }
 
     void ViewManager::registerInteraction(component_id_t id, InteractionType interaction_type) {
+        debug("ViewManager::registerInteraction begin");
+        debug(id);
+        debug(print(interaction_type));
         auto ptr = id_to_interactive_component->find(id);
         if (ptr == id_to_interactive_component->end()) {
+            debug("Component with id not found!");
+            debug("ViewManager::registerInteraction end");
             return;
         }
         auto component = ptr->second.lock();
         if (component) {
             component->registerInteraction(interaction_type);
         }
+        else {
+            debug("Component has been deallocated!");
+        }
+        debug("ViewManager::registerInteraction end");
     }
 
     // ViewServiceImpl
 
     ViewServiceImpl::ViewServiceImpl(ViewManager vm) : vm(std::move(vm)) {
         ::view::ViewResponse *temp = new ::view::ViewResponse;
+        debug("Test view begin");
         this->vm.getView(temp);
+        debug("Test view end");
     }
 
     ViewServiceImpl ViewServiceImpl::createFromJson(const json &input) {
@@ -224,7 +218,7 @@ namespace view_manager {
         builder.AddListeningPort("localhost:50051", grpc::InsecureServerCredentials());
         builder.RegisterService(&service);
         std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
-        std::cout << "ViewManager started on port 50051\n";
+        std::cerr << "ViewManager started on port 50051\n";
         server->Wait();
     }
 }

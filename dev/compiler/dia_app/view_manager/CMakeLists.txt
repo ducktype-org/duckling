@@ -1,3 +1,5 @@
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w -g3 -DDEBUG") # TODO: This should be more isolated
+
 add_executable(view_manager
     src/dia_app/view_manager/components.cpp
     src/dia_app/view_manager/components.hpp

@@ -6,6 +6,14 @@
 #include <json/json.hpp>
 #include <yaml-cpp/yaml.h>
 
+#ifdef DEBUG
+auto&operator<<(auto&o,std::pair<auto,auto>p){return o<<"("<<p.first<<", "<<p.second<<")";}
+auto operator<<(auto&o,auto x)->decltype(x.end(),o){o<<"{";int i=0;for(auto e:x)o<<","+!i++<<e;return o<<"}";}
+#define debug(X...)std::cerr<<"["#X"]: ",[](auto...$){((std::cerr<<$<<"; "),...)<<std::endl;}(X)
+#else
+#define debug(...){}
+#endif
+
 namespace dia_app {
     using json = nlohmann::json;
     using cstrr = const std::string &;

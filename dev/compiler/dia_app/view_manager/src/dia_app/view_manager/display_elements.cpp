@@ -63,11 +63,13 @@ namespace dia_file {
 
     std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
+            debug(this->groups);
             std::vector<hl_id_t> tags(ssize(this->groups));
             transform(this->groups.begin(), this->groups.end(), tags.begin(),
             [&creation_context](const std::string &name) {
                 return creation_context.hl_name_to_id->at(name);
             });
+            debug(tags);
             this->generated_component = static_pointer_cast<Component>(make_shared<TextComponent>(content, tags));
         }
         return this->generated_component;
@@ -225,7 +227,7 @@ namespace dia_file {
         if (!this->generated_component) {
             auto primary = this->content->toComponent(creation_context);
             auto alternative = this->alt_content->toComponent(creation_context);
-            auto result = make_shared<InteractiveComponent>(view_manager::getNewId(), primary, alternative);
+            auto result = make_shared<InteractiveComponent>(view_manager::getNewId(), primary, alternative, creation_context.id_to_interactive_component);
             creation_context.id_to_interactive_component->emplace(result->getId(), std::weak_ptr<InteractiveComponent>(result));
             this->generated_component = static_pointer_cast<Component>(result);
         }

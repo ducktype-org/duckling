@@ -56,6 +56,7 @@ namespace message_template {
             std::string filename = params.metadata.get_path();
             std::ifstream file(filename);
             if (!file.is_open()) {
+                std::cerr << "Failed to open message template!" << std::endl;
                 // This may not be a bug, but an OS problem on user side,
                 // so do not assert. TODO: Exception must be handled.
                 throw TemplateFileNotFoundException();

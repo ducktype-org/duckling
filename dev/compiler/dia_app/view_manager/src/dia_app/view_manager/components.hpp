@@ -12,10 +12,13 @@ namespace view_manager {
     using line_metadata_t = std::optional<uint>;
 
     template<class T>
-    using ptr = T*;
+    using line_suffix_data_t = std::optional<std::unique_ptr<T>>;
 
     template<class T>
-    using line_data_t = std::pair<line_metadata_t, T>;
+    using line_data_t = std::pair<line_metadata_t, std::optional<std::unique_ptr<T>>>;
+
+    template<class T>
+    using component_get_view_data_t = std::pair<line_suffix_data_t<T>, std::vector<line_data_t<T>>>;
 
     enum class InteractionType : uint8_t {
         Click,
@@ -23,15 +26,24 @@ namespace view_manager {
         CtrlClick
     };;
 
+    inline std::string print(InteractionType it) {
+        switch (it) {
+            case dia_app::view_manager::InteractionType::Click: return "Click";
+            case dia_app::view_manager::InteractionType::CtrlClick: return "CtrlClick";
+            case dia_app::view_manager::InteractionType::ShiftClick: return "ShiftClick";
+        }
+        assert(false);
+    };
+
     class Component {
         private:
 
         public:
         std::weak_ptr<Component> parent;
 
-        virtual std::vector<line_data_t<ptr<::view::Component>>> getView() const;
+        virtual component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const;
 
-        virtual std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const;
+        virtual component_get_view_data_t<::view::NoHlComponent> getNoHlView() const;
 
         virtual void registerInteraction(InteractionType interaction_type);
 
@@ -49,9 +61,9 @@ namespace view_manager {
 
         TextComponent(std::string content, std::vector<hl_id_t> tags);
 
-        std::vector<line_data_t<ptr<::view::Component>>> getView() const override;
-        
-        std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const override;
+        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+
+        component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
     };
@@ -65,9 +77,9 @@ namespace view_manager {
 
         CodeComponent(std::string content, std::vector<hl_id_t> tags);
 
-        std::vector<line_data_t<ptr<::view::Component>>> getView() const override;
-        
-        std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const override;
+        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+
+        component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
     };
@@ -80,9 +92,9 @@ namespace view_manager {
         public:
         ConcatComponent(std::vector<std::shared_ptr<Component>> components, std::vector<hl_id_t> tags);
 
-        std::vector<line_data_t<ptr<::view::Component>>> getView() const override;
-        
-        std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const override;
+        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+
+        component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
     };
@@ -92,6 +104,8 @@ namespace view_manager {
         return next++;
     }
 
+    class InteractiveComponent;
+    using id_to_interactive_component_mapping_t = std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>;
     class InteractiveComponent : public Component {
         private:
         enum class Status : bool {
@@ -102,17 +116,16 @@ namespace view_manager {
         component_id_t id;
         Status status = Status::Primary;
         std::shared_ptr<Component> visible, primary, alternative;
+        std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
 
         public:
         component_id_t getId();
 
-        InteractiveComponent(component_id_t id, const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative);
+        InteractiveComponent(component_id_t id, const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component);
             
-        std::unique_ptr<InteractiveComponent> create(const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative);
+        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
 
-        std::vector<line_data_t<ptr<::view::Component>>> getView() const override;
-        
-        std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const override;
+        component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
 
@@ -126,9 +139,9 @@ namespace view_manager {
         public:
         StartLineComponent(std::optional<uint> number);
 
-        std::vector<line_data_t<ptr<::view::Component>>> getView() const override;
-        
-        std::vector<line_data_t<ptr<::view::NoHlComponent>>> getNoHlView() const override;
+        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+
+        component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
     };
@@ -138,7 +151,7 @@ namespace view_manager {
 
         public:
         virtual ~Section();
-        virtual ptr<::view::Section> getView() const;
+        virtual std::unique_ptr<::view::Section> getView() const;
     };
 
     class TextSection : public Section {
@@ -148,9 +161,7 @@ namespace view_manager {
         public:
         TextSection(std::shared_ptr<Component> root);
 
-        ptr<::view::TextSection> getOwnView() const;
-
-        virtual ptr<::view::Section> getView() const override;
+        virtual std::unique_ptr<::view::Section> getView() const override;
     };
     
     class CodeSection : public Section {
@@ -159,7 +170,7 @@ namespace view_manager {
 
         public:
         CodeSection(std::shared_ptr<Component> root);
-        virtual ptr<::view::Section> getView() const override;
+        virtual std::unique_ptr<::view::Section> getView() const override;
     };
 
     class NoHlTextSection : public Section {
@@ -167,11 +178,11 @@ namespace view_manager {
         std::unique_ptr<Component> root;
 
         public:
-        virtual ptr<::view::Section> getView() const override;
+        virtual std::unique_ptr<::view::Section> getView() const override;
     };
 
     struct CreationContext {
-        std::unique_ptr<std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>> id_to_interactive_component;
+        std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
         std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
         dia_app::DataHandle data_handle;
     };
