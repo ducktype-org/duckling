@@ -88,7 +88,7 @@ int main(int argc, const char** argv) {
 	else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
-		cli(file.value(), result.isFlag("stdlib"));
+		return cli(file.value(), result.isFlag("stdlib"));
 	else
-		cli(result.isFlag("stdlib"));
+		return cli(result.isFlag("stdlib"));
 }
