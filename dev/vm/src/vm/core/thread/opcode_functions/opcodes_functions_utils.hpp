@@ -1,8 +1,9 @@
 #pragma once
 
+#include "../config.hpp"
+
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
-#include <vm/config.hpp>
 
 template<typename T>
 [[gnu::always_inline]]

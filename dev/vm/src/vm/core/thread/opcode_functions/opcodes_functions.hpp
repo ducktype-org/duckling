@@ -1,7 +1,8 @@
 #pragma once
 
+#include "../config.hpp"
+
 #include <vm/core/thread/low_program/instruction.hpp>
-#include <vm/config.hpp>
 
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS
@@ -10,14 +11,14 @@
 #endif
 
 #ifdef USE_TAIL_CALLS
-    #define RETURN_TYPE RETURN_TYPE_OPFUN_TC
+	#define RETURN_TYPE RETURN_TYPE_OPFUN_TC
 #else
-    #define RETURN_TYPE RETURN_TYPE_OPFUN_REF
+	#define RETURN_TYPE RETURN_TYPE_OPFUN_REF
 #endif
 
 namespace vm {
 	using DebugOpFun = void(OPFUN_REF_ARGS);
-	using OpFun = void(OPFUN_ARGS);
+	using OpFun      = void(OPFUN_ARGS);
 
 	/**
 	 * @brief A class that contains all opcode functions implementations

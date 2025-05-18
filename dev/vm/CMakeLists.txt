@@ -7,34 +7,50 @@ function(add_files)
     set(tmp ${tmp} "${CMAKE_CURRENT_LIST_DIR}/${ARGV${index}}")
   endforeach()
 
-  set(files ${files} ${tmp} PARENT_SCOPE)
+  set(files ${tmp} PARENT_SCOPE)
 endfunction()
 
 # Add vm files
 add_subdirectory(src/vm)
 
-function(duck_add_vm suffix defines default)
-  set(exec "VM_${suffix}")
+add_library(LibCommonVM ${vm_common_sources})
+make_module(LibCommonVM USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-  set(lib "Lib${exec}")
-  add_library(${lib} ${vm_sources})
-  make_module(${lib} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
-  target_compile_definitions(${lib} PRIVATE ${defines})
+add_library(LibThreadVM_TC ${vm_config_dependent_sources})
+make_module(LibThreadVM_TC USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-  set(sources src/vm/main.cpp src/vm/server.cpp src/vm/cli.cpp src/vm/vm_repl.cpp)
-  add_executable(${exec} ${sources})
-  target_link_libraries(${exec} ${lib})
+add_library(LibThreadVM_SC ${vm_config_dependent_sources})
+target_compile_definitions(LibThreadVM_SC PRIVATE "USE_SWITCH_CASE")
+make_module(LibThreadVM_SC USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-  if(default)
-    add_executable(VM ${sources})
-    target_link_libraries(VM ${lib})
-    add_library(LibVM ALIAS ${lib})
-  endif()
-endfunction()
+add_library(LibThreadVM_CG ${vm_config_dependent_sources})
+target_compile_definitions(LibThreadVM_CG PRIVATE "USE_COMPUTED_GOTO")
+make_module(LibThreadVM_CG USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-duck_add_vm("tc" "" ON)
-duck_add_vm("cg" "USE_COMPUTED_GOTO" OFF)
-duck_add_vm("sc" "USE_SWITCH_CASE" OFF)
+add_library(LibVM_tc INTERFACE)
+target_link_libraries(LibVM_tc INTERFACE LibCommonVM LibThreadVM_TC)
+
+add_library(LibVM_cg INTERFACE)
+target_link_libraries(LibVM_cg INTERFACE LibCommonVM LibThreadVM_SC)
+
+add_library(LibVM_sc INTERFACE)
+target_link_libraries(LibVM_sc INTERFACE LibCommonVM LibThreadVM_CG)
+
+add_library(LibVM ALIAS LibVM_tc)
+
+set(sources src/vm/main.cpp src/vm/server.cpp src/vm/cli.cpp src/vm/vm_repl.cpp)
+
+add_executable(VM_tc ${sources})
+target_link_libraries(VM_tc LibVM_tc)
+
+add_executable(VM_cg ${sources})
+target_link_libraries(VM_cg LibVM_cg)
+
+add_executable(VM_sc ${sources})
+target_link_libraries(VM_sc LibVM_sc)
+
+add_executable(VM ${sources})
+target_link_libraries(VM LibVM)
 
 add_subdirectory(playground)
 add_subdirectory(tests)

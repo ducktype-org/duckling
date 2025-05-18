@@ -73,4 +73,9 @@ namespace vm {
 	 * @return Fix8Instruction
 	 */
 	Fix8Instruction makeLowInstruction(u64 opcode, i32 arg0 = 0, i32 arg1 = 0);
+
+	/**
+	 * @brief For debug purposes only.
+	 */
+	std::string getInstructionConfig();
 }

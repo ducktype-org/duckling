@@ -1,6 +1,7 @@
 #include "instruction.hpp"
 
-#include <vm/config.hpp>
+#include "../config.hpp"
+
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 
@@ -19,6 +20,18 @@ namespace vm {
 			.arg0   = arg0,
 			.arg1   = arg1,
 		};
+#endif
+	}
+
+	std::string getInstructionConfig() {
+#ifdef USE_TAIL_CALLS
+		return "Tail calls";
+#endif
+#ifdef USE_COMPUTED_GOTO
+		return "Computed goto";
+#endif
+#ifdef USE_SWITCH_CASE
+		return "Switch case";
 #endif
 	}
 }
