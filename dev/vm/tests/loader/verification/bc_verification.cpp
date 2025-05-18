@@ -35,7 +35,7 @@ public:
 		TESTER_ADD_TEST(afterDeinit);
 		TESTER_ADD_TEST(invalidName);
 		TESTER_ADD_TEST(repeatedName);
-		
+
 		// @note: Not implemented yet
 		// TESTER_ADD_TEST(derefAfterDeinit);
 		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
