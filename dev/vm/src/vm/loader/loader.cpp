@@ -271,7 +271,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<fs::FilePath>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value())
-		return getProgram({ std::move(opt_code_collection).value() });
+	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });
 	return std::unexpected(std::move(opt_code_collection).error());
 }

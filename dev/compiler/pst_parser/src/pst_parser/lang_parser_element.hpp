@@ -26,6 +26,9 @@ namespace pst {
 	 * @brief Base Element for all of the PST elements.
 	 */
 	class LangElement: public tpc::Element {
+	private:
+		static base::HashMap<u64, AccessLocked<LangElement>> pst_id_map;
+
 	public:
 		using Child = AccessLocked<LangElement>;
 
@@ -35,13 +38,24 @@ namespace pst {
 
 		explicit LangElement(const dia::SourcePosition& position):
 			  source_position(position),
-			  id(PstID::next()) {}
+			  id(PstID::next()) {
+			pst_id_map.emplace(id, AccessLocked<LangElement>(CRef<LangElement>(this)));
+		}
+
+		LangElement(const LangElement&) = delete;
+		LangElement(LangElement&&)      = delete;
 
 		/**
 		 * @brief Position covering the whole element
 		 */
 		[[nodiscard]]
 		const dia::SourcePosition& getSourcePosition() const;
+
+		/**
+		 * @brief Get pst node the by id. Throws on non-existent id.
+		 */
+		[[nodiscard]]
+		static AccessLocked<LangElement> getByID(u64);
 
 	protected:
 		void dprintPrefix(std::ostream& out) const override {
@@ -206,5 +220,3 @@ namespace pst {
 
 	using ImportType = CRef<pst::Import>;
 }
-
-ID_STD_HASH(::pst::PstID);
