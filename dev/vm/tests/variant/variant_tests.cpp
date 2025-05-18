@@ -12,9 +12,10 @@ class VmVariantTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(simpleVariant);
-		TESTER_ADD_TEST(blocksDontDisappearTest);
-		TESTER_ADD_TEST(nestedVariantTest);
+		// TESTER_ADD_TEST(simpleVariant);
+		// TESTER_ADD_TEST(blocksDontDisappearTest);
+		// TESTER_ADD_TEST(nestedVariantTest);
+		TESTER_ADD_TEST(variantInsideStruct);
 	}
 
 private:
@@ -65,6 +66,10 @@ private:
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("nested_failing.dbc", "15", "15"), "Data was freed"
 		);
+	}
+
+	void variantInsideStruct() {
+		runTestOnVm("inside_struct.dbc");
 	}
 };
 

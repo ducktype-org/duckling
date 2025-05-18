@@ -2,6 +2,7 @@ type primitive: i8 1
 type variant: simple_variant { i64, i8 }
 type variant: nested { simple_variant, i64 }
 type pointer: ptr_sv simple_variant
+type pointer: ptr_nested nested
 
 function main {
     # let v0: variant<variant<i64, i8>, i64>;

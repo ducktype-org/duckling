@@ -1,5 +1,6 @@
 #pragma once
 
+#include "base/maps.hpp"
 #include <base/ints.hpp>
 #include <base/raw_view.hpp>
 #include <base/strongly_typed_int.hpp>
@@ -63,6 +64,7 @@ namespace vm {
 		friend class Memory;
 		friend class VariantAllocator;
 
+		// Think of it as a view on parent's bytes that has it's own type and lifetime.
 		base::HashMap<usize, Ref<Block>> children_blocks{};  // offset to block
 		MRef<Block>                      parent = nullptr;
 
