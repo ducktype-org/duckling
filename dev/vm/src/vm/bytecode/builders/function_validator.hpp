@@ -64,6 +64,8 @@ namespace vm::code::builders {
 		base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
 		bool                                                     validated = false;
 
+		void validateArgTypes(const Instruction& instruction, LocalStack&) const;
+		void validateSpecificInstruction(const Instruction& instruction) const;
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction, LocalStack&) const;
 		void validateArgInstantiable(const opargs::Type& arg) const;

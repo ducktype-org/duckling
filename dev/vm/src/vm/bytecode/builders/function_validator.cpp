@@ -107,12 +107,7 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 	if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
 }
 
-/**
- * @brief Validates the instruction in the current stack state.
- * Checks each argument of the instruction if it has the expected type of an argument.
- * @param instruction Instruction that is validated.
- */
-void FunctionValidator::validateInstruction(const Instruction& instruction, LocalStack& local_stack)
+void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalStack& local_stack)
 	const {
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
@@ -222,11 +217,24 @@ void FunctionValidator::validateInstruction(const Instruction& instruction, Loca
 		    && arg_types.at(0).name != arg_types.at(1).name)
 			throw ArgumentMismatchError(instruction);
 	}
+}
 
+void FunctionValidator::validateSpecificInstruction(const Instruction& instruction) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 	}
+}
+
+/**
+ * @brief Validates the instruction in the current stack state.
+ * Checks each argument of the instruction if it has the expected type of an argument.
+ * @param instruction Instruction that is validated.
+ */
+void FunctionValidator::validateInstruction(const Instruction& instruction, LocalStack& local_stack)
+	const {
+	validateArgTypes(instruction, local_stack);
+	validateSpecificInstruction(instruction);
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
