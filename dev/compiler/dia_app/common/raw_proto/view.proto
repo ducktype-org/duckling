@@ -2,17 +2,16 @@ syntax = "proto3";
 
 package view;
 
-message SideEntryComponent {
-    /* Position in the side_notes array in the ViewResponse. */
-    int32 side_entry_id = 1;
-}
+// ---------- COMPONENTS WITHOUT HIGHLIGHT ---------- //
 
 message NoHlTextComponent {
     string content = 1;
+    repeated uint32 assoc_side_entries = 2;
 }
 
 message NoHlCodeComponent {
     string content = 1;
+    repeated uint32 assoc_side_entries = 2;
 }
 
 message NoHlConcatComponent {
@@ -20,7 +19,7 @@ message NoHlConcatComponent {
 }
 
 message NoHlInteractiveComponent {
-    int32 component_id = 1;
+    uint32 component_id = 1;
     NoHlComponent primary_component = 2;
 }
 
@@ -30,197 +29,167 @@ message NoHlComponent {
         NoHlCodeComponent code_component = 2;
         NoHlConcatComponent concat_component = 3;
         NoHlInteractiveComponent interactive_component = 4;
-        SideEntryComponent side_entry_component = 5;
     }
 }
 
-message NoHlTextSection {
-    NoHlComponent root = 1;
-}
+// ---------- COMPONENTS WITH HIGHLIGHT ---------- //
 
-message TextComponent {
+// Highlight tags (and associated side infos) can be pushed down to the leaves by the VM.
+// Pros: clarity; hl_tags in ConcatComponent were bloating the protocol and spreading confusion.
+
+// Note: higlights are only allowed inside code sections,
+//       and in these sections all text is rendered as code,
+//       so there is no need for a text component.
+
+message HlCodeComponent {
     string content = 1;
-    repeated int32 hl_tags = 2;
+    repeated uint32 assoc_side_infos = 2;
+    repeated uint32 hl_tags = 3;
 }
 
-message CodeComponent {
-    string content = 1;
-    repeated int32 hl_tags = 2;
+message HlConcatComponent {
+    repeated HlComponent components = 1;
 }
 
-message ConcatComponent {
-    repeated Component components = 1;
-    repeated int32 hl_tags = 2;
+message HlInteractiveComponent {
+    uint32 component_id = 1;
+    HlComponent current_component = 2;
 }
 
-message InteractiveComponent {
-    int32 component_id = 1;
-    Component primary_component = 2;
-}
-
-message Component {
+message HlComponent {
     oneof component {
-        TextComponent text_component = 1;
-        CodeComponent code_component = 2;
-        ConcatComponent concat_component = 3;
-        InteractiveComponent interactive_component = 4;
-        SideEntryComponent side_entry_component = 5;
+        HlCodeComponent code_component = 1;
+        HlConcatComponent concat_component = 2;
+        HlInteractiveComponent interactive_component = 3;
     }
 }
 
-message TextSection {
-    Component root = 1;
+// ---------- CODE SECTION RELATED MESSAGES ---------- //
+
+// Filename, line, and column are required to show the standardized location form:
+//          filename.extension:line:column
+
+message CodeMetadata {
+    string filename = 1;
+    uint32 line = 2;
+    uint32 column = 3;
 }
 
 message CodeLine {
-    optional int32 line_number = 1;
-    TextSection content = 2;
+    optional uint32 line_number = 1;
+    HlComponent content = 2;
+}
+
+// The message related to a specific highlight.
+message HlMessage {
+    // The tag this message is referred to as.
+    uint32 tag = 1;
+    // The priority of display.
+    uint32 priority = 2;
+    NoHlComponent message = 3;
 }
 
 message CodeSection {
-    repeated CodeLine lines = 1;
+    CodeMetadata metadata = 1;
+    repeated CodeLine lines = 2;
+    repeated HlMessage hl_messages = 3;
+}
+
+// ---------- DIAGNOSTICS ---------- //
+
+// A series of infos related to one diagnostic. 
+message Diagnostic {
+    repeated Info infos = 1;
+}
+
+// A coherent piece of information related to a diagnostic.
+message Info {
+    Metadata metadata = 1;
+    repeated Section sections = 2;
+}
+
+enum InfoType {
+    Error = 0;
+    Warning = 1;
+    Note = 2;
+    Hint = 3;
+    Docs = 4;
+}
+
+message Metadata {
+    InfoType type = 1;
+    // Info code is always a number.
+    uint32 code = 2;
 }
 
 message Section {
     oneof section {
         CodeSection code_section = 1;
-        NoHlTextSection no_hl_text_section = 2;
-        TextSection text_section = 3;
+        // Both header message and description are of the same type.
+        NoHlComponent text_section = 2;
     }
 }
 
-/* This is to be adjusted. */
-message Metadata {
-    optional string error_code = 1;
-    optional string file_info = 2;
-}
 
-message HlInfo {
-    int32 tag = 1;
-    string message = 2;
-}
-
-message Diagnostic {
-    Metadata metadata = 1;
-    repeated Section sections = 2;
-    repeated HlInfo hl_messages = 3;
-}
-
-message SideNoHlConcatComponent {
-    repeated SideNoHlComponent components = 1;
-}
-
-message SideNoHlInteractiveComponent {
-    int32 component_id = 1;
-    SideNoHlComponent primary_component = 2;
-}
-
-message SideNoHlComponent {
-    oneof component {
-        NoHlTextComponent text_component = 1;
-        NoHlCodeComponent code_component = 2;
-        SideNoHlConcatComponent concat_component = 3;
-        SideNoHlInteractiveComponent interactive_component = 4;
-    }
-}
-
-message SideNoHlTextSection {
-    SideNoHlComponent root = 1;
-}
-
-message SideConcatComponent {
-    repeated SideComponent components = 1;
-    repeated int32 hl_tags = 2;
-}
-
-message SideInteractiveComponent {
-    int32 component_id = 1;
-    SideComponent primary_component = 2;
-}
-
-message SideComponent {
-    oneof component {
-        TextComponent text_component = 1;
-        CodeComponent code_component = 2;
-        SideConcatComponent concat_component = 3;
-        SideInteractiveComponent interactive_component = 4;
-    }
-}
-
-message SideTextSection {
-    SideComponent root = 1;
-}
-
-message SideCodeLine {
-    optional int32 line_number = 1;
-    SideTextSection content = 2;
-}
-
-message SideCodeSection {
-    repeated SideCodeLine lines = 1;
-}
-
-message SideSection {
-    oneof section {
-        SideCodeSection code_section = 1;
-        SideNoHlTextSection no_hl_text_section = 2;
-        SideTextSection text_section = 3;
-    }
-}
-
-/* This is to be adjusted. */
-message SideMetadata {
-    optional string note_code = 1;
-}
+// ---------- SIDE INFOS ---------- //
 
 message SideEdge {
-    int32 side_note_id = 1;
+    uint32 edge_id = 1;
     string description = 2;
 }
 
-message SideDiagnostic {
-    SideMetadata metadata = 1;
-    repeated SideSection sections = 2;
-    repeated SideEdge edges = 3;
+message SideInfo {
+    uint32 side_info_id = 1;
+    Metadata metadata = 2;
+    repeated SideSection sections = 3;
+    repeated SideEdge edges = 4;
 }
 
-message SideNote {
-    repeated SideDiagnostic diagnostics = 1;
+message SidePath {
+    repeated SideInfo infos = 1;
 }
 
-message ViewResponse {
-    repeated Diagnostic diagnostics = 1;
-    repeated SideNote side_notes = 2;
-}
+// ---------- VIEW SERVICE API ---------- //
 
-/* This is to be adjusted. */
+// The names of clicks are abstract, so the UI may decide how to invoke them.
 enum ClickType {
     CLICK = 0;
-    CTRL_CLICK = 1;
-    SHIFT_CLICK = 2;
+    CLICK_INTERACTIVE = 1;
+    CLICK_INTERACTIVE_ROLLBACK = 2;
+}
+
+message ViewRequest {}
+message ViewResponse {
+    repeated Diagnostic diagnostics = 1;
+    repeated SidePath side_paths = 2;
 }
 
 message ClickRequest {
-    int32 component_id = 1;
+    uint32 component_id = 1;
     ClickType click_type = 2;
 }
-
 message ClickResponse {
     string status = 1;
 }
 
-message ViewRequest {}
-
-message CloseSideNoteRequest {
-    int32 side_note_id = 1;
+message CloseSideInfoRequest {
+    uint32 side_info_id = 1;
+}
+message CloseSideInfoResponse {
+    string status = 1;
 }
 
-message CloseSideNoteResponse {
+message EdgeRequest {
+    uint32 side_info_id = 1;
+    uint32 edge_id = 2;
+}
+message EdgeResponse {
     string status = 1;
 }
 
 service ViewService {
     rpc GetView(ViewRequest) returns (ViewResponse);
     rpc Click(ClickRequest) returns (ClickResponse);
-    rpc CloseSideNote(CloseSideNoteRequest) returns (CloseSideNoteResponse);
+    rpc CloseSideInfo(CloseSideInfoRequest) returns (CloseSideInfoResponse);
+    rpc GetEdge(EdgeRequest) returns (EdgeResponse);
 }
