@@ -146,6 +146,10 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
+		saveUnderPointer
+
+		loadFromPointerTo
+
 		auto destroyPointer(Pointer pointer) -> void {
 			if_opt_some(pointer.block.toOpt(), block) {
 				std::unique_lock lock(*block->shared_mutex);
