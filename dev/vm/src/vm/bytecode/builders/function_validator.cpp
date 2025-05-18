@@ -193,8 +193,20 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 				if (!type_context.getTypes().contains(type_value.type_name))
 					throw UnknownTypeError(arg);
 			}
-			variant_case(opargs::FunctionName, function_value) {}
-			variant_case_novalue(opargs::BuiltinFunctionName) {}
+			variant_case(opargs::FunctionName, function_value) {
+				auto fun_name = function_value.function_name;
+				auto generic_arg = opargs::OpCodeArg{ function_value };
+				auto maybe_func_type = type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					throw UnknownFunctionError(generic_arg);
+			}
+			variant_case(opargs::BuiltinFunctionName, function_value) {
+				auto fun_name = function_value.function_name;
+				auto generic_arg = opargs::OpCodeArg{ function_value };
+				auto maybe_func_type = type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					throw UnknownFunctionError(generic_arg);
+			}
 			variant_case(opargs::Label, label_value) {
 				variant_match(instruction) {
 					variant_case_novalue(Op_label) {}
@@ -420,12 +432,7 @@ void FunctionValidator::LocalStack::popCallArgs(
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	// TODO: remove atMaybe after adding a check for the call instruction.
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type     = std::get<FunctionType>(*maybe_func_type);
+	auto func_type     = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
 	bool check_ret_val = func_type.result != base::StrID("void");
 
 	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
@@ -448,11 +455,7 @@ void FunctionValidator::LocalStack::validateTailcall(
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type = std::get<FunctionType>(*maybe_func_type);
+	auto func_type = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
 
 	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
 		throw InvalidTailcallSignatureError(generic_arg);
