@@ -2,7 +2,7 @@ fun square(x : i64) -> i64 = {
     return x * x;
 }
 
-fun main() = {
+fun main() -> i64 = {
     let x: i64 = builtin_input_i64();
     let y: i64 = square(x);
     builtin_output_i64(y);

@@ -31,7 +31,6 @@ namespace compiler::driver {
 	 */
 	struct Options {
 		BackendType backend_type;
-		base::StrID output_file;
 		bool        compile_to_assembly;
 		bool        dump_llvm_ir;
 
@@ -72,7 +71,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Link all compiled modules into a single program.
 		 */
-		virtual void link() = 0;
+		virtual void link(base::StrID output_file) = 0;
 
 		/**
 		 * @brief Run the compiled program. (only for DVM)
@@ -101,7 +100,7 @@ namespace compiler::driver {
 		/**
 		 * @brief Links all module compiled so far into a complete program.
 		 */
-		void link();
+		void link(base::StrID output_file);
 
 		/**
 		 * @brief Execute modules compiled with `compileModule` method.

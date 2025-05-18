@@ -31,7 +31,7 @@ namespace compiler::driver {
 		this->code_collection.emplace_back(std::move(code_collection));
 	}
 
-	void DVMDriver::link() {
+	void DVMDriver::link(base::StrID) {
 		// DVM doesn't require linking.
 	}
 

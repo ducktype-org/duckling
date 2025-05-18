@@ -18,7 +18,7 @@ namespace compiler::driver {
 
 		void compileModule(query::Context&, const BackendModuleData&) override;
 
-		void link() final;
+		void link(base::StrID output_file) final;
 
 		auto run() -> std::expected<RunOutput, std::string> final;
 	};
