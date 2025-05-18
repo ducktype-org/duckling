@@ -80,6 +80,42 @@ namespace vm {
 			return global_data.atMaybe(id).expect("Id not stored!").modView();
 		}
 
+		// =================== Variant operations ===================
+
+		MRef<Block> getNestedViewBlock(Ref<Block> variant_block, u64 offset, TypeCRef type) {
+			std::unique_lock lock(mutex);
+			if_opt_some(variant_block->children_blocks.atMaybe(offset), nested) {
+				if (nested->data.element_type == type) return nested;
+			}
+			return nullptr;
+		}
+
+		/**
+		 * @brief Creates new block at position (kind of variant.)
+		 */
+		void setNestedViewBlock(Ref<Block> parent_block, u64 offset, TypeCRef type) {
+			std::unique_lock lock(mutex);
+			auto&            children = parent_block->children_blocks;
+			if_opt_some(children.atMaybe(offset), nested) {
+				freeBlock(nested);
+				children.erase(offset);
+			}
+
+			auto block_data         = parent_block->data;
+			block_data.element_type = type;
+			block_data.view
+				= base::ModRawView(parent_block->data.view.getBegin() + offset, type->getSize());
+
+			// Set memory to 0.
+			std::memset(block_data.view.getBegin(), 0, block_data.view.size());
+
+			auto new_block = createBlock(block_data);
+			new_block->refcount++;  // so that the block does not disappear accidentally
+			children.put(offset, new_block);
+		}
+
+		bool variantHoldsType(Ref<Block> variant_block, TypeCRef type);
+
 		// =================== Block operations ===================
 
 		[[nodiscard]]
@@ -102,8 +138,8 @@ namespace vm {
 		[[nodiscard]]
 		static __attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
 			-> base::ModRawView {
-			std::shared_lock lock(*pointer.block->shared_mutex);
 			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
+			std::shared_lock lock(*pointer.block->shared_mutex);
 			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
 				CORE_PANIC("Accessing data out of bounds");

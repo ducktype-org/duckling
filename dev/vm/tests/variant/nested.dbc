@@ -1,0 +1,6 @@
+type variant: simple_variant { i64, i8 }
+type variant: nested { simple_variant, i64 }
+
+function main {
+    
+}

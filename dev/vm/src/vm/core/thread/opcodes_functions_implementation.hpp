@@ -36,6 +36,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/memory/memory.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -539,6 +540,42 @@ namespace vm {
 			*vt_pointer = type.get();
 		}
 		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(set_inner_lvnt_type)(FUNCTION_ARGS) {
+		{
+			auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg0)];
+			auto block               = frame->block_stack[variant_block_index];
+			thread.process.getMemory().setNestedViewBlock(
+				block, 0, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(get_inner_lptr_lvnt)(FUNCTION_ARGS) {
+		{
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+			auto  parent_block        = frame->block_stack[variant_block_index];
+			auto  wanted_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+			auto view_block_ref
+				= thread.process.getMemory().getNestedViewBlock(parent_block, 0, wanted_type);
+
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) {
+					thread.process.getMemory().setPointer(
+						destination_pointer, Memory::getPointer(view_block)
+					);
+				}
+				opt_none {
+					thread.process.getMemory().setPointer(destination_pointer, Pointer::null());
+				}
+			}
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {

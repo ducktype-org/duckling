@@ -4,7 +4,7 @@
 #include <base/ref.hpp>
 
 namespace vm {
-	class BlockData;
+	struct BlockData;
 
 	class AllocatorABC {
 	public:

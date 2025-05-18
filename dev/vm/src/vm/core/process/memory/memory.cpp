@@ -59,9 +59,17 @@ namespace vm {
 	}
 
 	void Memory::freeBlock(Ref<Block> block) {
-		std::unique_lock lock(mutex);
+		// std::unique_lock lock(mutex);
+		for (auto [offset, child]: block->children_blocks) freeBlock(child);
+
+		// Parents reference their children so that they don't disappear on someone's pointer
+		// destruction.
+		if (block->parent)
+			destroyReference(block);
+		else
+			block->data.allocator->deallocate(&block->data);
+
 		block->deallocated = true;
-		block->data.allocator->deallocate(&block->data);
 		if (block->refcount == 0) deleteBlock(block);
 	}
 
@@ -89,4 +97,67 @@ namespace vm {
 			global_data.put(id, std::move(storage));
 		}
 	}
+
+	// Ref<Block> Memory::variantChangeType(Ref<Block> variant_block, TypeCRef new_type) {
+	// 	CORE_ASSERT(variant_block->variant_data, "Block is not a variant block");
+	// 	CORE_ASSERT(!variant_block->deallocated, "Variant operation on deallocated block");
+	// 	std::unique_lock lock(mutex);
+
+	// 	// auto&            variant_data = variant_block->variant_data.value();
+	// 	// if (variant_data.parent) {
+	// 	// 	// We have to remove our-selves from parent
+	// 	// 	// @TODO: Improve speed of this operation.
+	// 	// 	auto& parent_children = variant_data.parent->variant_data->children_blocks;
+	// 	// 	for (auto it = parent_children.begin(); it != parent_children.end(); it++) {
+	// 	// 		if (*it == variant_block) {
+	// 	// 			parent_children.erase(it);
+	// 	// 			break;
+	// 	// 		}
+	// 	// 	}
+
+	// 	// } else {
+	// 	// 	// Nothing?
+	// 	// }
+
+	// 	// Create a new block that points to the same memory.
+
+	// 	// Invalidate children.
+	// 	// A child may be a field inside a structure
+	// 	// that is of a variant type, or a variant within variant.
+	// 	// A child may already be deallocated, but the reference was not
+	// 	// removed from children list for the sake of efficiency.
+	// 	std::vector<Ref<Block>> stack;
+	// 	stack.insert(variant_block->variant_data->children_blocks);
+	// 	while (!stack.empty()) {
+	// 		auto front = stack.back();
+	// 		stack.pop_back();
+	// 		for (auto& [offset, child]: front->variant_data->children_blocks)
+	// 			if (!child->deallocated) stack.push_back(child);
+	// 		destroyReference(front);
+	// 		freeBlock(front);
+	// 	}
+
+	// 	return variantDataReference(variant_block, 0, new_type);
+	// 	// Whenever we create a child we have to mark it referenced.
+	// 	// @TODO: Taking a pointer to variant must work.
+	// 	// GENERALLY speaking: Main block has a variant type. Then we can have inner offset=0, which
+	// 	// has inner type and so on.
+	// 	//
+	// 	// New idea -
+	// }
+
+	// bool Memory::variantHoldsType(Ref<Block> variant_block, TypeCRef type) {
+	// 	CORE_ASSERT(variant_block->variant_data, "Not a variant");
+	// 	return variant_block->data.element_type == type;
+	// }
+
+	// Ref<Block> Memory::variantDataReference(
+	// 	Ref<Block> variant_block, u64 variant_offset, TypeCRef type
+	// ) {
+	// 	auto& children = variant_block->variant_data->children_blocks;
+	// 	if (children.contains(offset)) return children[offset];
+	// 	auto data         = variant_block->data;
+	// 	data.element_type = type;
+	// 	createBlock(BlockData data)
+	// }
 }
