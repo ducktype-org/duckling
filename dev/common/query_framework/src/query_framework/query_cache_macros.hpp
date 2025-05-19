@@ -7,19 +7,19 @@
  */
 #define QUERY_AUTO_CACHE_COPY                                                    \
 	static inline base::HashMap<                                                 \
-		QKey,                                                                    \
-		query::CacheEntry<PResult>,                                              \
-		::query::QueryUnstableHashFunctor<QKey>>                                 \
-				cache;                                                           \
-	static auto load(const QKey& key) -> LoadResult {                            \
-		if (const auto& value = cache.atMaybe(key)) {                            \
-			return QResWithACD{ value->data, value->acd };                       \
+		QueryUnstableHash,                                                        \
+		query::CacheEntry<PResult>,                                               \
+		::query::QueryUnstableHashFunctor<QueryUnstableHash>>                      \
+				cache;                                                               \
+	static auto load(QueryUnstableHash keyHash) -> LoadResult {                  \
+		if (const auto& value = cache.atMaybe(keyHash)) {                         \
+			return QResWithACD{ value->data, value->acd };                          \
 		}                                                                        \
 		return {};                                                               \
 	}                                                                            \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult { \
-		cache.put(key, { std::move(res), acd });                                 \
-		return cache.at(key).data;                                               \
+	static auto store(QueryUnstableHash keyHash, PResult res, query::ACD acd) -> QResult { \
+		cache.put(keyHash, { std::move(res), acd });                              \
+		return cache.at(keyHash).data;                                            \
 	}                                                                            \
 	static_assert(                                                               \
 		std::is_same_v<PResult, QResult>,                                        \
@@ -39,24 +39,24 @@
  */
 #define QUERY_AUTO_CACHE_CONSTRUCT                                                      \
 	static inline base::HashMap<                                                        \
-		QKey,                                                                           \
+		QueryUnstableHash,                                                               \
 		query::CacheEntry<PResult>,                                                     \
-		::query::QueryUnstableHashFunctor<QKey>>                                        \
-				cache;                                                                  \
-	static auto load(const QKey& key) -> LoadResult {                                   \
-		if (const auto& value = cache.atMaybe(key)) {                                   \
-			return QResWithACD{ value->data, value->acd };                              \
-		}                                                                               \
-		return {};                                                                      \
-	}                                                                                   \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {        \
-		cache.put(key, { std::move(res), acd });                                        \
-		return cache.at(key).data;                                                      \
-	}                                                                                   \
-	static_assert(                                                                      \
+		::query::QueryUnstableHashFunctor<QueryUnstableHash>>                            \
+				cache;                                                                     \
+	static auto load(QueryUnstableHash keyHash) -> LoadResult {                        \
+		if (const auto& value = cache.atMaybe(keyHash)) {                               \
+			return QResWithACD{ value->data, value->acd };                                \
+		}                                                                              \
+		return {};                                                                     \
+	}                                                                                 \
+	static auto store(QueryUnstableHash keyHash, PResult res, query::ACD acd) -> QResult { \
+		cache.put(keyHash, { std::move(res), acd });                                    \
+		return cache.at(keyHash).data;                                                 \
+	}                                                                                 \
+	static_assert(                                                                    \
 		std::is_constructible_v<QResult, PResult> && !std::is_same_v<QResult, PResult>, \
-		"QResult should be constructible from (but not equal to) PResult for "          \
-		"QUERY_AUTO_CACHE_CONSTRUCT"                                                    \
+		"QResult should be constructible from (but not equal to) PResult for "        \
+		"QUERY_AUTO_CACHE_CONSTRUCT"                                                  \
 	);
 
 
@@ -68,22 +68,22 @@
  */
 #define QUERY_AUTO_CACHE_REF                                                     \
 	static inline base::StableHashMap<                                           \
-		QKey,                                                                    \
-		query::CacheEntry<PResult>,                                              \
-		::query::QueryUnstableHashFunctor<QKey>>                                 \
-				cache;                                                           \
-	static auto load(const QKey& key) -> LoadResult {                            \
-		if (auto value = cache.atMaybe(key)) {                                   \
-			return QResWithACD{ CRef<PResult>(&value->data), value->acd };       \
+		QueryUnstableHash,                                                        \
+		query::CacheEntry<PResult>,                                               \
+		::query::QueryUnstableHashFunctor<QueryUnstableHash>>                      \
+				cache;                                                               \
+	static auto load(QueryUnstableHash keyHash) -> LoadResult {                  \
+		if (auto value = cache.atMaybe(keyHash)) {                                \
+			return QResWithACD{ CRef<PResult>(&value->data), value->acd };          \
 		}                                                                        \
 		return {};                                                               \
 	}                                                                            \
-	static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult { \
-		cache.put(key, query::CacheEntry<PResult>{ std::move(res), acd });       \
-		return CRef<PResult>(&cache[key].data);                                  \
+	static auto store(QueryUnstableHash keyHash, PResult res, query::ACD acd) -> QResult { \
+		cache.put(keyHash, query::CacheEntry<PResult>{ std::move(res), acd });    \
+		return CRef<PResult>(&cache[keyHash].data);                               \
 	}                                                                            \
 	static_assert(                                                               \
-		std::is_same_v<CRef<PResult>, QResult>,                                  \
+		std::is_same_v<CRef<PResult>, QResult>,                                   \
 		"QResult should be a CRef of PResult for QUERY_AUTO_CACHE_REF"           \
 	);
 
@@ -93,8 +93,8 @@
  * is expected to be faster than trying to look it up in a cache.
  */
 #define QUERY_AUTO_NO_CACHE                                                     \
-	static auto store(const QKey&, PResult res, const query::ACD&) -> QResult { \
+	static auto store(QueryUnstableHash, PResult res, const query::ACD&) -> QResult { \
 		return QResult{ std::move(res) };                                       \
 	}                                                                           \
                                                                                 \
-	static auto load(const QKey&) -> LoadResult { return {}; }
+	static auto load(QueryUnstableHash) -> LoadResult { return {}; }

@@ -10,7 +10,7 @@
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
-#include "query_hash.hpp"          // IWYU pragma: export
+#include "query_hash.hpp"
 #include "query_int.hpp"
 
 #include <base/defer.hpp>
@@ -39,7 +39,7 @@ namespace query::detail {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		if (auto v = QueryImplType::load(key)) {
+		if (auto v = QueryImplType::load(unstableHashKey(key))) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
@@ -71,7 +71,7 @@ namespace query::detail {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			return QueryImplType::store(unstableHashKey(key), QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -99,8 +99,8 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QKey key) -> LoadResult;
-		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		 *  static auto load(QueryUnstableHash keyHash) -> LoadResult;
+		 *  static auto store(QueryUnstableHash keyHash, PResult res, query::ACD acd) -> QResult;
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};
@@ -140,7 +140,7 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		std::is_same_v<                                                                           \
-			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>, \
+			std::invoke_result_t<decltype(type::store), QueryUnstableHash, type::PResult, ::query::ACD>, \
 			type::QResult>,                                                                       \
 		"Bad store result."                                                                       \
 	);                                                                                            \
