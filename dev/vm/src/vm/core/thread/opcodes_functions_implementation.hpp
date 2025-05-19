@@ -582,8 +582,11 @@ namespace vm {
 		{
 			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto block           = variant_pointer.getBlock();
+			// @TODO: Change this to pointer.
 			thread.process.getMemory().setNestedViewBlock(
-				block, 0, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+				block,
+				variant_pointer.getOffset(),
+				thread.executing_program->types->at(TypeID(u64(instr->arg1)))
 			);
 		}
 		FUNCTION_CONT(1);
@@ -597,8 +600,9 @@ namespace vm {
 			auto  wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
-			auto view_block_ref
-				= thread.process.getMemory().getNestedViewBlock(parent_block, 0, wanted_type);
+			auto view_block_ref = thread.process.getMemory().getNestedViewBlock(
+				parent_block, variant_pointer.getOffset(), wanted_type
+			);
 
 			match_optional(view_block_ref.toOpt()) {
 				opt_some(view_block) {

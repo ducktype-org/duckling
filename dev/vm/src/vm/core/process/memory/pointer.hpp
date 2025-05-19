@@ -43,6 +43,11 @@ namespace vm {
 		}
 
 		[[nodiscard]]
+		auto getOffset() {
+			return offset;
+		}
+
+		[[nodiscard]]
 		auto isNull() -> bool {
 			return block == nullptr;
 		}

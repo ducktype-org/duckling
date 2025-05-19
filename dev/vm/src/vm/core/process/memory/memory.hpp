@@ -164,9 +164,11 @@ namespace vm {
                 auto offset = dst.offset + iter->first - src.offset;
                 setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
             }
-            
+
 			// Copy the data itself
-			getPointerData(dst, type->getSize()) = getPointerData(src, type->getSize());
+			auto dst_view = getPointerData(dst, type->getSize());
+			auto src_view = getPointerData(src, type->getSize());
+			std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
 		}
 
 		auto destroyPointer(Pointer pointer) -> void {
