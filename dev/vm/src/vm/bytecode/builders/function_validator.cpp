@@ -107,8 +107,9 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 	if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
 }
 
-void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalStack& local_stack)
-	const {
+void FunctionValidator::validateArgTypes(
+	const Instruction& instruction, const LocalStack& current_stack
+) const {
 	auto args = std::visit(
 		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
 			if constexpr (TwoArgumentOpcode<T>)
@@ -127,8 +128,8 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 		variant_match(arg) {
 #define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
 	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
-		if (!local_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);             \
-		CRef<TypeOfData> entry = local_stack.at(local.var_name);                                 \
+		if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);           \
+		CRef<TypeOfData> entry = current_stack.at(local.var_name);                               \
 		variant_match(*entry) {                                                                  \
 			variant_case(PrimitiveType, primitive_type) {                                        \
 				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
@@ -170,8 +171,8 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 			STACK_LOCAL_CASE(32);
 			STACK_LOCAL_CASE(64);
 			variant_case(opargs::StackLocalPtr, local) {
-				if (!local_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = local_stack.at(local.var_name);
+				if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> entry = current_stack.at(local.var_name);
 				variant_match(*entry) {
 					variant_case(PointerType, pointer_type) { (void) pointer_type; }
 					variant_default { throw InvalidArgumentTypeError(arg); }
@@ -180,11 +181,12 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 			variant_case(opargs::StackLocalAny, local) {
 				variant_match(instruction) {
 					variant_case_novalue(Op_init_lany_type) {
-						if (local_stack.contains(local.var_name))
+						if (current_stack.contains(local.var_name))
 							throw DuplicatedLocalNameError(arg);
 					}
 					variant_default {
-						if (!local_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+						if (!current_stack.contains(local.var_name))
+							throw UnknownLocalNameError(arg);
 					}
 				}
 			}
@@ -194,16 +196,22 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 					throw UnknownTypeError(arg);
 			}
 			variant_case(opargs::FunctionName, function_value) {
-				auto fun_name = function_value.function_name;
+				auto fun_name    = function_value.function_name;
 				auto generic_arg = opargs::OpCodeArg{ function_value };
-				auto maybe_func_type = type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+				auto maybe_func_type
+					= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(
+						generic_arg
+					);
 				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 					throw UnknownFunctionError(generic_arg);
 			}
 			variant_case(opargs::BuiltinFunctionName, function_value) {
-				auto fun_name = function_value.function_name;
+				auto fun_name    = function_value.function_name;
 				auto generic_arg = opargs::OpCodeArg{ function_value };
-				auto maybe_func_type = type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
+				auto maybe_func_type
+					= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(
+						generic_arg
+					);
 				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 					throw UnknownFunctionError(generic_arg);
 			}
@@ -218,8 +226,8 @@ void FunctionValidator::validateArgTypes(const Instruction& instruction, LocalSt
 				}
 			}
 
-			// All possible opargs must be handled. Unhandled opargs throw an exception.
-			variant_default { CORE_PANIC("Unhandled argument case during validation\n"); }
+			// All possible opargs must be handled. Unhandled opargs panic.
+			variant_default { CORE_PANIC("Unhandled argument case during validation"); }
 		}
 	}
 
@@ -243,9 +251,10 @@ void FunctionValidator::validateSpecificInstruction(const Instruction& instructi
  * Checks each argument of the instruction if it has the expected type of an argument.
  * @param instruction Instruction that is validated.
  */
-void FunctionValidator::validateInstruction(const Instruction& instruction, LocalStack& local_stack)
-	const {
-	validateArgTypes(instruction, local_stack);
+void FunctionValidator::validateInstruction(
+	const Instruction& instruction, const LocalStack& current_stack
+) const {
+	validateArgTypes(instruction, current_stack);
 	validateSpecificInstruction(instruction);
 }
 
@@ -418,11 +427,11 @@ void FunctionValidator::LocalStack::pop(const Op_deinit& cause) {
 	stack_state.pop_back();
 }
 
-bool FunctionValidator::LocalStack::contains(base::StrID local_name) {
+bool FunctionValidator::LocalStack::contains(base::StrID local_name) const {
 	return local_name_to_type.contains(local_name);
 }
 
-CRef<TypeOfData> FunctionValidator::LocalStack::at(base::StrID local_name) {
+CRef<TypeOfData> FunctionValidator::LocalStack::at(base::StrID local_name) const {
 	return local_name_to_type.at(local_name);
 }
 
@@ -431,7 +440,7 @@ void FunctionValidator::LocalStack::popCallArgs(
 ) {
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
-	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto generic_arg   = VISIT(function, f, return opargs::OpCodeArg{ f });
 	auto func_type     = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
 	bool check_ret_val = func_type.result != base::StrID("void");
 
@@ -455,7 +464,7 @@ void FunctionValidator::LocalStack::validateTailcall(
 	auto fun_name = VISIT(function, f, return f.function_name);
 	// Used for errors.
 	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	auto func_type = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
+	auto func_type   = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
 
 	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
 		throw InvalidTailcallSignatureError(generic_arg);

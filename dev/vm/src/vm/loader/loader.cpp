@@ -138,8 +138,8 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	LoaderLogger log;
 
 	program.insertTypes(code_collection.types, log);
-	program.insertFunctions(code_collection.functions, log);
 	program.insertGlobals(code_collection.global_data, log);
+	program.insertFunctions(code_collection.functions, log);
 	if (!log.good()) return std::unexpected(std::move(log));
 	return program;
 }
@@ -206,9 +206,7 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 			auto                          type_context_builder = vm::code::getBuiltinTypes();
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
-			auto                          program_type_context = program.getTypeContext();
-			for (const auto& type: program_type_context.getTypes())
-				type_context_builder.addType(type);
+			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
 			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
 
 			for (const auto& parsed_file: parsed_files) {

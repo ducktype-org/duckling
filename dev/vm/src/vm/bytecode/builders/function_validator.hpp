@@ -46,8 +46,8 @@ namespace vm::code::builders {
 				const TypeContext&           type_context
 			);
 			void             pop(const instructions::Op_deinit& cause);
-			bool             contains(base::StrID local_name);
-			CRef<TypeOfData> at(base::StrID local_name);
+			bool             contains(base::StrID local_name) const;
+			CRef<TypeOfData> at(base::StrID local_name) const;
 			void             popCallArgs(
 							const opargs::OpCodeFunctionArg& function, const TypeContext& type_context
 						);
@@ -64,10 +64,11 @@ namespace vm::code::builders {
 		base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
 		bool                                                     validated = false;
 
-		void validateArgTypes(const Instruction& instruction, LocalStack&) const;
+		void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const;
 		void validateSpecificInstruction(const Instruction& instruction) const;
 		void validateExtension(usize instruction_index) const;
-		void validateInstruction(const Instruction& instruction, LocalStack&) const;
+		void validateInstruction(const Instruction& instruction, const LocalStack& current_stack)
+			const;
 		void validateArgInstantiable(const opargs::Type& arg) const;
 		void validateFunctionEnd() const;
 
