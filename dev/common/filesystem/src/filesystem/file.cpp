@@ -5,8 +5,9 @@
 
 #include "file.hpp"
 
-#include "../../src_private/filesystem_private/vfs.hpp"
+#include "vfs.hpp"
 
+#include "base/ref.hpp"
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
@@ -34,7 +35,7 @@ namespace {
 		throw base::LogicError("Couldn't create a new name in: " + absolute(prefix_path).string());
 	}
 
-	VFS vfs;
+	Ref<fs::VFS> vfs = fs::VFS::getInstance();
 }
 
 namespace fs {
@@ -42,7 +43,7 @@ namespace fs {
 		if (VFS::isVirtualPath(path)) {
 			this->path     = path;
 			this->type     = FileType::Virtual;
-			this->category = vfs.isDirectory(path) ? FileCategory::Directory : FileCategory::File;
+			this->category = vfs->isDirectory(path) ? FileCategory::Directory : FileCategory::File;
 		} else {
 			this->path = canonical(absolute(path));
 			this->category
@@ -60,7 +61,7 @@ namespace fs {
 
 	FilePath FilePath::getDefaultVirtualPath() {
 		static FilePath virtual_directory_path
-			= createFilePathObj(vfs.getRootPath(), FileType::Virtual);
+			= createFilePathObj(vfs->getRootPath(), FileType::Virtual);
 		return virtual_directory_path;
 	}
 
@@ -76,7 +77,7 @@ namespace fs {
 		else {
 			file_name = path / custom_name;
 
-			if ((type == FileType::Virtual && vfs.exists(file_name))
+			if ((type == FileType::Virtual && vfs->exists(file_name))
 			    || (type != FileType::Virtual && exists(file_name)))
 				throw base::LogicError(base::strConcat(
 					"Cannot create a file/dir with name \"",
@@ -117,7 +118,7 @@ namespace fs {
 		if (type != FileType::Virtual)
 			std::filesystem::create_directory(new_temp_dir);
 		else
-			vfs.createDirectory(new_temp_dir);
+			vfs->createDirectory(new_temp_dir);
 		return createFilePathObj(new_temp_dir, type);
 	}
 
@@ -135,8 +136,8 @@ namespace fs {
 			temp_file << new_file_content;
 			temp_file.close();
 		} else {
-			vfs.createFile(new_temp_file);
-			vfs.writeFile(new_temp_file, std::string(new_file_content));
+			vfs->createFile(new_temp_file);
+			vfs->writeFile(new_temp_file, std::string(new_file_content));
 		}
 
 		return createFilePathObj(new_temp_file, type);
@@ -163,7 +164,7 @@ namespace fs {
 
 	std::expected<FileContent, std::string> FilePath::getContentSafe() const {
 		if ((type != FileType::Virtual && !exists(path))
-		    || (type == FileType::Virtual && vfs.exists(path))) {
+		    || (type == FileType::Virtual && vfs->exists(path))) {
 			return std::unexpected(base::strConcat(
 				"Error: cannot get content of file `", path, "` - file does not exist"
 			));
@@ -185,7 +186,7 @@ namespace fs {
 	}
 
 	bool FilePath::isDirectory() const noexcept {
-		if (type == FileType::Virtual) return vfs.isDirectory(path);
+		if (type == FileType::Virtual) return vfs->isDirectory(path);
 		return is_directory(path);
 	}
 
@@ -206,7 +207,7 @@ namespace fs {
 
 		std::vector<FilePath> file_paths;
 		if (type == FileType::Virtual)
-			for (const auto& name: vfs.listDirectory(path))
+			for (const auto& name: vfs->listDirectory(path))
 				file_paths.emplace_back(createFilePathObj(path / name, type));
 		else
 			for (const auto& entry: std::filesystem::directory_iterator(path))
@@ -240,7 +241,7 @@ namespace fs {
 	}
 
 	base::OwningView getSimpleVirtualFileContent(const std::filesystem::path& path) {
-		auto content = vfs.readFile(path);
+		auto content = vfs->readFile(path);
 		if (content.empty())
 			throw base::LogicError(std::string("virtual file does not exist: ") + path.string());
 
