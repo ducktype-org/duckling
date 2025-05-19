@@ -59,8 +59,10 @@ add_vm_variant(sc "USE_SWITCH_CASE")
 add_vm_variant(cg "USE_COMPUTED_GOTO")
 
 # Default alias to "tc"
-add_library(LibVM ALIAS LibVM_tc)
-add_executable(VM ALIAS VM_tc)
+add_library(LibVM  $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:LibThreadVM_tc>)
+make_module(LibVM USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
+add_executable(VM $<TARGET_OBJECTS:MainVM>)
+target_link_libraries(VM LibVM)
 
 add_subdirectory(playground)
 add_subdirectory(tests)
