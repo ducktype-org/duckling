@@ -25,6 +25,12 @@ namespace vm::code {
 	void serialize(const GlobalData& type, std::ostream& out);
 
 	/**
+	 * @brief Serializes code collection into a parse-able by the DVM
+	 * text representation.
+	 */
+	void serialize(const CodeCollection& code_collection, std::ostream& out);
+
+	/**
 	 * @brief Stringifies instruction arguments.
 	 */
 	std::string argumentToString(const opargs::OpCodeArg& arg);

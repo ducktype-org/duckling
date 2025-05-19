@@ -43,5 +43,7 @@ namespace compiler::driver {
 		});
 	}
 
-	void Driver::link() { backend_driver->link(); }
+	void Driver::link(base::StrID output_file) { backend_driver->link(output_file); }
+
+	std::expected<RunOutput, std::string> Driver::run() { return backend_driver->run(); }
 }

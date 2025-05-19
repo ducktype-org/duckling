@@ -16,7 +16,11 @@ namespace compiler::backend_vm {
 		base::StrID module_id;
 
 	public:
-		Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions);
+		Module(
+			query::Context&                         ctx,
+			base::StrID                             module_id,
+			const std::vector<CRef<lir::Function>>& functions
+		);
 
 		/**
 		 * @brief Builds a module representation.
