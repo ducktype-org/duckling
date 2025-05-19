@@ -4,7 +4,8 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_result.hpp>
 #include <helios/symbols/simple.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
@@ -491,7 +492,8 @@ namespace compiler::helios {
 			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
+						auto wild_result
+							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
@@ -567,7 +569,7 @@ namespace compiler::helios {
 					{ parent, key.name, key.with_wildcards }
 				);
 
-				parent_result.insert(*result);
+				parent_result.merge(*result);
 
 				return parent_result;
 			} else {

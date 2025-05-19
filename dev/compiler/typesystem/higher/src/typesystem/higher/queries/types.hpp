@@ -1,6 +1,9 @@
 #pragma once
 
+#include "../symbol_type.hpp"
 #include "../types.hpp"
+
+#include <query_framework/query_int.hpp>
 
 #include <base/maps.hpp>
 
@@ -77,6 +80,17 @@ namespace tsh {
 	 * @brief Query to get a typed Pointer type.
 	 */
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType)
+
+	/**
+	 * @brief Query to get the String type.
+	 */
+	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
+
+	/**
+	 * @brief Query to get the DynamicArray type.
+	 * The AbstractType of the elements of the array is given as a key.
+	 */
+	DECLARE_QUERY(QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType)
 
 	/**
 	 * @brief Key for QueryTupleType.

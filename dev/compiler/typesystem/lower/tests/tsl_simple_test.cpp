@@ -19,6 +19,8 @@ class LowerTypeSystemSimpleTest final: public tester::TestSuite {
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(basicTypesTest);
+		TESTER_ADD_TEST(stringTest);
+		TESTER_ADD_TEST(dynamicArrayTest);
 		TESTER_ADD_TEST(variantTest);
 		TESTER_ADD_TEST(tupleTest);
 		TESTER_ADD_TEST(classTest);
@@ -175,6 +177,42 @@ private:
 				variant_default { fail("Layout of raw pointer type should be pointer-like."); }
 			}
 			testPrinting(unit_pointer_layout, ctx);
+		});
+	}
+
+	void stringTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const StringAbstractType string_type = ctx.query<QueryStringType>({});
+			TypeLayout string_layout             = ctx.query<QueryAbstractTypeLayout>(string_type);
+
+			assertTrue(
+				string_layout.getSourceType() == string_type,
+				"Layout should have source type as constructed."
+			);
+			variant_match(string_layout()) {
+				variant_case(StringTypeLayout, l) { /* good */ }
+				variant_default { fail("Layout of string type should be string-like."); }
+			}
+			testPrinting(string_layout, ctx, true);
+		});
+	}
+
+	void dynamicArrayTest() {
+		withContextDo([&](query::Context& ctx) -> void {
+			const UnitAbstractType unit_type   = ctx.query<QueryUnitType>({});
+			TypeLayout             unit_layout = ctx.query<QueryAbstractTypeLayout>(unit_type);
+
+			const DynamicArrayAbstractType dynamic_array_type
+				= ctx.query<QueryDynamicArrayType>(st(unit_type));
+			TypeLayout dynamic_array_layout
+				= ctx.query<QueryAbstractTypeLayout>(dynamic_array_type);
+
+			assertTrue(
+				dynamic_array_layout.getSourceType() == dynamic_array_type,
+				"Layout should have source type as constructed."
+			);
+
+			testPrinting(dynamic_array_layout, ctx, true);
 		});
 	}
 

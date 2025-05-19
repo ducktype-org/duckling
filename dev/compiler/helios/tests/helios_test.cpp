@@ -1,3 +1,4 @@
+#include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
@@ -15,6 +16,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lexer/lexer.hpp>
+#include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -48,6 +50,7 @@ public:
 		TESTER_ADD_TEST(testSimpleHOUT);
 		TESTER_ADD_TEST(testSinglefileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
@@ -244,6 +247,31 @@ private:
 
 		ASSERT_EQUAL(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
+	}
+
+	void testDependencyHOUT() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
+		for (const auto& hout: houts) {
+			for (const auto& fun: hout.functions) {
+				std::cerr << fun.original_name.str() << " i dependent on\n";
+				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOFFun>(
+					fun.original_symbol
+				);
+
+				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOFFun>(
+					fun.original_symbol
+				);
+
+				printer::PrinterOStream str;
+				dia::printHighlightedPositions(str, positions);
+
+				printer::StreamPrinter p;
+				p.print(str.getContents());
+			}
+		}
 	}
 
 	void testHoutVisitor() {

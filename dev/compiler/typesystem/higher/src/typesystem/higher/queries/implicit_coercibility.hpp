@@ -31,6 +31,8 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
+#include <query_framework/query_int.hpp>
+
 #include <base/maps.hpp>
 
 // In the future, coercibility could work significantly differently.
