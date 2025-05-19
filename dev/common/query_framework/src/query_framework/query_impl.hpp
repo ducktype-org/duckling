@@ -145,7 +145,7 @@ namespace query::detail {
 		std::is_same_v<                                                                           \
 			std::invoke_result_t<                                                                 \
 				decltype(type::store),                                                            \
-				::query::QueryUnstableHash,                                                       \
+				query::QueryUnstableHash,                                                         \
 				type::PResult,                                                                    \
 				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
