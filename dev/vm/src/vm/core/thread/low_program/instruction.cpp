@@ -24,14 +24,14 @@ namespace vm {
 	}
 
 	std::string getInstructionConfig() {
-#ifdef USE_TAIL_CALLS
-		return "Tail calls";
+#ifdef USE_SWITCH_CASE
+		return "Switch case";
 #endif
 #ifdef USE_COMPUTED_GOTO
 		return "Computed goto";
 #endif
-#ifdef USE_SWITCH_CASE
-		return "Switch case";
+#ifdef USE_TAIL_CALLS
+		return "Tail calls";
 #endif
 	}
 }

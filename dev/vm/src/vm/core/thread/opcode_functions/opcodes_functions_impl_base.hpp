@@ -33,10 +33,10 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
-#include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
 #include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 

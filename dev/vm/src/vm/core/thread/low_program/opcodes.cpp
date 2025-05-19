@@ -1,6 +1,5 @@
 #include "opcodes.hpp"
 
-
 namespace vm::low {
 
 	template<class Instr>

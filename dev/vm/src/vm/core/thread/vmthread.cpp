@@ -11,15 +11,15 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/core/thread/low_program/opcodes.hpp>
-#include <vm/core/process/vmprocess.hpp>
 #include <vm/api/data/response.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/core/kill_process_exception.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/process/vmprocess.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 
 #include <cstring>
 #include <iostream>

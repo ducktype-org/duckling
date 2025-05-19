@@ -13,44 +13,54 @@ endfunction()
 # Add vm files
 add_subdirectory(src/vm)
 
-add_library(LibCommonVM ${vm_common_sources})
+set(exec_sources
+    src/vm/main.cpp
+    src/vm/server.cpp
+    src/vm/cli.cpp
+    src/vm/vm_repl.cpp
+)
+
+# There are two "libraries" and one executable that should always be linked toghethers.
+# - LibCommonVM from ${vm_common_sources}
+#    - this is created from the source files that do not require CONFIG compile definitions.
+# - LibThreadVM_{sc/cg/tc} from ${vm_config_dependent_sources}
+#    - this is created from the source files that require CONFIG compile definitions.
+# - MainVM from ${exec_sources}
+#    - this is the main executable that uses LibCommonVM and LibThreadVM_{sc/cg/tc}.
+
+add_library(LibCommonVM OBJECT ${vm_common_sources})
 make_module(LibCommonVM USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-add_library(LibThreadVM_TC ${vm_config_dependent_sources})
-make_module(LibThreadVM_TC USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
+add_library(MainVM OBJECT ${exec_sources})
+make_module(MainVM USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-add_library(LibThreadVM_SC ${vm_config_dependent_sources})
-target_compile_definitions(LibThreadVM_SC PRIVATE "USE_SWITCH_CASE")
-make_module(LibThreadVM_SC USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
+function(add_vm_variant suffix compile_def)
+    set(lib_thread_vm_name "LibThreadVM_${suffix}")
+    add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})
+    make_module(${lib_thread_vm_name} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-add_library(LibThreadVM_CG ${vm_config_dependent_sources})
-target_compile_definitions(LibThreadVM_CG PRIVATE "USE_COMPUTED_GOTO")
-make_module(LibThreadVM_CG USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
+    if (compile_def)
+        target_compile_definitions(${lib_thread_vm_name} PRIVATE "${compile_def}")
+    endif()
 
-add_library(LibVM_tc INTERFACE)
-target_link_libraries(LibVM_tc INTERFACE LibCommonVM LibThreadVM_TC)
 
-add_library(LibVM_cg INTERFACE)
-target_link_libraries(LibVM_cg INTERFACE LibCommonVM LibThreadVM_SC)
+    set(lib_vm_name "LibVM_${suffix}")
+    add_library(${lib_vm_name} $<TARGET_OBJECTS:LibCommonVM> $<TARGET_OBJECTS:${lib_thread_vm_name}>)
+    make_module(${lib_vm_name} USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
 
-add_library(LibVM_sc INTERFACE)
-target_link_libraries(LibVM_sc INTERFACE LibCommonVM LibThreadVM_CG)
+    set(exec_name "VM_${suffix}")
+    add_executable(${exec_name} $<TARGET_OBJECTS:MainVM>)
+    target_link_libraries(${exec_name} ${lib_vm_name})
+endfunction()
 
+# Define suffixes and their respective compile definitions
+add_vm_variant(tc "")
+add_vm_variant(sc "USE_SWITCH_CASE")
+add_vm_variant(cg "USE_COMPUTED_GOTO")
+
+# Default alias to "tc"
 add_library(LibVM ALIAS LibVM_tc)
-
-set(sources src/vm/main.cpp src/vm/server.cpp src/vm/cli.cpp src/vm/vm_repl.cpp)
-
-add_executable(VM_tc ${sources})
-target_link_libraries(VM_tc LibVM_tc)
-
-add_executable(VM_cg ${sources})
-target_link_libraries(VM_cg LibVM_cg)
-
-add_executable(VM_sc ${sources})
-target_link_libraries(VM_sc LibVM_sc)
-
-add_executable(VM ${sources})
-target_link_libraries(VM LibVM)
+add_executable(VM ALIAS VM_tc)
 
 add_subdirectory(playground)
 add_subdirectory(tests)
