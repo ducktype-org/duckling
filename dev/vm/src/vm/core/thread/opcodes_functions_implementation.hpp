@@ -650,7 +650,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer   = derefStack<Pointer>(local_stack, instr->arg0);
-			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Memory::getPointer(src_block);
 			auto type_id       = TypeID{ static_cast<usize>(instr[1].arg0) };
@@ -749,9 +749,10 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer   = derefStack<Pointer>(local_stack, instr->arg0);
-			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Memory::getPointer(src_block);
+
 			auto type_id       = TypeID{ static_cast<usize>(instr[1].arg0) };
 			auto type          = thread.executing_program->types->at(type_id);
 			auto field_offset  = instr[1].arg1;
@@ -767,12 +768,14 @@ namespace vm {
 			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto dst_pointer   = Memory::getPointer(dst_block);
+
 			auto src_pointer   = derefStack<Pointer>(local_stack, instr->arg1);
+			auto field_offset  = instr[1].arg1;
+			src_pointer.movePointer(field_offset);
+
 			auto type_id       = TypeID{ static_cast<usize>(instr[1].arg0) };
 			auto type          = thread.executing_program->types->at(type_id);
-			auto field_offset  = instr[1].arg1;
 
-			src_pointer.movePointer(field_offset);
 			thread.process_memory.copyPointerData(dst_pointer, src_pointer, type);
 		}
 		FUNCTION_CONT(2);

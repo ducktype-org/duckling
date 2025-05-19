@@ -19,8 +19,7 @@ public:
 	}
 
 private:
-	void linkedListTest() { //runTestOnVm("linked_list.dbc", "3 11 22 33", "332211"); 
-                            }
+	void linkedListTest() { runTestOnVm("linked_list.dbc", "3 11 22 33", "332211"); }
 
 	void linkedListNoStructLoadStoreTest() {
 		runTestOnVm("linked_list_no_struct_load_store.dbc", "3 11 22 33", "332211");

@@ -150,13 +150,14 @@ namespace vm {
 		auto copyPointerData(Pointer dst, Pointer src, TypeCRef type) -> void {
             CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
 
-			// Copy the child blocks
+			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
 			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
 			     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
 			     iter = dst_child_blocks.erase(iter)) {
 				freeBlock(iter->second);
 			}
+			// Copy the child blocks
 			auto& src_child_blocks = src.getBlock()->children_blocks;
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
 			     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
