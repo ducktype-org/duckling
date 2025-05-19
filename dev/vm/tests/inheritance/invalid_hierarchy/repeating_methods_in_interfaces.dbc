@@ -1,0 +1,25 @@
+type pointer: pointer_A A
+type pointer: pointer_I1 I1
+type pointer: pointer_I2 I2
+type fun: method_I1_int {pointer_I1} i64
+type fun: method_I2_int {pointer_I1} i64
+
+type interface: I1 {
+    virtual_methods: {
+        foo: method_I1_int,
+    };
+}
+type interface: I2 {
+    virtual_methods: {
+        foo: method_I2_int,
+    };
+}
+
+type class: A {
+    implements: {I1, I2};
+    # IDK what should happen here.
+    virtual_methods: {
+        foo: method_I1_int, 
+        foo: method_I1_int, 
+    }
+}

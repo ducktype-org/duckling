@@ -11,7 +11,3 @@ type class: SufficientlyThickPoint {
         thickness: i64,
     };
 }
-
-function main {
-    ret;
-}

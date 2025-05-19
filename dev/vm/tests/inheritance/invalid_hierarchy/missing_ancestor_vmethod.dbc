@@ -16,7 +16,3 @@ type class: Button {
         foo: method_foo_widget,
     };
 }
-
-function main {
-    ret;
-}

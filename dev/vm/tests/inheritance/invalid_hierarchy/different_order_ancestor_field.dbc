@@ -14,7 +14,3 @@ type class: Button {
         pos_y: i64,
     };
 }
-
-function main {
-    ret;
-}

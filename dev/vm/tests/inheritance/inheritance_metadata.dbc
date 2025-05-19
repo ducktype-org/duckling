@@ -82,7 +82,3 @@ type class: Child {
 type class: PietMondrian {
     abstract: true;
 }
-
-function main {
-    ret;
-}

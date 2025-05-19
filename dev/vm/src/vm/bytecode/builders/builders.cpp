@@ -99,7 +99,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		validate_range_match(clazz.virtual_methods, superclass.virtual_methods, error_factory);
 		start_index += superclass.virtual_methods.size();
 		for (const auto& interface_name: clazz.implements) {
-			// TODO: Validate valid interfaces type here.
+			// TODO: Validate valid interfaces type here. Instead of validate_implements.
 			const auto& interface      = std::get<InterfaceType>(*get_type(interface_name));
 			auto        vmethods_range = clazz.virtual_methods | std::views::drop(start_index)
 			                    | std::views::take(interface.virtual_methods.size());
@@ -109,82 +109,74 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	};
 
 	auto validate_implementations = [&](const ClassType& clazz) {
-		for (const auto& impl: clazz.vmethods_implementations) {
+		for (const auto& implementation: clazz.vmethods_implementations) {
 			// TODO: Potentially change that to a map for faster lookup.
-			auto vmethod = std::ranges::find_if(clazz.virtual_methods, [&](const auto& vmethod) {
-				return vmethod == impl;
+			auto vmethod_it = std::ranges::find_if(clazz.virtual_methods, [&](const auto& virtual_method) {
+				return virtual_method == implementation;
 			});
-			if (vmethod == clazz.virtual_methods.end())
-				throw InvalidVirtualMethodImplementationError(type, impl.name);
+			if (vmethod_it == clazz.virtual_methods.end())
+				throw InvalidVirtualMethodImplementationError(type, implementation.name);
 
 
-			auto impl_type    = *get_type(impl.type);
-			auto vmethod_type = *get_type(vmethod->type);
+			// TODO: This is strange. Change it.
+			auto impl_type    = *get_type(implementation.type);
+			auto vmethod_type = *get_type(vmethod_it->type);
 			if (!std::holds_alternative<FunctionType>(impl_type))
-				throw TypeIsNotFunctionalError(impl.type);
+				throw TypeIsNotFunctionalError(implementation.type);
 			if (!std::holds_alternative<FunctionType>(vmethod_type))
-				throw TypeIsNotFunctionalError(vmethod->type);
+				throw TypeIsNotFunctionalError(vmethod_it->type);
 
-			auto impl_ftype    = std::get<FunctionType>(impl_type);
-			auto vmethod_ftype = std::get<FunctionType>(vmethod_type);
+			auto impl    = std::get<FunctionType>(impl_type);
+			auto vmethod = std::get<FunctionType>(vmethod_type);
 
-			auto validate_method_signatures
-				= [&](const FunctionType& vmethod, const FunctionType& impl) {
-					  if (vmethod.result != impl.result) throw MethodTypeError(impl);
-					  if (vmethod.parameters.size() != impl.parameters.size())
-						  throw MethodTypeError(impl);
+			if (vmethod.result != impl.result) throw MethodTypeError(impl);
+			if (vmethod.parameters.size() != impl.parameters.size()) throw MethodTypeError(impl);
 
-					  // First argument should always be a class pointer (this*).
-				      // TODO: Refactor this code? We use those get<T>'s a lot.
-					  auto first_param_type = *get_type(impl.parameters[0]);
-					  if (!std::holds_alternative<PointerType>(first_param_type))
-						  throw MethodFirstArgumentError(first_param_type);
-					  auto first_param_ptr = std::get<PointerType>(first_param_type);
+			// First argument should always be a class pointer (this*).
+			// TODO: Refactor this code? We use those get<T>'s a lot.
+			auto first_param_type = *get_type(impl.parameters[0]);
+			if (!std::holds_alternative<PointerType>(first_param_type))
+				throw MethodFirstArgumentError(first_param_type);
+			auto first_param_ptr = std::get<PointerType>(first_param_type);
 
-					  // TODO: Make that work for interfaces as well.
-				      // using Type = decltype(clazz);
-					  if (first_param_ptr.inner != clazz.name)
-						  throw MethodFirstArgumentError(first_param_type);
+			// TODO: Make that work for interfaces as well.
+			// using Type = decltype(clazz);
+			if (first_param_ptr.inner != clazz.name)
+				throw MethodFirstArgumentError(first_param_type);
 
-					  for (u64 i = 1; impl.parameters.size(); i++)
-						  if (impl.parameters[i] != vmethod.parameters[i])
-							  throw MethodTypeError(first_param_type);
-				  };
-			validate_method_signatures(vmethod_ftype, impl_ftype);
+			for (u64 i = 1; impl.parameters.size(); i++)
+				if (impl.parameters[i] != vmethod.parameters[i])
+					throw MethodTypeError(first_param_type);
 		}
 	};
 
 	auto validate_all_methods_implemented = [&](const ClassType& clazz) {
-		if (clazz.is_abstract) return;
-
 		// Collect all methods on the inheritance path and verify they are implemented.
 		base::HashMap<base::StrID, base::StrID> required_methods;
 		for (const auto& vmethod: clazz.virtual_methods) required_methods.put(vmethod.name);
 
 		std::function<void(const ClassType&)> collect_implementations
-			= [&](const ClassType& clazz) {
+			= [&](const ClassType& clazzz) {
 				  // Remove those implemented by this class.
-				  for (const auto& impl: clazz.vmethods_implementations)
+				  for (const auto& impl: clazzz.vmethods_implementations)
 					  required_methods.erase(impl.name);
 
 				  // Remove those implemented by interfaces.
-				  for (const auto& iface: clazz.implements) {
-					  //@note: We are guarenteed an InterfaceType is contained. This was checked before.
+				  for (const auto& iface: clazzz.implements) {
+					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
 					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
 					  for (const auto& impl: iface_type.vmethods_implementations)
 						  required_methods.erase(impl.name);
 				  }
 
-				  if (clazz.extends) {
-					  const auto& super_type = *get_type(*clazz.extends);
+				  if (clazzz.extends) {
+					  const auto& super_type = *get_type(*clazzz.extends);
 					  if (std::holds_alternative<ClassType>(super_type))
 						  collect_implementations(std::get<ClassType>(super_type));
 				  }
 			  };
-		if (!required_methods.empty()) {
-
+		if (!required_methods.empty())
 			throw UnimplementedVirtualMethodError(type, required_methods.begin()->first);
-		}
 	};
 
 
@@ -210,14 +202,10 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 				// in their types.
 				validate_virtual_methods(clazz, superclass);
 				validate_implementations(clazz);
-				validate_all_methods_implemented(clazz);
-
+				if (!clazz.is_abstract) validate_all_methods_implemented(clazz);
 
 				// TODO: Check if we don't try to call methods without the being in class -> this
-				// should appear in function_validator.
-				if (!clazz.is_abstract) {
-					// TODO: Verify all virtual methods on the superclass path are implemented.
-				}
+				// should appear in function_validator. This will be done by checking signatures.
 			}
 		}
 	}

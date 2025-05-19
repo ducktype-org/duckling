@@ -6,7 +6,3 @@ type class: Circle {
         radius: i64,
     };
 }
-
-function main {
-    ret;
-}

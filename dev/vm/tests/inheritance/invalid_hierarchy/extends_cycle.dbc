@@ -9,8 +9,3 @@ type class: B {
 type class: C {
     extends: A;
 }
-
-function main {
-    ret;
-}
-# TODO: Remove those mains, they are not needed after code injection works

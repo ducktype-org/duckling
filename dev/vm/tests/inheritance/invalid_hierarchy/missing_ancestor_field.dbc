@@ -12,7 +12,3 @@ type class: Button {
         n_clicked: i64,
     };
 }
-
-function main {
-    ret;
-}
