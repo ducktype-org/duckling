@@ -169,6 +169,10 @@ namespace query::detail {
 		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
 		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
 		"(QueryStableHash)."                                                                      \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_invocable_v<decltype(type::load), query::QueryUnstableHash>,                      \
+		"Load function must be callable with query::QueryUnstableHash."                           \
 	);
 
 /**
