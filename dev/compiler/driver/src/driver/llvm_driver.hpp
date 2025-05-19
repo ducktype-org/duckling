@@ -15,7 +15,13 @@ namespace compiler::driver {
 
 		void compileModule(query::Context& ctx, const BackendModuleData& lir_module) final;
 
-		void link() final;
+		void link(base::StrID output_file) final;
+
+		std::expected<RunOutput, std::string> run() final;
 	};
 
+	inline std::expected<RunOutput, std::string> LLVMDriver::run() {
+		CORE_PANIC("LLVM backend doesn't support run.");
+		return std::unexpected<std::string>{ "Run command is not supported in the LLVM Backend." };
+	}
 }

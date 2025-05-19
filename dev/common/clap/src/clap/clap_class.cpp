@@ -57,7 +57,7 @@ namespace {
 	 * @param str A source of chars.
 	 */
 	void skipWhitespace(usize& position, std::string_view str) {
-		while (std::isspace(str[position])) position++;
+		while (position < str.size() && std::isspace(str[position])) position++;
 	}
 
 	/**

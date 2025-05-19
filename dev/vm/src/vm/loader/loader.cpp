@@ -191,19 +191,15 @@ const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const 
 	return globals_map;
 }
 
-vm::code::builders::TypeContext vm::loader::Program::getTypeContext() const {
-	return type_context_builder.build();
-}
-
-Loader::Loader(const bool validate_program): validate_program(validate_program) {}
-
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	const std::vector<fs::FilePath>& files
 ) {
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto                          type_context_builder = vm::code::getBuiltinTypes();
+			auto type_context_builder = vm::code::getBuiltinTypes();
+			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
+
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
 			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
@@ -278,7 +274,6 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<fs::FilePath>& file_paths
 ) {
 	auto opt_code_collection = loadFiles(file_paths);
-	if (opt_code_collection.has_value())
-		return getProgram({ std::move(opt_code_collection).value() });
+	if (opt_code_collection.has_value()) return getProgram({ *std::move(opt_code_collection) });
 	return std::unexpected(std::move(opt_code_collection).error());
 }

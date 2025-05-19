@@ -1,12 +1,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	std::vector<base::StrID> DottedName::getNames() const {
-		std::vector<base::StrID> out;
-		out.reserve(names.size());
-		for (auto name: names) out.push_back(base::StrID(name));
-		return out;
-	}
 
 	bool DottedName::getStar() const { return star; }
 

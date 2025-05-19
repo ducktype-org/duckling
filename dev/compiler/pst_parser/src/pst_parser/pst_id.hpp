@@ -2,6 +2,11 @@
 
 #include <base/strongly_typed_id.hpp>
 
+namespace std {
+	template<class Key>
+	struct hash;
+}
+
 namespace pst {
 	/**
 	 * @brief Unique ID for each PST element.
@@ -9,3 +14,5 @@ namespace pst {
 	 */
 	STRONG_TYPEDEF_ID(PstID);
 }
+
+ID_STD_HASH(::pst::PstID);

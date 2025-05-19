@@ -72,7 +72,6 @@ namespace vm::loader {
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		bool    validate_program;
 		Program program;
 
 		/**
@@ -84,7 +83,7 @@ namespace vm::loader {
 		);
 
 	public:
-		explicit Loader(bool validate_program);
+		explicit Loader() = default;
 
 		/**
 		 * @brief Injects new code from given file paths to the current program state and

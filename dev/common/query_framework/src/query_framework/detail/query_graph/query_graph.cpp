@@ -67,7 +67,7 @@ namespace query::detail {
 		return { visited.begin(), visited.end() };
 	}
 
-	std::vector<NodeID> QueryGraph::getNodeDepsFilterred(
+	std::vector<NodeID> QueryGraph::getNodeDepsFiltered(
 		detail::NodeID node_id, QueryID dependency_id
 	) const {
 		return getNodeDeps(node_id) | std::views::filter([dependency_id](const NodeID& id) {

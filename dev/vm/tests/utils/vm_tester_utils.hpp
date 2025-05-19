@@ -12,7 +12,7 @@
 
 class VmTestSuite: public tester::TestSuite {
 public:
-	VmTestSuite(tester ::TestConfig&& config, std::string_view name):
+	VmTestSuite(tester::TestConfig&& config, std::string_view name):
 		  tester::TestSuite(std::move(config), name) {}
 
 private:
@@ -47,7 +47,8 @@ protected:
 		const base::Optional<std::string>& optional_input  = {},
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {},
-		i64                                exit_code       = 0
+		i64                                exit_code       = 0,
+		bool                               add_stdlib      = false
 	);
 
 	/**
