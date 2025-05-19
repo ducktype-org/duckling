@@ -20,6 +20,5 @@ type class: A {
     # IDK what should happen here.
     virtual_methods: {
         foo: method_I1_int, 
-        foo: method_I1_int, 
-    }
+    };
 }

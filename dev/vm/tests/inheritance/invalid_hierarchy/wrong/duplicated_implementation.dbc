@@ -1,33 +1,14 @@
-# Implementation of foo() is duplicated.
 type pointer: pointer_A A
 type fun: method_foo {pointer_A} void
-
 type fun: method_foo_impl_1 {pointer_A} void
 type fun: method_foo_impl_2 {pointer_A} void
 
-function method_foo_impl_1 {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
-    deinit;
-    ret;
-}
-
-function method_foo_impl_2 {
-    init_lany_type x, i64;
-    mov_l64_imm x, 1;
-    output_l64 x;
-    deinit;
-    ret;
-}
-
 type class: A {
     abstract: true;
-    fields: {};
     virtual_methods: {
         foo: method_foo, 
     };
-    implementation: {
+    implementations: {
         foo: method_foo_impl_1,
         foo: method_foo_impl_2,
     };

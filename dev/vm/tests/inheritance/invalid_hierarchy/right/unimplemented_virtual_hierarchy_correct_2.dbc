@@ -37,7 +37,6 @@ type interface: I2 {
 
 type class: A {
     abstract: true;
-    fields: {};
     virtual_methods: {
         eee: method_eee, 
         fff: method_fff,
@@ -49,9 +48,7 @@ type class: A {
 
 type class: B {
     extends: A;
-    abstract: false;
     implements: {I1, I2};
-    fields: {};
     virtual_methods: {
         # First methods from the superclass are defined in the same order.
         # Then methods from interfaces in the order they are implemented -> I1.
@@ -66,7 +63,7 @@ type class: B {
     };
     implementation: {
         fff: method_fff_impl,
-        # bbb: method_bbb_impl, # bbb() is unimplemented in an instantiable class.
+        bbb: method_bbb_impl,
         ddd: method_ddd_impl,
         aaa: method_aaa_impl, # Override implementation.
     };

@@ -1,4 +1,4 @@
-# Method bar() lacks implementation in the hierarchy.
+# Method gaa() lacks implementation in an instantiable class C.
 type pointer: pointer_A A
 type pointer: pointer_B B
 type pointer: pointer_C C
@@ -13,73 +13,41 @@ type fun: method_bar_impl {pointer_A} void
 type fun: method_goo_impl {pointer_A} void
 type fun: method_gaa_impl {pointer_A} void
 
-function method_foo_impl {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
-    deinit;
-    ret;
-}
-
-function method_bar_impl {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
-    deinit;
-    ret;
-}
-function method_goo_impl {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
-    deinit;
-    ret;
-}
-function method_gaa_impl {
-    init_lany_type x, i64;
-    mov_l64_imm x, 0;
-    output_l64 x;
-    deinit;
-    ret;
-}
-
 type class: A {
     abstract: true;
-    fields: {};
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,
     };
 
-    implementation: {
+    implementations: {
         foo: method_foo_impl, 
-    }
+    };
 }
 
 type class: B {
     abstract: true;
-    fields: {};
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,
         goo: method_goo,
     };
-    implementation: {
+    implementations: {
         foo: method_foo_impl, 
-    }
+        bar: method_bar_impl, 
+    };
 }
 
 type class: C {
-    abstract: false;
-    fields: {};
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,
         goo: method_goo,
         gaa: method_gaa,
     };
-    implementation: {
+    implementations: {
         goo: method_goo_impl, 
-        gaa: method_gaa_impl, 
-    }
+        # Someone forgot about gaa()?
+        # gaa: method_goo_impl, 
+    };
 }

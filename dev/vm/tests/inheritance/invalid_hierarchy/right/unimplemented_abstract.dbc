@@ -1,4 +1,4 @@
-type pointer: pointer_A
+type pointer: pointer_A A
 type fun: method_foo {pointer_A} void
 type fun: method_bar {pointer_A} void
 type fun: method_foo_impl {pointer_A} void
@@ -12,14 +12,13 @@ function method_foo_impl {
 }
 
 type class: A {
-    abstract: false;
-    fields: {};
+    abstract: true;
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,
     };
-    implementation: {
+    implementations: {
         foo: method_foo_impl, 
-        # bar() is unimplemented in an instantiable class.
-    }
+        # bar() is unimplemented in an abstract class. This should pass.
+    };
 }

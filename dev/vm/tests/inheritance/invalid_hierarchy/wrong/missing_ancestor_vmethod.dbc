@@ -14,5 +14,7 @@ type class: Button {
     extends: Widget;
     virtual_methods: {
         foo: method_foo_widget,
+        # Oh no, where is bar()
+        # bar: method_foo_widget,
     };
 }

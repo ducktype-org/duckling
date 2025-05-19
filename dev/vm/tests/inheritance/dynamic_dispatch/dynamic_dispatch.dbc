@@ -1,0 +1,140 @@
+type pointer: pointer_Shape Shape
+type pointer: pointer_Line Line
+type pointer: pointer_Triangle Triangle
+type pointer: pointer_Rectangle Rectangle
+
+# Virtual method definitions.
+type fun: method_Shape_void {pointer_Shape} void
+type fun: method_Line_void {pointer_Line} void
+type fun: method_Triangle_void {pointer_Triangle} void
+type fun: method_Rectangle_void {pointer_Rectangle} void
+
+# Method implementation definitions.
+type fun: Shape_vertexCount_impl {pointer_Shape} void
+type fun: Line_vertexCount_impl {pointer_Shape} void
+type fun: Triangle_vertexCount_impl {pointer_Shape} void
+type fun: Rectangle_vertexCount_impl {pointer_Shape} void
+
+# Class definitions.
+type class: Shape {
+    virtual_methods: {
+        vertexCount: method_Shape_void,
+    };
+    implementations: {
+        vertexCount: Shape_vertexCount_impl,
+    };
+}
+
+type class: Line {
+    extends: Shape;
+    fields: { 
+        length: i64,
+    };
+    virtual_methods: {
+        vertexCount: method_Shape_void,
+    };
+    implementations: {
+        vertexCount: Line_vertexCount_impl,
+    };
+}
+
+type class: Triangle {
+    extends: Shape;
+    fields: {
+        arm1_length: i64,
+        arm2_length: i64,
+        angle: i64,
+    };
+    virtual_methods: {
+        vertexCount: method_Shape_void,
+    };
+    implementations: {
+        vertexCount: Triangle_vertexCount_impl,
+    };
+}
+
+type class: Rectangle {
+    extends: Shape;
+    fields: {
+        width: i64,
+        height: i64,
+    };
+    virtual_methods: {
+        vertexCount: method_Shape_void,
+    };
+    implementations: {
+        vertexCount: Rectangle_vertexCount_impl,
+    };
+}
+
+# Method implementations.
+function Shape_vertexCount_impl {
+    init_lany_type count, i64;
+    mov_l64_imm count, 0;
+    output_l64 count;
+    deinit;
+    ret;
+}
+
+function Line_vertexCount_impl {
+    init_lany_type count, i64;
+    mov_l64_imm count, 2;
+    output_l64 count;
+    deinit;
+    ret;
+}
+
+function Triangle_vertexCount_impl {
+    init_lany_type count, i64;
+    mov_l64_imm count, 3;
+    output_l64 count;
+    deinit;
+    ret;
+}
+
+function Rectangle_vertexCount_impl {
+    init_lany_type count, i64;
+    mov_l64_imm count, 4;
+    output_l64 count;
+    deinit;
+    ret;
+}
+
+function main {
+    init_lany_type shape_var, pointer_Shape;
+    init_lany_type line_obj, pointer_Line;
+    init_lany_type tri_obj, pointer_Triangle;
+    init_lany_type rect_obj, pointer_Rectangle;
+    init_lany_type shape_obj, pointer_Shape;
+
+    # 1) Call to Shape vertex count.
+    alloc_lptr_type shape_obj, Shape;
+    setVTable_lptr_type shape_obj, Shape;
+    mov_lptr_lptr shape_var, shape_obj;
+    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 0.
+
+    # 2) Call to Line vertex count.
+    alloc_lptr_type line_obj, Line; 
+    setVTable_lptr_type line_obj, Line;
+    upcast_lptr_lptr shape_var, line_obj;
+    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 2.
+
+    # 3) Call to triangle vertex count.
+    alloc_lptr_type tri_obj, Triangle;
+    setVTable_lptr_type tri_obj, Triangle;
+    upcast_lptr_lptr shape_var, tri_obj; 
+    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 3.
+
+    # 4) Call to Rectangle vertex count.
+    alloc_lptr_type rect_obj, Rectangle;
+    setVTable_lptr_type rect_obj, Rectangle;
+    upcast_lptr_lptr shape_var, rect_obj;
+    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 4.
+
+    deinit; # shape_obj
+    deinit; # rect_obj
+    deinit; # tri_obj
+    deinit; # line_obj
+    deinit; # shape_var
+    ret;
+}

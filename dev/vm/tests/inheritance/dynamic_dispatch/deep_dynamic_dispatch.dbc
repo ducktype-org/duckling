@@ -5,26 +5,34 @@ type pointer: pointer_Cat Cat
 # ========== VIRTUAL METHOD DECLARATIONS ==============
 type fun: method_Animal_void {pointer_Animal} void 
 type fun: method_Feline_void {pointer_Feline} void
+type fun: method_Cat_void {pointer_Cat} void
 
-
-
+# ========== VIRTUAL METHOD IMPLEMENTATIONS ==============
+type fun: Animal_makeSound_impl {pointer_Animal} void
+type fun: Feline_hunt_impl {pointer_Feline} void
+type fun: Feline_makeSound_impl {pointer_Feline} void
+type fun: Cat_makeSound_impl {pointer_Cat} void
+type fun: Cat_hunt_impl {pointer_Cat} void
 
 # ============ CLASSES DEFINITIONS ============
 type class: Animal {
-    abstract: false; 
-    fields: {};
     virtual_methods: {
         makeSound: method_Animal_void,
+    };
+    implementations: {
+        makeSound: Animal_makeSound_impl,
     };
 }
 
 type class: Feline {
     extends: Animal;
-    abstract: false;
-    implements: {};
-    fields: {}; 
     virtual_methods: { 
+        makeSound: method_Feline_void, # should this be a Feline pointer or a Animal pointer
         hunt: method_Feline_void,
+    };
+    implementations: {
+        makeSound: Feline_makeSound_impl,
+        hunt: Feline_hunt_impl,
     };
     # Feline OVERRIDES 'makeSound' from Animal
     # Feline INTRODUCES 'hunt'
@@ -32,9 +40,14 @@ type class: Feline {
 
 type class: Cat {
     extends: Feline;
-    abstract: false;
-    implements: {};
-    fields: {}; 
+    virtual_methods: { 
+        makeSound: method_Animal_void,
+        hunt: method_Feline_void,
+    };
+    implementations: {
+        makeSound: Cat_makeSound_impl,
+        hunt: Cat_hunt_impl,
+    };
     # Cat OVERRIDES 'makeSound' (inherited from Animal, potentially through Feline)
     # Cat OVERRIDES 'hunt' (inherited from Feline)
 }
@@ -115,7 +128,7 @@ function main {
     # Using the same actual_cat_obj from above.
     upcast_lptr_lptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
     virtual_call_lptr_func ptr_f, method_id_Animal_makeSound;   # Expected output: 4
-    virtual_call_lptr_fun ptr_f, method_id_Feline_hunt;         # Expected output: 5
+    virtual_call_lptr_func ptr_f, method_id_Feline_hunt;         # Expected output: 5
 
 
     # ---------------------- Scenario 3: Feline object, Animal* pointer ------------------
@@ -141,7 +154,7 @@ function main {
     setVTable_lptr_type actual_animal_obj, Animal;   
     # mov_lptr_lptr ptr_a, actual_animal_obj;
     upcast_lptr_lptr ptr_a, actual_animal_obj;
-    virtual_call_0args ptr_a, method_id_Animal_makeSound; # Expected output: 1 (for "Generic animal sound")
+    virtual_call_lptr_func ptr_a, method_id_Animal_makeSound; # Expected output: 1 (for "Generic animal sound")
 
     ret;
 }
