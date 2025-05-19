@@ -616,7 +616,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_func)(FUNCTION_ARGS) {
 		{
-			[[maybe_unused]] auto& obj_ptr = instr->arg0;
+			[[maybe_unused]] auto& obj_ptr     = instr->arg0;
 			[[maybe_unused]] auto& method_name = instr->arg1;
 			std::cerr << "This is a placeholder\n";
 		}

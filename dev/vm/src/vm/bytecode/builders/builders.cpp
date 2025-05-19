@@ -111,9 +111,12 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	auto validate_implementations = [&](const ClassType& clazz) {
 		for (const auto& implementation: clazz.vmethods_implementations) {
 			// TODO: Potentially change that to a map for faster lookup.
-			auto vmethod_it = std::ranges::find_if(clazz.virtual_methods, [&](const auto& virtual_method) {
-				return virtual_method == implementation;
-			});
+			auto vmethod_it
+				= std::ranges::find_if(clazz.virtual_methods, [&](const auto& virtual_method) {
+					  // TODO: Verify the signatures. Not only types. Once you figure out how xd.
+					  return virtual_method.name == implementation.name;
+					  //   return virtual_method == implementation;
+				  });
 			if (vmethod_it == clazz.virtual_methods.end())
 				throw InvalidVirtualMethodImplementationError(type, implementation.name);
 
@@ -131,22 +134,23 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 			if (vmethod.result != impl.result) throw MethodTypeError(impl);
 			if (vmethod.parameters.size() != impl.parameters.size()) throw MethodTypeError(impl);
-
+			// TODO: Verify that the function types declared as definitions really exist.
 			// First argument should always be a class pointer (this*).
 			// TODO: Refactor this code? We use those get<T>'s a lot.
+			// TODO: What if method have no arguments? This will segfault.
 			auto first_param_type = *get_type(impl.parameters[0]);
-			if (!std::holds_alternative<PointerType>(first_param_type))
-				throw MethodFirstArgumentError(first_param_type);
-			auto first_param_ptr = std::get<PointerType>(first_param_type);
+			// if (!std::holds_alternative<PointerType>(first_param_type))
+			// 	throw MethodFirstArgumentError(first_param_type);
+			// auto first_param_ptr = std::get<PointerType>(first_param_type);
 
 			// TODO: Make that work for interfaces as well.
 			// using Type = decltype(clazz);
-			if (first_param_ptr.inner != clazz.name)
-				throw MethodFirstArgumentError(first_param_type);
+			// if (first_param_ptr.inner != clazz.name)
+			// 	throw MethodFirstArgumentError(first_param_type);
 
-			for (u64 i = 1; impl.parameters.size(); i++)
-				if (impl.parameters[i] != vmethod.parameters[i])
-					throw MethodTypeError(first_param_type);
+			// for (u64 i = 1; impl.parameters.size(); i++)
+			// 	if (impl.parameters[i] != vmethod.parameters[i])
+			// 		throw MethodTypeError(first_param_type);
 		}
 	};
 
@@ -155,39 +159,70 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		base::HashMap<base::StrID, base::StrID> required_methods;
 		for (const auto& vmethod: clazz.virtual_methods) required_methods.put(vmethod.name);
 
+
+		std::cerr << "All methods to be implemented:\n";
+		for (auto [name, _]: required_methods) std::cerr << "{ " << name.strView() << "} | ";
+		std::cerr << '\n';
+
 		std::function<void(const ClassType&)> collect_implementations
 			= [&](const ClassType& clazzz) {
 				  // Remove those implemented by this class.
-				  for (const auto& impl: clazzz.vmethods_implementations)
+				  for (const auto& impl: clazzz.vmethods_implementations) {
+					  std::cerr << "Implemented: " << impl.name.strView() << '\n';
 					  required_methods.erase(impl.name);
+				  }
 
 				  // Remove those implemented by interfaces.
 				  for (const auto& iface: clazzz.implements) {
 					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
 					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
-					  for (const auto& impl: iface_type.vmethods_implementations)
+					  for (const auto& impl: iface_type.vmethods_implementations) {
+						  std::cerr << "Implemented: " << impl.name.strView() << '\n';
 						  required_methods.erase(impl.name);
+					  }
 				  }
 
 				  if (clazzz.extends) {
+					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
+
 					  const auto& super_type = *get_type(*clazzz.extends);
-					  if (std::holds_alternative<ClassType>(super_type))
+					  if (std::holds_alternative<ClassType>(super_type)) {
+						  auto super_type_ = std::get<ClassType>(super_type);
+						  std::cerr << "Supertype name: " << super_type_.name.strView() << '\n';
 						  collect_implementations(std::get<ClassType>(super_type));
+					  }
 				  }
 			  };
+		collect_implementations(clazz);
+		std::cerr << "Methods left unimplemented implemented:\n";
+		for (auto [name, _]: required_methods) std::cerr << "{ " << name.strView() << "} | ";
+		std::cerr << '\n';
+
 		if (!required_methods.empty())
 			throw UnimplementedVirtualMethodError(type, required_methods.begin()->first);
 	};
 
+	auto validate_field_duplicates = [&](const std::vector<Field>& fields) {
+		base::HashMap<base::StrID, base::StrID> field_definitions;
+		for (const auto& field: fields) {
+			if (field_definitions.contains(field.name)) throw DuplicatedFieldError(type);
+			field_definitions.put(field.name);
+		}
+	};
 
 	variant_match(type) {
+		// @todo: Verify empty variants.
+		variant_case(DataType, data) { validate_field_duplicates(data.fields); }
 		variant_case(InterfaceType, interface) {
 			validate_implements(interface.implements);
+			// validate_implementations(interface); // TODO: Make it generic for interfaces as well.
 			// TODO: Validate virtual methods. Currently only works for classes. Should work for
 			// both. validate_implementations(clazz);
 		}
 		variant_case(ClassType, clazz) {
+			validate_field_duplicates(clazz.fields);
 			validate_implements(clazz.implements);
+			validate_implementations(clazz);
 
 			if_opt_some(clazz.extends, extends) {
 				auto super_type = get_type(extends);
@@ -201,19 +236,16 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 				// superclass, then virtual methods from interfaces in the order they are declared
 				// in their types.
 				validate_virtual_methods(clazz, superclass);
-				validate_implementations(clazz);
-				if (!clazz.is_abstract) validate_all_methods_implemented(clazz);
 
 				// TODO: Check if we don't try to call methods without the being in class -> this
 				// should appear in function_validator. This will be done by checking signatures.
 			}
+			if (!clazz.is_abstract) validate_all_methods_implemented(clazz);
 		}
 	}
 }
 
 void TypeContextBuilder::validateTypes() const {
-	for (const auto& type: types) validateType(type);
-
 	// Check for cycles in hierarchy.
 	enum Status { Waiting, Visited, Done };
 
@@ -242,8 +274,10 @@ void TypeContextBuilder::validateTypes() const {
         }
         status[name] = Done;
 	};
-
 	for (const auto& type: types) helper(type);
+
+	// @note: This validation assumes cycles in class hierarchy where detected.
+	for (const auto& type: types) validateType(type);
 }
 
 TypeContext TypeContextBuilder::build() const {

@@ -1,4 +1,4 @@
-# Method bar() lacks implementation in the hierarchy.
+# All methods on the inheritance path are implemented. This should pass.
 type pointer: pointer_A A
 type pointer: pointer_B B
 type pointer: pointer_C C
@@ -25,6 +25,7 @@ type class: A {
 }
 
 type class: B {
+    extends: A;
     abstract: true;
     virtual_methods: {
         foo: method_foo, 
@@ -33,10 +34,12 @@ type class: B {
     };
     implementations: {
         foo: method_foo_impl, 
+        bar: method_bar_impl, 
     };
 }
 
 type class: C {
+    extends: B;
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,

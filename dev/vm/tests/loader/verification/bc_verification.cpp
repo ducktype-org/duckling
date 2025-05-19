@@ -26,6 +26,8 @@ public:
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
+		// TODO: Maybe move that test somewhere else.
+		TESTER_ADD_TEST(duplicatedDataFields);
 
 		// @note: Not implemented yet
 		// TESTER_ADD_TEST(noInit);
@@ -99,6 +101,16 @@ private:
 			"wrong/init_deinit/no_init.dbc",
 			{
 				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+	// TODO: Should this be here?
+	void duplicatedDataFields() {
+		loadInvalidDbc(
+			"wrong/data_type/duplicated_fields.dbc",
+			{
+				vm::code::builders::DuplicatedFieldError::ERR_MSG,
 			}
 		);
 	}

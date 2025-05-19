@@ -2,31 +2,43 @@ type pointer: pointer_parent Parent
 type pointer: pointer_child Child
 type pointer: pointer_I1 I1
 type pointer: pointer_I2 I2
-type fun: method_parent_int_int {pointer_parent, i64} i64
+type fun: method_parent_int {pointer_parent, i64} void
 type fun: method_I1_int {pointer_I1} i64
 
-type fun: Parent_getAge_impl {pointer_parent} void
+type fun: Parent_getAge_impl {pointer_parent, i64} void
+type fun: Child_getAge_impl {pointer_child, i64} void
+type fun: I1_foo_impl {pointer_I1} i64 
+type fun: Child_I1_impl {pointer_child} i64
+
 function Parent_getAge_impl {
     init_lany_type age, i64;
     mov_l64_imm age, 50;
     output_l64 age;
-    deinit;
+    deinit; # age
+    deinit; # arg0
     ret;
 }
 
-type fun: Child_getAge_impl {pointer_child} void
 function Child_getAge_impl {
     init_lany_type age, i64;
     mov_l64_imm age, 15;
     output_l64 age;
+    deinit; # age
+    deinit; # arg0
+    ret;
+}
+
+function I1_foo_impl {
+    init_lany_type x, i64;
+    mov_l64_imm x, 0;
+    output_l64 x;
     deinit;
     ret;
 }
 
-type fun: I1_foo_impl {pointer_I1} void
-function I1_foo_impl {
+function Child_I1_impl {
     init_lany_type x, i64;
-    mov_l64_imm x, 0;
+    mov_l64_imm x, 1;
     output_l64 x;
     deinit;
     ret;
@@ -54,7 +66,7 @@ type class: Parent {
         foo: i64,
     };
     virtual_methods: {
-        getAge: method_parent_int_int,
+        getAge: method_parent_int,
     };
     implementations: {
         getAge: Parent_getAge_impl, # Implementation of age for Parent.
@@ -70,15 +82,21 @@ type class: Child {
         bar: i64,
     };
     virtual_methods: {
+        getAge: method_parent_int,
         foo: method_I1_int, # We assume all virtual methods from superclasses have to be declared.
         bar: method_I1_int,
-        getAge: method_parent_int_int,
-    }
+    };
     implementations: { # If Child is a concrete class, all methods have to be implemented.
         getAge: Child_getAge_impl, # Implementation of getAge for child.
+        # bar: I1_foo_impl,
+        bar: Child_I1_impl, # TODO: This should change soon.
     };
 }
 
 type class: PietMondrian {
     abstract: true;
+}
+
+function main {
+    ret;
 }

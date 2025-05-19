@@ -2,6 +2,8 @@
 
 #include <tester/tester.hpp>
 
+#include "vm/api/data/api_error.hpp"
+#include "vm/api/data/core_operation_error.hpp"
 #include <vm/api/api.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
@@ -24,6 +26,8 @@ private:
 		i64                                exit_code
 	);
 
+	void dumpLoadFileError(const vm::api::ApiError& error);
+
 protected:
 	vm::PID initProcess();
 
@@ -37,7 +41,8 @@ protected:
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {},
 		i64                                exit_code       = 0,
-		bool                               add_stdlib      = false
+		bool                               add_stdlib      = false,
+		bool                               dump_error      = false
 	);
 	/**
 	 * @brief Same as above, but the program is given as an argument
@@ -48,7 +53,8 @@ protected:
 		const base::Optional<std::string>& optional_output = {},
 		const std::vector<std::string>&    args            = {},
 		i64                                exit_code       = 0,
-		bool                               add_stdlib      = false
+		bool                               add_stdlib      = false,
+		bool                               dump_error      = false
 	);
 
 	/**
@@ -56,11 +62,13 @@ protected:
 	 * guidelines. Asserts what error keywords are present in the error message.
 	 */
 	void loadInvalidDbc(
-		const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
+		const std::string&                   dbc_filename,
+		const std::vector<std::string_view>& error_keywords,
+		bool                                 dump_error = false
 	);
 
 	/**
 	 * @brief Loads a file containing a valid bytecode program and asserts it was loaded correctly.
 	 */
-	void loadValidDbc(const std::string& dbc_filename);
+	void loadValidDbc(const std::string& dbc_filename, bool dump_error = false);
 };

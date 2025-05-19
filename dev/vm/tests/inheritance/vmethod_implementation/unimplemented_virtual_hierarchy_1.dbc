@@ -27,6 +27,7 @@ type class: A {
 
 type class: B {
     abstract: true;
+    extends: A;
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,
@@ -39,6 +40,7 @@ type class: B {
 }
 
 type class: C {
+    extends: B;
     virtual_methods: {
         foo: method_foo, 
         bar: method_bar,

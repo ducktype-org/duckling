@@ -92,7 +92,7 @@ namespace vm::code::builders {
 	class InvalidVirtualMethodImplementationError: public BuilderError {
 	public:
 		constexpr static const std::string_view ERR_MSG
-			= "Method implementation lacks it's definition: ";
+			= "Method implementation lacks it's declaration as a virtual method: ";
 		const TypeOfData  CLASS_TYPE;
 		const base::StrID METHOD_NAME;
 
@@ -130,7 +130,7 @@ namespace vm::code::builders {
 		const TypeOfData  CLASS_TYPE;
 		const base::StrID METHOD_NAME;
 
-	UnimplementedVirtualMethodError(TypeOfData class_type, base::StrID method_name):
+		UnimplementedVirtualMethodError(TypeOfData class_type, base::StrID method_name):
 			  BuilderError(base::strConcat(ERR_MSG, method_name)),
 			  CLASS_TYPE(std::move(class_type)),
 			  METHOD_NAME(method_name) {}
@@ -214,6 +214,7 @@ namespace vm::code::builders {
 	DEFINE_TYPE_ERROR(
 		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
 	);
+	DEFINE_TYPE_ERROR(DuplicatedFieldError, "This class' fields are duplicated: ");
 	// TODO: Think about those new errors.
 	DEFINE_TYPE_ERROR(
 		MissingAncestorVirtualMethodError,

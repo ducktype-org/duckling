@@ -41,9 +41,9 @@ type class: A {
         eee: method_eee, 
         fff: method_fff,
     };
-    implementation: {
+    implementations: {
         eee: method_eee_impl, 
-    }
+    };
 }
 
 type class: B {
@@ -54,14 +54,14 @@ type class: B {
         # Then methods from interfaces in the order they are implemented -> I1.
         # Then methods from interfaces in the order they are implemented -> I2.
 
-        eee: method_eee         # Implemented in A
-        fff: method_fff         # Not implemented
-        aaa: method_aaa         # Implemented in I1
-        bbb: method_bbb         # Not implemented.
-        ccc: method_ccc         # Implemented in I2
-        ddd: method_ddd         # Not implemented.
+        eee: method_eee,         # Implemented in A
+        fff: method_fff,         # Not implemented
+        aaa: method_aaa,         # Implemented in I1
+        bbb: method_bbb,         # Not implemented.
+        ccc: method_ccc,         # Implemented in I2
+        ddd: method_ddd,         # Not implemented.
     };
-    implementation: {
+    implementations: {
         fff: method_fff_impl,
         bbb: method_bbb_impl,
         ddd: method_ddd_impl,
