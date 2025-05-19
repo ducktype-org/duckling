@@ -106,6 +106,7 @@ namespace vm {
 			block_data.view
 				= base::ModRawView(parent_block->data.view.getBegin() + offset, type->getSize());
 
+			// This is done by `createBlock`
 			// Set memory to 0.
 			std::memset(block_data.view.getBegin(), 0, block_data.view.size());
 
@@ -146,9 +147,27 @@ namespace vm {
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
-		saveUnderPointer
+		auto copyPointerData(Pointer dst, Pointer src, TypeCRef type) -> void {
+            CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
 
-		loadFromPointerTo
+			// Copy the child blocks
+			auto& dst_child_blocks = dst.getBlock()->children_blocks;
+			for (auto iter = dst_child_blocks.lower_bound(dst.offset);
+			     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
+			     iter = dst_child_blocks.erase(iter)) {
+				freeBlock(iter->second);
+			}
+			auto& src_child_blocks = src.getBlock()->children_blocks;
+			for (auto iter = src_child_blocks.lower_bound(src.offset);
+			     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
+			     ++iter) {
+                auto offset = dst.offset + iter->first - src.offset;
+                setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
+            }
+            
+			// Copy the data itself
+			getPointerData(dst, type->getSize()) = getPointerData(src, type->getSize());
+		}
 
 		auto destroyPointer(Pointer pointer) -> void {
 			if_opt_some(pointer.block.toOpt(), block) {

@@ -581,7 +581,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantSet_inner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto block = variant_pointer.getBlock();
+			auto block           = variant_pointer.getBlock();
 			thread.process.getMemory().setNestedViewBlock(
 				block, 0, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
 			);
@@ -592,7 +592,7 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(variantGet_inner_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  variant_pointer     = derefStack<Pointer>(local_stack, instr->arg1);
 			auto  parent_block        = variant_pointer.getBlock();
 			auto  wanted_type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
@@ -657,12 +657,15 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
 		{
-			auto dst      = &local_stack[instr->arg0];
-			auto src_ptr  = derefStack<Pointer>(local_stack, instr->arg1);
-			auto type_id  = TypeID{ static_cast<usize>(instr[1].arg0) };
-			auto type     = thread.executing_program->types->at(type_id);
-			auto src_view = Memory::getPointerData(src_ptr, type->getSize());
-			std::memcpy(dst, src_view.getBegin(), src_view.size());
+			auto src_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+			auto type_id     = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type        = thread.executing_program->types->at(type_id);
+
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Memory::getPointer(dst_block);
+			thread.process_memory.copyPointerData(dst_pointer, src_pointer, type);
+			// std::memcpy(dst, src_view.getBegin(), src_view.size());
 		}
 		FUNCTION_CONT(2);
 	}
@@ -753,12 +756,17 @@ namespace vm {
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
 		{
 			auto dst          = &local_stack[instr->arg0];
-			auto src_ptr      = derefStack<Pointer>(local_stack, instr->arg1);
+			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
 			auto type_id      = TypeID{ static_cast<usize>(instr[1].arg0) };
 			auto type         = thread.executing_program->types->at(type_id);
-			auto field_offset = static_cast<usize>(instr[1].arg1);
-			auto src_view     = Memory::getPointerData(src_ptr, type->getSize());
-			std::memcpy(dst, src_view.getBegin() + field_offset, src_view.size());
+			auto field_offset = instr[1].arg1;
+			src_pointer.movePointer(field_offset);
+
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Memory::getPointer(dst_block);
+
+			thread.process_memory.copyPointerData(dst_pointer, src_pointer, type);
 		}
 		FUNCTION_CONT(2);
 	}

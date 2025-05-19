@@ -65,8 +65,8 @@ namespace vm {
 		friend class VariantAllocator;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
-		base::HashMap<usize, Ref<Block>> children_blocks{};  // offset to block
-		MRef<Block>                      parent = nullptr;
+        base::Map<usize, Ref<Block>> children_blocks{};  // offset to block
+		MRef<Block>                 parent = nullptr;
 
 	public:
 		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
