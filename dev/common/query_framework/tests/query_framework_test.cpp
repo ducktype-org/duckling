@@ -19,7 +19,7 @@ struct Key1 {
 	constexpr auto operator<=>(const Key1& oth) const = default;
 
 	[[nodiscard]]
-	base::HashT customPerfectHash() const {
+	u64 queryUnstablePerfectHash() const {
 		return v;
 	}
 };
@@ -28,7 +28,7 @@ struct Key2 {
 	uint64_t v;
 
 	[[nodiscard]]
-	base::HashT customPerfectHash() const {
+	u64 queryUnstablePerfectHash() const {
 		return v;
 	}
 };
@@ -68,7 +68,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
-DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+DECLARE_QUERY(FibonacciStringAutoCache, u64, std::string);
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
