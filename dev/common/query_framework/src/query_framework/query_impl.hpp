@@ -71,7 +71,9 @@ namespace query::detail {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(unstableHashKey(key), QueryImplType::provide(context, key), acd);
+			return QueryImplType::store(
+				unstableHashKey(key), QueryImplType::provide(context, key), acd
+			);
 		}
 	}
 
@@ -99,8 +101,9 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QueryUnstableHash keyHash) -> LoadResult;
-		 *  static auto store(QueryUnstableHash keyHash, PResult res, query::ACD acd) -> QResult;
+		 *  static auto load(query::QueryUnstableHash keyHash) -> LoadResult;
+		 *  static auto store(query::QueryUnstableHash keyHash, PResult res, query::ACD acd) ->
+		 * QResult;
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
 	};
@@ -140,7 +143,11 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		std::is_same_v<                                                                           \
-			std::invoke_result_t<decltype(type::store), QueryUnstableHash, type::PResult, ::query::ACD>, \
+			std::invoke_result_t<                                                                 \
+				decltype(type::store),                                                            \
+				::query::QueryUnstableHash,                                                       \
+				type::PResult,                                                                    \
+				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
 		"Bad store result."                                                                       \
 	);                                                                                            \
@@ -156,7 +163,7 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		::query::HasUnstablePerfectHash<type::QKey>,                                              \
-		"queryUnstablePerfectHash must be implemented and return u64 (QueryUnstableHash)."        \
+		"queryUnstablePerfectHash must be implemented and return u64 (query::QueryUnstableHash)." \
 	);                                                                                            \
 	static_assert(                                                                                \
 		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \

@@ -334,6 +334,9 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
+		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<SymbolList>>
+			symbol_cache;
+
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
@@ -458,15 +461,16 @@ namespace compiler::helios {
 			return output;
 		}
 
-		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols)
+		static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
+			if (const auto& cache = symbol_cache.atMaybe(key_hash))
 				return QResWithACD{ &cache->data, cache->acd };
 			return {};
 		}
 
-		static auto store(QKey key, PResult p_res, query::ACD acd) -> QResult {
-			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return &key.ref->symbols.value().data;
+		static auto store(query::QueryUnstableHash key_hash, PResult p_res, query::ACD acd)
+			-> QResult {
+			symbol_cache.put(key_hash, { .data = std::move(p_res), .acd = acd });
+			return &symbol_cache.at(key_hash).data;
 		}
 	};
 
@@ -513,10 +517,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<
-			QKey,
-			query::CacheEntry<pst::PST<pst::Stmt>>,
-			::query::QueryUnstableHashFunctor<QKey>>
+		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<pst::PST<pst::Stmt>>>
 			cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -542,13 +543,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(const QKey& key) -> LoadResult {
+		static auto load(query::QueryUnstableHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value().data), value->acd };
 			return {};
 		}
 
-		static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {
+		static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
