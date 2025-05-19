@@ -32,6 +32,10 @@ namespace compiler::helios {
 				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
 			}
 
+			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
+				throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
+			}
+
 			void visitCallExpr(const code::CallExpr&) final {
 				throw base::NotYetImplemented("Evaluation of calls");
 			}

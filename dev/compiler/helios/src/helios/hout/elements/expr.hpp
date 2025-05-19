@@ -63,6 +63,18 @@ namespace compiler::helios::code {
 	};
 
 	/**
+	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
+	 */
+	 struct LiteralStringExpr final: public Expr {
+		std::string value;
+
+		LiteralStringExpr(query::Context& ctx, std::string value);
+		
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
 	 * @brief Represents a type literal value written in the expression (e.g. i32, i64, bool, void).
 	 */
 	struct LiteralTypeExpr final: public Expr {
