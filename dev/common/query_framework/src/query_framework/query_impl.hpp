@@ -10,6 +10,7 @@
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_hash.hpp"          // IWYU pragma: export
 #include "query_int.hpp"
 
 #include <base/defer.hpp>
@@ -101,7 +102,9 @@ namespace query::detail {
 		 *  static auto load(QKey key) -> LoadResult;
 		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
 		 */
+		static constexpr bool CACHE_ON_DISK = false;
 	};
+
 }
 
 /**
@@ -150,8 +153,16 @@ namespace query::detail {
 	static_assert(                                                                                \
 		not std::is_reference_v<type::QKey>,                                                      \
 		"Query key type should not be a reference (use custom struct instead)"                    \
+	);                                                                                            \
+	static_assert(                                                                                \
+		::query::HasUnstablePerfectHash<type::QKey>,                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 (QueryUnstableHash)."        \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
+		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
+		"(QueryStableHash)."                                                                      \
 	);
-
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

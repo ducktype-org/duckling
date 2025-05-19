@@ -114,7 +114,7 @@ namespace compiler::helios::code {
 		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
-		out << strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
+		out << strConcat("(Symbol ", name(symbol), " (", symbol.queryUnstablePerfectHash(), "))");
 	}
 
 	tsh::AbstractType builtinOperationToReturnType(

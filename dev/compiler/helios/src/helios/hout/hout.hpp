@@ -79,7 +79,7 @@ namespace compiler::helios {
 		std::string debugPrint() const;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 
 		bool operator==(const HOUTFunction& oth) const {
 			return original_symbol == oth.original_symbol;

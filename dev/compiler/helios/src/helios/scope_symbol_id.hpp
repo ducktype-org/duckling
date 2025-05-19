@@ -6,7 +6,6 @@
  */
 #pragma once
 
-#include <base/perfect_hash.hpp>
 #include <base/ref.hpp>
 
 namespace compiler::helios {
@@ -21,7 +20,7 @@ namespace compiler::helios {
 	struct SymID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return reinterpret_cast<u64>(ref.get());
 		}
 
@@ -46,7 +45,7 @@ namespace compiler::helios {
 	struct ScopeID final {
 		// @FUTURE: add some mangling, so valgrind will not get confused
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return reinterpret_cast<u64>(ref.get());
 		}
 
