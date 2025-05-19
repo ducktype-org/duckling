@@ -1,15 +1,15 @@
 type interface: A {
-    implements: { B };
+	implements: { B };
 }
 
 type interface: B {
-    implements: { C };
+	implements: { C };
 }
 
 type interface: C {
-    implements: { A };
+	implements: { A };
 }
 
 function main {
-    ret;
+	ret;
 }

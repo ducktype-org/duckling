@@ -1,4 +1,4 @@
 function main {
-    init_lany_type x, in64;
-    deinit;
+	init_lany_type x, in64;
+	deinit;
 }

@@ -1,11 +1,11 @@
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
 	init_lany_type     	x, i64;
 
-    # conditional so that the code inbetween the target and jump does not get eliminated
+	# conditional so that the code inbetween the target and jump does not get eliminated
 	jmpIf_label 		Other;
 
 	deinit; # x
@@ -14,7 +14,7 @@ function main {
 	label         		Other;
 	deinit; # y
 
-    deinit; # *argv
-    deinit; # argc
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }
