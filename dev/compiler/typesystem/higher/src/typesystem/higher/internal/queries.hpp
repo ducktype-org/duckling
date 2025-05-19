@@ -16,8 +16,6 @@ namespace tsh::internal {
 
 		WrappedClassAbstractTypeImplPtr(const ClassAbstractTypeImpl* value): value(value) {}
 
-		auto operator<=>(const WrappedClassAbstractTypeImplPtr& other) const = default;
-
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
 			return u64(value);

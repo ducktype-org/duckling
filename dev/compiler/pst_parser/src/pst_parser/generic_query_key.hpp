@@ -31,13 +31,5 @@ namespace pst {
 		u64 queryUnstablePerfectHash() const {
 			return element.illegalAccess().value()->getID().asInt();
 		}
-
-		bool operator==(const GenericPSTQueryKey& other) const {
-			if (element.illegalAccess().has_value() == other.element.illegalAccess().has_value())
-				return true;
-			if (!element.illegalAccess().has_value() || !other.element.illegalAccess().has_value())
-				return false;
-			return &*element.illegalAccess().value() == &*other.element.illegalAccess().value();
-		}
 	};
 }
