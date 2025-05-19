@@ -206,8 +206,8 @@ namespace tsh {
 		}
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			static base::Map<SymbolType, base::HashT> hashes{};
+		u64 queryUnstablePerfectHash() const {
+			static base::Map<SymbolType, u64> hashes{};
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 			auto new_hash = hashes.size();
 			hashes.put(*this, new_hash);

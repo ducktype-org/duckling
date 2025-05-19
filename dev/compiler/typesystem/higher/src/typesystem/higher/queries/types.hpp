@@ -55,7 +55,7 @@ namespace tsh {
 			  signedness(signedness) {}
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return size + signedness;
 		}
 	};
@@ -103,7 +103,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -127,7 +127,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -173,7 +173,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryFunctionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

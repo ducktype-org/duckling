@@ -414,7 +414,7 @@ private:
 		tree_v12->debugPrint(out_v12);
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
-		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
+		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.queryUnstablePerfectHash(), "))");
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
