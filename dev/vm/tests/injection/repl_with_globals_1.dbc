@@ -4,17 +4,17 @@ global_data counter i64;
 global_data global_ptr ptr_i64;
 
 function globaler_setter {
-    init_lany_type  x, i64;
-    input_l64       x;
-    mov_g64_l64     counter, x;
+	init_lany_type  x, i64;
+	input_l64       x;
+	mov_g64_l64     counter, x;
 
-    input_l64           x;
-    init_lany_type      ptr, ptr_i64;
-    alloc_lptr_type     ptr, i64;
-    store_lptr_l64_ofs  ptr, x;
-    mov_gptr_lptr       global_ptr, ptr;
-    
-    deinit; # ptr
-    deinit; # x
-    ret;
+	input_l64           x;
+	init_lany_type      ptr, ptr_i64;
+	alloc_lptr_type     ptr, i64;
+	store_lptr_l64_ofs  ptr, x;
+	mov_gptr_lptr       global_ptr, ptr;
+	
+	deinit; # ptr
+	deinit; # x
+	ret;
 }

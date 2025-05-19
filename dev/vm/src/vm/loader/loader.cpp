@@ -127,7 +127,7 @@ namespace {
 		vm::code::builders::GlobalDataMap& globals_map,
 		LoaderLogger&                      log
 	) {
-		if (globals_map.contains(global.name))
+		if (globals_map.contains(global.name) && globals_map.at(global.name)->type != global.type)
 			log.log<DuplicatedGlobalDataError>(global.name, global.name.str);
 		globals_map.insert(global, global.name);
 	}
@@ -138,8 +138,8 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	LoaderLogger log;
 
 	program.insertTypes(code_collection.types, log);
-	program.insertFunctions(code_collection.functions, log);
 	program.insertGlobals(code_collection.global_data, log);
+	program.insertFunctions(code_collection.functions, log);
 	if (!log.good()) return std::unexpected(std::move(log));
 	return program;
 }
@@ -202,6 +202,9 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 			code::builders::GlobalDataMap globals;
 			LoaderLogger                  log;
+			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
+			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
+
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
 					auto code_global

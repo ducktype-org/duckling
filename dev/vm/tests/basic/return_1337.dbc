@@ -1,9 +1,9 @@
 type primitive: int64 8
 
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
 	mov_l64_imm ret_val, 1337;
 

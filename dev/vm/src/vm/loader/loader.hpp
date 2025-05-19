@@ -55,7 +55,7 @@ namespace vm::loader {
 		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
 
 		/**
-		 * @brief Inserts a global. Cannot be called multiple times with the same global data
+		 * @brief Inserts a global. Can be called multiple times with the same global data
 		 * object.
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);

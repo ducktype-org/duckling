@@ -1,11 +1,11 @@
 type class: Animal {
-    abstract: true;
+	abstract: true;
 }
 type class: Dog {
-    extends: Animal;
+	extends: Animal;
 }
 type class: Cat {
-    extends: Animal;
+	extends: Animal;
 }
 
 type pointer: AnimalPtr Animal
@@ -13,36 +13,36 @@ type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
-    init_lany_type animal, AnimalPtr;
-    init_lany_type cat, CatPtr;
-    init_lany_type dog, DogPtr;
-    init_lany_type x, i64;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+	init_lany_type animal, AnimalPtr;
+	init_lany_type cat, CatPtr;
+	init_lany_type dog, DogPtr;
+	init_lany_type x, i64;
 
-    alloc_lptr_type animal, Dog;
-    setVTable_lptr_type animal, Dog;
+	alloc_lptr_type animal, Dog;
+	setVTable_lptr_type animal, Dog;
 
-    downcast_lptr_lptr cat, animal;  # cat := static_cast<CatPtr>(animal)
-    ext_type Cat;
-    cmpNull_lptr cat;  # flag := cat != nullptr
+	downcast_lptr_lptr cat, animal;  # cat := static_cast<CatPtr>(animal)
+	ext_type Cat;
+	cmpNull_lptr cat;  # flag := cat != nullptr
 
-    # Check if succeeded
-    jmpIfNot_label notCat;
-        add_l64_imm x, 10;
-    label notCat;
+	# Check if succeeded
+	jmpIfNot_label notCat;
+		add_l64_imm x, 10;
+	label notCat;
 
-    downcast_lptr_lptr dog, animal;  # dog := static_cast<DogPtr>(animal)
-    ext_type Dog;
-    cmpNull_lptr dog;  # flag := dog != nullptr
+	downcast_lptr_lptr dog, animal;  # dog := static_cast<DogPtr>(animal)
+	ext_type Dog;
+	cmpNull_lptr dog;  # flag := dog != nullptr
 
-    # Check if succeeded
-    jmpIfNot_label notDog;
-        add_l64_imm x, 1;
-    label notDog;
+	# Check if succeeded
+	jmpIfNot_label notDog;
+		add_l64_imm x, 1;
+	label notDog;
 
-    output_l64 x;
+	output_l64 x;
 
-    ret;
+	ret;
 }

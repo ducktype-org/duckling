@@ -1,24 +1,24 @@
 type class: Animal {
-    abstract: true;
+	abstract: true;
 }
 type class: Dog {
-    extends: Animal;
+	extends: Animal;
 }
 type class: Cat {
-    extends: Animal;
+	extends: Animal;
 }
 
 type pointer: DogPtr Dog
 type pointer: CatPtr Cat
 
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
-    init_lany_type dog, DogPtr;
-    init_lany_type cat, CatPtr;
-    alloc_lptr_type dog, Dog;
-    setVTable_lptr_type dog, Dog;
-    upcast_lptr_lptr cat, dog;  # cat := static_cast<CatPtr>(dog)
-    ret;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+	init_lany_type dog, DogPtr;
+	init_lany_type cat, CatPtr;
+	alloc_lptr_type dog, Dog;
+	setVTable_lptr_type dog, Dog;
+	upcast_lptr_lptr cat, dog;  # cat := static_cast<CatPtr>(dog)
+	ret;
 }
