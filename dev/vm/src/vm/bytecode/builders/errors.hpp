@@ -73,73 +73,6 @@ namespace vm::code::builders {
 			  TYPE_NAME(type_name) {}
 	};
 
-	class UnknownSubtypeError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
-		const TypeOfData                        BASE_TYPE;
-		const base::StrID                       MISSING_NAME;
-
-		UnknownSubtypeError(TypeOfData base_type, base::StrID missing_name):
-			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
-			  BASE_TYPE(std::move(base_type)),
-			  MISSING_NAME(missing_name) {}
-
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(BASE_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
-		}
-	};
-
-	class InvalidVirtualMethodImplementationError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "Method implementation lacks it's declaration as a virtual method: ";
-		const TypeOfData  CLASS_TYPE;
-		const base::StrID METHOD_NAME;
-
-		InvalidVirtualMethodImplementationError(TypeOfData class_type, base::StrID method_name):
-			  BuilderError(base::strConcat(ERR_MSG, method_name)),
-			  CLASS_TYPE(std::move(class_type)),
-			  METHOD_NAME(method_name) {}
-
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(CLASS_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
-		}
-	};
-
-	class VirtualMethodSignatureError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This class implements a method with wrong signature: ";
-		const TypeOfData  CLASS_TYPE;
-		const base::StrID METHOD_NAME;
-
-		VirtualMethodSignatureError(TypeOfData class_type, base::StrID method_name):
-			  BuilderError(base::strConcat(ERR_MSG, method_name)),
-			  CLASS_TYPE(std::move(class_type)),
-			  METHOD_NAME(method_name) {}
-
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(CLASS_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
-		}
-	};
-
-	class UnimplementedVirtualMethodError: public BuilderError {
-	public:
-		constexpr static const std::string_view ERR_MSG
-			= "This method is unimplemented in an instantiable class: ";
-		const TypeOfData  CLASS_TYPE;
-		const base::StrID METHOD_NAME;
-
-		UnimplementedVirtualMethodError(TypeOfData class_type, base::StrID method_name):
-			  BuilderError(base::strConcat(ERR_MSG, method_name)),
-			  CLASS_TYPE(std::move(class_type)),
-			  METHOD_NAME(method_name) {}
-
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(CLASS_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
-		}
-	};
-
 	class TypeErrorBase: public BuilderError {
 	public:
 		const TypeOfData TYPE;
@@ -179,6 +112,21 @@ namespace vm::code::builders {
 		}
 	};
 
+	class ClassErrorBase: public BuilderError {
+	public:
+		const TypeOfData  TYPE;
+		const base::StrID ATTRIBUTE_NAME;
+
+		ClassErrorBase(std::string msg, TypeOfData argument, base::StrID field_name):
+			  BuilderError(std::move(msg)),
+			  TYPE(std::move(argument)),
+			  ATTRIBUTE_NAME(field_name) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
+	};
+
 #define DEFINE_TYPE_ERROR(error_name, msg)                                                   \
 	class error_name: public TypeErrorBase {                                                 \
 	public:                                                                                  \
@@ -207,32 +155,53 @@ namespace vm::code::builders {
 			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	};
 
+#define DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(error_name, msg)                                          \
+	class error_name: public ClassErrorBase {                                                      \
+	public:                                                                                        \
+		constexpr static const std::string_view ERR_MSG = (msg);                                   \
+                                                                                                   \
+		error_name(TypeOfData type, base::StrID field_name):                                       \
+			  ClassErrorBase(base::strConcat(ERR_MSG, field_name), std::move(type), field_name) {} \
+	};
+
+	// Class/Interface errors.
 	DEFINE_TYPE_ERROR(
 		InvalidImplementsError, "This interface/class can implement only other interfaces: "
 	);
+	DEFINE_TYPE_ERROR(
+		DuplicatedImplementsError, "This interface/class tried implementing the same interface twice: "
+	);
 	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
-	DEFINE_TYPE_ERROR(
-		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
-	);
-	DEFINE_TYPE_ERROR(DuplicatedFieldError, "This class' fields are duplicated: ");
-	// TODO: Think about those new errors.
-	DEFINE_TYPE_ERROR(
-		MissingAncestorVirtualMethodError,
-		"This class does not contain all of its ancestors' virtual methods: "
-	);
-	DEFINE_TYPE_ERROR(DuplicatedVirtualMethodError, "Duplicated virtual method: ");
-	DEFINE_TYPE_ERROR(
-		DuplicatedVirtualMethodImplementationError, "Duplicated virtual method implementation: "
-	);
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(DuplicatedTypeError, "Duplicated type: ");
-	DEFINE_TYPE_ERROR(
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
 		MethodTypeError,
 		"Implementations and virtual method declarations should have the same signature: "
 	);
-	DEFINE_TYPE_ERROR(MethodFirstArgumentError, "Methods first argument should be a self*: ");
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(MethodFirstArgumentError, "Methods first argument should be a this*: ");
+
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(DuplicatedFieldError, "This objects' field is duplicated: ");
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		DuplicatedVirtualMethodError, "This objects' virtual method declaration is duplicated: "
+	);
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		DuplicatedVirtualMethodImplementationError,
+		"This objects' virtual method implementation is duplicated: "
+	);
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		UnimplementedVirtualMethodError,
+		"This virtual method is unimplemented in an instantiable class: "
+	);
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		VirtualMethodSignatureError, "This class implements a method with wrong signature: "
+	);
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		InvalidVirtualMethodImplementationError,
+		"Method implementation lacks it's declaration as a virtual method: "
+	);
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
@@ -262,5 +231,5 @@ namespace vm::code::builders {
 		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for "
 		"calling: "
 	);
-	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of type: ");
+	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
 }

@@ -1,14 +1,18 @@
-type pointer: pointer_parent Parent
-type pointer: pointer_child Child
 type pointer: pointer_I1 I1
 type pointer: pointer_I2 I2
-type fun: method_parent_int {pointer_parent, i64} void
-type fun: method_I1_int {pointer_I1} i64
+type pointer: pointer_parent Parent
+type pointer: pointer_child Child
 
-type fun: Parent_getAge_impl {pointer_parent, i64} void
-type fun: Child_getAge_impl {pointer_child, i64} void
+type fun: method_I1_int {pointer_I1} i64
 type fun: I1_foo_impl {pointer_I1} i64 
+
+type fun: method_parent_int {pointer_parent, i64} void
+type fun: Parent_getAge_impl {pointer_parent, i64} void
+
+type fun: method_child_int {pointer_child, i64} void
+type fun: Child_getAge_impl {pointer_child, i64} void
 type fun: Child_I1_impl {pointer_child} i64
+type fun: Child_cry_impl {pointer_child, i64} void
 
 function Parent_getAge_impl {
     init_lany_type age, i64;
@@ -63,7 +67,7 @@ type interface: I2 {
 
 type class: Parent {
     fields: {
-        foo: i64,
+        x: i64,
     };
     virtual_methods: {
         getAge: method_parent_int,
@@ -78,18 +82,15 @@ type class: Child {
     abstract: false;  # This is the case by default.
     implements: {I1, I2};
     fields: {
-        foo: i64,
-        bar: i64,
+        y: i64,
     };
     virtual_methods: {
-        getAge: method_parent_int,
-        foo: method_I1_int, # We assume all virtual methods from superclasses have to be declared.
-        bar: method_I1_int,
+        cry: method_child_int,
     };
     implementations: { # If Child is a concrete class, all methods have to be implemented.
         getAge: Child_getAge_impl, # Implementation of getAge for child.
-        # bar: I1_foo_impl,
-        bar: Child_I1_impl, # TODO: This should change soon.
+        bar: Child_I1_impl,
+        cry: Child_cry_impl,
     };
 }
 

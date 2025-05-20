@@ -10,6 +10,7 @@
 #include <base/variant.hpp>
 
 #include "vm/core/process/type_metadata/definitions.hpp"
+#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
@@ -20,7 +21,9 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <algorithm>
+#include <functional>
 #include <ranges>
+#include <variant>
 
 using namespace vm::code::builders;
 
@@ -63,184 +66,420 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	// 	return std::get<T>(type_variant);
 	// };
 
-	// Validates if all fields in a specified view match. Throws a specified error on failure.
-	auto validate_range_match
-		= [&](const auto& actual_view, const auto& expected_view, auto error_factory) {
-			  const auto actual_size   = std::ranges::size(actual_view);
-			  const auto expected_size = std::ranges::size(expected_view);
-
-			  if (actual_size < expected_size) throw error_factory();
-
-			  for (auto [actual, expected]: std::views::zip(actual_view, expected_view))
-				  if (actual != expected) throw error_factory();
-		  };
-
 	// Validates if implements contain interfaces.
 	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
+		std::cerr << "Helooo: " << implements.size() << '\n';
+		base::HashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: implements) {
+			if (interfaces.contains(impl)) throw DuplicatedImplementsError(type);
+			interfaces.put(impl);
+			std::cerr << "Validate implements: " << impl.strView() << '\n';
 			auto impl_type = get_type(impl);
 			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
 				throw InvalidImplementsError(type);
 		}
 	};
 
-	// Validates if all superclass fields exist in the subclass.
-	auto validate_fields = [&](const ClassType& clazz, const ClassType& superclass) {
-		validate_range_match(clazz.fields, superclass.fields, [&]() {
-			return MissingAncestorFieldError(type);
-		});
+	// TODO: Merge those two into one.
+	auto validate_first_argument = [&](const ClassType& clazzz, const FunctionType& func) {
+		std::cerr << "Implementation name: " << func.name.strView() << '\n';
+		std::cerr << "Implementation res type: " << func.result.strView() << '\n';
+		std::cerr << "Implementation param count: " << func.parameters.size() << '\n';
+		if (func.parameters.size() == 0) throw MethodFirstArgumentError(clazzz, func.name);
+
+		auto first_param_type = *get_type(func.parameters[0]);
+		if (!std::holds_alternative<PointerType>(first_param_type))
+			throw MethodFirstArgumentError(clazzz, func.name);
+		auto first_param = std::get<PointerType>(first_param_type);
+
+		if (first_param.inner != clazzz.name) throw MethodFirstArgumentError(clazzz, func.name);
 	};
 
-	// Validates if all superclass/interface vmethods exist in the subclass.
-	auto validate_virtual_methods = [&](const ClassType& clazz, const ClassType& superclass) {
-		auto error_factory = [&]() { return MissingAncestorVirtualMethodError(type); };
+	auto validate_first_argument_iface = [&](const InterfaceType& iface, const FunctionType& func) {
+		std::cerr << "Implementation name: " << func.name.strView() << '\n';
+		std::cerr << "Implementation res type: " << func.result.strView() << '\n';
+		std::cerr << "Implementation param count: " << func.parameters.size() << '\n';
+		if (func.parameters.size() == 0) throw MethodFirstArgumentError(iface, func.name);
 
-		u64 start_index = 0;
-		validate_range_match(clazz.virtual_methods, superclass.virtual_methods, error_factory);
-		start_index += superclass.virtual_methods.size();
-		for (const auto& interface_name: clazz.implements) {
-			// TODO: Validate valid interfaces type here. Instead of validate_implements.
-			const auto& interface      = std::get<InterfaceType>(*get_type(interface_name));
-			auto        vmethods_range = clazz.virtual_methods | std::views::drop(start_index)
-			                    | std::views::take(interface.virtual_methods.size());
-			validate_range_match(vmethods_range, interface.virtual_methods, error_factory);
-			start_index += interface.virtual_methods.size();
+		auto first_param_type = *get_type(func.parameters[0]);
+		if (!std::holds_alternative<PointerType>(first_param_type))
+			throw MethodFirstArgumentError(iface, func.name);
+		auto first_param = std::get<PointerType>(first_param_type);
+
+		if (first_param.inner != iface.name) throw MethodFirstArgumentError(iface, func.name);
+	};
+
+	auto validate_signature_match
+		= [&](const ClassType& clazzz, const FunctionType& vmethod, const FunctionType& impl) {
+			  std::cerr << "Implementation name: " << impl.name.strView() << '\n';
+			  std::cerr << "Implementation res type: " << impl.result.strView() << '\n';
+			  std::cerr << "Implementation param count: " << impl.parameters.size() << '\n';
+			  std::cerr << "VMethod name: " << vmethod.name.strView() << '\n';
+			  std::cerr << "Vmethod res type: " << vmethod.result.strView() << '\n';
+			  std::cerr << "VMethod param count: " << vmethod.parameters.size() << '\n';
+
+			  if (vmethod.result != impl.result) throw MethodTypeError(clazzz, impl.name);
+			  if (vmethod.parameters.size() != impl.parameters.size())
+				  throw MethodTypeError(clazzz, impl.name);
+
+			  for (u64 i = 1; i < impl.parameters.size(); i++) {
+				  std::cerr << "Verify Parameter " << i << " : " << impl.parameters[i].strView()
+							<< ", " << vmethod.parameters[i].strView() << '\n';
+				  if (impl.parameters[i] != vmethod.parameters[i])
+					  throw MethodTypeError(clazzz, impl.name);
+			  }
+		  };
+
+	auto validate_signature_match_iface
+		= [&](const InterfaceType& iface, const FunctionType& vmethod, const FunctionType& impl) {
+			  std::cerr << "Implementation name: " << impl.name.strView() << '\n';
+			  std::cerr << "Implementation res type: " << impl.result.strView() << '\n';
+			  std::cerr << "Implementation param count: " << impl.parameters.size() << '\n';
+			  std::cerr << "VMethod name: " << vmethod.name.strView() << '\n';
+			  std::cerr << "Vmethod res type: " << vmethod.result.strView() << '\n';
+			  std::cerr << "VMethod param count: " << vmethod.parameters.size() << '\n';
+
+			  if (vmethod.result != impl.result) throw MethodTypeError(iface, impl.name);
+			  if (vmethod.parameters.size() != impl.parameters.size())
+				  throw MethodTypeError(iface, impl.name);
+
+			  for (u64 i = 1; i < impl.parameters.size(); i++) {
+				  std::cerr << "Verify Parameter " << i << " : " << impl.parameters[i].strView()
+							<< ", " << vmethod.parameters[i].strView() << '\n';
+				  if (impl.parameters[i] != vmethod.parameters[i])
+					  throw MethodTypeError(iface, impl.name);
+			  }
+		  };
+	// TODO: What is someone declares a field named vt.
+	auto validate_implementations = [&](const ClassType& clazz) {
+		// Validates if declared implementations have corresponding virtual method declarations.
+		// Validates signatures of implementations.
+		base::HashMap<base::StrID, base::StrID> virtual_methods;
+
+		// Collect all virtual methods that can be implemented by this class.
+		std::function<void(const InterfaceType&)> collect_virtual_methods_iface
+			= [&](const InterfaceType& ifacee) {
+				  for (const auto& iface: ifacee.implements) {
+					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
+					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+					  // TODO: Change that to invoke collect_virtual_methods.
+					  collect_virtual_methods_iface(iface_type);
+				  }
+				  for (const auto& vmeth: ifacee.virtual_methods) {
+					  if (virtual_methods.contains(vmeth.name))
+						  throw DuplicatedVirtualMethodError(type, vmeth.name);
+					  virtual_methods.put(vmeth.name, vmeth.type);
+				  }
+			  };
+		// Collect all virtual methods that can be implemented by this class.
+		std::function<void(const ClassType&)> collect_virtual_methods
+			= [&](const ClassType& clazzz) {
+				  if (clazzz.extends) {
+					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
+					  const auto& super_type = *get_type(*clazzz.extends);
+					  if (std::holds_alternative<ClassType>(super_type)) {
+						  auto super_type_temp = std::get<ClassType>(super_type);
+						  std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
+						  collect_virtual_methods(std::get<ClassType>(super_type));
+					  }
+				  }
+				  for (const auto& iface: clazzz.implements) {
+					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
+					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+					  // TODO: Change that to invoke collect_virtual_methods.
+					  collect_virtual_methods_iface(iface_type);
+				  }
+				  for (const auto& vmeth: clazzz.virtual_methods) {
+					  if (virtual_methods.contains(vmeth.name)) {
+						  std::cerr << "Hello from validate implementations\n";
+						  throw DuplicatedVirtualMethodError(type, vmeth.name);
+					  }
+					  virtual_methods.put(vmeth.name, vmeth.type);
+				  }
+			  };
+		collect_virtual_methods(clazz);
+
+		std::cerr << "=========== VALIDATE IMPLEMENTATION for: " << clazz.name.strView()
+				  << " ==============\n";
+		std::cerr << "Collected vmethods: \n";
+		for (auto [name, sth]: virtual_methods)
+			std::cerr << "{ " << name.strView() << ", " << sth.strView() << " } | ";
+
+		base::HashMap<base::StrID, base::StrID> implementations;
+		for (const auto& impl: clazz.implementations) {
+			// Implemented method is not declared as a virtual.
+			if (!virtual_methods.contains(impl.name))
+				throw InvalidVirtualMethodImplementationError(type, impl.name);
+			if (implementations.contains(impl.name))
+				throw DuplicatedVirtualMethodImplementationError(type, impl.name);
+			implementations.put(impl.name);
+
+			std::cerr << "\nVerifying method: " << impl.name.strView() << '\n';
+
+			// Check the signatures of implementations.
+			TypeOfData vmethod_type = *get_type(virtual_methods[impl.name]);
+			TypeOfData impl_type    = *get_type(impl.type);
+			if (!std::holds_alternative<FunctionType>(impl_type))
+				throw TypeIsNotFunctionalError(impl.type);
+			if (!std::holds_alternative<FunctionType>(vmethod_type))
+				throw TypeIsNotFunctionalError(virtual_methods[impl.name]);
+
+			FunctionType implementation = std::get<FunctionType>(impl_type);
+			FunctionType vmethod        = std::get<FunctionType>(vmethod_type);
+
+			// First argument should always be a this*
+			validate_first_argument(clazz, implementation);
+			// Arguments and result types have to match the virtual methods type.
+			validate_signature_match(clazz, vmethod, implementation);
 		}
 	};
 
-	auto validate_implementations = [&](const ClassType& clazz) {
-		for (const auto& implementation: clazz.vmethods_implementations) {
-			// TODO: Potentially change that to a map for faster lookup.
-			auto vmethod_it
-				= std::ranges::find_if(clazz.virtual_methods, [&](const auto& virtual_method) {
-					  // TODO: Verify the signatures. Not only types. Once you figure out how xd.
-					  return virtual_method.name == implementation.name;
-					  //   return virtual_method == implementation;
-				  });
-			if (vmethod_it == clazz.virtual_methods.end())
-				throw InvalidVirtualMethodImplementationError(type, implementation.name);
+	auto validate_implementations_iface = [&](const InterfaceType& interface) {
+		// Validates if declared implementations have corresponding virtual method declarations.
+		// Validates signatures of implementations.
+		base::HashMap<base::StrID, base::StrID> virtual_methods;
+
+		// Collect all virtual methods that can be implemented by this class.
+		std::function<void(const InterfaceType&)> collect_virtual_methods_iface
+			= [&](const InterfaceType& ifacee) {
+				  for (const auto& iface: ifacee.implements) {
+					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
+					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+					  // TODO: Change that to invoke collect_virtual_methods.
+					  collect_virtual_methods_iface(iface_type);
+				  }
+				  for (const auto& vmeth: ifacee.virtual_methods) {
+					  if (virtual_methods.contains(vmeth.name))
+						  throw DuplicatedVirtualMethodError(type, vmeth.name);
+					  virtual_methods.put(vmeth.name, vmeth.type);
+				  }
+			  };
+		collect_virtual_methods_iface(interface);
+
+		// TODO: Remove that.
+		std::cerr << "=========== VALIDATE IMPLEMENTATION for: " << interface.name.strView()
+				  << " ==============\n";
+		std::cerr << "Collected vmethods: \n";
+		for (auto [name, sth]: virtual_methods)
+			std::cerr << "{ " << name.strView() << ", " << sth.strView() << " } | ";
 
 
-			// TODO: This is strange. Change it.
-			auto impl_type    = *get_type(implementation.type);
-			auto vmethod_type = *get_type(vmethod_it->type);
+		base::HashMap<base::StrID, base::StrID> implementations;
+		for (const auto& impl: interface.vmethods_implementations) {
+			// Implemented method is not declared as a virtual.
+			if (!virtual_methods.contains(impl.name))
+				throw InvalidVirtualMethodImplementationError(type, impl.name);
+			if (implementations.contains(impl.name))
+				throw DuplicatedVirtualMethodImplementationError(type, impl.name);
+			implementations.put(impl.name);
+
+			std::cerr << "\nVerifying method: " << impl.name.strView() << '\n';
+
+			// Check the signatures of implementations.
+			TypeOfData vmethod_type = *get_type(virtual_methods[impl.name]);
+			TypeOfData impl_type    = *get_type(impl.type);
 			if (!std::holds_alternative<FunctionType>(impl_type))
-				throw TypeIsNotFunctionalError(implementation.type);
+				throw TypeIsNotFunctionalError(impl.type);
 			if (!std::holds_alternative<FunctionType>(vmethod_type))
-				throw TypeIsNotFunctionalError(vmethod_it->type);
+				throw TypeIsNotFunctionalError(virtual_methods[impl.name]);
 
-			auto impl    = std::get<FunctionType>(impl_type);
-			auto vmethod = std::get<FunctionType>(vmethod_type);
+			FunctionType implementation = std::get<FunctionType>(impl_type);
+			FunctionType vmethod        = std::get<FunctionType>(vmethod_type);
 
-			if (vmethod.result != impl.result) throw MethodTypeError(impl);
-			if (vmethod.parameters.size() != impl.parameters.size()) throw MethodTypeError(impl);
-			// TODO: Verify that the function types declared as definitions really exist.
-			// First argument should always be a class pointer (this*).
-			// TODO: Refactor this code? We use those get<T>'s a lot.
-			// TODO: What if method have no arguments? This will segfault.
-			auto first_param_type = *get_type(impl.parameters[0]);
-			// if (!std::holds_alternative<PointerType>(first_param_type))
-			// 	throw MethodFirstArgumentError(first_param_type);
-			// auto first_param_ptr = std::get<PointerType>(first_param_type);
-
-			// TODO: Make that work for interfaces as well.
-			// using Type = decltype(clazz);
-			// if (first_param_ptr.inner != clazz.name)
-			// 	throw MethodFirstArgumentError(first_param_type);
-
-			// for (u64 i = 1; impl.parameters.size(); i++)
-			// 	if (impl.parameters[i] != vmethod.parameters[i])
-			// 		throw MethodTypeError(first_param_type);
+			// First argument should always be a this*
+			validate_first_argument_iface(interface, implementation);
+			// Arguments and result types have to match the virtual methods type.
+			validate_signature_match_iface(interface, vmethod, implementation);
 		}
 	};
 
 	auto validate_all_methods_implemented = [&](const ClassType& clazz) {
 		// Collect all methods on the inheritance path and verify they are implemented.
-		base::HashMap<base::StrID, base::StrID> required_methods;
-		for (const auto& vmethod: clazz.virtual_methods) required_methods.put(vmethod.name);
+		base::HashMap<base::StrID, base::StrID> virtual_methods;
 
-
-		std::cerr << "All methods to be implemented:\n";
-		for (auto [name, _]: required_methods) std::cerr << "{ " << name.strView() << "} | ";
-		std::cerr << '\n';
-
-		std::function<void(const ClassType&)> collect_implementations
-			= [&](const ClassType& clazzz) {
-				  // Remove those implemented by this class.
-				  for (const auto& impl: clazzz.vmethods_implementations) {
-					  std::cerr << "Implemented: " << impl.name.strView() << '\n';
-					  required_methods.erase(impl.name);
+		// Collect all virtual methods that can be implemented by this class.
+		std::function<void(const InterfaceType&)> collect_virtual_methods_iface
+			= [&](const InterfaceType& ifacee) {
+				  for (const auto& iface: ifacee.implements) {
+					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
+					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+					  // TODO: Change that to invoke collect_virtual_methods.
+					  collect_virtual_methods_iface(iface_type);
 				  }
-
-				  // Remove those implemented by interfaces.
+				  for (const auto& vmeth: ifacee.virtual_methods) {
+					  if (virtual_methods.contains(vmeth.name))
+						  throw DuplicatedVirtualMethodError(type, vmeth.name);
+					  virtual_methods.put(vmeth.name, vmeth.type);
+				  }
+			  };
+		// Collect all virtual methods that can and should be implemented by this class.
+		std::function<void(const ClassType&)> collect_virtual_methods
+			= [&](const ClassType& clazzz) {
+				  if (clazzz.extends) {
+					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
+					  const auto& super_type = *get_type(*clazzz.extends);
+					  if (std::holds_alternative<ClassType>(super_type)) {
+						  auto super_type_temp = std::get<ClassType>(super_type);
+						  std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
+						  collect_virtual_methods(std::get<ClassType>(super_type));
+					  }
+				  }
 				  for (const auto& iface: clazzz.implements) {
 					  //@note: We are guaranteed an InterfaceType is contained. This was checked before.
 					  const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
-					  for (const auto& impl: iface_type.vmethods_implementations) {
-						  std::cerr << "Implemented: " << impl.name.strView() << '\n';
-						  required_methods.erase(impl.name);
-					  }
+					  // TODO: Change that to invoke collect_virtual_methods.
+					  collect_virtual_methods_iface(iface_type);
 				  }
-
-				  if (clazzz.extends) {
-					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
-
-					  const auto& super_type = *get_type(*clazzz.extends);
-					  if (std::holds_alternative<ClassType>(super_type)) {
-						  auto super_type_ = std::get<ClassType>(super_type);
-						  std::cerr << "Supertype name: " << super_type_.name.strView() << '\n';
-						  collect_implementations(std::get<ClassType>(super_type));
-					  }
+				  for (const auto& vmeth: clazzz.virtual_methods) {
+					  if (virtual_methods.contains(vmeth.name))
+						  throw DuplicatedVirtualMethodError(type, vmeth.name);
+					  virtual_methods.put(vmeth.name, vmeth.type);
 				  }
 			  };
-		collect_implementations(clazz);
-		std::cerr << "Methods left unimplemented implemented:\n";
-		for (auto [name, _]: required_methods) std::cerr << "{ " << name.strView() << "} | ";
+		collect_virtual_methods(clazz);
+
+		// TODO: Remove that.
+		std::cerr << "All methods to be implemented:\n";
+		for (auto [name, _]: virtual_methods) std::cerr << "{ " << name.strView() << "} | ";
 		std::cerr << '\n';
 
-		if (!required_methods.empty())
-			throw UnimplementedVirtualMethodError(type, required_methods.begin()->first);
+		std::function<void(const ClassType&)> verify_implemented = [&](const ClassType& clazzz) {
+			// Remove those implemented by this class.
+			for (const auto& impl: clazzz.implementations) {
+				std::cerr << "Implemented: " << impl.name.strView() << '\n';
+				virtual_methods.erase(impl.name);
+			}
+
+			// Remove those implemented by interfaces.
+			for (const auto& iface: clazzz.implements) {
+				//@note: We are guaranteed an InterfaceType is contained. This was
+				// checked before.
+				const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+				for (const auto& impl: iface_type.vmethods_implementations) {
+					// TODO: Make this invoke a template verify implemented.
+					std::cerr << "Implemented: " << impl.name.strView() << '\n';
+					virtual_methods.erase(impl.name);
+				}
+			}
+
+			if (clazzz.extends) {
+				std::cerr << "Clazzz extends: " << clazzz.extends->strView();
+				const auto& super_type = *get_type(*clazzz.extends);
+				if (std::holds_alternative<ClassType>(super_type)) {
+					auto super_type_temp = std::get<ClassType>(super_type);
+					std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
+					verify_implemented(std::get<ClassType>(super_type));
+				}
+			}
+		};
+		verify_implemented(clazz);
+
+		// TODO: Remove that.
+		std::cerr << "Methods left unimplemented implemented:\n";
+		for (auto [name, _]: virtual_methods) std::cerr << "{ " << name.strView() << "} | ";
+		std::cerr << '\n';
+
+		if (!virtual_methods.empty())
+			throw UnimplementedVirtualMethodError(type, virtual_methods.begin()->first);
 	};
 
-	auto validate_field_duplicates = [&](const std::vector<Field>& fields) {
+	auto validate_field_duplicates = [&](const ClassType& clazz) {
+		// Validates field duplicates on the whole inheritance path.
+		// TODO: Add a test for that.
 		base::HashMap<base::StrID, base::StrID> field_definitions;
-		for (const auto& field: fields) {
-			if (field_definitions.contains(field.name)) throw DuplicatedFieldError(type);
+		std::function<void(const ClassType&)>   collect_fields = [&](const ClassType& clazzz) {
+            if (clazzz.extends) {
+                std::cerr << "Clazzz extends: " << clazzz.extends->strView();
+                const auto& super_type = *get_type(*clazzz.extends);
+                if (std::holds_alternative<ClassType>(super_type)) {
+                    auto super_type_temp = std::get<ClassType>(super_type);
+                    std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
+                    collect_fields(std::get<ClassType>(super_type));
+                }
+            }
+
+            for (const Field& field: clazzz.fields) {
+                if (field_definitions.contains(field.name))
+                    throw DuplicatedFieldError(type, field.name);
+                field_definitions.put(field.name, field.type);
+            }
+		};
+		collect_fields(clazz);
+	};
+
+	auto validate_field_duplicates_data = [&](const DataType& data) {
+		// TODO: Add a test for that.
+		base::HashMap<base::StrID, base::StrID> field_definitions;
+		for (const auto& field: data.fields) {
+			if (field_definitions.contains(field.name))
+				throw DuplicatedFieldError(type, field.name);
 			field_definitions.put(field.name);
 		}
 	};
 
+	auto validate_vmethod_signatures = [&](const ClassType& clazzz) {
+		for (const auto& vmethod: clazzz.virtual_methods) {
+			TypeOfData vmethod_type = *get_type(vmethod.type);
+			if (!std::holds_alternative<FunctionType>(vmethod_type))
+				throw TypeIsNotFunctionalError(vmethod.type);
+
+			FunctionType vmethod_func = std::get<FunctionType>(vmethod_type);
+			validate_first_argument(clazzz, vmethod_func);
+		}
+	};
+
+	auto validate_vmethod_signatures_interface = [&](const InterfaceType& iface) {
+		for (const auto& vmethod: iface.virtual_methods) {
+			TypeOfData vmethod_type = *get_type(vmethod.type);
+			if (!std::holds_alternative<FunctionType>(vmethod_type))
+				throw TypeIsNotFunctionalError(vmethod.type);
+
+			FunctionType vmethod_func = std::get<FunctionType>(vmethod_type);
+			validate_first_argument_iface(iface, vmethod_func);
+		}
+	};
+
+	auto validate_extends = [&](const ClassType& clazzz) {
+		if_opt_some(clazzz.extends, extends) {
+			auto super_type = get_type(extends);
+			if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
+				throw InvalidExtends(type);
+		}
+	};
+
 	variant_match(type) {
-		// @todo: Verify empty variants.
-		variant_case(DataType, data) { validate_field_duplicates(data.fields); }
+		// Think about how other types should be verified.
+		// TODO: Funkcje ktorym przekażemy typ funkcyjny jako argument?
+		variant_case(VariantType, variant) {
+			// @todo: Verify empty variants.
+		}
+		variant_case(DataType, data) {
+			// TODO: Add a check for that as well.
+			validate_field_duplicates_data(data);
+		}
 		variant_case(InterfaceType, interface) {
+			std::cerr << "Verifying implements:\n";
 			validate_implements(interface.implements);
-			// validate_implementations(interface); // TODO: Make it generic for interfaces as well.
-			// TODO: Validate virtual methods. Currently only works for classes. Should work for
-			// both. validate_implementations(clazz);
+			std::cerr << "Verifying vmethod signatures:\n";
+			validate_vmethod_signatures_interface(interface);
+			std::cerr << "Verifying implementations :\n";
+			validate_implementations_iface(interface);
 		}
 		variant_case(ClassType, clazz) {
-			validate_field_duplicates(clazz.fields);
+			std::cerr << "Verifying Extends:\n";
+			validate_extends(clazz);
+			std::cerr << "Verifying Field Duplicates:\n";
+			validate_field_duplicates(clazz);
+			std::cerr << "Verifying implements:\n";
 			validate_implements(clazz.implements);
+			std::cerr << "Verifying vmethod signatures:\n";
+			validate_vmethod_signatures(clazz);
+			std::cerr << "Verifying implementations :\n";
 			validate_implementations(clazz);
-
-			if_opt_some(clazz.extends, extends) {
-				auto super_type = get_type(extends);
-				if (!std::holds_alternative<ClassType>(*super_type) || *super_type == type)
-					throw InvalidExtends(type);
-				const auto& superclass = std::get<ClassType>(*super_type);
-				// TODO: Merge those comments into one.
-				// @note: The order of field declarations in this check is important.
-				validate_fields(clazz, superclass);
-				// @note: Order of functions is important. We first declare vmethods from the
-				// superclass, then virtual methods from interfaces in the order they are declared
-				// in their types.
-				validate_virtual_methods(clazz, superclass);
-
-				// TODO: Check if we don't try to call methods without the being in class -> this
-				// should appear in function_validator. This will be done by checking signatures.
+			if (!clazz.is_abstract) {
+				std::cerr << "Verifying All methods implemented:\n";
+				validate_all_methods_implemented(clazz);
 			}
-			if (!clazz.is_abstract) validate_all_methods_implemented(clazz);
 		}
 	}
 }
@@ -347,53 +586,109 @@ TypeContext TypeContextBuilder::build() const {
 				// TODO: Verify that vmethods types are the same as implementations. Add
 				// some tests.
 
+				auto get_type = [&](base::StrID name) {
+					return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
+				};
+
+
 				// @note: First field in the data types is always a vt.
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
 					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
-				fields.reserve(data.fields.size() + 1);
 
-				for (auto& field: data.fields)
-					fields.emplace_back(
-						field.name,
-						tctx.metadata->atMaybe(field.type)
-							.expect<UnknownSubtypeError>(data, field.name)
-					);
+				// Collects all fields from superclasses and insert them into the vector.
+				std::function<void(const ClassType&)> collect_fields = [&](const ClassType& clazz) {
+					if (clazz.extends) {
+						std::cerr << "Clazzz extends: " << clazz.extends->strView();
+						const auto& super_type = *get_type(*clazz.extends);
+						if (std::holds_alternative<ClassType>(super_type)) {
+							auto super_type_temp = std::get<ClassType>(super_type);
+							std::cerr << "Supertype name: " << super_type_temp.name.strView()
+									  << '\n';
+							collect_fields(std::get<ClassType>(super_type));
+						}
+					}
 
+					// TODO: At maybes may not be needed?
+					for (const Field& field: clazz.fields) {
+						fields.emplace_back(
+							field.name,
+							tctx.metadata->atMaybe(field.type)
+								.expect<UnknownSubtypeError>(data, field.name)
+						);
+					}
+				};
+				collect_fields(data);
 
-				TypeRef tp       = tctx.metadata->at(data.name);
-				auto    get_type = [&](base::StrID name) -> TypeCRef {
+				TypeRef tp            = tctx.metadata->at(data.name);
+				auto    get_type_cref = [&](base::StrID name) -> TypeCRef {
                     return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
 				};
 
-
 				auto kind = InheritanceMetadata::Class{
 					.is_abstract = data.is_abstract,
-					.extends     = data.extends.map(get_type),
+					.extends     = data.extends.map(get_type_cref),
 				};
-				auto implements = data.implements | std::views::transform(get_type)
+				auto implements = data.implements | std::views::transform(get_type_cref)
 				                | std::ranges::to<std::vector>();
 
 				base::HashMap<base::StrID, TypeCRef> virtual_methods;
-				for (auto& method: data.virtual_methods) {
-					if (virtual_methods.contains(method.name))
-						throw DuplicatedVirtualMethodError(type);
-					virtual_methods.put(method.name, get_type(method.type));
-				}
+				for (auto& method: data.virtual_methods)
+					virtual_methods.put(method.name, get_type_cref(method.type));
 
-				base::HashMap<base::StrID, TypeCRef> vmethods_implementations;
-				for (auto& method: data.vmethods_implementations) {
-					if (vmethods_implementations.contains(method.name))
-						throw DuplicatedVirtualMethodImplementationError(type);
-					vmethods_implementations.put(method.name, get_type(method.type));
-				}
+				base::HashMap<base::StrID, TypeCRef> implementations;
+				for (auto& method: data.implementations)
+					implementations.put(method.name, get_type_cref(method.type));
+
+				// TODO: How is it possible that we double verify the code xD?
+				// Construct a vtable.
+				base::HashMap<base::StrID, TypeCRef>  vtable;
+				std::function<void(const ClassType&)> create_vtable = [&](const ClassType& clazz) {
+					// TODO: At maybes may not be needed?
+					for (const auto& impl: clazz.implementations)
+						if (!vtable.contains(impl.name))
+							vtable.put(impl.name, get_type_cref(impl.type));
+
+					for (const auto& iface: clazz.implements) {
+						//@note: We are guaranteed an InterfaceType is contained. This was checked
+						// before.
+						const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
+						// TODO: Change that to invoke collect_virtual_methods.
+						for (const auto& impl: iface_type.vmethods_implementations)
+							vtable.put(impl.name, get_type_cref(impl.type));
+					}
+
+					if (clazz.extends) {
+						std::cerr << "Clazzz extends: " << clazz.extends->strView();
+						const auto& super_type = *get_type(*clazz.extends);
+						if (std::holds_alternative<ClassType>(super_type)) {
+							auto super_type_temp = std::get<ClassType>(super_type);
+							std::cerr << "Supertype name: " << super_type_temp.name.strView()
+									  << '\n';
+							create_vtable(std::get<ClassType>(super_type));
+						}
+					}
+				};
+				create_vtable(data);
+
+				std::cerr << "=========== CREATING CLASS ==============\n";
+				std::cerr << "Declared fields: \n";
+				for (const auto& x: fields) std::cerr << x.first.strView() << " | ";
+				std::cerr << "\nDeclared vmethods: \n";
+				for (const auto& x: virtual_methods) std::cerr << x.first.strView() << " | ";
+				std::cerr << "\nVTable: \n";
+				for (const auto& x: vtable)
+					std::cerr << x.first.strView() << ", " << x.second->getName().strView()
+							  << " | ";
+				std::cerr << "\n==========================================\n";
 
 				vm::InheritanceMetadata inheritance_metadata(
 					tp,
 					kind,
 					std::move(implements),
 					std::move(virtual_methods),
-					std::move(vmethods_implementations)
+					std::move(implementations),
+					std::move(vtable)
 				);
 				tp->defineData(fields, std::move(inheritance_metadata));
 			}
@@ -415,16 +710,18 @@ TypeContext TypeContextBuilder::build() const {
 					virtual_methods.put(method.name, get_type(method.type));
 
 				// TODO: Validate duplicate implementations.
-				base::HashMap<base::StrID, TypeCRef> vmethods_implementations;
+				base::HashMap<base::StrID, TypeCRef> implementations;
 				for (auto& method: data.vmethods_implementations)
-					vmethods_implementations.put(method.name, get_type(method.type));
+					implementations.put(method.name, get_type(method.type));
+
+				// TODO: VTable building should appear here.
 
 				vm::InheritanceMetadata inheritance_metadata(
 					tp,
 					InheritanceMetadata::Interface{},
 					std::move(implements),
 					std::move(virtual_methods),
-					std::move(vmethods_implementations)
+					std::move(implementations)
 				);
 				tp->defineData(fields, std::move(inheritance_metadata));
 			}

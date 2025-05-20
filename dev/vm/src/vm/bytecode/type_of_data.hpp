@@ -182,7 +182,7 @@ namespace vm::code {
 			base::Optional<base::StrID> extends,
 			std::vector<base::StrID>    implements,
 			std::vector<Field>          virtual_methods,
-			std::vector<Field>          vmethods_implementations
+			std::vector<Field>          implementations
 		):
 			  name{ name },
 			  fields{ std::move(fields) },
@@ -190,7 +190,7 @@ namespace vm::code {
 			  extends{ extends },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) },
-			  vmethods_implementations{ std::move(vmethods_implementations) } {}
+			  implementations{ std::move(implementations) } {}
 
 		base::StrID                 name;
 		std::vector<Field>          fields;
@@ -198,13 +198,15 @@ namespace vm::code {
 		base::Optional<base::StrID> extends;
 		std::vector<base::StrID>    implements;
 		std::vector<Field>          virtual_methods;
-		std::vector<Field>          vmethods_implementations;
+		
+		// This are only the implementations declared for this class.
+		std::vector<Field>          implementations;
 
 		bool operator==(const ClassType& other) const {
 			return name == other.name && fields == other.fields && is_abstract == other.is_abstract
 			    && extends == other.extends && implements == other.implements
 			    && virtual_methods == other.virtual_methods
-			    && vmethods_implementations == other.vmethods_implementations;
+			    && implementations == other.implementations;
 		}
 	};
 

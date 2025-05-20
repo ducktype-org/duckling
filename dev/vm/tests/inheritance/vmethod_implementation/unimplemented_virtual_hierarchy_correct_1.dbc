@@ -5,13 +5,16 @@ type pointer: pointer_C C
 
 type fun: method_foo {pointer_A} void
 type fun: method_bar {pointer_A} void
-type fun: method_goo {pointer_A} void
-type fun: method_gaa {pointer_A} void
+type fun: method_foo_impl_A {pointer_A} void
 
-type fun: method_foo_impl {pointer_A} void
-type fun: method_bar_impl {pointer_A} void
-type fun: method_goo_impl {pointer_A} void
-type fun: method_gaa_impl {pointer_A} void
+type fun: method_goo {pointer_B} void
+type fun: method_foo_impl_B {pointer_B} void
+type fun: method_bar_impl_B {pointer_B} void
+
+
+type fun: method_gaa {pointer_C} void
+type fun: method_goo_impl_C {pointer_C} void
+type fun: method_gaa_impl_C {pointer_C} void
 
 type class: A {
     abstract: true;
@@ -20,7 +23,7 @@ type class: A {
         bar: method_bar,
     };
     implementations: {
-        foo: method_foo_impl, 
+        foo: method_foo_impl_A, 
     };
 }
 
@@ -28,26 +31,21 @@ type class: B {
     extends: A;
     abstract: true;
     virtual_methods: {
-        foo: method_foo, 
-        bar: method_bar,
         goo: method_goo,
     };
     implementations: {
-        foo: method_foo_impl, 
-        bar: method_bar_impl, 
+        foo: method_foo_impl_B, 
+        bar: method_bar_impl_B, 
     };
 }
 
 type class: C {
     extends: B;
     virtual_methods: {
-        foo: method_foo, 
-        bar: method_bar,
-        goo: method_goo,
         gaa: method_gaa,
     };
     implementations: {
-        goo: method_goo_impl, 
-        gaa: method_gaa_impl, 
+        goo: method_goo_impl_C, 
+        gaa: method_gaa_impl_C, 
     };
 }

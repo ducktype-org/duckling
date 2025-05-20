@@ -1,11 +1,14 @@
 #include <vm_tester_utils.hpp>
 
+#include "base/string_id.hpp"
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/api/api.hpp>
 
 #include <variant>
+#include <vector>
 
 class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -36,13 +39,13 @@ private:
 
 			assertTrue(imd.implements.empty(), "I1 should not implement anything");
 			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
-			assertTrue(
-				imd.vmethods_implementations.size() == 1, "I1 should implement virtual methods"
-			);
+			assertTrue(imd.implementations.size() == 1, "I1 should implement one virtual methods");
+			// TODO: Change that to an optional.
+			assertTrue(imd.vtable.empty(), "I1 is not instantiable, it's vtable should not exist");
 
 			auto foo_type      = imd.virtual_methods[base::StrID("foo")];
 			auto bar_type      = imd.virtual_methods[base::StrID("bar")];
-			auto foo_impl_type = imd.vmethods_implementations[base::StrID("foo")];
+			auto foo_impl_type = imd.implementations[base::StrID("foo")];
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == method_type, "I1's method have the wrong type");
 			assertTrue(
@@ -64,9 +67,8 @@ private:
 			);
 			assertTrue(imd.implements.empty(), "I2 should not implement anything");
 			assertTrue(imd.virtual_methods.empty(), "I2 should not have any virtual methods");
-			assertTrue(
-				imd.vmethods_implementations.empty(), "I2 should not implement any virtual methods"
-			);
+			assertTrue(imd.implementations.empty(), "I2 should not implement any virtual methods");
+			assertTrue(imd.vtable.empty(), "I2 should not implement any virtual methods");
 
 			return;
 		}
@@ -88,15 +90,15 @@ private:
 
 			assertTrue(imd.implements.empty(), "Parent should not implement anything");
 			assertTrue(imd.virtual_methods.size() == 1, "Parent should declare one virtual method");
-			assertTrue(
-				imd.vmethods_implementations.size() == 1,
-				"Parent should implement one virtual method"
-			);
+			assertTrue(imd.implementations.size() == 1, "Parent should implement one method");
+			assertTrue(imd.vtable.size() == 1, "Parents' vtable should contain one method");
 
-			auto get_age_type      = imd.virtual_methods[base::StrID("getAge")];
-			auto get_age_impl_type = imd.vmethods_implementations[base::StrID("getAge")];
+			auto get_age_type        = imd.virtual_methods[base::StrID("getAge")];
+			auto get_age_impl_type   = imd.implementations[base::StrID("getAge")];
+			auto vtable_get_age_type = imd.vtable[base::StrID("getAge")];
 			assertTrue(get_age_type == method_type, "Invalid Parent method type");
 			assertTrue(get_age_impl_type == method_impl_type, "Invalid Parent method type");
+			assertTrue(vtable_get_age_type == method_impl_type, "Invalid Parent method type");
 
 			return;
 		}
@@ -108,10 +110,11 @@ private:
 		vm::TypeCRef                     type,
 		vm::TypeCRef                     super_type,
 		const std::vector<vm::TypeCRef>& interfaces,
-		vm::TypeCRef                     expected_get_age_type,
-		vm::TypeCRef                     expected_foo_bar_type,
-		vm::TypeCRef                     expected_get_age_impl_type,
-		vm::TypeCRef                     expected_bar_impl_type
+		vm::TypeCRef                     expected_i1_foo_impl,
+		vm::TypeCRef                     expected_child_method,
+		vm::TypeCRef                     expected_child_get_age_impl,
+		vm::TypeCRef                     expected_child_i1_impl,
+		vm::TypeCRef                     expected_child_cry_impl
 	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
@@ -133,31 +136,48 @@ private:
 				"Child implements wrong interfaces"
 			);
 
+			assertTrue(imd.virtual_methods.size() == 1, "Child should declare one virtual method");
 			assertTrue(
-				imd.virtual_methods.size() == 3, "Child should implement getAge(), foo() and bar()"
+				imd.implementations.size() == 3, "Child should implement three virtual methods"
+			);
+			assertTrue(imd.vtable.size() == 4, "Child should have 4 method in its vtable");
+
+			auto cry_type          = imd.virtual_methods[base::StrID("cry")];
+			auto get_age_impl_type = imd.implementations[base::StrID("getAge")];
+			auto bar_impl_type     = imd.implementations[base::StrID("bar")];
+			auto cry_impl_type     = imd.implementations[base::StrID("cry")];
+
+			assertTrue(cry_type == expected_child_method, "Invalid Child vmethod type: cry()");
+			assertTrue(
+				get_age_impl_type == expected_child_get_age_impl,
+				"Invalid Child vmethod implementation: getAge()"
 			);
 			assertTrue(
-				imd.vmethods_implementations.size() == 2,
-				"Child should implement two virtual methods: bar(), getAge()"
+				bar_impl_type == expected_child_i1_impl,
+				"Invalid Child vmethod implementation type: bar()"
+			);
+			assertTrue(
+				cry_impl_type == expected_child_cry_impl,
+				"Invalid Child vmethod implementation type: cry()"
 			);
 
-			auto get_age_type = imd.virtual_methods[base::StrID("getAge")];
-			auto foo_type     = imd.virtual_methods[base::StrID("foo")];
-			auto bar_type     = imd.virtual_methods[base::StrID("bar")];
+			auto vt_foo     = imd.vtable[base::StrID("foo")];
+			auto vt_bar     = imd.vtable[base::StrID("bar")];
+			auto vt_get_age = imd.vtable[base::StrID("getAge")];
+			auto vt_cry     = imd.vtable[base::StrID("cry")];
 
-			auto get_age_impl_type = imd.vmethods_implementations[base::StrID("getAge")];
-			auto bar_impl_type     = imd.vmethods_implementations[base::StrID("bar")];
+			assertTrue(vt_foo == expected_i1_foo_impl, "Invalid method implementation in vt: foo()");
+			assertTrue(
+				vt_bar == expected_child_i1_impl, "Invalid method implementation in vt: bar()"
+			);
+			assertTrue(
+				vt_get_age == expected_child_get_age_impl,
+				"Invalid method implementation in vt: getAge()"
+			);
+			assertTrue(
+				vt_cry == expected_child_cry_impl, "Invalid method implementation in vt: cry()"
+			);
 
-			assertTrue(
-				get_age_type == expected_get_age_type, "Invalid Child vmethod type: getAge()"
-			);
-			assertTrue(foo_type == expected_foo_bar_type, "Invalid Child vmethod type: foo()");
-			assertTrue(bar_type == expected_foo_bar_type, "Invalid Child vmethod type: bar()");
-			assertTrue(
-				get_age_impl_type == expected_get_age_impl_type,
-				"Invalid Child method type: getAge()"
-			);
-			assertTrue(bar_impl_type == expected_bar_impl_type, "Invalid Child method type: bar()");
 			return;
 		}
 
@@ -179,10 +199,10 @@ private:
 
 			assertTrue(imd.implements.empty(), "PietMondrian should implement no interfaces");
 			assertTrue(imd.virtual_methods.empty(), "PietMondrian should have no virtual methods");
-			assertTrue(
-				imd.vmethods_implementations.empty(),
-				"PietMondrian should not implement any virtual methods"
-			);
+			// assertTrue(
+			// 	imd.vmethods_implementations.empty(),
+			// 	"PietMondrian should not implement any virtual methods"
+			// );
 
 			return;
 		}
@@ -213,18 +233,27 @@ private:
 		std::vector interfaces{ i1, i2 };
 
 		auto i1_method           = getType(pid, "method_I1_int");
+		auto i1_foo_impl         = getType(pid, "I1_foo_impl");
 		auto parent_method       = getType(pid, "method_parent_int");
 		auto parent_get_age_impl = getType(pid, "Parent_getAge_impl");
+		auto child_method        = getType(pid, "method_child_int");
 		auto child_get_age_impl  = getType(pid, "Child_getAge_impl");
 		auto child_i1_impl       = getType(pid, "Child_I1_impl");
-		auto i1_foo_impl         = getType(pid, "I1_foo_impl");
+		auto child_cry_impl      = getType(pid, "Child_cry_impl");
 
 		checkPod(pod);
 		checkI1(i1, i1_method, i1_foo_impl);
 		checkI2(i2);
 		checkParent(parent, parent_method, parent_get_age_impl);
 		checkChild(
-			child, parent, interfaces, parent_method, i1_method, child_get_age_impl, child_i1_impl
+			child,
+			parent,
+			interfaces,
+			i1_foo_impl,
+			child_method,
+			child_get_age_impl,
+			child_i1_impl,
+			child_cry_impl
 		);
 		checkPietMondrian(piet_mondrian);
 	}

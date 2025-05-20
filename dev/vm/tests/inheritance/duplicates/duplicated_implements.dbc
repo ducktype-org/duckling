@@ -1,0 +1,6 @@
+type interface: I1 {
+}
+
+type interface: I2 {
+    implements: {I1, I1};
+}

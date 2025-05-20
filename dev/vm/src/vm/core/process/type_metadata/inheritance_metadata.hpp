@@ -11,16 +11,6 @@
 #include <vector>
 
 namespace vm {
-
-	// using ActualVmFunctionPointer = void*;
-
-	// struct VTable {
-	// 	// Pointers to virtual methods implementation.
-	// 	std::vector<ActualVmFunctionPointer> vtable;
-
-	// 	base::HashMap<std::pair<TypeCRef, base::StrID>, base::StrID> method_to_vtable_index;
-	// };
-
 	struct InheritanceMetadata {
 		struct Class {
 			bool                     is_abstract;
@@ -31,29 +21,33 @@ namespace vm {
 
 		using Kind = std::variant<Interface, Class>;
 
-		TypeCRef                             type;
-		Kind                                 kind;
-		std::vector<TypeCRef>                implements;
+		TypeCRef              type;
+		Kind                  kind;
+		std::vector<TypeCRef> implements;
+		// Virtual method declarations for this class. Contains only method introduced in this class.
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
-		// Virtual Methods to actual implementations for this class.
-		base::HashMap<base::StrID, TypeCRef> vmethods_implementations;
+		base::HashMap<base::StrID, TypeCRef> implementations;
+		// This contains all the actual implementations of virtual methods for this class/interface.
+		// VWe call it a VTable, tho it's more of a VMap. Creating a table is causes problem when
+		// working with multiple inheritance of interfaces.
+		base::HashMap<base::StrID, TypeCRef> vtable;
 
-		// base::Optional<VTable> vtable_data;  // Exists only for classes with virtual methods.
-		// base::HashMap<std::pair<TypeCRef, base::StrID>, ActualVmFunctionPointer>
-		// 	method_implementations;
 		// 	TODO: Check if implementations have the same type as virtual methods declarations.
+		// 	TODO: VTable should only exist for instantiable classes. Make it an optional.
 
 		InheritanceMetadata(
 			TypeCRef                             type,
 			Kind                                 kind,
 			std::vector<TypeCRef>                implements,
 			base::HashMap<base::StrID, TypeCRef> virtual_methods,
-			base::HashMap<base::StrID, TypeCRef> vmethods_implementations = {}
+			base::HashMap<base::StrID, TypeCRef> implementations,
+			base::HashMap<base::StrID, TypeCRef> vtable = {}
 		):
 			  type{ type },
 			  kind{ kind },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) },
-			  vmethods_implementations{ std::move(vmethods_implementations) } {}
+			  implementations{ std::move(implementations) },
+			  vtable{ std::move(vtable) } {}
 	};
 }

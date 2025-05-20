@@ -1,19 +1,27 @@
-# All methods on the inheritance path are implemented. This should pass.
+# Method bbb() is unimplemented in an instantiable class.
 type pointer: pointer_A A
+type pointer: pointer_I1 I1
+type pointer: pointer_I2 I2
+type pointer: pointer_B B
 
-type fun: method_aaa {pointer_A} void
-type fun: method_bbb {pointer_A} void
-type fun: method_ccc {pointer_A} void
-type fun: method_ddd {pointer_A} void
+type fun: method_aaa {pointer_I1} void
+type fun: method_bbb {pointer_I1} void
+type fun: method_aaa_impl {pointer_I1} void
+
+type fun: method_ccc {pointer_I2} void
+type fun: method_ddd {pointer_I2} void
+type fun: method_ccc_impl {pointer_I2} void
+
 type fun: method_eee {pointer_A} void
 type fun: method_fff {pointer_A} void
-
-type fun: method_aaa_impl {pointer_A} void
-type fun: method_bbb_impl {pointer_A} void
-type fun: method_ccc_impl {pointer_A} void
-type fun: method_ddd_impl {pointer_A} void
 type fun: method_eee_impl {pointer_A} void
-type fun: method_fff_impl {pointer_A} void
+
+type fun: method_ggg {pointer_B} void
+type fun: method_aaa_impl_B {pointer_B} void
+type fun: method_bbb_impl {pointer_B} void
+type fun: method_ddd_impl {pointer_B} void
+type fun: method_fff_impl {pointer_B} void
+type fun: method_ggg_impl {pointer_B} void
 
 type interface: I1 {
     virtual_methods: {
@@ -50,21 +58,13 @@ type class: B {
     extends: A;
     implements: {I1, I2};
     virtual_methods: {
-        # First methods from the superclass are defined in the same order.
-        # Then methods from interfaces in the order they are implemented -> I1.
-        # Then methods from interfaces in the order they are implemented -> I2.
-
-        eee: method_eee,         # Implemented in A
-        fff: method_fff,         # Not implemented
-        aaa: method_aaa,         # Implemented in I1
-        bbb: method_bbb,         # Not implemented.
-        ccc: method_ccc,         # Implemented in I2
-        ddd: method_ddd,         # Not implemented.
+        ggg: method_ggg,
     };
     implementations: {
-        fff: method_fff_impl,
+        aaa: method_aaa_impl_B, # Override implementation.
         bbb: method_bbb_impl,
         ddd: method_ddd_impl,
-        aaa: method_aaa_impl, # Override implementation.
+        fff: method_fff_impl,
+        ggg: method_ggg_impl,
     };
 }
