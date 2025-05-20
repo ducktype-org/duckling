@@ -171,7 +171,7 @@ def get_llvm_source_strings(version) -> tuple[str, str, str, str]:
     return (
         f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/llvm-project-{version}.src.tar.xz",
         f"llvm-project-{version}.src.tar.xz",
-        f"llvm-project-{version}.src"
+        f"llvm-project-{version}.src",
         f"llvm_lib_{version}_native",
     )
 

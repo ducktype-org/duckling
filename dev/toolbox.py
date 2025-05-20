@@ -520,7 +520,7 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
         cmake_cmd_parts.append(f"-DLLVM_USE_LINKER={linker}")
 
     cmake_command = " \\\n  ".join(cmake_cmd_parts)
-    log_info(f"Running cmake command:\n{cmake_command}")
+    log_info(f"Running cmake command...")
     bash_command(cmake_command)
 
     # Build LLVM
@@ -572,10 +572,10 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
 @click.option(
     "-t",
     "--targets",
-    prompt="LLVM targets to build (using 'All' will increase the build time significantly).",
+    prompt="LLVM targets to build (using 'all' will increase the build time about 3 times).",
     help="LLVM architecture targets to build.",
     default="Native",
-    type=click.Choice(["Native", "X86", "All"], case_sensitive=False),
+    type=click.Choice(["Native", "X86", "all"], case_sensitive=False),
 )
 @click.option(
     "-s",
