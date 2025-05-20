@@ -344,6 +344,15 @@ DEF_OPCODE(
 // expects `ext_type_l64` to be the next instruction
 // DEF_OPCODE(pointerTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 
+// ========= TYPE OPERATIONS ========
+
+// Casts a primitive type in-place. This does nothing at runtime, but is needed
+// for type checking.
+DEF_OPCODE(cast_l8_type, vm::opargs::StackLocalI8, vm::opargs::Type)
+DEF_OPCODE(cast_l16_type, vm::opargs::StackLocalI16, vm::opargs::Type)
+DEF_OPCODE(cast_l32_type, vm::opargs::StackLocalI32, vm::opargs::Type)
+DEF_OPCODE(cast_l64_type, vm::opargs::StackLocalI64, vm::opargs::Type)
+
 // ========= EXT DEFINITIONS ========
 
 // passes additional argument to preceding opcode

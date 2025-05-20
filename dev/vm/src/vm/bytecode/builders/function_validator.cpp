@@ -1,6 +1,7 @@
 #include "function_validator.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
@@ -389,6 +390,14 @@ void FunctionValidator::traverseControlFlowGraph() {
 				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
+#define HANDLE_CAST(SIZE)                                                       \
+	variant_case(Op_cast_l##SIZE##_type, instr) {                               \
+		local_stack.castPrimitive(instr.arg0, instr.arg1, instr, type_context); \
+		index++;                                                                \
+	}
+
+			FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
+#undef HANDLE_CAST
 			variant_default { index++; }
 		}
 	}
@@ -515,4 +524,20 @@ void FunctionValidator::LocalStack::validateTailcall(
 	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
 		if (code::typeName(*stack_elem.type) != param)
 			throw InvalidTailcallArgumentsError(generic_arg);
+}
+
+void FunctionValidator::LocalStack::castPrimitive(
+	const opargs::OpCodePrimitiveArg& local,
+	const opargs::Type&               type,
+	const Instruction&                instruction,
+	const TypeContext&                type_context
+) {
+	// These are guaranteed to exist by `validateInstruction`.
+	auto& curr_type      = local_name_to_type.at(VISIT(local, l, return l.var_name));
+	auto  new_type       = type_context.getTypes().at(type.type_name);
+	auto  curr_primitive = getTypeKind<PrimitiveType>(*curr_type).value();
+
+	auto new_primitive = getTypeKind<PrimitiveType>(*new_type).expect<NonPrimitiveCastError>(type);
+	if (curr_primitive.size != new_primitive.size) throw CastSizeMismatchError(instruction);
+	curr_type = new_type;
 }

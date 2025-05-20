@@ -56,6 +56,12 @@ namespace vm::code::builders {
 				const TypeContext&               type_context,
 				const FunctionType&              type
 			) const;
+			void castPrimitive(
+				const opargs::OpCodePrimitiveArg& local,
+				const opargs::Type&               type,
+				const Instruction&                instruction,
+				const TypeContext&                type_context
+			);
 		};
 
 		std::vector<bool>                                        visited_instructions;
