@@ -53,7 +53,7 @@ jobs:
 
       - name: Install lcov, LLVM
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev
+        run: sudo apt -y install lcov llvm-19 llvm-dev-19
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
