@@ -6,6 +6,8 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
+#include <iostream>
+
 namespace vm {
 	/**
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
@@ -32,6 +34,10 @@ namespace vm {
 
 		VmValue(TypeCRef type, Memory& memory, Pointer src): VmValue(type, memory) {
 			importData(src);
+		}
+
+		~VmValue() {
+			if (!pointer.isNull()) std::cerr << "VmValue not freed!\n";
 		}
 
 		void exportData(Pointer dst) { memory->copyPointerData(dst, pointer, type); }

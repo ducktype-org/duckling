@@ -246,44 +246,6 @@ namespace vm {
 		);
 	}
 
-	base::Optional<TypeCRef> Type::getFieldTypeByOffset([[maybe_unused]] Offset offset) const {
-		throw base::NotYetImplemented("getFieldTypeByOffset");
-		// return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-		// 	// @TODO: Verify this code
-		// 	usize begin = 0, end = data.fields.size(), middle = 0;
-		// 	while (end - begin) {
-		// 		middle = (begin + end) / 2;
-		// 		if (data.fields[middle].offset < offset)
-		// 			begin = middle + 1;
-		// 		else
-		// 			end = middle;
-		// 	}
-		// 	if (data.fields[begin].offset != offset) return base::Optional<TypeCRef>();
-		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
-		// });
-	}
-
-	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive([[maybe_unused]] Offset offset
-	) const {
-		throw base::NotYetImplemented("getFieldTypeByOffsetRecursive");
-		// return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-		// 	// @TODO: Verify this code
-		// 	usize begin = 0, end = usize(data.fields.size()), middle = 0;
-		// 	while (end - begin) {
-		// 		middle = (begin + end) / 2;
-		// 		if (data.fields[middle].offset < offset)
-		// 			begin = middle + 1;
-		// 		else
-		// 			end = middle;
-		// 	}
-		// 	if (data.fields[begin].offset != offset)
-		// 		return data.fields[begin].type->getFieldTypeByOffsetRecursive(
-		// 			offset - data.fields[begin].offset
-		// 		);
-		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
-		// });
-	}
-
 	// inheritance
 	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
 		variant_match(kind) {
