@@ -2,6 +2,7 @@
 
 #include <diagnostic/logger.hpp>
 
+#include <base/int_conv.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
@@ -74,6 +75,19 @@ namespace vm::loader::compiler {
 					ctx.log.log<UnknownTypeError>(type_arg, type_arg.type_name);
 					return 0;
 				}
+				variant_case(vm::opargs::Field, field_arg) {
+					// @TODO remove atMaybe after validating `ext_field` instruction
+					if (auto type_obj = ctx.type_map.atMaybe(field_arg.type_name)) {
+						auto opt_field_offset
+							= type_obj.value()->getFieldOffsetByName(field_arg.field_name);
+						if_opt_some(opt_field_offset, offset) { return static_cast<i64>(offset); }
+						// the wrong error, but this is temporary
+						ctx.log.log<UnknownTypeError>(field_arg, field_arg.field_name);
+						return 0;
+					}
+					ctx.log.log<UnknownTypeError>(field_arg, field_arg.type_name);
+					return 0;
+				}
 				variant_case(vm::opargs::FunctionName, func) {
 					for (i64 i = 0; i < ctx.func_map.size(); i++)
 						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str
@@ -100,6 +114,7 @@ namespace vm::loader::compiler {
 					// because our instruction counter is a pointer.
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
+				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
 
 			CORE_UNREACHABLE();
@@ -133,14 +148,11 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 				}
 
-				func_data.bc.emplace_back(Fix8Instruction{
-#ifdef USE_TAIL_CALLS
-					.opfun = vm::OpFuns::OPFUNS.at(low::fix8FromInstr(op)),
-#else
-					.opcode = static_cast<u16>(low::fix8FromInstr(op)),
-#endif
-					.arg0 = static_cast<i32>(arg_0),
-					.arg1 = static_cast<i32>(arg_1) });
+				func_data.bc.emplace_back(makeLowInstruction(
+					low::fix8FromInstr(op),
+					base::safeIntConv<i32>(arg_0),
+					base::safeIntConv<i32>(arg_1)
+				));
 			}
 			return func_data;
 		}

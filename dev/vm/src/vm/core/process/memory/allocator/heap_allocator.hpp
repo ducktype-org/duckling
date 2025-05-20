@@ -13,7 +13,7 @@
 
 namespace vm {
 
-	class BlockData;
+	struct BlockData;
 
 	class HeapAllocator final: public AllocatorABC {
 		// It's a mock, it should be replaced with something faster.

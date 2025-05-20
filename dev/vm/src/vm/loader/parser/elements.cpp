@@ -51,27 +51,48 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			return { parseInt<i64, vm::opargs::Immediate>(state) };
+			auto pos         = state.getPosition();
+			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
+			);
+			return arg;
 		}
 
-#define HANDLE_LOCAL(TYPE)                                    \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
-	}
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+			tpc::Identifier type_name, field_name;
+			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			auto field         = vm::opargs::Field{ type_name, field_name };
+			field.bytecode_pos = dia::SourcePosition(
+				type_name.position.getLocation(),
+				type_name.position.getStart(),
+				field_name.position.getEnd()
+			);
+			return field;
+		}
 
-		FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
-
-#undef HANDLE_LOCAL
-
-#define HANDLE_STR_ARG(TYPE)                                  \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
+#define HANDLE_STR_ARG(TYPE)                                                        \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto pos         = state.getPosition();                                     \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
+			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
+		);                                                                          \
+		return { arg };                                                             \
 	}
 
 		FOR_EACH(
-			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+			HANDLE_STR_ARG,
+			Type,
+			FunctionName,
+			BuiltinFunctionName,
+			Label,
+			VM_OPARG_GLOBAL_TYPES,
+			VM_OPARG_LOCAL_TYPES
 		)
 
 #undef HANDLE_STR_ARG
@@ -80,22 +101,14 @@ namespace vm::loader::parser {
 
 		template<IsOpCodeArg Arg0>
 		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
-
-			return { arg0 };
+			return { parseArg<Arg0>(state) };
 		}
 
 		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
 		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
+			auto arg0 = parseArg<Arg0>(state);
 			state.parse().one(lang_def::Special::Comma);
-			auto pos1         = state.getPosition();
-			auto arg1         = parseArg<Arg1>(state);
-			arg1.bytecode_pos = pos1;
+			auto arg1 = parseArg<Arg1>(state);
 			return { arg0, arg1 };
 		}
 

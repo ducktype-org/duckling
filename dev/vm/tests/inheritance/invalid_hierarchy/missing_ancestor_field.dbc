@@ -1,0 +1,18 @@
+type class: Widget {
+	abstract: true;
+	fields: {
+		pos_x: i64,
+		pos_y: i64,
+	};
+}
+
+type class: Button {
+	extends: Widget;
+	fields: {
+		n_clicked: i64,
+	};
+}
+
+function main {
+	ret;
+}

@@ -257,4 +257,9 @@ namespace vm::code {
 	constexpr base::StrID typeName(const TypeOfData& type) {
 		return VISIT(type, tp, return tp.name);
 	}
+
+	template<typename T>
+	constexpr base::Optional<T> getTypeKind(const TypeOfData& type) {
+		return std::holds_alternative<T>(type) ? std::get<T>(type) : base::Optional<T>{};
+	}
 }

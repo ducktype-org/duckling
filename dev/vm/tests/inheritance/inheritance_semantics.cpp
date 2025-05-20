@@ -24,9 +24,9 @@ private:
 
 	void upcast() {
 		runTestOnVm("semantics/valid_upcast.dbc", {}, {}, {}, 0);
-		// @TODO after #732.
-		// loadInvalidDbc("semantics/invalid_upcast.dbc", {
-		// vm::code::builders::InvalidUpcastError::ERR_MSG });
+		loadInvalidDbc(
+			"semantics/invalid_upcast.dbc", { vm::code::builders::InvalidUpcastError::ERR_MSG }
+		);
 	}
 
 	void dynamicDispatch() {

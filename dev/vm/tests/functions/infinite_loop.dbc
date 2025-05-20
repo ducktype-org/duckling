@@ -1,5 +1,5 @@
 function main {
-    label foo;
-    output_l64 ret_val;
-    jmp_label foo;
+	label foo;
+	output_l64 ret_val;
+	jmp_label foo;
 }

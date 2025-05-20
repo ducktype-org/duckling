@@ -14,6 +14,7 @@ public:
 		TESTER_ADD_TEST(jumpSkipBlock);
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
+		TESTER_ADD_TEST(twoInits);
 
 		// @note: This tests breaks the current implementation of jump verification, but will be
 		// used soon when better verification is implemented.
@@ -21,27 +22,34 @@ public:
 
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
+		TESTER_ADD_TEST(useArgumentAfterCall);
 
-		// Jump verfification
+		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
 		// TODO: Maybe move that test somewhere else.
 		TESTER_ADD_TEST(duplicatedDataFields);
 
-		// @note: Not implemented yet
-		// TESTER_ADD_TEST(noInit);
-		// TESTER_ADD_TEST(beforeInit);
-		// TESTER_ADD_TEST(afterDeinit);
-		// TESTER_ADD_TEST(invalidOffset);
+		// Local variable verification
+		TESTER_ADD_TEST(noInit);
+		TESTER_ADD_TEST(beforeInit);
+		TESTER_ADD_TEST(afterDeinit);
+		TESTER_ADD_TEST(invalidName);
+		TESTER_ADD_TEST(repeatedName);
 
+		// @note: Not implemented yet
 		// TESTER_ADD_TEST(derefAfterDeinit);
 		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
 		// TESTER_ADD_TEST(derefWrongType);
 		// TESTER_ADD_TEST(refOnPrimitive);
 
-		// TESTER_ADD_TEST(wrongTypeMov);
-		// TESTER_ADD_TEST(wrongTypeSize);
+		// Type verification
+		TESTER_ADD_TEST(wrongTypeMov);
+		TESTER_ADD_TEST(wrongTypeSize);
+		TESTER_ADD_TEST(globalWrongTypeMov);
+		TESTER_ADD_TEST(globalWrongTypeSize);
+		TESTER_ADD_TEST(usingPointerAsPrimitive);
 	}
 
 private:
@@ -54,12 +62,24 @@ private:
 
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 
+	void twoInits() { loadValidDbc("right/two_inits.dbc"); }
+
 	// Function verification
 	void multipleFunctions() {
 		loadInvalidDbc(
 			"wrong/functions/multiple_functions.dbc",
 			{
 				vm::loader::DuplicatedFunctionError::ERR_MSG,
+			}
+		);
+	}
+
+	// Function verification
+	void useArgumentAfterCall() {
+		loadInvalidDbc(
+			"wrong/functions/use_argument_after_call.dbc",
+			{
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -95,7 +115,7 @@ private:
 		);
 	}
 
-	// Deinitialized valued verification
+	// Deinitialized value verification
 	void noInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
@@ -105,25 +125,12 @@ private:
 		);
 	}
 
-	// TODO: Should this be here?
-	void duplicatedDataFields() {
-		loadInvalidDbc(
-			"wrong/data_type/duplicated_fields.dbc",
-			{
-				vm::code::builders::DuplicatedFieldError::ERR_MSG,
-			}
-		);
-	}
 
-	// @TODO Use these tests when typecheck gets implemented,
-	// but swap those deleted loader errors for (then freshly added by you) builder ones.
-#if 0
 	void beforeInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -132,12 +139,30 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
 
+	void invalidName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/invalid_name.dbc",
+			{
+				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+	void repeatedName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/repeated_name.dbc",
+			{
+				vm::code::builders::DuplicatedLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+#if 0
 	// Pointer verification
 	void derefAfterDeinit() {
 		loadInvalidDbc(
@@ -174,13 +199,14 @@ private:
 			}
 		);
 	}
+#endif
 
 	// Type verification
 	void wrongTypeMov() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_mov.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::builders::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -189,12 +215,47 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
 
-#endif
+	void globalWrongTypeMov() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_mov.dbc",
+			{
+				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalWrongTypeSize() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_size.dbc",
+			{
+				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+			}
+		);
+	}
+
+	void usingPointerAsPrimitive() {
+		loadInvalidDbc(
+			"wrong/types/using_pointer_as_primitive.dbc",
+			{
+				vm::code::builders::InvalidArgumentTypeError::ERR_MSG,
+			}
+		);
+	}
+	
+	// TODO: Should this be here?
+	void duplicatedDataFields() {
+		loadInvalidDbc(
+			"wrong/data_type/duplicated_fields.dbc",
+			{
+				vm::code::builders::DuplicatedFieldError::ERR_MSG,
+			}
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/verification/");

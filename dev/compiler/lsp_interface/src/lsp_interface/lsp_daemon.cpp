@@ -28,7 +28,6 @@ POP_DIAGNOSTIC;
 #include <base/variant.hpp>
 
 #include <vm/cli.hpp>
-#include <vm/config.hpp>
 #include <vm/server.hpp>
 
 /**

@@ -49,7 +49,7 @@ function Child_I1_impl {
 }
 
 type data: POD {
-    abc: i64,
+	abc: i64,
 }
 
 type interface: I1 {
@@ -95,7 +95,7 @@ type class: Child {
 }
 
 type class: PietMondrian {
-    abstract: true;
+	abstract: true;
 }
 
 function main {
