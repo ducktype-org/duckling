@@ -8,7 +8,10 @@
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+
+#include <variant>
 
 using namespace vm::code::builders;
 
@@ -44,7 +47,7 @@ namespace {
 	}
 
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type>;
+	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 
@@ -53,13 +56,24 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter = std::tuple<>;
-		using OptionalAfter = std::tuple<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>;
+		using RequiredAfter
+			= std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
+		using OptionalAfter = std::tuple<>;
 	};
 
 	template<>
 	struct ExtensionMetadata<Op_ext_type> {
-		using RequiredAfter = std::tuple<Op_downcast_lptr_lptr>;
+		using RequiredAfter = std::tuple<
+			Op_downcast_lptr_lptr,
+			Op_variantGetInner_lptr_lvnt,
+			Op_variantGetInner_lptr_lptr>;
+		using OptionalAfter = std::tuple<>;
+	};
+
+	template<>
+	struct ExtensionMetadata<Op_ext_field> {
+		using RequiredAfter
+			= std::tuple<Op_structLea_lptr_lptr, Op_structLoad_lany_lptr, Op_structStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -160,10 +174,8 @@ void FunctionValidator::validateArgTypes(
 				if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);
 				CRef<GlobalData> entry = globals.at(global.global_data_name);
 				auto             type  = type_context.getTypes().at(entry->type);
-				variant_match(*type) {
-					variant_case_novalue(PointerType) {}
-					variant_default { throw InvalidArgumentTypeError(arg); }
-				}
+				if (!std::holds_alternative<PointerType>(*type))
+					throw InvalidArgumentTypeError(arg);
 			}
 
 			STACK_LOCAL_CASE(8);
@@ -172,11 +184,9 @@ void FunctionValidator::validateArgTypes(
 			STACK_LOCAL_CASE(64);
 			variant_case(opargs::StackLocalPtr, local) {
 				if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
-				CRef<TypeOfData> entry = current_stack.at(local.var_name);
-				variant_match(*entry) {
-					variant_case(PointerType, pointer_type) { (void) pointer_type; }
-					variant_default { throw InvalidArgumentTypeError(arg); }
-				}
+				CRef<TypeOfData> type = current_stack.at(local.var_name);
+				if (!std::holds_alternative<PointerType>(*type))
+					throw InvalidArgumentTypeError(arg);
 			}
 			variant_case(opargs::StackLocalAny, local) {
 				variant_match(instruction) {
@@ -226,8 +236,35 @@ void FunctionValidator::validateArgTypes(
 				}
 			}
 
+			variant_case(opargs::StackLocalVnt, variant) {
+				if (!current_stack.contains(variant.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> type = current_stack.at(variant.var_name);
+				if (!std::holds_alternative<VariantType>(*type))
+					throw InvalidArgumentTypeError(arg);
+			}
+
+			variant_case(opargs::Field, field) {
+				auto type = type_context.getTypes().at(field.type_name);
+				variant_match(*type) {
+					variant_case(DataType, ztruct) {
+						bool good = false;
+						for (auto& ztruct_field: ztruct.fields) {
+							if (ztruct_field.name == field.field_name) {
+								good = true;
+								break;
+							}
+						}
+						if (!good) throw UnknownFieldError(field);
+					}
+					variant_default { throw InvalidArgumentTypeError(arg); }
+				}
+			}
+
 			// All possible opargs must be handled. Unhandled opargs panic.
-			variant_default { CORE_PANIC("Unhandled argument case during validation"); }
+			variant_default {
+				CORE_PANIC("Unhandled argument case during validation");
+				;
+			}
 		}
 	}
 

@@ -5,7 +5,7 @@ function ackermann {
 	# arg1 -> nPtr
 
 	init_lany_type          n, i64;      # [24, 32) n
-	load_l64_lptr_ofs       n, arg1;     # n = *nPtr
+	load_lany_lptr       	n, arg1;     # n = *nPtr
 
 	# if m == 0
 	cmpEq_l64_imm           arg0, 0;
@@ -24,7 +24,7 @@ function ackermann {
 	mov_l64_l64             n1_arg0, arg0;          # arg0 := m
 	sub_l64_imm             n, 1;                   # n := n-1
 	alloc_lptr_type         n1_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_l64_ofs      n1_arg1, n;             # *arg1 := n
+	store_lptr_lany      	n1_arg1, n;             # *arg1 := n
 
 	call_func               ackermann;              # A(m, n-1)
 
@@ -37,7 +37,7 @@ function ackermann {
 	sub_l64_imm             arg0, 1;                # m := m-1
 	mov_l64_l64             m1_arg0, arg0;          # arg0 := m
 	alloc_lptr_type         m1_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_l64_ofs      m1_arg1, n;             # *arg1 := A(m, n-1)
+	store_lptr_lany      	m1_arg1, n;             # *arg1 := A(m, n-1)
 	call_func               ackermann;              # A(m-1, A(m, n-1))
 
 	# m1_arg0 and m1_arg1 are deinitialized here
@@ -57,7 +57,7 @@ function ackermann {
 	mov_l64_l64             n0_arg0, arg0;          # arg0 := m
 	mov_l64_imm             n, 1;                   # n := 1
 	alloc_lptr_type         n0_arg1, i64;           # arg1 := alloc *i64
-	store_lptr_l64_ofs      n0_arg1, n;             # *arg1 := n
+	store_lptr_lany      	n0_arg1, n;             # *arg1 := n
 	call_func               ackermann;              # A(m-1, 1)
 
 	# n0_arg0 and n0_arg1 are deinitialized here
@@ -93,7 +93,7 @@ function main {
 	input_l64               ack_arg0;
 	input_l64               n;
 	alloc_lptr_type         ack_arg1, i64;          # arg1 := alloc *int
-	store_lptr_l64_ofs      ack_arg1, n;            # *arg1 = n
+	store_lptr_lany      	ack_arg1, n;            # *arg1 = n
 
 	call_func               ackermann;  # A(m, n, nPtr)
 
