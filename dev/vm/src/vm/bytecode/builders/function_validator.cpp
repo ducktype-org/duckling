@@ -277,14 +277,17 @@ void FunctionValidator::validateArgTypes(
 	}
 }
 
-void FunctionValidator::validateSpecificInstruction(
-	const Instruction& instruction, const LocalStack& current_stack
+void FunctionValidator::validateInstructionNonTrivially(
+	const Instruction&                  instruction,
+	[[maybe_unused]] const Instruction& next_instruction,
+	const LocalStack&                   current_stack
 ) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 
+		variant_case_novalue(Comment) {}
 		variant_case_novalue(Op_mov_l8_imm) {}
 		variant_case_novalue(Op_mov_l8_l8) {}
 		variant_case_novalue(Op_cmov_l8_l8) {}
@@ -395,18 +398,6 @@ void FunctionValidator::validateSpecificInstruction(
 	}
 }
 
-/**
- * @brief Validates the instruction in the current stack state.
- * Checks each argument of the instruction if it has the expected type of an argument.
- * @param instruction Instruction that is validated.
- */
-void FunctionValidator::validateInstruction(
-	const Instruction& instruction, const LocalStack& current_stack
-) const {
-	validateArgTypes(instruction, current_stack);
-	validateSpecificInstruction(instruction, current_stack);
-}
-
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
@@ -457,8 +448,13 @@ void FunctionValidator::traverseControlFlowGraph() {
 
 	while (index != instructions.size()) {
 		validateExtension(index);
-		// Validate non-control flow instruction there.
-		validateInstruction(instructions[index], local_stack);
+
+		validateArgTypes(instructions[index], local_stack);
+
+		if (index + 1 < instructions.size())
+			validateInstructionNonTrivially(
+				instructions[index], instructions[index + 1], local_stack
+			);
 
 		visited_instructions[index] = true;
 

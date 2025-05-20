@@ -65,16 +65,27 @@ namespace vm::code::builders {
 		bool                                                     validated = false;
 
 		void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const;
-		void validateSpecificInstruction(
-			const Instruction& instruction, const LocalStack& current_stack
-		) const;
 		void validateExtension(usize instruction_index) const;
-		void validateInstruction(const Instruction& instruction, const LocalStack& current_stack)
-			const;
+
+		/**
+		 * @brief Validates the instruction in the current stack state.
+		 * Checks non-trivial connection between arguments.
+		 * @param instruction Instruction that is validated.
+		 * @param next_instruction Next instruction. Used when expecting e.g. `ext_*`.
+		 * @note It's not triggered for the last instruction.
+		 */
+		void validateInstructionNonTrivially(
+			const Instruction& instruction,
+			const Instruction& next_instruction,
+			const LocalStack&  current_stack
+		) const;
+
 		void validateArgInstantiable(const opargs::Type& arg) const;
+
 		void validateUpcast(
 			const instructions::Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
 		) const;
+
 		void validateFunctionEnd() const;
 
 		usize getLabelTarget(const opargs::Label& label) const;
