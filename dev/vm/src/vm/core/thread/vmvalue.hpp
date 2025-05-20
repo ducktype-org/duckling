@@ -2,6 +2,7 @@
 
 #include <base/raw_view.hpp>
 
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
 
@@ -12,20 +13,32 @@ namespace vm {
 	 * @note Passed data is copied.
 	 */
 	struct VmValue {
-		explicit VmValue(TypeCRef type): type(type) { data.resize(type->getSize()); }
+	private:
+		std::vector<byte> data;  // data.size() == type.getSize()
+		Ref<Memory>       memory;
 
-		VmValue(TypeCRef type, const byte* data): VmValue(type) { setValue(data); }
+	public:
+		VmValue(const VmValue&)            = delete;
+		VmValue(VmValue&&)                 = default;
+		VmValue& operator=(const VmValue&) = delete;
+		VmValue& operator=(VmValue&&)      = default;
 
-		/**
-		 * @brief Sets value's data as new_data. Assumes new_data.size() >= type.getSize();
-		 */
-		void setValue(const byte* new_data) {
-			CORE_ASSERT(new_data != nullptr, "VmValue\'s data cannot be null!");
-			std::memcpy(this->data.data(), new_data, type->getSize());
+		explicit VmValue(TypeCRef type, Memory& memory):
+			  data(type->getSize()),
+			  memory(&memory),
+			  type(type),
+			  pointer(Memory::getPointer(memory.allocateStack(type, data.data()))) {}
+
+		VmValue(TypeCRef type, Memory& memory, Pointer src): VmValue(type, memory) {
+			importData(src);
 		}
 
-		std::vector<byte> data;  // data.size() == type.getSize()
-		TypeCRef          type;
+		void exportData(Pointer dst) { memory->copyPointerData(dst, pointer, type); }
+
+		void importData(Pointer src) { memory->copyPointerData(pointer, src, type); }
+
+		TypeCRef type;
+		Pointer  pointer;
 
 		template<class T>
 		constexpr T& interpret(usize offset = 0) {

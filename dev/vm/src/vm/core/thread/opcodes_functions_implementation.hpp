@@ -36,7 +36,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/memory/memory.hpp"
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmvalue.hpp>
@@ -321,20 +321,18 @@ namespace vm {
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_type->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
-				args.emplace_back(
-					real_type, local_stack + frame->block_idx_to_local_offset[first_arg_idx + i]
-				);
+				auto block = frame->block_stack[first_arg_idx + i];
+				args.emplace_back(real_type, thread.process_memory, Memory::getPointer(block));
 			}
 
-			base::Optional<VmValue> return_value
-				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
+			base::Optional<VmValue> return_value = builtins::callBuiltinFunction(
+				builtin_id, real_function_type, thread, thread.process_memory, args
+			);
+
 			match_optional(return_value) {
 				opt_none {}
 				opt_some(value) {
-					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
-					std::memcpy(
-						local_stack + ret_val_offset, value.data.data(), value.type->getSize()
-					);
+					value.exportData(Memory::getPointer(frame->block_stack[first_arg_idx - 1]));
 				}
 			}
 

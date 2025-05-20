@@ -1,10 +1,10 @@
 #include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
-#include "base/variant.hpp"
+#include <base/variant.hpp>
 
-#include "vm/api/data/status.hpp"
-#include "vm/api/vm.hpp"
+#include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
 
 class VmVariantTest: public VmTestSuite {
 #undef TESTER_CLASS
