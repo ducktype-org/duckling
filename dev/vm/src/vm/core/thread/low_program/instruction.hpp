@@ -67,6 +67,7 @@ namespace vm {
 		i32 arg0;
 		i32 arg1;
 	};
+	static_assert(sizeof(Fix8Instruction) == 16, "Fix8Instruction size is not 16 bytes");
 
 	/**
 	 * @brief Creates a low-level instruction with correct "union" type depending on the config.
