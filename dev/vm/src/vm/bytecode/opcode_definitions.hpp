@@ -291,9 +291,9 @@ DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 
 // expects `ext_field` to be the next instruction
 DEF_OPCODE(structLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
-// expects `ext_type_field` to be the next instruction
+// expects `ext_field` to be the next instruction
 DEF_OPCODE(structLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
-// expects `ext_type_field` to be the next instruction
+// expects `ext_field` to be the next instruction
 DEF_OPCODE(structStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 
 // ========= TABLE OPERATIONS ========

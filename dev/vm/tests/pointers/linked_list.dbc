@@ -18,10 +18,10 @@ function cons {
     alloc_lptr_type ret_val, Node;
 
     structStore_lptr_lany ret_val, arg0;
-    ext_type_field i64, Node.head;
+    ext_field Node.head;
 
     structStore_lptr_lany ret_val, arg1;
-    ext_type_field LinkedList, Node.tail;
+    ext_field Node.tail;
 
     ret;
 }
@@ -30,7 +30,7 @@ function cons {
 type fun: tail {} LinkedList
 function tail {
     structLoad_lany_lptr ret_val, ret_val;
-    ext_type_field LinkedList, Node.tail;
+    ext_field Node.tail;
 
     ret;
 }
@@ -48,7 +48,7 @@ label non_empty;
 
     # curr = arg0->x
     structLoad_lany_lptr curr, arg0;
-    ext_type_field i64, Node.head;
+    ext_field Node.head;
 
     output_l64 curr;
 

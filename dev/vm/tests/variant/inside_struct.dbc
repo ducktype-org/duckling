@@ -40,7 +40,7 @@ function main {
     # let var = ptr_a->second;
     init_lany_type var, simple_variant;
     structLoad_lany_lptr var, ptr_a;
-    ext_type_field simple_variant, VariantStruct.second;
+    ext_field VariantStruct.second;
 
     # let var_ptr: ptr<variant<i64, i8>> = &var;
     init_lany_type var_ptr, ptr_variant;
