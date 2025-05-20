@@ -204,6 +204,6 @@ namespace vm::code::builders {
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
-    DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:")
+	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:")
 
 }
