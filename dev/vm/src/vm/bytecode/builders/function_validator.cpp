@@ -98,12 +98,11 @@ namespace {
 	}
 }
 
-void FunctionValidator::validateExtension(usize instruction_index) const {
+void FunctionValidator::validateExtension(
+	base::Optional<const Instruction&> predecessor, const Instruction& instruction
+) const {
 	// This check assumes that the last instruction in a function is non-extendable,
 	// this is checked in `validate`.
-	auto instruction     = instructions[instruction_index];
-	auto predecessor     = instruction_index == 0 ? base::Optional<const Instruction&>{}
-	                                              : instructions[instruction_index - 1];
 	bool valid_extension = std::visit(
 		[&]<typename T>(const T&) {
 			if constexpr (Extension<T>)
@@ -277,10 +276,10 @@ void FunctionValidator::validateArgTypes(
 	}
 }
 
-void FunctionValidator::validateInstructionNonTrivially(
-	const Instruction&                  instruction,
-	[[maybe_unused]] const Instruction& next_instruction,
-	const LocalStack&                   current_stack
+void FunctionValidator::validateArgTypesNonTrivially(
+	const Instruction&                                  instruction,
+	[[maybe_unused]] base::Optional<const Instruction&> next_instruction,
+	const LocalStack&                                   current_stack
 ) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
@@ -447,14 +446,19 @@ void FunctionValidator::traverseControlFlowGraph() {
 	usize index = 0;
 
 	while (index != instructions.size()) {
-		validateExtension(index);
+		validateExtension(
+			index > 0 ? instructions[index - 1] : base::Optional<const Instruction&>(),
+			instructions[index]
+		);
 
 		validateArgTypes(instructions[index], local_stack);
 
-		if (index + 1 < instructions.size())
-			validateInstructionNonTrivially(
-				instructions[index], instructions[index + 1], local_stack
-			);
+		validateArgTypesNonTrivially(
+			instructions[index],
+			index + 1 < instructions.size() ? base::Optional<const Instruction&>()
+											: instructions[index + 1],
+			local_stack
+		);
 
 		visited_instructions[index] = true;
 
