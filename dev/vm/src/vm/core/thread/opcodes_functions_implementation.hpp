@@ -542,43 +542,43 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	// RETURN_TYPE OpFuns::OPCODE_NAME(variantSet_inner_lvnt_type)(FUNCTION_ARGS) {
-	// 	{
-	// 		auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg0)];
-	// 		auto block               = frame->block_stack[variant_block_index];
-	// 		thread.process.getMemory().setNestedViewBlock(
-	// 			block, 0, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
-	// 		);
-	// 	}
-	// 	FUNCTION_CONT(1);
-	// }
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
+		{
+			auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg0)];
+			auto block               = frame->block_stack[variant_block_index];
+			thread.process.getMemory().setNestedViewBlock(
+				block, 0, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+			);
+		}
+		FUNCTION_CONT(1);
+	}
 
-	// RETURN_TYPE OpFuns::OPCODE_NAME(variantGet_inner_lptr_lvnt)(FUNCTION_ARGS) {
-	// 	{
-	// 		auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
-	// 		auto  variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
-	// 		auto  parent_block        = frame->block_stack[variant_block_index];
-	// 		auto  wanted_type
-	// 			= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
+		{
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+			auto  parent_block        = frame->block_stack[variant_block_index];
+			auto  wanted_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
 
-	// 		auto view_block_ref
-	// 			= thread.process.getMemory().getNestedViewBlock(parent_block, 0, wanted_type);
+			auto view_block_ref
+				= thread.process.getMemory().getNestedViewBlock(parent_block, 0, wanted_type);
 
-	// 		match_optional(view_block_ref.toOpt()) {
-	// 			opt_some(view_block) {
-	// 				thread.process.getMemory().setPointer(
-	// 					destination_pointer, Memory::getPointer(view_block)
-	// 				);
-	// 			}
-	// 			opt_none {
-	// 				thread.process.getMemory().setPointer(destination_pointer, Pointer::null());
-	// 			}
-	// 		}
-	// 	}
-	// 	FUNCTION_CONT(2);
-	// }
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) {
+					thread.process.getMemory().setPointer(
+						destination_pointer, Memory::getPointer(view_block)
+					);
+				}
+				opt_none {
+					thread.process.getMemory().setPointer(destination_pointer, Pointer::null());
+				}
+			}
+		}
+		FUNCTION_CONT(2);
+	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantSet_inner_lptr_type)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto block           = variant_pointer.getBlock();
@@ -592,7 +592,7 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(variantGet_inner_lptr_lptr)(FUNCTION_ARGS) {
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  variant_pointer     = derefStack<Pointer>(local_stack, instr->arg1);
@@ -753,9 +753,9 @@ namespace vm {
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Memory::getPointer(src_block);
 
-			auto type_id       = TypeID{ static_cast<usize>(instr[1].arg0) };
-			auto type          = thread.executing_program->types->at(type_id);
-			auto field_offset  = instr[1].arg1;
+			auto type_id      = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type         = thread.executing_program->types->at(type_id);
+			auto field_offset = instr[1].arg1;
 
 			dst_pointer.movePointer(field_offset);
 			thread.process_memory.copyPointerData(dst_pointer, src_pointer, type);
@@ -769,12 +769,12 @@ namespace vm {
 			auto dst_block     = frame->block_stack[dst_block_idx];
 			auto dst_pointer   = Memory::getPointer(dst_block);
 
-			auto src_pointer   = derefStack<Pointer>(local_stack, instr->arg1);
-			auto field_offset  = instr[1].arg1;
+			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
+			auto field_offset = instr[1].arg1;
 			src_pointer.movePointer(field_offset);
 
-			auto type_id       = TypeID{ static_cast<usize>(instr[1].arg0) };
-			auto type          = thread.executing_program->types->at(type_id);
+			auto type_id = TypeID{ static_cast<usize>(instr[1].arg0) };
+			auto type    = thread.executing_program->types->at(type_id);
 
 			thread.process_memory.copyPointerData(dst_pointer, src_pointer, type);
 		}

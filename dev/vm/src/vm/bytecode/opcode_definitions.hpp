@@ -162,30 +162,30 @@ DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 // ========= VARIANT OPERATIONS ========
 
 
-// // Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to it's data.
-// DEF_OPCODE(
-// 	variantSet_inner_lvnt_type,
-// 	vm::opargs::StackLocalVariant /* variant */,
-// 	vm::opargs::Type /* 			 inner_type */
-// )
-// /**
-//  * @brief Sets `destination` to point at `variant`'s data. Expects `variant` to has `expected_type`
-//  * set, and if it's not, `destination` becomes nullptr.
-//  * @note `ext_type` required to know which type is to be expected.
-//  */
-// DEF_OPCODE(
-// 	variantGet_inner_lptr_lvnt,
-// 	vm::opargs::StackLocalPtr /* 	 destination */,
-// 	vm::opargs::StackLocalVariant /* variant,
-//     vm::opargs::Type 				 expected_type*/
-// )
+// Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to it's data.
+DEF_OPCODE(
+	variantSetInner_lvnt_type,
+	vm::opargs::StackLocalVnt /* variant */,
+	vm::opargs::Type /* 			 inner_type */
+)
+/**
+ * @brief Sets `destination` to point at `variant`'s data. Expects `variant` to has `expected_type`
+ * set, and if it's not, `destination` becomes nullptr.
+ * @note `ext_type` required to know which type is to be expected.
+ */
+DEF_OPCODE(
+	variantGetInner_lptr_lvnt,
+	vm::opargs::StackLocalPtr /* 	 destination */,
+	vm::opargs::StackLocalVnt /* variant,
+    vm::opargs::Type 				 expected_type*/
+)
 
 /**
  * @brief Sets inner type of variant under `variant_ptr` to `inner_type`. It also invalidates
  * pointers to it's data.
  */
 DEF_OPCODE(
-	variantSet_inner_lptr_type,
+	variantSetInner_lptr_type,
 	vm::opargs::StackLocalPtr /* variant_ptr */,
 	vm::opargs::Type /* 		 inner_type */
 )
@@ -196,7 +196,7 @@ DEF_OPCODE(
  * @note `ext_type` required to know which type is to be expected.
  */
 DEF_OPCODE(
-	variantGet_inner_lptr_lptr,
+	variantGetInner_lptr_lptr,
 	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalPtr /* variant_ptr,
     vm::opargs::Type 			 expected_type */

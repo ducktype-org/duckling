@@ -62,7 +62,6 @@ namespace vm {
 		// name ...
 
 		friend class Memory;
-		friend class VariantAllocator;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
         base::Map<usize, Ref<Block>> children_blocks{};  // offset to block

@@ -23,11 +23,11 @@ function main {
     ext_field VariantStruct.second;
 
     # ptr_second->setType<i64>();
-    variantSet_inner_lptr_type ptr_second, i64;
+    variantSetInner_lptr_type ptr_second, i64;
 
     # let int_ptr: ptr<i64> = ptr_second->getData<i64>();
     init_lany_type int_ptr, ptr_i64;
-    variantGet_inner_lptr_lptr int_ptr, ptr_second;
+    variantGetInner_lptr_lptr int_ptr, ptr_second;
     ext_type i64;
 
     # let value: i64 = 5;
@@ -49,7 +49,7 @@ function main {
 
     # let read_ptr: ptr<i64> = var_ptr->getData<i64>();
     init_lany_type read_ptr, ptr_i64;
-    variantGet_inner_lptr_lptr read_ptr, var_ptr;           # <- To ustawia read_ptr na null
+    variantGetInner_lptr_lptr read_ptr, var_ptr;           # <- To ustawia read_ptr na null
     ext_type i64;
 
     # let read_value: i64 = *read_ptr;
