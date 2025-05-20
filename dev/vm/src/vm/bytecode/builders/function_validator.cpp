@@ -57,16 +57,14 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter = std::tuple<>;
-		using OptionalAfter = std::tuple<Op_load_l64_lptr_ofs, Op_store_lptr_l64_ofs>;
+		using RequiredAfter = std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
+		using OptionalAfter = std::tuple<>;
 	};
 
 	template<>
 	struct ExtensionMetadata<Op_ext_type> {
 		using RequiredAfter = std::tuple<
 			Op_downcast_lptr_lptr,
-			Op_store_lptr_lany,
-			Op_load_lany_lptr,
 			Op_variantGetInner_lptr_lvnt,
 			Op_variantGetInner_lptr_lptr>;
 		using OptionalAfter = std::tuple<>;

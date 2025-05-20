@@ -12,7 +12,8 @@ function main {
     variantGetInner_lptr_lvnt ptr, v1;
     ext_type i64;
 
-    store_lptr_l64_ofs ptr, value;
+    store_lptr_lany ptr, value;
+    ext_type i64;
 
     deinit; # ptr
 
@@ -21,7 +22,8 @@ function main {
     ext_type i64;
 
     mov_l64_imm value, 0;
-    load_l64_lptr_ofs value, new_ptr;
+    load_lany_lptr value, new_ptr;
+    ext_type i64;
 
     output_l64 value;
 

@@ -15,7 +15,8 @@ function main {
 	mov_lptr_lptr       q, p;      # q = p
 
 	mov_l64_imm         y, 42;     # y = 42
-	store_lptr_l64_ofs  q, y;      # *q := y
+	store_lptr_lany  q, y;      # *q := y
+	ext_type i64;
 	output_l64          x;         # print(x)
 
 	# from non-null to null

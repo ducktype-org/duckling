@@ -219,9 +219,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
-					// @todo: This should be changed to 'store_lptr_imm_ofs' and temp_store should
-			        // be removed once it exists. https://github.com/ducktype-org/duckling/issues/778
-					MAKE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
+					MAKE_BYTECODE_INSTRUCTION(staticTableStore_lptr_lany, 8, 32),
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
 				}
@@ -551,8 +549,8 @@ namespace vm {
 
 		exec_thread = std::thread([this, program, func_name, run_arguments] {
 			try {
-				// @TODO: catch not general std::exception&
 				run(program, func_name, run_arguments);
+				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
 				respondExecutionRequest(api::ExecutionPanicked{ e.what() });

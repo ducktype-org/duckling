@@ -13,10 +13,10 @@ function main {
     init_lany_type int, i64;            # var int: i64;
     input_l64 int;                      # int = input();
 
-    store_lptr_l64_ofs ptr, int;        # *ptr = int;
+    staticTableStore_lptr_lany ptr, int;        # *ptr = int;
 
     init_lany_type read_ptr, i64;       # var read_ptr: i64;
-    load_l64_lptr_ofs read_ptr, ptr;    # read_ptr = *ptr;
+    staticTableLoad_lany_lptr read_ptr, ptr;    # read_ptr = *ptr;
 
     output_l64 read_ptr;                # print(read_ptr);
 

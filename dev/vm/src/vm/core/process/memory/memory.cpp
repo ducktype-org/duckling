@@ -5,9 +5,7 @@
 #include <base/exceptions.hpp>
 #include <base/raw_view.hpp>
 
-#include <algorithm>
 #include <mutex>
-#include <ranges>
 
 namespace vm {
 
@@ -43,23 +41,23 @@ namespace vm {
 	}
 
 	auto Memory::initializeFrameStack() -> Ref<ThreadStack> {
-		std::unique_lock lock(mutex);
+		std::lock_guard lock(mutex);
 		threads_frame_stacks.emplace_back();
 		return &threads_frame_stacks.back();
 	}
 
 	auto Memory::allocateHeap(TypeCRef type) -> Ref<Block> {
-		std::unique_lock lock(mutex);
+		std::lock_guard lock(mutex);
 		return createBlock(heap_allocator.allocate(type));
 	}
 
-	auto Memory::allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
-		std::unique_lock lock(mutex);
-		return createBlock(stack_allocator.allocate(type, stack_pointer));
+	auto Memory::allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block> {
+		std::lock_guard lock(mutex);
+		return createBlock(dummy_allocator.allocate(type, stack_pointer));
 	}
 
 	void Memory::freeBlock(Ref<Block> block) {
-		// std::unique_lock lock(mutex);
+		std::lock_guard lock(mutex);
 		for (auto [offset, child]: block->children_blocks) freeBlock(child);
 
 		// Parents reference their children so that they don't disappear on someone's pointer
@@ -91,6 +89,7 @@ namespace vm {
 	}
 
 	void Memory::insertGlobalData(GlobalDataID id, TypeCRef type) {
+		std::lock_guard lock(mutex);
 		if (!global_data.contains(id)) {
 			auto             type_size = type->getSize();
 			base::OwningView storage(new byte[type_size], type_size);
@@ -98,66 +97,87 @@ namespace vm {
 		}
 	}
 
-	// Ref<Block> Memory::variantChangeType(Ref<Block> variant_block, TypeCRef new_type) {
-	// 	CORE_ASSERT(variant_block->variant_data, "Block is not a variant block");
-	// 	CORE_ASSERT(!variant_block->deallocated, "Variant operation on deallocated block");
-	// 	std::unique_lock lock(mutex);
+	MRef<Block> Memory::getNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
+		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		std::lock_guard lock(*parent_pointer.block->mutex_ref);
+		if_opt_some(parent_pointer.block->children_blocks.atMaybe(parent_pointer.offset), nested) {
+			if (nested->data.element_type == type) return nested;
+		}
+		return nullptr;
+	}
 
-	// 	// auto&            variant_data = variant_block->variant_data.value();
-	// 	// if (variant_data.parent) {
-	// 	// 	// We have to remove our-selves from parent
-	// 	// 	// @TODO: Improve speed of this operation.
-	// 	// 	auto& parent_children = variant_data.parent->variant_data->children_blocks;
-	// 	// 	for (auto it = parent_children.begin(); it != parent_children.end(); it++) {
-	// 	// 		if (*it == variant_block) {
-	// 	// 			parent_children.erase(it);
-	// 	// 			break;
-	// 	// 		}
-	// 	// 	}
+	void Memory::setNestedViewBlock(Pointer parent_pointer, TypeCRef type) {
+		CORE_ASSERT(!parent_pointer.isNull(), "Accessing null pointer");
+		std::lock_guard lock(mutex);
+		auto&           children = parent_pointer.block->children_blocks;
+		if_opt_some(children.atMaybe(parent_pointer.offset), nested) {
+			freeBlock(nested);
+			children.erase(parent_pointer.offset);
+		}
 
-	// 	// } else {
-	// 	// 	// Nothing?
-	// 	// }
+		auto block_data         = parent_pointer.block->data;
+		block_data.element_type = type;
+		block_data.view         = getPointerData(parent_pointer, type->getSize());
 
-	// 	// Create a new block that points to the same memory.
+		auto new_block = createBlock(block_data);  // @note createBlock nulls them bytes
+		new_block->refcount++;  // so that the block does not disappear accidentally
+		children.put(parent_pointer.offset, new_block);
+	}
 
-	// 	// Invalidate children.
-	// 	// A child may be a field inside a structure
-	// 	// that is of a variant type, or a variant within variant.
-	// 	// A child may already be deallocated, but the reference was not
-	// 	// removed from children list for the sake of efficiency.
-	// 	std::vector<Ref<Block>> stack;
-	// 	stack.insert(variant_block->variant_data->children_blocks);
-	// 	while (!stack.empty()) {
-	// 		auto front = stack.back();
-	// 		stack.pop_back();
-	// 		for (auto& [offset, child]: front->variant_data->children_blocks)
-	// 			if (!child->deallocated) stack.push_back(child);
-	// 		destroyReference(front);
-	// 		freeBlock(front);
-	// 	}
+	auto Memory::copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void {
+		CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
 
-	// 	return variantDataReference(variant_block, 0, new_type);
-	// 	// Whenever we create a child we have to mark it referenced.
-	// 	// @TODO: Taking a pointer to variant must work.
-	// 	// GENERALLY speaking: Main block has a variant type. Then we can have inner offset=0, which
-	// 	// has inner type and so on.
-	// 	//
-	// 	// New idea -
-	// }
+		std::lock_guard lock_dst(*dst.block->mutex_ref);
+		std::lock_guard lock_src(*src.block->mutex_ref);
 
-	// bool Memory::variantHoldsType(Ref<Block> variant_block, TypeCRef type) {
-	// 	CORE_ASSERT(variant_block->variant_data, "Not a variant");
-	// 	return variant_block->data.element_type == type;
-	// }
+		// Free child blocks.
+		auto& dst_child_blocks = dst.getBlock()->children_blocks;
+		for (auto iter = dst_child_blocks.lower_bound(dst.offset);
+		     iter != dst_child_blocks.end() && iter->first < dst.offset + type->getSize();
+		     iter = dst_child_blocks.erase(iter)) {
+			freeBlock(iter->second);
+		}
+		// Copy the child blocks
+		auto& src_child_blocks = src.getBlock()->children_blocks;
+		for (auto iter = src_child_blocks.lower_bound(src.offset);
+		     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
+		     ++iter) {
+			auto    offset      = dst.offset + iter->first - src.offset;
+			Pointer new_pointer = Pointer(dst.getBlock(), offset);
+			setNestedViewBlock(new_pointer, iter->second->data.element_type);
+			// @TODO We should go down the tree here...
+		}
 
-	// Ref<Block> Memory::variantDataReference(
-	// 	Ref<Block> variant_block, u64 variant_offset, TypeCRef type
-	// ) {
-	// 	auto& children = variant_block->variant_data->children_blocks;
-	// 	if (children.contains(offset)) return children[offset];
-	// 	auto data         = variant_block->data;
-	// 	data.element_type = type;
-	// 	createBlock(BlockData data)
-	// }
+		// Copy the data itself
+		auto dst_view = getPointerData(dst, type->getSize());
+		auto src_view = getPointerData(src, type->getSize());
+		std::memcpy(dst_view.getBegin(), src_view.getBegin(), type->getSize());
+	}
+
+	auto Memory::destroyBlockReference(Pointer pointer) -> void {
+		if_opt_some(pointer.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			destroyReference(block);
+		}
+	}
+
+	auto Memory::setPointer(Pointer& dst, Pointer src) -> void {
+		destroyBlockReference(dst);
+		if_opt_some(src.block.toOpt(), block) {
+			std::lock_guard lock(*block->mutex_ref);
+			block->refcount++;
+			dst = src;
+		}
+	}
+
+	auto Memory::newBlockReference(Ref<Block> block, u64 offset) -> Pointer {
+		std::lock_guard lock(*block->mutex_ref);
+		block->refcount++;
+		return { block, offset };
+	}
+
+	auto Memory::getBlockType(Ref<Block> block) -> TypeCRef {
+		std::lock_guard lock(*block->mutex_ref);
+		return block->data.element_type;
+	}
 }

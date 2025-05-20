@@ -24,7 +24,7 @@ private:
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
 			{ "missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },
-			// { "invalid_upcast.dbc", InvalidUpcast::ERR_MSG }, // @TODO after #732
+			// { "invalid_upcast.dbc", InvalidUpcastError::ERR_MSG }, @TODO after #732
 		});
 
 		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });

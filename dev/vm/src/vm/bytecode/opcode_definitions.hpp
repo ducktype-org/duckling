@@ -279,25 +279,13 @@ DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
 
 
 // stores local data at pointer
-// expects `ext_type` to be the next instruction (technically unnecessary)
 DEF_OPCODE(store_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // dereferences pointer and stores into local
-// expects `ext_type` to be the next instruction (technically unnecessary)
 DEF_OPCODE(load_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
 // loads effective address of struct field
 
 // stores reference to local object of any type T in pointer<T>
 DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
-
-// @TODO: Delete once table operations are added
-// load 64-bit primitive value from `lptr + ofs`
-// expects `ext_l64` to be the next instruction
-DEF_OPCODE(load_l64_lptr_ofs, vm::opargs::StackLocalI64, vm::opargs::StackLocalPtr)
-// @TODO: Delete once table operations are added
-// stores 64-bit primitive value under `lptr + ofs`
-// expects `ext_l64` to be the next instruction
-DEF_OPCODE(store_lptr_l64_ofs, vm::opargs::StackLocalPtr, vm::opargs::StackLocalI64)
-
 
 // ========= STRUCTURE OPERATIONS ========
 
@@ -311,11 +299,11 @@ DEF_OPCODE(structStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLo
 // ========= TABLE OPERATIONS ========
 
 // expects `ext_l64` to be the next instruction
-// DEF_OPCODE(staticTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
-// expects `ext_type_l64` to be the next instruction
-// DEF_OPCODE(staticTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
-// expects `ext_type_l64` to be the next instruction
-// DEF_OPCODE(staticTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_OPCODE(staticTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(staticTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+// expects `ext_l64` to be the next instruction
+DEF_OPCODE(staticTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 
 // expects `ext_l64` to be the next instruction
 // DEF_OPCODE(pointerTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)

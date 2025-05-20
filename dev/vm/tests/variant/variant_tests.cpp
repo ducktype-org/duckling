@@ -12,7 +12,9 @@ class VmVariantTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(simpleVariant);
+		TESTER_ADD_TEST(simpleVariant0);
+		TESTER_ADD_TEST(simpleVariant1);
+		TESTER_ADD_TEST(simpleVariant2);
 		TESTER_ADD_TEST(blocksDontDisappearTest);
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(variantInsideStruct);
@@ -49,11 +51,15 @@ private:
 		}
 	}
 
-	void simpleVariant() {
-		runTestOnVm("simple_variant.dbc", "0", "13");
+	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
+
+	void simpleVariant1() {
 		assertExecutionPanickedWith(
-			runTestOnVmGetResult("simple_variant.dbc", "1", "13"), "Accessing null pointer"
+			runTestOnVmGetResult("simple_variant.dbc", "1", "13"), "Copying to/from null pointer"
 		);
+	}
+
+	void simpleVariant2() {
 		assertExecutionPanickedWith(
 			runTestOnVmGetResult("simple_variant.dbc", "2", "13"), "Data was freed"
 		);

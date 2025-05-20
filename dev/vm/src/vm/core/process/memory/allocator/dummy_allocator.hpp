@@ -10,13 +10,11 @@
 #include <vm/core/process/type_metadata/type.hpp>
 
 namespace vm {
-	class StackAllocator final: public AllocatorABC {
+	class DummyAllocator final: public AllocatorABC {
 	public:
 		BlockData allocate(TypeCRef type, Ref<std::byte> data) {
 			auto size = type->getSize();
-			return BlockData{ type,
-				              base::ModRawView{ data.get(), size },
-				              Ref<AllocatorABC>{ this } };
+			return BlockData{ type, base::ModRawView{ data.get(), size }, this };
 		}
 
 		void deallocate(Ref<BlockData>) final {

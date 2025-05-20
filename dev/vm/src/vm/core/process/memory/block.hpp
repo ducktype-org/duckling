@@ -7,6 +7,7 @@
 
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
+#include <mutex>
 #include <shared_mutex>
 #include <utility>
 
@@ -51,10 +52,10 @@ namespace vm {
 		u64 refcount = 0;
 
 		/**
-		 * @brief Pointer to the shared mutex.
+		 * @brief Pointer to the mutex.
 		 * To avoid double dereference through the Memory class object.
 		 */
-		Ref<std::shared_mutex> shared_mutex;
+		Ref<std::recursive_mutex> mutex_ref;
 
 		// For future:
 		// allocated at ...
@@ -68,9 +69,9 @@ namespace vm {
 		MRef<Block>                  parent = nullptr;
 
 	public:
-		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
+		Block(BlockID id, BlockData data, Ref<std::recursive_mutex> mutex):
 			  id(id),
 			  data(data),
-			  shared_mutex(mutex) {}
+			  mutex_ref(mutex) {}
 	};
 }
