@@ -15,8 +15,8 @@ namespace query::utils {
 				  id(next_id++) {}
 
 			[[nodiscard]]
-			base::HashT customPerfectHash() const {
-				return base::HashT(id);
+			u64 queryUnstablePerfectHash() const {
+				return id;
 			}
 		};
 

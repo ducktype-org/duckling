@@ -30,8 +30,8 @@ namespace compiler::mir {
 
 	namespace hc = helios::code;
 
-	base::HashT KeyOf_LowerToMirFunction::customPerfectHash() const {
-		return base::perfectHash(function);
+	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
+		return function.queryUnstablePerfectHash();
 	}
 
 	struct InstructionHole;
