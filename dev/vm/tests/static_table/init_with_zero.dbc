@@ -14,16 +14,16 @@ function main {
 	alloc_lptr_type     t, tablei64;
 
 	# x := t[0]
-	mov_l64_imm         i, 0;
-	load_l64_lptr_ofs   x, t;
-	ext_l64             i;
+	mov_l64_imm         		i, 0;
+	staticTableLoad_lany_lptr   x, t;
+	ext_l64 					i;
 
 	mov_l64_l64         y, x;
 
 	# x := t[1]
-	mov_l64_imm         i, 1;
-	load_l64_lptr_ofs   x, t;
-	ext_l64             i;
+	mov_l64_imm         		i, 1;
+	staticTableLoad_lany_lptr   x, t;
+	ext_l64             		i;
 
 	add_l64_l64         y, x;
 

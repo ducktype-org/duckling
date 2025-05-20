@@ -1,11 +1,13 @@
 #pragma once
 
 #include <base/ints.hpp>
+#include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/strongly_typed_int.hpp>
 
 #include <vm/core/process/memory/allocator/block_data.hpp>
 
+#include <mutex>
 #include <shared_mutex>
 #include <utility>
 
@@ -20,7 +22,7 @@ namespace vm {
 	 * Holds all the block metadata and pointers to the real data.
 	 * The blocks are managed by the `vm::Memory` class.
 	 */
-	class Block final {
+	class Block {
 	private:
 		/**
 		 * @brief The unique identifier for the block.
@@ -50,10 +52,10 @@ namespace vm {
 		u64 refcount = 0;
 
 		/**
-		 * @brief Pointer to the shared mutex.
+		 * @brief Pointer to the mutex.
 		 * To avoid double dereference through the Memory class object.
 		 */
-		Ref<std::shared_mutex> shared_mutex;
+		Ref<std::recursive_mutex> mutex_ref;
 
 		// For future:
 		// allocated at ...
@@ -62,10 +64,14 @@ namespace vm {
 
 		friend class Memory;
 
+		// Think of it as a view on parent's bytes that has it's own type and lifetime.
+		base::Map<usize, Ref<Block>> children_blocks{};  // offset to block
+		MRef<Block>                  parent = nullptr;
+
 	public:
-		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):
+		Block(BlockID id, BlockData data, Ref<std::recursive_mutex> mutex):
 			  id(id),
 			  data(data),
-			  shared_mutex(mutex) {}
+			  mutex_ref(mutex) {}
 	};
 }

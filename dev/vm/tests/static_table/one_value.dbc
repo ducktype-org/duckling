@@ -15,12 +15,12 @@ function main {
 	mov_l64_imm         x, 3;        # x := 3
 
 	# t[i] := x (by i)
-	store_lptr_l64_ofs  arr_ptr, x;       # t[i] := x
+	staticTableStore_lptr_lany  arr_ptr, x;       # t[i] := x
 	ext_l64             i;
 
 	mov_l64_imm         x, 5;        # x := 5
 
-	load_l64_lptr_ofs   ret_val, arr_ptr;
+	staticTableLoad_lany_lptr   ret_val, arr_ptr;
 	ext_l64             i;
 
 	output_l64          i;
