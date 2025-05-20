@@ -68,12 +68,10 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 	// Validates if implements contain interfaces.
 	auto validate_implements = [&](const std::vector<base::StrID>& implements) {
-		std::cerr << "Helooo: " << implements.size() << '\n';
 		base::HashMap<base::StrID, base::StrID> interfaces;
 		for (const auto& impl: implements) {
 			if (interfaces.contains(impl)) throw DuplicatedImplementsError(type);
 			interfaces.put(impl);
-			std::cerr << "Validate implements: " << impl.strView() << '\n';
 			auto impl_type = get_type(impl);
 			if (!std::holds_alternative<InterfaceType>(*impl_type) || *impl_type == type)
 				throw InvalidImplementsError(type);
@@ -82,9 +80,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 	// TODO: Merge those two into one.
 	auto validate_first_argument = [&](const ClassType& clazzz, const FunctionType& func) {
-		std::cerr << "Implementation name: " << func.name.strView() << '\n';
-		std::cerr << "Implementation res type: " << func.result.strView() << '\n';
-		std::cerr << "Implementation param count: " << func.parameters.size() << '\n';
 		if (func.parameters.size() == 0) throw MethodFirstArgumentError(clazzz, func.name);
 
 		auto first_param_type = *get_type(func.parameters[0]);
@@ -96,9 +91,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	};
 
 	auto validate_first_argument_iface = [&](const InterfaceType& iface, const FunctionType& func) {
-		std::cerr << "Implementation name: " << func.name.strView() << '\n';
-		std::cerr << "Implementation res type: " << func.result.strView() << '\n';
-		std::cerr << "Implementation param count: " << func.parameters.size() << '\n';
 		if (func.parameters.size() == 0) throw MethodFirstArgumentError(iface, func.name);
 
 		auto first_param_type = *get_type(func.parameters[0]);
@@ -111,44 +103,24 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 	auto validate_signature_match
 		= [&](const ClassType& clazzz, const FunctionType& vmethod, const FunctionType& impl) {
-			  std::cerr << "Implementation name: " << impl.name.strView() << '\n';
-			  std::cerr << "Implementation res type: " << impl.result.strView() << '\n';
-			  std::cerr << "Implementation param count: " << impl.parameters.size() << '\n';
-			  std::cerr << "VMethod name: " << vmethod.name.strView() << '\n';
-			  std::cerr << "Vmethod res type: " << vmethod.result.strView() << '\n';
-			  std::cerr << "VMethod param count: " << vmethod.parameters.size() << '\n';
-
 			  if (vmethod.result != impl.result) throw MethodTypeError(clazzz, impl.name);
 			  if (vmethod.parameters.size() != impl.parameters.size())
 				  throw MethodTypeError(clazzz, impl.name);
 
-			  for (u64 i = 1; i < impl.parameters.size(); i++) {
-				  std::cerr << "Verify Parameter " << i << " : " << impl.parameters[i].strView()
-							<< ", " << vmethod.parameters[i].strView() << '\n';
+			  for (u64 i = 1; i < impl.parameters.size(); i++)
 				  if (impl.parameters[i] != vmethod.parameters[i])
 					  throw MethodTypeError(clazzz, impl.name);
-			  }
 		  };
 
 	auto validate_signature_match_iface
 		= [&](const InterfaceType& iface, const FunctionType& vmethod, const FunctionType& impl) {
-			  std::cerr << "Implementation name: " << impl.name.strView() << '\n';
-			  std::cerr << "Implementation res type: " << impl.result.strView() << '\n';
-			  std::cerr << "Implementation param count: " << impl.parameters.size() << '\n';
-			  std::cerr << "VMethod name: " << vmethod.name.strView() << '\n';
-			  std::cerr << "Vmethod res type: " << vmethod.result.strView() << '\n';
-			  std::cerr << "VMethod param count: " << vmethod.parameters.size() << '\n';
-
 			  if (vmethod.result != impl.result) throw MethodTypeError(iface, impl.name);
 			  if (vmethod.parameters.size() != impl.parameters.size())
 				  throw MethodTypeError(iface, impl.name);
 
-			  for (u64 i = 1; i < impl.parameters.size(); i++) {
-				  std::cerr << "Verify Parameter " << i << " : " << impl.parameters[i].strView()
-							<< ", " << vmethod.parameters[i].strView() << '\n';
+			  for (u64 i = 1; i < impl.parameters.size(); i++)
 				  if (impl.parameters[i] != vmethod.parameters[i])
 					  throw MethodTypeError(iface, impl.name);
-			  }
 		  };
 	// TODO: What is someone declares a field named vt.
 	auto validate_implementations = [&](const ClassType& clazz) {
@@ -175,11 +147,9 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		std::function<void(const ClassType&)> collect_virtual_methods
 			= [&](const ClassType& clazzz) {
 				  if (clazzz.extends) {
-					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
 					  const auto& super_type = *get_type(*clazzz.extends);
 					  if (std::holds_alternative<ClassType>(super_type)) {
 						  auto super_type_temp = std::get<ClassType>(super_type);
-						  std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
 						  collect_virtual_methods(std::get<ClassType>(super_type));
 					  }
 				  }
@@ -190,20 +160,12 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 					  collect_virtual_methods_iface(iface_type);
 				  }
 				  for (const auto& vmeth: clazzz.virtual_methods) {
-					  if (virtual_methods.contains(vmeth.name)) {
-						  std::cerr << "Hello from validate implementations\n";
+					  if (virtual_methods.contains(vmeth.name))
 						  throw DuplicatedVirtualMethodError(type, vmeth.name);
-					  }
 					  virtual_methods.put(vmeth.name, vmeth.type);
 				  }
 			  };
 		collect_virtual_methods(clazz);
-
-		std::cerr << "=========== VALIDATE IMPLEMENTATION for: " << clazz.name.strView()
-				  << " ==============\n";
-		std::cerr << "Collected vmethods: \n";
-		for (auto [name, sth]: virtual_methods)
-			std::cerr << "{ " << name.strView() << ", " << sth.strView() << " } | ";
 
 		base::HashMap<base::StrID, base::StrID> implementations;
 		for (const auto& impl: clazz.implementations) {
@@ -213,8 +175,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 			if (implementations.contains(impl.name))
 				throw DuplicatedVirtualMethodImplementationError(type, impl.name);
 			implementations.put(impl.name);
-
-			std::cerr << "\nVerifying method: " << impl.name.strView() << '\n';
 
 			// Check the signatures of implementations.
 			TypeOfData vmethod_type = *get_type(virtual_methods[impl.name]);
@@ -256,14 +216,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 			  };
 		collect_virtual_methods_iface(interface);
 
-		// TODO: Remove that.
-		std::cerr << "=========== VALIDATE IMPLEMENTATION for: " << interface.name.strView()
-				  << " ==============\n";
-		std::cerr << "Collected vmethods: \n";
-		for (auto [name, sth]: virtual_methods)
-			std::cerr << "{ " << name.strView() << ", " << sth.strView() << " } | ";
-
-
 		base::HashMap<base::StrID, base::StrID> implementations;
 		for (const auto& impl: interface.vmethods_implementations) {
 			// Implemented method is not declared as a virtual.
@@ -272,8 +224,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 			if (implementations.contains(impl.name))
 				throw DuplicatedVirtualMethodImplementationError(type, impl.name);
 			implementations.put(impl.name);
-
-			std::cerr << "\nVerifying method: " << impl.name.strView() << '\n';
 
 			// Check the signatures of implementations.
 			TypeOfData vmethod_type = *get_type(virtual_methods[impl.name]);
@@ -316,11 +266,9 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		std::function<void(const ClassType&)> collect_virtual_methods
 			= [&](const ClassType& clazzz) {
 				  if (clazzz.extends) {
-					  std::cerr << "Clazzz extends: " << clazzz.extends->strView();
 					  const auto& super_type = *get_type(*clazzz.extends);
 					  if (std::holds_alternative<ClassType>(super_type)) {
 						  auto super_type_temp = std::get<ClassType>(super_type);
-						  std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
 						  collect_virtual_methods(std::get<ClassType>(super_type));
 					  }
 				  }
@@ -338,17 +286,9 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 			  };
 		collect_virtual_methods(clazz);
 
-		// TODO: Remove that.
-		std::cerr << "All methods to be implemented:\n";
-		for (auto [name, _]: virtual_methods) std::cerr << "{ " << name.strView() << "} | ";
-		std::cerr << '\n';
-
 		std::function<void(const ClassType&)> verify_implemented = [&](const ClassType& clazzz) {
 			// Remove those implemented by this class.
-			for (const auto& impl: clazzz.implementations) {
-				std::cerr << "Implemented: " << impl.name.strView() << '\n';
-				virtual_methods.erase(impl.name);
-			}
+			for (const auto& impl: clazzz.implementations) virtual_methods.erase(impl.name);
 
 			// Remove those implemented by interfaces.
 			for (const auto& iface: clazzz.implements) {
@@ -357,27 +297,19 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 				const auto& iface_type = std::get<InterfaceType>(*get_type(iface));
 				for (const auto& impl: iface_type.vmethods_implementations) {
 					// TODO: Make this invoke a template verify implemented.
-					std::cerr << "Implemented: " << impl.name.strView() << '\n';
 					virtual_methods.erase(impl.name);
 				}
 			}
 
 			if (clazzz.extends) {
-				std::cerr << "Clazzz extends: " << clazzz.extends->strView();
 				const auto& super_type = *get_type(*clazzz.extends);
 				if (std::holds_alternative<ClassType>(super_type)) {
 					auto super_type_temp = std::get<ClassType>(super_type);
-					std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
 					verify_implemented(std::get<ClassType>(super_type));
 				}
 			}
 		};
 		verify_implemented(clazz);
-
-		// TODO: Remove that.
-		std::cerr << "Methods left unimplemented implemented:\n";
-		for (auto [name, _]: virtual_methods) std::cerr << "{ " << name.strView() << "} | ";
-		std::cerr << '\n';
 
 		if (!virtual_methods.empty())
 			throw UnimplementedVirtualMethodError(type, virtual_methods.begin()->first);
@@ -385,15 +317,12 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 
 	auto validate_field_duplicates = [&](const ClassType& clazz) {
 		// Validates field duplicates on the whole inheritance path.
-		// TODO: Add a test for that.
 		base::HashMap<base::StrID, base::StrID> field_definitions;
 		std::function<void(const ClassType&)>   collect_fields = [&](const ClassType& clazzz) {
             if (clazzz.extends) {
-                std::cerr << "Clazzz extends: " << clazzz.extends->strView();
                 const auto& super_type = *get_type(*clazzz.extends);
                 if (std::holds_alternative<ClassType>(super_type)) {
                     auto super_type_temp = std::get<ClassType>(super_type);
-                    std::cerr << "Supertype name: " << super_type_temp.name.strView() << '\n';
                     collect_fields(std::get<ClassType>(super_type));
                 }
             }
@@ -408,7 +337,6 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	};
 
 	auto validate_field_duplicates_data = [&](const DataType& data) {
-		// TODO: Add a test for that.
 		base::HashMap<base::StrID, base::StrID> field_definitions;
 		for (const auto& field: data.fields) {
 			if (field_definitions.contains(field.name))
@@ -453,33 +381,19 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 		variant_case(VariantType, variant) {
 			// @todo: Verify empty variants.
 		}
-		variant_case(DataType, data) {
-			// TODO: Add a check for that as well.
-			validate_field_duplicates_data(data);
-		}
+		variant_case(DataType, data) { validate_field_duplicates_data(data); }
 		variant_case(InterfaceType, interface) {
-			std::cerr << "Verifying implements:\n";
 			validate_implements(interface.implements);
-			std::cerr << "Verifying vmethod signatures:\n";
 			validate_vmethod_signatures_interface(interface);
-			std::cerr << "Verifying implementations :\n";
 			validate_implementations_iface(interface);
 		}
 		variant_case(ClassType, clazz) {
-			std::cerr << "Verifying Extends:\n";
 			validate_extends(clazz);
-			std::cerr << "Verifying Field Duplicates:\n";
 			validate_field_duplicates(clazz);
-			std::cerr << "Verifying implements:\n";
 			validate_implements(clazz.implements);
-			std::cerr << "Verifying vmethod signatures:\n";
 			validate_vmethod_signatures(clazz);
-			std::cerr << "Verifying implementations :\n";
 			validate_implementations(clazz);
-			if (!clazz.is_abstract) {
-				std::cerr << "Verifying All methods implemented:\n";
-				validate_all_methods_implemented(clazz);
-			}
+			if (!clazz.is_abstract) validate_all_methods_implemented(clazz);
 		}
 	}
 }
@@ -582,14 +496,9 @@ TypeContext TypeContextBuilder::build() const {
 				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
 			}
 			variant_case(vm::code::ClassType, data) {
-				// TODO: Verify that all virtuals are implemented and only them.
-				// TODO: Verify that vmethods types are the same as implementations. Add
-				// some tests.
-
 				auto get_type = [&](base::StrID name) {
 					return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
 				};
-
 
 				// @note: First field in the data types is always a vt.
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
@@ -599,12 +508,9 @@ TypeContext TypeContextBuilder::build() const {
 				// Collects all fields from superclasses and insert them into the vector.
 				std::function<void(const ClassType&)> collect_fields = [&](const ClassType& clazz) {
 					if (clazz.extends) {
-						std::cerr << "Clazzz extends: " << clazz.extends->strView();
 						const auto& super_type = *get_type(*clazz.extends);
 						if (std::holds_alternative<ClassType>(super_type)) {
 							auto super_type_temp = std::get<ClassType>(super_type);
-							std::cerr << "Supertype name: " << super_type_temp.name.strView()
-									  << '\n';
 							collect_fields(std::get<ClassType>(super_type));
 						}
 					}
@@ -659,12 +565,9 @@ TypeContext TypeContextBuilder::build() const {
 					}
 
 					if (clazz.extends) {
-						std::cerr << "Clazzz extends: " << clazz.extends->strView();
 						const auto& super_type = *get_type(*clazz.extends);
 						if (std::holds_alternative<ClassType>(super_type)) {
 							auto super_type_temp = std::get<ClassType>(super_type);
-							std::cerr << "Supertype name: " << super_type_temp.name.strView()
-									  << '\n';
 							create_vtable(std::get<ClassType>(super_type));
 						}
 					}
@@ -693,7 +596,6 @@ TypeContext TypeContextBuilder::build() const {
 				tp->defineData(fields, std::move(inheritance_metadata));
 			}
 			variant_case(vm::code::InterfaceType, data) {
-				// TODO: Verify that all virtuals are implemented and only them.
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
 					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
@@ -704,12 +606,10 @@ TypeContext TypeContextBuilder::build() const {
 				auto implements = data.implements | std::views::transform(get_type)
 				                | std::ranges::to<std::vector>();
 
-				// TODO: Validate duplicate virtuals.
 				base::HashMap<base::StrID, TypeCRef> virtual_methods;
 				for (auto& method: data.virtual_methods)
 					virtual_methods.put(method.name, get_type(method.type));
 
-				// TODO: Validate duplicate implementations.
 				base::HashMap<base::StrID, TypeCRef> implementations;
 				for (auto& method: data.vmethods_implementations)
 					implementations.put(method.name, get_type(method.type));
