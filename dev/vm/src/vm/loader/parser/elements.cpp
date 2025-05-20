@@ -55,8 +55,8 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
-            tpc::Identifier type_name, field_name;
-            state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			tpc::Identifier type_name, field_name;
+			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
 			return { type_name, field_name };
 		}
 
@@ -67,7 +67,13 @@ namespace vm::loader::parser {
 	}
 
 		FOR_EACH(
-			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES, VM_OPARG_LOCAL_TYPES
+			HANDLE_STR_ARG,
+			Type,
+			FunctionName,
+			BuiltinFunctionName,
+			Label,
+			VM_OPARG_GLOBAL_TYPES,
+			VM_OPARG_LOCAL_TYPES
 		)
 
 #undef HANDLE_STR_ARG

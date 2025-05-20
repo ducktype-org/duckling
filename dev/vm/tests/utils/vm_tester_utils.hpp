@@ -2,9 +2,9 @@
 
 #include <tester/tester.hpp>
 
+#include <vm/api/api.hpp>
 #include <vm/api/data/api_error.hpp>
 #include <vm/api/data/status.hpp>
-#include <vm/api/api.hpp>
 #include <vm/bytecode/bytecode.hpp>
 
 #include <expected>

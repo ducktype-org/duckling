@@ -60,8 +60,9 @@ namespace vm::opargs {
 	 */
 	DEFINE_STACK_LOCAL(Vnt, "lvnt");
 
-#define VM_OPARG_LOCAL_TYPES \
-	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, StackLocalVnt
+#define VM_OPARG_LOCAL_TYPES                                                                 \
+	StackLocalI8, StackLocalI16, StackLocalI32, StackLocalI64, StackLocalAny, StackLocalPtr, \
+		StackLocalVnt
 
 	DEFINE_GLOBAL(I8, "g8");
 	DEFINE_GLOBAL(I16, "g16");

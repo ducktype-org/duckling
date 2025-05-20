@@ -148,7 +148,7 @@ namespace vm {
 		}
 
 		auto copyPointerData(Pointer dst, Pointer src, TypeCRef type) -> void {
-            CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
+			CORE_ASSERT(!dst.isNull() && !src.isNull(), "Copying to/from null pointer");
 
 			// Free child blocks.
 			auto& dst_child_blocks = dst.getBlock()->children_blocks;
@@ -162,9 +162,9 @@ namespace vm {
 			for (auto iter = src_child_blocks.lower_bound(src.offset);
 			     iter != src_child_blocks.end() && iter->first < src.offset + type->getSize();
 			     ++iter) {
-                auto offset = dst.offset + iter->first - src.offset;
-                setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
-            }
+				auto offset = dst.offset + iter->first - src.offset;
+				setNestedViewBlock(dst.getBlock(), offset, iter->second->data.element_type);
+			}
 
 			// Copy the data itself
 			auto dst_view = getPointerData(dst, type->getSize());

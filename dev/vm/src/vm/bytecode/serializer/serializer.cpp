@@ -26,7 +26,9 @@ namespace vm::code {
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
-	std::string toString(opargs::Field arg) { return base::strConcat(arg.type_name, ".", arg.field_name); }
+	std::string toString(opargs::Field arg) {
+		return base::strConcat(arg.type_name, ".", arg.field_name);
+	}
 
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 

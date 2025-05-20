@@ -36,8 +36,8 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
@@ -321,7 +321,7 @@ namespace vm {
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_type->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
-				auto block = frame->block_stack[first_arg_idx + i];
+				auto              block     = frame->block_stack[first_arg_idx + i];
 				args.emplace_back(real_type, thread.process_memory, Memory::getPointer(block));
 			}
 
@@ -329,12 +329,16 @@ namespace vm {
 				builtin_id, real_function_type, thread, thread.process_memory, args
 			);
 
+
 			match_optional(return_value) {
 				opt_none {}
 				opt_some(value) {
 					value.exportData(Memory::getPointer(frame->block_stack[first_arg_idx - 1]));
+					value.freeData();
 				}
 			}
+
+			for (auto& vm_value: args) vm_value.freeData();
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.

@@ -1,7 +1,7 @@
 #pragma once
 
-#include <base/maps.hpp>
 #include <base/ints.hpp>
+#include <base/maps.hpp>
 #include <base/raw_view.hpp>
 #include <base/strongly_typed_int.hpp>
 
@@ -64,8 +64,8 @@ namespace vm {
 		friend class Memory;
 
 		// Think of it as a view on parent's bytes that has it's own type and lifetime.
-        base::Map<usize, Ref<Block>> children_blocks{};  // offset to block
-		MRef<Block>                 parent = nullptr;
+		base::Map<usize, Ref<Block>> children_blocks{};  // offset to block
+		MRef<Block>                  parent = nullptr;
 
 	public:
 		Block(BlockID id, BlockData data, Ref<std::shared_mutex> mutex):

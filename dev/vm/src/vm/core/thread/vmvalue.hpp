@@ -11,6 +11,7 @@ namespace vm {
 	 * @brief Storage for a value. It is meant to import value into/export value out of VM.
 	 * It is NOT meant to be used by the internal memory module.
 	 * @note Passed data is copied.
+	 * @note User of VmValue is responsible for cleaning it up.
 	 */
 	struct VmValue {
 	private:
@@ -36,6 +37,11 @@ namespace vm {
 		void exportData(Pointer dst) { memory->copyPointerData(dst, pointer, type); }
 
 		void importData(Pointer src) { memory->copyPointerData(pointer, src, type); }
+
+		void freeData() {
+			memory->freeBlock(pointer.getBlock());
+			pointer = Pointer::null();
+		}
 
 		TypeCRef type;
 		Pointer  pointer;

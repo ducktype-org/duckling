@@ -12,7 +12,7 @@
 namespace vm {
 
 	Ref<Block> Memory::createBlock(BlockData data) {
-        std::memset(data.view.getBegin(), 0, data.view.size());
+		std::memset(data.view.getBegin(), 0, data.view.size());
 
 		if (free_ids.empty()) {
 			auto id = BlockID(blocks.size());

@@ -68,9 +68,7 @@ private:
 		);
 	}
 
-	void variantInsideStruct() {
-		runTestOnVm("inside_struct.dbc");
-	}
+	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
 };
 
 TESTER_COMMON_MAIN("/vm/tests/variant/");
