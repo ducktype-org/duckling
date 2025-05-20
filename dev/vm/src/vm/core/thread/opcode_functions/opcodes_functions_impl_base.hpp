@@ -3,8 +3,8 @@
  * @file opcodes_functions_impl_base.hpp
  * @brief The opcodes functions implementations.
  *
- * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.hpp` or
- * `opcodes_functions_impl_debug.hpp` instead.
+ * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or
+ * `opcodes_functions_impl_debug.cpp` instead.
  *
  * Motivation: each opcode that thread executes has its own function that is called to
  * perform the opcode operation. They are called "OpFuns". At the end of each
@@ -502,12 +502,12 @@ namespace vm {
 			auto view    = Memory::getPointerData(pointer, view_size);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
+			if (instr[1].tc_opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+			if (static_cast<low::OpcodeFix8>(instr[1].nontc_opcode) == low::OpcodeFix8::ext_l64)
 				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
@@ -530,12 +530,12 @@ namespace vm {
 			auto view    = Memory::getPointerData(pointer, view_size);
 			u64  idx     = 0;
 #ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
+			if (instr[1].tc_opfun == OpFuns::op_ext_l64) [[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;
 			}
 #else
-			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
+			if (static_cast<low::OpcodeFix8>(instr[1].nontc_opcode) == low::OpcodeFix8::ext_l64)
 				[[likely]] {
 				idx = derefStack<u64>(local_stack, instr[1].arg0);
 				next++;

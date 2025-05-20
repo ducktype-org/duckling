@@ -20,13 +20,16 @@ set(exec_sources
     src/vm/vm_repl.cpp
 )
 
-# There are two "libraries" and one executable that should always be linked toghethers.
+# There are three "libraries":.
 # - LibCommonVM from ${vm_common_sources}
 #    - this is created from the source files that do not require CONFIG compile definitions.
 # - LibThreadVM_{sc/cg/tc} from ${vm_config_dependent_sources}
 #    - this is created from the source files that require CONFIG compile definitions.
 # - MainVM from ${exec_sources}
-#    - this is the main executable that uses LibCommonVM and LibThreadVM_{sc/cg/tc}.
+#    - this are the main files that are not dependent on CONFIG compile definitions.
+#
+# The LibCommonVM and LibThreadVM_{sc/cg/tc} should always be linked together
+# as they depend on each other.
 
 set(vm_dependencies
   Base Listener Clap Crow::Crow Filesystem TPC JSON Init
@@ -36,8 +39,11 @@ add_library(LibCommonVM OBJECT ${vm_common_sources})
 make_module(LibCommonVM USES ${vm_dependencies})
 
 add_library(MainVM OBJECT ${exec_sources})
-make_module(MainVM USES Base Listener Clap Crow::Crow Filesystem TPC JSON Init)
+make_module(MainVM USES ${vm_dependencies})
 
+# Create the LibVM_{sc/cg/tc} static libraries and the VM_{sc/cg/tc} executables.
+# In the middle it creates the LibThreadVM_{sc/cg/tc} object libraries.
+# The configuration depends on the suffix and the compile_def.
 function(add_vm_variant suffix compile_def)
     set(lib_thread_vm_name "LibThreadVM_${suffix}")
     add_library(${lib_thread_vm_name} OBJECT ${vm_config_dependent_sources})

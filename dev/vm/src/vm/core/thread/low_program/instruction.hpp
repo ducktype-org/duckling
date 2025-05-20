@@ -9,6 +9,15 @@
 
 #include <vm/core/process/memory/frame.hpp>
 
+/**
+ * OPFUN_TC_ARGS are OpFun arguments for the Tail Call version.
+ * OPFUN_REF_ARGS are OpFun arguments for the non tail call version.
+ * The difference is that the OPFUN_REF_ARGS are pointers passed by reference.
+ * It is because the OpFun's can change the underelying pointers to point to something else,
+ * like the next instruction or the new frame.
+ * In switch case we call the OpFuns directly from the cases, so to see the changes in pointers
+ * in the main switch function we need to pass the pointers by reference.
+ */
 #define OPFUN_TC_ARGS                                                                       \
 	const Fix8Instruction *instr [[maybe_unused]], std::byte *local_stack [[maybe_unused]], \
 		Frame *frame [[maybe_unused]], VMThread &thread [[maybe_unused]]
@@ -60,13 +69,23 @@ namespace vm {
 
 	struct Fix8Instruction {
 		union {
-			u64      opcode;
-			OpFunTC* opfun;
+			/**
+			 * @brief Index indicating which opcode it is.
+			 * @details This is used when the `USE_TAIL_CALLS` option is disabled.
+			 */
+			u64 nontc_opcode;
+
+			/**
+			 * @brief Pointer to the opcode functions
+			 * @details This is used when the `USE_TAIL_CALLS` option is enabled.
+			 */
+			OpFunTC* tc_opfun;
 		};
 
 		i32 arg0;
 		i32 arg1;
 	};
+
 	static_assert(sizeof(Fix8Instruction) == 16, "Fix8Instruction size is not 16 bytes");
 
 	/**
@@ -76,7 +95,8 @@ namespace vm {
 	Fix8Instruction makeLowInstruction(u64 opcode, i32 arg0 = 0, i32 arg1 = 0);
 
 	/**
-	 * @brief For debug purposes only.
+	 * @brief For main purposes only.
+	 * Returns human-readable instruction config.
 	 */
 	std::string getInstructionConfig();
 }

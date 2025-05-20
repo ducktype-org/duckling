@@ -34,8 +34,8 @@ inline static T& derefView(base::ModRawView view) {
  * with `0` being the current instruction.
  */
 // NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-#define OPFUN_CONT(i)                                                                        \
-	IF_TC({ CLANG_MUST_TAIL return instr[i].opfun(&instr[i], local_stack, frame, thread); }) \
+#define OPFUN_CONT(i)                                                                           \
+	IF_TC({ CLANG_MUST_TAIL return instr[i].tc_opfun(&instr[i], local_stack, frame, thread); }) \
 	IF_NOT_TC({ instr += i; })
 // NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
@@ -49,7 +49,7 @@ inline static T& derefView(base::ModRawView view) {
 			if (thread.execution_request_break)                                       \
 				return handle_execution_break(&instr[i], local_stack, frame, thread); \
 		}                                                                             \
-		return instr[i].opfun(&instr[i], local_stack, frame, thread);                 \
+		return instr[i].tc_opfun(&instr[i], local_stack, frame, thread);              \
 	})                                                                                \
 	IF_NOT_TC({                                                                       \
 		instr += i;                                                                   \

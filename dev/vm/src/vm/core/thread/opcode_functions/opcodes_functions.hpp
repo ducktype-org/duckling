@@ -21,9 +21,9 @@ namespace vm {
 	using OpFun      = void(OPFUN_ARGS);
 
 	/**
-	 * @brief A class that contains all opcode functions implementations
-	 * Executor service calls these functions to execute the instructions.
-	 * For convenience they are implemented in the `executor.cpp` file.
+	 * @brief A class that contains all opcode functions implementations.
+	 * It is created to be a friend of the Thread and Process classes,
+	 * so the instructions have access to the private members of these classes.
 	 */
 	class OpFuns final {
 	public:
@@ -71,7 +71,7 @@ namespace vm {
 		static u16 getOpcodeFromOpFun(OpFun* fun) {
 			for (u16 i = 0; i < OP_CASES_COUNT; i++)
 				if (OPFUNS.at(i) == fun) return i;
-			return 0;
+			CORE_UNREACHABLE();
 		}
 	};
 }  // namespace vm
