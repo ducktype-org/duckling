@@ -13,6 +13,7 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
+#include <llvm/Support/ManagedStatic.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 LLVM_INCLUDE_END()

@@ -165,13 +165,14 @@ def get_llvm_strings(version, os, arch) -> tuple[str, str, str, str]:
 
 def get_llvm_source_strings(version) -> tuple[str, str, str, str]:
     """
-    Takes `version` param and returns a tuple[link_to_download, downloaded_file, extracted_file]
+    Takes `version` param and returns a tuple[link_to_download, downloaded_file, extracted_file, friendly_name]
     for LLVM source code.
     """
     return (
         f"https://github.com/llvm/llvm-project/releases/download/llvmorg-{version}/llvm-project-{version}.src.tar.xz",
         f"llvm-project-{version}.src.tar.xz",
         f"llvm-project-{version}.src"
+        f"llvm_lib_{version}_native",
     )
 
 

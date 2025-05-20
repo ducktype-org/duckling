@@ -380,7 +380,7 @@ def test(*args, **kwargs):
 
 def download_llvm_impl(version, os, arch):
     log_info("==========================")
-    log_info(
+    log_warning(
         "Downloading LLVM may or may not work, depending on a presence of compiled binaries listed here: https://github.com/llvm/llvm-project/releases/"
     )
     log_new_line()
@@ -407,11 +407,24 @@ def download_llvm_impl(version, os, arch):
 
 @cli.command()
 @click.option(
+    "-c",
+    "--confirm",
+    prompt=(
+        "From LLVM 19 onwards, the releases are compiled with unfavourable compile options, so it is recommended to either:\n"
+        " - use the LLVM from your distribution (e.g. apt install llvm-19)\n"
+        " - build LLVM from source (see `install-llvm` command)\n"
+        "Do you want to continue with the download?"
+    ),
+    type=bool,
+    default=True,
+    is_flag=True,
+)
+@click.option(
     "-v",
     "--version",
     prompt="LLVM Version",
     help="Version of LLVM release, ex. 19.1.4",
-    default="18.1.8",
+    default="19.1.7",
 )
 @click.option(
     "-o",
@@ -437,53 +450,61 @@ def download_llvm(*args, **kwargs):
 def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_path):
     log_info("==========================")
     log_info("Building LLVM from source. This will take significant time!")
-    log_info("A single target build with lld and Ninja takes about 8 minutes on a 10-thread machine")
+    log_info(
+        "A single target build with lld and Ninja takes about 8 minutes on a 10-thread machine"
+    )
+    log_info(
+        "You can also use LLVM from your distribution (e.g. apt install llvm-19) instead."
+    )
     log_info("==========================")
     log_new_line()
-    
+
     source_dir_path = pathlib.Path(os.path.expanduser(source_dir_path))
 
     if not source_dir_path.exists():
         log_info(f"Creating LLVM source directory at {source_dir_path}")
         source_dir_path.mkdir(parents=True, exist_ok=True)
-        
-    link, downloaded_name, extracted_name = get_llvm_source_strings(version)
+
+    link, downloaded_name, extracted_name, friendly_name = get_llvm_source_strings(
+        version
+    )
     extracted_name = pathlib.Path(extracted_name)
     if not (source_dir_path / extracted_name).exists():
         # 1. Download to downloads directory
         download_dir = pathlib.Path("scripts/downloads")
         downloaded_path = download_dir / pathlib.Path(downloaded_name)
-        
+
         llvm_file = InternetFile(
             str(downloaded_path),
             link,
             after_download=[
                 (callback_unTAR,),
-
             ],
         )
         llvm_file.download()
-        
+
         extracted_dir = download_dir / extracted_name
         bash_command(f"mv {extracted_dir} {source_dir_path}")
-    
+    else:
+        log_info(
+            f"LLVM source directory already exists at {source_dir_path / extracted_name}"
+        )
 
     sources_path = source_dir_path / extracted_name
-    # 4. Compile there with install directory in the GitHub project
-    install_dir = (pathlib.Path("scripts/Downloads") / version).absolute()
-    
+    install_dir = (pathlib.Path("scripts/downloads") / friendly_name).absolute()
+
     # Calculate parallel link jobs based on RAM
     link_jobs = max(1, int(ram_gb) // 16)
     log_info(f"Using {link_jobs} parallel link jobs based on {ram_gb}GB RAM")
-    
+
     # Create build directory
     build_dir = sources_path / "build"
     if not build_dir.exists():
         build_dir.mkdir()
-    
+
     # Configure LLVM build
     log_info("Configuring LLVM build...")
-    
+
     # Build the cmake command
     cmake_cmd_parts = [
         f"cmake -S {sources_path}/llvm -B {build_dir}",
@@ -491,25 +512,25 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
         f"-DCMAKE_BUILD_TYPE=Release",
         f"-DCMAKE_INSTALL_PREFIX={install_dir}",
         f"-DLLVM_TARGETS_TO_BUILD={targets}",
-        f"-DLLVM_PARALLEL_LINK_JOBS={link_jobs}"
+        f"-DLLVM_PARALLEL_LINK_JOBS={link_jobs}",
     ]
-    
+
     # Add linker option only if a specific linker is selected
     if linker != "default":
         cmake_cmd_parts.append(f"-DLLVM_USE_LINKER={linker}")
-    
+
     cmake_command = " \\\n  ".join(cmake_cmd_parts)
     log_info(f"Running cmake command:\n{cmake_command}")
     bash_command(cmake_command)
-    
+
     # Build LLVM
     log_info("Building LLVM (this may take a while)...")
     bash_command(f"cmake --build {build_dir} -- -j{os.cpu_count() - 1}")
-    
+
     # Install LLVM
     log_info("Installing LLVM...")
     bash_command(f"cmake --build {build_dir} --target install")
-    
+
     log_info(f"LLVM {version} has been built and installed to {install_dir}")
     log_new_line()
 
@@ -534,10 +555,10 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
 @click.option(
     "-l",
     "--linker",
-    prompt="Linker to use",
-    help="Linker to use for building LLVM",
+    prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
+    help="Linker to use for building LLVM.",
     default="lld",
-    type=click.Choice(["default", "lld", "gold", "bfd"], case_sensitive=False),
+    type=click.Choice(["default", "lld", "mold"], case_sensitive=False),
 )
 @click.option(
     "-b",
@@ -551,10 +572,10 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
 @click.option(
     "-t",
     "--targets",
-    prompt="LLVM targets to build",
-    help="LLVM architecture targets to build",
+    prompt="LLVM targets to build (using 'All' will increase the build time significantly).",
+    help="LLVM architecture targets to build.",
     default="Native",
-    type=click.Choice(["Native", "X86", "ARM", "AArch64", "WebAssembly", "All"], case_sensitive=False),
+    type=click.Choice(["Native", "X86", "All"], case_sensitive=False),
 )
 @click.option(
     "-s",
@@ -567,9 +588,11 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
 )
 def install_llvm(*args, **kwargs):
     """Compiles LLVM from source with specified options.
-    
+
     This command will download LLVM source code, build it with the specified options,
     and install it to the 'scripts/downloads/installed' directory.
+    Important! Is is advised to try to use the LLVM from your
+    distribution (e.g. apt install llvm-19) first.
     """
     install_llvm_impl(*args, **kwargs)
 
