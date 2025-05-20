@@ -5,6 +5,7 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
+#include "vm/bytecode/instructions.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
@@ -280,5 +281,11 @@ namespace vm::code {
 
 	std::string argumentToString(const opargs::OpCodeArg& arg) {
 		return VISIT(arg, a, return toString(a));
+	}
+
+	std::string instructionToString(const Instruction& instruction) {
+		std::stringstream ss;
+		writeInstruction(instruction, ss);
+		return ss.str();
 	}
 }
