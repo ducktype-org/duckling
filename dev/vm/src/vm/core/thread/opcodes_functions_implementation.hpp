@@ -32,8 +32,8 @@
 #include "opcodes_functions_utils.hpp"
 #include "vmthread.hpp"
 
-#include "base/int_conv.hpp"
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
@@ -643,7 +643,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
-			auto dst_pointer   = derefStack<Pointer>(local_stack, instr->arg0);
+			auto dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
 
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
@@ -692,7 +692,7 @@ namespace vm {
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Pointer(src_block, 0);
 
-			auto type         = Memory::getBlockType(src_block);
+			auto type = Memory::getBlockType(src_block);
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}
@@ -709,7 +709,7 @@ namespace vm {
 			auto field_offset = instr[1].arg0;
 			src_pointer.movePointer(field_offset);
 
-			auto type    = Memory::getBlockType(dst_block);
+			auto type = Memory::getBlockType(dst_block);
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}

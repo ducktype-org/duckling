@@ -72,16 +72,16 @@ namespace vm::loader::parser {
 			return field;
 		}
 
-#define HANDLE_STR_ARG(TYPE)                                                      \
-	template<>                                                                    \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                     \
-		auto pos         = state.getPosition();                                   \
-		auto value       = parseStr(state);                                       \
-		auto arg         = vm::opargs::TYPE{ value };                             \
-		arg.bytecode_pos = dia::SourcePosition(                                   \
+#define HANDLE_STR_ARG(TYPE)                                                        \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto pos         = state.getPosition();                                     \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
 			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
-		);                                                                        \
-		return { arg };                                                           \
+		);                                                                          \
+		return { arg };                                                             \
 	}
 
 		FOR_EACH(

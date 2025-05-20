@@ -4,11 +4,11 @@
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <variant>
@@ -47,8 +47,7 @@ namespace {
 	}
 
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
-	using ExtensionTypes
-		= std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
+	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
 
@@ -57,7 +56,8 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_l64> {
-		using RequiredAfter = std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
+		using RequiredAfter
+			= std::tuple<Op_staticTableLoad_lany_lptr, Op_staticTableStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 
@@ -72,7 +72,8 @@ namespace {
 
 	template<>
 	struct ExtensionMetadata<Op_ext_field> {
-		using RequiredAfter = std::tuple<Op_structLea_lptr_lptr, Op_structLoad_lany_lptr, Op_structStore_lptr_lany>;
+		using RequiredAfter
+			= std::tuple<Op_structLea_lptr_lptr, Op_structLoad_lany_lptr, Op_structStore_lptr_lany>;
 		using OptionalAfter = std::tuple<>;
 	};
 

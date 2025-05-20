@@ -265,7 +265,8 @@ DEF_OPCODE(free_lptr, vm::opargs::StackLocalPtr)
 // )
 
 // /**
-//  * @brief Re-allocates dynamic table from under `source` by changing its element count to `element_count`.
+//  * @brief Re-allocates dynamic table from under `source` by changing its element count to
+//  `element_count`.
 //  * `element_type` is type of each element in the array, not the dynamic table itself.
 //  * @note It's counter-intuitive, but this instruction does not modify pointer data. (unline in C)
 //  * @note `ext_l64` is required to tell the count of elements
@@ -290,20 +291,51 @@ DEF_OPCODE(ref_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
 // ========= STRUCTURE OPERATIONS ========
 
 // expects `ext_field` to be the next instruction
-DEF_OPCODE(structLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(
+	structLea_lptr_lptr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalPtr /* source,
+    vm::opargs::Field 			 field */
+)
 // expects `ext_field` to be the next instruction
-DEF_OPCODE(structLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+DEF_OPCODE(
+	structLoad_lany_lptr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalPtr /* data_ptr,
+    vm::opargs::Field 			 field */
+)
 // expects `ext_field` to be the next instruction
-DEF_OPCODE(structStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_OPCODE(
+	structStore_lptr_lany,
+	vm::opargs::StackLocalPtr /* data_ptr */,
+	vm::opargs::StackLocalAny /* source ,
+    vm::opargs::Field 			 field */
+)
 
 // ========= TABLE OPERATIONS ========
 
 // expects `ext_l64` to be the next instruction
-DEF_OPCODE(staticTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+DEF_OPCODE(
+	staticTableLea_lptr_lptr,
+	vm::opargs::StackLocalPtr /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocalI64 	 index */
+)
 // expects `ext_l64` to be the next instruction
-DEF_OPCODE(staticTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
+DEF_OPCODE(
+	staticTableLoad_lany_lptr,
+	vm::opargs::StackLocalAny /* destination */,
+	vm::opargs::StackLocalPtr /* table_ptr,
+    vm::opargs::StackLocalI64 	 index */
+)
+
 // expects `ext_l64` to be the next instruction
-DEF_OPCODE(staticTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+DEF_OPCODE(
+	staticTableStore_lptr_lany,
+	vm::opargs::StackLocalPtr /* table_ptr */,
+	vm::opargs::StackLocalAny /* source,
+    vm::opargs::StackLocalI64 	 index */
+)
 
 // expects `ext_l64` to be the next instruction
 // DEF_OPCODE(pointerTableLea_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
