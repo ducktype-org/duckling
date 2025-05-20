@@ -277,10 +277,13 @@ void FunctionValidator::validateArgTypes(
 	}
 }
 
-void FunctionValidator::validateSpecificInstruction(const Instruction& instruction) const {
+void FunctionValidator::validateSpecificInstruction(
+	const Instruction& instruction, const LocalStack& current_stack
+) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 
 		variant_case_novalue(Op_mov_l8_imm) {}
 		variant_case_novalue(Op_mov_l8_l8) {}
@@ -368,7 +371,6 @@ void FunctionValidator::validateSpecificInstruction(const Instruction& instructi
 		variant_case_novalue(Op_input_l32) {}
 		variant_case_novalue(Op_output_l32) {}
 		variant_case_novalue(Op_setVTable_lptr_type) {}
-		variant_case_novalue(Op_upcast_lptr_lptr) {}
 		variant_case_novalue(Op_downcast_lptr_lptr) {}
 		variant_case_novalue(Op_free_lptr) {}
 		variant_case_novalue(Op_store_lptr_lany) {}
@@ -402,12 +404,24 @@ void FunctionValidator::validateInstruction(
 	const Instruction& instruction, const LocalStack& current_stack
 ) const {
 	validateArgTypes(instruction, current_stack);
-	validateSpecificInstruction(instruction);
+	validateSpecificInstruction(instruction, current_stack);
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
+}
+
+void FunctionValidator::validateUpcast(
+	const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+) const {
+	auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
+	auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
+
+	auto dst_type = type_context.getMetadata().at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
+	auto src_type = type_context.getMetadata().at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
+
+	if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 }
 
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
