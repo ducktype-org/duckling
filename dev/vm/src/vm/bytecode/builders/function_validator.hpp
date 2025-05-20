@@ -65,11 +65,16 @@ namespace vm::code::builders {
 		bool                                                     validated = false;
 
 		void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const;
-		void validateSpecificInstruction(const Instruction& instruction) const;
+		void validateSpecificInstruction(
+			const Instruction& instruction, const LocalStack& current_stack
+		) const;
 		void validateExtension(usize instruction_index) const;
 		void validateInstruction(const Instruction& instruction, const LocalStack& current_stack)
 			const;
 		void validateArgInstantiable(const opargs::Type& arg) const;
+		void validateUpcast(
+			const instructions::Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+		) const;
 		void validateFunctionEnd() const;
 
 		usize getLabelTarget(const opargs::Label& label) const;
