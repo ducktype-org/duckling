@@ -1,1 +1,1 @@
-set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
