@@ -29,11 +29,9 @@ function main {
     label not_scenario_2;
 
     store_lptr_lany ptr, int;        # *ptr = int;  -- this causes panic in scenario 2
-    ext_type i64;
 
     init_lany_type read_ptr, i64;       # var read_ptr: i64;
     load_lany_lptr read_ptr, ptr;    # read_ptr = *ptr;
-    ext_type i64;
 
     output_l64 read_ptr;                # print(read_ptr);
 

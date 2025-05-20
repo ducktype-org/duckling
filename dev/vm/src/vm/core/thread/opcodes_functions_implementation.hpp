@@ -638,12 +638,13 @@ namespace vm {
 
 			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}
-		FUNCTION_CONT(2);  // skip ext_type
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto dst_pointer   = derefStack<Pointer>(local_stack, instr->arg0);
+
 			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto src_block     = frame->block_stack[src_block_idx];
 			auto src_pointer   = Pointer(src_block, 0);
@@ -652,7 +653,7 @@ namespace vm {
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}
-		FUNCTION_CONT(2);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
@@ -667,7 +668,7 @@ namespace vm {
 
 			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
 		}
-		FUNCTION_CONT(2);
+		FUNCTION_CONT(1);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {

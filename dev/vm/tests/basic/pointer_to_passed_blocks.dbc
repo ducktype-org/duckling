@@ -15,13 +15,11 @@ function check {
 
 	init_lany_type      x, i64;
 	mov_l64_imm         x, 42;
-	store_lptr_lany p, x;
-	ext_type i64;
+	store_lptr_lany 	p, x;
 	deinit; # x
 
 	init_lany_type      x, i64;
-	load_lany_lptr   x, p;
-	ext_type i64;
+	load_lany_lptr   	x, p;
 	mov_l64_l64         ret_val, x;
 
 	deinit; # arg0

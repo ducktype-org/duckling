@@ -10,8 +10,7 @@ function main {
 	# First let's check if it works for ints.
 	ref_lptr_lany p, x;         # p := &x
 	mov_l64_imm y, 42;          # y := 42
-	store_lptr_lany p, y;   # *p := y
-	ext_type i64;
+	store_lptr_lany p, y;   	# *p := y
 	output_l64 x;               # print(x)
 
 	init_lany_type q, ptr_i64;

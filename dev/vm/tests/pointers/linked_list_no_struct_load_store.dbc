@@ -25,7 +25,6 @@ function cons {
 
     # *head_ptr = head
     store_lptr_lany head_ptr, arg0;
-    ext_type i64;
     deinit;  # head_ptr
 
     # ret_val->tail = arg1
@@ -34,7 +33,6 @@ function cons {
     ext_field Node.tail;
 
     store_lptr_lany tail_ptr, arg1;
-    ext_type LinkedList;
     deinit;  # tail_ptr
 
     # return ret_val
@@ -49,7 +47,6 @@ function tail {
     ext_field Node.tail;
 
     load_lany_lptr ret_val, ptr_ptr_node;
-    ext_type LinkedList;
 
     ret;
 }
@@ -70,7 +67,6 @@ label non_empty;
     structLea_lptr_lptr x_ptr, arg0;
     ext_field Node.head;
     load_lany_lptr curr, x_ptr;
-    ext_type i64;
     deinit;  # x_ptr
 
     output_l64 curr;

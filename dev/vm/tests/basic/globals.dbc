@@ -17,7 +17,6 @@ function for_coverage {
 	init_lany_type int, i64;
 	mov_l64_imm int, 5;
 	store_lptr_lany ptr, int;
-	ext_type i64;
 
 	deinit;
 	ret;
@@ -32,7 +31,6 @@ function main {
 	init_lany_type ptr, ptr_i64;
 	mov_lptr_gptr ptr, global_ptr;
 	load_lany_lptr ret_val, ptr;
-	ext_type i64;
 
 	deinit; # ptr
 	deinit; # *argv

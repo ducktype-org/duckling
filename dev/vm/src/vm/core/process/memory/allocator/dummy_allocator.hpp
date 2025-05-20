@@ -12,7 +12,7 @@
 namespace vm {
 	class DummyAllocator final: public AllocatorABC {
 	public:
-		BlockData allocate(TypeCRef type, Ref<std::byte> data) {
+		BlockData allocate(TypeCRef type, Ref<byte> data) {
 			auto size = type->getSize();
 			return BlockData{ type, base::ModRawView{ data.get(), size }, this };
 		}

@@ -28,7 +28,7 @@ private:
 	void pointerTest() {
 		for (auto filename:
 		     { "pointer_to_local.dbc", "pointer_copy.dbc", "pointer_to_passed_blocks.dbc" }) {
-			runTestOnVm(filename, "", "42", {});
+			runTestOnVm(filename, "", "42");
 		}
 	}
 

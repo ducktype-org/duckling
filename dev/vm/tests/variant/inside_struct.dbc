@@ -36,7 +36,6 @@ function main {
 
     # *int_ptr = value;
     store_lptr_lany int_ptr, value;
-    ext_type i64;
 
     # let var = ptr_a->second;
     init_lany_type var, simple_variant;
@@ -55,7 +54,6 @@ function main {
     # let read_value: i64 = *read_ptr;
     init_lany_type read_value, i64;
     load_lany_lptr read_value, read_ptr;
-    ext_type i64;
 
     output_l64 read_value;
 
