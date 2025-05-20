@@ -6,4 +6,4 @@ add_files(
     builtin_types.cpp
     builders/function_validator.cpp
 )
-set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
