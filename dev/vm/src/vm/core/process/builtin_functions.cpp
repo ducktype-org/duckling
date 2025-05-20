@@ -21,15 +21,17 @@ namespace vm::builtins {
 	namespace {
 		template<class Ret, class... FunArgs, std::size_t... Is>
 		base::Optional<VmValue>
-			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
+			callUnpackArgsImpl(Ret (*function)(VMThread&, FunArgs...), TypeCRef vm_return_type, VMThread& thread, Memory& memory, const std::vector<VmValue>& args, std::index_sequence<Is...>) {
 			if (std::is_void_v<Ret>) {
 				function(thread, args[Is].interpret<FunArgs>()...);
 				return {};
 			}
 			auto value = function(thread, args[Is].interpret<FunArgs>()...);
 			CORE_ASSERT(sizeof(value) == vm_return_type->getSize(), "Type sizes do not match");
-			// @note THIS ASSUMES MATCHING ENDIANNESS
-			return VmValue(vm_return_type, reinterpret_cast<byte*>(&value));
+
+			auto vm_value             = VmValue(vm_return_type, memory);
+			vm_value.interpret<Ret>() = value;
+			return vm_value;
 		}
 
 		/**
@@ -54,11 +56,12 @@ namespace vm::builtins {
 			Ret (*function)(VMThread&, FunArgs...),
 			TypeCRef                    vm_return_type,
 			VMThread&                   thread,
+			Memory&                     memory,
 			const std::vector<VmValue>& args
 		) {
 			if (sizeof...(FunArgs) != args.size()) CORE_PANIC("Argument number mismatch!");
 			return callUnpackArgsImpl(
-				function, vm_return_type, thread, args, std::index_sequence_for<FunArgs...>{}
+				function, vm_return_type, thread, memory, args, std::index_sequence_for<FunArgs...>{}
 			);
 		}
 	}
@@ -85,6 +88,7 @@ namespace vm::builtins {
 		BuiltinFunctionID           id,
 		TypeCRef                    builtin_func_type,
 		VMThread&                   thread,
+		Memory&                     memory,
 		const std::vector<VmValue>& arguments
 	) {
 		switch (id) {
@@ -94,6 +98,7 @@ namespace vm::builtins {
 			FunctionHandlers::builtin##ID_NAME,  \
 			*builtin_func_type->getResultType(), \
 			thread,                              \
+			memory,                              \
 			arguments                            \
 		);                                       \
 	}
