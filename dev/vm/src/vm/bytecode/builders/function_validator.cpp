@@ -1,10 +1,17 @@
 #include "function_validator.hpp"
 
+#include <base/exceptions.hpp>
+#include <base/ref.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
+#include <vm/bytecode/type_of_data.hpp>
+
+#include <variant>
 
 using namespace vm::code::builders;
 
@@ -127,89 +134,187 @@ void FunctionValidator::validateExtension(usize instruction_index) const {
 	if (!valid_extension) throw InvalidInstructionExtensionError(instruction);
 }
 
-void FunctionValidator::validateInstruction(const Instruction& instruction) const {
+void FunctionValidator::validateArgTypes(
+	const Instruction& instruction, const LocalStack& current_stack
+) const {
+	auto args = std::visit(
+		[]<typename T>(T& instr) -> std::vector<opargs::OpCodeArg> {
+			if constexpr (TwoArgumentOpcode<T>)
+				return { instr.arg0, instr.arg1 };
+			else if constexpr (OneArgumentOpcode<T>)
+				return { instr.arg0 };
+			else
+				return {};
+		},
+		instruction
+	);
+
+	std::vector<PrimitiveType> arg_types;
+
+	for (auto arg: args) {
+		variant_match(arg) {
+#define STACK_LOCAL_CASE(BIT_COUNT)                                                              \
+	variant_case(opargs::StackLocalI##BIT_COUNT, local) {                                        \
+		if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);           \
+		CRef<TypeOfData> entry = current_stack.at(local.var_name);                               \
+		variant_match(*entry) {                                                                  \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+#define GLOBAL_CASE(BIT_COUNT)                                                                   \
+	variant_case(opargs::GlobalI##BIT_COUNT, global) {                                           \
+		if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);       \
+		CRef<GlobalData> entry = globals.at(global.global_data_name);                            \
+		auto             type  = type_context.getTypes().at(entry->type);                        \
+		variant_match(*type) {                                                                   \
+			variant_case(PrimitiveType, primitive_type) {                                        \
+				if (primitive_type.size != (BIT_COUNT / 8)) throw InvalidArgumentSizeError(arg); \
+				arg_types.push_back(primitive_type);                                             \
+			}                                                                                    \
+			variant_default { throw InvalidArgumentTypeError(arg); }                             \
+		}                                                                                        \
+	}
+			GLOBAL_CASE(8);
+			GLOBAL_CASE(16);
+			GLOBAL_CASE(32);
+			GLOBAL_CASE(64);
+
+			variant_case(opargs::GlobalPtr, global) {
+				if (!globals.contains(global.global_data_name)) throw UnknownGlobalNameError(arg);
+				CRef<GlobalData> entry = globals.at(global.global_data_name);
+				auto             type  = type_context.getTypes().at(entry->type);
+				if (!std::holds_alternative<PointerType>(*type))
+					throw InvalidArgumentTypeError(arg);
+			}
+
+			STACK_LOCAL_CASE(8);
+			STACK_LOCAL_CASE(16);
+			STACK_LOCAL_CASE(32);
+			STACK_LOCAL_CASE(64);
+			variant_case(opargs::StackLocalPtr, local) {
+				if (!current_stack.contains(local.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> type = current_stack.at(local.var_name);
+				if (!std::holds_alternative<PointerType>(*type))
+					throw InvalidArgumentTypeError(arg);
+			}
+			variant_case(opargs::StackLocalAny, local) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_init_lany_type) {
+						if (current_stack.contains(local.var_name))
+							throw DuplicatedLocalNameError(arg);
+					}
+					variant_default {
+						if (!current_stack.contains(local.var_name))
+							throw UnknownLocalNameError(arg);
+					}
+				}
+			}
+			variant_case_novalue(opargs::Immediate) {}
+			variant_case(opargs::Type, type_value) {
+				if (!type_context.getTypes().contains(type_value.type_name))
+					throw UnknownTypeError(arg);
+			}
+			variant_case(opargs::FunctionName, function_value) {
+				auto fun_name    = function_value.function_name;
+				auto generic_arg = opargs::OpCodeArg{ function_value };
+				auto maybe_func_type
+					= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(
+						generic_arg
+					);
+				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					throw UnknownFunctionError(generic_arg);
+			}
+			variant_case(opargs::BuiltinFunctionName, function_value) {
+				auto fun_name    = function_value.function_name;
+				auto generic_arg = opargs::OpCodeArg{ function_value };
+				auto maybe_func_type
+					= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(
+						generic_arg
+					);
+				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
+					throw UnknownFunctionError(generic_arg);
+			}
+			variant_case(opargs::Label, label_value) {
+				variant_match(instruction) {
+					variant_case_novalue(Op_label) {}
+					// The default instruction for a label argument is a jump instruction.
+					variant_default {
+						if (!index_of_label.contains(label_value.label_name))
+							throw UnknownLabelError(label_value);
+					}
+				}
+			}
+
+			variant_case(opargs::StackLocalVnt, variant) {
+				if (!current_stack.contains(variant.var_name)) throw UnknownLocalNameError(arg);
+				CRef<TypeOfData> type = current_stack.at(variant.var_name);
+				if (!std::holds_alternative<VariantType>(*type))
+					throw InvalidArgumentTypeError(arg);
+			}
+
+			variant_case(opargs::Field, field) {
+				auto type = type_context.getTypes().at(field.type_name);
+				variant_match(*type) {
+					variant_case(DataType, ztruct) {
+						bool good = false;
+						for (auto& ztruct_field: ztruct.fields) {
+							if (ztruct_field.name == field.field_name) {
+								good = true;
+								break;
+							}
+						}
+						if (!good) throw UnknownFieldError(field);
+					}
+					variant_default { throw InvalidArgumentTypeError(arg); }
+				}
+			}
+
+			// All possible opargs must be handled. Unhandled opargs panic.
+			variant_default {
+				CORE_PANIC("Unhandled argument case during validation");
+				;
+			}
+		}
+	}
+
+	// We assert no cross-type operations on primitive types.
+	if (arg_types.size() == 2) {
+		if (arg_types.at(0).size == arg_types.at(1).size
+		    && arg_types.at(0).name != arg_types.at(1).name)
+			throw ArgumentMismatchError(instruction);
+	}
+}
+
+void FunctionValidator::validateSpecificInstruction(const Instruction& instruction) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 	}
 }
 
+/**
+ * @brief Validates the instruction in the current stack state.
+ * Checks each argument of the instruction if it has the expected type of an argument.
+ * @param instruction Instruction that is validated.
+ */
+void FunctionValidator::validateInstruction(
+	const Instruction& instruction, const LocalStack& current_stack
+) const {
+	validateArgTypes(instruction, current_stack);
+	validateSpecificInstruction(instruction);
+}
+
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
-	// @TODO remove `atMaybe` after #732
-	auto type = type_context.getMetadata().atMaybe(arg.type_name).expect<UnknownTypeError>(arg);
+	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
-void FunctionValidator::initStackState() {
-	pushStackState(base::StrID("ret_val"), type.result);
-	for (auto [idx, param]: std::views::enumerate(type.parameters))
-		pushStackState(base::StrID(base::strConcat("arg", idx).c_str()), param);
-}
-
-void FunctionValidator::pushStackState(const opargs::StackLocalAny& local, const opargs::Type& type) {
-	auto tod = type_context.getTypes().atMaybe(type.type_name).expect<UnknownTypeError>(type);
-
-	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
-
-	stack_state.emplace_back(local.var_name, tod);
-	local_name_to_type.put(local.var_name, tod);
-}
-
-void FunctionValidator::popStackState(const Op_deinit& cause) {
-	if (stack_state.size() == 1) throw RetValDeinitError(cause);
-	const auto& top = stack_state.back();
-	local_name_to_type.erase(top.local_name);
-	stack_state.pop_back();
-}
-
-void FunctionValidator::popCallArgs(const opargs::OpCodeFunctionArg& function) {
-	auto fun_name = VISIT(function, f, return f.function_name);
-	// Used for errors.
-	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type     = std::get<FunctionType>(*maybe_func_type);
-	bool check_ret_val = func_type.result != base::StrID("void");
-
-	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
-		throw InvalidFunctionCallArgumentsError(generic_arg);
-	for (auto param: func_type.parameters | std::views::reverse) {
-		if (code::typeName(*stack_state.back().type) != param)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
-		stack_state.pop_back();
-	}
-	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
-		throw InvalidFunctionCallArgumentsError(generic_arg);
-}
-
-void FunctionValidator::validateTailcall(const opargs::OpCodeFunctionArg& function) const {
-	auto fun_name = VISIT(function, f, return f.function_name);
-	// Used for errors.
-	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
-	auto maybe_func_type
-		= type_context.getTypes().atMaybe(fun_name).expect<UnknownFunctionError>(generic_arg);
-	if (!std::holds_alternative<FunctionType>(*maybe_func_type))
-		throw UnknownFunctionError(generic_arg);
-	auto func_type = std::get<FunctionType>(*maybe_func_type);
-
-	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
-		throw InvalidTailcallSignatureError(generic_arg);
-
-	if (func_type.parameters.size() + 1 != stack_state.size())
-		throw InvalidTailcallArgumentsError(generic_arg);
-
-	if (code::typeName(*stack_state.front().type) != func_type.result)
-		throw InvalidTailcallArgumentsError(generic_arg);
-	for (auto [param, stack_elem]:
-	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
-		if (code::typeName(*stack_elem.type) != param)
-			throw InvalidTailcallArgumentsError(generic_arg);
-}
-
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
-	return index_of_label.atMaybe(label.label_name).expect<UnknownLabelError>(label);
+	return index_of_label.at(label.label_name);
 }
 
 void FunctionValidator::preprocessLabels() {
@@ -232,40 +337,41 @@ void FunctionValidator::preprocessLabels() {
 }
 
 void FunctionValidator::traverseControlFlowGraph() {
+	LocalStack local_stack(type, type_context);
 	visited_instructions.resize(instructions.size());
-	std::vector<std::pair<usize, decltype(stack_state)>> dfs_stack{
-		{ instructions.size(), {} }  // sentinel
+	std::vector<std::tuple<usize, LocalStack>> dfs_stack{
+		{ instructions.size(), local_stack }  // sentinel
 	};
 	usize index = 0;
 
 	while (index != instructions.size()) {
 		validateExtension(index);
 		// Validate non-control flow instruction there.
-		validateInstruction(instructions[index]);
+		validateInstruction(instructions[index], local_stack);
 
 		visited_instructions[index] = true;
 
 		variant_match(instructions[index]) {
 			variant_case(Op_init_lany_type, instr) {
-				pushStackState(instr.arg0, instr.arg1);
+				local_stack.push(instr.arg0, instr.arg1, type_context);
 				index++;
 			}
 			variant_case(Op_deinit, instr) {
-				popStackState(instr);
+				local_stack.pop(instr);
 				index++;
 			}
 			variant_case(Op_label, instr) {
 				match_optional(stack_at_label.atMaybe(instr.arg0.label_name)) {
 					opt_some(label_state) {
-						if (label_state != stack_state)
+						if (label_state != local_stack.stack_state)
 							throw StackStructureMismatchError(
 								instr, jumps_to_label.at(instr.arg0.label_name)
 							);
-						std::tie(index, stack_state) = dfs_stack.back();
+						std::tie(index, local_stack) = dfs_stack.back();
 						dfs_stack.pop_back();
 					}
 					opt_none {
-						stack_at_label.put(instr.arg0.label_name, stack_state);
+						stack_at_label.put(instr.arg0.label_name, local_stack.stack_state);
 						index++;
 					}
 				}
@@ -273,27 +379,27 @@ void FunctionValidator::traverseControlFlowGraph() {
 			variant_case(Op_jmp_label, instr) { index = getLabelTarget(instr.arg0); }
 			variant_case(Op_jmpIf_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
 			}
 			variant_case(Op_jmpIfNot_label, instr) {
 				index++;
-				dfs_stack.emplace_back(getLabelTarget(instr.arg0), stack_state);
+				dfs_stack.emplace_back(getLabelTarget(instr.arg0), local_stack);
 			}
 			variant_case(Op_ret, instr) {
-				std::tie(index, stack_state) = dfs_stack.back();
+				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_case(Op_call_func, instr) {
-				popCallArgs(instr.arg0);
+				local_stack.popCallArgs(instr.arg0, type_context);
 				index++;
 			}
 			variant_case(Op_call_builtin_func, instr) {
-				popCallArgs(instr.arg0);
+				local_stack.popCallArgs(instr.arg0, type_context);
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
-				validateTailcall(instr.arg0);
-				std::tie(index, stack_state) = dfs_stack.back();
+				local_stack.validateTailcall(instr.arg0, type_context, type);
+				std::tie(index, local_stack) = dfs_stack.back();
 				dfs_stack.pop_back();
 			}
 			variant_default { index++; }
@@ -334,7 +440,6 @@ FunctionValidator::FunctionValidator(
 void FunctionValidator::validate() {
 	if (validated) CORE_PANIC("The validator can only run once.");
 	preprocessLabels();
-	initStackState();
 	traverseControlFlowGraph();
 	validateFunctionEnd();
 	validated = true;
@@ -346,4 +451,81 @@ std::vector<Instruction> FunctionValidator::extractReachableCode() {
 	for (auto [instruction, visited]: std::views::zip(instructions, visited_instructions))
 		if (visited) out.push_back(instruction);
 	return out;
+}
+
+FunctionValidator::LocalStack::LocalStack(const FunctionType& type, const TypeContext& type_context) {
+	push(base::StrID("ret_val"), type.result, type_context);
+	for (auto [idx, param]: std::views::enumerate(type.parameters))
+		push(base::StrID(base::strConcat("arg", idx).c_str()), param, type_context);
+}
+
+void FunctionValidator::LocalStack::push(
+	const opargs::StackLocalAny& local, const opargs::Type& type, const TypeContext& type_context
+) {
+	auto tod = type_context.getTypes().at(type.type_name);
+
+	if (local_name_to_type.contains(local.var_name)) throw DuplicatedLocalNameError(local);
+
+	stack_state.emplace_back(local.var_name, tod);
+	local_name_to_type.put(local.var_name, tod);
+}
+
+void FunctionValidator::LocalStack::pop(const Op_deinit& cause) {
+	if (stack_state.size() == 1) throw RetValDeinitError(cause);
+	const auto& top = stack_state.back();
+	local_name_to_type.erase(top.local_name);
+	stack_state.pop_back();
+}
+
+bool FunctionValidator::LocalStack::contains(base::StrID local_name) const {
+	return local_name_to_type.contains(local_name);
+}
+
+CRef<TypeOfData> FunctionValidator::LocalStack::at(base::StrID local_name) const {
+	return local_name_to_type.at(local_name);
+}
+
+void FunctionValidator::LocalStack::popCallArgs(
+	const opargs::OpCodeFunctionArg& function, const TypeContext& type_context
+) {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg   = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto func_type     = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
+	bool check_ret_val = func_type.result != base::StrID("void");
+
+	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+	for (auto param: func_type.parameters | std::views::reverse) {
+		if (code::typeName(*stack_state.back().type) != param)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		local_name_to_type.erase(stack_state.back().local_name);
+		stack_state.pop_back();
+	}
+	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+}
+
+void FunctionValidator::LocalStack::validateTailcall(
+	const opargs::OpCodeFunctionArg& function,
+	const TypeContext&               type_context,
+	const FunctionType&              type
+) const {
+	auto fun_name = VISIT(function, f, return f.function_name);
+	// Used for errors.
+	auto generic_arg = VISIT(function, f, return opargs::OpCodeArg{ f });
+	auto func_type   = std::get<FunctionType>(*type_context.getTypes().at(fun_name));
+
+	if (!(func_type.result == type.result && func_type.parameters == type.parameters))
+		throw InvalidTailcallSignatureError(generic_arg);
+
+	if (func_type.parameters.size() + 1 != stack_state.size())
+		throw InvalidTailcallArgumentsError(generic_arg);
+
+	if (code::typeName(*stack_state.front().type) != func_type.result)
+		throw InvalidTailcallArgumentsError(generic_arg);
+	for (auto [param, stack_elem]:
+	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
+		if (code::typeName(*stack_elem.type) != param)
+			throw InvalidTailcallArgumentsError(generic_arg);
 }

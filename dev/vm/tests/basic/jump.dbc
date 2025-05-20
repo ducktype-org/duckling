@@ -1,8 +1,8 @@
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
-	init_lany_type 	x, i64;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+	init_lany_type 	x, i32;
 
 	mov_l32_imm x, 5;
 
@@ -13,7 +13,7 @@ function main {
 	output_l32 	x;
 
 	deinit; # x
-    deinit; # *argv
-    deinit; # argc
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

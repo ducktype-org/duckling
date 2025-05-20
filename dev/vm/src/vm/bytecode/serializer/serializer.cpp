@@ -269,6 +269,15 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serialize(const CodeCollection& code, std::ostream& out) {
+		for (const auto& type: code.types) serialize(type, out);
+		out << '\n';
+		for (const auto& global_data: code.global_data) serialize(global_data, out);
+		out << '\n';
+		for (const auto& func: code.functions) serialize(func, out);
+		out << '\n';
+	}
+
 	std::string argumentToString(const opargs::OpCodeArg& arg) {
 		return VISIT(arg, a, return toString(a));
 	}

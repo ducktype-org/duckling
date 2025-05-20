@@ -36,7 +36,7 @@ namespace compiler::mir {
 		return helios_id == other.helios_id;
 	}
 
-	base::HashT Function::customPerfectHash() const { return base::perfectHash(helios_id); }
+	u64 Function::queryUnstablePerfectHash() const { return helios_id.queryUnstablePerfectHash(); }
 
 	bool isTerminating(Operation op) {
 		switch (op) {

@@ -46,12 +46,18 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents bytecode a function.
+	 * @note A function on its own (without type context or globals) does not contain enough
+	 * information to tell if it is correct/valid or not.
 	 */
 	struct Function final: ElementBase {
 		Identifier name;
 		CodeBlock  body;
 	};
 
+	/**
+	 * @brief Represents a group of types, globals and functions.
+	 * @note It's not guaranteed that every code collection is valid.
+	 */
 	struct CodeCollection final {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;

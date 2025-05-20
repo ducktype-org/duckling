@@ -29,7 +29,7 @@ namespace tsh {
 		return pimpl->toString();
 	}
 
-	base::HashT AbstractType::customPerfectHash() const { return base::HashT(pimpl); }
+	u64 AbstractType::queryUnstablePerfectHash() const { return u64(pimpl); }
 
 	// Specialized template definition and explicit instantiation.
 	template<>

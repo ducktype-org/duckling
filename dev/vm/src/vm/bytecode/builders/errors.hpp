@@ -196,5 +196,12 @@ namespace vm::code::builders {
 		"Invalid tailcall arguments. The stack should contain exactly ret_val and arguments for "
 		"calling: "
 	);
-	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot intiantiate a value of type: ");
+	DEFINE_ARGUMENT_ERROR(UninstantiableValueError, "Cannot instantiate a value of type: ");
+	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
+	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
+	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
+	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
+	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
+	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
+
 }
