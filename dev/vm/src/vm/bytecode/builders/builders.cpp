@@ -75,30 +75,26 @@ const ExpectedType& TypeContextBuilder::getType(
 	throw error_factory();
 }
 
-// Class or interface.
-template<typename InheritableType>
-void TypeContextBuilder::validateMethodFirstArgument(
-	const InheritableType& inh, const FunctionType& func_type
+// Class or Data.
+template<typename FieldableType>
+void TypeContextBuilder::collectFieldsRecursive(
+	const FieldableType&                     fieldable,
+	const TypeOfData&                        error_context,
+	base::HashMap<base::StrID, base::StrID>& fields
 ) const {
-	if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
-	const auto& first_param_type_name = func_type.parameters[0];
-	const auto& first_param_type      = getType<PointerType>(first_param_type_name, inh, [&]() {
-        return MethodFirstArgumentError(inh, func_type.name);
-    });
-	if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_type.name);
-}
-
-// Class or interface.
-template<typename InheritableType>
-void TypeContextBuilder::validateMethodSignatureMatch(
-	const InheritableType& inh, const FunctionType& vmethod_type, const FunctionType& impl_type
-) const {
-	if (vmethod_type.result != impl_type.result) throw MethodTypeError(inh, impl_type.name);
-	if (vmethod_type.parameters.size() != impl_type.parameters.size())
-		throw MethodTypeError(inh, impl_type.name);
-	for (u64 i = 1; i < impl_type.parameters.size(); i++)
-		if (vmethod_type.parameters[i] != impl_type.parameters[i])
-			throw MethodTypeError(inh, impl_type.name);
+	if constexpr (std::is_same_v<FieldableType, ClassType>) {
+		if (fieldable.extends) {
+			const auto& super_class = getType<ClassType>(*fieldable.extends, error_context, [&]() {
+				return InvalidExtends(fieldable);
+			});
+			collectFieldsRecursive(super_class, error_context, fields);
+		}
+	}
+	for (const auto& field_type: fieldable.fields) {
+		if (fields.contains(field_type.name))
+			throw DuplicatedFieldError(error_context, field_type.name);
+		fields.put(field_type.name, field_type.type);
+	}
 }
 
 // Class of Interface.
@@ -134,25 +130,65 @@ void TypeContextBuilder::collectVirtualMethodsRecursive(
 	}
 }
 
-// Class or Data.
-template<typename FieldableType>
-void TypeContextBuilder::collectFieldsRecursive(
-	const FieldableType&                     fieldable,
-	const TypeOfData&                        error_context,
-	base::HashMap<base::StrID, base::StrID>& fields
+template<typename InheritableType, typename ErrorContextType>
+void TypeContextBuilder::collectImplementationsRecursive(
+	const InheritableType&                   inh,
+	const ErrorContextType&                  error_context_inh,
+	base::HashMap<base::StrID, base::StrID>& implementations
 ) const {
-	if constexpr (std::is_same_v<FieldableType, ClassType>) {
-		if (fieldable.extends) {
-			const auto& super_class = getType<ClassType>(*fieldable.extends, error_context, [&]() {
-				return InvalidExtends(fieldable);
+	// Insert those implemented by this class.
+	for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
+	for (const auto& interface_name: inh.implements) {
+		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
+			return InvalidImplementsError(error_context_inh);
+		});
+		collectImplementationsRecursive(interface, error_context_inh, implementations);
+	}
+	if constexpr (std::is_same_v<InheritableType, ClassType>) {
+		if (inh.extends) {
+			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
+				return InvalidExtends(inh);
 			});
-			collectFieldsRecursive(super_class, error_context, fields);
+			collectImplementationsRecursive(super_class, error_context_inh, implementations);
 		}
 	}
-	for (const auto& field_type: fieldable.fields) {
-		if (fields.contains(field_type.name))
-			throw DuplicatedFieldError(error_context, field_type.name);
-		fields.put(field_type.name, field_type.type);
+}
+
+
+
+// Class or interface.
+template<typename InheritableType>
+void TypeContextBuilder::validateMethodFirstArgument(
+	const InheritableType& inh, const FunctionType& func_type
+) const {
+	if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
+	const auto& first_param_type_name = func_type.parameters[0];
+	const auto& first_param_type      = getType<PointerType>(first_param_type_name, inh, [&]() {
+        return MethodFirstArgumentError(inh, func_type.name);
+    });
+	if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_type.name);
+}
+
+// Class or interface.
+template<typename InheritableType>
+void TypeContextBuilder::validateMethodSignatureMatch(
+	const InheritableType& inh, const FunctionType& vmethod_type, const FunctionType& impl_type
+) const {
+	if (vmethod_type.result != impl_type.result) throw MethodTypeError(inh, impl_type.name);
+	if (vmethod_type.parameters.size() != impl_type.parameters.size())
+		throw MethodTypeError(inh, impl_type.name);
+	for (u64 i = 1; i < impl_type.parameters.size(); i++)
+		if (vmethod_type.parameters[i] != impl_type.parameters[i])
+			throw MethodTypeError(inh, impl_type.name);
+}
+
+template<typename InheritableType>
+void TypeContextBuilder::validateVMethodSignatures(const InheritableType& inh) const {
+	for (const auto& vmethod: inh.virtual_methods) {
+		const FunctionType& vmethod_type = getType<FunctionType>(vmethod.type, inh, [&]() {
+			return TypeIsNotFunctionalError(vmethod.type);
+		});
+		validateMethodFirstArgument(inh, vmethod_type);
 	}
 }
 
@@ -186,39 +222,6 @@ void TypeContextBuilder::validateImplementations(const InheritableType& inh) con
 	}
 }
 
-template<typename InheritableType, typename ErrorContextType>
-void TypeContextBuilder::collectImplementationsRecursive(
-	const InheritableType&                   inh,
-	const ErrorContextType&                  error_context_inh,
-	base::HashMap<base::StrID, base::StrID>& implementations
-) const {
-	// Insert those implemented by this class.
-	for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
-	for (const auto& interface_name: inh.implements) {
-		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
-			return InvalidImplementsError(error_context_inh);
-		});
-		collectImplementationsRecursive(interface, error_context_inh, implementations);
-	}
-	if constexpr (std::is_same_v<InheritableType, ClassType>) {
-		if (inh.extends) {
-			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtends(inh);
-			});
-			collectImplementationsRecursive(super_class, error_context_inh, implementations);
-		}
-	}
-}
-
-template<typename InheritableType>
-void TypeContextBuilder::validateVMethodSignatures(const InheritableType& inh) const {
-	for (const auto& vmethod: inh.virtual_methods) {
-		const FunctionType& vmethod_type = getType<FunctionType>(vmethod.type, inh, [&]() {
-			return TypeIsNotFunctionalError(vmethod.type);
-		});
-		validateMethodFirstArgument(inh, vmethod_type);
-	}
-}
 
 // Potentially pass the required vmethods map as a parameter so it's faster.
 void TypeContextBuilder::validateAllMethodsImplemented(const ClassType& clazz) const {
@@ -274,66 +277,6 @@ void TypeContextBuilder::buildVTableRecursive(
 			buildVTableRecursive(super_class, error_context_inh, vtable, tctx);
 		}
 	}
-}
-
-void TypeContextBuilder::validateType(const TypeOfData& type) const {
-	// TODO: What is someone declares a field named vt.
-	// TODO: Funkcje ktorym przekażemy typ funkcyjny jako argument?
-	// TODO: Think about how other types should be verified.
-
-	variant_match(type) {
-		variant_case(VariantType, variant) {
-			if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
-		}
-		variant_case(DataType, data) { validateFieldDuplicates(data); }
-		variant_case(InterfaceType, interface) {
-			validateImplementsDuplicates(interface);
-			validateVMethodSignatures(interface);
-			validateImplementations(interface);
-		}
-		variant_case(ClassType, clazz) {
-			validateFieldDuplicates(clazz);
-			validateImplementsDuplicates(clazz);
-			validateVMethodSignatures(clazz);
-			validateImplementations(clazz);
-			if (!clazz.is_abstract) validateAllMethodsImplemented(clazz);
-		}
-	}
-}
-
-void TypeContextBuilder::validateTypes() const {
-	// Check for cycles in hierarchy.
-	enum Status { Waiting, Visited, Done };
-
-	base::HashMap<base::StrID, Status> status;
-	for (const auto& type: types) status.put(typeName(type), Waiting);
-
-	// explicit object parameter lambdas don't seem to work with class members, hence the
-	// reference
-	auto& types_ref = types;
-	auto  helper    = [&](this auto self, const auto& type) {
-        auto name = typeName(type);
-        if (status[name] == Visited)
-            throw CycleInHierarchyError(type);
-        else if (status[name] == Done)
-            return;
-
-        status[name] = Visited;
-        variant_match(type) {
-            variant_case(ClassType, clazz) {
-                if_opt_some(clazz.extends, superclass) self(*types_ref.at(superclass));
-                for (auto iface: clazz.implements) self(*types_ref.at(iface));
-            }
-            variant_case(InterfaceType, interface) {
-                for (auto iface: interface.implements) self(*types_ref.at(iface));
-            }
-        }
-        status[name] = Done;
-	};
-	for (const auto& type: types) helper(type);
-
-	// @note: Following validation assumes cycles in class hierarchy where detected.
-	for (const auto& type: types) validateType(type);
 }
 
 template<typename InheritableType>
@@ -409,6 +352,66 @@ vm::InheritanceMetadata TypeContextBuilder::buildInheritanceMetadata(
 		std::move(implementations),
 		std::move(vtable),
 	};
+}
+
+void TypeContextBuilder::validateType(const TypeOfData& type) const {
+	// TODO: What is someone declares a field named vt.
+	// TODO: Funkcje ktorym przekażemy typ funkcyjny jako argument?
+	// TODO: Think about how other types should be verified.
+
+	variant_match(type) {
+		variant_case(VariantType, variant) {
+			if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
+		}
+		variant_case(DataType, data) { validateFieldDuplicates(data); }
+		variant_case(InterfaceType, interface) {
+			validateImplementsDuplicates(interface);
+			validateVMethodSignatures(interface);
+			validateImplementations(interface);
+		}
+		variant_case(ClassType, clazz) {
+			validateFieldDuplicates(clazz);
+			validateImplementsDuplicates(clazz);
+			validateVMethodSignatures(clazz);
+			validateImplementations(clazz);
+			if (!clazz.is_abstract) validateAllMethodsImplemented(clazz);
+		}
+	}
+}
+
+void TypeContextBuilder::validateTypes() const {
+	// Check for cycles in hierarchy.
+	enum Status { Waiting, Visited, Done };
+
+	base::HashMap<base::StrID, Status> status;
+	for (const auto& type: types) status.put(typeName(type), Waiting);
+
+	// explicit object parameter lambdas don't seem to work with class members, hence the
+	// reference
+	auto& types_ref = types;
+	auto  helper    = [&](this auto self, const auto& type) {
+        auto name = typeName(type);
+        if (status[name] == Visited)
+            throw CycleInHierarchyError(type);
+        else if (status[name] == Done)
+            return;
+
+        status[name] = Visited;
+        variant_match(type) {
+            variant_case(ClassType, clazz) {
+                if_opt_some(clazz.extends, superclass) self(*types_ref.at(superclass));
+                for (auto iface: clazz.implements) self(*types_ref.at(iface));
+            }
+            variant_case(InterfaceType, interface) {
+                for (auto iface: interface.implements) self(*types_ref.at(iface));
+            }
+        }
+        status[name] = Done;
+	};
+	for (const auto& type: types) helper(type);
+
+	// @note: Following validation assumes cycles in class hierarchy where detected.
+	for (const auto& type: types) validateType(type);
 }
 
 TypeContext TypeContextBuilder::build() const {

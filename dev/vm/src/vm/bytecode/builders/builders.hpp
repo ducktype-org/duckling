@@ -90,27 +90,36 @@ namespace vm::code::builders {
 	 * It is used to build TypeContext.
 	 */
 	class TypeContextBuilder {
-		using FieldVector             = std::vector<std::pair<base::StrID, TypeRef>>;
+		using FieldVector = std::vector<std::pair<base::StrID, TypeRef>>;
 		StableTypeIdNameMap<TypeOfData> types;
 
-		/*
-		 * @brief Throws a builder error if type is invalid.
-		 */
-		void validateType(const TypeOfData& type) const;
-
-		/*
-		 * @brief Throws a builder error if types are invalid.
-		 * Checks each type individually and inheritance
-		 * hierarchy soundness.
-		 */
-		void validateTypes() const;
 		const vm::code::TypeOfData& getTypeOfData(base::StrID name, const TypeOfData& context) const;
-		const vm::code::TypeOfData& getTypeOfDataCRef(base::StrID name, const TypeOfData& context)
-			const;
 
 		template<typename ExpectedType, typename ErrorFactory>
 		const ExpectedType& getType(
 			base::StrID name, const vm::code::TypeOfData& context, ErrorFactory error_factory
+		) const;
+
+		template<typename FieldableType>
+		void collectFieldsRecursive(
+			const FieldableType&                     fieldable,
+			const TypeOfData&                        error_context,
+			base::HashMap<base::StrID, base::StrID>& fields
+		) const;
+
+		template<typename InheritableType, typename ErrorContextType>
+		void collectVirtualMethodsRecursive(
+			const InheritableType&                   inh,
+			const ErrorContextType&                  error_context_inh,
+			base::HashMap<base::StrID, base::StrID>& virtual_methods,
+			bool                                     throw_on_duplicates = true
+		) const;
+
+		template<typename InheritableType, typename ErrorContextType>
+		void collectImplementationsRecursive(
+			const InheritableType&                   inh,
+			const ErrorContextType&                  error_context_inh,
+			base::HashMap<base::StrID, base::StrID>& virtual_methods
 		) const;
 
 		template<typename InheritableType>
@@ -124,39 +133,16 @@ namespace vm::code::builders {
 			const FunctionType&    impl_type
 		) const;
 
-		template<typename InheritableType, typename ErrorContextType>
-		void collectVirtualMethodsRecursive(
-			const InheritableType&                   inh,
-			const ErrorContextType&                  error_context_inh,
-			base::HashMap<base::StrID, base::StrID>& virtual_methods,
-			bool                                     throw_on_duplicates = true
-		) const;
-
-		template<typename FieldableType>
-		void collectFieldsRecursive(
-			const FieldableType&                     fieldable,
-			const TypeOfData&                        error_context,
-			base::HashMap<base::StrID, base::StrID>& fields
-		) const;
+		template<typename InheritableType>
+		void validateVMethodSignatures(const InheritableType& inh) const;
 
 		template<typename InheritableType>
 		void validateImplementations(const InheritableType& inh) const;
 
 		void validateAllMethodsImplemented(const ClassType& clazz) const;
 
-		template<typename InheritableType, typename ErrorContextType>
-		void collectImplementationsRecursive(
-			const InheritableType&                   inh,
-			const ErrorContextType&                  error_context_inh,
-			base::HashMap<base::StrID, base::StrID>& virtual_methods
-		) const;
-
-		template<typename InheritableType>
-		void validateVMethodSignatures(const InheritableType& inh) const;
-
 		template<typename FieldableType>
 		void validateFieldDuplicates(const FieldableType& fieldable) const;
-
 
 		template<typename InheritableType>
 		void validateImplementsDuplicates(const InheritableType& implements) const;
@@ -176,6 +162,18 @@ namespace vm::code::builders {
 		vm::InheritanceMetadata buildInheritanceMetadata(
 			const InheritableType& inh, const TypeContext& tctx
 		) const;
+
+		/*
+		 * @brief Throws a builder error if type is invalid.
+		 */
+		void validateType(const TypeOfData& type) const;
+
+		/*
+		 * @brief Throws a builder error if types are invalid.
+		 * Checks each type individually and inheritance
+		 * hierarchy soundness.
+		 */
+		void validateTypes() const;
 
 	public:
 		void                                   addType(const TypeOfData& type);
