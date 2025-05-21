@@ -31,12 +31,6 @@ namespace compiler::helios {
 		 */
 		frontend::ModuleID parent_module;
 
-		// cache entry:
-		// in the future we might need separation for: direct symbols, expanded symbols
-		// in this system scope is no longer closed/open as we think of it as a pure-value object
-		// any lookup in the scope requires calculation of symbols witch itself is done only once!
-		base::Optional<query::CacheEntry<SymbolList>> symbols;
-
 		/**
 		 * Scope depth, i.e. distance to the root scope.
 		 * It is currently unused but might be useful in the future.

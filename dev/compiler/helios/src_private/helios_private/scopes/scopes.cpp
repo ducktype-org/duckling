@@ -185,7 +185,6 @@ namespace compiler::helios {
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
-				.symbols             = {},
 				.depth               = 0,
 			});
 		}
@@ -234,7 +233,6 @@ namespace compiler::helios {
 				.parent              = parent,
 				.related_pst_element = element,
 				.parent_module       = module(parent),
-				.symbols             = {},
 				.depth               = scopeDepth(parent) + 1,
 			});
 		}
@@ -334,9 +332,6 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryScopesInModule);
 
 	struct IMPLEMENT_QUERY(QuerySymbolsInScope, std::vector<SymID>) {
-		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<SymbolList>>
-			symbol_cache;
-
 		/**
 		 * @brief Makes symbols from pst::Stmt and filters out non declarations from the StmtList.
 		 */
@@ -461,17 +456,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
-			if (const auto& cache = symbol_cache.atMaybe(key_hash))
-				return QResWithACD{ &cache->data, cache->acd };
-			return {};
-		}
-
-		static auto store(query::QueryUnstableHash key_hash, PResult p_res, query::ACD acd)
-			-> QResult {
-			symbol_cache.put(key_hash, { .data = std::move(p_res), .acd = acd });
-			return &symbol_cache.at(key_hash).data;
-		}
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);

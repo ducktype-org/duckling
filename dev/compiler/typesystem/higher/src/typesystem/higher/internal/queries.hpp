@@ -8,7 +8,7 @@ namespace tsh::internal {
 	class ClassAbstractTypeImpl;
 
 	/**
-	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
+	 * @brief A "stupid" key, containing only a pointer value and defining hashing.
 	 */
 	struct WrappedClassAbstractTypeImplPtr {
 		const ClassAbstractTypeImpl* value;
