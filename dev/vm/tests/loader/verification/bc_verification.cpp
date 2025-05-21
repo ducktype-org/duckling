@@ -30,6 +30,7 @@ public:
 		TESTER_ADD_TEST(jumpOutOfBlock);
 		// TODO: Maybe move that test somewhere else.
 		TESTER_ADD_TEST(duplicatedDataFields);
+		TESTER_ADD_TEST(unknownMethod);
 
 		// Local variable verification
 		TESTER_ADD_TEST(noInit);
@@ -253,6 +254,15 @@ private:
 			"wrong/data_type/duplicated_fields.dbc",
 			{
 				vm::code::builders::DuplicatedFieldError::ERR_MSG,
+			}
+		);
+	}
+
+	void unknownMethod() {
+		loadInvalidDbc(
+			"wrong/unknown_method.dbc",
+			{
+				vm::code::builders::UnknownMethodError::ERR_MSG,
 			}
 		);
 	}

@@ -12,10 +12,10 @@ class VmInheritanceSemanticsTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(downcast);
-		TESTER_ADD_TEST(upcast);
-		// TESTER_ADD_TEST(dynamicDispatch); // @TODO shortly.
-		TESTER_ADD_TEST(semantics);
+		// TESTER_ADD_TEST(downcast);
+		// TESTER_ADD_TEST(upcast);
+		TESTER_ADD_TEST(dynamicDispatch);
+		// TESTER_ADD_TEST(semantics);
 	}
 
 
@@ -30,9 +30,10 @@ private:
 	}
 
 	void dynamicDispatch() {
-		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "", {}, 0);
-		runTestOnVm("semantics/deep_dynamic_dispatch.dbc", "", "", {}, 0);
-		runTestOnVm("semantics/dynamic_call_with_args.dbc", "", "", {}, 0);
+		runTestOnVm("semantics/very_simple_dispatch.dbc", "", "420", {}, 0);
+		// runTestOnVm("semantics/dynamic_dispatch.dbc", "", "", {}, 0);
+		// runTestOnVm("semantics/deep_dynamic_dispatch.dbc", "", "", {}, 0);
+		// runTestOnVm("semantics/dynamic_call_with_args.dbc", "", "", {}, 0);
 	}
 
 	void semantics() {

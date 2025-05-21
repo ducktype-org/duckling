@@ -225,6 +225,25 @@ void FunctionValidator::validateArgTypes(
 				if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 					throw UnknownFunctionError(generic_arg);
 			}
+			variant_case(opargs::MethodName, method_value) {
+				auto method_name = method_value.method_name;
+				auto generic_arg = opargs::OpCodeArg{ method_value };
+				bool valid       = false;
+				for (const auto& types: type_context.getTypes()) {
+					variant_match(types) {
+						variant_case(ClassType, clazz) {
+							for (const auto& vmethod: clazz.virtual_methods)
+								if (vmethod.name == method_name) valid = true;
+						}
+						variant_case(InterfaceType, iface) {
+							for (const auto& vmethod: iface.virtual_methods)
+								if (vmethod.name == method_name) valid = true;
+						}
+					}
+					if (valid) break;
+				}
+				if (!valid) throw UnknownMethodError(generic_arg);
+			}
 			variant_case(opargs::Label, label_value) {
 				variant_match(instruction) {
 					variant_case_novalue(Op_label) {}

@@ -143,6 +143,20 @@ namespace vm::opargs {
 		}
 	};
 
+	struct MethodName final: code::ElementBase {
+		static constexpr std::string_view OP_SHORT = "method";
+
+		MethodName() = default;
+
+		MethodName(const base::StrID method_name): method_name(method_name) {}
+
+		base::StrID method_name = base::StrID("");
+
+		constexpr bool operator==(const MethodName& other) const noexcept {
+			return method_name == other.method_name;
+		}
+	};
+
 	/**
 	 * @brief Represents label name argument.
 	 */
@@ -171,8 +185,10 @@ namespace vm::opargs {
 		Field,
 		FunctionName,
 		BuiltinFunctionName,
+		MethodName,
 		Label>;
 	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
+	// TODO: These should be verified as well
 	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
 }
 

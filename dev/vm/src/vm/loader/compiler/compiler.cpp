@@ -2,6 +2,7 @@
 
 #include <diagnostic/logger.hpp>
 
+#include "base/maps.hpp"
 #include <base/int_conv.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
@@ -34,11 +35,15 @@ namespace vm::loader::compiler {
 			const StableTypeIdNameMap<code::Function>&         func_map;
 			const TypeMetadata&                                type_map;
 			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
-			LoaderLogger                                       log{};
-			base::Optional<code::Function>                     function{};
-			base::HashMap<base::StrID, usize>                  label_positions{};
-			base::HashMap<base::StrID, usize>                  local_offset_map{};
-			usize                                              local_stack_size{};
+			const base::HashMap<i32, base::StrID>&
+				method_id_to_name;           // Used when translating virtual_call_lptr_method.
+			const base::HashMap<base::StrID, i32>&
+						 method_name_to_id;  // Used when translating virtual_call_lptr_method.
+			LoaderLogger log{};
+			base::Optional<code::Function>    function{};
+			base::HashMap<base::StrID, usize> label_positions{};
+			base::HashMap<base::StrID, usize> local_offset_map{};
+			usize                             local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(
@@ -104,6 +109,12 @@ namespace vm::loader::compiler {
 						    )
 						);
 					ctx.log.log<UnknownFunctionError>(func, func.function_name);
+					return 0;
+				}
+				variant_case(vm::opargs::MethodName, method) {
+					if (ctx.method_name_to_id.contains(method.method_name))
+						return ctx.method_name_to_id[method.method_name];
+					ctx.log.log<UnknownMethodError>(method, method.method_name);
 					return 0;
 				}
 				variant_case(vm::opargs::Label, label) {
@@ -290,8 +301,28 @@ namespace vm::loader::compiler {
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
+
+		i32                             current_ix = 0;
+		base::HashMap<i32, base::StrID> method_id_to_name;
+		base::HashMap<base::StrID, i32> method_name_to_id;
+		for (const auto& type: *types) {
+			auto opt_metadata = type.getInheritanceMetadata();
+			if_opt_some(opt_metadata, metadata) {
+				for (auto& [name, impl]: metadata.virtual_methods) {
+					if (!method_name_to_id.contains(name)) {
+						method_id_to_name.put(current_ix, name);
+						method_name_to_id.put(name, current_ix);
+						current_ix++;
+					}
+				}
+			}
+		}
+
+
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto ctx = CompilationContext(program.funcMap(), *types, globals);
+		auto                                        ctx = CompilationContext(
+            program.funcMap(), *types, globals, method_id_to_name, method_name_to_id
+        );
 
 		for (const auto& global: program.globalMap()) {
 			match_optional(types->atMaybe(global.type)) {
@@ -310,11 +341,13 @@ namespace vm::loader::compiler {
 			converted_functions.push_back(converted_func);
 		}
 
+
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
 		return low::LowVMProgram{
 			converted_functions,
 			std::move(types),
 			{ program.globalMap().begin(), program.globalMap().end() },
+			method_id_to_name,
 		};
 	}
 }

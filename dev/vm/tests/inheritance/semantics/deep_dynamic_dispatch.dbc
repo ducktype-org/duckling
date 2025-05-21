@@ -118,17 +118,17 @@ function main {
 
     # Call Animal::makeSound. Since the actual object is Cat,
     # Cat_makeSound_impl will be called.
-    virtual_call_lptr_func ptr_a, method_id_Animal_makeSound; # Expected output: 4.
+    virtual_call_lptr_method ptr_a, method_id_Animal_makeSound; # Expected output: 4.
 
     # Cannot call ptr_a->hunt(), because Animal doesn't have a hunt() method.
     # This would be a static typing error in a higher-level language.
-    # virtual_call_lptr_func ptr_a, method_id_Animal_hunt;
+    # virtual_call_lptr_method ptr_a, method_id_Animal_hunt;
 
     # ---------------------- Scenario 2: Cat object, Feline* pointer ------------------
     # Using the same actual_cat_obj from above.
     upcast_lptr_lptr ptr_f, actual_cat_obj;                     # ptr_f = (Feline*)actual_cat_obj;
-    virtual_call_lptr_func ptr_f, method_id_Animal_makeSound;   # Expected output: 4
-    virtual_call_lptr_func ptr_f, method_id_Feline_hunt;         # Expected output: 5
+    virtual_call_lptr_method ptr_f, method_id_Animal_makeSound;   # Expected output: 4
+    virtual_call_lptr_method ptr_f, method_id_Feline_hunt;         # Expected output: 5
 
 
     # ---------------------- Scenario 3: Feline object, Animal* pointer ------------------
@@ -136,7 +136,7 @@ function main {
     setVTable_lptr_type actual_feline_obj, Feline; 
     upcast_lptr_lptr ptr_a, actual_feline_obj;      # ptr_a = (Animal*)actual_feline_obj;
     # Call Animal::makeSound. Actual object is Feline.
-    virtual_call_lptr_func ptr_a, method_id_Animal_makeSound;   # Expected output: 2(for "General feline sound")
+    virtual_call_lptr_method ptr_a, method_id_Animal_makeSound;   # Expected output: 2(for "General feline sound")
 
 
     # ---------------------- Scenario 4: Feline object, Feline* pointer ------------------
@@ -144,17 +144,17 @@ function main {
     upcast_lptr_lptr ptr_f, actual_feline_obj;
 
     # Call Animal::makeSound. Actual object is Feline.
-    virtual_call_lptr_func ptr_f, method_id_Animal_makeSound;   # Expected output: 2 (for "General feline sound")
+    virtual_call_lptr_method ptr_f, method_id_Animal_makeSound;   # Expected output: 2 (for "General feline sound")
 
     # Call Feline::hunt. Actual object is Feline.
-    virtual_call_lptr_func ptr_f, method_id_Feline_hunt;   # Expected output: 3 (for "Feline is hunting...")
+    virtual_call_lptr_method ptr_f, method_id_Feline_hunt;   # Expected output: 3 (for "Feline is hunting...")
 
     # ---------------------- Scenario 5: Animal object, Animal* pointer ------------------
     alloc_lptr_type actual_animal_obj, Animal;
     setVTable_lptr_type actual_animal_obj, Animal;   
     # mov_lptr_lptr ptr_a, actual_animal_obj;
     upcast_lptr_lptr ptr_a, actual_animal_obj;
-    virtual_call_lptr_func ptr_a, method_id_Animal_makeSound; # Expected output: 1 (for "Generic animal sound")
+    virtual_call_lptr_method ptr_a, method_id_Animal_makeSound; # Expected output: 1 (for "Generic animal sound")
 
     ret;
 }

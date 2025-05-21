@@ -5,6 +5,7 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
+#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
@@ -33,6 +34,8 @@ namespace vm::code {
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::MethodName arg) { return arg.method_name.str(); }
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 

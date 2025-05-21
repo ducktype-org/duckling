@@ -111,25 +111,25 @@ function main {
     alloc_lptr_type shape_obj, Shape;
     setVTable_lptr_type shape_obj, Shape;
     mov_lptr_lptr shape_var, shape_obj;
-    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 0.
+    virtual_call_lptr_method shape_var, method_id_Shape_draw; # Should output 0.
 
     # 2) Call to Line vertex count.
     alloc_lptr_type line_obj, Line; 
     setVTable_lptr_type line_obj, Line;
     upcast_lptr_lptr shape_var, line_obj;
-    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 2.
+    virtual_call_lptr_method shape_var, method_id_Shape_draw; # Should output 2.
 
     # 3) Call to triangle vertex count.
     alloc_lptr_type tri_obj, Triangle;
     setVTable_lptr_type tri_obj, Triangle;
     upcast_lptr_lptr shape_var, tri_obj; 
-    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 3.
+    virtual_call_lptr_method shape_var, method_id_Shape_draw; # Should output 3.
 
     # 4) Call to Rectangle vertex count.
     alloc_lptr_type rect_obj, Rectangle;
     setVTable_lptr_type rect_obj, Rectangle;
     upcast_lptr_lptr shape_var, rect_obj;
-    virtual_call_lptr_func shape_var, method_id_Shape_draw; # Should output 4.
+    virtual_call_lptr_method shape_var, method_id_Shape_draw; # Should output 4.
 
     deinit; # shape_obj
     deinit; # rect_obj

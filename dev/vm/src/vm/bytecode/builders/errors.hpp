@@ -220,6 +220,7 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLabelError, "Duplicated label: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
+	DEFINE_ARGUMENT_ERROR(UnknownMethodError, "Unknown method: ");
 	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
 		"Invalid function call arguments. Values on the stack do not have proper types for "
