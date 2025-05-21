@@ -53,7 +53,7 @@ message HlConcatComponent {
 
 message HlInteractiveComponent {
     uint32 component_id = 1;
-    HlComponent current_component = 2;
+    HlComponent primary_component = 2;
 }
 
 message HlComponent {
