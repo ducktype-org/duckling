@@ -60,7 +60,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 	}
 
 	static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key_hash, { res, acd } });
+		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
 };

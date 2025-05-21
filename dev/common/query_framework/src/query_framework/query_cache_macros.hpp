@@ -82,7 +82,7 @@
  */
 #define QUERY_AUTO_NO_CACHE                                                                  \
 	static auto store(query::QueryUnstableHash, PResult res, const query::ACD&) -> QResult { \
-		return QResult{ std::move(res) };                                                    \
+		return QResult{ std::move(res) }; /* NOLINT(clang-diagnostic-redundant-move) */      \
 	}                                                                                        \
                                                                                              \
 	static auto load(query::QueryUnstableHash) -> LoadResult { return {}; }

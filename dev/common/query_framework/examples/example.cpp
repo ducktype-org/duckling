@@ -75,7 +75,7 @@ struct IMPLEMENT_QUERY(Query1, uint64_t) {
 	}
 
 	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
 };
@@ -101,7 +101,7 @@ struct IMPLEMENT_QUERY(Query2, uint64_t) {
 	}
 
 	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
 };
@@ -127,7 +127,7 @@ struct IMPLEMENT_QUERY(CyclicQuery, uint64_t) {
 	}
 
 	static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+		cache.insert({ key, { .data = res, .acd = acd } });
 		return res;
 	}
 };

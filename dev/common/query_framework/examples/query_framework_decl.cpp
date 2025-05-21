@@ -64,7 +64,7 @@ struct IMPLEMENT_QUERY(MyQuery, PResult) {
 
 	static auto store(query::QueryUnstableHash key_hash, PResult q_res, query::ACD acd) -> QResult {
 		QResult res = { q_res.v };
-		cache.put(key_hash, { res, acd });
+		cache.put(key_hash, { .data = res, .acd = acd });
 		return res;
 	}
 };
