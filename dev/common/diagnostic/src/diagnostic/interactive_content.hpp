@@ -50,28 +50,25 @@ namespace dia {
 
 	class InteractiveContent {
 	private:
-		const ContentType                     content_type;
-		const std::string                     family;
-		const std::string                     name;
-		Box<ContentParams>                    params;
-		const base::Optional<InteractiveCode> interactive_code;
+		const ContentType                       content_type;
+		const std::string                       family;
+		const std::string                       name;
+		Box<ContentParams>                      params;
+		const base::Optional<Box<AbstractCode>> code_sample;
 
 	public:
 		InteractiveContent(
-			ContentType                   content_type,
-			const std::string&            family,
-			const std::string&            name,
-			Box<ContentParams>            params,
-			dia::SourcePosition           position,
-			pst::Access<pst::LangElement> pst,
-			query::Context&               ctx,
-			dia::pointer_message          pointer
+			ContentType        content_type,
+			const std::string& family,
+			const std::string& name,
+			Box<ContentParams> params,
+			Box<AbstractCode>  code_sample
 		):
 			  content_type(content_type),
 			  family(family),
 			  name(name),
 			  params(std::move(params)),
-			  interactive_code(InteractiveCode{ position, pst, ctx, pointer }) {}
+			  code_sample(std::move(code_sample)) {}
 
 		InteractiveContent(
 			ContentType        content_type,
@@ -83,32 +80,19 @@ namespace dia {
 			  family(family),
 			  name(name),
 			  params(std::move(params)),
-			  interactive_code() {}
-
-		InteractiveContent(
-			ContentType        content_type,
-			const std::string& family,
-			const std::string& name,
-			Box<ContentParams> params,
-			InteractiveCode    interactive_code
-		):
-			  content_type(content_type),
-			  family(family),
-			  name(name),
-			  params(std::move(params)),
-			  interactive_code(std::move(interactive_code)) {}
+			  code_sample() {}
 
 		json tojson() {
 			return json{ { "metadata",
 				           { { "type", content_type }, { "family", family }, { "name", name } } },
 				         { "params", params },
-				         { "code", interactive_code } };
+				         { "code", code_sample } };
 		}
 
 		std::set<compiler::helios::SymID> get_symbols() {
 			auto params_symbols = params->get_symbols();
-			if_opt_some(interactive_code, val) {
-				auto code_symbols = val.get_symbols();
+			if_opt_some(code_sample, val) {
+				auto code_symbols = val->get_symbols();
 				params_symbols.insert(code_symbols.begin(), code_symbols.end());
 			}
 			return params_symbols;
@@ -116,8 +100,8 @@ namespace dia {
 
 		std::set<tsh::AbstractType> get_types() {
 			auto params_types = params->get_types();
-			if_opt_some(interactive_code, val) {
-				auto code_types = val.get_types();
+			if_opt_some(code_sample, val) {
+				auto code_types = val->get_types();
 				params_types.insert(code_types.begin(), code_types.end());
 			}
 			return params_types;
@@ -134,17 +118,18 @@ namespace dia {
 
 	class InteractiveNote: public InteractiveContent {
 		InteractiveNote(
+			const std::string& family, const std::string& name, Box<ContentParams> params
+		):
+			  InteractiveContent(ContentType::NOTE, family, name, std::move(params)) {}
+
+		InteractiveNote(
 			const std::string& family,
 			const std::string& name,
 			Box<ContentParams> params,
-			InteractiveCode&&  interactive_code
+			Box<AbstractCode>  code_sample
 		):
 			  InteractiveContent(
-				  ContentType::NOTE,
-				  family,
-				  name,
-				  std::move(params),
-				  std::forward<InteractiveCode>(interactive_code)
+				  ContentType::NOTE, family, name, std::move(params), std::move(code_sample)
 			  ) {}
 	};
 }

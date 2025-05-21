@@ -36,21 +36,26 @@ base::Optional<compiler::helios::SymID> dia::InteractiveCode::get_symbol(
 	return {};
 }
 
-json dia::InteractiveCode::make_string_array(usize start, usize end) const {
-	auto              lines = pst->getSourcePosition().getSource()->viewSplitRange(start, end);
-	std::vector<json> v;
-	for (auto& l: lines) {
-		v.push_back(l.second.stdString());
-		v.push_back({ { "type", "start_line" }, { "number", l.first + 1 } });
+namespace {
+	json make_string_array(Ref<tokenizer::TokenSource> source, usize start, usize end) {
+		auto              lines = source->viewSplitRange(start, end);
+		std::vector<json> v;
+		for (auto& l: lines) {
+			v.emplace_back(l.second.stdString());
+			v.push_back({ { "type", "start_line" }, { "number", l.first + 1 } });
+		}
+		if (!v.empty()) v.pop_back();
+		return v;
 	}
-	if (!v.empty()) v.pop_back();
-	return v;
 }
 
-void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& out) const {
+void dia::InteractiveCode::visit_leafs(
+	pst::Access<pst::LangElement> pst, json& out, usize range_start, usize range_end
+) const {
 	auto source = pst->getSourcePosition().getSource();
 	// If this node is a leaf:
-	if (pst->viewChildren().empty()) {
+	auto node_line = pst->getSourcePosition().getStartLineColumn().first;
+	if (pst->viewChildren().empty() && node_line >= range_start && node_line <= range_end) {
 		auto hid_opt    = get_symbol(pst);
 		auto node_start = pst->getSourcePosition().getStart();
 		auto node_end   = pst->getSourcePosition().getEnd();
@@ -59,7 +64,8 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 			                      .getSource()
 			                      ->getCharRange(node_start, node_end + 1)
 			                      .stdString() } };
-		node["content"] = make_string_array(node_start, node_end + 1);
+		node["content"]
+			= make_string_array(pst->getSourcePosition().getSource(), node_start, node_end + 1);
 		if (hid_opt.has_value()) {
 			node["type"]      = "entity";
 			node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
@@ -83,10 +89,13 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 		auto child       = c.unlock(ctx);
 		auto child_start = child->getSourcePosition().getStart();
 		auto child_end   = child->getSourcePosition().getEnd();
+		// TODO: check if this is in line range.
 		if (child_start > last_position) {
 			json node       = { { "testcontent",
 				                  source->getCharRange(last_position, child_start).stdString() } };
-			node["content"] = make_string_array(last_position, child_start);
+			node["content"] = make_string_array(
+				pst->getSourcePosition().getSource(), last_position, child_start
+			);
 			if (hid_opt.has_value()) {
 				node["type"]      = "entity";
 				node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
@@ -101,16 +110,19 @@ void dia::InteractiveCode::visit_leafs(pst::Access<pst::LangElement> pst, json& 
 		json child_json{};
 		child_json["content"] = json::array();
 		child_json["type"]    = "grouping";
-		visit_leafs(c.unlock(ctx), child_json["content"]);
+		visit_leafs(c.unlock(ctx), child_json["content"], range_start, range_end);
 		last_position = child_end + 1;
 		out.push_back(child_json);
 	}
+	// TODO: this is awful copypaste.
 	if (pst->getSourcePosition().getEnd() > last_position) {
 		json node = {
 			{ "testcontent",
 			  source->getCharRange(last_position, pst->getSourcePosition().getEnd()).stdString() }
 		};
-		node["content"] = make_string_array(last_position, pst->getSourcePosition().getEnd());
+		node["content"] = make_string_array(
+			pst->getSourcePosition().getSource(), last_position, pst->getSourcePosition().getEnd()
+		);
 		if (hid_opt.has_value()) {
 			node["type"]      = "entity";
 			node["refers_to"] = std::to_string(hid_opt.value().customPerfectHash());
@@ -146,6 +158,33 @@ json dia::InteractiveCode::serialize_code() const {
 	}
 	fragments.push_back({ { "type", "start_line" },
 	                      { "number", parent->getSourcePosition().getStartLineColumn().first } });
-	visit_leafs(parent, fragments);
+	visit_leafs(parent, fragments, start, end);
 	return fragments;
+}
+
+json dia::SimpleCode::serialize_code() const {
+	auto source = position.getSource();
+
+	usize start_line = position.getStartLineColumn().first;
+	usize end_line   = position.getEndLineColumn().first;
+
+	auto  code_lines = InteractiveLogger::params().default_code_lines;
+	usize first_line = std::max(code_lines + 1, start_line) - code_lines;
+	usize last_line  = std::min(source->getLines().size(), end_line + code_lines);
+
+	usize begin_char = source->getLine(first_line).first;
+	usize end_char   = source->getLine(last_line).second;
+
+	auto j = json::array();
+	j.push_back({ { "type", "start_line" }, { "number", first_line } });
+	auto before = make_string_array(source, begin_char, pointer.second.getStart());
+	auto points_to
+		= make_string_array(source, pointer.second.getStart(), pointer.second.getEnd() + 1);
+	j.insert(j.end(), before.begin(), before.end());
+	j.push_back({ { "type", "grouping" }, { "content", points_to }, { "groups", { pointer.first } } }
+	);
+	auto after = make_string_array(source, pointer.second.getEnd() + 1, end_char);
+	j.insert(j.end(), after.begin(), after.end());
+
+	return j;
 }

@@ -15,39 +15,63 @@ namespace dia {
 	using pointer_message = dia::pointer_message;
 	using nlohmann::json;
 
-	class InteractiveCode {
-	private:
+	class AbstractCode {
+	protected:
 		dia::SourcePosition                       position;
-		mutable std::set<compiler::helios::SymID> symbols;
-		mutable std::set<tsh::AbstractType>       types;
-		pst::Access<pst::LangElement>             pst;
-		query::Context&                           ctx;
+		mutable std::set<compiler::helios::SymID> symbols{};
+		mutable std::set<tsh::AbstractType>       types{};
 		pointer_message                           pointer;
-		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
-		json                                    make_string_array(usize start, usize end) const;
-		void visit_leafs(pst::Access<pst::LangElement> pst, json& out) const;
-		json serialize_code() const;
+
+		AbstractCode(dia::SourcePosition position, pointer_message pointer):
+			  position(position),
+			  pointer(pointer) {}
 
 	public:
+		virtual json serialize_code() const = 0;
+
+		json tojson() {
+			auto j        = json::object();
+			j["location"] = position;
+			j["content"]  = { { "type", "code" }, { "content", serialize_code() } };
+			return j;
+		}
+
+		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }
+
+		std::set<tsh::AbstractType> get_types() const { return types; }
+
+		virtual ~AbstractCode() = default;
+	};
+
+	class InteractiveCode: public AbstractCode {
+	private:
+		pst::Access<pst::LangElement>           pst;
+		query::Context&                         ctx;
+		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
+		void                                    visit_leafs(
+											   pst::Access<pst::LangElement> pst, json& out, usize range_start, usize range_end
+										   ) const;
+
+	public:
+		json serialize_code() const override;
+
 		InteractiveCode(
 			dia::SourcePosition           position,
 			pst::Access<pst::LangElement> pst,
 			query::Context&               ctx,
 			pointer_message               pointer
 		):
-			  position(position),
+			  AbstractCode(position, pointer),
 			  pst(pst),
-			  ctx(ctx),
-			  pointer(pointer) {}
+			  ctx(ctx) {}
+	};
 
-		friend void to_json(json& j, const InteractiveCode& code) {
-			j             = json::object();
-			j["location"] = code.position;
-			j["content"]  = { { "type", "code" }, { "content", code.serialize_code() } };
-		}
+	// Non-interactive code. Might be useful in parse errors.
+	class SimpleCode: public AbstractCode {
+	public:
+		json serialize_code() const override;
 
-		std::set<compiler::helios::SymID> get_symbols() const { return symbols; }
-
-		std::set<tsh::AbstractType> get_types() const { return types; }
+		SimpleCode(dia::SourcePosition position, pointer_message pointer):
+			  AbstractCode(position, pointer) {}
 	};
 }

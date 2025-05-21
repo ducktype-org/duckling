@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.hpp"
+#include "diagnostic/interactive_code.hpp"
 #include "interactive_content.hpp"
 #include "query_framework/query_int.hpp"
 
@@ -76,10 +77,9 @@ namespace dia {
 					  "type_check",
 					  "no_match_2op",
 					  std::move(params),
-					  position,
-					  pst,
-					  ctx,
-					  { "cause", position }
+					  base::makeBox<InteractiveCode>(
+						  position, pst, ctx, dia::pointer_message{ "cause", position }
+					  )
 				  ) {}
 		};
 
@@ -100,4 +100,46 @@ namespace dia {
 			  ) {}
 	};
 
+	class ParseError: public dia::InteractiveMessage {
+	public:
+		ParseError(std::string family, std::string name, dia::SourcePosition position):
+			  dia::InteractiveMessage(
+				  makeBox<InteractiveContent>(
+					  ContentType::ERROR,
+					  family,
+					  name,
+					  base::makeBox<EmptyParams>(),
+					  base::makeBox<SimpleCode>(position, pointer_message{ "here", position })
+				  ),
+				  std::vector<Box<dia::InteractiveNote>>{}
+			  ) {}
+	};
+
+	class RoundBracket: public ParseError {
+	public:
+		RoundBracket(dia::SourcePosition position): ParseError("parse", "roundbracket", position) {}
+	};
+
+	class TODOError: public InteractiveMessage {
+		class Params: public ContentParams {
+			const std::string message;
+
+		public:
+			Params(const std::string& message): message(message) {}
+
+			json tojson() override { return { "message", message }; }
+		};
+
+		TODOError(dia::SourcePosition position, const std::string& message):
+			  dia::InteractiveMessage(
+				  makeBox<InteractiveContent>(
+					  ContentType::ERROR,
+					  "misc"
+					  "todo",
+					  base::makeBox<Params>(message),
+					  base::makeBox<SimpleCode>(position, pointer_message{ "here", position })
+				  ),
+				  std::vector<Box<dia::InteractiveNote>>{}
+			  ) {}
+	};
 }
