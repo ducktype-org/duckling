@@ -101,8 +101,8 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(query::QueryUnstableHash keyHash) -> LoadResult;
-		 *  static auto store(query::QueryUnstableHash keyHash, PResult res, query::ACD acd) ->
+		 *  static auto load(query::QueryUnstableHash key_hash) -> LoadResult;
+		 *  static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
