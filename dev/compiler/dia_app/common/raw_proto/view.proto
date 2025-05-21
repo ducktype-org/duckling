@@ -141,7 +141,7 @@ message SideEdge {
 message SideInfo {
     uint32 side_info_id = 1;
     Metadata metadata = 2;
-    repeated SideSection sections = 3;
+    repeated Section sections = 3;
     repeated SideEdge edges = 4;
 }
 
