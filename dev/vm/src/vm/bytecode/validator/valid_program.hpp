@@ -3,8 +3,10 @@
 #include "base/box.hpp"
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**
@@ -36,11 +38,6 @@ namespace vm::code {
 		static ValidProgram withBuiltins();
 
 		/**
-		 * @brief Creates a CodeCollection that is validated.
-		 */
-		CodeCollection produceValidBytecode() const;
-
-		/**
 		 * @brief Produces TypeMetadata, that is isomorphic with its state.
 		 * @TODO: Fix an issue, that TypeMetadata has to be built twice.
 		 */
@@ -63,16 +60,22 @@ namespace vm::code {
 		 */
 		void insertCode(const std::vector<code::CodeCollection>& collections_to_add);
 
+		const StableTypeIdNameMap<TypeOfData>& types() const;
+
+		const StableTypeIdNameMap<GlobalData>& globals() const;
+
+		const StableTypeIdNameMap<Function>& functions() const;
+
 	private:
 		/**
 		 * @brief Inserts types. May invalidate state.
-		 * @TODO: Improve comment.
+		 * Can insert the same type multiple times.
 		 */
 		void insertTypes(const std::vector<code::TypeOfData>& new_types);
 
 		/**
 		 * @brief Inserts globals. May invalidate state.
-		 * @TODO: Improve comment.
+		 * Cannot insert the same global data multiple times.
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
 
@@ -84,7 +87,7 @@ namespace vm::code {
 		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions);
 
-		StableTypeIdNameMap<code::Function>   functions;
+		StableTypeIdNameMap<code::Function>   function_map;
 		StableTypeIdNameMap<code::GlobalData> globals_map;
 
 		code::TypeContext type_context;

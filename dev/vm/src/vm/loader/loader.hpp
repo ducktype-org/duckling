@@ -4,6 +4,7 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -17,62 +18,10 @@
 
 namespace vm::loader {
 	/**
-	 * @brief Loader-only program representation. It allows for dynamic function and type insertion.
-	 */
-	class Program final {
-	public:
-		Program()                                                             = default;
-		Program(const Program&)                                               = delete;
-		Program(Program&&) noexcept                                           = default;
-		Program&                                    operator=(const Program&) = delete;
-		Program&                                    operator=(Program&&)      = default;
-		static std::expected<Program, LoaderLogger> from(const code::CodeCollection& code_collection
-		);
-
-		const StableTypeIdNameMap<code::Function>&   funcMap() const;
-		const StableTypeIdNameMap<code::TypeOfData>& typeMap() const;
-		const code::builders::GlobalDataMap&         globalMap() const;
-
-		Box<TypeMetadata> produceTypeMetadata() const;
-
-		/**
-		 * @brief Inserts new code to a current program state. Can be called multiple times with
-		 * the same code collection object.
-		 */
-		void insertCode(
-			const std::vector<code::CodeCollection>& new_code_collections, LoaderLogger& logger
-		);
-
-		/**
-		 * @brief Inserts a type. Can be called multiple times with the same type object.
-		 */
-		void insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger);
-
-		/**
-		 * @brief Inserts a function. Cannot be called multiple times with the same function
-		 * object.
-		 */
-		void insertFunctions(const std::vector<code::Function>& new_functions, LoaderLogger& logger);
-
-		/**
-		 * @brief Inserts a global. Can be called multiple times with the same global data
-		 * object.
-		 */
-		void insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger);
-
-		code::builders::TypeContext getTypeContext() const;
-
-	private:
-		StableTypeIdNameMap<code::Function>  functions;
-		code::builders::GlobalDataMap        globals_map;
-		code::builders::TypeContextValidator type_context_builder;
-	};
-
-	/**
 	 * @brief Loader class, that allows for loading programs in multiple forms.
 	 */
 	class Loader final {
-		Program program;
+		code::ValidProgram program = code::ValidProgram::withBuiltins();
 
 		/**
 		 * @brief Parses a list of files, returns an intermediate loader-only program

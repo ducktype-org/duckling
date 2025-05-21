@@ -2,9 +2,9 @@
 
 #include "errors.hpp"
 
-#include "vm/bytecode/bytecode.hpp"
-#include "vm/bytecode/validator/function_validator.hpp"
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/function_validator.hpp>
 
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
@@ -12,14 +12,6 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 	auto program         = ValidProgram();
 	program.type_context = getBuiltinTypes();
 	return program;
-}
-
-vm::code::CodeCollection vm::code::ValidProgram::produceValidBytecode() const {
-	CodeCollection code;
-	for (const auto& type: type_context.getCurrentTypes()) code.types.push_back(type);
-	for (const auto& global: globals_map) code.global_data.push_back(global);
-	for (const auto& function: functions) code.functions.push_back(function);
-	return code;
 }
 
 Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
@@ -30,12 +22,17 @@ vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
 	const std::vector<code::CodeCollection>& collections_to_add
 ) const {
 	ValidProgram copy = *this;
-	for (const auto& collection: collections_to_add) {
-		copy.insertTypes(collection.types);
-		copy.insertGlobals(collection.global_data);
-		copy.insertFunctions(collection.functions);
-	}
+	copy.insertCode(collections_to_add);
 	return copy;
+}
+
+void vm::code::ValidProgram::insertCode(const std::vector<code::CodeCollection>& collections_to_add
+) {
+	for (const auto& collection: collections_to_add) {
+		insertTypes(collection.types);
+		insertGlobals(collection.global_data);
+		insertFunctions(collection.functions);
+	}
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& new_types) {
@@ -43,8 +40,8 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
-	// @TODO: Validate global's type even exists.
-	for (const auto& global: new_globals) globals_map.insert(global, global.name);
+	for (const auto& global: new_globals)
+		if (!globals_map.contains(global.name)) globals_map.insert(global, global.name);
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
@@ -53,6 +50,18 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 		auto validated_function = validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), *type_metadata, globals_map, func
 		);
-		functions.insert(validated_function, validated_function.name);
+		function_map.insert(validated_function, validated_function.name);
 	}
+}
+
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+	return type_context.getCurrentTypes();
+}
+
+const vm::StableTypeIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+	return globals_map;
+}
+
+const vm::StableTypeIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+	return function_map;
 }

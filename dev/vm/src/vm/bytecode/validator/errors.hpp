@@ -3,6 +3,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/bytecode.hpp"
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -86,6 +87,20 @@ namespace vm::code {
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
 			return VISIT(BASE_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
+	};
+
+	class DuplicatedGlobalError: public ValidationError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Duplicated global data: ";
+		const code::GlobalData                  GLOBAL_DATA;
+
+		DuplicatedGlobalError(code::GlobalData global_data):
+			  ValidationError(base::strConcat(ERR_MSG, global_data.name)),
+			  GLOBAL_DATA(global_data) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return &GLOBAL_DATA.name;
 		}
 	};
 
