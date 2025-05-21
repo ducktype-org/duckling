@@ -1,10 +1,10 @@
 
 /**
- * @file opcodes_functions_implementation.hpp
+ * @file opcodes_functions_impl_base.hpp
  * @brief The opcodes functions implementations.
  *
- * @warning Do not include this file directly. Include `opcodes_functions.hpp` or
- * `opcodes_functions_debug.hpp` instead.
+ * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or
+ * `opcodes_functions_impl_debug.cpp` instead.
  *
  * Motivation: each opcode that thread executes has its own function that is called to
  * perform the opcode operation. They are called "OpFuns". At the end of each
@@ -27,10 +27,7 @@
  * `opcodes_functions_utils.hpp`.
  */
 
-#include "low_program/instruction.hpp"
-#include "op_case.hpp"
 #include "opcodes_functions_utils.hpp"
-#include "vmthread.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -40,6 +37,9 @@
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <variant>
