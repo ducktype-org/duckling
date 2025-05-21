@@ -39,7 +39,9 @@ namespace query::detail {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		if (auto v = QueryImplType::load(unstableHashKey(key))) {
+		const auto unstable_hash = unstableHashKey(key);
+
+		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
@@ -72,7 +74,7 @@ namespace query::detail {
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
 			return QueryImplType::store(
-				unstableHashKey(key), QueryImplType::provide(context, key), acd
+				unstable_hash, QueryImplType::provide(context, key), acd
 			);
 		}
 	}
