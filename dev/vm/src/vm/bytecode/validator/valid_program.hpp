@@ -38,6 +38,11 @@ namespace vm::code {
 		static ValidProgram withBuiltins();
 
 		/**
+		 * @brief Produces valid CodeCollection.
+		 */
+		CodeCollection produceCodeCollection() const;
+
+		/**
 		 * @brief Produces TypeMetadata, that is isomorphic with its state.
 		 * @TODO: Fix an issue, that TypeMetadata has to be built twice.
 		 */

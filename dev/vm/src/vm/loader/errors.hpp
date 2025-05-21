@@ -5,6 +5,8 @@
 #include <string_view>
 
 namespace vm::loader {
+	// TODOM: Remove unused errors.
+
 	class DuplicatedTypeError final: public dia::Error {
 		base::StrID type_name;
 
@@ -152,7 +154,7 @@ namespace vm::loader {
 		std::string error_message;
 
 	public:
-		constexpr static const std::string_view ERR_MSG = "An error occurred during building: ";
+		constexpr static const std::string_view ERR_MSG = "A validation error occurred: ";
 
 	protected:
 		[[nodiscard]]
@@ -171,7 +173,7 @@ namespace vm::loader {
 			  error_message(error_message) {}
 	};
 
-	class SomeBuilderNote final: public dia::NoteWithPosition {
+	class SomeValidationNote final: public dia::NoteWithPosition {
 		std::string error_message;
 
 	public:
@@ -184,7 +186,7 @@ namespace vm::loader {
 		}
 
 	public:
-		SomeBuilderNote(dia::SourcePosition pos, std::string_view error_message):
+		SomeValidationNote(dia::SourcePosition pos, std::string_view error_message):
 			  dia::NoteWithPosition(pos),
 			  error_message(error_message) {}
 	};

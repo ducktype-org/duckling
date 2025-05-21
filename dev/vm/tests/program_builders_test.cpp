@@ -5,7 +5,7 @@
 
 #include <base/string_id.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
+#include <vm/bytecode/builders/.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>

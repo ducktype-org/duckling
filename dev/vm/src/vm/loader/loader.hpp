@@ -5,7 +5,6 @@
 #include <filesystem/file.hpp>
 
 #include <vm/bytecode/validator/valid_program.hpp>
-#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>

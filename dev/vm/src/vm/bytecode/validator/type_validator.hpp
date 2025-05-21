@@ -6,9 +6,8 @@
 
 namespace vm::code {
 	/**
-	 * @brief TypeContextValidator allows for first adding a set of types,
+	 * @brief TypeContext allows for first adding a set of types,
 	 * and then validating and building them.
-	 * It is used to build TypeContext.
 	 */
 	class TypeContext {
 	public:

@@ -5,7 +5,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>

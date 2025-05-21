@@ -4,8 +4,9 @@
 
 #include <base/ref.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
+#include "vm/bytecode/validator/valid_program.hpp"
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 namespace compiler::backend_vm {
 	/**
@@ -28,7 +29,7 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::builders::TypeContextValidator type_context_builder;
-		vm::code::CodeCollection                 code;
+		vm::code::TypeContext  type_context;
+		vm::code::ValidProgram program;
 	};
 }

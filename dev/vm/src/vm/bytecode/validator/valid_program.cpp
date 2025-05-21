@@ -40,13 +40,17 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
-	for (const auto& global: new_globals)
-		if (!globals_map.contains(global.name)) globals_map.insert(global, global.name);
+	for (const auto& global: new_globals) {
+		if (globals_map.contains(global.name)) throw DuplicatedGlobalDataError(global);
+		globals_map.insert(global, global.name);
+	}
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata();
 	for (const auto& func: new_functions) {
+		if (function_map.contains(func.name)) throw DuplicatedFunctionError(func);
+
 		auto validated_function = validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), *type_metadata, globals_map, func
 		);
@@ -64,4 +68,12 @@ const vm::StableTypeIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::glo
 
 const vm::StableTypeIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
 	return function_map;
+}
+
+vm::code::CodeCollection vm::code::ValidProgram::produceCodeCollection() const {
+	return {
+		.functions = { function_map.begin(), function_map.end() },
+		.types = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },
+		.global_data = { globals_map.begin(), globals_map.end() },
+	};
 }

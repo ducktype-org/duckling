@@ -90,19 +90,26 @@ namespace vm::code {
 		}
 	};
 
-	class DuplicatedGlobalError: public ValidationError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "Duplicated global data: ";
-		const code::GlobalData                  GLOBAL_DATA;
+#define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
+	class NAME: public ValidationError {                                                \
+	public:                                                                             \
+		constexpr static const std::string_view ERR_MSG = ERROR;                        \
+		const ELEMENT_TYPE                      ELEMENT;                                \
+                                                                                        \
+		NAME(ELEMENT_TYPE element):                                                     \
+			  ValidationError(ERR_MSG.data()),                                          \
+			  ELEMENT(std::move(element)) {}                                            \
+                                                                                        \
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override { \
+			return &ELEMENT.name;                                                       \
+		}                                                                               \
+	}
 
-		DuplicatedGlobalError(code::GlobalData global_data):
-			  ValidationError(base::strConcat(ERR_MSG, global_data.name)),
-			  GLOBAL_DATA(global_data) {}
+	DEFINE_DUPLICATED_ELEMENT_ERROR(
+		DuplicatedGlobalDataError, code::GlobalData, "Duplicated global data: "
+	);
 
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return &GLOBAL_DATA.name;
-		}
-	};
+	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
 
 	class TypeErrorBase: public ValidationError {
 	public:

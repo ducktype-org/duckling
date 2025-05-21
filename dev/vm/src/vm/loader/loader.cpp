@@ -11,8 +11,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/validator/valid_program.hpp"
-#include <vm/bytecode/builders/builders.hpp>
+#include "vm/loader/logger.hpp"
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
@@ -20,6 +20,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
@@ -105,7 +106,6 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			LoaderLogger         log;
 			code::CodeCollection new_code;
 
 			for (const auto& parsed_file: parsed_files) {
@@ -132,31 +132,8 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 				}
 			}
 
-
-			if (log.good())
-				return code::CodeCollection{
-					.functions   = functions,
-					.types       = type_context.getTypes() | std::ranges::to<std::vector>(),
-					.global_data = globals | std::ranges::to<std::vector>(),
-				};
+			return new_code;
 		}
-		catch (vm::code::builders::StackStructureMismatchError& e) {
-			log.logMap<SomeValidationError>(
-				e.label,
-				[&](Box<SomeValidationError>& err) {
-					for (const auto& instruction: e.jumps)
-						log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
-				},
-				e.what()
-			);
-		}
-		catch (code::builders::ValidationError& e) {
-			match_optional(e.maybeElement()) {
-				opt_some(elem) { log.log<SomeValidationError>(*elem, e.what()); }
-				opt_none { log.logSimple(e.what()); }
-			}
-		}
-		return std::unexpected(std::move(log));
 	}
 
 	CORE_UNREACHABLE();
@@ -165,13 +142,26 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 	const std::vector<code::CodeCollection>& code_collections
 ) {
-	LoaderLogger logger;
+	LoaderLogger log;
 	try {
 		program = program.newInsertCode(code_collections);
-	} catch()
-
-	if (logger.good()) return compiler::compile(program);
-	return std::unexpected(std::move(logger));
+		return compiler::compile(program);
+	} catch (code::StackStructureMismatchError& e) {
+		log.logMap<SomeValidationError>(
+			e.label,
+			[&](Box<SomeValidationError>& err) {
+				for (const auto& instruction: e.jumps)
+					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
+			},
+			e.what()
+		);
+	} catch (code::ValidationError& e) {
+		match_optional(e.maybeElement()) {
+			opt_some(elem) log.log<SomeValidationError>(*elem, e.what());
+			opt_none log.logSimple(e.what());
+		}
+	}
+	return std::unexpected(std::move(log));
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
