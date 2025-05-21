@@ -494,9 +494,7 @@ namespace compiler::helios {
 		// has to return different expresion tree (unique_ptr).
 		// It might not be a problem in the future, so for now it is left without cache.
 
-		static auto load(QKey) -> LoadResult { return {}; }
-
-		static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
+		QUERY_AUTO_NO_CACHE
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryHoutOfExpr)
