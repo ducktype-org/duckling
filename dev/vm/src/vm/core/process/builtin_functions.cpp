@@ -146,8 +146,8 @@ namespace vm::builtins {
 
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection               code_collection;
-			code::builders::TypeContextBuilder type_context_builder(code::getBuiltinTypes());
+			code::CodeCollection          code_collection;
+			code::builders::TypeValidator type_context_builder(code::getBuiltinTypes());
 			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
 				type_context_builder.addType(func_type);
 

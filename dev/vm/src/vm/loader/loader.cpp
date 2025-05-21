@@ -98,9 +98,9 @@ namespace {
 	}
 
 	void insertType(
-		const vm::code::TypeOfData&             type,
-		vm::code::builders::TypeContextBuilder& types,
-		LoaderLogger&                           log
+		const vm::code::TypeOfData&               type,
+		vm::code::builders::TypeContextValidator& types,
+		LoaderLogger&                             log
 	) {
 		using namespace vm;
 		try {
@@ -142,35 +142,6 @@ std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& c
 	program.insertFunctions(code_collection.functions, log);
 	if (!log.good()) return std::unexpected(std::move(log));
 	return program;
-}
-
-void Program::insertCode(
-	const std::vector<code::CodeCollection>& code_collections, LoaderLogger& logger
-) {
-	for (const auto& code_collection: code_collections) {
-		insertTypes(code_collection.types, logger);
-		insertFunctions(code_collection.functions, logger);
-		insertGlobals(code_collection.global_data, logger);
-	}
-}
-
-void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
-	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
-}
-
-void Program::insertFunctions(
-	const std::vector<code::Function>& new_functions, LoaderLogger& logger
-) {
-	for (const auto& func: new_functions) {
-		if (const auto func_name = func.name.str; functions.contains(func_name)) {
-			logger.logMap<DuplicatedFunctionError>(func.name, [&](auto& err) {
-				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicatedFunctionNote>(err, dup_func->name);
-			});
-		} else {
-			functions.insert(func, func_name);
-		}
-	}
 }
 
 void Program::insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger) {
@@ -241,17 +212,17 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 						.global_data = globals | std::ranges::to<std::vector>(),
 					};
 			} catch (vm::code::builders::StackStructureMismatchError& e) {
-				log.logMap<SomeBuilderError>(
+				log.logMap<SomeValidationError>(
 					e.label,
-					[&](Box<SomeBuilderError>& err) {
+					[&](Box<SomeValidationError>& err) {
 						for (const auto& instruction: e.jumps)
 							log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
 					},
 					e.what()
 				);
-			} catch (code::builders::BuilderError& e) {
+			} catch (code::builders::ValidationError& e) {
 				match_optional(e.maybeElement()) {
-					opt_some(elem) { log.log<SomeBuilderError>(*elem, e.what()); }
+					opt_some(elem) { log.log<SomeValidationError>(*elem, e.what()); }
 					opt_none { log.logSimple(e.what()); }
 				}
 			}

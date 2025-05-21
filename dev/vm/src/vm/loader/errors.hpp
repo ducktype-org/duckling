@@ -148,7 +148,7 @@ namespace vm::loader {
 			  local_name(local_name) {}
 	};
 
-	class SomeBuilderError final: public dia::Error {
+	class SomeValidationError final: public dia::Error {
 		std::string error_message;
 
 	public:
@@ -166,7 +166,7 @@ namespace vm::loader {
 			return Domain::StaticVerification;
 		}
 
-		SomeBuilderError(dia::SourcePosition pos, std::string_view error_message):
+		SomeValidationError(dia::SourcePosition pos, std::string_view error_message):
 			  dia::Error(pos),
 			  error_message(error_message) {}
 	};

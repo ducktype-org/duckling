@@ -171,7 +171,7 @@ namespace compiler::backend_vm {
 			}
 		}
 
-		void insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+		void insertFunctionType(TypeValidator& type_context, CRef<lir::Function> lir_function) {
 			auto param_types
 				= lir_function->parameter_layouts
 			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
@@ -190,7 +190,7 @@ namespace compiler::backend_vm {
 			}
 		}
 
-		void insertTypes(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+		void insertTypes(TypeValidator& type_context, CRef<lir::Function> lir_function) {
 			// Insert function type
 			insertFunctionType(type_context, lir_function);
 
@@ -501,7 +501,7 @@ namespace compiler::backend_vm {
 	 */
 	void instertCalledFuncTypes(
 		query::Context&                         query_ctx,
-		TypeContextBuilder&                     type_context,
+		TypeValidator&                          type_context,
 		const std::vector<CRef<lir::Function>>& functions
 	) {
 		for (const auto& lir_function: functions) {

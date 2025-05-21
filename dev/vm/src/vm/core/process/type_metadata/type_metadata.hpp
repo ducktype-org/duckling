@@ -8,6 +8,8 @@
 namespace vm {
 	/**
 	 * @brief Holds metadata about all types in the program.
+	 * @note Copy/Move constructors are deleted, because inner types hold cross-references to themselves,
+	 * so moving or copying them may invalidate their state.
 	 */
 	class TypeMetadata final {
 	private:

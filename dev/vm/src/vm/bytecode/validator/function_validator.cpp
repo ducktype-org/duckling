@@ -1,25 +1,29 @@
 #include "function_validator.hpp"
 
+#include "errors.hpp"
+
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/type_metadata.hpp"
+#include "vm/utils/stable_type_id_name_map.hpp"
 #include <vm/bytecode/builders/builders.hpp>
-#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 #include <variant>
 
-using namespace vm::code::builders;
+using namespace vm;
+using namespace code;
 
 namespace {
 	// Helpers for validation, mainly `ext_*` instructions
-	using namespace vm::code;
-	using namespace vm::code::instructions;
+	using namespace instructions;
 
 	template<typename T, typename Tup>
 	struct IsIn;
@@ -97,6 +101,127 @@ namespace {
 		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
 	}
 }
+
+/**
+ * @brief Represents a local stack variable.
+ */
+struct LocalStackEntry {
+	base::StrID      local_name;
+	CRef<TypeOfData> type;
+
+	constexpr bool operator==(const LocalStackEntry& other) const;
+};
+
+class LocalStack {
+public:
+	std::vector<LocalStackEntry>                 stack_state;
+	base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
+
+	LocalStack(const FunctionType& type, const TypeContextValidator& type_context);
+
+	void push(
+		const opargs::StackLocalAny& local,
+		const opargs::Type&          type,
+		const TypeContextValidator&  type_context
+	);
+	void             pop(const instructions::Op_deinit& cause);
+	bool             contains(base::StrID local_name) const;
+	CRef<TypeOfData> at(base::StrID local_name) const;
+
+	void popCallArgs(
+		const opargs::OpCodeFunctionArg& function, const TypeContextValidator& type_context
+	);
+
+	void validateTailcall(
+		const opargs::OpCodeFunctionArg& function,
+		const TypeContextValidator&      type_context,
+		const FunctionType&              type
+	) const;
+};
+
+/*
+ * Class responsible for function validation.
+ * Processes the control-flow graph and simulates
+ * stack operations. Throws subclasses of ValidationError.
+ */
+class FunctionValidator {
+	const TypeContextValidator&            type_context;
+	const TypeMetadata&                    type_metadata;
+	const StableTypeIdNameMap<GlobalData>& globals;
+	const Function&                        function;
+	FunctionType                           type;
+
+	std::vector<bool>                                        visited_instructions;
+	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
+	base::HashMap<base::StrID, usize>                        index_of_label;
+	base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
+	bool                                                     validated = false;
+
+	/**
+	 * @brief Validates instruction's arguments in a trivial, generic way, i.e. if an
+	 * instruction expects a pointer argument then this function validates this argument really
+	 * is a pointer, not a label or a primitive. In case of this function, an instruction can be
+	 * thought of as an argument collection.
+	 * @param instruction Instruction that is validated.
+	 */
+	void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const;
+
+	/**
+	 * @brief Validates instruction's arguments non-trivially - using specific logic for each
+	 * instruction. For instance, an instruction may expect type `T` as arg0, a `Pointer<T>` as
+	 * arg1 and another `Pointer<T>` as an extension. This is the place to express such logic.
+	 * @param instruction Instruction that is validated.
+	 * @param next_instruction Optional next instruction. Used when expecting e.g. `ext_*`.
+	 * @note Presence of extensions is checked by different function: `validateExtension`.
+	 */
+	void validateArgTypesNonTrivially(
+		const Instruction&                 instruction,
+		base::Optional<const Instruction&> next_instruction,
+		const LocalStack&                  current_stack
+	) const;
+
+	/**
+	 * @brief Meant to be called for every instruction in a function, not just extension.
+	 * In case it's an extension, it validates whether `predecessor` really expected this
+	 * extension.
+	 */
+	void validateExtension(
+		base::Optional<const Instruction&> predecessor, const Instruction& instruction
+	) const;
+
+	/**
+	 * @brief Validates, whether given type is really instantiable, e.g. it's a primitive, or a
+	 * real data, not an abstract class or an interface.
+	 */
+	void validateArgInstantiable(const opargs::Type& arg) const;
+
+	void validateUpcast(
+		const instructions::Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+	) const;
+
+	void validateFunctionEnd() const;
+
+	usize getLabelTarget(const opargs::Label& label) const;
+	void  preprocessLabels();
+	void  traverseControlFlowGraph();
+
+public:
+	FunctionValidator(
+		const StableTypeIdNameMap<TypeOfData>& types_map,
+		const TypeMetadata&                    type_metadata,
+		const StableTypeIdNameMap<GlobalData>& globals_map,
+		const Function&                        function
+	);
+	void                     validate();
+	std::vector<Instruction> extractReachableCode();
+};
+
+FunctionValidator::FunctionValidator(
+	const StableTypeIdNameMap<TypeOfData>& types_map,
+	const TypeMetadata&                    type_metadata,
+	const StableTypeIdNameMap<GlobalData>& globals_map,
+	const Function&                        function
+) {}
 
 void FunctionValidator::validateExtension(
 	base::Optional<const Instruction&> predecessor, const Instruction& instruction
@@ -398,7 +523,7 @@ void FunctionValidator::validateArgTypesNonTrivially(
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
-	auto type = type_context.getMetadata().at(arg.type_name);
+	auto type = type_metadata.at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
 }
 
@@ -408,8 +533,8 @@ void FunctionValidator::validateUpcast(
 	auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
 	auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
 
-	auto dst_type = type_context.getMetadata().at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
-	auto src_type = type_context.getMetadata().at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
+	auto dst_type = type_metadata.at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
+	auto src_type = type_metadata.at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
 
 	if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 }
@@ -531,7 +656,6 @@ constexpr bool FunctionValidator::LocalStackEntry::operator==(const LocalStackEn
 }
 
 FunctionValidator::FunctionValidator(
-	Identifier                      name,
 	const TypeContext&              type_context,
 	const GlobalDataMap&            globals,
 	const std::vector<Instruction>& instructions
@@ -639,4 +763,19 @@ void FunctionValidator::LocalStack::validateTailcall(
 	     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
 		if (code::typeName(*stack_elem.type) != param)
 			throw InvalidTailcallArgumentsError(generic_arg);
+}
+
+vm::code::Function vm::code::validateAndExtractReachableCode(
+	const StableTypeIdNameMap<TypeOfData>& types_map,
+	const TypeMetadata&                    type_metadata,
+	const StableTypeIdNameMap<GlobalData>& globals_map,
+	const Function&                        function
+) {
+	FunctionValidator validator(types_map, type_metadata, globals_map, function);
+	validator.validate();
+	Function new_function;
+	new_function.name         = function.name;
+	new_function.body         = validator.extractReachableCode();
+	new_function.bytecode_pos = function.bytecode_pos;
+	return new_function;
 }

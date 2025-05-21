@@ -11,16 +11,16 @@
 #include <string_view>
 #include <utility>
 
-namespace vm::code::builders {
-	class BuilderError: public base::LogicError {
+namespace vm::code {
+	class ValidationError: public base::LogicError {
 	public:
-		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
+		ValidationError(std::string reason): base::LogicError(std::move(reason)) {}
 
 		// @brief element causing the error
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
 	};
 
-	class StackStructureMismatchError: public BuilderError {
+	class StackStructureMismatchError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG
 			= "Stack structure differs between jumps and label: ";
@@ -29,7 +29,7 @@ namespace vm::code::builders {
 		std::vector<Instruction>                jumps;  /// all jumps to the label
 
 		StackStructureMismatchError(instructions::Op_label label, std::vector<Instruction> jumps):
-			  BuilderError(base::strConcat(ERR_MSG, label.arg0.label_name)),
+			  ValidationError(base::strConcat(ERR_MSG, label.arg0.label_name)),
 			  label(label),
 			  jumps(std::move(jumps)) {}
 
@@ -38,49 +38,49 @@ namespace vm::code::builders {
 		}
 	};
 
-	class PathWithoutEndError: public BuilderError {
+	class PathWithoutEndError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG
 			= "Not all code paths end with returns in function: ";
 		const base::StrID FUNC_NAME;
 
 		PathWithoutEndError(base::StrID func_name):
-			  BuilderError(base::strConcat(ERR_MSG, func_name)),
+			  ValidationError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
 	// @brief position-less error for function definitions.
 	// For function name arguments, like in call instructions, use UnknownFunctionError.
-	class MissingFunctionalTypeError: public BuilderError {
+	class MissingFunctionalTypeError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
 		const base::StrID                       FUNC_NAME;
 
 		MissingFunctionalTypeError(base::StrID func_name):
-			  BuilderError(base::strConcat(ERR_MSG, func_name)),
+			  ValidationError(base::strConcat(ERR_MSG, func_name)),
 			  FUNC_NAME(func_name) {}
 	};
 
 	// @brief position-less error for function definitions.
 	// For function name arguments, like in call instructions, use UnknownFunctionError.
-	class TypeIsNotFunctionalError: public BuilderError {
+	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
 		const base::StrID                       TYPE_NAME;
 
 		TypeIsNotFunctionalError(base::StrID type_name):
-			  BuilderError(base::strConcat(ERR_MSG, type_name)),
+			  ValidationError(base::strConcat(ERR_MSG, type_name)),
 			  TYPE_NAME(type_name) {}
 	};
 
-	class UnknownSubtypeError: public BuilderError {
+	class UnknownSubtypeError: public ValidationError {
 	public:
 		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
 		const TypeOfData                        BASE_TYPE;
 		const base::StrID                       MISSING_NAME;
 
 		UnknownSubtypeError(TypeOfData base_type, base::StrID missing_name):
-			  BuilderError(base::strConcat(ERR_MSG, missing_name)),
+			  ValidationError(base::strConcat(ERR_MSG, missing_name)),
 			  BASE_TYPE(std::move(base_type)),
 			  MISSING_NAME(missing_name) {}
 
@@ -89,12 +89,12 @@ namespace vm::code::builders {
 		}
 	};
 
-	class TypeErrorBase: public BuilderError {
+	class TypeErrorBase: public ValidationError {
 	public:
 		const TypeOfData TYPE;
 
 		TypeErrorBase(std::string msg, TypeOfData type):
-			  BuilderError(std::move(msg)),
+			  ValidationError(std::move(msg)),
 			  TYPE(std::move(type)) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
@@ -102,12 +102,12 @@ namespace vm::code::builders {
 		}
 	};
 
-	class InstructionErrorBase: public BuilderError {
+	class InstructionErrorBase: public ValidationError {
 	public:
 		const Instruction INSTRUCTION;
 
 		InstructionErrorBase(std::string_view msg, Instruction instruction):
-			  BuilderError(std::string(msg)),
+			  ValidationError(std::string(msg)),
 			  INSTRUCTION(instruction) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
@@ -115,12 +115,12 @@ namespace vm::code::builders {
 		}
 	};
 
-	class ArgumentErrorBase: public BuilderError {
+	class ArgumentErrorBase: public ValidationError {
 	public:
 		const opargs::OpCodeArg ARGUMENT;
 
 		ArgumentErrorBase(std::string msg, opargs::OpCodeArg argument):
-			  BuilderError(std::move(msg)),
+			  ValidationError(std::move(msg)),
 			  ARGUMENT(argument) {}
 
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
@@ -164,7 +164,7 @@ namespace vm::code::builders {
 		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
 	);
 	DEFINE_TYPE_ERROR(
-		CycleInHierarchyError, "This inerface/class is a part of an inheritance cycle: "
+		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
 	DEFINE_TYPE_ERROR(DuplicatedTypeError, "Duplicated type: ");
 

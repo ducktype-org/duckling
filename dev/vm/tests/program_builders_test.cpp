@@ -61,11 +61,11 @@ private:
 	}
 
 	void testFunctionBuilder() {
-		TypeContextBuilder type_context_builder;
-		auto               void_t = base::StrID("void");
-		auto               int32  = base::StrID("int32");
-		auto               int64  = base::StrID("int64");
-		auto               test   = base::StrID("test");
+		TypeValidator type_context_builder;
+		auto          void_t = base::StrID("void");
+		auto          int32  = base::StrID("int32");
+		auto          int64  = base::StrID("int64");
+		auto          test   = base::StrID("test");
 		type_context_builder.addType(vm::code::PrimitiveType{ void_t, 0 });
 		type_context_builder.addType(vm::code::PrimitiveType{ int32, 4 });
 		type_context_builder.addType(vm::code::PrimitiveType{ int64, 8 });
@@ -107,7 +107,7 @@ private:
 	}
 
 	void testFileBuilder() {
-		TypeContextBuilder type_context_builder;
+		TypeValidator type_context_builder;
 
 		auto main  = base::StrID("main");
 		auto int32 = base::StrID("int32");

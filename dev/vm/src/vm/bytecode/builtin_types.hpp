@@ -3,8 +3,8 @@
 #include <base/box.hpp>
 #include <base/string_id.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
 
 namespace vm::code {
 	/*
@@ -22,8 +22,8 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Create a TypeContextBuilder with builtin types.
+	 * @brief Create a TypeContextValidator with builtin types.
 	 * @note The types defined here are used by the builtin functions.
 	 */
-	code::builders::TypeContextBuilder getBuiltinTypes();
+	code::TypeContextValidator getBuiltinTypes();
 }

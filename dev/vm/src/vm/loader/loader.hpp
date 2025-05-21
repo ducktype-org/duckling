@@ -63,9 +63,9 @@ namespace vm::loader {
 		code::builders::TypeContext getTypeContext() const;
 
 	private:
-		StableTypeIdNameMap<code::Function> functions;
-		code::builders::GlobalDataMap       globals_map;
-		code::builders::TypeContextBuilder  type_context_builder;
+		StableTypeIdNameMap<code::Function>  functions;
+		code::builders::GlobalDataMap        globals_map;
+		code::builders::TypeContextValidator type_context_builder;
 	};
 
 	/**
