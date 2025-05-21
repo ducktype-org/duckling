@@ -181,7 +181,7 @@ private:
 			}
 		);
 	}
-	#endif
+#endif
 
 	void derefWrongType() {
 		loadInvalidDbc(

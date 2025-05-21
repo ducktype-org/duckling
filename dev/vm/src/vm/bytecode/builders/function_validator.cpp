@@ -1,22 +1,21 @@
 #include "function_validator.hpp"
 
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
+#include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/definitions.hpp"
-#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/type_metadata/definitions.hpp>
+#include <vm/core/process/type_metadata/type.hpp>
 
 #include <algorithm>
-#include <iostream>
 #include <variant>
 #include <vector>
 
