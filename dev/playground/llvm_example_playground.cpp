@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
 	// Call the Fibonacci function with argument n:
 	std::vector<GenericValue> Args(1);
-	Args[0].IntVal  = APInt(32, n);
+	Args[0].IntVal  = APInt(32, static_cast<unsigned long>(n));
 	GenericValue GV = EE->runFunction(FibF, Args);
 
 	// import result of execution

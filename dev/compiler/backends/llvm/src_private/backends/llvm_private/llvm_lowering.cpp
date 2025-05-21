@@ -10,10 +10,10 @@ LLVM_INCLUDE_BEGIN()
 #include <llvm/IR/Module.h>
 #include <llvm/IR/Type.h>
 #include <llvm/IRReader/IRReader.h>
+#include <llvm/Support/ManagedStatic.h>
 #include <llvm/Support/MemoryBuffer.h>
 #include <llvm/Support/SourceMgr.h>
 #include <llvm/Support/TargetSelect.h>
-#include <llvm/Support/ManagedStatic.h>
 #include <llvm/Transforms/Utils/BasicBlockUtils.h>
 
 LLVM_INCLUDE_END()
