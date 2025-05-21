@@ -20,7 +20,7 @@ namespace query::detail {
 	 * dep_graph node of concrete query invocation.
 	 */
 	struct NodeID final {
-		QueryID q_id;
+		QueryID  q_id;
 		key_hash hash;
 
 		constexpr bool operator==(const NodeID& r) const {

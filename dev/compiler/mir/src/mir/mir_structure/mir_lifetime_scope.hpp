@@ -33,7 +33,6 @@ namespace compiler::mir {
 			 * Unique runtime id, for mapping, comparision, etc.
 			 */
 			u64 id;
-			
 		};
 
 		using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;

@@ -73,9 +73,7 @@ namespace query::detail {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(
-				unstable_hash, QueryImplType::provide(context, key), acd
-			);
+			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);
 		}
 	}
 
