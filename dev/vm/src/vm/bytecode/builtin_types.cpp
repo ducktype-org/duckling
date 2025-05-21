@@ -14,7 +14,7 @@ namespace vm::code {
 		return instance;
 	}
 
-	TypeContextValidator getBuiltinTypes() {
+	TypeContext getBuiltinTypes() {
 		static const std::array builtin_types = {
 			TypeOfData(PrimitiveType(base::StrID("byte"), 1)),
 			TypeOfData(PrimitiveType(base::StrID("i16"), 2)),
@@ -41,7 +41,7 @@ namespace vm::code {
 
 			SpecialTypes::get().vtable_ptr,
 		};
-		TypeContextValidator type_context;
+		TypeContext type_context;
 
 		for (const auto& tp: builtin_types) type_context.insertType(tp);
 

@@ -5,7 +5,7 @@
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-void vm::code::TypeContextValidator::validateType(const TypeOfData& type) const {
+void vm::code::TypeContext::validateType(const TypeOfData& type) const {
 	auto get_type = [&](base::StrID name) {
 		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
 	};
@@ -36,7 +36,7 @@ void vm::code::TypeContextValidator::validateType(const TypeOfData& type) const 
 	}
 }
 
-void vm::code::TypeContextValidator::validateTypes() const {
+void vm::code::TypeContext::validateTypes() const {
 	for (const auto& type: types) validateType(type);
 
 	// Check for cycles in hierarchy.
@@ -70,7 +70,7 @@ void vm::code::TypeContextValidator::validateTypes() const {
 	for (const auto& type: types) helper(type);
 }
 
-Box<vm::TypeMetadata> vm::code::TypeContextValidator::validateAndProduceTypeMetadata() const {
+Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() const {
 	validateTypes();
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 
@@ -190,12 +190,11 @@ Box<vm::TypeMetadata> vm::code::TypeContextValidator::validateAndProduceTypeMeta
 	return metadata;
 }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContextValidator::getCurrentTypes(
-) const {
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContext::getCurrentTypes() const {
 	return types;
 }
 
-void vm::code::TypeContextValidator::insertType(const TypeOfData& type) {
+void vm::code::TypeContext::insertType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
 		opt_some(tp) {

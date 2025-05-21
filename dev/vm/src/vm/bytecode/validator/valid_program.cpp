@@ -6,8 +6,6 @@
 #include "vm/bytecode/validator/function_validator.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 
-vm::code::ValidProgram::ValidProgram(): current_type_metadata(makeBox<TypeMetadata>()) {}
-
 vm::code::ValidProgram vm::code::ValidProgram::empty() { return {}; }
 
 vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
@@ -18,17 +16,17 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 
 vm::code::CodeCollection vm::code::ValidProgram::produceValidBytecode() const {
 	CodeCollection code;
-	for (const auto& type: type_context_builder.getTypes()) code.types.push_back(type);
+	for (const auto& type: type_context.getCurrentTypes()) code.types.push_back(type);
 	for (const auto& global: globals_map) code.global_data.push_back(global);
 	for (const auto& function: functions) code.functions.push_back(function);
 	return code;
 }
 
 Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
-	return type_context.build().moveMetadata();
+	return type_context.validateAndProduceTypeMetadata();
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::withCode(
+vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
 	const std::vector<code::CodeCollection>& collections_to_add
 ) const {
 	ValidProgram copy = *this;
@@ -45,13 +43,16 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 }
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
-    // @TODO: Validate global's type even exists.
+	// @TODO: Validate global's type even exists.
 	for (const auto& global: new_globals) globals_map.insert(global, global.name);
 }
 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
-    auto type_metadata = type_context.validateAndProduceTypeMetadata();
+	auto type_metadata = type_context.validateAndProduceTypeMetadata();
 	for (const auto& func: new_functions) {
-        validateAndExtractReachableCode(type_context.getCurrentTypes(), , const StableTypeIdNameMap<GlobalData> &globals_map, const Function &function)
+		auto validated_function = validateAndExtractReachableCode(
+			type_context.getCurrentTypes(), *type_metadata, globals_map, func
+		);
+		functions.insert(validated_function, validated_function.name);
 	}
 }

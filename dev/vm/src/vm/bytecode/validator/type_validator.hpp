@@ -10,7 +10,7 @@ namespace vm::code {
 	 * and then validating and building them.
 	 * It is used to build TypeContext.
 	 */
-	class TypeContextValidator {
+	class TypeContext {
 	public:
 		/**
 		 * @brief Inserts a new type. If a type is duplicated throws DuplicatedTypeError.

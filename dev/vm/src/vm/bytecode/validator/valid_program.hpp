@@ -17,7 +17,7 @@ namespace vm::code {
 	 * valid bytecode's assumption, but rather VMThread's.
 	 */
 	class ValidProgram {
-		ValidProgram();
+		ValidProgram() = default;
 
 	public:
 		ValidProgram(const ValidProgram&)            = default;
@@ -48,36 +48,45 @@ namespace vm::code {
 
 		/**
 		 * @brief Creates a new ValidProgram object with inserted code.
-		 * @note If the newly injected code where to create an unvalid state,
+		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram withCode(const std::vector<code::CodeCollection>& collections_to_add) const;
+		ValidProgram newInsertCode(const std::vector<code::CodeCollection>& collections_to_add
+		) const;
+
+		/**
+		 * @brief Inserts code in-place.
+		 * @note If the newly injected code unvalidates the state,
+		 * an exception of `ValidationError` base is thrown. This means this object will contain
+		 * invalid code and mustn't be used! If you don't want to lose the state, place use
+		 * `newInsertCode`.
+		 */
+		void insertCode(const std::vector<code::CodeCollection>& collections_to_add);
 
 	private:
 		/**
-		 * @brief Inserts types.
+		 * @brief Inserts types. May invalidate state.
 		 * @TODO: Improve comment.
 		 */
 		void insertTypes(const std::vector<code::TypeOfData>& new_types);
 
 		/**
-		 * @brief Inserts globals.
+		 * @brief Inserts globals. May invalidate state.
 		 * @TODO: Improve comment.
 		 */
 		void insertGlobals(const std::vector<code::GlobalData>& new_globals);
 
 		/**
-		 * @brief Inserts a function.
+		 * @brief Inserts a function. May invalidate state.
 		 * @note It also performs removal of dead-code. We might modify this in the future, that
 		 * function must not contain any dead-code, but Duckling's compiler, as of 21.05.2025, may
 		 * produce dead code.
 		 */
 		void insertFunctions(const std::vector<code::Function>& new_functions);
 
-
 		StableTypeIdNameMap<code::Function>   functions;
 		StableTypeIdNameMap<code::GlobalData> globals_map;
 
-		code::TypeContextValidator type_context;
+		code::TypeContext type_context;
 	};
 }
