@@ -51,13 +51,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov, LLVM
+      - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm-19 llvm-19-dev
+        run: sudo apt -y install lcov
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
+
+      - name: Install LLVM
+        run: sudo apt -y install llvm-19 llvm-19-dev
 
       - name: Install GCC 14 and gcov-14
         run: |
