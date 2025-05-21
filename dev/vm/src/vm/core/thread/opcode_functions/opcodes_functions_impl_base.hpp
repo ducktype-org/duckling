@@ -1,10 +1,10 @@
 
 /**
- * @file opcodes_functions_implementation.hpp
+ * @file opcodes_functions_impl_base.hpp
  * @brief The opcodes functions implementations.
  *
- * @warning Do not include this file directly. Include `opcodes_functions.hpp` or
- * `opcodes_functions_debug.hpp` instead.
+ * @warning Do not include this file directly. Include `opcodes_functions_impl_exec.cpp` or
+ * `opcodes_functions_impl_debug.cpp` instead.
  *
  * Motivation: each opcode that thread executes has its own function that is called to
  * perform the opcode operation. They are called "OpFuns". At the end of each
@@ -27,17 +27,19 @@
  * `opcodes_functions_utils.hpp`.
  */
 
-#include "low_program/instruction.hpp"
-#include "op_case.hpp"
 #include "opcodes_functions_utils.hpp"
-#include "vmthread.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
 #include <vm/core/process/builtin_functions.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
+#include <vm/core/thread/opcode_functions/opcodes_functions.hpp>
+#include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 #include <variant>
@@ -320,29 +322,31 @@ namespace vm {
 			for (u64 i = 0; i < arg_count; i++) {
 				const base::StrID arg_type  = function_type->parameters[i];
 				TypeCRef          real_type = thread.executing_program->types->at(arg_type);
-				args.emplace_back(
-					real_type, local_stack + frame->block_idx_to_local_offset[first_arg_idx + i]
-				);
+				auto              block     = frame->block_stack[first_arg_idx + i];
+				args.emplace_back(real_type, thread.process_memory, Pointer(block, 0));
 			}
 
-			base::Optional<VmValue> return_value
-				= builtins::callBuiltinFunction(builtin_id, real_function_type, thread, args);
+			base::Optional<VmValue> return_value = builtins::callBuiltinFunction(
+				builtin_id, real_function_type, thread, thread.process_memory, args
+			);
+
+
 			match_optional(return_value) {
 				opt_none {}
 				opt_some(value) {
-					u64 ret_val_offset = frame->block_idx_to_local_offset[first_arg_idx - 1];
-					std::memcpy(
-						local_stack + ret_val_offset, value.data.data(), value.type->getSize()
-					);
+					value.exportData(Pointer(frame->block_stack[first_arg_idx - 1], 0));
+					value.freeData();
 				}
 			}
+
+			for (auto& vm_value: args) vm_value.freeData();
 
 			// Similar as in call_func, but we deinit the arguments blocks as well,
 			// but without the return value.
 			for (u64 i = 0; i < arg_count; i++) {
 				auto block = frame->block_stack.back();
 				frame->block_stack.pop_back();
-				thread.process.getMemory().freeBlock(block);
+				thread.process_memory.freeBlock(block);
 			}
 			if (arg_count > 0)
 				frame->local_stack_head = frame->block_idx_to_local_offset[first_arg_idx];
@@ -383,7 +387,7 @@ namespace vm {
 				// We're returning from a non-void function, so the last block on the stack is the
 				// return value. It's being used by the caller so we don't free it.
 				if (!non_void || callee_frame->block_stack.size() != 1)
-					thread.process.getMemory().freeBlock(block);
+					thread.process_memory.freeBlock(block);
 
 				callee_frame->block_stack.pop_back();
 			}
@@ -404,7 +408,7 @@ namespace vm {
 			auto type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr->arg1)));
 			auto data_ptr = local_stack + frame->local_stack_head;
-			auto block    = thread.process_memory.allocateStack(type, data_ptr);
+			auto block    = thread.process_memory.allocateDummy(type, data_ptr);
 			// @note: We're using insert_or_assign so we don't have to remove the blocks_id to
 			// local_offset mappings from the frame when we call a function. In the call, we just
 			// move the local_stack_head and new inits (which will happen after we return from a
@@ -476,12 +480,24 @@ namespace vm {
 		CORE_PANIC("ext_type not consumed by previous instruction");
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_field)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_field not consumed by previous instruction");
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(ext_type_l64)(FUNCTION_ARGS) {
+		CORE_PANIC("ext_type_l64 not consumed by previous instruction");
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(alloc_lptr_type)(FUNCTION_ARGS) {
 		{
 			auto type
 				= thread.executing_program->types->at(vm::TypeID(static_cast<u32>(instr->arg1)));
 			auto block = thread.process_memory.allocateHeap(type);
-			derefStack<Pointer>(local_stack, instr->arg0) = Memory::getPointer(block);
+			derefStack<Pointer>(local_stack, instr->arg0) = Memory::newBlockReference(block, 0);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -494,68 +510,12 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
-	RETURN_TYPE OpFuns::OPCODE_NAME(load_l64_lptr_ofs)(FUNCTION_ARGS) {
-		constexpr const uint8_t view_size = 8;
-		int                     next      = 1;
-		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg1);
-			auto view    = Memory::getPointerData(pointer, view_size);
-			u64  idx     = 0;
-#ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#else
-			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
-				[[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#endif
-
-			// @TODO: this assert degrades performance by 5-10%
-			// CORE_ASSERT(view.size() == view_size, "bad type");
-
-			std::memcpy(&local_stack[instr->arg0], view.getBegin() + idx * view_size, view_size);
-		}
-		FUNCTION_CONT(next);
-	}
-
-	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_l64_ofs)(FUNCTION_ARGS) {
-		constexpr const uint8_t view_size = 8;
-		int                     next      = 1;
-		{
-			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			auto view    = Memory::getPointerData(pointer, view_size);
-			u64  idx     = 0;
-#ifdef USE_TAIL_CALLS
-			if (instr[1].opfun == OpFuns::op_ext_l64) [[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#else
-			if (static_cast<low::OpcodeFix8>(instr[1].opcode) == low::OpcodeFix8::ext_l64)
-				[[likely]] {
-				idx = derefStack<u64>(local_stack, instr[1].arg0);
-				next++;
-			}
-#endif
-
-			// @TODO: this assert degrades performance by 5-10%
-			// CORE_ASSERT(view.size() == view_size, "bad type");
-
-			std::memcpy(view.getBegin() + idx * view_size, &local_stack[instr->arg1], view_size);
-		}
-		FUNCTION_CONT(next);
-	}
-
 	RETURN_TYPE OpFuns::OPCODE_NAME(ref_lptr_lany)(FUNCTION_ARGS) {
 		{
 			auto& pointer   = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
 			auto  block     = frame->block_stack[block_idx];
-			thread.process.getMemory().setPointer(pointer, Memory::getPointer(block));
+			thread.process_memory.setPointer(pointer, Memory::newBlockReference(block, 0));
 		}
 		FUNCTION_CONT(1);
 	}
@@ -564,7 +524,7 @@ namespace vm {
 		{
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
-			thread.process.getMemory().setPointer(dst, src);
+			thread.process_memory.setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -585,12 +545,79 @@ namespace vm {
 		FUNCTION_CONT(1);
 	}
 
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lvnt_type)(FUNCTION_ARGS) {
+		{
+			auto variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg0)];
+			auto variant_block       = frame->block_stack[variant_block_index];
+			thread.process_memory.setNestedViewBlock(
+				Pointer(variant_block, 0),
+				thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lvnt)(FUNCTION_ARGS) {
+		{
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_block_index = frame->local_offset_to_block_idx[u64(instr->arg1)];
+			auto  parent_block        = frame->block_stack[variant_block_index];
+			auto  wanted_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+			auto view_block_ref
+				= thread.process_memory.getNestedViewBlock(Pointer(parent_block, 0), wanted_type);
+
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) {
+					thread.process_memory.setPointer(
+						destination_pointer, thread.process_memory.newBlockReference(view_block, 0)
+					);
+				}
+				opt_none { thread.process_memory.setPointer(destination_pointer, Pointer::null()); }
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantSetInner_lptr_type)(FUNCTION_ARGS) {
+		{
+			auto variant_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			thread.process_memory.setNestedViewBlock(
+				variant_pointer, thread.executing_program->types->at(TypeID(u64(instr->arg1)))
+			);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(variantGetInner_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& destination_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  variant_pointer     = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  wanted_type
+				= thread.executing_program->types->at(vm::TypeID(static_cast<usize>(instr[1].arg0)));
+
+			auto view_block_ref
+				= thread.process_memory.getNestedViewBlock(variant_pointer, wanted_type);
+
+			match_optional(view_block_ref.toOpt()) {
+				opt_some(view_block) {
+					thread.process_memory.setPointer(
+						destination_pointer, Memory::newBlockReference(view_block, 0)
+					);
+				}
+				opt_none { thread.process_memory.setPointer(destination_pointer, Pointer::null()); }
+			}
+		}
+		FUNCTION_CONT(2);
+	}
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(upcast_lptr_lptr)(FUNCTION_ARGS) {
 		{
 			// Same as move_lptr_lptr, treated differently by static analysis.
 			auto& dst = derefStack<Pointer>(local_stack, instr->arg0);
 			auto  src = derefStack<Pointer>(local_stack, instr->arg1);
-			thread.process.getMemory().setPointer(dst, src);
+			thread.process_memory.setPointer(dst, src);
 		}
 		FUNCTION_CONT(1);
 	}
@@ -611,7 +638,132 @@ namespace vm {
 
 			thread.process_memory.setPointer(dst, cast_allowed ? src : Pointer::null());
 		}
-		FUNCTION_CONT(2);  // skip ext_type
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(store_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(load_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto src_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(1);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLea_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst    = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  src    = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  offset = static_cast<usize>(instr[1].arg0);
+
+			dst = Memory::newBlockReference(src.getBlock(), offset);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structStore_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto dst_pointer  = derefStack<Pointer>(local_stack, instr->arg0);
+			auto field_offset = instr[1].arg0;
+			dst_pointer.movePointer(field_offset);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer(src_block, 0);
+
+			auto type = Memory::getBlockType(src_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(structLoad_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto src_pointer  = derefStack<Pointer>(local_stack, instr->arg1);
+			auto field_offset = instr[1].arg0;
+			src_pointer.movePointer(field_offset);
+
+			auto type = Memory::getBlockType(dst_block);
+
+			thread.process_memory.copyPointedData(dst_pointer, src_pointer, type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableLea_lptr_lptr)(FUNCTION_ARGS) {
+		{
+			auto& dst         = derefStack<Pointer>(local_stack, instr->arg0);
+			auto  tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+			auto  element_type
+				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
+			auto data_offset = usize(index * i64(element_type->getSize()));
+
+			dst = Memory::newBlockReference(tbl_pointer.getBlock(), data_offset);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableStore_lptr_lany)(FUNCTION_ARGS) {
+		{
+			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg0);
+			auto element_type
+				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+			auto index       = derefStack<i64>(local_stack, instr[1].arg0);
+			auto data_offset = index * i64(element_type->getSize());
+			tbl_pointer.movePointer(data_offset);
+
+			auto src_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg1)];
+			auto src_block     = frame->block_stack[src_block_idx];
+			auto src_pointer   = Pointer(src_block, 0);
+
+			thread.process_memory.copyPointedData(tbl_pointer, src_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
+	}
+
+	RETURN_TYPE OpFuns::OPCODE_NAME(staticTableLoad_lany_lptr)(FUNCTION_ARGS) {
+		{
+			auto dst_block_idx = frame->local_offset_to_block_idx[static_cast<u64>(instr->arg0)];
+			auto dst_block     = frame->block_stack[dst_block_idx];
+			auto dst_pointer   = Pointer(dst_block, 0);
+
+			auto tbl_pointer = derefStack<Pointer>(local_stack, instr->arg1);
+
+			auto index = derefStack<i64>(local_stack, instr[1].arg0);
+			auto element_type
+				= *thread.process_memory.getBlockType(tbl_pointer.getBlock())->getInnerType();
+			tbl_pointer.movePointer(index * i64(element_type->getSize()));
+
+			thread.process_memory.copyPointedData(dst_pointer, tbl_pointer, element_type);
+		}
+		FUNCTION_CONT(2);
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {

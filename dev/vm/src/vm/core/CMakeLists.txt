@@ -1,6 +1,5 @@
 add_files(
 		supervisor/supervisor.cpp
-		thread/vmthread.cpp
 		process/vmprocess.cpp
 		process/proc_io.cpp
 		process/builtin_functions.cpp
@@ -9,4 +8,14 @@ add_files(
 		process/memory/memory.cpp
 )
 
-set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)
+
+add_files(
+	thread/opcode_functions/opcodes_functions_impl_debug.cpp
+	thread/opcode_functions/opcodes_functions_impl_exec.cpp
+	thread/low_program/opcodes.cpp
+	thread/low_program/instruction.cpp
+	thread/vmthread.cpp
+)
+
+set(vm_config_dependent_sources ${vm_config_dependent_sources} ${files} PARENT_SCOPE) 

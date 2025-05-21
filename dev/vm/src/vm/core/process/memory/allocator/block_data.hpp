@@ -8,16 +8,11 @@
 #include <vm/core/process/type_metadata/definitions.hpp>
 
 namespace vm {
-	class BlockData final {
-	private:
+	struct BlockData final {
 		TypeCRef          element_type;
 		base::ModRawView  view;
 		Ref<AllocatorABC> allocator;
 
-		friend class Memory;
-		friend class HeapAllocator;
-
-	public:
 		BlockData(TypeCRef element_type, base::ModRawView view, Ref<AllocatorABC> allocator) noexcept
 			  :
 			  element_type(element_type),
