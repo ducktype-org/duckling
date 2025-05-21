@@ -1,6 +1,5 @@
 #include "cli.hpp"
 
-#include <graphviz/gvcext.h>
 #include <json/json.hpp>
 
 #include <base/variant.hpp>
