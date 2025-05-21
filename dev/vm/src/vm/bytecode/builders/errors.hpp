@@ -202,6 +202,7 @@ namespace vm::code::builders {
 	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
 	DEFINE_INSTRUCTION_ERROR(PointerTypeMismatchError, "Inner pointer type does not match expected type.")
+	DEFINE_INSTRUCTION_ERROR(VariantTypeMismatchError, "Possible variant types do not match expected type.")
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 
