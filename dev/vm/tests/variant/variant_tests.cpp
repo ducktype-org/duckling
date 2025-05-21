@@ -3,6 +3,7 @@
 
 #include <base/variant.hpp>
 
+#include "vm/bytecode/builders/errors.hpp"
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
 
@@ -18,6 +19,7 @@ public:
 		TESTER_ADD_TEST(blocksDontDisappearTest);
 		TESTER_ADD_TEST(nestedVariantTest);
 		TESTER_ADD_TEST(variantInsideStruct);
+		TESTER_ADD_TEST(emptyVariant);
 	}
 
 private:
@@ -75,6 +77,10 @@ private:
 	}
 
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
+
+	void emptyVariant() {
+		loadInvalidDbc("empty_variant.dbc", { vm::code::builders::EmptyVariantError::ERR_MSG });
+	}
 };
 
 TESTER_COMMON_MAIN("/vm/tests/variant/");

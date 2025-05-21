@@ -26,7 +26,7 @@ namespace vm {
 		std::vector<TypeCRef> implements;
 		// Virtual method declarations for this class. Contains only method introduced in this class.
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
-		base::HashMap<base::StrID, TypeCRef> implementations;
+		base::HashMap<base::StrID, TypeCRef> implementations; // TODO: This may be not needed here.
 		// This contains all the actual implementations of virtual methods for this class/interface.
 		// VWe call it a VTable, tho it's more of a VMap. Creating a table is causes problem when
 		// working with multiple inheritance of interfaces.

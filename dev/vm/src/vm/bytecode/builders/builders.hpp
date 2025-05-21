@@ -90,6 +90,7 @@ namespace vm::code::builders {
 	 * It is used to build TypeContext.
 	 */
 	class TypeContextBuilder {
+		using FieldVector             = std::vector<std::pair<base::StrID, TypeRef>>;
 		StableTypeIdNameMap<TypeOfData> types;
 
 		/*
@@ -159,6 +160,22 @@ namespace vm::code::builders {
 
 		template<typename InheritableType>
 		void validateImplementsDuplicates(const InheritableType& implements) const;
+
+		template<typename InheritableType, typename ErrorContextType>
+		void buildVTableRecursive(
+			const InheritableType&                inh,
+			const ErrorContextType&               error_context_inh,
+			base::HashMap<base::StrID, TypeCRef>& implementations,
+			const TypeContext&                    tctx
+		) const;
+
+		template<typename FieldableType>
+		FieldVector buildFieldVector(const FieldableType& inh, const TypeContext& tctx) const;
+
+		template<typename InheritableType>
+		vm::InheritanceMetadata buildInheritanceMetadata(
+			const InheritableType& inh, const TypeContext& tctx
+		) const;
 
 	public:
 		void                                   addType(const TypeOfData& type);

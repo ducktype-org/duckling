@@ -29,7 +29,9 @@ private:
 		assertFalse(type->getInheritanceMetadata().has_value(), "Plain data should be plain");
 	}
 
-	void checkI1(vm::TypeCRef type, vm::TypeCRef method_type, vm::TypeCRef method_impl_type) {
+	void checkI1(
+		vm::TypeCRef type, vm::TypeCRef expected_method_type, vm::TypeCRef expected_foo_impl_type
+	) {
 		if_opt_some(type->getInheritanceMetadata(), imd) {
 			assertTrue(imd.type == type, "Invalid type in inheritance metadata");
 			assertTrue(
@@ -41,16 +43,19 @@ private:
 			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
 			assertTrue(imd.implementations.size() == 1, "I1 should implement one virtual methods");
 			// TODO: Change that to an optional.
-			assertTrue(imd.vtable.empty(), "I1 is not instantiable, it's vtable should not exist");
+			assertTrue(imd.vtable.size() == 1, "I1 should have foo in it's vtable");
 
 			auto foo_type      = imd.virtual_methods[base::StrID("foo")];
 			auto bar_type      = imd.virtual_methods[base::StrID("bar")];
 			auto foo_impl_type = imd.implementations[base::StrID("foo")];
+			auto vt_foo        = imd.vtable[base::StrID("foo")];
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
-			assertTrue(foo_type == method_type, "I1's method have the wrong type");
+			assertTrue(foo_type == expected_method_type, "I1's method have the wrong type");
 			assertTrue(
-				foo_impl_type == method_impl_type, "I1's method implementation have the wrong type"
+				foo_impl_type == expected_foo_impl_type,
+				"I1's method implementation have the wrong type"
 			);
+			assertTrue(vt_foo == expected_foo_impl_type, "I1's vtable contains wrong type");
 
 			return;
 		}
