@@ -384,6 +384,10 @@ void FunctionValidator::validateArgTypesNonTrivially(
 		variant_case_novalue(Op_staticTableLea_lptr_lptr) {}
 		variant_case_novalue(Op_staticTableLoad_lany_lptr) {}
 		variant_case_novalue(Op_staticTableStore_lptr_lany) {}
+		variant_case_novalue(Op_cast_l8_type) {}
+		variant_case_novalue(Op_cast_l16_type) {}
+		variant_case_novalue(Op_cast_l32_type) {}
+		variant_case_novalue(Op_cast_l64_type) {}
 		variant_case_novalue(Op_ext_l64) {}
 		variant_case_novalue(Op_ext_type) {}
 		variant_case_novalue(Op_ext_field) {}
