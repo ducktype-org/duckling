@@ -220,22 +220,22 @@ namespace vm::code {
 			base::StrID              name,
 			std::vector<base::StrID> implements,
 			std::vector<Field>       virtual_methods,
-			std::vector<Field>       vmethods_implementations
+			std::vector<Field>       implementations
 		):
 			  name{ name },
 			  implements{ std::move(implements) },
 			  virtual_methods{ std::move(virtual_methods) },
-			  vmethods_implementations{ std::move(vmethods_implementations) } {}
+			  implementations{ std::move(implementations) } {}
 
 		base::StrID              name;
 		std::vector<base::StrID> implements;
 		std::vector<Field>       virtual_methods;
-		std::vector<Field>       vmethods_implementations;
+		std::vector<Field>       implementations;
 
 		bool operator==(const InterfaceType& other) const {
 			return name == other.name && implements == other.implements
 			    && virtual_methods == other.virtual_methods
-			    && vmethods_implementations == other.vmethods_implementations;
+			    && implementations == other.implementations;
 		}
 	};
 

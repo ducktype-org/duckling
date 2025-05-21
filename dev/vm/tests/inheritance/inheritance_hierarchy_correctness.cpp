@@ -14,14 +14,18 @@ class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(correctHierarchy);
 		TESTER_ADD_TEST(hierarchyCorrectness);
 		TESTER_ADD_TEST(virtualMethodImplementationCorrectness);
 		TESTER_ADD_TEST(duplicateCorrectness);
 	}
 
 private:
-	void hierarchyCorrectness() {
+	void correctHierarchy() {
 		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
+	}
+
+	void hierarchyCorrectness() {
 
 		// Invalid
 		using namespace vm::code::builders;
@@ -53,6 +57,7 @@ private:
 		});
 
 		for (auto& [filename, error]: invalid_filename_and_error) {
+			std::cerr << "NEW TEST: "<< filename << '\n';
 			loadInvalidDbc(filename, { error });
 		}
 	}
@@ -106,6 +111,7 @@ private:
 			"vmethod_implementation/unimplemented_virtual_hierarchy_correct_2.dbc",
 		});
 		for (auto& filename: valid_filenames) {
+			std::cerr << "NEW TEST: "<< filename << '\n';
 			loadValidDbc(filename);
 		}
 	}
@@ -156,6 +162,7 @@ private:
 		    // },
 		});
 		for (auto& [filename, error]: invalid_filename_and_error) {
+			std::cerr << "NEW TEST: "<< filename << '\n';
 			loadInvalidDbc(filename, { error });
 		}
 	}
