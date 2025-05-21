@@ -1,5 +1,6 @@
 #include "function_validator.hpp"
 
+#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
@@ -283,7 +284,14 @@ void FunctionValidator::validateArgTypesNonTrivially(
 ) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
-		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+		variant_case(Op_alloc_lptr_type, instr) {
+			validateArgInstantiable(instr.arg1);
+			CRef<TypeOfData> type = current_stack.at(instr.arg0.var_name);
+			PointerType pointer_type = std::get<PointerType>(*type);
+			if (pointer_type.inner != instr.arg1.type_name) {
+				throw PointerTypeMismatchError(instr);
+			}
+		}
 		variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 
 		variant_case_novalue(Comment) {}
@@ -375,9 +383,30 @@ void FunctionValidator::validateArgTypesNonTrivially(
 		variant_case_novalue(Op_setVTable_lptr_type) {}
 		variant_case_novalue(Op_downcast_lptr_lptr) {}
 		variant_case_novalue(Op_free_lptr) {}
-		variant_case_novalue(Op_store_lptr_lany) {}
-		variant_case_novalue(Op_load_lany_lptr) {}
-		variant_case_novalue(Op_ref_lptr_lany) {}
+		variant_case(Op_store_lptr_lany, instr) {
+			PointerType pointer_type = std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+			CRef<TypeOfData> other_type = current_stack.at(instr.arg1.var_name);
+			base::StrID other_type_id = typeName(*other_type);
+			if (pointer_type.inner != other_type_id) {
+				throw PointerTypeMismatchError(instr);
+			}
+		}
+		variant_case(Op_load_lany_lptr, instr) {
+			PointerType pointer_type = std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+			CRef<TypeOfData> other_type = current_stack.at(instr.arg0.var_name);
+			base::StrID other_type_id = typeName(*other_type);
+			if (pointer_type.inner != other_type_id) {
+				throw PointerTypeMismatchError(instr);
+			}
+		}
+		variant_case(Op_ref_lptr_lany, instr) {
+			PointerType pointer_type = std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+			CRef<TypeOfData> other_type = current_stack.at(instr.arg1.var_name);
+			base::StrID other_type_id = typeName(*other_type);
+			if (pointer_type.inner != other_type_id) {
+				throw PointerTypeMismatchError(instr);
+			}
+		}
 		variant_case_novalue(Op_structLea_lptr_lptr) {}
 		variant_case_novalue(Op_structLoad_lany_lptr) {}
 		variant_case_novalue(Op_structStore_lptr_lany) {}
