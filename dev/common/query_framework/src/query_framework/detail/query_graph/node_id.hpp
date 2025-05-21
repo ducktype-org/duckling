@@ -11,7 +11,7 @@ namespace query::detail {
 	/**
 	 * @brief Type representing hash value for all key-types.
 	 */
-	struct key_hash final {
+	struct KeyHash final {
 		u64 val;
 	};
 
@@ -20,8 +20,8 @@ namespace query::detail {
 	 * dep_graph node of concrete query invocation.
 	 */
 	struct NodeID final {
-		QueryID  q_id;
-		key_hash hash;
+		QueryID q_id;
+		KeyHash hash;
 
 		constexpr bool operator==(const NodeID& r) const {
 			return this->q_id.asInt() == r.q_id.asInt() and this->hash.val == r.hash.val;

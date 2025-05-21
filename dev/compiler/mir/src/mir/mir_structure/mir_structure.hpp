@@ -426,11 +426,6 @@ namespace compiler::mir {
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
 
-		/**
-		 * @todo: delete it during hash refactror  #523
-		 */
-		bool operator==(const Function& other) const;
-
 		void debugPrint(std::ostream& output) const;
 
 		/**

@@ -33,6 +33,8 @@ namespace compiler::mir {
 			 * Unique runtime id, for mapping, comparision, etc.
 			 */
 			u64 id;
+
+			bool operator==(const LifetimeScope& other) const { return id == other.id; }
 		};
 
 		using ScopeRef = CRef<LifetimeScopeTree::LifetimeScope>;

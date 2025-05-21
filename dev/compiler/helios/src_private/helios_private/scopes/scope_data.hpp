@@ -4,7 +4,6 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 #include <pst_parser/access.hpp>
-#include <query_framework/query_impl.hpp>  // @TODO #404 relax it to just cache entry
 
 #include <base/optional.hpp>
 
