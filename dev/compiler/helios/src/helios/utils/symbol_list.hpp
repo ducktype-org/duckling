@@ -20,16 +20,6 @@ namespace compiler::helios {
 		// some forwarded vector interface for convenience:
 
 		[[nodiscard]]
-		auto at(size_t i) const {
-			return list.at(i);
-		}
-
-		[[nodiscard]]
-		auto& at(size_t i) {
-			return list.at(i);
-		}
-
-		[[nodiscard]]
 		auto back() const {
 			return list.back();
 		}
