@@ -4,7 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceSemanticsTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -20,7 +20,7 @@ private:
 		runTestOnVm("downcast.dbc", "", "10", {}, 0);
 
 		// Invalid
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
 			{ "missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },

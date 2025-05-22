@@ -2,6 +2,7 @@
 
 #include "base/box.hpp"
 
+#include "vm/core/process/memory/block.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
@@ -40,7 +41,7 @@ namespace vm::code {
 		/**
 		 * @brief Produces valid CodeCollection.
 		 */
-		CodeCollection produceCodeCollection() const;
+		CodeCollection produceValidCodeCollection() const;
 
 		/**
 		 * @brief Produces TypeMetadata, that is isomorphic with its state.
@@ -53,8 +54,7 @@ namespace vm::code {
 		 * @note If the newly injected code were to create an unvalid state,
 		 * an exception of ValidationError base will be thrown.
 		 */
-		ValidProgram newInsertCode(const std::vector<code::CodeCollection>& collections_to_add
-		) const;
+		ValidProgram newInsertCode(const code::CodeCollection& collection) const;
 
 		/**
 		 * @brief Inserts code in-place.
@@ -63,7 +63,7 @@ namespace vm::code {
 		 * invalid code and mustn't be used! If you don't want to lose the state, place use
 		 * `newInsertCode`.
 		 */
-		void insertCode(const std::vector<code::CodeCollection>& collections_to_add);
+		void insertCode(const code::CodeCollection& collections);
 
 		const StableTypeIdNameMap<TypeOfData>& types() const;
 
@@ -96,5 +96,7 @@ namespace vm::code {
 		StableTypeIdNameMap<code::GlobalData> globals_map;
 
 		code::TypeContext type_context;
+
+		bool valid = true;
 	};
 }

@@ -15,24 +15,23 @@ vm::code::ValidProgram vm::code::ValidProgram::withBuiltins() {
 }
 
 Box<vm::TypeMetadata> vm::code::ValidProgram::produceTypeMetadata() const {
+	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.validateAndProduceTypeMetadata();
 }
 
-vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(
-	const std::vector<code::CodeCollection>& collections_to_add
+vm::code::ValidProgram vm::code::ValidProgram::newInsertCode(const code::CodeCollection& collection
 ) const {
 	ValidProgram copy = *this;
-	copy.insertCode(collections_to_add);
+	copy.insertCode(collection);
 	return copy;
 }
 
-void vm::code::ValidProgram::insertCode(const std::vector<code::CodeCollection>& collections_to_add
-) {
-	for (const auto& collection: collections_to_add) {
-		insertTypes(collection.types);
-		insertGlobals(collection.global_data);
-		insertFunctions(collection.functions);
-	}
+void vm::code::ValidProgram::insertCode(const code::CodeCollection& collection) {
+	valid = false;
+	insertTypes(collection.types);
+	insertGlobals(collection.global_data);
+	insertFunctions(collection.functions);
+	valid = true;
 }
 
 void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& new_types) {
@@ -59,18 +58,22 @@ void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Functio
 }
 
 const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::ValidProgram::types() const {
+	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return type_context.getCurrentTypes();
 }
 
 const vm::StableTypeIdNameMap<vm::code::GlobalData>& vm::code::ValidProgram::globals() const {
+	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return globals_map;
 }
 
 const vm::StableTypeIdNameMap<vm::code::Function>& vm::code::ValidProgram::functions() const {
+	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return function_map;
 }
 
-vm::code::CodeCollection vm::code::ValidProgram::produceCodeCollection() const {
+vm::code::CodeCollection vm::code::ValidProgram::produceValidCodeCollection() const {
+	CORE_ASSERT(valid, "Using an invalidated ValidProgram");
 	return {
 		.functions = { function_map.begin(), function_map.end() },
 		.types = { type_context.getCurrentTypes().begin(), type_context.getCurrentTypes().end() },

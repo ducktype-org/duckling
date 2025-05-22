@@ -144,7 +144,8 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger log;
 	try {
-		program = program.newInsertCode(code_collections);
+		for(const auto& code: code_collections)
+			program = program.newInsertCode(code);
 		return compiler::compile(program);
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(

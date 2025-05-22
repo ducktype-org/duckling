@@ -29,7 +29,6 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::TypeContext  type_context;
-		vm::code::ValidProgram program;
+		vm::code::ValidProgram valid_program;
 	};
 }
