@@ -494,7 +494,7 @@ namespace compiler::helios {
 				                      .value();
 				pointed_chain = alias_stmt->getPointed().unlock(ctx)->getNames();
 			} else {
-				return SymbolList{ key };
+				return SymbolList{ { key } };
 			}
 
 			UNPACK_RESULT_MOVE(

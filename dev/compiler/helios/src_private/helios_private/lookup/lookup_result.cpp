@@ -26,7 +26,7 @@ namespace compiler::helios {
 		if (isEmpty()) return errors::HError(errors::SymbolNotFound());
 		if (!isSingle()) return errors::HError(errors::Ambiguity());
 
-		if (!leaves.empty()) return SymbolList{ leaves[0] };
+		if (!leaves.empty()) return SymbolList{ { leaves[0] } };
 
 		CORE_ASSERT(children.size() == 1, "Invalid state: contains empty children");
 
@@ -39,8 +39,8 @@ namespace compiler::helios {
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
 		SymbolList result;
-		result.push_back(node_id);
-		result.insert(result.end(), child_path.begin(), child_path.end());
+		result.pushBack(node_id);
+		result.appendList(child_path);
 		return result;
 	}
 

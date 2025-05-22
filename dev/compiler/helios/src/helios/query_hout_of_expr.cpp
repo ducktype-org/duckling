@@ -172,7 +172,7 @@ namespace compiler::helios::code {
 
 				// this is very temporary:
 				SymbolList looked_up_symbol
-					= { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() };
+					= { { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() } };
 
 				// @note If optional is not empty it means there has been a call.
 				base::Optional<std::vector<Box<Expr>>> call_arguments;
@@ -199,11 +199,7 @@ namespace compiler::helios::code {
 
 						if (!new_symbols) return;  // failed
 
-						looked_up_symbol.insert(
-							looked_up_symbol.end(),
-							new_symbols.value().begin(),
-							new_symbols.value().end()
-						);
+						looked_up_symbol.appendList(new_symbols.value());
 					} else if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
 						auto pst_call = pst_call_opt.value();
 						if (pst_call->getType() != lexer::Token::Round) {

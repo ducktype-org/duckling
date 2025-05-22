@@ -80,7 +80,7 @@ static Function* CreateFibFunction(Module* M, LLVMContext& Context) {
 	BasicBlock* RecurseBB = BasicBlock::Create(Context, "recurse", FibF);
 
 	// Create the "if (arg <= 2) goto exitbb"
-	Value* CondInst = new ICmpInst(*BB, ICmpInst::ICMP_SLE, ArgX, Two, "cond");
+	Value* CondInst = new ICmpInst(InsertPosition(BB), ICmpInst::ICMP_SLE, ArgX, Two, "cond");
 	BranchInst::Create(RetBB, RecurseBB, CondInst, BB);
 
 	// Create: ret int 1
@@ -140,7 +140,7 @@ int main(int argc, char** argv) {
 
 	// Call the Fibonacci function with argument n:
 	std::vector<GenericValue> Args(1);
-	Args[0].IntVal  = APInt(32, n);
+	Args[0].IntVal  = APInt(32, static_cast<unsigned long>(n));
 	GenericValue GV = EE->runFunction(FibF, Args);
 
 	// import result of execution
