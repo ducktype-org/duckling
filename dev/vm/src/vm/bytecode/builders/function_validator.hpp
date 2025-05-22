@@ -64,17 +64,48 @@ namespace vm::code::builders {
 		base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
 		bool                                                     validated = false;
 
+		/**
+		 * @brief Validates instruction's arguments in a trivial, generic way, i.e. if an
+		 * instruction expects a pointer argument then this function validates this argument really
+		 * is a pointer, not a label or a primitive. In case of this function, an instruction can be
+		 * thought of as an argument collection.
+		 * @param instruction Instruction that is validated.
+		 */
 		void validateArgTypes(const Instruction& instruction, const LocalStack& current_stack) const;
-		void validateSpecificInstruction(
-			const Instruction& instruction, const LocalStack& current_stack
+
+		/**
+		 * @brief Validates instruction's arguments non-trivially - using specific logic for each
+		 * instruction. For instance, an instruction may expect type `T` as arg0, a `Pointer<T>` as
+		 * arg1 and another `Pointer<T>` as an extension. This is the place to express such logic.
+		 * @param instruction Instruction that is validated.
+		 * @param next_instruction Optional next instruction. Used when expecting e.g. `ext_*`.
+		 * @note Presence of extensions is checked by different function: `validateExtension`.
+		 */
+		void validateArgTypesNonTrivially(
+			const Instruction&                 instruction,
+			base::Optional<const Instruction&> next_instruction,
+			const LocalStack&                  current_stack
 		) const;
-		void validateExtension(usize instruction_index) const;
-		void validateInstruction(const Instruction& instruction, const LocalStack& current_stack)
-			const;
+
+		/**
+		 * @brief Meant to be called for every instruction in a function, not just extension.
+		 * In case it's an extension, it validates whether `predecessor` really expected this
+		 * extension.
+		 */
+		void validateExtension(
+			base::Optional<const Instruction&> predecessor, const Instruction& instruction
+		) const;
+
+		/**
+		 * @brief Validates, whether given type is really instantiable, e.g. it's a primitive, or a
+		 * real data, not an abstract class or an interface.
+		 */
 		void validateArgInstantiable(const opargs::Type& arg) const;
+
 		void validateUpcast(
 			const instructions::Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
 		) const;
+
 		void validateFunctionEnd() const;
 
 		usize getLabelTarget(const opargs::Label& label) const;

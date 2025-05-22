@@ -92,8 +92,7 @@ namespace compiler::helios {
 		bool        with_wildcards;
 
 		[[nodiscard]]
-		u64  queryUnstablePerfectHash() const;
-		bool operator==(const KeyOf_LookupInScope&) const = default;
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

@@ -228,9 +228,7 @@ struct IMPLEMENT_QUERY(QueryParentModule, base::Optional<ModuleID>) {
 		return module_tree->getParentModule().map([](const auto& parent) { return parent.getID(); });
 	}
 
-	static auto load(QKey) -> LoadResult { return {}; }
-
-	static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
+	QUERY_AUTO_NO_CACHE
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryParentModule);
@@ -244,9 +242,7 @@ struct IMPLEMENT_QUERY(QueryMainSourceFile, FileID) {
 		return module_tree->getMainSourceFile().id;
 	}
 
-	static auto load(QKey) -> LoadResult { return {}; }
-
-	static auto store(QKey, PResult res, query::ACD) -> QResult { return res; }
+	QUERY_AUTO_NO_CACHE
 };
 
 QUERY_IMPLEMENTATION_BOILERPLATE(QueryMainSourceFile);
