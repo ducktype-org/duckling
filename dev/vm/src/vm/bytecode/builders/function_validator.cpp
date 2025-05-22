@@ -1,6 +1,7 @@
 #include "function_validator.hpp"
 
 #include <base/exceptions.hpp>
+#include <base/macros/for_each.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
 
@@ -97,12 +98,11 @@ namespace {
 	}
 }
 
-void FunctionValidator::validateExtension(usize instruction_index) const {
+void FunctionValidator::validateExtension(
+	base::Optional<const Instruction&> predecessor, const Instruction& instruction
+) const {
 	// This check assumes that the last instruction in a function is non-extendable,
 	// this is checked in `validate`.
-	auto instruction     = instructions[instruction_index];
-	auto predecessor     = instruction_index == 0 ? base::Optional<const Instruction&>{}
-	                                              : instructions[instruction_index - 1];
 	bool valid_extension = std::visit(
 		[&]<typename T>(const T&) {
 			if constexpr (Extension<T>)
@@ -276,28 +276,142 @@ void FunctionValidator::validateArgTypes(
 	}
 }
 
-void FunctionValidator::validateSpecificInstruction(const Instruction& instruction) const {
+void FunctionValidator::validateArgTypesNonTrivially(
+	const Instruction&                                  instruction,
+	[[maybe_unused]] base::Optional<const Instruction&> next_instruction,
+	const LocalStack&                                   current_stack
+) const {
 	variant_match(instruction) {
 		variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 		variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
-	}
-}
+		variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 
-/**
- * @brief Validates the instruction in the current stack state.
- * Checks each argument of the instruction if it has the expected type of an argument.
- * @param instruction Instruction that is validated.
- */
-void FunctionValidator::validateInstruction(
-	const Instruction& instruction, const LocalStack& current_stack
-) const {
-	validateArgTypes(instruction, current_stack);
-	validateSpecificInstruction(instruction);
+		variant_case_novalue(Comment) {}
+		variant_case_novalue(Op_mov_l8_imm) {}
+		variant_case_novalue(Op_mov_l8_l8) {}
+		variant_case_novalue(Op_cmov_l8_l8) {}
+		variant_case_novalue(Op_mov_l16_imm) {}
+		variant_case_novalue(Op_mov_l16_l16) {}
+		variant_case_novalue(Op_cmov_l16_l16) {}
+		variant_case_novalue(Op_mov_l32_imm) {}
+		variant_case_novalue(Op_mov_l32_l32) {}
+		variant_case_novalue(Op_cmov_l32_l32) {}
+		variant_case_novalue(Op_mov_l64_imm) {}
+		variant_case_novalue(Op_mov_l64_l64) {}
+		variant_case_novalue(Op_cmov_l64_l64) {}
+		variant_case_novalue(Op_mov_l64_r0) {}
+		variant_case_novalue(Op_mov_r0_l64) {}
+		variant_case_novalue(Op_mov_g64_g64) {}
+		variant_case_novalue(Op_mov_g64_l64) {}
+		variant_case_novalue(Op_mov_g64_imm) {}
+		variant_case_novalue(Op_mov_g32_g32) {}
+		variant_case_novalue(Op_mov_g32_l32) {}
+		variant_case_novalue(Op_mov_g32_imm) {}
+		variant_case_novalue(Op_mov_g16_g16) {}
+		variant_case_novalue(Op_mov_g16_l16) {}
+		variant_case_novalue(Op_mov_g16_imm) {}
+		variant_case_novalue(Op_mov_g8_g8) {}
+		variant_case_novalue(Op_mov_g8_l8) {}
+		variant_case_novalue(Op_mov_g8_imm) {}
+		variant_case_novalue(Op_mov_gptr_lptr) {}
+		variant_case_novalue(Op_mov_l64_g64) {}
+		variant_case_novalue(Op_mov_l32_g32) {}
+		variant_case_novalue(Op_mov_l16_g16) {}
+		variant_case_novalue(Op_mov_l8_g8) {}
+		variant_case_novalue(Op_mov_lptr_gptr) {}
+		variant_case_novalue(Op_mov_lptr_lptr) {}
+		variant_case_novalue(Op_add_l64_l64) {}
+		variant_case_novalue(Op_add_l64_imm) {}
+		variant_case_novalue(Op_add_l32_l32) {}
+		variant_case_novalue(Op_add_l32_imm) {}
+		variant_case_novalue(Op_sub_l64_l64) {}
+		variant_case_novalue(Op_sub_l64_imm) {}
+		variant_case_novalue(Op_sub_l32_l32) {}
+		variant_case_novalue(Op_sub_l32_imm) {}
+		variant_case_novalue(Op_mul_l64_l64) {}
+		variant_case_novalue(Op_mul_l64_imm) {}
+		variant_case_novalue(Op_mul_l32_l32) {}
+		variant_case_novalue(Op_mul_l32_imm) {}
+		variant_case_novalue(Op_mod_l64_l64) {}
+		variant_case_novalue(Op_mod_l64_imm) {}
+		variant_case_novalue(Op_mod_l32_l32) {}
+		variant_case_novalue(Op_mod_l32_imm) {}
+		variant_case_novalue(Op_div_l64_l64) {}
+		variant_case_novalue(Op_div_l64_imm) {}
+		variant_case_novalue(Op_div_l32_l32) {}
+		variant_case_novalue(Op_div_l32_imm) {}
+		variant_case_novalue(Op_neg_l64) {}
+		variant_case_novalue(Op_neg_l32) {}
+		variant_case_novalue(Op_cmpEq_l64_l64) {}
+		variant_case_novalue(Op_cmpEq_l64_imm) {}
+		variant_case_novalue(Op_cmpG_l64_l64) {}
+		variant_case_novalue(Op_cmpG_l64_imm) {}
+		variant_case_novalue(Op_cmpEq_l32_l32) {}
+		variant_case_novalue(Op_cmpEq_l32_imm) {}
+		variant_case_novalue(Op_cmpG_l32_l32) {}
+		variant_case_novalue(Op_cmpG_l32_imm) {}
+		variant_case_novalue(Op_cmpEq_l8_l8) {}
+		variant_case_novalue(Op_cmpEq_l8_imm) {}
+		variant_case_novalue(Op_cmpG_l8_l8) {}
+		variant_case_novalue(Op_cmpG_l8_imm) {}
+		variant_case_novalue(Op_cmpNull_lptr) {}
+		variant_case_novalue(Op_variantSetInner_lvnt_type) {}
+		variant_case_novalue(Op_variantGetInner_lptr_lvnt) {}
+		variant_case_novalue(Op_variantSetInner_lptr_type) {}
+		variant_case_novalue(Op_variantGetInner_lptr_lptr) {}
+		variant_case_novalue(Op_label) {}
+		variant_case_novalue(Op_jmp_label) {}
+		variant_case_novalue(Op_jmpIf_label) {}
+		variant_case_novalue(Op_jmpIfNot_label) {}
+		variant_case_novalue(Op_call_func) {}
+		variant_case_novalue(Op_call_builtin_func) {}
+		variant_case_novalue(Op_ret_tailcall_func) {}
+		variant_case_novalue(Op_ret) {}
+		variant_case_novalue(Op_deinit) {}
+		variant_case_novalue(Op_input_l64) {}
+		variant_case_novalue(Op_output_l64) {}
+		variant_case_novalue(Op_input_l32) {}
+		variant_case_novalue(Op_output_l32) {}
+		variant_case_novalue(Op_setVTable_lptr_type) {}
+		variant_case_novalue(Op_downcast_lptr_lptr) {}
+		variant_case_novalue(Op_free_lptr) {}
+		variant_case_novalue(Op_store_lptr_lany) {}
+		variant_case_novalue(Op_load_lany_lptr) {}
+		variant_case_novalue(Op_ref_lptr_lany) {}
+		variant_case_novalue(Op_structLea_lptr_lptr) {}
+		variant_case_novalue(Op_structLoad_lany_lptr) {}
+		variant_case_novalue(Op_structStore_lptr_lany) {}
+		variant_case_novalue(Op_staticTableLea_lptr_lptr) {}
+		variant_case_novalue(Op_staticTableLoad_lany_lptr) {}
+		variant_case_novalue(Op_staticTableStore_lptr_lany) {}
+		variant_case_novalue(Op_ext_l64) {}
+		variant_case_novalue(Op_ext_type) {}
+		variant_case_novalue(Op_ext_field) {}
+		variant_case_novalue(Op_ext_type_field) {}
+		variant_case_novalue(Op_ext_type_l64) {}
+		variant_case_novalue(Op_nop) {}
+		variant_case_novalue(Op_exit) {}
+		variant_case_novalue(Op_breakpoint) {}
+
+		variant_default { CORE_PANIC("Unhandled instruction: ", instructionToString(instruction)); }
+	}
 }
 
 void FunctionValidator::validateArgInstantiable(const opargs::Type& arg) const {
 	auto type = type_context.getMetadata().at(arg.type_name);
 	if (!type->isInstantiable()) throw UninstantiableValueError(arg);
+}
+
+void FunctionValidator::validateUpcast(
+	const Op_upcast_lptr_lptr& instruction, const LocalStack& current_stack
+) const {
+	auto dst_ptr_tod = current_stack.at(instruction.arg0.var_name);
+	auto src_ptr_tod = current_stack.at(instruction.arg1.var_name);
+
+	auto dst_type = type_context.getMetadata().at(getTypeKind<PointerType>(*dst_ptr_tod)->inner);
+	auto src_type = type_context.getMetadata().at(getTypeKind<PointerType>(*src_ptr_tod)->inner);
+
+	if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 }
 
 usize FunctionValidator::getLabelTarget(const opargs::Label& label) const {
@@ -332,9 +446,19 @@ void FunctionValidator::traverseControlFlowGraph() {
 	usize index = 0;
 
 	while (index != instructions.size()) {
-		validateExtension(index);
-		// Validate non-control flow instruction there.
-		validateInstruction(instructions[index], local_stack);
+		validateExtension(
+			index > 0 ? instructions[index - 1] : base::Optional<const Instruction&>(),
+			instructions[index]
+		);
+
+		validateArgTypes(instructions[index], local_stack);
+
+		validateArgTypesNonTrivially(
+			instructions[index],
+			index + 1 < instructions.size() ? base::Optional<const Instruction&>()
+											: instructions[index + 1],
+			local_stack
+		);
 
 		visited_instructions[index] = true;
 
