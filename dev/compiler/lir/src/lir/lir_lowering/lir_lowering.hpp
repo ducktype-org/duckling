@@ -10,12 +10,6 @@ namespace compiler::lir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
-
-		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
-			// this kind of doesn't work, but it won't be run anyway (mir functions are unique)
-			// @TODO: delete it during hash-query refactor #523
-			return (*function) == (*oth.function);
-		}
 	};
 
 	/**

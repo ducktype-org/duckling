@@ -8,15 +8,13 @@ namespace tsh::internal {
 	class ClassAbstractTypeImpl;
 
 	/**
-	 * @brief A "stupid" key, containing only a pointer value and defining comparison and hashing.
+	 * @brief A "stupid" key, containing only a pointer value and defining hashing.
 	 */
 	struct WrappedClassAbstractTypeImplPtr {
 		const ClassAbstractTypeImpl* value;
 		WrappedClassAbstractTypeImplPtr() = delete;
 
 		WrappedClassAbstractTypeImplPtr(const ClassAbstractTypeImpl* value): value(value) {}
-
-		auto operator<=>(const WrappedClassAbstractTypeImplPtr& other) const = default;
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
