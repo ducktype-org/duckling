@@ -1,12 +1,12 @@
-#include "builders.hpp"
+#include "instruction_builder.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
 #include <sstream>
-#include <stdexcept>
 #include <unordered_map>
 
 namespace vm::code::builders {
@@ -114,15 +114,15 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 	std::vector new_args = args;
 
 	// Transforms arguments.
-	if ((kind == OpKind::load || kind == OpKind::store) && args.size() == 3) {
-		InstructionBuilder load_or_store_instr(kind);
-		load_or_store_instr.pushArgs(new_args[0], new_args[1]);
-		auto built = load_or_store_instr.build();
+	if (args.size() > 2) {
+		InstructionBuilder base_instr(kind);
+		base_instr.pushArgs(new_args[0], new_args[1]);
+		auto built = base_instr.build();
 		result.insert(result.end(), built.begin(), built.end());
 
 		InstructionBuilder ext(OpKind::ext);
-		ext.pushArg(new_args[2]);
-		auto built2 = load_or_store_instr.build();
+		for (usize i = 2; i < new_args.size(); i++) ext.pushArg(new_args[i]);
+		auto built2 = ext.build();
 		result.insert(result.end(), built2.begin(), built2.end());
 		return { result.begin(), result.end() };
 	}

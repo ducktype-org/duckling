@@ -4,7 +4,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/parser/errors.hpp>
 #include <vm/loader/parser/parser.hpp>
@@ -30,7 +30,7 @@ private:
 		loadInvalidDbc(
 			"multiple_labels.dbc",
 			{
-				vm::code::builders::DuplicatedLabelError::ERR_MSG,
+				vm::code::DuplicatedLabelError::ERR_MSG,
 			}
 		);
 	}
@@ -49,7 +49,7 @@ private:
 		loadInvalidDbc(
 			"label_not_found.dbc",
 			{
-				vm::code::builders::UnknownLabelError::ERR_MSG,
+				vm::code::UnknownLabelError::ERR_MSG,
 				"LB",
 			}
 		);
@@ -59,7 +59,7 @@ private:
 		loadInvalidDbc(
 			"unknown_type.dbc",
 			{
-				base::strConcat(vm::loader::UnknownTypeError::ERR_MSG, "in64"),
+				base::strConcat(vm::code::UnknownTypeError::ERR_MSG, "in64"),
 			}
 		);
 	}
@@ -68,7 +68,7 @@ private:
 		loadInvalidDbc(
 			"unknown_function.dbc",
 			{
-				base::strConcat(vm::code::builders::UnknownFunctionError::ERR_MSG, "foo"),
+				base::strConcat(vm::code::UnknownFunctionError::ERR_MSG, "foo"),
 			}
 		);
 	}
@@ -77,7 +77,7 @@ private:
 		loadInvalidDbc(
 			"no_func_type.dbc",
 			{
-				base::strConcat(vm::code::builders::MissingFunctionalTypeError::ERR_MSG, "foo"),
+				base::strConcat(vm::code::MissingFunctionalTypeError::ERR_MSG, "foo"),
 			}
 		);
 	}
@@ -86,7 +86,7 @@ private:
 		loadInvalidDbc(
 			"invalid_function_call.dbc",
 			{
-				vm::code::builders::InvalidFunctionCallArgumentsError::ERR_MSG,
+				vm::code::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
 		);
 	}
@@ -95,7 +95,7 @@ private:
 		loadInvalidDbc(
 			"invalid_ret_type_in_call.dbc",
 			{
-				vm::code::builders::InvalidFunctionCallArgumentsError::ERR_MSG,
+				vm::code::InvalidFunctionCallArgumentsError::ERR_MSG,
 			}
 		);
 	}
