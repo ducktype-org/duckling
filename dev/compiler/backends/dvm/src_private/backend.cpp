@@ -570,7 +570,7 @@ namespace compiler::backend_vm {
 			insertTypesUsedByFunction(query_ctx, compiled_types.types, lir_function);
 
 		// Insert and validate types:
-		valid_program = valid_program.newInsertCode(compiled_types);
+		valid_program.insertCode(compiled_types);
 
 		CodeCollection compiled_functions;
 
@@ -594,7 +594,7 @@ namespace compiler::backend_vm {
 		}
 
 		// Insert and validate functions:
-		valid_program = valid_program.newInsertCode(compiled_functions);
+		valid_program.insertCode(compiled_functions);
 	}
 
 	vm::code::CodeCollection Module::build() const {
