@@ -59,11 +59,17 @@ namespace compiler::helios::code {
 			return sub_exprs;
 		}
 
+		/**
+		 * Visitor that implements logic of creation of HOUT expressions from PST expressions.
+		 */
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
 
+			/**
+			 * The "output" of the visitor.
+			 */
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
