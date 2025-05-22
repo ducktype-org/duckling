@@ -3,7 +3,8 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/bytecode.hpp"
+#include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
@@ -94,14 +95,16 @@ namespace vm::code {
 	class NAME: public ValidationError {                                                \
 	public:                                                                             \
 		constexpr static const std::string_view ERR_MSG = ERROR;                        \
-		const ELEMENT_TYPE                      ELEMENT;                                \
+		const ELEMENT_TYPE                      NEW_ELEMENT;                            \
+		const ELEMENT_TYPE                      PREVIOUS_ELEMENT;                       \
                                                                                         \
-		NAME(ELEMENT_TYPE element):                                                     \
+		NAME(ELEMENT_TYPE new_element, ELEMENT_TYPE previous_element):                  \
 			  ValidationError(ERR_MSG.data()),                                          \
-			  ELEMENT(std::move(element)) {}                                            \
+			  NEW_ELEMENT(std::move(new_element)),                                      \
+			  PREVIOUS_ELEMENT(std::move(previous_element)) {}                          \
                                                                                         \
 		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override { \
-			return &ELEMENT.name;                                                       \
+			return &NEW_ELEMENT.name;                                                   \
 		}                                                                               \
 	}
 
@@ -110,6 +113,22 @@ namespace vm::code {
 	);
 
 	DEFINE_DUPLICATED_ELEMENT_ERROR(DuplicatedFunctionError, code::Function, "Duplicated function: ");
+
+	class DuplicatedTypeError: public ValidationError {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Duplicated type: ";
+		const code::TypeOfData                  NEW_ELEMENT;
+		const code::TypeOfData                  PREVIOUS_ELEMENT;
+
+		DuplicatedTypeError(code::TypeOfData new_element, code::TypeOfData previous_element):
+			  ValidationError(ERR_MSG.data()),
+			  NEW_ELEMENT(std::move(new_element)),
+			  PREVIOUS_ELEMENT(std::move(previous_element)) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(NEW_ELEMENT, type, return static_cast<const ElementBase*>(&type));
+		}
+	};
 
 	class TypeErrorBase: public ValidationError {
 	public:
@@ -188,7 +207,6 @@ namespace vm::code {
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
-	DEFINE_TYPE_ERROR(DuplicatedTypeError, "Duplicated type: ");
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"

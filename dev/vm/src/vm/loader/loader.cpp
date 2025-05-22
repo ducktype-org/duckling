@@ -4,6 +4,7 @@
 #include "parser/parser.hpp"
 
 #include <diagnostic/logger.hpp>
+#include <diagnostic/source_position.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -11,7 +12,6 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/loader/logger.hpp"
 #include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
@@ -27,6 +27,7 @@
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
+#include <vm/loader/logger.hpp>
 
 #include <expected>
 #include <unordered_map>
@@ -110,9 +111,11 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
-					auto code_global
-						= code::GlobalData{ .name = global->name, .type = global->type };
-					new_code.global_data.push_back(code_global);
+					code::GlobalData code_global;
+					code_global.name         = global->name;
+					code_global.type         = global->type;
+					code_global.bytecode_pos = global->position;
+					new_code.global_data.emplace_back(code_global);
 				}
 				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
 
@@ -144,8 +147,7 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 ) {
 	LoaderLogger log;
 	try {
-		for(const auto& code: code_collections)
-			program = program.newInsertCode(code);
+		for (const auto& code: code_collections) program = program.newInsertCode(code);
 		return compiler::compile(program);
 	} catch (code::StackStructureMismatchError& e) {
 		log.logMap<SomeValidationError>(
@@ -155,6 +157,22 @@ std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
 					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
 			},
 			e.what()
+		);
+	} catch (code::DuplicatedFunctionError& e) {
+		log.logMap<DuplicatedFunctionError>(e.NEW_ELEMENT, [&](auto& err) {
+			log.addNote<DuplicatedFunctionNote>(err, e.PREVIOUS_ELEMENT);
+		});
+	} catch (code::DuplicatedGlobalDataError& e) {
+		log.logMap<DuplicatedGlobalDataError>(
+			e.NEW_ELEMENT,
+			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.PREVIOUS_ELEMENT); },
+			e.NEW_ELEMENT.name.str
+		);
+	} catch (code::DuplicatedTypeError& e) {
+		log.logMap<DuplicatedTypeError>(
+			**e.maybeElement(),
+			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.PREVIOUS_ELEMENT); },
+			code::typeName(e.NEW_ELEMENT)
 		);
 	} catch (code::ValidationError& e) {
 		match_optional(e.maybeElement()) {

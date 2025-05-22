@@ -43,9 +43,7 @@ namespace vm::loader {
 		}
 
 	public:
-		DuplicatedTypeNote(dia::SourcePosition pos, base::StrID type_name):
-			  dia::NoteWithPosition(pos),
-			  type_name(type_name) {}
+		DuplicatedTypeNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class UnknownTypeError final: public dia::Error {
@@ -218,6 +216,20 @@ namespace vm::loader {
 		DuplicatedGlobalDataError(dia::SourcePosition pos, base::StrID global_data_name):
 			  dia::Error(pos),
 			  global_data_name(global_data_name) {}
+	};
+
+	class DuplicatedGlobalDataNote final: public dia::NoteWithPosition {
+	public:
+		constexpr static const std::string_view ERR_MSG = "Previous declaration here.";
+
+	protected:
+		[[nodiscard]]
+		std::string toStringBrief() const override {
+			return ERR_MSG.data();
+		}
+
+	public:
+		DuplicatedGlobalDataNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
 	class UnknownGlobalDataError final: public dia::Error {

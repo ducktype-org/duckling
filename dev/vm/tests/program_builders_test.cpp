@@ -6,12 +6,12 @@
 #include <base/string_id.hpp>
 
 #include <vm/bytecode/builders/instruction_builder.hpp>
-#include <vm/bytecode/validator/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 #include <sstream>
 
@@ -24,9 +24,7 @@ class DVMBackendUnitTest final: public tester::TestSuite {
 #define TESTER_CLASS DVMBackendUnitTest
 
 public:
-	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		TESTER_ADD_TEST(testInstructionBuilder);
-	}
+	TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(testInstructionBuilder); }
 
 
 private:

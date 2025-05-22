@@ -40,7 +40,8 @@ void vm::code::ValidProgram::insertTypes(const std::vector<code::TypeOfData>& ne
 
 void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& new_globals) {
 	for (const auto& global: new_globals) {
-		if (globals_map.contains(global.name)) throw DuplicatedGlobalDataError(global);
+		if (globals_map.contains(global.name))
+			throw DuplicatedGlobalDataError(global, *globals_map.at(global.name));
 		globals_map.insert(global, global.name);
 	}
 }
@@ -48,7 +49,8 @@ void vm::code::ValidProgram::insertGlobals(const std::vector<code::GlobalData>& 
 void vm::code::ValidProgram::insertFunctions(const std::vector<vm::code::Function>& new_functions) {
 	auto type_metadata = type_context.validateAndProduceTypeMetadata();
 	for (const auto& func: new_functions) {
-		if (function_map.contains(func.name)) throw DuplicatedFunctionError(func);
+		if (function_map.contains(func.name))
+			throw DuplicatedFunctionError(func, *function_map.at(func.name));
 
 		auto validated_function = validateAndExtractReachableCode(
 			type_context.getCurrentTypes(), *type_metadata, globals_map, func

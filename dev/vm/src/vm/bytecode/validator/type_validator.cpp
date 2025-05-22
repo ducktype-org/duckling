@@ -197,8 +197,8 @@ const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContext::getC
 void vm::code::TypeContext::insertType(const TypeOfData& type) {
 	const auto name = VISIT(type, tp, return tp.name);
 	match_optional(types.atMaybe(name)) {
-		opt_some(tp) {
-			if (type != *tp) throw DuplicatedTypeError(type);
+		opt_some(previous_type) {
+			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
 		}
 		opt_none { types.insert(type, name); }
 	}

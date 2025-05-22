@@ -121,7 +121,7 @@ namespace compiler::backend_vm {
 				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
 			):
 				  lir_func(lir_function),
-				  code_func({ .name = Identifier(lir_function->name), .body = {} }),
+				  code_func(Function({}, Identifier(lir_function->name), {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(VISIT(type, tp, return tp.name), type);
@@ -590,7 +590,7 @@ namespace compiler::backend_vm {
 				addTerminator(ctx, lir_block);
 			}
 
-			compiled_types.functions.emplace_back(std::move(ctx.code_func));
+			compiled_functions.functions.emplace_back(std::move(ctx.code_func));
 		}
 
 		// Insert and validate functions:

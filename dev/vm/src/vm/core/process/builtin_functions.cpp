@@ -4,11 +4,11 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>

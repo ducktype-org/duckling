@@ -267,7 +267,7 @@ namespace vm::loader::compiler {
 		auto ctx = CompilationContext(program.functions(), *types, globals);
 
 		for (const auto& global: program.globals())
-			globals.insert(types->at(global.name), global.name);
+			globals.insert(types->at(global.type), global.name);
 
 		for (auto& func: program.functions()) {
 			ctx.function = func;

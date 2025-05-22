@@ -4,9 +4,9 @@
 
 #include <base/ref.hpp>
 
-#include "vm/bytecode/validator/valid_program.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm {
 	/**
