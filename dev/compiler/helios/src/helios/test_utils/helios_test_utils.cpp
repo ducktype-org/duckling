@@ -25,7 +25,7 @@ namespace compiler::helios::test_utils {
 		return { module, base::anyCast<ScopeID>(main_file_root_scope) };
 	}
 
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope) {
+	SymbolList getChain(const std::string_view chain, ScopeID scope) {
 		auto       symbols = base::strSplit(chain, ".");
 		SymbolList result;
 		bool       first_symbol = true;
@@ -40,7 +40,7 @@ namespace compiler::helios::test_utils {
 			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
+				result.appendList(dealiased);
 			}
 			first_symbol = false;
 		}
