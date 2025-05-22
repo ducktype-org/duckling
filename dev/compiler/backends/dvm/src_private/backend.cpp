@@ -121,10 +121,10 @@ namespace compiler::backend_vm {
 				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
 			):
 				  lir_func(lir_function),
-				  bytecode_func(Function({}, Identifier(lir_function->name), {})),
+				  bytecode_func(Function({}, lir_function->name, {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
-					  for (auto&& type: type_map) map.put(VISIT(type, tp, return tp.name), type);
+					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()) {
 				variable_to_id = lir_function->getLocalVariableIDs();

@@ -75,11 +75,9 @@ Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() co
 	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
 
 	// Declare all types first
-	for (const auto& type: types)
-		metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
+	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
 
-	auto to_low_type
-		= [&](const TypeOfData& tod) { return metadata->at(VISIT(tod, tp, return tp.name)); };
+	auto to_low_type = [&](const TypeOfData& tod) { return metadata->at(typeName(tod)); };
 
 	// Well-define every type.
 	for (const auto& type: types) {
@@ -195,7 +193,7 @@ const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContext::getC
 }
 
 void vm::code::TypeContext::insertType(const TypeOfData& type) {
-	const auto name = VISIT(type, tp, return tp.name);
+	const auto name = typeName(type);
 	match_optional(types.atMaybe(name)) {
 		opt_some(previous_type) {
 			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);

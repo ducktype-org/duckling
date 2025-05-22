@@ -22,7 +22,7 @@ namespace vm::code {
 	};
 
 	/**
-	 * @brief Create a TypeContextValidator with builtin types.
+	 * @brief Create a TypeContext with builtin types.
 	 * @note The types defined here are used by the builtin functions.
 	 */
 	code::TypeContext getBuiltinTypes();

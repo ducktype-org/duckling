@@ -60,13 +60,12 @@ namespace vm::loader::compiler {
 #undef HANDLE_GLOBAL
 
 				variant_case(vm::opargs::Type, type_arg) {
-					auto type_obj = ctx.type_map.atMaybe(type_arg.type_name);
-					return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
+					auto type_obj = ctx.type_map.at(type_arg.type_name);
+					return static_cast<i64>(static_cast<u64>(type_obj->getID()));
 				}
 				variant_case(vm::opargs::Field, field_arg) {
-					auto type_obj = ctx.type_map.atMaybe(field_arg.type_name);
-					auto field_offset
-						= *type_obj.value()->getFieldOffsetByName(field_arg.field_name);
+					auto type_obj     = ctx.type_map.at(field_arg.type_name);
+					auto field_offset = *type_obj->getFieldOffsetByName(field_arg.field_name);
 					return static_cast<i64>(field_offset);
 				}
 				variant_case(vm::opargs::FunctionName, func) {
@@ -281,7 +280,7 @@ namespace vm::loader::compiler {
 		return low::LowVMProgram{
 			converted_functions,
 			std::move(types),
-			{ program.globals().begin(), program.globals().end() },
+			{ program.globals() | std::ranges::to<std::vector>() },
 		};
 	}
 }
