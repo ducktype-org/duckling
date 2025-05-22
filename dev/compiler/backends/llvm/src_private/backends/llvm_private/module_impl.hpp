@@ -1,8 +1,8 @@
 #pragma once
 
-#include "llvm_helpers/llvm_helpers.hpp"
 #include "llvm_includes/module.hpp"
 
+#include <llvm_helpers/llvm_helpers.hpp>
 
 LLVM_INCLUDE_BEGIN()
 #include <llvm/Target/TargetMachine.h>
@@ -17,7 +17,7 @@ namespace compiler::backend_llvm {
 	 * Implements it is a way similar to pimpl idiom.
 	 */
 	struct ModuleImpl {
-		Box<llvm::Module> module;
+		Box<llvm::Module>                        module;
 		base::Optional<Box<llvm::TargetMachine>> target_machine;
 
 		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
