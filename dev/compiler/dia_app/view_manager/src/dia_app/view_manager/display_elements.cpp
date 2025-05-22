@@ -63,14 +63,8 @@ namespace dia_file {
 
     std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            debug(this->groups);
-            std::vector<hl_id_t> tags(ssize(this->groups));
-            transform(this->groups.begin(), this->groups.end(), tags.begin(),
-            [&creation_context](const std::string &name) {
-                return creation_context.hl_name_to_id->at(name);
-            });
-            debug(tags);
-            this->generated_component = static_pointer_cast<Component>(make_shared<TextComponent>(content, tags));
+            auto component = std::make_shared<TextComponent>(this->content, this->assoc_infos);
+            this->generated_component = std::static_pointer_cast<Component>(component);
         }
         return this->generated_component;
     }
@@ -364,7 +358,8 @@ namespace dia_file {
 
     std::shared_ptr<Component> CodeElement::toComponent(CreationContext &creation_context) {
         if (!this->generated_component) {
-            this->generated_component = static_pointer_cast<Component>(make_shared<CodeComponent>(this->content, std::vector<hl_id_t>{}));
+            // TODO: use hl info after it's added
+            this->generated_component = std::static_pointer_cast<Component>(std::make_shared<CodeComponent>(this->content, std::vector<hl_id_t>{}, this->assoc_infos));
         }
         return this->generated_component;
     }

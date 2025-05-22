@@ -4,155 +4,63 @@
 #include <grpcpp/server.h>
 #include <grpcpp/grpcpp.h>
 
-#include <utility>
-
 namespace dia_app {
 namespace view_manager {
-
-    // Metadata
-    Metadata::Metadata(std::optional<std::string> error_code, std::optional<std::string> file_info) : error_code(std::move(error_code)), file_info(std::move(file_info)) {}
-
-    Metadata Metadata::createFromInfo(const Info &info) {
-        std::optional<std::string> error_code;
-        error_code = info.metadata.code;
-        std::optional<std::string> file_info;
-        if (info.code.has_value()) {
-            file_info = info.code.value().location.file;
-        }
-        return Metadata(error_code, file_info);
-    }
-
-    std::unique_ptr<::view::Metadata> Metadata::getView() const {
-        debug("Metadata::getView() begin");
-        auto result = std::make_unique<::view::Metadata>();
-        if (this->error_code.has_value()) {
-            debug("Error code: ", this->error_code.value());
-            result->set_error_code(this->error_code.value());
-        }
-        if (this->file_info.has_value()) {
-            result->set_file_info(this->file_info.value());
-        }
-        debug("Metadata::getView() end");
-        return result;
-    }
-
-    // HlInfo
-    HlInfo::HlInfo(hl_id_t tag, std::string message) : tag(tag), message(std::move(message)) {}
-    std::unique_ptr<::view::HlInfo> HlInfo::getView() const {
-        auto result = std::make_unique<::view::HlInfo>();
-        result->set_message(this->message);
-        result->set_tag(this->tag);
-        return result;
-    }
-
-    // Diagnostic
-    using std::cerr;
-    using std::endl;
-
-    Diagnostic::Diagnostic(Metadata metadata, std::vector<std::shared_ptr<Section>> sections, std::vector<HlInfo> hl_messages) : metadata(std::move(metadata)), sections(std::move(sections)), hl_messages(std::move(hl_messages)) {}
-    
-    Diagnostic Diagnostic::createFromInfo(const Info &info, CreationContext &creation_context) {
-        std::vector<HlInfo> hl_messages;
-        {
-            hl_id_t id = 0;
-            for (const auto &[name, pointer_message] : info.pointer_messages) {
-                ++id;
-                creation_context.hl_name_to_id->emplace(name, id);
-                std::string message = pointer_message.message->to_text(creation_context.data_handle);
-                hl_messages.emplace_back(id, message);
-            }
-        }
-        auto metadata = Metadata::createFromInfo(info);
-        std::vector<std::shared_ptr<Section>> sections;
-        if (info.header_message) {
-            sections.emplace_back(make_shared<TextSection>(info.header_message->toComponent(creation_context)));
-        }
-        if (info.code.has_value()) {
-            sections.emplace_back(make_shared<CodeSection>(info.code->content->toComponent(creation_context)));
-        }
-        if (info.description) {
-            sections.emplace_back(make_shared<TextSection>(info.description->toComponent(creation_context)));
-        }
-        debug("Number of sections: ", ssize(sections));
-        return Diagnostic(metadata, sections, hl_messages);
-    }
-
-    std::unique_ptr<::view::Diagnostic> Diagnostic::getView() const {
-        debug("Diagnostic::getView() begin");
-        auto diagnostic = std::make_unique<::view::Diagnostic>();
-        {
-            auto metadata = this->metadata.getView();
-            diagnostic->set_allocated_metadata(metadata.release());
-        }
-        {
-            std::vector<std::unique_ptr<::view::Section>> tmp(ssize(sections));
-            transform(sections.begin(), sections.end(), tmp.begin(),
-                [](const std::shared_ptr<Section> &section) {
-                return section->getView();
-            });
-            debug("While adding view sections: allocated sections cnt: ", ssize(tmp));
-            for (auto &elm : tmp) {
-                if (elm != nullptr) {
-                    debug("non-nullptr");
-                    diagnostic->mutable_sections()->AddAllocated(elm.release());
-                }
-                else {
-                    debug("nullptr");
-                }
-            }
-        }
-        {
-            std::vector<std::unique_ptr<::view::HlInfo>> tmp(ssize(hl_messages));
-            transform(hl_messages.begin(), hl_messages.end(), tmp.begin(),
-                [](const HlInfo &hl_info) {
-                return hl_info.getView();
-            });
-            for (auto &elm : tmp) {
-                diagnostic->mutable_hl_messages()->AddAllocated(elm.release());
-            }
-        }
-        debug("Diagnostic::getView() end");
-        return diagnostic;
-    }
-
     // ViewManager
 
-    ViewManager::ViewManager(std::vector<Diagnostic> diagnostics, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component) : diagnostics(std::move(diagnostics)), id_to_interactive_component(std::move(id_to_interactive_component)) {}
+    ViewManager::ViewManager(std::vector<Diagnostic> diagnostics,
+                             std::vector<SidePath> side_paths,
+                             std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component)
+                             : diagnostics(std::move(diagnostics)),
+                               side_paths(std::move(side_paths)),
+                               id_to_interactive_component(std::move(id_to_interactive_component)) {}
     
     ViewManager ViewManager::createFromJson(const json &input) {
         debug("ViewManager::createFromJson begin");
-        // TODO: WTF?
-        ViewConstructor view_constructor(0, input);
-
-        Info info = *view_constructor.load_main_info();
-
         auto creation_context = CreationContext{
         .id_to_interactive_component=std::make_shared<id_to_interactive_component_mapping_t>(),
-        .hl_name_to_id=std::make_unique<std::map<std::string, hl_id_t>>(),
-        .data_handle = view_constructor.data_handle()};
-
-        auto diagnostics = std::vector<Diagnostic>{Diagnostic::createFromInfo(info, creation_context)};
-        debug("diagnostics cnt: ", ssize(diagnostics));
-
+        .hl_name_to_id=std::make_unique<std::map<std::string, hl_id_t>>()
+        // ,.data_handle = view_constructor.data_handle()
+        };
+        std::vector<Diagnostic> diagnostics;
+        for (uint error_id = 0; error_id < input.size(); ++error_id) {
+            ViewConstructor view_constructor(error_id, input);
+            diagnostics.emplace_back(Diagnostic::createFromViewConstructor(view_constructor, creation_context));
+        }
         debug("ViewManager::createFromJson end");
-        return ViewManager(diagnostics, std::move(creation_context.id_to_interactive_component));
+        return ViewManager(std::move(diagnostics), {}, std::move(creation_context.id_to_interactive_component));
     }
 
     void ViewManager::getView(::view::ViewResponse* response) {
         debug("ViewManager::getView() begin");
-        std::vector<std::unique_ptr<::view::Diagnostic>> tmp(ssize(diagnostics));
-        debug("Diagnostics cnt: ", ssize(diagnostics));
-        transform(diagnostics.begin(), diagnostics.end(), tmp.begin(),
+        std::vector<std::unique_ptr<::view::Diagnostic>> diagnostic_view(ssize(diagnostics));
+        transform(diagnostics.begin(), diagnostics.end(), diagnostic_view.begin(),
         [](const Diagnostic &diagnostic) {
             return diagnostic.getView();
         });
-        for (auto &elm : tmp) {
+        for (auto &elm : diagnostic_view) {
             response->mutable_diagnostics()->AddAllocated(elm.release());
+        }
+        std::vector<std::unique_ptr<::view::SidePath>> side_path_view(ssize(this->side_paths));
+        transform(this->side_paths.begin(), this->side_paths.end(), side_path_view.begin(),
+        [](const SidePath &side_path) {
+            return side_path.getView();
+        });
+        for (auto &elm : side_path_view) {
+            response->mutable_side_paths()->AddAllocated(elm.release());
         }
         debug("ViewManager::getView() end");
     }
 
-    void ViewManager::registerInteraction(component_id_t id, InteractionType interaction_type) {
+    void ViewManager::click(const ::view::ClickRequest* request, ::view::ClickResponse* response) {
+        InteractionType interaction_type = [&request](){
+            switch(request->click_type()) {
+                case ::view::ClickType::CLICK: return InteractionType::Click;
+                case ::view::ClickType::CLICK_INTERACTIVE: return InteractionType::ClickInteractive;
+                case ::view::ClickType::CLICK_INTERACTIVE_ROLLBACK: return InteractionType::ClickInteractiveRollback;
+            }
+        }();
+        auto id = request->component_id();
         debug("ViewManager::registerInteraction begin");
         debug(id);
         debug(print(interaction_type));
@@ -160,6 +68,7 @@ namespace view_manager {
         if (ptr == id_to_interactive_component->end()) {
             debug("Component with id not found!");
             debug("ViewManager::registerInteraction end");
+            response->set_status("Component with given id doesn't exist!");
             return;
         }
         auto component = ptr->second.lock();
@@ -167,9 +76,18 @@ namespace view_manager {
             component->registerInteraction(interaction_type);
         }
         else {
+            response->set_status("Component with given id doesn't exist!");
             debug("Component has been deallocated!");
         }
         debug("ViewManager::registerInteraction end");
+    }
+
+    void ViewManager::closeSideInfo(const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response) {
+
+    }
+
+    void ViewManager::getEdge(const ::view::EdgeRequest* request, ::view::EdgeResponse* response) {
+
     }
 
     // ViewServiceImpl
@@ -177,7 +95,9 @@ namespace view_manager {
     ViewServiceImpl::ViewServiceImpl(ViewManager vm) : vm(std::move(vm)) {
         ::view::ViewResponse *temp = new ::view::ViewResponse;
         debug("Test view begin");
+        #ifdef DEBUG
         this->vm.getView(temp);
+        #endif
         debug("Test view end");
     }
 
@@ -195,20 +115,21 @@ namespace view_manager {
     ::grpc::Status ViewServiceImpl::Click(::grpc::ServerContext* context,
                         const ::view::ClickRequest* request,
                         ::view::ClickResponse* response) {
-        InteractionType interaction_type = [&request](){
-            switch(request->click_type()) {
-                case ::view::ClickType::CLICK: return InteractionType::Click;
-                case ::view::ClickType::CTRL_CLICK: return InteractionType::CtrlClick;
-                case ::view::ClickType::SHIFT_CLICK: return InteractionType::ShiftClick;
-            }
-        }();
-        vm.registerInteraction(request->component_id(), interaction_type);
+        vm.click(request, response);
         return ::grpc::Status::OK;
     }
 
-    ::grpc::Status ViewServiceImpl::CloseSideNote(::grpc::ServerContext* context,
-                        const ::view::CloseSideNoteRequest* request,
-                        ::view::CloseSideNoteResponse* response) {
+    ::grpc::Status ViewServiceImpl::CloseSideInfo(::grpc::ServerContext* context,
+                        const ::view::CloseSideInfoRequest* request,
+                        ::view::CloseSideInfoResponse* response) {
+        vm.closeSideInfo(request, response);
+        return ::grpc::Status::OK;
+    }
+
+    ::grpc::Status ViewServiceImpl::GetEdge(::grpc::ServerContext* context,
+                               const ::view::EdgeRequest* request,
+                               ::view::EdgeResponse* response) {
+        vm.getEdge(request, response);
         return ::grpc::Status::OK;
     }
 

@@ -24,7 +24,8 @@ namespace view {
 static const char* ViewService_method_names[] = {
   "/view.ViewService/GetView",
   "/view.ViewService/Click",
-  "/view.ViewService/CloseSideNote",
+  "/view.ViewService/CloseSideInfo",
+  "/view.ViewService/GetEdge",
 };
 
 std::unique_ptr< ViewService::Stub> ViewService::NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options) {
@@ -36,7 +37,8 @@ std::unique_ptr< ViewService::Stub> ViewService::NewStub(const std::shared_ptr< 
 ViewService::Stub::Stub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options)
   : channel_(channel), rpcmethod_GetView_(ViewService_method_names[0], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   , rpcmethod_Click_(ViewService_method_names[1], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
-  , rpcmethod_CloseSideNote_(ViewService_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_CloseSideInfo_(ViewService_method_names[2], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
+  , rpcmethod_GetEdge_(ViewService_method_names[3], options.suffix_for_stats(),::grpc::internal::RpcMethod::NORMAL_RPC, channel)
   {}
 
 ::grpc::Status ViewService::Stub::GetView(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::view::ViewResponse* response) {
@@ -85,25 +87,48 @@ void ViewService::Stub::async::Click(::grpc::ClientContext* context, const ::vie
   return result;
 }
 
-::grpc::Status ViewService::Stub::CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::view::CloseSideNoteResponse* response) {
-  return ::grpc::internal::BlockingUnaryCall< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_CloseSideNote_, context, request, response);
+::grpc::Status ViewService::Stub::CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::view::CloseSideInfoResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_CloseSideInfo_, context, request, response);
 }
 
-void ViewService::Stub::async::CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, std::function<void(::grpc::Status)> f) {
-  ::grpc::internal::CallbackUnaryCall< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_CloseSideNote_, context, request, response, std::move(f));
+void ViewService::Stub::async::CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_CloseSideInfo_, context, request, response, std::move(f));
 }
 
-void ViewService::Stub::async::CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, ::grpc::ClientUnaryReactor* reactor) {
-  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_CloseSideNote_, context, request, response, reactor);
+void ViewService::Stub::async::CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_CloseSideInfo_, context, request, response, reactor);
 }
 
-::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* ViewService::Stub::PrepareAsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
-  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::view::CloseSideNoteResponse, ::view::CloseSideNoteRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_CloseSideNote_, context, request);
+::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>* ViewService::Stub::PrepareAsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::view::CloseSideInfoResponse, ::view::CloseSideInfoRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_CloseSideInfo_, context, request);
 }
 
-::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* ViewService::Stub::AsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
+::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>* ViewService::Stub::AsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
   auto* result =
-    this->PrepareAsyncCloseSideNoteRaw(context, request, cq);
+    this->PrepareAsyncCloseSideInfoRaw(context, request, cq);
+  result->StartCall();
+  return result;
+}
+
+::grpc::Status ViewService::Stub::GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::view::EdgeResponse* response) {
+  return ::grpc::internal::BlockingUnaryCall< ::view::EdgeRequest, ::view::EdgeResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), rpcmethod_GetEdge_, context, request, response);
+}
+
+void ViewService::Stub::async::GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, std::function<void(::grpc::Status)> f) {
+  ::grpc::internal::CallbackUnaryCall< ::view::EdgeRequest, ::view::EdgeResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetEdge_, context, request, response, std::move(f));
+}
+
+void ViewService::Stub::async::GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, ::grpc::ClientUnaryReactor* reactor) {
+  ::grpc::internal::ClientCallbackUnaryFactory::Create< ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(stub_->channel_.get(), stub_->rpcmethod_GetEdge_, context, request, response, reactor);
+}
+
+::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>* ViewService::Stub::PrepareAsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+  return ::grpc::internal::ClientAsyncResponseReaderHelper::Create< ::view::EdgeResponse, ::view::EdgeRequest, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(channel_.get(), cq, rpcmethod_GetEdge_, context, request);
+}
+
+::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>* ViewService::Stub::AsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+  auto* result =
+    this->PrepareAsyncGetEdgeRaw(context, request, cq);
   result->StartCall();
   return result;
 }
@@ -132,12 +157,22 @@ ViewService::Service::Service() {
   AddMethod(new ::grpc::internal::RpcServiceMethod(
       ViewService_method_names[2],
       ::grpc::internal::RpcMethod::NORMAL_RPC,
-      new ::grpc::internal::RpcMethodHandler< ViewService::Service, ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+      new ::grpc::internal::RpcMethodHandler< ViewService::Service, ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
           [](ViewService::Service* service,
              ::grpc::ServerContext* ctx,
-             const ::view::CloseSideNoteRequest* req,
-             ::view::CloseSideNoteResponse* resp) {
-               return service->CloseSideNote(ctx, req, resp);
+             const ::view::CloseSideInfoRequest* req,
+             ::view::CloseSideInfoResponse* resp) {
+               return service->CloseSideInfo(ctx, req, resp);
+             }, this)));
+  AddMethod(new ::grpc::internal::RpcServiceMethod(
+      ViewService_method_names[3],
+      ::grpc::internal::RpcMethod::NORMAL_RPC,
+      new ::grpc::internal::RpcMethodHandler< ViewService::Service, ::view::EdgeRequest, ::view::EdgeResponse, ::grpc::protobuf::MessageLite, ::grpc::protobuf::MessageLite>(
+          [](ViewService::Service* service,
+             ::grpc::ServerContext* ctx,
+             const ::view::EdgeRequest* req,
+             ::view::EdgeResponse* resp) {
+               return service->GetEdge(ctx, req, resp);
              }, this)));
 }
 
@@ -158,7 +193,14 @@ ViewService::Service::~Service() {
   return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
 }
 
-::grpc::Status ViewService::Service::CloseSideNote(::grpc::ServerContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response) {
+::grpc::Status ViewService::Service::CloseSideInfo(::grpc::ServerContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response) {
+  (void) context;
+  (void) request;
+  (void) response;
+  return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+}
+
+::grpc::Status ViewService::Service::GetEdge(::grpc::ServerContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response) {
   (void) context;
   (void) request;
   (void) response;

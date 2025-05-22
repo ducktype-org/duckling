@@ -50,12 +50,19 @@ class ViewService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>> PrepareAsyncClick(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>>(PrepareAsyncClickRaw(context, request, cq));
     }
-    virtual ::grpc::Status CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::view::CloseSideNoteResponse* response) = 0;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>> AsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>>(AsyncCloseSideNoteRaw(context, request, cq));
+    virtual ::grpc::Status CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::view::CloseSideInfoResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>> AsyncCloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>>(AsyncCloseSideInfoRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>> PrepareAsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>>(PrepareAsyncCloseSideNoteRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>> PrepareAsyncCloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>>(PrepareAsyncCloseSideInfoRaw(context, request, cq));
+    }
+    virtual ::grpc::Status GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::view::EdgeResponse* response) = 0;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>> AsyncGetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>>(AsyncGetEdgeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>> PrepareAsyncGetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>>(PrepareAsyncGetEdgeRaw(context, request, cq));
     }
     class async_interface {
      public:
@@ -64,8 +71,10 @@ class ViewService final {
       virtual void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
       virtual void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, std::function<void(::grpc::Status)>) = 0;
       virtual void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
-      virtual void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, std::function<void(::grpc::Status)>) = 0;
-      virtual void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
+      virtual void GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, std::function<void(::grpc::Status)>) = 0;
+      virtual void GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, ::grpc::ClientUnaryReactor* reactor) = 0;
     };
     typedef class async_interface experimental_async_interface;
     virtual class async_interface* async() { return nullptr; }
@@ -75,8 +84,10 @@ class ViewService final {
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>* AsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) = 0;
     virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::ClickResponse>* PrepareAsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>* AsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) = 0;
-    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideNoteResponse>* PrepareAsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>* AsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::CloseSideInfoResponse>* PrepareAsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>* AsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) = 0;
+    virtual ::grpc::ClientAsyncResponseReaderInterface< ::view::EdgeResponse>* PrepareAsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) = 0;
   };
   class Stub final : public StubInterface {
    public:
@@ -95,12 +106,19 @@ class ViewService final {
     std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>> PrepareAsyncClick(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) {
       return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>>(PrepareAsyncClickRaw(context, request, cq));
     }
-    ::grpc::Status CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::view::CloseSideNoteResponse* response) override;
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>> AsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>>(AsyncCloseSideNoteRaw(context, request, cq));
+    ::grpc::Status CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::view::CloseSideInfoResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>> AsyncCloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>>(AsyncCloseSideInfoRaw(context, request, cq));
     }
-    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>> PrepareAsyncCloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) {
-      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>>(PrepareAsyncCloseSideNoteRaw(context, request, cq));
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>> PrepareAsyncCloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>>(PrepareAsyncCloseSideInfoRaw(context, request, cq));
+    }
+    ::grpc::Status GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::view::EdgeResponse* response) override;
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>> AsyncGetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>>(AsyncGetEdgeRaw(context, request, cq));
+    }
+    std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>> PrepareAsyncGetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) {
+      return std::unique_ptr< ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>>(PrepareAsyncGetEdgeRaw(context, request, cq));
     }
     class async final :
       public StubInterface::async_interface {
@@ -109,8 +127,10 @@ class ViewService final {
       void GetView(::grpc::ClientContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
       void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, std::function<void(::grpc::Status)>) override;
       void Click(::grpc::ClientContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
-      void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, std::function<void(::grpc::Status)>) override;
-      void CloseSideNote(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, std::function<void(::grpc::Status)>) override;
+      void CloseSideInfo(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
+      void GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, std::function<void(::grpc::Status)>) override;
+      void GetEdge(::grpc::ClientContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response, ::grpc::ClientUnaryReactor* reactor) override;
      private:
       friend class Stub;
       explicit async(Stub* stub): stub_(stub) { }
@@ -126,11 +146,14 @@ class ViewService final {
     ::grpc::ClientAsyncResponseReader< ::view::ViewResponse>* PrepareAsyncGetViewRaw(::grpc::ClientContext* context, const ::view::ViewRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>* AsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) override;
     ::grpc::ClientAsyncResponseReader< ::view::ClickResponse>* PrepareAsyncClickRaw(::grpc::ClientContext* context, const ::view::ClickRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* AsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) override;
-    ::grpc::ClientAsyncResponseReader< ::view::CloseSideNoteResponse>* PrepareAsyncCloseSideNoteRaw(::grpc::ClientContext* context, const ::view::CloseSideNoteRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>* AsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::CloseSideInfoResponse>* PrepareAsyncCloseSideInfoRaw(::grpc::ClientContext* context, const ::view::CloseSideInfoRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>* AsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) override;
+    ::grpc::ClientAsyncResponseReader< ::view::EdgeResponse>* PrepareAsyncGetEdgeRaw(::grpc::ClientContext* context, const ::view::EdgeRequest& request, ::grpc::CompletionQueue* cq) override;
     const ::grpc::internal::RpcMethod rpcmethod_GetView_;
     const ::grpc::internal::RpcMethod rpcmethod_Click_;
-    const ::grpc::internal::RpcMethod rpcmethod_CloseSideNote_;
+    const ::grpc::internal::RpcMethod rpcmethod_CloseSideInfo_;
+    const ::grpc::internal::RpcMethod rpcmethod_GetEdge_;
   };
   static std::unique_ptr<Stub> NewStub(const std::shared_ptr< ::grpc::ChannelInterface>& channel, const ::grpc::StubOptions& options = ::grpc::StubOptions());
 
@@ -140,7 +163,8 @@ class ViewService final {
     virtual ~Service();
     virtual ::grpc::Status GetView(::grpc::ServerContext* context, const ::view::ViewRequest* request, ::view::ViewResponse* response);
     virtual ::grpc::Status Click(::grpc::ServerContext* context, const ::view::ClickRequest* request, ::view::ClickResponse* response);
-    virtual ::grpc::Status CloseSideNote(::grpc::ServerContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response);
+    virtual ::grpc::Status CloseSideInfo(::grpc::ServerContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response);
+    virtual ::grpc::Status GetEdge(::grpc::ServerContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response);
   };
   template <class BaseClass>
   class WithAsyncMethod_GetView : public BaseClass {
@@ -183,26 +207,46 @@ class ViewService final {
     }
   };
   template <class BaseClass>
-  class WithAsyncMethod_CloseSideNote : public BaseClass {
+  class WithAsyncMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithAsyncMethod_CloseSideNote() {
+    WithAsyncMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodAsync(2);
     }
-    ~WithAsyncMethod_CloseSideNote() override {
+    ~WithAsyncMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestCloseSideNote(::grpc::ServerContext* context, ::view::CloseSideNoteRequest* request, ::grpc::ServerAsyncResponseWriter< ::view::CloseSideNoteResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestCloseSideInfo(::grpc::ServerContext* context, ::view::CloseSideInfoRequest* request, ::grpc::ServerAsyncResponseWriter< ::view::CloseSideInfoResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
-  typedef WithAsyncMethod_GetView<WithAsyncMethod_Click<WithAsyncMethod_CloseSideNote<Service > > > AsyncService;
+  template <class BaseClass>
+  class WithAsyncMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithAsyncMethod_GetEdge() {
+      ::grpc::Service::MarkMethodAsync(3);
+    }
+    ~WithAsyncMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetEdge(::grpc::ServerContext* context, ::view::EdgeRequest* request, ::grpc::ServerAsyncResponseWriter< ::view::EdgeResponse>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  typedef WithAsyncMethod_GetView<WithAsyncMethod_Click<WithAsyncMethod_CloseSideInfo<WithAsyncMethod_GetEdge<Service > > > > AsyncService;
   template <class BaseClass>
   class WithCallbackMethod_GetView : public BaseClass {
    private:
@@ -258,33 +302,60 @@ class ViewService final {
       ::grpc::CallbackServerContext* /*context*/, const ::view::ClickRequest* /*request*/, ::view::ClickResponse* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithCallbackMethod_CloseSideNote : public BaseClass {
+  class WithCallbackMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithCallbackMethod_CloseSideNote() {
+    WithCallbackMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodCallback(2,
-          new ::grpc::internal::CallbackUnaryHandler< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>(
+          new ::grpc::internal::CallbackUnaryHandler< ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::view::CloseSideNoteRequest* request, ::view::CloseSideNoteResponse* response) { return this->CloseSideNote(context, request, response); }));}
-    void SetMessageAllocatorFor_CloseSideNote(
-        ::grpc::MessageAllocator< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>* allocator) {
+                   ::grpc::CallbackServerContext* context, const ::view::CloseSideInfoRequest* request, ::view::CloseSideInfoResponse* response) { return this->CloseSideInfo(context, request, response); }));}
+    void SetMessageAllocatorFor_CloseSideInfo(
+        ::grpc::MessageAllocator< ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse>* allocator) {
       ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(2);
-      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>*>(handler)
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse>*>(handler)
               ->SetMessageAllocator(allocator);
     }
-    ~WithCallbackMethod_CloseSideNote() override {
+    ~WithCallbackMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* CloseSideNote(
-      ::grpc::CallbackServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/)  { return nullptr; }
+    virtual ::grpc::ServerUnaryReactor* CloseSideInfo(
+      ::grpc::CallbackServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/)  { return nullptr; }
   };
-  typedef WithCallbackMethod_GetView<WithCallbackMethod_Click<WithCallbackMethod_CloseSideNote<Service > > > CallbackService;
+  template <class BaseClass>
+  class WithCallbackMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithCallbackMethod_GetEdge() {
+      ::grpc::Service::MarkMethodCallback(3,
+          new ::grpc::internal::CallbackUnaryHandler< ::view::EdgeRequest, ::view::EdgeResponse>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::view::EdgeRequest* request, ::view::EdgeResponse* response) { return this->GetEdge(context, request, response); }));}
+    void SetMessageAllocatorFor_GetEdge(
+        ::grpc::MessageAllocator< ::view::EdgeRequest, ::view::EdgeResponse>* allocator) {
+      ::grpc::internal::MethodHandler* const handler = ::grpc::Service::GetHandler(3);
+      static_cast<::grpc::internal::CallbackUnaryHandler< ::view::EdgeRequest, ::view::EdgeResponse>*>(handler)
+              ->SetMessageAllocator(allocator);
+    }
+    ~WithCallbackMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetEdge(
+      ::grpc::CallbackServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/)  { return nullptr; }
+  };
+  typedef WithCallbackMethod_GetView<WithCallbackMethod_Click<WithCallbackMethod_CloseSideInfo<WithCallbackMethod_GetEdge<Service > > > > CallbackService;
   typedef CallbackService ExperimentalCallbackService;
   template <class BaseClass>
   class WithGenericMethod_GetView : public BaseClass {
@@ -321,18 +392,35 @@ class ViewService final {
     }
   };
   template <class BaseClass>
-  class WithGenericMethod_CloseSideNote : public BaseClass {
+  class WithGenericMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithGenericMethod_CloseSideNote() {
+    WithGenericMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodGeneric(2);
     }
-    ~WithGenericMethod_CloseSideNote() override {
+    ~WithGenericMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+  };
+  template <class BaseClass>
+  class WithGenericMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithGenericMethod_GetEdge() {
+      ::grpc::Service::MarkMethodGeneric(3);
+    }
+    ~WithGenericMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
@@ -378,23 +466,43 @@ class ViewService final {
     }
   };
   template <class BaseClass>
-  class WithRawMethod_CloseSideNote : public BaseClass {
+  class WithRawMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawMethod_CloseSideNote() {
+    WithRawMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodRaw(2);
     }
-    ~WithRawMethod_CloseSideNote() override {
+    ~WithRawMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    void RequestCloseSideNote(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+    void RequestCloseSideInfo(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
       ::grpc::Service::RequestAsyncUnary(2, context, request, response, new_call_cq, notification_cq, tag);
+    }
+  };
+  template <class BaseClass>
+  class WithRawMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawMethod_GetEdge() {
+      ::grpc::Service::MarkMethodRaw(3);
+    }
+    ~WithRawMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    void RequestGetEdge(::grpc::ServerContext* context, ::grpc::ByteBuffer* request, ::grpc::ServerAsyncResponseWriter< ::grpc::ByteBuffer>* response, ::grpc::CompletionQueue* new_call_cq, ::grpc::ServerCompletionQueue* notification_cq, void *tag) {
+      ::grpc::Service::RequestAsyncUnary(3, context, request, response, new_call_cq, notification_cq, tag);
     }
   };
   template <class BaseClass>
@@ -442,25 +550,47 @@ class ViewService final {
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
-  class WithRawCallbackMethod_CloseSideNote : public BaseClass {
+  class WithRawCallbackMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithRawCallbackMethod_CloseSideNote() {
+    WithRawCallbackMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodRawCallback(2,
           new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
             [this](
-                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->CloseSideNote(context, request, response); }));
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->CloseSideInfo(context, request, response); }));
     }
-    ~WithRawCallbackMethod_CloseSideNote() override {
+    ~WithRawCallbackMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable synchronous version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
-    virtual ::grpc::ServerUnaryReactor* CloseSideNote(
+    virtual ::grpc::ServerUnaryReactor* CloseSideInfo(
+      ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
+  };
+  template <class BaseClass>
+  class WithRawCallbackMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithRawCallbackMethod_GetEdge() {
+      ::grpc::Service::MarkMethodRawCallback(3,
+          new ::grpc::internal::CallbackUnaryHandler< ::grpc::ByteBuffer, ::grpc::ByteBuffer>(
+            [this](
+                   ::grpc::CallbackServerContext* context, const ::grpc::ByteBuffer* request, ::grpc::ByteBuffer* response) { return this->GetEdge(context, request, response); }));
+    }
+    ~WithRawCallbackMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable synchronous version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    virtual ::grpc::ServerUnaryReactor* GetEdge(
       ::grpc::CallbackServerContext* /*context*/, const ::grpc::ByteBuffer* /*request*/, ::grpc::ByteBuffer* /*response*/)  { return nullptr; }
   };
   template <class BaseClass>
@@ -518,35 +648,62 @@ class ViewService final {
     virtual ::grpc::Status StreamedClick(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::ClickRequest,::view::ClickResponse>* server_unary_streamer) = 0;
   };
   template <class BaseClass>
-  class WithStreamedUnaryMethod_CloseSideNote : public BaseClass {
+  class WithStreamedUnaryMethod_CloseSideInfo : public BaseClass {
    private:
     void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
    public:
-    WithStreamedUnaryMethod_CloseSideNote() {
+    WithStreamedUnaryMethod_CloseSideInfo() {
       ::grpc::Service::MarkMethodStreamed(2,
         new ::grpc::internal::StreamedUnaryHandler<
-          ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>(
+          ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse>(
             [this](::grpc::ServerContext* context,
                    ::grpc::ServerUnaryStreamer<
-                     ::view::CloseSideNoteRequest, ::view::CloseSideNoteResponse>* streamer) {
-                       return this->StreamedCloseSideNote(context,
+                     ::view::CloseSideInfoRequest, ::view::CloseSideInfoResponse>* streamer) {
+                       return this->StreamedCloseSideInfo(context,
                          streamer);
                   }));
     }
-    ~WithStreamedUnaryMethod_CloseSideNote() override {
+    ~WithStreamedUnaryMethod_CloseSideInfo() override {
       BaseClassMustBeDerivedFromService(this);
     }
     // disable regular version of this method
-    ::grpc::Status CloseSideNote(::grpc::ServerContext* /*context*/, const ::view::CloseSideNoteRequest* /*request*/, ::view::CloseSideNoteResponse* /*response*/) override {
+    ::grpc::Status CloseSideInfo(::grpc::ServerContext* /*context*/, const ::view::CloseSideInfoRequest* /*request*/, ::view::CloseSideInfoResponse* /*response*/) override {
       abort();
       return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
     }
     // replace default version of method with streamed unary
-    virtual ::grpc::Status StreamedCloseSideNote(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::CloseSideNoteRequest,::view::CloseSideNoteResponse>* server_unary_streamer) = 0;
+    virtual ::grpc::Status StreamedCloseSideInfo(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::CloseSideInfoRequest,::view::CloseSideInfoResponse>* server_unary_streamer) = 0;
   };
-  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideNote<Service > > > StreamedUnaryService;
+  template <class BaseClass>
+  class WithStreamedUnaryMethod_GetEdge : public BaseClass {
+   private:
+    void BaseClassMustBeDerivedFromService(const Service* /*service*/) {}
+   public:
+    WithStreamedUnaryMethod_GetEdge() {
+      ::grpc::Service::MarkMethodStreamed(3,
+        new ::grpc::internal::StreamedUnaryHandler<
+          ::view::EdgeRequest, ::view::EdgeResponse>(
+            [this](::grpc::ServerContext* context,
+                   ::grpc::ServerUnaryStreamer<
+                     ::view::EdgeRequest, ::view::EdgeResponse>* streamer) {
+                       return this->StreamedGetEdge(context,
+                         streamer);
+                  }));
+    }
+    ~WithStreamedUnaryMethod_GetEdge() override {
+      BaseClassMustBeDerivedFromService(this);
+    }
+    // disable regular version of this method
+    ::grpc::Status GetEdge(::grpc::ServerContext* /*context*/, const ::view::EdgeRequest* /*request*/, ::view::EdgeResponse* /*response*/) override {
+      abort();
+      return ::grpc::Status(::grpc::StatusCode::UNIMPLEMENTED, "");
+    }
+    // replace default version of method with streamed unary
+    virtual ::grpc::Status StreamedGetEdge(::grpc::ServerContext* context, ::grpc::ServerUnaryStreamer< ::view::EdgeRequest,::view::EdgeResponse>* server_unary_streamer) = 0;
+  };
+  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideInfo<WithStreamedUnaryMethod_GetEdge<Service > > > > StreamedUnaryService;
   typedef Service SplitStreamedService;
-  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideNote<Service > > > StreamedService;
+  typedef WithStreamedUnaryMethod_GetView<WithStreamedUnaryMethod_Click<WithStreamedUnaryMethod_CloseSideInfo<WithStreamedUnaryMethod_GetEdge<Service > > > > StreamedService;
 };
 
 }  // namespace view

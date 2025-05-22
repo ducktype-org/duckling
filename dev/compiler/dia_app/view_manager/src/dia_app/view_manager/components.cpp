@@ -1,4 +1,5 @@
 #include "components.hpp"
+#include "utils.hpp"
 
 #include <proto/view.pb.h>
 
@@ -11,10 +12,11 @@ namespace view_manager {
     Component::~Component() {}
 
     std::shared_ptr<Component> Component::deepCopy() {
+        assert(false);
         return {};
     }
 
-    component_get_view_data_t<::view::Component> Component::getView(std::vector<component_id_t> ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> Component::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
         assert(false);
         return {};
     }
@@ -33,26 +35,13 @@ namespace view_manager {
 
     // TextComponent
 
-    TextComponent::TextComponent(std::string content, std::vector<hl_id_t> tags) : content(std::move(content)), tags(std::move(tags)) {}
-
-    component_get_view_data_t<::view::Component> TextComponent::getView(std::vector<component_id_t> ancestor_tags) const {
-        debug("TextComponent::getView() begin");
-        auto result = std::make_unique<::view::Component>();
-        debug("Adding content: ", this->content);
-        result->mutable_text_component()->set_content(this->content);
-        debug("Adding hl_tags: ", this->tags);
-        result->mutable_text_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
-        result->mutable_text_component()->mutable_hl_tags()->Add(ancestor_tags.begin(), ancestor_tags.end());
-        auto left = line_suffix_data_t<::view::Component>{std::move(result)};
-        auto mid = std::vector<line_data_t<::view::Component>>{};
-        debug("TextComponent::getView() end");
-        return {std::move(left), std::move(mid)};
-    }
+    TextComponent::TextComponent(std::string content, std::vector<side_entry_id_t> assoc_side_entries) : content(std::move(content)), assoc_side_entries(std::move(assoc_side_entries)) {}
 
     component_get_view_data_t<::view::NoHlComponent> TextComponent::getNoHlView() const {
         debug("TextComponent::getNoHlView() begin");
         auto result = std::make_unique<::view::NoHlComponent>();
         result->mutable_text_component()->set_content(this->content);
+        result->mutable_text_component()->mutable_assoc_side_entries()->Add(this->assoc_side_entries.begin(), this->assoc_side_entries.end());
         auto left = line_suffix_data_t<::view::NoHlComponent>{std::move(result)};
         auto mid = std::vector<line_data_t<::view::NoHlComponent>>{};
         debug("TextComponent::getNoHlView() end");
@@ -60,22 +49,24 @@ namespace view_manager {
     }
 
     std::shared_ptr<Component> TextComponent::deepCopy() {
-        return std::static_pointer_cast<Component>(make_shared<TextComponent>(this->content, this->tags));
+        auto result = std::make_shared<TextComponent>(this->content, this->assoc_side_entries);
+        return std::static_pointer_cast<Component>(result);
     }
 
     // CodeComponent
 
-    CodeComponent::CodeComponent(std::string content, std::vector<hl_id_t> tags) : content(std::move(content)), tags(std::move(tags)) {}
+    CodeComponent::CodeComponent(std::string content, std::vector<hl_id_t> tags, std::vector<side_entry_id_t> assoc_side_entries) : content(std::move(content)), tags(std::move(tags)), assoc_side_entries(std::move(assoc_side_entries)) {}
 
-    component_get_view_data_t<::view::Component> CodeComponent::getView(std::vector<component_id_t> ancestor_tags) const {
-        debug("CodeComponent::getView() begin");
-        auto result = std::make_unique<::view::Component>();
+    component_get_view_data_t<::view::HlComponent> CodeComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+        debug("CodeComponent::getHlView() begin");
+        auto result = std::make_unique<::view::HlComponent>();
         result->mutable_code_component()->set_content(this->content);
         result->mutable_code_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
         result->mutable_code_component()->mutable_hl_tags()->Add(ancestor_tags.begin(), ancestor_tags.end());
-        auto left = line_suffix_data_t<::view::Component>{std::move(result)};
-        auto mid = std::vector<line_data_t<::view::Component>>{};
-        debug("CodeComponent::getView() end");
+        result->mutable_code_component()->mutable_assoc_side_infos()->Add(this->assoc_side_entries.begin(), this->assoc_side_entries.end());
+        auto left = line_suffix_data_t<::view::HlComponent>{std::move(result)};
+        auto mid = std::vector<line_data_t<::view::HlComponent>>{};
+        debug("CodeComponent::getHlView() end");
         return {std::move(left), std::move(mid)};
     }
 
@@ -83,6 +74,7 @@ namespace view_manager {
         debug("CodeComponent::getNoHlView() begin");
         auto result = std::make_unique<::view::NoHlComponent>();
         result->mutable_code_component()->set_content(this->content);
+        result->mutable_code_component()->mutable_assoc_side_entries()->Add(this->assoc_side_entries.begin(), this->assoc_side_entries.end());
         auto left = line_suffix_data_t<::view::NoHlComponent>{std::move(result)};
         auto mid = std::vector<line_data_t<::view::NoHlComponent>>{};
         debug("CodeComponent::getNoHlView() end");
@@ -90,7 +82,8 @@ namespace view_manager {
     }
 
     std::shared_ptr<Component> CodeComponent::deepCopy() {
-        return std::static_pointer_cast<Component>(make_shared<CodeComponent>(this->content, this->tags));
+        auto result = std::make_shared<CodeComponent>(this->content, this->tags, this->assoc_side_entries);
+        return std::static_pointer_cast<Component>(result);
     }
 
     // ConcatComponent
@@ -156,20 +149,21 @@ namespace view_manager {
         return {std::move(suffix), std::move(wrapped)};
     }
 
-    component_get_view_data_t<::view::Component> ConcatComponent::getView(std::vector<component_id_t> ancestor_tags) const {
-        debug("ConcatComponent::getView() begin");
+    component_get_view_data_t<::view::HlComponent> ConcatComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+        debug("ConcatComponent::getHlView() begin");
         if (components.empty()) {
-            debug("ConcatComponent::getView() end");
-            return component_get_view_data_t<::view::Component>{};
+            debug("ConcatComponent::getHlView() end");
+            return component_get_view_data_t<::view::HlComponent>{};
         }
-        ancestor_tags.insert(ancestor_tags.end(), this->tags.begin(), this->tags.end());
+        auto joint_ancestor_tags = ancestor_tags;
+        joint_ancestor_tags.insert(joint_ancestor_tags.end(), this->tags.begin(), this->tags.end());
         auto subcomponents_results = std::ranges::subrange(this->components.begin(), this->components.end())
-          | std::views::transform([ancestor_tags](const std::shared_ptr<Component> &component) {
+          | std::views::transform([joint_ancestor_tags](const std::shared_ptr<Component> &component) {
             assert(component);
-            return component->getView(ancestor_tags);
+            return component->getHlView(joint_ancestor_tags);
         });
-        auto result = concatGetViewHelper<::view::Component>(std::vector(subcomponents_results.begin(), subcomponents_results.end()));
-        debug("ConcatComponent::getView() end");
+        auto result = concatGetViewHelper<::view::HlComponent>(std::vector(subcomponents_results.begin(), subcomponents_results.end()));
+        debug("ConcatComponent::getHlView() end");
         return result;
     }
 
@@ -191,11 +185,12 @@ namespace view_manager {
 
     std::shared_ptr<Component> ConcatComponent::deepCopy() {
         std::vector<std::shared_ptr<Component>> new_components(ssize(this->components));
-        transform(this->components.begin(), this->components.end(), new_components.begin(),
+        std::transform(this->components.begin(), this->components.end(), new_components.begin(),
             [](const std::shared_ptr<Component> &component) {
             return component->deepCopy();
         });
-        return std::static_pointer_cast<Component>(make_shared<ConcatComponent>(new_components, this->tags));
+        auto result = std::make_shared<ConcatComponent>(new_components, this->tags);
+        return std::static_pointer_cast<Component>(result);
     }
 
     // InteractiveComponent
@@ -231,10 +226,10 @@ namespace view_manager {
         return {std::move(suffix), std::move(mid)};
     }
 
-    component_get_view_data_t<::view::Component> InteractiveComponent::getView(std::vector<component_id_t> ancestor_tags) const {
-        debug("InteractiveComponent::getView() begin");
-        auto result = interactiveGetViewHelper<::view::Component>(this->id, visible->getView(ancestor_tags));
-        debug("InteractiveComponent::getView() end");
+    component_get_view_data_t<::view::HlComponent> InteractiveComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+        debug("InteractiveComponent::getHlView() begin");
+        auto result = interactiveGetViewHelper<::view::HlComponent>(this->id, visible->getHlView(ancestor_tags));
+        debug("InteractiveComponent::getHlView() end");
         return result;
     }
 
@@ -246,7 +241,7 @@ namespace view_manager {
     }
 
     std::shared_ptr<Component> InteractiveComponent::deepCopy() {
-        auto result = make_shared<InteractiveComponent>(
+        auto result = std::make_shared<InteractiveComponent>(
             getNewId(),
             this->primary,
             this->alternative,
@@ -259,12 +254,12 @@ namespace view_manager {
     void InteractiveComponent::registerInteraction(InteractionType interaction_type) {
         debug("InteractiveComponent::registerInteraction begin");
         debug(print(interaction_type));
-        if (this->status == Status::Primary && interaction_type == InteractionType::Click) {
+        if (this->status == Status::Primary && interaction_type == InteractionType::ClickInteractive) {
             debug("Switching to alternative content");
             this->visible = alternative->deepCopy();
             this->status = Status::Alternative;
         }
-        else if (this->status == Status::Alternative && interaction_type == InteractionType::CtrlClick) {
+        else if (this->status == Status::Alternative && interaction_type == InteractionType::ClickInteractiveRollback) {
             debug("Switching to primary content");
             this->visible = primary->deepCopy();
             this->status = Status::Primary;
@@ -279,12 +274,12 @@ namespace view_manager {
 
     StartLineComponent::StartLineComponent(std::optional<uint> number) : number(number) {}
 
-    component_get_view_data_t<::view::Component> StartLineComponent::getView(std::vector<component_id_t> ancestor_tags) const {
-        debug("StartLineComponent::getView() begin");
-        auto left = line_suffix_data_t<::view::Component>{};
-        auto mid = std::vector<line_data_t<::view::Component>>();
-        mid.emplace_back(this->number, std::optional<std::unique_ptr<::view::Component>>{});
-        debug("StartLineComponent::getView() end");
+    component_get_view_data_t<::view::HlComponent> StartLineComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+        debug("StartLineComponent::getHlView() begin");
+        auto left = line_suffix_data_t<::view::HlComponent>{};
+        auto mid = std::vector<line_data_t<::view::HlComponent>>();
+        mid.emplace_back(this->number, std::optional<std::unique_ptr<::view::HlComponent>>{});
+        debug("StartLineComponent::getHlView() end");
         return {std::move(left), std::move(mid)};
     }
 
@@ -298,118 +293,10 @@ namespace view_manager {
     }
 
     std::shared_ptr<Component> StartLineComponent::deepCopy() {
-        return std::static_pointer_cast<Component>(make_shared<StartLineComponent>(
-            this->number
-        ));
+        auto result = std::make_shared<StartLineComponent>(this->number);
+        return std::static_pointer_cast<Component>(result);
     }
 
 
-    // Section
-
-    Section::~Section() {}
-
-    std::unique_ptr<::view::Section> Section::getView() const {
-        assert(false);
-        return nullptr;
-    }
-
-    // TextSection
-
-    TextSection::TextSection(std::shared_ptr<Component> root) : root(std::move(root)) {}
-
-
-    std::unique_ptr<::view::Section> TextSection::getView() const {
-        debug("TextSection::getView() begin");
-        auto [suffix, mid] = this->root->getView({});
-        std::vector<std::unique_ptr<::view::Component>> components;
-        if (suffix.has_value()) {
-            components.emplace_back(std::move(suffix.value()));
-        }
-        std::vector<std::unique_ptr<::view::Component>> mid_components;
-        for (auto &[_, component] : mid) {
-            if (component.has_value()) {
-                mid_components.emplace_back(std::move(component.value()));
-            }
-        }
-        components.insert(components.end(), std::make_move_iterator(mid_components.begin()), std::make_move_iterator(mid_components.end()));
-
-        auto result = std::make_unique<::view::Section>();
-        for (auto &component : components) {
-            result->mutable_text_section()
-                  ->mutable_root()
-                  ->mutable_concat_component()
-                  ->mutable_components()
-                  ->AddAllocated(component.release());
-        }
-        debug("TextSection::getView() end");
-        return result;
-    }
-
-    // CodeSection
-
-    CodeSection::CodeSection(std::shared_ptr<Component> root) : root(std::move(root)) {}
-
-    std::unique_ptr<::view::Section> CodeSection::getView() const {
-        debug("CodeSection::getView() begin");
-        auto [suffix, mid] = this->root->getView({});
-        debug(ssize(mid));
-        std::vector<std::unique_ptr<::view::CodeLine>> lines;
-        if (suffix.has_value()) {
-            auto line = std::make_unique<::view::CodeLine>();
-            line->mutable_content()->set_allocated_root(suffix.value().release());
-            lines.emplace_back(std::move(line));
-        }
-
-        auto mid_lines = std::ranges::subrange(mid.begin(), mid.end())
-          | std::views::transform([](line_data_t<::view::Component> &line_data) {
-            auto &[line_number, component] = line_data;
-            auto line = std::make_unique<::view::CodeLine>();
-            if (line_number.has_value()) {
-                line->set_line_number(line_id_t(line_number.value()));
-            }
-            if (component.has_value()) {
-                line->mutable_content()->set_allocated_root(component.value().release());
-            }
-            return line;
-        });
-        lines.insert(lines.end(), std::make_move_iterator(mid_lines.begin()), std::make_move_iterator(mid_lines.end()));
-        debug(ssize(lines));
-
-        auto result = std::make_unique<::view::Section>();
-        for (auto &line : lines) {
-            result->mutable_code_section()->mutable_lines()->AddAllocated(line.release());
-        }
-        debug("CodeSection::getView() end");
-        return result;
-    }
-
-    // NoHlTextSection
-
-    std::unique_ptr<::view::Section> NoHlTextSection::getView() const {
-        debug("NoHlTextSection::getView() begin");
-        auto [suffix, mid] = this->root->getNoHlView();
-        std::vector<std::unique_ptr<::view::NoHlComponent>> components;
-        if (suffix.has_value()) {
-            components.emplace_back(std::move(suffix.value()));
-        }
-        std::vector<std::unique_ptr<::view::NoHlComponent>> mid_components;
-        for (auto &[_, component] : mid) {
-            if (component.has_value()) {
-                mid_components.emplace_back(std::move(component.value()));
-            }
-        }
-        components.insert(components.end(), std::make_move_iterator(mid_components.begin()), std::make_move_iterator(mid_components.end()));
-
-        auto result = std::make_unique<::view::Section>();
-        for (auto &component : components) {
-            result->mutable_no_hl_text_section()
-                  ->mutable_root()
-                  ->mutable_concat_component()
-                  ->mutable_components()
-                  ->AddAllocated(component.release());
-        }
-        debug("NoHlTextSection::getView() end");
-        return result;
-    }
 } // namespace view_manager
 } // namespace dia_app

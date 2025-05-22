@@ -6,7 +6,7 @@
 #include <json/json.hpp>
 #include <yaml-cpp/yaml.h>
 
-#ifdef DEBUG
+#ifndef DEBUG
 auto&operator<<(auto&o,std::pair<auto,auto>p){return o<<"("<<p.first<<", "<<p.second<<")";}
 auto operator<<(auto&o,auto x)->decltype(x.end(),o){o<<"{";int i=0;for(auto e:x)o<<","+!i++<<e;return o<<"}";}
 #define debug(X...)std::cerr<<"["#X"]: ",[](auto...$){((std::cerr<<$<<"; "),...)<<std::endl;}(X)
@@ -94,6 +94,7 @@ namespace dia_app {
 
     // Message template metadata.
     struct Metadata {
+        // TODO: Refactor for more meaningful types
         std::string type;
         std::string family;
         std::string name;

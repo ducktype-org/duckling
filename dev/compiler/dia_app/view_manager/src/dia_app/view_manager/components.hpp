@@ -1,13 +1,20 @@
 #pragma once
-#include "utils.hpp"
 #include <proto/view.pb.h>
 #include <memory>
 
 namespace dia_app {
 namespace view_manager {
-    using component_id_t = int32_t;
-    using line_id_t = int32_t;
-    using hl_id_t = int32_t;
+    using component_id_t = uint32_t;
+
+    using side_entry_id_t = uint32_t;
+    using side_info_id_t = uint32_t;
+
+    using hl_id_t = uint32_t;
+    using priority_t = uint32_t;
+
+    using line_no_t = uint32_t;
+    using column_no_t = uint32_t;
+
 
     using line_metadata_t = std::optional<uint>;
 
@@ -20,17 +27,18 @@ namespace view_manager {
     template<class T>
     using component_get_view_data_t = std::pair<line_suffix_data_t<T>, std::vector<line_data_t<T>>>;
 
+
     enum class InteractionType : uint8_t {
         Click,
-        ShiftClick,
-        CtrlClick
+        ClickInteractive,
+        ClickInteractiveRollback
     };;
 
     inline std::string print(InteractionType it) {
         switch (it) {
             case dia_app::view_manager::InteractionType::Click: return "Click";
-            case dia_app::view_manager::InteractionType::CtrlClick: return "CtrlClick";
-            case dia_app::view_manager::InteractionType::ShiftClick: return "ShiftClick";
+            case dia_app::view_manager::InteractionType::ClickInteractive: return "ClickInteractive";
+            case dia_app::view_manager::InteractionType::ClickInteractiveRollback: return "ClickInteractiveRollback";
         }
         assert(false);
     };
@@ -41,7 +49,7 @@ namespace view_manager {
         public:
         std::weak_ptr<Component> parent;
 
-        virtual component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const;
+        virtual component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const;
 
         virtual component_get_view_data_t<::view::NoHlComponent> getNoHlView() const;
 
@@ -55,13 +63,11 @@ namespace view_manager {
     class TextComponent : public Component {
         private:
         std::string content;
-        std::vector<hl_id_t> tags;
+        std::vector<side_entry_id_t> assoc_side_entries;
 
         public:
 
-        TextComponent(std::string content, std::vector<hl_id_t> tags);
-
-        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+        TextComponent(std::string content, std::vector<side_entry_id_t> accos_side_entries);
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -72,12 +78,13 @@ namespace view_manager {
         private:
         std::string content;
         std::vector<hl_id_t> tags;
+        std::vector<side_info_id_t> assoc_side_entries;
 
         public:
 
-        CodeComponent(std::string content, std::vector<hl_id_t> tags);
+        CodeComponent(std::string content, std::vector<hl_id_t> tags, std::vector<side_entry_id_t> assoc_side_infos);
 
-        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -92,7 +99,7 @@ namespace view_manager {
         public:
         ConcatComponent(std::vector<std::shared_ptr<Component>> components, std::vector<hl_id_t> tags);
 
-        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -123,13 +130,19 @@ namespace view_manager {
 
         InteractiveComponent(component_id_t id, const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component);
             
-        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
 
         void registerInteraction(InteractionType interaction_type) override;
+    };
+
+    struct CreationContext {
+        std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
+        std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
+        // dia_app::DataHandle data_handle;
     };
 
     class StartLineComponent : public Component {
@@ -139,52 +152,11 @@ namespace view_manager {
         public:
         StartLineComponent(std::optional<uint> number);
 
-        component_get_view_data_t<::view::Component> getView(std::vector<component_id_t> ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
         std::shared_ptr<Component> deepCopy() override;
     };
-
-    class Section {
-        private:
-
-        public:
-        virtual ~Section();
-        virtual std::unique_ptr<::view::Section> getView() const;
-    };
-
-    class TextSection : public Section {
-        private:
-        std::shared_ptr<Component> root;
-
-        public:
-        TextSection(std::shared_ptr<Component> root);
-
-        virtual std::unique_ptr<::view::Section> getView() const override;
-    };
-    
-    class CodeSection : public Section {
-        private:
-        std::shared_ptr<Component> root;
-
-        public:
-        CodeSection(std::shared_ptr<Component> root);
-        virtual std::unique_ptr<::view::Section> getView() const override;
-    };
-
-    class NoHlTextSection : public Section {
-        private:
-        std::unique_ptr<Component> root;
-
-        public:
-        virtual std::unique_ptr<::view::Section> getView() const override;
-    };
-
-    struct CreationContext {
-        std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
-        std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
-        dia_app::DataHandle data_handle;
-    };
-}
-}
+} // namespace view_manager
+} // namespace dia_app
