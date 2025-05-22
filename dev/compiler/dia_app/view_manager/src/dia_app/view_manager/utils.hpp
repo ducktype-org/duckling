@@ -49,25 +49,55 @@ namespace dia_app {
     #define ASSUME_MSG(jf) ASSUME(is_message(jf), #jf " is not a message")
     #define ASSUME_SUBST(jf, data) ASSUME(substitute_params(jf, data), "parameter substitution failed for " #jf)
 
-    /* An empty json object which can be referenced */
-    extern json EMPTY_OBJ;
-    inline const json &or_empty(const json &jf, cstrr key) {
-        ASSUME_OBJ(jf);
-        return jf.contains(key) ? jf[key] : EMPTY_OBJ;
-    }
-
     /* Location of message templates */
     extern std::string MESSAGE_TEMPLATE_PATH;
+
+    enum class InfoType {
+        Error,
+        Warning,
+        Note,
+        Hint,
+        Docs
+    };
+
+    inline InfoType from_string(const std::string &s) {
+        if (s == "error") {
+            return InfoType::Error;
+        } else if (s == "warning") {
+            return InfoType::Warning;
+        } else if (s == "note") {
+            return InfoType::Note;
+        } else if (s == "hint") {
+            return InfoType::Hint;
+        } else if (s == "docs") {
+            return InfoType::Docs;
+        } else {
+            ASSUME(false, "info type must be one of: error|warning|note|hint|docs, but provided: " << s);
+            return InfoType::Error;
+        }
+    }
+
+    inline std::string to_string(InfoType type) {
+        switch (type) {
+            case InfoType::Error: return "error";
+            case InfoType::Warning: return "warning";
+            case InfoType::Note: return "note";
+            case InfoType::Hint: return "hint";
+            case InfoType::Docs: return "docs";
+        }
+    }
     
-    // Message params metadata (identifies the message template)
+    // Message params metadata (identifies the message template).
+    // Appears both in the diagnostic file and in message template files (as "include on").
     struct ShortMetadata {
-        std::string type;
+        InfoType type;
         std::string family;
         std::string name;
 
         ShortMetadata() {}
         ShortMetadata(const json &metadata) {
-            ASSUME_HAS_STR_ASSIGN(metadata, type);
+            ASSUME_HAS_STR(metadata, "type");
+            type = from_string(metadata["type"]);
             ASSUME_HAS_STR_ASSIGN(metadata, family);
             ASSUME_HAS_STR_ASSIGN(metadata, name);
         }
@@ -78,13 +108,13 @@ namespace dia_app {
             assert(node["family"] && node["family"].IsScalar());
             assert(node["name"] && node["name"].IsScalar());
 
-            type = node["type"].as<std::string>();
+            type = from_string(node["type"].as<std::string>());
             family = node["family"].as<std::string>();
             name = node["name"].as<std::string>();
         }
 
         std::string get_path() const {
-            return MESSAGE_TEMPLATE_PATH + type + '/' + family + '/' + name + ".yaml";
+            return MESSAGE_TEMPLATE_PATH + to_string(type) + '/' + family + '/' + name + ".yaml";
         }
 
         bool operator==(const ShortMetadata &other) const {
@@ -93,12 +123,12 @@ namespace dia_app {
     };
 
     // Message template metadata.
+    // Appears only in the message template files.
     struct Metadata {
-        // TODO: Refactor for more meaningful types
-        std::string type;
+        InfoType type;
         std::string family;
         std::string name;
-        std::string code;
+        uint code;
         std::string active_from;
         std::string active_until;
 
@@ -112,10 +142,14 @@ namespace dia_app {
             assert(node["active_from"] && node["active_from"].IsScalar());
             assert(node["active_until"] && node["active_until"].IsScalar());
 
-            type = node["type"].as<std::string>();
+            type = from_string(node["type"].as<std::string>());
             family = node["family"].as<std::string>();
             name = node["name"].as<std::string>();
-            code = node["code"].as<std::string>();
+            try {
+                code = std::stoi(node["code"].as<std::string>());
+            } catch (const std::logic_error &e) {
+                ASSUME(false, "message code must be convertible to an integer, instead provided: " << node["code"].as<std::string>());
+            }
             active_from = node["active_from"].as<std::string>();
             active_until = node["active_until"].as<std::string>();
         }
@@ -127,6 +161,7 @@ namespace dia_app {
         }
     };
 
+    // Check if the "case of" key is an exact match (true) or a class match (false).
     inline bool is_case_exact(const std::string &key) {
         return key.size() == 0 || (key[0] != '[' && key[key.size() - 1] != ']');
     }
@@ -190,7 +225,7 @@ namespace dia_app {
     using EntityHandle = std::pair<std::string, json>;
 
     // A stateful info params handle for lazy fetching of infos.
-    struct InfoParamsHandle {
+    class InfoParamsHandle {
     private:
         std::optional<ShortMetadata> metadata;
         std::optional<uint> idx;

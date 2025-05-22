@@ -167,28 +167,7 @@ namespace view_manager {
     Metadata::Metadata(InfoType type, error_code_t code) : type(type), code(code) {}
 
     Metadata Metadata::createFromInfo(const message_template::Info &info) {
-        auto type = [&info]() {
-            if (info.metadata.type == "error") {
-                return InfoType::Error;
-            }
-            else if (info.metadata.type == "warning") {
-                return InfoType::Warning;
-            }
-            else if (info.metadata.type == "note") {
-                return InfoType::Note;
-            }
-            else if (info.metadata.type == "hint") {
-                return InfoType::Hint;
-            }
-            else if (info.metadata.type == "docs") {
-                return InfoType::Docs;
-            }
-            else {
-                assert(false);
-            }
-        }();
-        auto code = std::stoi(info.metadata.code);
-        return Metadata(type, code);
+        return Metadata(info.metadata.type, info.metadata.code);
     }
 
     std::unique_ptr<::view::Metadata> Metadata::getView() const {

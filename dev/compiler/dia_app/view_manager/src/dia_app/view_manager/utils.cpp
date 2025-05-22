@@ -4,7 +4,6 @@
 #include "dia_parser.hpp"
 
 namespace dia_app {
-    json EMPTY_OBJ = json::object_t();
     std::string MESSAGE_TEMPLATE_PATH = "../compiler/dia_app/view_manager/src/dia_app/view_manager/templates/";
 
     DataHandle::DataHandle(

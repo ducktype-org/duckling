@@ -64,14 +64,6 @@ namespace view_manager {
 
     using error_code_t = uint32_t;
 
-    enum class InfoType : uint8_t {
-        Error,
-        Warning,
-        Note,
-        Hint,
-        Docs
-    };
-
     class Metadata {
         private:
         InfoType type;

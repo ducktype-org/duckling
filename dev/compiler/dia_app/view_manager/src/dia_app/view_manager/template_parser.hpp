@@ -48,10 +48,6 @@ namespace message_template {
         Ptr description;
     
         TemplateData(const dia_file::ParamData &params) {
-            cstrr type = params.metadata.type;
-            cstrr family = params.metadata.family;
-            cstrr name = params.metadata.name;
-        
             // Fetch the message template.
             std::string filename = params.metadata.get_path();
             std::ifstream file(filename);
