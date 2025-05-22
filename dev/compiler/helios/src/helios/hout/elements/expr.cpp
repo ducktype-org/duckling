@@ -64,8 +64,8 @@ namespace compiler::helios::code {
 		  value(value) {}
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
-	
-	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, std::string value):
+
+	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, tpc::StringValue value):
 		  Expr(
 
 			  tsh::ExpressionType<>(
@@ -77,9 +77,9 @@ namespace compiler::helios::code {
 				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
 			  )
 		  ),
-		  value(std::move(value)) {}
-	
-	void LiteralStringExpr::debugPrint(std::ostream& out) const { out << value; }
+		  value(value) {}
+
+	void LiteralStringExpr::debugPrint(std::ostream& out) const { out << value.str(); }
 
 	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, tsh::AbstractType type):
 		  Expr(

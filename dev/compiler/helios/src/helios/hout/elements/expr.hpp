@@ -4,6 +4,7 @@
 
 #include <helios/utils/symbol_list.hpp>
 #include <query_framework/query_int.hpp>
+#include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/box.hpp>
@@ -65,11 +66,16 @@ namespace compiler::helios::code {
 	/**
 	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
 	 */
-	 struct LiteralStringExpr final: public Expr {
-		std::string value;
+	struct LiteralStringExpr final: public Expr {
+		/**
+		 * @note value is a StringValue, not a String.
+		 * Thus the character escaping sequences are kept in the value.
+		 * Ex. in "Hello world\n" new line character is kept as "\n" not as literal new line.
+		 */
+		tpc::StringValue value;
 
-		LiteralStringExpr(query::Context& ctx, std::string value);
-		
+		LiteralStringExpr(query::Context& ctx, tpc::StringValue value);
+
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
 	};

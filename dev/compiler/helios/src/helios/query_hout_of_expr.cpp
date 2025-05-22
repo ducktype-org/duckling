@@ -77,6 +77,10 @@ namespace compiler::helios::code {
 				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
 			}
 
+			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
+				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
+			}
+
 			/**
 			 * If a valid builtin exists (special characters only), returns it.
 			 * Otherwise, returns None.
