@@ -1,0 +1,54 @@
+type pointer: pointer_A A
+type pointer: pointer_B B
+type fun: method_foo_void_A {pointer_A} void
+type fun: method_foo_void_impl_A {pointer_A} void
+type fun: method_foo_void_impl_B {pointer_B} void
+
+function method_foo_void_impl_A {
+    init_lany_type x, i64;
+    mov_l64_imm x, 420;
+    output_l64 x;
+    deinit; # x
+    deinit; # arg0
+    ret;
+}
+
+function method_foo_void_impl_B {
+    init_lany_type x, i64;
+    mov_l64_imm x, 2137;
+    output_l64 x;
+    deinit; # x
+    deinit; # arg0
+    ret;
+}
+
+type class: A {
+    fields: {
+        x: i64,
+    };
+    virtual_methods: {
+        foo: method_foo_void_A,
+    };
+    implementations: {
+        foo: method_foo_void_impl_A,
+    };
+}
+
+type class: B {
+    extends: A;
+    implementations: {
+        foo: method_foo_void_impl_B,
+    };
+}
+
+function main {
+    init_lany_type b_obj, pointer_B;
+    alloc_lptr_type b_obj, B;
+    setVTable_lptr_type b_obj, B;
+    init_lany_type b_ptr, pointer_B;
+    mov_lptr_lptr b_ptr, b_obj;
+    virtual_call_lptr_method b_obj, foo;
+    
+    deinit; # b_obj
+    ret;
+}
