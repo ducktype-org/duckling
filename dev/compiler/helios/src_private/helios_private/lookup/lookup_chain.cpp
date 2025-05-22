@@ -21,7 +21,7 @@ namespace compiler::helios {
 			                   lookup_interface.lookupExpectUnique(
 								   pointed.position, ctx, pointed.value, key.params
 							   ););
-			result.list.insert(result.end(), lookup.begin(), lookup.end());
+			result.appendList(lookup);
 			first_symbol = false;
 		}
 		return result;

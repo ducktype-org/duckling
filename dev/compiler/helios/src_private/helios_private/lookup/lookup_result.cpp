@@ -39,8 +39,8 @@ namespace compiler::helios {
 		CORE_ASSERT(!inner.isEmpty(), "Invalid state: found an empty child");
 
 		SymbolList result;
-		result.list.push_back(node_id);
-		result.list.insert(result.end(), child_path.begin(), child_path.end());
+		result.pushBack(node_id);
+		result.appendList(child_path);
 		return result;
 	}
 

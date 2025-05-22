@@ -19,6 +19,8 @@ namespace compiler::helios {
 
 		// some forwarded vector interface for convenience:
 
+		void pushBack(SymID id) { list.push_back(id); }
+
 		[[nodiscard]]
 		auto back() const {
 			return list.back();
@@ -38,5 +40,10 @@ namespace compiler::helios {
 		bool empty() const {
 			return list.empty();
 		}
+
+		/**
+		 * Append another symbol list to this one.
+		 */
+		void appendList(const SymbolList& other);
 	};
 }
