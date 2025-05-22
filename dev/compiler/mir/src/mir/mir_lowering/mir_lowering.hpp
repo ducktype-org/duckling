@@ -15,10 +15,6 @@ namespace compiler::mir {
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const;
-
-		bool operator==(const KeyOf_LowerToMirFunction& oth) const {
-			return function == oth.function;
-		}
 	};
 
 	using LowerToMirFunctionResult = helios::errors::HResult<Function, helios::errors::Failed>;

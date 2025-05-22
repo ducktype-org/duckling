@@ -14,7 +14,7 @@ struct Key {
 	// for example:
 	uint64_t v;
 
-	u64 queryUnstablePerfectHash() { return v; }
+	[[nodiscard]] u64 queryUnstablePerfectHash() const { return v; }
 };
 
 /**
