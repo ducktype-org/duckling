@@ -1,6 +1,6 @@
 #include "queries.hpp"
 
-#include "query_hout_of_expr.hpp"
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/elements.hpp>

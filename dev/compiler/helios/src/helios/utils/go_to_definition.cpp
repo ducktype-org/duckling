@@ -52,19 +52,19 @@ namespace compiler::helios {
 		void visitCallExpr(const CallExpr& call) override { symbol = call.callee; }
 	};
 
-	base::Optional<SymID> querySymIDOfExpr(query::Context& ctx, CRef<code::Expr> expr) {
+	base::Optional<SymID> querySymIDOfHOUTExpr(query::Context& ctx, CRef<code::Expr> expr) {
 		HoutResultingSymbolListVisitor visitor(ctx);
 		expr->acceptVisitor(visitor);
 		return visitor.symbol;
 	}
 
-	base::Optional<SymID> querySymIDOfExpr(
+	base::Optional<SymID> querySymIDOfPSTExpr(
 		query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
 	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
 		if (!hout_expr.hasValue()) return {};
 
-		return querySymIDOfExpr(ctx, hout_expr.value().ref());
+		return querySymIDOfHOUTExpr(ctx, hout_expr.value().ref());
 	}
 }
