@@ -1,6 +1,12 @@
 #pragma once
 
+#include "llvm_helpers/llvm_helpers.hpp"
 #include "llvm_includes/module.hpp"
+
+
+LLVM_INCLUDE_BEGIN()
+#include <llvm/Target/TargetMachine.h>
+LLVM_INCLUDE_END()
 
 #include <base/box.hpp>
 
@@ -12,6 +18,7 @@ namespace compiler::backend_llvm {
 	 */
 	struct ModuleImpl {
 		Box<llvm::Module> module;
+		base::Optional<Box<llvm::TargetMachine>> target_machine;
 
 		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
 

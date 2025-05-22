@@ -22,7 +22,9 @@ LLVM_INCLUDE_END()
 
 namespace compiler::backend_llvm {
 
-	Ref<llvm::TargetMachine> getTargetMachine(const std::string& target_triple) {
+	Ref<llvm::TargetMachine> getTargetMachine(
+		Ref<ModuleImpl> module_impl, const std::string& target_triple
+	) {
 		if (target_triple == llvm::sys::getDefaultTargetTriple()) {
 			if (llvm::InitializeNativeTarget())
 				CORE_PANIC("LLVM error: failed to initialize native target");
@@ -31,18 +33,33 @@ namespace compiler::backend_llvm {
 		} else {
 			throw base::NotYetImplemented("target different than native");
 		}
+		match_optional(module_impl->target_machine) {
+			opt_some(target_machine) {
+				if (target_machine->getTargetTriple().getTriple() == target_triple)
+					return target_machine.refMut();
+				else
+					CORE_PANIC(
+						"LLVM error: target machine already initialized with different target"
+					);
+			}
+			opt_none {
+				std::string error;
+				auto        target = llvm::TargetRegistry::lookupTarget(target_triple, error);
 
-		std::string error;
-		auto        target = llvm::TargetRegistry::lookupTarget(target_triple, error);
+				// Error if we couldn't find the requested target.
+				if (!target) CORE_PANIC("LLVM error: " + error);
 
-		// Error if we couldn't find the requested target.
-		if (!target) CORE_PANIC("LLVM error: " + error);
+				auto cpu      = "generic";
+				auto features = "";
 
-		auto cpu      = "generic";
-		auto features = "";
-
-		llvm::TargetOptions opt;
-		return target->createTargetMachine(target_triple, cpu, features, opt, llvm::Reloc::PIC_);
+				llvm::TargetOptions opt;
+				module_impl->target_machine = Box<llvm::TargetMachine>::fromPointer(
+					target->createTargetMachine(target_triple, cpu, features, opt, llvm::Reloc::PIC_)
+				);
+				return module_impl->target_machine->refMut();
+			}
+		}
+		CORE_UNREACHABLE();
 	}
 
 	void emitCode(
@@ -87,7 +104,7 @@ namespace compiler::backend_llvm {
 	) {
 		auto m              = module_impl->module.refMut();
 		auto target_triple  = llvm::sys::getDefaultTargetTriple();
-		auto target_machine = getTargetMachine(target_triple);
+		auto target_machine = getTargetMachine(module_impl, target_triple);
 
 		std::error_code error_code;
 
