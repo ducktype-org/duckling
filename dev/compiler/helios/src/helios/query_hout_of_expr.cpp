@@ -287,6 +287,10 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
 					break;
 
+				case pst::Keyword::Str:
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryStringType>({}));
+					break;
+
 					// @todo: add meta keyword and type
 
 				case pst::Keyword::i128:
