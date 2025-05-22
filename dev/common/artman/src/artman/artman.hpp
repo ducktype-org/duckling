@@ -106,8 +106,8 @@ namespace artman {
 			  ID(0),
 			  COLLECTION_TYPE(collection_type) {}
 
-		CRef<ArtifactCollection> newCollection(base::StrID name, CollectionType grouping_mode) {
-			auto new_path = PATH.createDirectoryIn(name.strView());
+		CRef<ArtifactCollection> newCollection(base::StrID collection_name, CollectionType grouping_mode) {
+			auto new_path = PATH.createDirectoryIn(collection_name.strView());
 			sub_collections.push_back(Box<ArtifactCollection>::fromPointer(
 				new ArtifactCollection(new_path, grouping_mode)
 			));
