@@ -1,3 +1,5 @@
+#include "get_parameter_types.hpp"
+
 #include <backends/dvm/backend.hpp>
 #include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -46,6 +48,7 @@ namespace compiler::backend_vm {
 				}
 				variant_case_novalue(tsl::IntegralTypeLayout) {
 					auto bits = usize(layout.getSize());
+					if (bits == 1) bits = 8;  // Boolean case.
 					if (bits % 8 != 0) CORE_PANIC("Integral type size not divisible by 8");
 					usize       bytes = bits / 8;
 					std::string name  = "i" + std::to_string(bits);
@@ -71,6 +74,23 @@ namespace compiler::backend_vm {
 				}
 			}
 			CORE_UNREACHABLE();
+		}
+
+		vm::code::FunctionType getFunctionTypeFromLayouts(
+			base::StrID                         function_name,
+			const std::vector<tsl::TypeLayout>& parameter_layouts,
+			const tsl::TypeLayout&              return_type_layout
+		) {
+			auto param_types = parameter_layouts | std::views::transform([](auto&& layout) {
+								   return getTypeFromLayout(layout);
+							   });
+
+			auto param_type_names
+				= param_types | std::views::transform([](auto&& type) { return typeName(type); })
+			    | std::ranges::to<std::vector>();
+			auto result_type      = getTypeFromLayout(return_type_layout);
+			auto result_type_name = typeName(result_type);
+			return vm::code::FunctionType{ function_name, param_type_names, result_type_name };
 		}
 
 		struct AddLirFuncContext {
@@ -107,7 +127,8 @@ namespace compiler::backend_vm {
 		 * @brief Generate `init_lany_type` instruction.
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
-			ctx.func_builder.initType(instructions::Op_init_lany_type(variable_name, type_name));
+			ctx.func_builder.addInstruction(instructions::Op_init_lany_type(variable_name, type_name)
+			);
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
@@ -157,18 +178,15 @@ namespace compiler::backend_vm {
 
 			std::ranges::for_each(param_types, [&](auto&& type) { type_context.addType(type); });
 
-			auto param_names = param_types
-			                 | std::views::transform([](auto&& type) { return typeName(type); })
-			                 | std::ranges::to<std::vector>();
-
 			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
 			type_context.addType(result_type);
 
-			auto result_type_name = typeName(result_type);
-
 			if (lir_function->name != "main") {
-				type_context.addType(FunctionType{
-					lir_function->name, param_names, result_type_name });
+				type_context.addType(getFunctionTypeFromLayouts(
+					lir_function->name,
+					lir_function->parameter_layouts,
+					lir_function->return_type_layout
+				));
 			}
 		}
 
@@ -477,13 +495,45 @@ namespace compiler::backend_vm {
 		}
 	}
 
-	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
+	/**
+	 * @brief Insert function types for all functions that are called somewhere in the LIR code.
+	 * Used to add function types for functions that are not in the current module.
+	 */
+	void instertCalledFuncTypes(
+		query::Context&                         query_ctx,
+		TypeContextBuilder&                     type_context,
+		const std::vector<CRef<lir::Function>>& functions
+	) {
+		for (const auto& lir_function: functions) {
+			for (const auto& lir_block: lir_function->block_order) {
+				for (const auto& lir_instruction: lir_block->instructions) {
+					if (lir_instruction.operation == lir::Operation::Call) {
+						const auto callee_helios_id
+							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
+						auto name  = compiler::helios::name(callee_helios_id);
+						auto types = getParameterAndResultFromSymID(query_ctx, callee_helios_id);
+
+						type_context.addType(
+							getFunctionTypeFromLayouts(name, types.parameters, types.result_type)
+						);
+					}
+				}
+			}
+		}
+	}
+
+	Module::Module(
+		query::Context&                         query_ctx,
+		base::StrID                             module_id,
+		const std::vector<CRef<lir::Function>>& functions
+	):
 		  module_id(module_id),
 		  type_context_builder(vm::code::getBuiltinTypes()) {
 		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
+		instertCalledFuncTypes(query_ctx, type_context_builder, functions);
 
 		TypeContext type_context = type_context_builder.build();
-		code.types               = type_context.getTypes();
+		code.types               = type_context.getTypes() | std::ranges::to<std::vector>();
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
@@ -500,7 +550,6 @@ namespace compiler::backend_vm {
 
 				addTerminator(ctx, lir_block);
 			}
-
 
 			code.functions.emplace_back(ctx.func_builder.build());
 		}

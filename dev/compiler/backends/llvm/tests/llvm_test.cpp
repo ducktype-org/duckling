@@ -9,6 +9,8 @@
 
 #include <base/exceptions.hpp>
 
+#include <utility>
+
 class LLVMBackendTest final: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS LLVMBackendTest
@@ -17,8 +19,9 @@ public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(returnVoidTest);
 		TESTER_ADD_TEST(simpleTypesVariables);
-		TESTER_ADD_TEST(booleanLiteralsTests);
+		TESTER_ADD_TEST(booleansTest);
 		TESTER_ADD_TEST(arithmeticTest);
+		TESTER_ADD_TEST(comparisonTest);
 		TESTER_ADD_TEST(functionCalls);
 		TESTER_ADD_TEST(parseFromIRCodeTest);
 		TESTER_ADD_TEST(doesNotParseIncorrectIRCode);
@@ -42,57 +45,41 @@ private:
 			}
 		});
 
-		ASSERT_TRUE(llvm_module.verify().isOk());
+		// debug print for coverage only:
+		llvm_module.debugPrint();
+
+		// verify integrity, then return for further checks.
+		assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
 		return llvm_module;
 	}
 
-	void runTestForModuleWithSingleFunction(std::string module_path) {
-		using namespace compiler;
-		query::utils::withContextDo([&](query::Context& ctx) {
-			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
-			auto top_level = ctx.query<helios::QueryTopLevelEntities>(module);
-
-			ASSERT_TRUE(top_level->functions.size() == 1);
-
-			CRef mir_fun
-				= &ctx.query<compiler::mir::LowerToMirFunction>({ top_level->functions[0] })->value();
-			auto lir_fun = ctx.query<compiler::lir::LowerToLirFunction>({ mir_fun });
-
-			auto llvm_module = backend_llvm::Module(base::StrID("test_module"));
-			llvm_module.addFunctionToModule(ctx, lir_fun);
-
-			// debug print for coverage only:
-			llvm_module.debugPrint();
-
-			// this is were the main part ot test is:
-			assertTrue(llvm_module.verify().isOk(), "LLVM module verification failed");
-		});
+	void runTestForModule(
+		std::string module_path, i32 expected_function_count = 1, i32 expected_prototype_count = -1
+	) {
+		if (expected_prototype_count == -1) expected_prototype_count = expected_function_count;
+		auto llvm_module = getLLVMModuleFromPath(std::move(module_path));
+		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(false), expected_function_count);
+		ASSERT_EQUAL_PRINT(llvm_module.getFunctionCount(), expected_prototype_count);
 	}
 
-	void returnVoidTest() { runTestForModuleWithSingleFunction("modules/simple"); }
+	void returnVoidTest() { runTestForModule("modules/simple"); }
 
 	void simpleTypesVariables() {
 		// Currently this test is for coverage mainly, but it will be
 		// replaced with something more meaningful in the future.
 
-		runTestForModuleWithSingleFunction("modules/variables");
+		runTestForModule("modules/variables");
 	}
 
-	void booleanLiteralsTests() { runTestForModuleWithSingleFunction("modules/boolean_literals"); }
+	void booleansTest() { runTestForModule("modules/booleans", 2); }
 
-	void arithmeticTest() { runTestForModuleWithSingleFunction("modules/arithmetic"); }
+	void arithmeticTest() { runTestForModule("modules/arithmetic"); }
+
+	void comparisonTest() { runTestForModule("modules/comparison", 1, 2); }
 
 	void functionCalls() {
-		{
-			auto llvm_module = getLLVMModuleFromPath("modules/calls_simple");
-			ASSERT_EQUAL(llvm_module.getFunctionCount(), 3);
-			ASSERT_EQUAL(llvm_module.getFunctionCount(false), 3);
-		}
-		{
-			auto llvm_module = getLLVMModuleFromPath("modules/calls");
-			ASSERT_EQUAL(llvm_module.getFunctionCount(false), 3);
-			ASSERT_EQUAL(llvm_module.getFunctionCount(), 5);
-		}
+		runTestForModule("modules/calls_simple", 3);
+		runTestForModule("modules/calls", 3, 5);
 	}
 
 	void parseFromIRCodeTest() {

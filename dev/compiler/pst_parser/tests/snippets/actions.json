@@ -41,6 +41,7 @@
 									"name": {
 										"Name": "a"
 									},
+									"mutable": false,
 									"type": {
 										"position": {
 											"sourceStart": 22,
@@ -56,6 +57,23 @@
 													"name": {
 														"Name": "T"
 													}
+												}
+											}
+										}
+									},
+									"value": {
+										"position": {
+											"sourceStart": 26,
+											"sourceEnd": 26
+										},
+										"Top Level Expression": {
+											"expr": {
+												"position": {
+													"sourceStart": 26,
+													"sourceEnd": 26
+												},
+												"Value Expr": {
+													"number": "5"
 												}
 											}
 										}

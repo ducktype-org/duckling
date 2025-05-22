@@ -1,11 +1,12 @@
 # Playground
 duck_add_playground(char char_playground.cpp USES Lexer Diagnostic Init)
 duck_add_playground(file file_playground.cpp USES Filesystem Init)
-duck_add_playground(lexer lexer_playground.cpp USES Lexer TokenFile Init)
+duck_add_playground(lexer lexer_playground.cpp USES Lexer TokenSource Init)
 duck_add_playground(elements elements_playground.cpp USES Lexer PstParser Init)
 duck_add_playground(pst_graph pst_graph_playground.cpp USES Lexer PstParser gvc cgraph cdt Init)
 duck_add_playground(frontend frontend_playground.cpp USES Filesystem ModuleTree Clap Init)
 duck_add_playground(helios helios_playground.cpp USES Base ModuleTree Clap HELIOS Init)
+duck_add_playground(main_code_dependency main_code_dependency_playground.cpp USES Base ModuleTree Clap HELIOS Init)
 duck_add_playground(mir mir_playground.cpp USES Base ModuleTree Clap HELIOS QueryFramework MIR PstParser Init)
 duck_add_playground(lir lir_playground.cpp USES Base ModuleTree Clap HELIOS QueryFramework MIR PstParser LIR Init)
 duck_add_playground(json json_playground.cpp USES Lexer PstParser Init)

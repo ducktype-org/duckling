@@ -50,27 +50,48 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			return { parseInt<i64, vm::opargs::Immediate>(state) };
+			auto pos         = state.getPosition();
+			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
+			);
+			return arg;
 		}
 
-#define HANDLE_LOCAL(TYPE)                                    \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
-	}
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+			tpc::Identifier type_name, field_name;
+			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			auto field         = vm::opargs::Field{ type_name, field_name };
+			field.bytecode_pos = dia::SourcePosition(
+				type_name.position.getLocation(),
+				type_name.position.getStart(),
+				field_name.position.getEnd()
+			);
+			return field;
+		}
 
-		FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
-
-#undef HANDLE_LOCAL
-
-#define HANDLE_STR_ARG(TYPE)                                  \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
+#define HANDLE_STR_ARG(TYPE)                                                        \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto pos         = state.getPosition();                                     \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
+			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
+		);                                                                          \
+		return { arg };                                                             \
 	}
 
 		FOR_EACH(
-			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+			HANDLE_STR_ARG,
+			Type,
+			FunctionName,
+			BuiltinFunctionName,
+			Label,
+			VM_OPARG_GLOBAL_TYPES,
+			VM_OPARG_LOCAL_TYPES
 		)
 
 #undef HANDLE_STR_ARG
@@ -79,22 +100,14 @@ namespace vm::loader::parser {
 
 		template<IsOpCodeArg Arg0>
 		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
-
-			return { arg0 };
+			return { parseArg<Arg0>(state) };
 		}
 
 		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
 		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
+			auto arg0 = parseArg<Arg0>(state);
 			state.parse().one(lang_def::Special::Comma);
-			auto pos1         = state.getPosition();
-			auto arg1         = parseArg<Arg1>(state);
-			arg1.bytecode_pos = pos1;
+			auto arg1 = parseArg<Arg1>(state);
 			return { arg0, arg1 };
 		}
 
@@ -148,9 +161,9 @@ namespace vm::loader::parser {
 					// Update end to contains args
 					if (!out->args.empty()) {
 						auto end = VISIT(out->args.back(), arg, return *arg.bytecode_pos).getEnd();
-						const auto& pos = *out->position;
-						out->position
-							= makeBox<dia::SourcePosition>(pos.getSource(), pos.getStart(), end);
+						auto pos = out->position;
+
+						out->position = { pos, end };
 					}
 
 					return out;
@@ -189,7 +202,7 @@ namespace vm::loader::parser {
 		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 			return nullptr;
 		}
 
@@ -206,7 +219,7 @@ namespace vm::loader::parser {
 		        if (state[0].is(lang_def::Special::Comma)) {
 		            state.parse().one(lang_def::Special::Comma);
 		        } else {
-		            state.err.failAndLog(state.getPosition(), "expected comma or }");
+		            state.err->failAndLog(state.getPosition(), "expected comma or }");
 		            state.tokens().skip();
 		        }
 		    }
@@ -214,7 +227,7 @@ namespace vm::loader::parser {
 		    state.parse().one(&out->result_type);
 
 		    if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-		        state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+		        state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 		        return nullptr;
 		    }
 		 */
@@ -231,7 +244,7 @@ namespace vm::loader::parser {
 			std::vector<code::Field> out;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return {};
 			}
 
@@ -247,7 +260,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -274,10 +287,10 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPrimitive: {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteral()) {
-				state.err.failAndLog(state.getPosition(), "expected number");
+				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -285,10 +298,10 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPointer: {
 			auto pointed_type = state.tokens().next();
 			if (!pointed_type.isIdentifier())
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = PointerType{ name, pointed_type.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -296,16 +309,16 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCStaticTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteral()) {
-					state.err.failAndLog(state.getPosition(), "expected number");
+					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
 					auto tp         = StaticTableType{ name,
                                                type_name.getValue(),
                                                static_cast<usize>(strIDToNum(size.getValue())) };
-					tp.bytecode_pos = *out->position;
+					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
 			}
@@ -314,23 +327,23 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = DynamicTableType{ name, type_name.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
 		}
 		case lang_def::Keyword::BCData: {
 			auto tp         = DataType{ name, parseFields(state) };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -345,19 +358,19 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
 			state.goUpAndSkip();
 			auto tp         = VariantType{ name, alternatives };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -372,7 +385,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -380,17 +393,17 @@ namespace vm::loader::parser {
 			tpc::Identifier result;
 			state.parse().one(&result);
 			auto tp         = FunctionType{ name, arguments, result };
-			tp.bytecode_pos = *out->position;
+			tp.bytecode_pos = out->position;
 			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCOpaque: {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteral()) {
-				state.err.failAndLog(state.getPosition(), "expected number");
+				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -405,7 +418,7 @@ namespace vm::loader::parser {
 			base::Optional<base::StrID> extends;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -416,7 +429,7 @@ namespace vm::loader::parser {
 				switch (next.asKeyword()) {
 				case lang_def::Keyword::BCExtends: {
 					if (is_interface) {
-						state.err.failAndLog(
+						state.err->failAndLog(
 							state.getPosition(), "interfaces cannot extend classes"
 						);
 					} else {
@@ -430,7 +443,7 @@ namespace vm::loader::parser {
 				}
 				case lang_def::Keyword::BCAbstract: {
 					if (is_interface) {
-						state.err.failAndLog(state.getPosition(), "interfaces cannot be abstract");
+						state.err->failAndLog(state.getPosition(), "interfaces cannot be abstract");
 					} else {
 						state.parse().one(lang_def::NamedOperator::Colon);
 						switch (state.tokens().next().asKeyword()) {
@@ -441,7 +454,7 @@ namespace vm::loader::parser {
 							is_abstract = false;
 							break;
 						default:
-							state.err.failAndLog(state.getPosition(), "bad keyword");
+							state.err->failAndLog(state.getPosition(), "bad keyword");
 							break;
 						}
 						state.parse().one(lang_def::Special::Semicolon);
@@ -451,7 +464,7 @@ namespace vm::loader::parser {
 				case lang_def::Keyword::BCImplements: {
 					state.parse().one(lang_def::NamedOperator::Colon);
 					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-						state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+						state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 						return nullptr;
 					}
 
@@ -465,7 +478,7 @@ namespace vm::loader::parser {
 						if (state[0].is(lang_def::Special::Comma)) {
 							state.parse().one(lang_def::Special::Comma);
 						} else {
-							state.err.failAndLog(state.getPosition(), "expected comma or }");
+							state.err->failAndLog(state.getPosition(), "expected comma or }");
 							state.tokens().skip();
 						}
 					}
@@ -487,14 +500,14 @@ namespace vm::loader::parser {
 					break;
 				}
 				default: {
-					state.err.failAndLog(state.getPosition(), "bad keyword");
+					state.err->failAndLog(state.getPosition(), "bad keyword");
 					return nullptr;
 				}
 				}
 			}
 
 			if (state.notEmpty()) {
-				state.err.failAndLog(state.getPosition(-1), "unexpected class/interface content");
+				state.err->failAndLog(state.getPosition(-1), "unexpected class/interface content");
 
 				state.goUpAndSkip();
 				return nullptr;
@@ -513,12 +526,12 @@ namespace vm::loader::parser {
 										 std::move(implements),
 										 std::move(virtual_methods)
 									 ));
-			VISIT(tp, t, t.bytecode_pos = *out->position);
+			VISIT(tp, t, t.bytecode_pos = out->position);
 			out->datatype = std::move(tp);
 			break;
 		}
 		default: {
-			state.err.failAndLog(state.getPosition(), "expected variant of type");
+			state.err->failAndLog(state.getPosition(), "expected variant of type");
 			break;
 		}
 		}

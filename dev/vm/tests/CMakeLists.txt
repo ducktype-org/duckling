@@ -27,7 +27,7 @@ function(duck_add_vm_tests suffix)
                 USES ${libvm} Tester)
         duck_add_test_custom(vm ${test_set}_static_table_test static_table/static_table.cpp
                 USES ${libvm} Tester ${vmtester})
-        duck_add_test_custom(vm ${test_set}_unit_tests basic/unit.cpp
+        duck_add_test_custom(vm ${test_set}_unit_test basic/unit.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_functions_test functions/functions.cpp
                 USES ${libvm} Tester ${vmtester})
@@ -57,8 +57,17 @@ function(duck_add_vm_tests suffix)
         duck_add_test_custom(vm ${test_set}_inheritance_semantics_test inheritance/inheritance_semantics.cpp
                 USES ${libvm} Tester ${vmtester})
         duck_add_test_custom(vm ${test_set}_inheritance_hierarchy_correctness_test
-            inheritance/inheritance_hierarchy_correctness.cpp
-            USES ${libvm} Tester ${vmtester})
+                inheritance/inheritance_hierarchy_correctness.cpp
+                USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_code_injection_test injection/code_injection.cpp
+                USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_pointers_test pointers/vm_pointers_test.cpp
+                USES ${libvm} Tester ${vmtester})
+
+        duck_add_test_custom(vm ${test_set}_variant_test variant/variant_tests.cpp
+                USES ${libvm} Tester ${vmtester})
 endfunction()
 
 duck_add_vm_tests("tc")

@@ -99,6 +99,10 @@ namespace tsh {
 
 	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
+	SymbolType<> DynamicArrayAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/
@@ -166,8 +170,10 @@ namespace tsh {
 	INSTANTIATE_CHECKED_CAST(FloatAbstractType)
 	INSTANTIATE_CHECKED_CAST(RawPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
+	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)

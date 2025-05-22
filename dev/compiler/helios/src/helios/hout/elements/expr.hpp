@@ -5,7 +5,6 @@
 #include <helios/utils/symbol_list.hpp>
 #include <query_framework/query_int.hpp>
 #include <typesystem/higher/expression_type.hpp>
-#include <typesystem/higher/queries.hpp>
 
 #include <base/box.hpp>
 #include <base/ints.hpp>
@@ -20,16 +19,12 @@ namespace compiler::helios::code {
 	 * All subclasses shall have a "Expr" suffix.
 	 */
 	struct Expr {
-		ScopeID lifetime_scope;
-
 		/**
 		 * The type of the expression, and its value category.
 		 */
 		tsh::ExpressionType<> expression_type;
 
-		Expr(ScopeID lifetime_scope, tsh::ExpressionType<> expression_type):
-			  lifetime_scope(lifetime_scope),
-			  expression_type(expression_type) {}
+		Expr(tsh::ExpressionType<> expression_type): expression_type(expression_type) {}
 
 		virtual ~Expr()                                  = default;
 		virtual void debugPrint(std::ostream& out) const = 0;
@@ -49,7 +44,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		i64 value;
 
-		LiteralIntExpr(query::Context& ctx, ScopeID scope, i64 value);
+		LiteralIntExpr(query::Context& ctx, i64 value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -61,7 +56,7 @@ namespace compiler::helios::code {
 	struct LiteralBoolExpr final: public Expr {
 		bool value;
 
-		LiteralBoolExpr(query::Context& ctx, ScopeID scope, bool value);
+		LiteralBoolExpr(query::Context& ctx, bool value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -73,7 +68,7 @@ namespace compiler::helios::code {
 	struct LiteralTypeExpr final: public Expr {
 		tsh::SymbolType<> value_type;
 
-		LiteralTypeExpr(query::Context& ctx, ScopeID scope, tsh::AbstractType type);
+		LiteralTypeExpr(query::Context& ctx, tsh::AbstractType type);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -89,7 +84,7 @@ namespace compiler::helios::code {
 		// @note: this is a mock
 		SymID symbol;
 
-		IdentifierExpr(query::Context& ctx, ScopeID scope, SymID symbol);
+		IdentifierExpr(query::Context& ctx, SymID symbol);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -110,7 +105,7 @@ namespace compiler::helios::code {
 	struct ParenthesisExpr final: public Expr {
 		base::Box<Expr> inner;
 
-		ParenthesisExpr(query::Context& ctx, ScopeID scope, base::Box<Expr> inner);
+		ParenthesisExpr(query::Context& ctx, base::Box<Expr> inner);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -131,6 +126,9 @@ namespace compiler::helios::code {
 		IntegerPow,
 
 		IntegerLt,  //< Less than
+
+		BooleanAnd,
+		BooleanOr,
 	};
 
 	/**
@@ -143,11 +141,7 @@ namespace compiler::helios::code {
 		base::Box<Expr> rhs;
 
 		BinaryOperatorExpr(
-			query::Context& ctx,
-			ScopeID         scope,
-			BuiltinBinary   operation,
-			base::Box<Expr> lhs,
-			base::Box<Expr> rhs
+			query::Context& ctx, BuiltinBinary operation, base::Box<Expr> lhs, base::Box<Expr> rhs
 		);
 
 		void debugPrint(std::ostream& out) const final;
@@ -162,6 +156,7 @@ namespace compiler::helios::code {
 		// we will likely want to be super specific in LIR
 
 		IntegerNegation,
+		BooleanNot,
 	};
 
 	/**
@@ -172,7 +167,23 @@ namespace compiler::helios::code {
 
 		base::Box<Expr> expr;
 
-		UnaryOperatorExpr(ScopeID scope, BuiltinUnary operation, base::Box<Expr> expr);
+		UnaryOperatorExpr(BuiltinUnary operation, base::Box<Expr> expr);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief A ternary operator.
+	 */
+	struct TernaryOperatorExpr: public Expr {
+		Box<Expr> condition;
+		Box<Expr> if_true;
+		Box<Expr> if_false;
+
+		TernaryOperatorExpr(
+			query::Context& ctx, Box<Expr> condition, Box<Expr> if_true, Box<Expr> if_false
+		);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -184,9 +195,7 @@ namespace compiler::helios::code {
 	struct TupleTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> elements;
 
-		TupleTypeConstructorExpr(
-			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> elements
-		);
+		TupleTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> elements);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -198,9 +207,7 @@ namespace compiler::helios::code {
 	struct VariantTypeConstructorExpr: public Expr {
 		std::vector<base::Box<Expr>> subtypes;
 
-		VariantTypeConstructorExpr(
-			query::Context& ctx, ScopeID scope, std::vector<base::Box<Expr>> subtypes
-		);
+		VariantTypeConstructorExpr(query::Context& ctx, std::vector<base::Box<Expr>> subtypes);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -217,7 +224,7 @@ namespace compiler::helios::code {
 	struct LinkedIdentifierExpr: public Expr {
 		SymbolList symbols;
 
-		LinkedIdentifierExpr(query::Context& ctx, ScopeID scope, SymbolList symbols);
+		LinkedIdentifierExpr(query::Context& ctx, SymbolList symbols);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -225,15 +232,12 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a call in an expression.
-	 * @note This is a mock, with this representation it's impossible to handle overloads.
 	 */
 	struct CallExpr final: public Expr {
 		SymID                        callee;
 		std::vector<base::Box<Expr>> arguments;
 
-		CallExpr(
-			query::Context& ctx, ScopeID scope, SymID callee, std::vector<base::Box<Expr>> arguments
-		);
+		CallExpr(query::Context& ctx, SymID callee, std::vector<base::Box<Expr>> arguments);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;

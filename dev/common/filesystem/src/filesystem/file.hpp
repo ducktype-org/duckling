@@ -7,7 +7,6 @@
 
 #include <base/maps.hpp>
 #include <base/optional.hpp>
-#include <base/perfect_hash.hpp>
 #include <base/raw_view.hpp>
 
 #include <expected>
@@ -45,6 +44,10 @@ namespace fs {
 
 		FileContent& operator=(const FileContent&) = default;
 		FileContent& operator=(FileContent&&)      = default;
+
+		static FileContent fromString(std::string_view str) {
+			return FileContent(std::make_shared<base::OwningView>(str.data()));
+		}
 
 		usize size() { return view().size(); }
 
@@ -311,7 +314,7 @@ namespace fs {
 		bool operator<(const FilePath& oth) const { return path < oth.path; }
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

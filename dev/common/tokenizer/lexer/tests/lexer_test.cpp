@@ -1,13 +1,13 @@
 #include <filesystem/file.hpp>
 #include <lexer/lexer.hpp>
 #include <tester/tester.hpp>
-#include <token_file/file.hpp>
+#include <token_source/source.hpp>
 
 class SimpleLexerTest: public tester::TestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS SimpleLexerTest
 
-	MBox<tokenizer::TokenFile> td;
+	MBox<tokenizer::TokenSource> td;
 
 public:
 	TESTER_TEST_SIMPLE_CONSTRUCTOR() {
@@ -31,9 +31,9 @@ public:
 	~SimpleLexerTest() override = default;
 
 private:
-	constexpr static std::array<std::string_view, 8> GROUP_NAMES = {
-		"", "keyword", "operator", "identifier", "special", "comment", "numLiteral", "string",
-	};
+	constexpr static std::array<std::string_view, 9> GROUP_NAMES
+		= { "",        "keyword",    "operator", "identifier", "special",
+		    "comment", "numLiteral", "string",   "char" };
 
 	void testBasicStructure() {
 		assertTrue(td->getTokenData().tokens.size() == 9, "Wrong amount of top-level token groups");

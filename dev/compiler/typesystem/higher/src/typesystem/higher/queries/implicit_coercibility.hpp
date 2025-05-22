@@ -31,6 +31,8 @@
 #include "../abstract_type.hpp"
 #include "../expression_type.hpp"
 
+#include <query_framework/query_int.hpp>
+
 #include <base/maps.hpp>
 
 // In the future, coercibility could work significantly differently.
@@ -64,7 +66,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnAbstractType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -108,7 +110,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnSymbolType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -152,7 +154,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryImplicitCoercibilityOnExpressionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

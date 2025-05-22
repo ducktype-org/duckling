@@ -185,13 +185,13 @@ namespace compiler::backend_llvm {
 	 * and generates LLVM function in given module based
 	 * on provided LIRFunction.
 	 */
-	struct LIR2LLVMFunction {
+	struct LirFunction2LLVM {
 		llvm::LLVMContext&  context;
 		query::Context&     ctx;
 		CRef<lir::Function> lir_function;
 		Ref<llvm::Module>   module;
 
-		LIR2LLVMFunction(
+		LirFunction2LLVM(
 			llvm::LLVMContext&  context,
 			query::Context&     ctx,
 			CRef<lir::Function> lir_function,
@@ -337,7 +337,7 @@ namespace compiler::backend_llvm {
 		 * @brief Lowers LIRInstruction to LLVM instructions and appends them
 		 * to the end of the block given by @p builder.
 		 */
-		void lir2LLVMInstruction(
+		void lirInstruction2LLVM(
 			const lir::Instruction& lir_instruction, llvm::IRBuilder<>& builder
 		) {
 			using enum lir::Operation;
@@ -397,6 +397,17 @@ namespace compiler::backend_llvm {
 				builder.CreateStore(value, local_register_map[output].get());
 				break;
 			}
+			case BooleanAnd:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalAnd)
+			case BooleanOr:
+				LIR_2_LLVM_BINARY_OPERATION_CASE(LogicalOr)
+			case BooleanNot: {
+				const auto output   = lir_instruction.output.value();
+				const auto argument = lirValue2LLVM(lir_instruction.arguments.at(0), builder);
+				const auto value    = builder.CreateNot(argument);
+				builder.CreateStore(value, local_register_map[output].get());
+				break;
+			}
 			case Call: {
 				CORE_ASSERT(lir_instruction.arguments.size() > 0, "call instruction without callee");
 
@@ -446,8 +457,8 @@ namespace compiler::backend_llvm {
 				auto              llvm_block = block_mapping[block];
 				llvm::IRBuilder<> builder(llvm_block.get());
 				for (const auto& instruction: block->instructions)
-					lir2LLVMInstruction(instruction, builder);
-				lir2LLVMInstruction(block->terminator, builder);
+					lirInstruction2LLVM(instruction, builder);
+				lirInstruction2LLVM(block->terminator, builder);
 			}
 
 			return fun.get();
@@ -481,7 +492,7 @@ namespace compiler::backend_llvm {
 	void addFunctionToModuleImpl(
 		query::Context& ctx, Ref<ModuleImpl> module, CRef<lir::Function> lir_function
 	) {
-		LIR2LLVMFunction lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
+		LirFunction2LLVM lir2llvm{ getLLVMContext(), ctx, lir_function, module->module.refMut() };
 		lir2llvm.createFunction();
 	}
 }

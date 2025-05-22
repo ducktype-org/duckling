@@ -1,3 +1,4 @@
+#include <diagnostic/highlight_positions.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_errors.hpp>
@@ -15,6 +16,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <lexer/lexer.hpp>
+#include <pst_parser/pst_query/code_dependency.hpp>
 #include <pst_parser/test_utils/pst_test_utils.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
@@ -48,6 +50,7 @@ public:
 		TESTER_ADD_TEST(testSimpleHOUT);
 		TESTER_ADD_TEST(testSinglefileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
+		TESTER_ADD_TEST(testDependencyHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
 		TESTER_ADD_TEST(testHeliosResultConcept);
 		TESTER_ADD_TEST(testHeliosResult);
@@ -128,59 +131,60 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
-		const auto INT16_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		const auto INT32_TYPE = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		const auto F16_TYPE   = query::entryPoint<tsh::QueryFloatType>(16);
-		const auto F32_TYPE   = query::entryPoint<tsh::QueryFloatType>(32);
-		const auto BOOL_TYPE  = query::entryPoint<tsh::QueryBoolType>({});
-		const auto META_TYPE  = query::entryPoint<tsh::QueryMetaType>({});
+		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto f16_type   = query::entryPoint<tsh::QueryFloatType>(16);
+		const auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
+		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
+		const auto meta_type  = query::entryPoint<tsh::QueryMetaType>({});
 
-		ASSERT_EQUAL(true, INT32_TYPE == getTypeOf("SimpleInt", root_scope));
-		ASSERT_EQUAL(true, F32_TYPE == getTypeOf("SimpleFloat", root_scope));
+		ASSERT_EQUAL(int32_type, getTypeOf("SimpleInt", root_scope));
+		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
+		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
 
 		const auto tuple_int_int = getTypeOf("TupleII", root_scope);
 		const auto tuple_int_int_abstract_type
-			= query::entryPoint<tsh::QueryTupleType>({ { st(INT32_TYPE), st(INT32_TYPE) } });
-		ASSERT_EQUAL(true, tuple_int_int == tuple_int_int_abstract_type);
+			= query::entryPoint<tsh::QueryTupleType>({ { st(int32_type), st(int32_type) } });
+		ASSERT_EQUAL(tuple_int_int, tuple_int_int_abstract_type);
 
 		const auto first_variant = getTypeOf("first_variant", root_scope);
 		const auto first_variant_abstract_type
-			= query::entryPoint<tsh::QueryVariantType>({ { st(INT32_TYPE), st(F32_TYPE) } });
-		ASSERT_EQUAL(true, first_variant == first_variant_abstract_type);
+			= query::entryPoint<tsh::QueryVariantType>({ { st(int32_type), st(f32_type) } });
+		ASSERT_EQUAL(first_variant, first_variant_abstract_type);
 
 		const auto second_variant               = getTypeOf("second_variant", root_scope);
 		const auto second_variant_abstract_type = query::entryPoint<tsh::QueryVariantType>(
-			{ { st(INT32_TYPE), st(F32_TYPE), st(BOOL_TYPE) } }
+			{ { st(int32_type), st(f32_type), st(bool_type) } }
 		);
-		ASSERT_EQUAL(true, second_variant == second_variant_abstract_type);
+		ASSERT_EQUAL(second_variant, second_variant_abstract_type);
 
 		const auto weird_variant = getTypeOf("weird_variant", root_scope);
 
-		const auto classA = getTypeFromDefinition("A", root_scope);
-		const auto classB = getTypeFromDefinition("B", root_scope);
-		const auto classC = getTypeFromDefinition("C", root_scope);
+		const auto class_a = getTypeFromDefinition("A", root_scope);
+		const auto class_b = getTypeFromDefinition("B", root_scope);
+		const auto class_c = getTypeFromDefinition("C", root_scope);
 
 		auto right_tuple = query::entryPoint<tsh::QueryTupleType>({ {
-			classA,
-			st(query::entryPoint<tsh::QueryVariantType>({ { classB, classC } })),
+			class_a,
+			st(query::entryPoint<tsh::QueryVariantType>({ { class_b, class_c } })),
 		} });
 
 		const auto weird_variant_type
-			= query::entryPoint<tsh::QueryVariantType>({ { classA, st(right_tuple) } });
+			= query::entryPoint<tsh::QueryVariantType>({ { class_a, st(right_tuple) } });
 
-		ASSERT_EQUAL(true, weird_variant == weird_variant_type);
+		ASSERT_EQUAL(weird_variant, weird_variant_type);
 
-		ASSERT_EQUAL(META_TYPE, getTypeOf("T", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("A", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("B", root_scope));
-		ASSERT_EQUAL(META_TYPE, getTypeOf("C", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("T", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("A", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("B", root_scope));
+		ASSERT_EQUAL(meta_type, getTypeOf("C", root_scope));
 
 		const auto tuple_ii_ff = getTypeOf("TupleIIFF", root_scope);
 
 		const auto tuple_f16_f32
-			= query::entryPoint<tsh::QueryTupleType>({ { st(F16_TYPE), st(F32_TYPE) } });
+			= query::entryPoint<tsh::QueryTupleType>({ { st(f16_type), st(f32_type) } });
 		const auto tuple_i16_i32
-			= query::entryPoint<tsh::QueryTupleType>({ { st(INT16_TYPE), st(INT32_TYPE) } });
+			= query::entryPoint<tsh::QueryTupleType>({ { st(int16_type), st(int32_type) } });
 
 		const auto tuple_ii_ff_abstract_type
 			= query::entryPoint<tsh::QueryTupleType>({ { st(tuple_i16_i32), st(tuple_f16_f32) } });
@@ -243,6 +247,31 @@ private:
 
 		ASSERT_EQUAL(functions, 1);
 		ASSERT_EQUAL(glob_data, 5);
+	}
+
+	void testDependencyHOUT() {
+		auto [module, _] = getModule(fs::FilePath(path("test_modules/hout_simple_test")));
+
+		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
+
+		for (const auto& hout: houts) {
+			for (const auto& fun: hout.functions) {
+				std::cerr << fun.original_name.str() << " i dependent on\n";
+				auto positions = pst::queryPositionDependencies<compiler::helios::QueryCodeOFFun>(
+					fun.original_symbol
+				);
+
+				auto tokens = pst::queryTokenDependencies<compiler::helios::QueryCodeOFFun>(
+					fun.original_symbol
+				);
+
+				printer::PrinterOStream str;
+				dia::printHighlightedPositions(str, positions);
+
+				printer::StreamPrinter p;
+				p.print(str.getContents());
+			}
+		}
 	}
 
 	void testHoutVisitor() {
@@ -385,10 +414,16 @@ private:
 		tree_v12->debugPrint(out_v12);
 
 		auto sym_v3      = getChain("N.V3", root_scope).back();
-		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.customPerfectHash(), "))");
+		auto sym_v3_repr = base::strConcat("(Symbol V3 (", sym_v3.queryUnstablePerfectHash(), "))");
 		ASSERT_EQUAL(
 			base::strConcat(sym_v3_repr, "+", sym_v3_repr, "*", sym_v3_repr), out_v12.str()
 		);
+
+		auto get_cmp  = getChain("CMP", root_scope).back();
+		auto expr_cmp = getExprOfConst(get_cmp);
+		Ref  expr_cmp_casted
+			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
+		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
 	}
 
 	void testError() {
@@ -627,15 +662,8 @@ private:
 		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
 
 		// a simple way to get function scope through hout:
-		// @todo maybe we want to put in in helios_test_utils.hpp?
-		auto hout = query::entryPoint<compiler::helios::QueryTopLevelEntities>(module);
-		ASSERT_EQUAL(1, hout->functions.size());
-
-		// debug print test just for cov and to see if it does not throw:
-		[[maybe_unused]] auto debug_print_out = hout->debugPrint();
-
-		auto foo            = hout->functions.at(0);
-		auto foo_body_scope = foo.content.body->lifetime_scope;
+		auto foo            = getChain("foo", top_scope).back();
+		auto foo_body_scope = getFunctionBodyScope(foo);
 
 		// variable types:
 

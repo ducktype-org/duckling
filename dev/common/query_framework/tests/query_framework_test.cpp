@@ -1,4 +1,4 @@
-#include <query_framework/detail/query_graph/dep_graph.hpp>
+#include <query_framework/detail/query_graph/query_graph.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <query_framework/query_input.hpp>
@@ -19,7 +19,7 @@ struct Key1 {
 	constexpr auto operator<=>(const Key1& oth) const = default;
 
 	[[nodiscard]]
-	base::HashT customPerfectHash() const {
+	u64 queryUnstablePerfectHash() const {
 		return v;
 	}
 };
@@ -28,7 +28,7 @@ struct Key2 {
 	uint64_t v;
 
 	[[nodiscard]]
-	base::HashT customPerfectHash() const {
+	u64 queryUnstablePerfectHash() const {
 		return v;
 	}
 };
@@ -40,7 +40,7 @@ DECLARE_QUERY(FibonacciSum, Key2, u64);
  * Q1: *
  * * * */
 struct IMPLEMENT_QUERY(Fibonacci, u64) {
-	inline static std::map<QKey, query::CacheEntry<QResult>> cache;
+	inline static std::map<query::QueryUnstableHash, query::CacheEntry<QResult>> cache;
 
 	static auto provide(Context& context, QKey key) -> PResult {
 		if (key.v == 0)
@@ -52,15 +52,15 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 			     + context.query<Fibonacci>({ key.v - 2 });
 	}
 
-	static auto load(QKey key) -> LoadResult {
-		if (cache.contains(key))
-			return cache.at(key);
+	static auto load(query::QueryUnstableHash key_hash) -> LoadResult {
+		if (cache.contains(key_hash))
+			return cache.at(key_hash);
 		else
 			return {};
 	}
 
-	static auto store(QKey key, PResult res, query::ACD acd) -> QResult {
-		cache.insert({ key, { res, acd } });
+	static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) -> QResult {
+		cache.insert({ key_hash, { .data = res, .acd = acd } });
 		return res;
 	}
 };
@@ -68,7 +68,7 @@ struct IMPLEMENT_QUERY(Fibonacci, u64) {
 QUERY_IMPLEMENTATION_BOILERPLATE(Fibonacci);
 
 
-DECLARE_QUERY(FibonacciStringAutoCache, uint64_t, std::string);
+DECLARE_QUERY(FibonacciStringAutoCache, u64, std::string);
 
 struct IMPLEMENT_QUERY(FibonacciStringAutoCache, std::string) {
 	static auto provide(Context& ctx, QKey key) -> PResult {
@@ -90,10 +90,15 @@ struct IMPLEMENT_QUERY(FibonacciSum, double) {
 		return res;
 	}
 
-	static auto load([[maybe_unused]] QKey key) -> LoadResult { return {}; }
+	static auto load([[maybe_unused]] query::QueryUnstableHash key_hash) -> LoadResult {
+		return {};
+	}
 
-	static auto store([[maybe_unused]] QKey key, PResult res, [[maybe_unused]] query::ACD acd)
-		-> QResult {
+	static auto store(
+		[[maybe_unused]] query::QueryUnstableHash key_hash,
+		PResult                                   res,
+		[[maybe_unused]] query::ACD               acd
+	) -> QResult {
 		return QResult(res);
 	}
 };
@@ -359,45 +364,48 @@ private:
 	}
 
 	void testDeps() {
+		const auto& graph = query::Context::getGraph();
+
 		assertThrows<base::Panic>(
-			[&]() { query::getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>(1); }, "Query deps present before query call."
 		);
 
 		query::entryPoint<EmptyQuery>(1);
-		auto deps = query::getNodeDeps<EmptyQuery>(1);
+		auto deps = graph.getNodeDeps<EmptyQuery>(1);
 		ASSERT_EQUAL(deps.size(), 1);
 
 		assertThrows<base::Panic>(
-			[&]() { query::getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
+			[&]() { graph.getNodeDeps<EmptyQuery>(2); }, "Query deps present before query call."
 		);
 
 		query::entryPoint<CallEmptyQueryNTimes>(10);
-		auto deps2 = query::getNodeDeps<CallEmptyQueryNTimes>(10);
+		auto deps2 = graph.getNodeDeps<CallEmptyQueryNTimes>(10);
 		// 10 + 1 for the query itself:
 		ASSERT_EQUAL(deps2.size(), 11);
 		{
 			auto deps2_filtered
-				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, EmptyQuery::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 10);
 		}
 		{
-			auto deps2_filtered = query::getNodeDepsFiltered<CallEmptyQueryNTimes>(
-				10, CallEmptyQueryNTimes::getID()
-			);
+			auto deps2_filtered
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, CallEmptyQueryNTimes::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 1);
 		}
 		{
 			auto deps2_filtered
-				= query::getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
+				= graph.getNodeDepsFiltered<CallEmptyQueryNTimes>(10, Fibonacci::getID());
 			ASSERT_EQUAL(deps2_filtered.size(), 0);
 		}
 	}
 
 	void testSideInput() {
+		const auto& graph = query::Context::getGraph();
+
 		// we test that nothing breaks on multiple calls
 		for (u64 i = 0; i < 10; i++) {
 			query::entryPoint<CallSideInputNTimes>(10);
-			auto deps = query::getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
+			auto deps = graph.getNodeDepsFiltered<CallSideInputNTimes>(10, SideInput::getID());
 			ASSERT_EQUAL(deps.size(), 10);
 		}
 	}
@@ -471,10 +479,11 @@ private:
 	}
 
 	void debugPrintTest() {
+		const auto& graph = query::Context::getGraph();
 		// just check if it compiles and don't throw
 		std::stringstream s;
-		query::debugPrintDependencyGraphForDrawing(s);
-		query::debugPrintDependencyGraph(s);
+		graph.debugPrintForDrawing(s);
+		graph.debugPrint(s);
 	}
 
 	void testConstructCache() {

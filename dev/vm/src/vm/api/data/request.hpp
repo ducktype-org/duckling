@@ -13,12 +13,14 @@
 
 namespace vm::api {
 	namespace request {
-		struct LoadFile {
-			fs::FilePath filename;
+		struct LoadStdlib {};
+
+		struct LoadFiles {
+			std::vector<fs::FilePath> filenames;
 		};
 
 		struct LoadCode {
-			code::CodeCollection code_collection;
+			std::vector<code::CodeCollection> code_collections;
 		};
 
 		struct Pause {};
@@ -28,7 +30,14 @@ namespace vm::api {
 		struct Stop {};
 
 		struct Run {
-			std::vector<std::string> args;
+			std::vector<std::string> program_args;
+		};
+
+		struct RunFunction {
+			std::string func_name;
+			// @todo: This should be a vector of any VM type, not just u64.
+			// This should change after: https://github.com/ducktype-org/duckling/issues/721
+			std::vector<i64> func_args;
 		};
 
 		struct Input {
@@ -69,12 +78,14 @@ namespace vm::api {
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
 	using ExecutorRequest = std::variant<
-		request::LoadFile,
+		request::LoadStdlib,
+		request::LoadFiles,
 		request::LoadCode,
 		request::Resume,
 		request::Pause,
 		request::Stop,
 		request::Run,
+		request::RunFunction,
 		request::Join,
 		request::Step,
 		request::WaitForBreakpoint,

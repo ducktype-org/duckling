@@ -2,14 +2,16 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios/utils/symbol_list.hpp>
 #include <pst_parser/access.hpp>
-#include <query_framework/query_impl.hpp>  // @TODO #404 relax it to just cache entry
 
 #include <base/optional.hpp>
 
 namespace compiler::helios {
 
+	/**
+	 * Structure holding all data directly stored for each created scope.
+	 */
 	struct ScopeData final {
 		// created on startup:
 		std::optional<ScopeID> parent;
@@ -28,12 +30,10 @@ namespace compiler::helios {
 		 */
 		frontend::ModuleID parent_module;
 
-		// cache entry:
-		// in the future we might need separation for: direct symbols, expanded symbols
-		// in this system scope is no longer closed/open as we think of it as a pure-value object
-		// any lookup in the scope requires calculation of symbols witch itself is done only once!
-		base::Optional<query::CacheEntry<SymbolList>> symbols;
-
+		/**
+		 * Scope depth, i.e. distance to the root scope.
+		 * It is currently unused but might be useful in the future.
+		 */
 		u64 depth;
 
 		// We would like the function bellow to be deleted to prevent any copy of scope data.

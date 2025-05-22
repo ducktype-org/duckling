@@ -6,6 +6,7 @@ add_library(Base
         src/base/impl/convert.cpp
         src/base/impl/str_utils.cpp
         src/base/impl/init_guards.cpp
+        src/base/impl/bit256.cpp
 )
 
 set_target_properties(Base PROPERTIES LINKER_LANGUAGE CXX)
@@ -40,8 +41,6 @@ duck_add_test(base strong_id tests/strong_id_test.cpp USES Base)
 
 duck_add_test(base at_maybe tests/at_maybe_test.cpp USES Base)
 
-duck_add_test(base perfect_hash tests/perfect_hash_test.cpp USES Base)
-
 duck_add_test(base box_ref tests/box_ref_test.cpp USES Base)
 
 duck_add_test(base bits_and_bytes tests/bits_and_bytes_test.cpp USES Base)
@@ -54,6 +53,8 @@ duck_add_test(base ok_bad tests/ok_bad_test.cpp USES Base)
 
 duck_add_test(base str_enum tests/str_enum_test.cpp USES Base)
 
+duck_add_test(base bit256 tests/bit256_test.cpp USES Base)
+
 add_example(anycast_example src/base/examples/anycast_example.cpp
         USES Base)
 
@@ -64,9 +65,6 @@ add_example(defer_example src/base/examples/defer_example.cpp
         USES Base)
 
 add_example(optional_simple_example src/base/examples/optional_simple_example.cpp
-        USES Base)
-
-add_example(perfect_hash_example src/base/examples/perfect_hash_example.cpp
         USES Base)
 
 add_example(str_utils_example src/base/examples/str_utils_example.cpp

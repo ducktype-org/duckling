@@ -4,7 +4,8 @@
 #include <frontend/module_tree/queries.hpp>
 #include <helios/helios_result.hpp>
 #include <helios/symbols/simple.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/lookup/interface.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
@@ -23,7 +24,6 @@
 #include <set>
 
 namespace compiler::helios {
-
 
 	struct ScopeAccess_Functor final {
 		static auto get(ScopeID id) { return id.ref; }
@@ -185,7 +185,6 @@ namespace compiler::helios {
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
-				.symbols             = {},
 				.depth               = 0,
 			});
 		}
@@ -234,7 +233,6 @@ namespace compiler::helios {
 				.parent              = parent,
 				.related_pst_element = element,
 				.parent_module       = module(parent),
-				.symbols             = {},
 				.depth               = scopeDepth(parent) + 1,
 			});
 		}
@@ -458,16 +456,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols)
-				return QResWithACD{ &cache->data, cache->acd };
-			return {};
-		}
-
-		static auto store(QKey key, PResult p_res, query::ACD acd) -> QResult {
-			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return &key.ref->symbols.value().data;
-		}
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
@@ -492,7 +481,8 @@ namespace compiler::helios {
 			for (const auto& sym: *symbol_list) {
 				if (isWildcard(sym)) {
 					if (key.with_wildcards) {
-						auto wild_result = ctx.query<QueryLookupInSymbol>({ sym, key.name, true });
+						auto wild_result
+							= HInterface::ofSymbol(sym).lookup(ctx, key.name, { true });
 						if (!wild_result->isEmpty())
 							result.children.push_back(wild_result->toNode(sym));
 					}
@@ -512,10 +502,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<
-			QKey,
-			query::CacheEntry<pst::PST<pst::Stmt>>,
-			base::PerfectHashFunctor<QKey>>
+		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<pst::PST<pst::Stmt>>>
 			cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -524,13 +511,15 @@ namespace compiler::helios {
 			auto value_holder = expand->getValue().unlock(ctx);
 			auto value = value_holder->getExpr().unlock(ctx).dynamicCast<pst::expr::ExprStrValue>();
 			if (value.has_value())
-				return pst::PST<pst::Stmt>::fromContents(value.value()->getValue().str());
+				return pst::PST<pst::Stmt>::fromExpand(
+					expand->getSourcePosition(), value.value()->getValue().str()
+				);
 			else
 				CORE_PANIC("Expand argument is not exactly a single string.");
 		}
 
 		static auto extractResult(const pst::PST<pst::Stmt>& pst_ref) -> QResult {
-			if (pst_ref.getLogger().good()) {
+			if (pst_ref.getLogger()->good()) {
 				return { pst_ref.getRootElement() };
 			} else {
 				return errors::HError(
@@ -539,13 +528,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(const QKey& key) -> LoadResult {
+		static auto load(query::QueryUnstableHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value().data), value->acd };
 			return {};
 		}
 
-		static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {
+		static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}
@@ -566,7 +555,7 @@ namespace compiler::helios {
 					{ parent, key.name, key.with_wildcards }
 				);
 
-				parent_result.insert(*result);
+				parent_result.merge(*result);
 
 				return parent_result;
 			} else {
@@ -579,8 +568,8 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	base::HashT KeyOf_LookupInScope::customPerfectHash() const {
-		auto hash_1 = base::perfectHash(scope);
+	u64 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
+		auto hash_1 = scope.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
 		// @FIXME: this does not work:
@@ -601,7 +590,7 @@ namespace compiler::helios {
 		auto iter_scope = *this;
 
 		while (true) {
-			std::cerr << iter_scope.customPerfectHash() << "("
+			std::cerr << iter_scope.queryUnstablePerfectHash() << "("
 					  << (iter_scope.ref->related_pst_element.has_value()
 			                  ? iter_scope.ref->related_pst_element.value()
 			                        .illegalAccess()

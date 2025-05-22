@@ -31,8 +31,8 @@ namespace compiler::lir {
 	 */
 	using MutBlockRef = Ref<Block>;
 
-	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
-		return base::perfectHash(*function);
+	u64 KeyOf_LowerToLirFunction::queryUnstablePerfectHash() const {
+		return function->queryUnstablePerfectHash();
 	}
 
 	/**
@@ -91,6 +91,12 @@ namespace compiler::lir {
 			return signed_version ? Operation::IntegerSLt : Operation::IntegerULt;
 		case mir::Operation::IntegerNeg:
 			return Operation::IntegerNeg;
+		case mir::Operation::BooleanAnd:
+			return Operation::BooleanAnd;
+		case mir::Operation::BooleanOr:
+			return Operation::BooleanOr;
+		case mir::Operation::BooleanNot:
+			return Operation::BooleanNot;
 		// @TODO: add more cases
 		default:
 			CORE_PANIC("Operation without direct counterpart");
@@ -291,6 +297,9 @@ namespace compiler::lir {
 				lowerFlags(curr_block, mir_instruction);
 
 				switch (mir_instruction.operation) {
+				case mir::Operation::Nop: {
+					return curr_block;
+				}
 				case mir::Operation::Assign:
 				case mir::Operation::IntegerAdd:
 				case mir::Operation::IntegerSub:
@@ -298,7 +307,10 @@ namespace compiler::lir {
 				case mir::Operation::IntegerDiv:
 				case mir::Operation::IntegerMod:
 				case mir::Operation::IntegerLt:
-				case mir::Operation::IntegerNeg: {
+				case mir::Operation::IntegerNeg:
+				case mir::Operation::BooleanAnd:
+				case mir::Operation::BooleanOr:
+				case mir::Operation::BooleanNot: {
 					// this is a generic case, that will be used for most instructions
 					// it currently assumes the output is present, but it can be changed
 
@@ -330,7 +342,11 @@ namespace compiler::lir {
 					return curr_block;
 				}
 				default:
-					throw base::NotYetImplemented("instruction in LowerToLirFunction");
+					throw base::NotYetImplemented(base::strConcat(
+						"instruction ",
+						base::enumToStr(mir_instruction.operation),
+						" in LowerToLirFunction"
+					));
 				}
 			}
 

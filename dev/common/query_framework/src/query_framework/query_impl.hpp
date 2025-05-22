@@ -6,10 +6,11 @@
 
 #include "context.hpp"
 #include "detail/acd.hpp"
-#include "detail/query_graph/dep_graph.hpp"
+#include "detail/context_access.hpp"
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_hash.hpp"
 #include "query_int.hpp"
 
 #include <base/defer.hpp>
@@ -24,12 +25,6 @@
 #include <utility>
 
 namespace query::detail {
-	/**
-	 * @brief Internal helper struct used to create context
-	 */
-	struct ContextMaker final {
-		static auto make(NodeID my_node) { return Context(my_node); }
-	};
 
 	/**
 	 * @brief Internal function implementing the call to a query.
@@ -44,7 +39,9 @@ namespace query::detail {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		if (auto v = QueryImplType::load(key)) {
+		const auto unstable_hash = unstableHashKey(key);
+
+		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
@@ -53,7 +50,7 @@ namespace query::detail {
 			return std::move(v.value().data);
 		} else {
 			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
-			auto context = ContextMaker::make(node_id);
+			auto context = ContextAccess::make(node_id);
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
@@ -64,10 +61,10 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(dep_graph::setExit(node_id));
+			defer(ContextAccess::getGraph()->setExit(node_id));
 
 			// prolog:
-			dep_graph::setEntry(node_id, from);
+			ContextAccess::getGraph()->setEntry(node_id, from);
 
 			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
@@ -76,7 +73,7 @@ namespace query::detail {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -104,10 +101,13 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QKey key) -> LoadResult;
-		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		 *  static auto load(query::QueryUnstableHash key_hash) -> LoadResult;
+		 *  static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) ->
+		 * QResult;
 		 */
+		static constexpr bool CACHE_ON_DISK = false;
 	};
+
 }
 
 /**
@@ -143,7 +143,11 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		std::is_same_v<                                                                           \
-			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>, \
+			std::invoke_result_t<                                                                 \
+				decltype(type::store),                                                            \
+				query::QueryUnstableHash,                                                         \
+				type::PResult,                                                                    \
+				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
 		"Bad store result."                                                                       \
 	);                                                                                            \
@@ -156,8 +160,20 @@ namespace query::detail {
 	static_assert(                                                                                \
 		not std::is_reference_v<type::QKey>,                                                      \
 		"Query key type should not be a reference (use custom struct instead)"                    \
+	);                                                                                            \
+	static_assert(                                                                                \
+		::query::HasUnstablePerfectHash<type::QKey>,                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 (query::QueryUnstableHash)." \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
+		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
+		"(QueryStableHash)."                                                                      \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_invocable_v<decltype(type::load), query::QueryUnstableHash>,                      \
+		"Load function must be callable with query::QueryUnstableHash."                           \
 	);
-
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

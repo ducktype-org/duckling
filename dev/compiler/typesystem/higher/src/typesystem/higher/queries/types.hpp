@@ -1,6 +1,9 @@
 #pragma once
 
+#include "../symbol_type.hpp"
 #include "../types.hpp"
+
+#include <query_framework/query_int.hpp>
 
 #include <base/maps.hpp>
 
@@ -52,7 +55,7 @@ namespace tsh {
 			  signedness(signedness) {}
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return size + signedness;
 		}
 	};
@@ -79,6 +82,17 @@ namespace tsh {
 	DECLARE_QUERY(QueryPointerType, SymbolType<>, PointerAbstractType)
 
 	/**
+	 * @brief Query to get the String type.
+	 */
+	DECLARE_QUERY(QueryStringType, query::EmptyKey, StringAbstractType)
+
+	/**
+	 * @brief Query to get the DynamicArray type.
+	 * The AbstractType of the elements of the array is given as a key.
+	 */
+	DECLARE_QUERY(QueryDynamicArrayType, SymbolType<>, DynamicArrayAbstractType)
+
+	/**
 	 * @brief Key for QueryTupleType.
 	 */
 	struct KeyFor_QueryTupleType final {
@@ -89,7 +103,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -113,7 +127,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -159,7 +173,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryFunctionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

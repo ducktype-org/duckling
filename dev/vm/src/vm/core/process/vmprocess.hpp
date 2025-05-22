@@ -16,6 +16,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/loader/loader.hpp>
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
@@ -24,13 +25,19 @@
 #include <deque>
 #include <expected>
 #include <shared_mutex>
+#include <string>
+#include <variant>
+#include <vector>
 
 namespace vm::loader {
 	class Loader;
 }
 
 namespace vm {
-	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ProgramRunArguments  = std::vector<std::string>;
+	using FunctionRunArguments = std::vector<i64>;
+	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -61,16 +68,9 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		std::expected<api::Response, api::LoadProgramError> loadProgram(
-			const std::variant<fs::FilePath, code::CodeCollection>& source
-		);
-
 		Memory memory;
 
-		Box<loader::Loader> loader;
-
-		//@TODO: For now assume that bytecode validation is always turned on.
-		static constexpr const bool VALIDATE_CODE = true;
+		loader::Loader loader{};
 
 		/**
 		 * @brief Performs external execution request on the VCPU.
@@ -104,9 +104,18 @@ namespace vm {
 		);
 
 		/**
-		 * @brief Creates new thread that runs the code in the Executor service.
+		 * @brief Loads the program from a given source into the current loader program state,
+		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
-		std::expected<api::Response, api::CoreOperationError> run(const std::vector<std::string>& args
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source
+		);
+
+		/**
+		 * @brief Creates new thread that runs a function in the Executor service.
+		 */
+		std::expected<api::Response, api::CoreOperationError> runFunction(
+			const std::string& func_name, const RunArguments& run_arguments
 		);
 
 		/**

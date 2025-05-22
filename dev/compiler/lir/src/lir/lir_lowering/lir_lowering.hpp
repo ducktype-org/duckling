@@ -9,13 +9,7 @@ namespace compiler::lir {
 		CRef<mir::Function> function;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-
-		bool operator==(const KeyOf_LowerToLirFunction& oth) const {
-			// this kind of doesn't work, but it won't be run anyway (mir functions are unique)
-			// @TODO: change it during hash-query refactor
-			return (*function) == (*oth.function);
-		}
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

@@ -34,7 +34,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContents(code);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -65,7 +65,7 @@ class PSTErrorTests: public tester::TestSuite {
 
 		bool operator()() override {
 			auto parsed = pst::PST<Element, Parser>::fromContentsWithContext(this->code, context);
-			return parsed.getLogger().good() == good;
+			return parsed.getLogger()->good() == good;
 		}
 
 		[[nodiscard]]
@@ -102,11 +102,25 @@ class PSTErrorTests: public tester::TestSuite {
 
 	Example<pst::Const, true>  simple_const{ "const x: i32 = 5" };
 	Example<pst::Const, true>  ref_const{ "const x: ref i32 = 5" };
+	Example<pst::Const, true>  type_const{ "const x: i32" };
+	Example<pst::Const, true>  value_const{ "const x = 5" };
 	Example<pst::Const, false> no_name_const{ "const: i32 = 5" };
 	Example<pst::Const, false> no_type_const{ "const x:= 5" };
 	Example<pst::Const, false> no_value_const{ "const x: i32=;" };
 	Example<pst::Const, false> no_value_const_eof{ "const x: i32=" };
-	Example<pst::Const, false> no_equals_const{ "const x: i32" };
+	Example<pst::Const, false> let_const{ "let x: i32 = 5" };
+	Example<pst::Const, false> var_const{ "var x: i32 = 5" };
+
+	Example<pst::Variable, true>  simple_var{ "var x: i32 = 5" };
+	Example<pst::Variable, true>  let_var{ "let x: i32 = 5" };
+	Example<pst::Variable, true>  ref_var{ "var x: ref i32 = 5" };
+	Example<pst::Variable, true>  type_var{ "var x: i32" };
+	Example<pst::Variable, true>  value_var{ "var x = 5" };
+	Example<pst::Variable, false> no_name_var{ "var: i32 = 5" };
+	Example<pst::Variable, false> no_type_var{ "var x:= 5" };
+	Example<pst::Variable, false> no_value_var{ "var x: i32=;" };
+	Example<pst::Variable, false> no_value_var_eof{ "var x: i32=" };
+	Example<pst::Variable, false> const_var{ "const x: i32 = 5" };
 
 	Example<pst::DottedName, true>  simple_dotted{ "std.a.b.*;" };
 	Example<pst::DottedName, false> bad_dotted{ "std.a.b. .*" };
@@ -211,9 +225,15 @@ class PSTErrorTests: public tester::TestSuite {
 	Example<pst::ExprStmt, false> bad_assign{ "x = y = z" };
 	Example<pst::ExprStmt, false> bad_operator{ "x = y z + 3" };
 
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  simple_operators{ "++ ++ 3 + 5 ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  text_operator{ "++ ++ 3 + 5 kg ++" };
-	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  new_operators{ "<> 3 <> 'x' <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> simple_operators{ "++ ++ 3 + 5 ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> text_operator{ "++ ++ 3 + 5 kg ++" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> new_operators{ "<> 3 <> 'x' <>" };
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_integer_operators{
+		"1 + 2 - 3 * 4 / 5 % 6 ** 7"
+	};
+	Example<pst::ExprHolder, true, pst::UniversalExprHolder> all_boolean_operators{
+		"true and true or false and not false"
+	};
 	Example<pst::ExprHolder, true, pst::UniversalExprHolder>  prefix_named{ "ref const T" };
 	Example<pst::ExprHolder, false, pst::UniversalExprHolder> bad_operators{ "++ ++ ++ ++" };
 

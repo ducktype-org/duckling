@@ -183,13 +183,13 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto file_to_lex = options.getValue<fs::FilePath>("file").value();
 
-		auto token_file = tokenizer::makeTokenFile(file_to_lex);
+		auto token_file = tokenizer::makeTokenSource(file_to_lex);
 
 		bool tokenize_ok = token_file->tokenize();
 
 		if (not tokenize_ok) {
 			std::cout << "Tokenization errors: ";
-			token_file->getLogger().dumpLog(true, std::cout);
+			token_file->getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n";
 			return 1;
 		} else {
@@ -224,9 +224,9 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		int exit_code = 0;
 
-		if (pst.getLogger().messageCount() != 0) {
+		if (pst.getLogger()->messageCount() != 0) {
 			std::cout << "Errors and messages: \n";
-			pst.getLogger().dumpLog(true, std::cout);
+			pst.getLogger()->dumpLog(true, std::cout);
 			std::cout << "\n\n";
 			exit_code = 1;
 		}
@@ -268,19 +268,25 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addShortDesc("Path to the module")
 		             .required()
 		             .build());
-
 		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
 		             .addShortName('o')
 		             .addLongName("output")
-		             .addShortDesc("Path to the output file")
-		             .required()
+		             .addShortDesc("Link the ouptut to the output file")
+		             .conditional(
+						 [](const clap::ParsingResult& result) {
+							 return not(result.isParam("output") && result.isFlag("dvm-backend"));
+						 },
+						 "Currently DVM backend doesn't support linking. "
+					 )
 		             .build());
-
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("dump-llvm-ir")
 		             .addShortDesc("Also dumps LLVM IR to a file (alongside main compilation).")
 		             .build());
-
+		clap.add(clap::ParamBuilder::ofFlag()
+		             .addLongName("dvm-backend")
+		             .addShortDesc("Compile to DVM bytcode.")
+		             .build());
 		clap.add(clap::ParamBuilder::ofFlag()
 		             .addLongName("compile-to-assembly")
 		             .addShortDesc("Also compiles to assembly file (alongside main compilation).")
@@ -290,6 +296,18 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .addLongName("add-builtin-library")
 		             .addShortDesc("Links builtin library into the final executable.")
 		             .build());
+		clap.add(
+			clap::ParamBuilder::ofFlag()
+				.addLongName("dvm-run")
+				.addShortDesc("After compiling to the Duckling bytecode run it on the DVM.")
+				.conditional(
+					[](const clap::ParsingResult& result) {
+						return not(result.isFlag("dvm-run") && not result.isFlag("dvm-backend"));
+					},
+					"Cannot run the code on the DVM without the --dvm-backend option."
+				)
+				.build()
+		);
 
 		auto options = configureDuckMainWith(clap, command_args);
 
@@ -301,12 +319,15 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto top_level = query::entryPoint<helios::QueryModuleHOUT>(root);
 
+		auto backend_type
+			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
+
 		driver::Driver driver{
 			driver::Options{
-				.backend_type = driver::BackendType::LLVM,
-				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.backend_type           = backend_type,
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
+				.dvm_code_only_memory   = options.isFlag("dvm-run"),
 				.add_builtin_library    = options.isFlag("add-builtin-library"),
 				.external_objects_files = {},
 				.external_libs          = {},
@@ -314,7 +335,19 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		};
 
 		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
-		driver.link();
+
+		if (options.isParam("output"))
+			driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
+
+		if (options.isFlag("dvm-run")) {
+			auto run_result = driver.run();
+			if (run_result.has_value()) {
+				return run_result.value().exit_code;
+			} else {
+				std::cerr << "Error: " << run_result.error() << "\n";
+				return 1;
+			}
+		}
 
 		return 0;
 	});
@@ -346,10 +379,10 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		driver::Driver driver{
 			driver::Options{
-				.backend_type = driver::BackendType::LLVM,
-				.output_file = base::StrID(options.getValue<std::string>("output").value().c_str()),
+				.backend_type           = driver::BackendType::LLVM,
 				.compile_to_assembly    = false,
 				.dump_llvm_ir           = false,
+				.dvm_code_only_memory   = false,
 				.add_builtin_library    = true,
 				.external_objects_files = {},
 				.external_libs          = {},
@@ -357,13 +390,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		};
 
 		u64 i = 0;
-		for (const auto& module: modules) {
+		for (const auto& module: modules)
 			driver.compileHOUTUnit(
 				&module, base::StrID(base::strConcat("main_module", i++).c_str())
 			);
-		}
 
-		driver.link();
+		driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
 
 		return 0;
 	});

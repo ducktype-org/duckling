@@ -8,6 +8,7 @@
 
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/utils/stable_type_id_name_map.hpp>
 
 namespace vm::code {
 	/**
@@ -45,16 +46,18 @@ namespace vm::code {
 
 	/**
 	 * @brief Represents bytecode a function.
+	 * @note A function on its own (without type context or globals) does not contain enough
+	 * information to tell if it is correct/valid or not.
 	 */
 	struct Function final: ElementBase {
 		Identifier name;
-		// @TODO this should be the compiler's responsibility, move it there
-		usize                           local_stack_size = 0;
-		base::HashMap<base::StrID, i64> local_offset_map;
-
-		CodeBlock body;
+		CodeBlock  body;
 	};
 
+	/**
+	 * @brief Represents a group of types, globals and functions.
+	 * @note It's not guaranteed that every code collection is valid.
+	 */
 	struct CodeCollection final {
 		std::vector<Function>   functions;
 		std::vector<TypeOfData> types;

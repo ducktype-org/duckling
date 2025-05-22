@@ -94,8 +94,7 @@ namespace compiler::helios {
 		 */
 		template<class Container>
 		static auto queryCodeOfCodeBlock(query::Context& ctx, const Container& container) {
-			auto            scope = ctx.query<QueryPrimaryCodeScopeFor>({ container });
-			code::CodeBlock block(scope, {});
+			code::CodeBlock block({});
 			for (const auto& stmt: *container.unlock(ctx)) {
 				HoutStmtMaker stmt_maker(ctx);
 				stmt.unlock(ctx)->acceptVisitor(stmt_maker);
@@ -112,14 +111,9 @@ namespace compiler::helios {
 
 			HoutStmtMaker(query::Context& ctx): ctx(ctx) {}
 
-			template<class T>
-			ScopeID scopeOf(pst::Access<T> element) {
-				return ctx.query<QueryPrimaryCodeScopeFor>(element);
-			}
-
 			// @TODO: visits for all valid stmt-s
 
-			// @TODO: some stuff in here are also symbols
+			// @TODO: some stuff in here are also symbols (like named if's)
 			// "query symbol in scope" should be able to just work
 			// and provide correct symbols for lookup, but same care
 			// has to be taken, to ensure consistency between this code and scope states.
@@ -133,9 +127,9 @@ namespace compiler::helios {
 				if (auto val = stmt->getValue()) {
 					auto expr = ctx.query<QueryHoutOfExpr>({ val.value().unlock(ctx)->getExpr() })
 					                .expect("Not handling errors here yet... (return expr)");
-					output(code::ReturnStmt(scopeOf(stmt), std::move(expr)));
+					output(code::ReturnStmt(std::move(expr)));
 				} else {
-					output(code::VoidReturnStmt(scopeOf(stmt)));
+					output(code::VoidReturnStmt());
 				}
 			}
 
@@ -172,9 +166,7 @@ namespace compiler::helios {
 
 					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
 
-					output(code::AssignmentStmt(
-						scopeOf(stmt), std::move(rhs), dynamic_casted_lhs->symbol
-					));
+					output(code::AssignmentStmt(std::move(rhs), dynamic_casted_lhs->symbol));
 					return;
 				}
 
@@ -183,13 +175,10 @@ namespace compiler::helios {
 				auto expr = ctx.query<QueryHoutOfExpr>({ inner_expr })
 				                .expect("Not handling errors here yet... (ExprStmt)");
 
-				output(code::ExprStmt(scopeOf(stmt), std::move(expr)));
+				output(code::ExprStmt(std::move(expr)));
 			}
 
 			void visitIf(pst::Access<pst::If> stmt) override {
-				// Get scopes:
-				auto outer_scope = scopeOf(stmt);
-
 				// in the future we must also handle here different if-s variants
 				// for example: `if (let a = ...) {}`.
 				auto condition
@@ -198,7 +187,7 @@ namespace compiler::helios {
 
 				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
 
-				output(code::IfStmt(outer_scope, std::move(condition), std::move(body)));
+				output(code::IfStmt(std::move(condition), std::move(body)));
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
@@ -214,13 +203,12 @@ namespace compiler::helios {
 
 				// for now initial value is assumed to always be present:
 				// this will probably change:
+				// @TODO: handle potential lack of value
 				auto initial_value
-					= ctx.query<QueryHoutOfExpr>(stmt->getValue().unlock(ctx)->getExpr())
+					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
-				output(
-					code::VariableStmt(scope(symbol), std::move(initial_value), symbol_type, symbol)
-				);
+				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
 			}
 		};
 
@@ -242,12 +230,6 @@ namespace compiler::helios {
 				// @TODO: rest, flags, attributes, etc
 
 				HOUTFunction output(original_symbol, ctx);
-
-				// Scope of function itself:
-				// this scope contains all "function declaration" symbols like parameters
-				// auto outer_scope
-				// 	= ctx.query<QueryPrimaryCodeScopeFor>({ MCRef<pst::LangElement>(&stmt) });
-
 
 				// body:
 

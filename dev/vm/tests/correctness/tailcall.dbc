@@ -18,9 +18,9 @@ function dummy {
 
 
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
 	init_lany_type dummy_ret_val, i64;
 	init_lany_type dummy_arg0, i64;
@@ -30,8 +30,8 @@ function main {
 
 	output_l64         dummy_ret_val;
 
-	deinit; # dummy ret_val
-    deinit;       # *argv
-    deinit;       # argc
+	deinit;       # dummy ret_val
+	deinit;       # *argv
+	deinit;       # argc
 	ret;
 }

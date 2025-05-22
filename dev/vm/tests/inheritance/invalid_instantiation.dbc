@@ -1,12 +1,12 @@
 type class: Widget {
-    abstract: true;
+	abstract: true;
 }
 
 type data: Wrapper {
-    wrapped: Widget,
+	wrapped: Widget,
 }
 
 function main {
-    init_lany_type w, Wrapper;
-    ret;
+	init_lany_type w, Wrapper;
+	ret;
 }
