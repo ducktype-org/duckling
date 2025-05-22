@@ -120,7 +120,11 @@ namespace base {
 
 		bool operator==(const Box& other) const { return ptr == other.ptr; }
 
-		~Box() { ::base::extend::BoxPtrDeleter<T>::del(ptr); }
+		~Box() {
+			::base::extend::BoxPtrDeleter<T>::del(ptr
+			);  // NOLINT(clang-analyzer-cplusplus.NewDelete), see:
+			    // https://github.com/ducktype-org/duckling/issues/402
+		}
 	};
 
 	/**
