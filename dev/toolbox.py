@@ -447,7 +447,7 @@ def download_llvm(*args, **kwargs):
     download_llvm_impl(*args, **kwargs)
 
 
-def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_path):
+def install_llvm_impl(version, ram_gb, c_compiler, cxx_compiler, linker, build_tool, targets, source_dir_path, use_old_build):
     log_info("==========================")
     log_info("Building LLVM from source. This will take significant time!")
     log_info(
@@ -499,6 +499,12 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
 
     # Create build directory
     build_dir = sources_path / "build"
+    if not use_old_build:
+        # remove old build directory if it exists
+        if build_dir.exists():
+            log_info(f"Removing old build directory: {build_dir}")
+            shutil.rmtree(build_dir)
+
     if not build_dir.exists():
         build_dir.mkdir()
 
@@ -518,6 +524,11 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
     # Add linker option only if a specific linker is selected
     if linker != "default":
         cmake_cmd_parts.append(f"-DLLVM_USE_LINKER={linker}")
+
+    if cxx_compiler != "default":
+        cmake_cmd_parts.append(f"-DCMAKE_CXX_COMPILER={cxx_compiler}")
+    if c_compiler != "default":
+        cmake_cmd_parts.append(f"-DCMAKE_C_COMPILER={c_compiler}")
 
     cmake_command = " \\\n  ".join(cmake_cmd_parts)
     log_info(f"Running cmake command...")
@@ -553,6 +564,20 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
     type=str,
 )
 @click.option(
+    "--cxx_compiler",
+    prompt="C++ compiler path",
+    help="A path to the C++ compiler to compile with",
+    default="default",
+    type=str
+)
+@click.option(
+    "--c-compiler",
+    prompt="C compiler path",
+    help="A path to the C compiler to compile with",
+    default="default",
+    type=str
+)
+@click.option(
     "-l",
     "--linker",
     prompt="Linker to use (using one of the newer linkers (lld/mold) will speed up the compilation)",
@@ -585,6 +610,13 @@ def install_llvm_impl(version, ram_gb, linker, build_tool, targets, source_dir_p
     help="Directory where LLVM sources will be extracted",
     default="~/llvm",
     type=str,
+)
+@click.option(
+    "--use-old-build",
+    prompt="Use old build directory",
+    help="Whether or not to use the old build directory",
+    default=False,
+    type=bool
 )
 def install_llvm(*args, **kwargs):
     """Compiles LLVM from source with specified options.
