@@ -59,7 +59,7 @@ private:
 		loadInvalidDbc(
 			"unknown_type.dbc",
 			{
-				base::strConcat(vm::loader::UnknownTypeError::ERR_MSG, "in64"),
+				base::strConcat(vm::code::UnknownTypeError::ERR_MSG, "in64"),
 			}
 		);
 	}

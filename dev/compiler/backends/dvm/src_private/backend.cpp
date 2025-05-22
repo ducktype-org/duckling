@@ -105,7 +105,7 @@ namespace compiler::backend_vm {
 
 		struct AddLirFuncContext {
 			CRef<lir::Function> lir_func;
-			Function            code_func;
+			Function            bytecode_func;
 
 			base::HashMap<usize, base::StrID>     block_id_to_label;
 			base::Map<lir::LocalRef, base::StrID> lir_local_to_name;
@@ -121,7 +121,7 @@ namespace compiler::backend_vm {
 				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
 			):
 				  lir_func(lir_function),
-				  code_func(Function({}, Identifier(lir_function->name), {})),
+				  bytecode_func(Function({}, Identifier(lir_function->name), {})),
 				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
 					  for (auto&& type: type_map) map.put(VISIT(type, tp, return tp.name), type);
@@ -137,7 +137,7 @@ namespace compiler::backend_vm {
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
 			pushInstruction(
-				ctx.code_func, instructions::Op_init_lany_type(variable_name, type_name)
+				ctx.bytecode_func, instructions::Op_init_lany_type(variable_name, type_name)
 			);
 		}
 
@@ -259,7 +259,7 @@ namespace compiler::backend_vm {
 
 		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
 			auto id = ctx.block_to_id.at(block);
-			pushInstruction(ctx.code_func, instructions::Op_label{ ctx.block_id_to_label[id] });
+			pushInstruction(ctx.bytecode_func, instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
 		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, base::StrID name) {
@@ -416,27 +416,29 @@ namespace compiler::backend_vm {
 				InstructionBuilder mov_arg(OpKind::mov);
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
-				pushInstruction(ctx.code_func, mov_arg);
+				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
-			pushInstruction(ctx.code_func, { OpKind::call, called_func_arg });
+			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
 			pushInstruction(
-				ctx.code_func,
+				ctx.bytecode_func,
 				{
 					OpKind::mov,
 					lir_result_argument,
 					func_result_argument,
 				}
 			);
-			pushInstruction(ctx.code_func, { instructions::Op_deinit() });  // Deinit func result
+			pushInstruction(
+				ctx.bytecode_func, { instructions::Op_deinit() }
+			);  // Deinit func result
 		}
 
 		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
 			// Insert a comment about operation type.
 			// @TODO: Improve this to contain more information.
 			pushInstruction(
-				ctx.code_func,
+				ctx.bytecode_func,
 				vm::code::instructions::Comment(base::StrID(
 					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
 				))
@@ -465,7 +467,7 @@ namespace compiler::backend_vm {
 					// by splitting it into two instructions:
 					// a = b;
 					// a += c;
-					pushInstruction(ctx.code_func, { OpKind::mov, args[0], args[1] });
+					pushInstruction(ctx.bytecode_func, { OpKind::mov, args[0], args[1] });
 
 					args.pop_front();
 					args.pop_front();
@@ -483,7 +485,7 @@ namespace compiler::backend_vm {
 					// a = -a;
 
 					// a = b;
-					pushInstruction(ctx.code_func, { OpKind::mov, args[0], args[1] });
+					pushInstruction(ctx.bytecode_func, { OpKind::mov, args[0], args[1] });
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
@@ -495,7 +497,7 @@ namespace compiler::backend_vm {
 
 			for (const auto& arg: args) instr.pushArgs(arg);
 
-			pushInstruction(ctx.code_func, instr);
+			pushInstruction(ctx.bytecode_func, instr);
 		}
 	}
 
@@ -503,7 +505,7 @@ namespace compiler::backend_vm {
 		const auto& terminator = lir_block->terminator;
 
 		pushInstruction(
-			ctx.code_func,
+			ctx.bytecode_func,
 			instructions::Comment(base::StrID(
 				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
 			))
@@ -517,16 +519,16 @@ namespace compiler::backend_vm {
 			variant_match(terminator.arguments.at(0).getVariant()) {
 				variant_case(bool, value) {
 					if (value)
-						pushInstruction(ctx.code_func, { OpKind::jmp, true_block });
+						pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
 					else
-						pushInstruction(ctx.code_func, { OpKind::jmp, false_block });
+						pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
 				}
 				variant_default {
 					pushInstruction(
-						ctx.code_func, { OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } }
+						ctx.bytecode_func, { OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } }
 					);
-					pushInstruction(ctx.code_func, { OpKind::jmpIf, true_block });
-					pushInstruction(ctx.code_func, { OpKind::jmpIfNot, false_block });
+					pushInstruction(ctx.bytecode_func, { OpKind::jmpIf, true_block });
+					pushInstruction(ctx.bytecode_func, { OpKind::jmpIfNot, false_block });
 				}
 			}
 
@@ -541,7 +543,7 @@ namespace compiler::backend_vm {
 					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
 				);
 				pushInstruction(
-					ctx.code_func,
+					ctx.bytecode_func,
 					{
 						OpKind::mov,
 						vm::opargs::StackLocalI64(base::StrID("ret_val")),
@@ -553,7 +555,7 @@ namespace compiler::backend_vm {
 					terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
 			}
 
-			pushInstruction(ctx.code_func, terminator_instr);
+			pushInstruction(ctx.bytecode_func, terminator_instr);
 		}
 	}
 
@@ -590,7 +592,7 @@ namespace compiler::backend_vm {
 				addTerminator(ctx, lir_block);
 			}
 
-			compiled_functions.functions.emplace_back(std::move(ctx.code_func));
+			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
 		}
 
 		// Insert and validate functions:
