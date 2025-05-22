@@ -28,7 +28,6 @@ public:
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
-		// TODO: Maybe move that test somewhere else.
 		TESTER_ADD_TEST(duplicatedDataFields);
 		TESTER_ADD_TEST(unknownMethod);
 
@@ -125,7 +124,6 @@ private:
 			}
 		);
 	}
-
 
 	void beforeInit() {
 		loadInvalidDbc(
@@ -248,7 +246,6 @@ private:
 		);
 	}
 	
-	// TODO: Should this be here?
 	void duplicatedDataFields() {
 		loadInvalidDbc(
 			"wrong/data_type/duplicated_fields.dbc",

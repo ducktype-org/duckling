@@ -1,14 +1,9 @@
 #include <vm_tester_utils.hpp>
 
-#include "base/string_id.hpp"
 #include <base/optional.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/api/api.hpp>
-
-#include <variant>
-#include <vector>
 
 class VmInheritanceLoadingTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -41,20 +36,13 @@ private:
 
 			assertTrue(imd.implements.empty(), "I1 should not implement anything");
 			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
-			assertTrue(imd.implementations.size() == 1, "I1 should implement one virtual methods");
-			// TODO: Change that to an optional.
 			assertTrue(imd.vtable.size() == 1, "I1 should have foo in it's vtable");
 
 			auto foo_type      = imd.virtual_methods[base::StrID("foo")];
 			auto bar_type      = imd.virtual_methods[base::StrID("bar")];
-			auto foo_impl_type = imd.implementations[base::StrID("foo")];
 			auto vt_foo        = imd.vtable[base::StrID("foo")];
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == expected_method_type, "I1's method have the wrong type");
-			assertTrue(
-				foo_impl_type == expected_foo_impl_type,
-				"I1's method implementation have the wrong type"
-			);
 			assertTrue(vt_foo == expected_foo_impl_type, "I1's vtable contains wrong type");
 
 			return;
@@ -72,7 +60,6 @@ private:
 			);
 			assertTrue(imd.implements.empty(), "I2 should not implement anything");
 			assertTrue(imd.virtual_methods.empty(), "I2 should not have any virtual methods");
-			assertTrue(imd.implementations.empty(), "I2 should not implement any virtual methods");
 			assertTrue(imd.vtable.empty(), "I2 should not implement any virtual methods");
 
 			return;
@@ -95,14 +82,11 @@ private:
 
 			assertTrue(imd.implements.empty(), "Parent should not implement anything");
 			assertTrue(imd.virtual_methods.size() == 1, "Parent should declare one virtual method");
-			assertTrue(imd.implementations.size() == 1, "Parent should implement one method");
 			assertTrue(imd.vtable.size() == 1, "Parents' vtable should contain one method");
 
 			auto get_age_type        = imd.virtual_methods[base::StrID("getAge")];
-			auto get_age_impl_type   = imd.implementations[base::StrID("getAge")];
 			auto vtable_get_age_type = imd.vtable[base::StrID("getAge")];
 			assertTrue(get_age_type == method_type, "Invalid Parent method type");
-			assertTrue(get_age_impl_type == method_impl_type, "Invalid Parent method type");
 			assertTrue(vtable_get_age_type == method_impl_type, "Invalid Parent method type");
 
 			return;
@@ -142,29 +126,10 @@ private:
 			);
 
 			assertTrue(imd.virtual_methods.size() == 1, "Child should declare one virtual method");
-			assertTrue(
-				imd.implementations.size() == 3, "Child should implement three virtual methods"
-			);
 			assertTrue(imd.vtable.size() == 4, "Child should have 4 method in its vtable");
 
 			auto cry_type          = imd.virtual_methods[base::StrID("cry")];
-			auto get_age_impl_type = imd.implementations[base::StrID("getAge")];
-			auto bar_impl_type     = imd.implementations[base::StrID("bar")];
-			auto cry_impl_type     = imd.implementations[base::StrID("cry")];
-
 			assertTrue(cry_type == expected_child_method, "Invalid Child vmethod type: cry()");
-			assertTrue(
-				get_age_impl_type == expected_child_get_age_impl,
-				"Invalid Child vmethod implementation: getAge()"
-			);
-			assertTrue(
-				bar_impl_type == expected_child_i1_impl,
-				"Invalid Child vmethod implementation type: bar()"
-			);
-			assertTrue(
-				cry_impl_type == expected_child_cry_impl,
-				"Invalid Child vmethod implementation type: cry()"
-			);
 
 			auto vt_foo     = imd.vtable[base::StrID("foo")];
 			auto vt_bar     = imd.vtable[base::StrID("bar")];
@@ -204,10 +169,7 @@ private:
 
 			assertTrue(imd.implements.empty(), "PietMondrian should implement no interfaces");
 			assertTrue(imd.virtual_methods.empty(), "PietMondrian should have no virtual methods");
-			// assertTrue(
-			// 	imd.vmethods_implementations.empty(),
-			// 	"PietMondrian should not implement any virtual methods"
-			// );
+			assertTrue(imd.vtable.empty(), "PietMondrian's  vtable should be empty");
 
 			return;
 		}

@@ -18,7 +18,6 @@ public:
 		TESTER_ADD_TEST(semantics);
 	}
 
-
 private:
 	void downcast() { runTestOnVm("semantics/downcast.dbc", "", "10", {}, 0); }
 

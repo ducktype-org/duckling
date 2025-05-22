@@ -42,7 +42,7 @@ type class: Cat {
         hunt: Cat_hunt_impl,
     };
 }
-
+TODOOOOOOO
 # ============ METHODS IMPLEMENTATION ============ 
 # Implementation for Animal.
 function Animal_makeSound_impl {

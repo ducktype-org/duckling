@@ -5,7 +5,6 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
-#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 

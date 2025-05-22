@@ -1,5 +1,6 @@
 #include "function_validator.hpp"
 
+#include "base/optional.hpp"
 #include <base/exceptions.hpp>
 #include <base/ref.hpp>
 #include <base/variant.hpp>
@@ -11,6 +12,7 @@
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
+#include <ranges>
 #include <variant>
 
 using namespace vm::code::builders;
@@ -228,18 +230,14 @@ void FunctionValidator::validateArgTypes(
 			variant_case(opargs::MethodName, method_value) {
 				auto method_name = method_value.method_name;
 				auto generic_arg = opargs::OpCodeArg{ method_value };
-				bool valid       = false;
-				for (const auto& types: type_context.getTypes()) {
-					variant_match(types) {
-						variant_case(ClassType, clazz) {
-							for (const auto& vmethod: clazz.virtual_methods)
+				bool valid = false;
+				for (const auto& type : type_context.getTypes()) {
+					std::visit([&](const auto& t) {
+						if constexpr (requires { t.virtual_methods; }) {
+							for (const auto& vmethod : t.virtual_methods)
 								if (vmethod.name == method_name) valid = true;
 						}
-						variant_case(InterfaceType, iface) {
-							for (const auto& vmethod: iface.virtual_methods)
-								if (vmethod.name == method_name) valid = true;
-						}
-					}
+					}, type);
 					if (valid) break;
 				}
 				if (!valid) throw UnknownMethodError(generic_arg);
@@ -367,7 +365,6 @@ void FunctionValidator::traverseControlFlowGraph() {
 
 	while (index != instructions.size()) {
 		validateExtension(index);
-		// Validate non-control flow instruction there.
 		validateInstruction(instructions[index], local_stack);
 
 		visited_instructions[index] = true;
@@ -416,6 +413,10 @@ void FunctionValidator::traverseControlFlowGraph() {
 			}
 			variant_case(Op_call_builtin_func, instr) {
 				local_stack.popCallArgs(instr.arg0, type_context);
+				index++;
+			}
+			variant_case(Op_virtual_call_lptr_method, instr) {
+				local_stack.popMethodCallArgs(instr.arg1, instr.arg0, type_context);
 				index++;
 			}
 			variant_case(Op_ret_tailcall_func, instr) {
@@ -523,6 +524,50 @@ void FunctionValidator::LocalStack::popCallArgs(
 		local_name_to_type.erase(stack_state.back().local_name);
 		stack_state.pop_back();
 	}
+	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+}
+
+void FunctionValidator::LocalStack::popMethodCallArgs(
+	const opargs::MethodName&    method,
+	const opargs::StackLocalPtr& obj_ptr,
+	const TypeContext&           type_context
+) {
+	// TODO: This implementation seeking occurs in a couple of places. Think of a better way.
+	base::StrID impl_name;
+	for (const auto& type: type_context.getMetadata()) {
+		if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+			if (inh_meta.virtual_methods.contains(method.method_name)) {
+				impl_name = inh_meta.virtual_methods[method.method_name]->getName();
+				break;
+			}
+		}
+	}
+
+	auto generic_arg   = opargs::OpCodeArg{ method };
+	auto func_type     = std::get<FunctionType>(*type_context.getTypes().at(impl_name));
+	bool check_ret_val = func_type.result != base::StrID("void");
+
+	if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+
+	for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
+		if (code::typeName(*stack_state.back().type) != param)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		local_name_to_type.erase(stack_state.back().local_name);
+		stack_state.pop_back();
+	}
+
+	// In method call validation, the first argument of the called function has to be the same as an
+	// object pointer on which the method is invoked.
+	auto type_name    = code::typeName(*stack_state.back().type);
+	auto ptr_on_stack = std::get<PointerType>(*type_context.getTypes().at(type_name));
+	auto ptr_in_call  = std::get<PointerType>(*local_name_to_type[obj_ptr.var_name]);
+	if (ptr_in_call.inner != ptr_on_stack.inner)
+		throw InvalidFunctionCallArgumentsError(generic_arg);
+	local_name_to_type.erase(stack_state.back().local_name);
+	stack_state.pop_back();
+
 	if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
 		throw InvalidFunctionCallArgumentsError(generic_arg);
 }

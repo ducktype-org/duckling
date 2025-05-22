@@ -4,6 +4,7 @@
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
 
+#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -40,17 +41,29 @@ namespace vm::code::builders {
 			base::HashMap<base::StrID, CRef<TypeOfData>> local_name_to_type;
 
 			LocalStack(const FunctionType& type, const TypeContext& type_context);
+
 			void push(
 				const opargs::StackLocalAny& local,
 				const opargs::Type&          type,
 				const TypeContext&           type_context
 			);
-			void             pop(const instructions::Op_deinit& cause);
-			bool             contains(base::StrID local_name) const;
+
+			void pop(const instructions::Op_deinit& cause);
+
+			bool contains(base::StrID local_name) const;
+
 			CRef<TypeOfData> at(base::StrID local_name) const;
-			void             popCallArgs(
-							const opargs::OpCodeFunctionArg& function, const TypeContext& type_context
-						);
+
+			void popCallArgs(
+				const opargs::OpCodeFunctionArg& function, const TypeContext& type_context
+			);
+
+			void popMethodCallArgs(
+				const opargs::MethodName&    method,
+				const opargs::StackLocalPtr& obj_ptr,
+				const TypeContext&           type_context
+			);
+
 			void validateTailcall(
 				const opargs::OpCodeFunctionArg& function,
 				const TypeContext&               type_context,

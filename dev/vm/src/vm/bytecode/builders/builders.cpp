@@ -75,7 +75,6 @@ const ExpectedType& TypeContextBuilder::getType(
 	throw error_factory();
 }
 
-// Class or Data.
 template<typename FieldableType>
 void TypeContextBuilder::collectFieldsRecursive(
 	const FieldableType&                     fieldable,
@@ -97,20 +96,17 @@ void TypeContextBuilder::collectFieldsRecursive(
 	}
 }
 
-// Class of Interface.
 template<typename InheritableType, typename ErrorContextType>
 void TypeContextBuilder::collectVirtualMethodsRecursive(
 	const InheritableType&                   inh,
 	const ErrorContextType&                  error_context_inh,
-	base::HashMap<base::StrID, base::StrID>& virtual_methods,
-	bool                                     throw_on_duplicates  // TODO: That may be not needed.
+	base::HashMap<base::StrID, base::StrID>& virtual_methods
 ) const {
 	for (const auto& interface_name: inh.implements) {
-		// TODO: Potentially move implements validation here.
 		const auto& interface = getType<InterfaceType>(interface_name, inh, [&]() {
 			return InvalidImplementsError(error_context_inh);
 		});
-		collectVirtualMethodsRecursive<InterfaceType>(interface, error_context_inh, virtual_methods);
+		collectVirtualMethodsRecursive(interface, error_context_inh, virtual_methods);
 	}
 
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
@@ -118,13 +114,11 @@ void TypeContextBuilder::collectVirtualMethodsRecursive(
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
 				return InvalidExtends(inh);
 			});
-			collectVirtualMethodsRecursive<ClassType>(
-				super_class, error_context_inh, virtual_methods
-			);
+			collectVirtualMethodsRecursive(super_class, error_context_inh, virtual_methods);
 		}
 	}
 	for (const auto& vmethod: inh.virtual_methods) {
-		if (throw_on_duplicates && virtual_methods.contains(vmethod.name))
+		if (virtual_methods.contains(vmethod.name))
 			throw DuplicatedVirtualMethodError(error_context_inh, vmethod.name);
 		virtual_methods.put(vmethod.name, vmethod.type);
 	}
@@ -136,7 +130,6 @@ void TypeContextBuilder::collectImplementationsRecursive(
 	const ErrorContextType&                  error_context_inh,
 	base::HashMap<base::StrID, base::StrID>& implementations
 ) const {
-	// Insert those implemented by this class.
 	for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 	for (const auto& interface_name: inh.implements) {
 		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
@@ -154,9 +147,6 @@ void TypeContextBuilder::collectImplementationsRecursive(
 	}
 }
 
-
-
-// Class or interface.
 template<typename InheritableType>
 void TypeContextBuilder::validateMethodFirstArgument(
 	const InheritableType& inh, const FunctionType& func_type
@@ -169,7 +159,6 @@ void TypeContextBuilder::validateMethodFirstArgument(
 	if (first_param_type.inner != inh.name) throw MethodFirstArgumentError(inh, func_type.name);
 }
 
-// Class or interface.
 template<typename InheritableType>
 void TypeContextBuilder::validateMethodSignatureMatch(
 	const InheritableType& inh, const FunctionType& vmethod_type, const FunctionType& impl_type
@@ -193,11 +182,9 @@ void TypeContextBuilder::validateVMethodSignatures(const InheritableType& inh) c
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateImplementations(const InheritableType& inh) const {
-	// TODO: Maybe it makes no sense to create a new map every time.
-	base::HashMap<base::StrID, base::StrID> virtual_methods;
-	collectVirtualMethodsRecursive(inh, inh, virtual_methods);
-
+void TypeContextBuilder::validateImplementations(
+	const InheritableType& inh, const base::HashMap<base::StrID, base::StrID>& virtual_methods
+) const {
 	base::HashMap<base::StrID, base::StrID> implementations;
 	for (const auto& implementation: inh.implementations) {
 		if (implementations.contains(implementation.name))
@@ -215,19 +202,15 @@ void TypeContextBuilder::validateImplementations(const InheritableType& inh) con
 		const auto& impl_type      = getType<FunctionType>(impl_type_name, inh, [&]() {
             return TypeIsNotFunctionalError(impl_type_name);
         });
-		// First argument should always be a this*
+
 		validateMethodFirstArgument(inh, impl_type);
-		// Arguments and result types have to match the virtual methods type.
 		validateMethodSignatureMatch(inh, vmethod_type, impl_type);
 	}
 }
 
-
-// Potentially pass the required vmethods map as a parameter so it's faster.
-void TypeContextBuilder::validateAllMethodsImplemented(const ClassType& clazz) const {
-	base::HashMap<base::StrID, base::StrID> virtual_methods;
-	collectVirtualMethodsRecursive(clazz, clazz, virtual_methods);
-
+void TypeContextBuilder::validateAllMethodsImplemented(
+	const ClassType& clazz, const base::HashMap<base::StrID, base::StrID>& virtual_methods
+) const {
 	base::HashMap<base::StrID, base::StrID> implementations;
 	collectImplementationsRecursive(clazz, clazz, implementations);
 
@@ -260,9 +243,8 @@ void TypeContextBuilder::buildVTableRecursive(
 	auto get_type_cref = [&](base::StrID name) -> TypeCRef {
 		return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(inh, name);
 	};
-	// Insert those implemented by this class.
-	for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
 
+	for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
 	for (const auto& interface_name: inh.implements) {
 		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
 			return InvalidImplementsError(error_context_inh);
@@ -349,32 +331,35 @@ vm::InheritanceMetadata TypeContextBuilder::buildInheritanceMetadata(
 		kind,
 		std::move(implements),
 		std::move(virtual_methods),
-		std::move(implementations),
 		std::move(vtable),
 	};
 }
 
 void TypeContextBuilder::validateType(const TypeOfData& type) const {
-	// TODO: What is someone declares a field named vt.
-	// TODO: Funkcje ktorym przekażemy typ funkcyjny jako argument?
-	// TODO: Think about how other types should be verified.
-
 	variant_match(type) {
 		variant_case(VariantType, variant) {
 			if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
 		}
 		variant_case(DataType, data) { validateFieldDuplicates(data); }
 		variant_case(InterfaceType, interface) {
+			base::HashMap<base::StrID, base::StrID> virtual_methods;
+			collectVirtualMethodsRecursive(interface, interface, virtual_methods);
+
 			validateImplementsDuplicates(interface);
 			validateVMethodSignatures(interface);
-			validateImplementations(interface);
+			validateImplementations(interface, virtual_methods);
 		}
 		variant_case(ClassType, clazz) {
+			// All virtual methods that can be implemented by this class(including superclass and
+			// interface vmethods as well).
+			base::HashMap<base::StrID, base::StrID> virtual_methods;
+			collectVirtualMethodsRecursive(clazz, clazz, virtual_methods);
+
 			validateFieldDuplicates(clazz);
 			validateImplementsDuplicates(clazz);
 			validateVMethodSignatures(clazz);
-			validateImplementations(clazz);
-			if (!clazz.is_abstract) validateAllMethodsImplemented(clazz);
+			validateImplementations(clazz, virtual_methods);
+			if (!clazz.is_abstract) validateAllMethodsImplemented(clazz, virtual_methods);
 		}
 	}
 }

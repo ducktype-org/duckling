@@ -16,7 +16,7 @@ namespace vm::code::builders {
 	public:
 		BuilderError(std::string reason): base::LogicError(std::move(reason)) {}
 
-		// @brief element causing the error
+		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
 	};
 
@@ -49,8 +49,10 @@ namespace vm::code::builders {
 			  FUNC_NAME(func_name) {}
 	};
 
-	// @brief position-less error for function definitions.
-	// For function name arguments, like in call instructions, use UnknownFunctionError.
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class MissingFunctionalTypeError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
@@ -61,8 +63,10 @@ namespace vm::code::builders {
 			  FUNC_NAME(func_name) {}
 	};
 
-	// @brief position-less error for function definitions.
-	// For function name arguments, like in call instructions, use UnknownFunctionError.
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class TypeIsNotFunctionalError: public BuilderError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
@@ -112,12 +116,12 @@ namespace vm::code::builders {
 		}
 	};
 
-	class ClassErrorBase: public BuilderError {
+	class TypeWithAttributeBase: public BuilderError {
 	public:
 		const TypeOfData  TYPE;
 		const base::StrID ATTRIBUTE_NAME;
 
-		ClassErrorBase(std::string msg, TypeOfData argument, base::StrID field_name):
+		TypeWithAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
 			  BuilderError(std::move(msg)),
 			  TYPE(std::move(argument)),
 			  ATTRIBUTE_NAME(field_name) {}
@@ -155,24 +159,24 @@ namespace vm::code::builders {
 			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	};
 
-#define DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(error_name, msg)                                          \
-	class error_name: public ClassErrorBase {                                                      \
-	public:                                                                                        \
-		constexpr static const std::string_view ERR_MSG = (msg);                                   \
-                                                                                                   \
-		error_name(TypeOfData type, base::StrID field_name):                                       \
-			  ClassErrorBase(base::strConcat(ERR_MSG, field_name), std::move(type), field_name) {} \
+#define DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(error_name, msg)                           \
+	class error_name: public TypeWithAttributeBase {                                \
+	public:                                                                         \
+		constexpr static const std::string_view ERR_MSG = (msg);                    \
+                                                                                    \
+		error_name(TypeOfData type, base::StrID field_name):                        \
+			  TypeWithAttributeBase(                                                \
+				  base::strConcat(ERR_MSG, field_name), std::move(type), field_name \
+			  ) {}                                                                  \
 	};
 
-	// Class/Interface errors.
 	DEFINE_TYPE_ERROR(
 		InvalidImplementsError, "This interface/class can implement only other interfaces: "
 	);
+	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
 	DEFINE_TYPE_ERROR(
-		EmptyVariantError, "This variant type is empty: "
-	);
-	DEFINE_TYPE_ERROR(
-		DuplicatedImplementsError, "This interface/class tried implementing the same interface twice: "
+		DuplicatedImplementsError,
+		"This interface/class tried implementing the same interface twice: "
 	);
 	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
 	DEFINE_TYPE_ERROR(
@@ -183,7 +187,9 @@ namespace vm::code::builders {
 		MethodTypeError,
 		"Implementations and virtual method declarations should have the same signature: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(MethodFirstArgumentError, "Methods first argument should be a this*: ");
+	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+		MethodFirstArgumentError, "Methods first argument should be a this*: "
+	);
 
 	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(DuplicatedFieldError, "This objects' field is duplicated: ");
 	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(

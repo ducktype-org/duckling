@@ -5,9 +5,6 @@
 
 #include "instruction.hpp"
 
-#include "base/maps.hpp"
-#include "base/string_id.hpp"
-
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -46,7 +43,8 @@ namespace vm::low {
 			const std::vector<code::GlobalData>&   global_data,
 			const base::HashMap<i32, base::StrID>& method_name_pool
 		):
-			  types(std::move(types)), method_name_pool(method_name_pool) {
+			  types(std::move(types)),
+			  method_name_pool(method_name_pool) {
 			for (const auto& func: functions) this->functions.insert(func, func.name);
 			for (const auto& global: global_data)
 				this->global_data.insert(this->types->at(global.type), global.name);
@@ -55,8 +53,9 @@ namespace vm::low {
 		StableTypeIdNameMap<FuncData, usize>        functions;
 		Box<TypeMetadata>                           types;
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
-		// This contains all method names in the program. It's used by the executor to determine the
-		// name of called functions
+		// Contains all method names in the program. It's used by the executor to determine the
+		// names of called functions.
+		// TODO: Create a MethodID.
 		base::HashMap<i32, base::StrID> method_name_pool;
 	};
 }

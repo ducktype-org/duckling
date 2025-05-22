@@ -1,20 +1,8 @@
-
 type pointer: pointer_A A
 type fun: method_foo_void_A {pointer_A} void
 type fun: method_foo_void_impl_A {pointer_A} void
 
-function method_foo_void_impl_A {
-    init_lany_type x, i64;
-    mov_l64_imm x, 420;
-    output_l64 x;
-    deinit;
-    ret;
-}
-
 type class: A {
-    fields: {
-        x: i64,
-    };
     virtual_methods: {
         foo: method_foo_void_A,
     };

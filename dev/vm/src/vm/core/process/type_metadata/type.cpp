@@ -105,7 +105,6 @@ namespace vm {
 	void Type::finalize() {
 		if (state == State::Finalizing) {
 			// @TODO: better errors
-			// TODO: resolve that todo.
 			CORE_PANIC("Cyclic type dependency");
 		}
 		if (state == State::Finalized) return;

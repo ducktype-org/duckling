@@ -198,8 +198,6 @@ namespace vm::code {
 		base::Optional<base::StrID> extends;
 		std::vector<base::StrID>    implements;
 		std::vector<Field>          virtual_methods;
-		
-		// This are only the implementations declared for this class.
 		std::vector<Field>          implementations;
 
 		bool operator==(const ClassType& other) const {

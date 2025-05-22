@@ -29,16 +29,11 @@
 
 #include "opcodes_functions_utils.hpp"
 
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/memory/pointer.hpp"
-#include "vm/core/process/type_metadata/definitions.hpp"
-#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
-#include "vm/core/process/type_metadata/type.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -362,6 +357,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
+			// TODO: MERGE WITH CALL_FUNC
 			// Get the pointer data.
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			// Get the inheritance metadata for this pointer
@@ -380,22 +376,20 @@ namespace vm {
 
 			const vm::InheritanceMetadata& inh_metadata = *opt_inh_meta;
 
-			auto method_name = thread.executing_program->method_name_pool[instr->arg1];
+			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
 			auto implementation_name = inh_metadata.vtable[method_name];
-			
+
 			// TODO: Use the helper method.
 			bool  found         = false;
 			usize function_id   = 0;
-			auto&  all_functions = thread.executing_program->functions;
+			auto& all_functions = thread.executing_program->functions;
 			for (usize i = 0; i < all_functions.size(); i++) {
 				if (all_functions[i].name == implementation_name->getName()) {
 					function_id = i;
-					found = true;
+					found       = true;
 				}
 			}
-			if (!found) {
-				CORE_PANIC("Implementation for method not found during call");
-			}
+			if (!found) CORE_PANIC("Implementation for method not found during call");
 
 			// This is copied 1:1 from call_func;
 			auto& runtime_data = thread.runtime_data;

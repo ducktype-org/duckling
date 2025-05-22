@@ -188,7 +188,6 @@ namespace vm::opargs {
 		MethodName,
 		Label>;
 	using OpCodeLocalArg    = std::variant<VM_OPARG_LOCAL_TYPES>;
-	// TODO: These should be verified as well
 	using OpCodeFunctionArg = std::variant<FunctionName, BuiltinFunctionName>;
 }
 

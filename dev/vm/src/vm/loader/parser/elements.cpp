@@ -7,7 +7,6 @@
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
-#include "base/string_id.hpp"
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
 
@@ -417,7 +416,7 @@ namespace vm::loader::parser {
 			std::vector<Field>          fields;
 			std::vector<base::StrID>    implements;
 			std::vector<Field>          virtual_methods;
-			std::vector<Field>          vmethods_implementations;
+			std::vector<Field>          implementations;
 			base::Optional<base::StrID> extends;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
@@ -497,16 +496,14 @@ namespace vm::loader::parser {
 				}
 				case lang_def::Keyword::BCMethodImplementations: {
 					state.parse().one(lang_def::NamedOperator::Colon);
-					vmethods_implementations = parseFields(state);
+					implementations = parseFields(state);
 					state.parse().one(lang_def::Special::Semicolon);
 					break;
 				}
 				case lang_def::Keyword::BCFields: {
 					state.parse().one(lang_def::NamedOperator::Colon);
 					// The first field is the VTable pointer
-					fields = parseFields(state);
-					// TODO: Why not like this?
-					// for (auto field: parseFields(state)) fields.push_back(field);
+					for (auto field: parseFields(state)) fields.push_back(field);
 					state.parse().one(lang_def::Special::Semicolon);
 					break;
 				}
@@ -530,7 +527,7 @@ namespace vm::loader::parser {
 										 name,
 										 std::move(implements),
 										 std::move(virtual_methods),
-										 std::move(vmethods_implementations)
+										 std::move(implementations)
 									 ))
 			                       : TypeOfData(ClassType(
 										 name,
@@ -539,7 +536,7 @@ namespace vm::loader::parser {
 										 extends,
 										 std::move(implements),
 										 std::move(virtual_methods),
-										 std::move(vmethods_implementations)
+										 std::move(implementations)
 									 ));
 			VISIT(tp, t, t.bytecode_pos = out->position);
 			out->datatype = std::move(tp);
