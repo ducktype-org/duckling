@@ -3,6 +3,8 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <query_framework/context.hpp>
 
 namespace compiler::helios {
 
@@ -54,5 +56,14 @@ namespace compiler::helios {
 		HoutResultingSymbolListVisitor visitor(ctx);
 		expr->acceptVisitor(visitor);
 		return visitor.symbol;
+	}
+
+	base::Optional<SymID> querySymIDOfExpr(query::Context& ctx,pst::AccessLocked<pst::ExprElement> expr) {
+		
+		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
+
+		if (!hout_expr.hasValue()) return {};
+
+		return querySymIDOfExpr(ctx, hout_expr.value().ref());
 	}
 }
