@@ -58,8 +58,9 @@ namespace compiler::helios {
 		return visitor.symbol;
 	}
 
-	base::Optional<SymID> querySymIDOfExpr(query::Context& ctx,pst::AccessLocked<pst::ExprElement> expr) {
-		
+	base::Optional<SymID> querySymIDOfExpr(
+		query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
+	) {
 		auto hout_expr = ctx.query<compiler::helios::QueryHoutOfExpr>(expr);
 
 		if (!hout_expr.hasValue()) return {};

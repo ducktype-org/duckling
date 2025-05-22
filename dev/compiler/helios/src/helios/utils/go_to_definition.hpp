@@ -1,9 +1,9 @@
 #pragma once
 
 #include <helios/hout/elements/expr.hpp>
-#include <query_framework/query_int.hpp>
 #include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/not_statements.hpp> // @TODO for pst::ExprElement #404 relax it
+#include <pst_parser/elements/hierarchy/not_statements.hpp>  // @TODO for pst::ExprElement #404 relax it
+#include <query_framework/query_int.hpp>
 
 #include <base/optional.hpp>
 
@@ -18,5 +18,7 @@ namespace compiler::helios {
 	 * Perform go-to definition on the given PST-expression.
 	 * Returns SymID that the expression is pointing to.
 	 */
-	base::Optional<SymID> querySymIDOfPSTExpr(query::Context& ctx,pst::AccessLocked<pst::ExprElement> expr);
+	base::Optional<SymID> querySymIDOfPSTExpr(
+		query::Context& ctx, pst::AccessLocked<pst::ExprElement> expr
+	);
 }
