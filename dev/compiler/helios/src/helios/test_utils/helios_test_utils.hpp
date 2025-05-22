@@ -5,8 +5,6 @@
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
 #include <helios/scope_symbol_id.hpp>
 
-#include <vector>
-
 namespace compiler::helios::test_utils {
 	/**
 	 * Get the ModuleID and ScopeID of a module in the given directory.
@@ -22,7 +20,7 @@ namespace compiler::helios::test_utils {
 	 * @return The symbols of all elements of a chain. In particular, the symbol of the last
 	 * element in the chain is accessed with the `back()` method.
 	 */
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope);
+	SymbolList getChain(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the integral value of the last symbol in a symbol chain in a given scope.

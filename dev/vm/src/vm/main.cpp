@@ -1,5 +1,4 @@
 #include "cli.hpp"
-#include "config.hpp"
 #include "server.hpp"
 #include "vm_repl.hpp"
 
@@ -8,13 +7,12 @@
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/low_program/instruction.hpp>
 
 void showVersion() {
-	std::cout << std::boolalpha;
 	std::cout << "VM version 0.0.\n";
 	std::cout << "Configuration: \n";
-	std::cout << "IGNORE_EXECUTION_STRATEGY: " << IGNORE_EXECUTION_STRATEGY << "\n";
-	std::cout << "USE_COMPUTED_GOTO: " << USE_COMPUTED_GOTO_VALUE << "\n";
+	std::cout << vm::getInstructionConfig() << '\n';
 }
 
 int main(int argc, const char** argv) {

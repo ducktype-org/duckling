@@ -4,7 +4,6 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/utils/symbol_list.hpp>
 #include <pst_parser/access.hpp>
-#include <query_framework/query_impl.hpp>  // @TODO #404 relax it to just cache entry
 
 #include <base/optional.hpp>
 
@@ -30,12 +29,6 @@ namespace compiler::helios {
 		 * @brief Module, the scope was defined in
 		 */
 		frontend::ModuleID parent_module;
-
-		// cache entry:
-		// in the future we might need separation for: direct symbols, expanded symbols
-		// in this system scope is no longer closed/open as we think of it as a pure-value object
-		// any lookup in the scope requires calculation of symbols witch itself is done only once!
-		base::Optional<query::CacheEntry<SymbolList>> symbols;
 
 		/**
 		 * Scope depth, i.e. distance to the root scope.

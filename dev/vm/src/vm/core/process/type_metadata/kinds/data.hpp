@@ -20,9 +20,8 @@ namespace vm::kind {
 		// @todo: change to strongly typed when it will be in utils
 		using FieldID = u64;
 
-		// @todo when hashmap has operator = change to base::HashMap
-		std::unordered_map<base::StrID, FieldID> field_name_map;
-		std::vector<FieldDesc>                   fields;
+		base::HashMap<base::StrID, FieldID> field_name_map;
+		std::vector<FieldDesc>              fields;
 
 		base::Optional<InheritanceMetadata> inheritance_metadata;
 	};

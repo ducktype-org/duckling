@@ -4,13 +4,14 @@
 
 #include <base/ref.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/validator/type_validator.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 
 namespace compiler::backend_vm {
 	/**
 	 * @brief A statefull collection of code lowered into VM bytecode.
-	 * @note Currently it does not support dynamic function insertion, but I will.
+	 * @note Currently it does not support dynamic function insertion, but it will.
 	 */
 	class Module {
 		base::StrID module_id;
@@ -28,7 +29,6 @@ namespace compiler::backend_vm {
 		[[nodiscard]] vm::code::CodeCollection build() const;
 
 	private:
-		vm::code::builders::TypeContextBuilder type_context_builder;
-		vm::code::CodeCollection               code;
+		vm::code::ValidProgram valid_program;
 	};
 }

@@ -1,13 +1,10 @@
 #include "compiler.hpp"
 
-#include <diagnostic/logger.hpp>
-
+#include <base/int_conv.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
-#include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -20,7 +17,6 @@
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/errors.hpp>
 #include <vm/loader/loader.hpp>
-#include <vm/loader/logger.hpp>
 #include <vm/loader/parser/elements.hpp>
 #include <vm/loader/parser/errors.hpp>
 #include <vm/utils/stable_type_id_name_map.hpp>
@@ -33,7 +29,6 @@ namespace vm::loader::compiler {
 			const StableTypeIdNameMap<code::Function>&         func_map;
 			const TypeMetadata&                                type_map;
 			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
-			LoaderLogger                                       log{};
 			base::Optional<code::Function>                     function{};
 			base::HashMap<base::StrID, usize>                  label_positions{};
 			base::HashMap<base::StrID, usize>                  local_offset_map{};
@@ -45,8 +40,6 @@ namespace vm::loader::compiler {
 			const usize              instruction_index,
 			const opargs::OpCodeArg& opcode_arg
 		) {
-			// @TODO After typechecks (#732) most of these checks should probably
-			// get removed.
 			variant_match(opcode_arg) {
 				variant_case(vm::opargs::Immediate, imm) return imm.value;
 
@@ -58,39 +51,31 @@ namespace vm::loader::compiler {
 				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 #undef HANDLE_LOCAL
 
-#define HANDLE_GLOBAL(TYPE)                                                         \
-	variant_case(vm::opargs::TYPE, global_data) {                                   \
-		auto name = global_data.global_data_name;                                   \
-		if (ctx.globals.contains(name)) return i64(usize(*ctx.globals.idOf(name))); \
-		ctx.log.log<UnknownGlobalDataError>(global_data, name);                     \
-		return 0;                                                                   \
+#define HANDLE_GLOBAL(TYPE)                         \
+	variant_case(vm::opargs::TYPE, global_data) {   \
+		auto name = global_data.global_data_name;   \
+		return i64(usize(*ctx.globals.idOf(name))); \
 	}
 				FOR_EACH(HANDLE_GLOBAL, VM_OPARG_GLOBAL_TYPES);
 #undef HANDLE_GLOBAL
 
 				variant_case(vm::opargs::Type, type_arg) {
-					if (auto type_obj = ctx.type_map.atMaybe(type_arg.type_name))
-						return static_cast<i64>(static_cast<u64>(type_obj.value()->getID()));
-					ctx.log.log<UnknownTypeError>(type_arg, type_arg.type_name);
-					return 0;
+					auto type_obj = ctx.type_map.at(type_arg.type_name);
+					return static_cast<i64>(static_cast<u64>(type_obj->getID()));
+				}
+				variant_case(vm::opargs::Field, field_arg) {
+					auto type_obj     = ctx.type_map.at(field_arg.type_name);
+					auto field_offset = *type_obj->getFieldOffsetByName(field_arg.field_name);
+					return static_cast<i64>(field_offset);
 				}
 				variant_case(vm::opargs::FunctionName, func) {
-					for (i64 i = 0; i < ctx.func_map.size(); i++)
-						if (ctx.func_map.at(base::safeIntConv<u64>(i))->name.str
-						    == func.function_name)
-							return i;
-					ctx.log.log<UnknownFunctionError>(func, func.function_name);
-					return 0;
+					return i64(*ctx.func_map.idOf(func.function_name));
 				}
 				variant_case(vm::opargs::BuiltinFunctionName, func) {
-					auto func_id = builtins::getBuiltinFunctionID(func.function_name);
-					if (func_id)
-						return base::safeIntConv<i64>(
-							static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(*func_id
-						    )
-						);
-					ctx.log.log<UnknownFunctionError>(func, func.function_name);
-					return 0;
+					auto func_id = *builtins::getBuiltinFunctionID(func.function_name);
+					return base::safeIntConv<i64>(
+						static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
+					);
 				}
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
@@ -100,6 +85,7 @@ namespace vm::loader::compiler {
 					// because our instruction counter is a pointer.
 					return static_cast<i64>(pos) - static_cast<i64>(instruction_index) - 1;
 				}
+				variant_default { CORE_PANIC("Unhandled OpCode argument type"); }
 			}
 
 			CORE_UNREACHABLE();
@@ -133,14 +119,11 @@ namespace vm::loader::compiler {
 #include <vm/bytecode/opcode_definitions.hpp>
 				}
 
-				func_data.bc.emplace_back(Fix8Instruction{
-#ifdef USE_TAIL_CALLS
-					.opfun = vm::OpFuns::OPFUNS.at(low::fix8FromInstr(op)),
-#else
-					.opcode = static_cast<u16>(low::fix8FromInstr(op)),
-#endif
-					.arg0 = static_cast<i32>(arg_0),
-					.arg1 = static_cast<i32>(arg_1) });
+				func_data.bc.emplace_back(makeLowInstruction(
+					low::fix8FromInstr(op),
+					base::safeIntConv<i32>(arg_0),
+					base::safeIntConv<i32>(arg_1)
+				));
 			}
 			return func_data;
 		}
@@ -171,8 +154,10 @@ namespace vm::loader::compiler {
 			auto push = [&](opargs::StackLocalAny local, opargs::Type type) {
 				if_opt_some(offsets.atMaybe(local.var_name), offset) {
 					if (offset != curr_stack_size) {
-						ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
-						return;
+						// ctx.log.log<DuplicatedLocalNameError>(local, local.var_name);
+						CORE_PANIC(
+							"DuplicatedLocalNameError - used a variable again at a different offset"
+						);
 					}
 				}
 
@@ -271,24 +256,19 @@ namespace vm::loader::compiler {
 		}
 	}
 
-	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
-		std::vector<low::FuncData> converted_functions;
-		converted_functions.reserve(program.funcMap().size());
-
+	low::LowVMProgram compile(const code::ValidProgram& program) {
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
+		std::vector<low::FuncData> converted_functions;
+		converted_functions.reserve(program.functions().size());
+
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto ctx = CompilationContext(program.funcMap(), *types, globals);
+		auto ctx = CompilationContext(program.functions(), *types, globals);
 
-		for (const auto& global: program.globalMap()) {
-			match_optional(types->atMaybe(global.type)) {
-				opt_some(type) { globals.insert(type, global.name); }
-				opt_none { ctx.log.log<UnknownTypeError>(global.type, global.type.str); }
-			}
-		}
+		for (const auto& global: program.globals())
+			globals.insert(types->at(global.type), global.name);
 
-
-		for (auto& func: program.funcMap()) {
+		for (auto& func: program.functions()) {
 			ctx.function = func;
 			splitCodeAndLabels(ctx);
 			calculateOffsets(ctx);
@@ -297,11 +277,10 @@ namespace vm::loader::compiler {
 			converted_functions.push_back(converted_func);
 		}
 
-		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
 		return low::LowVMProgram{
 			converted_functions,
 			std::move(types),
-			{ program.globalMap().begin(), program.globalMap().end() },
+			{ program.globals() | std::ranges::to<std::vector>() },
 		};
 	}
 }
