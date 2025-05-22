@@ -40,11 +40,11 @@ namespace compiler::helios::test_utils {
 			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
+				result.list.insert(result.end(), dealiased.begin(), dealiased.end());
 			}
 			first_symbol = false;
 		}
-		return result;
+		return result.list;
 	}
 
 	i64 getValue(const std::string_view chain, ScopeID scope) {
