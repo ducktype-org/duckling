@@ -1,55 +1,11 @@
-#include "builders.hpp"
+#include "type_validator.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/str_utils.hpp>
-#include <base/variant.hpp>
+#include "errors.hpp"
 
-#include <vm/bytecode/builders/errors.hpp>
-#include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/instructions.hpp>
-#include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-#include <ranges>
-
-using namespace vm::code::builders;
-
-FunctionBuilder::FunctionBuilder(
-	vm::code::Identifier name, const GlobalDataMap& globals, const TypeContext& types
-):
-	  name(name),
-	  type_context(types),
-	  globals(globals) {}
-
-vm::code::Function FunctionBuilder::build() const {
-	FunctionValidator validator(name, type_context, globals, instructions);
-	validator.validate();
-	Function function;
-	function.body = validator.extractReachableCode();
-	function.name = name;
-	return function;
-}
-
-void FunctionBuilder::addInstruction(const Instruction& instruction) {
-	instructions.push_back(instruction);
-}
-
-void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
-	for (auto&& instr: instruction.build()) this->addInstruction(instr);
-}
-
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
-) const {
-	return types;
-}
-
-void TypeContextBuilder::validateType(const TypeOfData& type) const {
+void vm::code::TypeContext::validateType(const TypeOfData& type) const {
 	auto get_type = [&](base::StrID name) {
 		return types.atMaybe(name).expect<UnknownSubtypeError>(type, name);
 	};
@@ -80,7 +36,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	}
 }
 
-void TypeContextBuilder::validateTypes() const {
+void vm::code::TypeContext::validateTypes() const {
 	for (const auto& type: types) validateType(type);
 
 	// Check for cycles in hierarchy.
@@ -114,33 +70,35 @@ void TypeContextBuilder::validateTypes() const {
 	for (const auto& type: types) helper(type);
 }
 
-TypeContext TypeContextBuilder::build() const {
+Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() const {
 	validateTypes();
-	TypeContext tctx;
-	tctx.types = types;
-	for (const auto& type: types)
-		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
-	auto to_low_type
-		= [&](const TypeOfData& tod) { return tctx.metadata->at(VISIT(tod, tp, return tp.name)); };
-	for (const auto& type: tctx.types) {
+	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
+
+	// Declare all types first
+	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
+
+	auto to_low_type = [&](const TypeOfData& tod) { return metadata->at(typeName(tod)); };
+
+	// Well-define every type.
+	for (const auto& type: types) {
 		variant_match(type) {
 			variant_case(vm::code::PrimitiveType, data) {
-				tctx.metadata->at(data.name)->definePrimitive(data.size);
+				metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(vm::code::PointerType, data) {
-				tctx.metadata->at(data.name)->definePointer(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+				metadata->at(data.name)->definePointer(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::StaticTableType, data) {
-				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
+				metadata->at(data.name)->defineStaticTable(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
-				tctx.metadata->at(data.name)->defineDynamicTable(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+				metadata->at(data.name)->defineDynamicTable(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::DataType, data) {
@@ -149,32 +107,30 @@ TypeContext TypeContextBuilder::build() const {
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						tctx.metadata->atMaybe(field.type)
-							.expect<UnknownSubtypeError>(data, field.name)
+						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
 					);
-				tctx.metadata->at(data.name)->defineData(fields, {});
+				metadata->at(data.name)->defineData(fields, {});
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(
-						tctx.metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
+						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
 					);
-				tctx.metadata->at(data.name)->defineVariant(variants);
+				metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(vm::code::FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters)
-					parameters.emplace_back(tctx.metadata->at(param));
-				tctx.metadata->at(data.name)->defineFunction(
+				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
+				metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
+					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
 			variant_case(vm::code::OpaqueType, opaque) {
-				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
+				metadata->at(opaque.name)->defineOpaque(opaque.size);
 			}
 			variant_case(vm::code::ClassType, data) {
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
@@ -184,12 +140,11 @@ TypeContext TypeContextBuilder::build() const {
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						tctx.metadata->atMaybe(field.type)
-							.expect<UnknownSubtypeError>(data, field.name)
+						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
 					);
-				TypeRef tp       = tctx.metadata->at(data.name);
+				TypeRef tp       = metadata->at(data.name);
 				auto    get_type = [&](base::StrID name) -> TypeCRef {
-                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+                    return metadata->atMaybe(name).expect<UnknownSubtypeError>(data, name);
 				};
 				auto kind = InheritanceMetadata::Class{
 					.is_abstract = data.is_abstract,
@@ -209,9 +164,9 @@ TypeContext TypeContextBuilder::build() const {
 				std::vector<std::pair<base::StrID, TypeRef>> fields{
 					{ base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) }
 				};
-				TypeRef tp       = tctx.metadata->at(data.name);
+				TypeRef tp       = metadata->at(data.name);
 				auto    get_type = [&](base::StrID name) -> TypeCRef {
-                    return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(data, name);
+                    return metadata->atMaybe(name).expect<UnknownSubtypeError>(data, name);
 				};
 				auto implements = data.implements | std::views::transform(get_type)
 				                | std::ranges::to<std::vector>();
@@ -229,21 +184,19 @@ TypeContext TypeContextBuilder::build() const {
 			variant_default { CORE_PANIC("bad type"); }
 		}
 	}
-	tctx.metadata->finalize();
-	return tctx;
+	metadata->finalize();
+	return metadata;
 }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& TypeContext::getTypes() const { return types; }
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContext::getCurrentTypes() const {
+	return types;
+}
 
-const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
-
-Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
-
-void TypeContextBuilder::addType(const TypeOfData& type) {
-	const auto name = VISIT(type, tp, return tp.name);
+void vm::code::TypeContext::insertType(const TypeOfData& type) {
+	const auto name = typeName(type);
 	match_optional(types.atMaybe(name)) {
-		opt_some(tp) {
-			if (type != *tp) throw DuplicatedTypeError(type);
+		opt_some(previous_type) {
+			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
 		}
 		opt_none { types.insert(type, name); }
 	}

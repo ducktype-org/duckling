@@ -4,6 +4,7 @@
 namespace vm::loader::compiler {
 	/**
 	 * @brief Transforms high-level Program into low-level program.
+	 * @TODO: Currently has an assumption about stack variables.
 	 */
-	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program);
+	low::LowVMProgram compile(const code::ValidProgram& program);
 }
