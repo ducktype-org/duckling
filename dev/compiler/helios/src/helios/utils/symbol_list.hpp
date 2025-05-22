@@ -8,7 +8,7 @@ namespace compiler::helios {
 	/**
 	 * A simple list of symbols, with additional semantic meaning, that it
 	 * is in some way treated as a sym0.sym1.sym2...symN expression.
-	 * HELIOS uses it in some places, especially in the lookup and 
+	 * HELIOS uses it in some places, especially in the lookup and
 	 * dealiasing process.
 	 */
 	struct SymbolList {
@@ -35,12 +35,12 @@ namespace compiler::helios {
 		}
 
 		[[nodiscard]]
-		auto begin()const  {
+		auto begin() const {
 			return list.begin();
 		}
 
 		[[nodiscard]]
-		auto end()const    {
+		auto end() const {
 			return list.end();
 		}
 
@@ -50,4 +50,3 @@ namespace compiler::helios {
 		}
 	};
 }
-
