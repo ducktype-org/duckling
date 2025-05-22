@@ -26,7 +26,7 @@ namespace dia_app {
     secondary_infos(data_handle.secondary_infos),
     info_handles(data_handle.info_handles) {}
 
-    DataHandle TemplateDataHandle::to_data_handle() const {
+    DataHandle TemplateDataHandle::toDataHandle() const {
         return DataHandle(entities, secondary_infos, info_handles);
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <proto/view.pb.h>
 #include <memory>
+#include "utils.hpp"
 
 namespace dia_app {
 namespace view_manager {
@@ -142,7 +143,7 @@ namespace view_manager {
     struct CreationContext {
         std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
         std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
-        // dia_app::DataHandle data_handle;
+        std::optional<DataHandle> dataHandle;
     };
 
     class StartLineComponent : public Component {

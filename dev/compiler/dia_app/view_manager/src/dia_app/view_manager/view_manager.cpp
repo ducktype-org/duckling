@@ -20,11 +20,13 @@ namespace view_manager {
         auto creation_context = CreationContext{
         .id_to_interactive_component=std::make_shared<id_to_interactive_component_mapping_t>(),
         .hl_name_to_id=std::make_unique<std::map<std::string, hl_id_t>>()
-        // ,.data_handle = view_constructor.data_handle()
         };
         std::vector<Diagnostic> diagnostics;
         for (uint error_id = 0; error_id < input.size(); ++error_id) {
             ViewConstructor view_constructor(error_id, input);
+            // Update the view constructor context (necessary for fetching lazy content).
+            creation_context.dataHandle.emplace(view_constructor.dataHandle());
+
             diagnostics.emplace_back(Diagnostic::createFromViewConstructor(view_constructor, creation_context));
         }
         debug("ViewManager::createFromJson end");

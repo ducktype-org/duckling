@@ -15,7 +15,7 @@ namespace message_template {
         using DisplayPtr = dia_file::Ptr;
 
         virtual ~TemplateElement() {}
-        virtual DisplayPtr to_display(TemplateDataHandle handle) const = 0;
+        virtual DisplayPtr toDisplay(TemplateDataHandle handle) const = 0;
     };
 
     struct TextElement : public TemplateElement {
@@ -23,7 +23,7 @@ namespace message_template {
 
         TextElement(const std::string &text) : text(text) {}
 
-        DisplayPtr to_display(TemplateDataHandle _) const override {
+        DisplayPtr toDisplay(TemplateDataHandle _) const override {
             return std::make_shared<dia_file::TextElement>(text);
         }
     };
@@ -38,12 +38,12 @@ namespace message_template {
             }
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const override {
+        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
             std::vector<DisplayPtr> display_elems;
             for (const auto &elem : elems) {
-                display_elems.push_back(elem->to_display(handle));
+                display_elems.push_back(elem->toDisplay(handle));
             }
-            return std::make_shared<dia_file::ConcatElement>(display_elems, std::vector<uint>());
+            return std::make_shared<dia_file::ConcatElement>(display_elems);
         }
     };
 
@@ -55,7 +55,7 @@ namespace message_template {
             param = elem_node["param"].as<std::string>();
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const override {
+        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
             assert(handle.param_data.params.count(param));
             // Deep copy so independent transformations
             return handle.param_data.params.at(param)->copy();
@@ -70,9 +70,9 @@ namespace message_template {
             macro = elem_node["macro"].as<std::string>();
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const override {
+        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
             assert(handle.template_data.macros.count(macro));
-            return handle.template_data.macros.at(macro)->to_display(handle);
+            return handle.template_data.macros.at(macro)->toDisplay(handle);
         }
     };
 
@@ -87,10 +87,10 @@ namespace message_template {
             on = parse(elem_node["on"]);
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const override {
-            DisplayPtr res = on->to_display(handle);
-            InfoHandle info = InfoParamsHandle::add(include, handle.to_data_handle());
-            res->add_assoc_info(info);
+        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+            DisplayPtr res = on->toDisplay(handle);
+            InfoHandle info = InfoParamsHandle::add(include, handle.toDataHandle());
+            res->assoc_infos.insert(info);
             return res;
         }
     };
@@ -111,18 +111,18 @@ namespace message_template {
             assert(elem_node["of"]["[other]"] && "CaseOfElement missing [other] case");
         }
 
-        DisplayPtr to_display(TemplateDataHandle handle) const override {
-            DisplayPtr pattern_display = pattern->to_display(handle);
+        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+            DisplayPtr pattern_display = pattern->toDisplay(handle);
             for (const auto &kv : cases) {
                 const std::string &key = kv.first;
                 const Ptr &val = kv.second;
                 if (is_case_exact(key)) {
-                    if (key == pattern_display->to_text(handle.to_data_handle())) {
-                        return val->to_display(handle);
+                    if (key == pattern_display->toText(handle.toDataHandle())) {
+                        return val->toDisplay(handle);
                     }
                 }
             }
-            return cases.at("[other]")->to_display(handle);
+            return cases.at("[other]")->toDisplay(handle);
         }
     };
 

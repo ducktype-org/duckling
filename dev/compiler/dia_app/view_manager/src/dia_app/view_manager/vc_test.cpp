@@ -9,13 +9,13 @@ int main() {
     std::ifstream data_file("./sample_error.json");
     json data = json::parse(data_file);
     ViewConstructor view_ctor(0, data);
-    dia_app::DataHandle dh = view_ctor.data_handle();
+    dia_app::DataHandle dh = view_ctor.dataHandle();
 
     // Print part of main info in plain text.
-    if (auto result = view_ctor.load_main_info(); result.has_value()) {
-        std::cout << result.value().header_message->to_text(dh) << std::endl;
+    if (auto result = view_ctor.loadMainInfo(); result.has_value()) {
+        std::cout << result.value().header_message->toText(dh) << std::endl;
         std::cout << std::endl;
-        std::cout << result.value().code.value().content->to_text(dh) << std::endl;
+        std::cout << result.value().code.value().content->toText(dh) << std::endl;
         std::cout << std::endl;
     } else {
         throw result.error();
@@ -26,9 +26,9 @@ int main() {
     //     // Get the first secondary info's stateless handle.
     //     dia_app::InfoHandle info_handle = view_ctor.displayed_secondary_infos[0];
     //     // Load the chosen info and print its code on the screen.
-    //     if (auto result = view_ctor.load_secondary_info(info_handle); result.has_value()) {
+    //     if (auto result = view_ctor.loadSecondaryInfo(info_handle); result.has_value()) {
     //         std::cout << "info code:\n";
-    //         std::cout << result.value().code.value().content->to_text(dh) << std::endl;
+    //         std::cout << result.value().code.value().content->toText(dh) << std::endl;
     //     } else {
     //         throw result.error();
     //     }
@@ -42,11 +42,11 @@ int main() {
     // auto entity = view_ctor.secondary_infos[0].params["alternative"];
     
     // // Get the first info id associated with this entity (with `sample-2.json` will require additional "fetching").
-    // dia_app::InfoHandle info_handle = entity->get_assoc_infos(dh)[0];
+    // dia_app::InfoHandle info_handle = entity->getAssocInfos(dh)[0];
     // // Load the chosen info and print its part on the screen.
-    // if (auto result = view_ctor.load_secondary_info(info_handle); result.has_value()) {
+    // if (auto result = view_ctor.loadSecondaryInfo(info_handle); result.has_value()) {
     //     std::cout << "Associated info:\n";
-    //     std::cout << result.value().header_message->to_text(dh) << std::endl;
+    //     std::cout << result.value().header_message->toText(dh) << std::endl;
     // } else {
     //     throw result.error();
     // }

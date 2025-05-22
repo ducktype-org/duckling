@@ -113,7 +113,7 @@ namespace dia_app {
             name = node["name"].as<std::string>();
         }
 
-        std::string get_path() const {
+        std::string getPath() const {
             return MESSAGE_TEMPLATE_PATH + to_string(type) + '/' + family + '/' + name + ".yaml";
         }
 
@@ -154,7 +154,7 @@ namespace dia_app {
             active_until = node["active_until"].as<std::string>();
         }
 
-        bool same_as(const ShortMetadata &metadata) const {
+        bool sameAs(const ShortMetadata &metadata) const {
             return type == metadata.type
                 && family == metadata.family
                 && name == metadata.name;
@@ -216,7 +216,7 @@ namespace dia_app {
             DataHandle data_handle
         );
 
-        DataHandle to_data_handle() const;
+        DataHandle toDataHandle() const;
     };
 
     // A handle for the lazy evaluation of alt_content.

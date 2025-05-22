@@ -49,7 +49,7 @@ namespace message_template {
     
         TemplateData(const dia_file::ParamData &params) {
             // Fetch the message template.
-            std::string filename = params.metadata.get_path();
+            std::string filename = params.metadata.getPath();
             std::ifstream file(filename);
             if (!file.is_open()) {
                 std::cerr << "Failed to open message template!" << std::endl;
@@ -63,7 +63,7 @@ namespace message_template {
             // Parse metadata.
             assert(template_yaml["metadata"]);
             metadata = Metadata(template_yaml["metadata"]);
-            assert(metadata.same_as(params.metadata));
+            assert(metadata.sameAs(params.metadata));
 
             // Parse macros.
             const YAML::Node &macros_node = template_yaml["macros"];

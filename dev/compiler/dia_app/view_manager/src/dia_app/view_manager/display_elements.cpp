@@ -13,18 +13,11 @@ namespace dia_file {
 
     Ptr fetch_resource(ResourceHandle, DataHandle data_handle);
     void fetch_entity(EntityHandle entity_handle, DataHandle data_handle);
-    std::vector<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle);
-
-    // ---------------- DisplayElement ---------------- //
-
-    DisplayElement::~DisplayElement() = default;
-    std::shared_ptr<Component> DisplayElement::toComponent(CreationContext&) {
-        return {};
-    }
+    std::set<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle);
 
     // ---------------- TextElement ---------------- //
 
-    TextElement::TextElement(const json &elem_json) : DisplayElement({}) {
+    TextElement::TextElement(const json &elem_json) {
         if (elem_json.is_string()) {
             // Plain text, no metadata.
             content = elem_json;
@@ -39,17 +32,15 @@ namespace dia_file {
             groups = elem_json["groups"];
         }
     }
-    TextElement::TextElement(const std::string &content) : DisplayElement({}), content(content) {}
     TextElement::TextElement(const TextElement &other) :
-        DisplayElement(other.assoc_infos),
-        content(other.content),
-        groups(other.groups) {}
+        DisplayElement(other),
+        content(other.content) {}
 
     Ptr TextElement::copy() const {
         return std::make_shared<TextElement>(*this);
     }
 
-    std::string TextElement::to_text(DataHandle _) const {
+    std::string TextElement::toText(DataHandle _) const {
         return content;
     }
 
@@ -61,18 +52,20 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<Component> TextElement::toComponent(CreationContext &creation_context) {
-        if (!this->generated_component) {
-            auto component = std::make_shared<TextComponent>(this->content, this->assoc_infos);
-            this->generated_component = std::static_pointer_cast<Component>(component);
-        }
-        return this->generated_component;
+    std::shared_ptr<Component> TextElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
+        // This element involves no computations,
+        // so caching can be skipped.
+        return std::make_shared<TextComponent>(this->content, acc_data.getAssocInfos());
     }
 
 
     // ---------------- ConcatElement ---------------- //
 
-    ConcatElement::ConcatElement(const json &elem_json) : DisplayElement({}) {
+    ConcatElement::ConcatElement(const json &elem_json) {
         if (elem_json.is_array()) {
             // A simple array of elements.
             for (auto &el : elem_json) {
@@ -93,23 +86,21 @@ namespace dia_file {
             elems.push_back(parse(elem_json["content"]));
         }
     }
-    ConcatElement::ConcatElement(
-        const std::vector<Ptr> &elems,
-        const std::vector<InfoHandle> &assoc_infos
-    ) : DisplayElement(assoc_infos), elems(elems) {}
+    ConcatElement::ConcatElement(const ConcatElement &other) : DisplayElement(other) {
+        for (auto &elem : other.elems) {
+            elems.push_back(elem->copy());
+        }
+    }
+    ConcatElement::ConcatElement(const std::vector<Ptr> &elems) : elems(elems) {}
 
     Ptr ConcatElement::copy() const {
-        std::vector<Ptr> new_elems;
-        for (auto &elem : elems) {
-            new_elems.push_back(elem->copy());
-        }
-        return std::make_shared<ConcatElement>(new_elems, assoc_infos);
+        return std::make_shared<ConcatElement>(*this);
     }
 
-    std::string ConcatElement::to_text(DataHandle dh) const {
+    std::string ConcatElement::toText(DataHandle dh) const {
         std::string res;
         for (auto &elem : elems) {
-            res += elem->to_text(dh);
+            res += elem->toText(dh);
         }
         return res;
     }
@@ -122,16 +113,21 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<Component> ConcatElement::toComponent(CreationContext &creation_context) {
+    std::shared_ptr<Component> ConcatElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
         if (!this->generated_component) {
             std::vector<std::shared_ptr<Component>> sons(ssize(this->elems));
             transform(this->elems.begin(), this->elems.end(), sons.begin(),
-                [&creation_context](const Ptr &son) {
-                return son->toComponent(creation_context);
+                [&creation_context, &acc_data](const Ptr &son) {
+                return son->toComponentImpl(creation_context, acc_data);
             });
             sons.erase(std::remove_if(sons.begin(), sons.end(), [](const std::shared_ptr<Component> &ptr) {
                 return !ptr;
             }), sons.end());
+            // TODO: remove these tags (all are to be moved to CodeElement::toComponentImpl)
             std::vector<hl_id_t> tags(ssize(this->groups));
             transform(this->groups.begin(), this->groups.end(), tags.begin(),
             [&creation_context](const std::string &name) {
@@ -145,7 +141,7 @@ namespace dia_file {
 
     // ---------------- StartLineElement ---------------- //
 
-    StartLineElement::StartLineElement(const json &elem_json) : DisplayElement({}) {
+    StartLineElement::StartLineElement(const json &elem_json) {
         ASSUME_HAS(elem_json, "type");
         ASSUME_VAL(elem_json, "type", "start_line");
         if (elem_json.contains("number")) {
@@ -153,13 +149,13 @@ namespace dia_file {
         }
     }
     StartLineElement::StartLineElement(const StartLineElement &other) :
-        DisplayElement(other.assoc_infos), number(other.number) {}
+        DisplayElement(other), number(other.number) {}
 
     Ptr StartLineElement::copy() const {
         return std::make_shared<StartLineElement>(*this);
     }
 
-    std::string StartLineElement::to_text(DataHandle dh) const {
+    std::string StartLineElement::toText(DataHandle dh) const {
         return "\n";
     }
 
@@ -172,17 +168,21 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<Component> StartLineElement::toComponent(CreationContext &creation_context) {
-        if (!this->generated_component) {
-            this->generated_component = static_pointer_cast<Component>(make_shared<StartLineComponent>(this->number));
-        }
-        return this->generated_component;
+    std::shared_ptr<Component> StartLineElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        // This element involves no computations,
+        // so caching can be skipped.
+        // Moreover, start line components ignore assoc infos
+        // and groups.
+        return make_shared<StartLineComponent>(this->number);
     }
 
 
     // ---------------- InteractElement ---------------- //
     
-    InteractElement::InteractElement(const json &elem_json) : DisplayElement({}) {
+    InteractElement::InteractElement(const json &elem_json) {
         // Both "entity" and "grouping" syntax elements can be
         // interactive.
         // Note that entity data is lost when creating an instance
@@ -196,17 +196,17 @@ namespace dia_file {
         ASSUME_HAS(elem_json, "alt_content");
         alt_content = parse(elem_json["alt_content"]);
     }
-    InteractElement::InteractElement(
-        Ptr content, Ptr alt_content,
-        const std::vector<InfoHandle> &assoc_infos
-    ) : DisplayElement(assoc_infos), content(content), alt_content(alt_content) {}
+    InteractElement::InteractElement(const InteractElement &other) :
+        DisplayElement(other),
+        content(other.content->copy()),
+        alt_content(other.alt_content->copy()) {}
 
     Ptr InteractElement::copy() const {
-        return std::make_shared<InteractElement>(content->copy(), alt_content->copy(), assoc_infos);
+        return std::make_shared<InteractElement>(*this);
     }
 
-    std::string InteractElement::to_text(DataHandle dh) const {
-        return content->to_text(dh);
+    std::string InteractElement::toText(DataHandle dh) const {
+        return content->toText(dh);
     }
 
     json InteractElement::show(DataHandle dh) const {
@@ -217,10 +217,14 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<Component> InteractElement::toComponent(CreationContext &creation_context) {
+    std::shared_ptr<Component> InteractElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
         if (!this->generated_component) {
-            auto primary = this->content->toComponent(creation_context);
-            auto alternative = this->alt_content->toComponent(creation_context);
+            auto primary = this->content->toComponentImpl(creation_context, acc_data);
+            auto alternative = this->alt_content->toComponentImpl(creation_context, acc_data);
             auto result = make_shared<InteractiveComponent>(view_manager::getNewId(), primary, alternative, creation_context.id_to_interactive_component);
             creation_context.id_to_interactive_component->emplace(result->getId(), std::weak_ptr<InteractiveComponent>(result));
             this->generated_component = static_pointer_cast<Component>(result);
@@ -231,41 +235,50 @@ namespace dia_file {
 
     // ---------------- LazyElement ---------------- //
 
-    LazyElement::LazyElement(const json &elem_json) : DisplayElement({}) {
+    LazyElement::LazyElement(const json &elem_json) {
         ASSUME_HAS(elem_json, "type");
         ASSUME_VAL(elem_json, "type", "lazy");
         ASSUME_HAS(elem_json, "handle");
         handle = elem_json["handle"];
     }
     LazyElement::LazyElement(const LazyElement &other) :
-        DisplayElement(other.assoc_infos), handle(other.handle) {}
+        DisplayElement(other), handle(other.handle) {}
 
     Ptr LazyElement::copy() const {
         return std::make_shared<LazyElement>(*this);
     }
 
-    std::string LazyElement::to_text(DataHandle dh) const {
-        return evaluated(nullptr, dh)->to_text(dh);
+    std::string LazyElement::toText(DataHandle dh) const {
+        return evaluated(dh)->toText(dh);
     }
 
-    Ptr LazyElement::evaluated(Ptr _, DataHandle dh) const {
+    Ptr LazyElement::evaluated(DataHandle dh) const {
         Ptr res = fetch_resource(handle, dh);
-        // Associated infos are passed onto the newly fetched
+        // Associated infos and groups are passed onto the newly fetched
         // resource.
-        for (auto info : assoc_infos) {
-            res->add_assoc_info(info);
-        }
+        res->assoc_infos.insert(assoc_infos.begin(), assoc_infos.end());
+        res->groups.insert(groups.begin(), groups.end());
         return res;
     }
 
     json LazyElement::show(DataHandle dh) const {
-        return evaluated(nullptr, dh)->show(dh);
+        return evaluated(dh)->show(dh);
     }
-    
+
+    std::shared_ptr<Component> LazyElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
+        // This element does not correspond to any component in the result,
+        // thus the caching can be skipped.
+        return evaluated(creation_context.dataHandle.value())->toComponentImpl(creation_context, acc_data);
+    }
+
 
     // ---------------- EntityElement ---------------- //
 
-    EntityElement::EntityElement(const json &elem_json) : DisplayElement({}) {
+    EntityElement::EntityElement(const json &elem_json) {
         ASSUME_HAS(elem_json, "type");
         ASSUME_VAL(elem_json, "type", "entity");
         ASSUME_HAS_STR_ASSIGN(elem_json, refers_to);
@@ -279,16 +292,16 @@ namespace dia_file {
             content = parse(elem_json["content"]);
         }
     }
-    EntityElement::EntityElement(
-        const std::string &refers_to, Ptr content,
-        const std::vector<InfoHandle> &assoc_infos
-    ) : DisplayElement(assoc_infos), refers_to(refers_to), content(content) {}
+    EntityElement::EntityElement(const EntityElement &other) :
+        DisplayElement(other),
+        refers_to(other.refers_to),
+        content(other.content->copy()) {}
 
     Ptr EntityElement::copy() const {
-        return std::make_shared<EntityElement>(refers_to, content->copy(), assoc_infos);
+        return std::make_shared<EntityElement>(*this);
     }
 
-    std::vector<InfoHandle> EntityElement::get_assoc_infos(DataHandle dh) const {
+    std::set<InfoHandle> EntityElement::getAssocInfos(DataHandle dh) const {
         auto res = assoc_infos;
         // Scan the entity metadata for associated infos
         // and fetch all the necessary resources along the way.
@@ -305,16 +318,12 @@ namespace dia_file {
         auto entity_res = scan_entity_metadata(dh.entities[refers_to], dh);
 
         // Merge the two info pools.
-        for (auto info : entity_res) {
-            if (std::find(res.begin(), res.end(), info) == res.end()) {
-                res.push_back(info);
-            }
-        }
+        res.insert(entity_res.begin(), entity_res.end());
         return res;
     }
 
-    std::string EntityElement::to_text(DataHandle dh) const {
-        return content->to_text(dh);
+    std::string EntityElement::toText(DataHandle dh) const {
+        return content->toText(dh);
     }
 
     json EntityElement::show(DataHandle dh) const {
@@ -325,27 +334,32 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<view_manager::Component> EntityElement::toComponent(view_manager::CreationContext &creation_context) {
-        return this->content->toComponent(creation_context);
+    std::shared_ptr<view_manager::Component> EntityElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
+        // This element does not correspond to any component in the result,
+        // thus the caching can be skipped.
+        return this->content->toComponentImpl(creation_context, acc_data);
     }
 
     // ---------------- CodeElement ---------------- //
 
-    CodeElement::CodeElement(const json &elem_json) : DisplayElement({}) {
+    CodeElement::CodeElement(const json &elem_json) {
         ASSUME_HAS(elem_json, "type");
         ASSUME_VAL(elem_json, "type", "code");
         ASSUME_HAS_STR(elem_json, "content");
         content = elem_json["content"];
     }
-    CodeElement::CodeElement(
-        const std::string &content, const std::vector<InfoHandle> &assoc_infos
-    ) : DisplayElement(assoc_infos), content(content) {}
+    CodeElement::CodeElement(const CodeElement &other) :
+        DisplayElement(other), content(other.content) {}
 
     Ptr CodeElement::copy() const {
-        return std::make_shared<CodeElement>(content, assoc_infos);
+        return std::make_shared<CodeElement>(*this);
     }
 
-    std::string CodeElement::to_text(DataHandle dh) const {
+    std::string CodeElement::toText(DataHandle dh) const {
         return content;
     }
 
@@ -356,10 +370,14 @@ namespace dia_file {
         return res;
     }
 
-    std::shared_ptr<Component> CodeElement::toComponent(CreationContext &creation_context) {
+    std::shared_ptr<Component> CodeElement::toComponentImpl(
+        CreationContext &creation_context,
+        AccData acc_data
+    ) {
+        accumulateData(acc_data);
         if (!this->generated_component) {
             // TODO: use hl info after it's added
-            this->generated_component = std::static_pointer_cast<Component>(std::make_shared<CodeComponent>(this->content, std::vector<hl_id_t>{}, this->assoc_infos));
+            this->generated_component = std::static_pointer_cast<Component>(std::make_shared<CodeComponent>(this->content, std::vector<hl_id_t>{}, acc_data.getAssocInfos()));
         }
         return this->generated_component;
     }
@@ -402,15 +420,15 @@ namespace dia_file {
         data_handle.entities[entity_handle.first] = entity_handle.second;
     }
 
-    std::vector<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle) {
+    std::set<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle) {
         // Note: during scanning it may be necessary to fetch
         //       some other entities - that's what the data handle is for.
-        std::vector<InfoHandle> res;
+        std::set<InfoHandle> res;
         
         // Definition scan.
         if (entity.contains("defined_at")) {
             ASSUME_UINT(entity, "defined_at");
-            res.push_back(InfoParamsHandle::add(entity["defined_at"], handle));
+            res.insert(InfoParamsHandle::add(entity["defined_at"], handle));
         }
         // TODO: more functionalities may be added here.
         

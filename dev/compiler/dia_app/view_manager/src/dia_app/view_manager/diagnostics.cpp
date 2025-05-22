@@ -241,10 +241,10 @@ namespace view_manager {
     
     Diagnostic Diagnostic::createFromViewConstructor(ViewConstructor &view_constructor, CreationContext &creation_context) {
         std::vector<Info> infos;
-        const message_template::Info info = *view_constructor.load_main_info();
+        const message_template::Info info = *view_constructor.loadMainInfo();
         infos.emplace_back(Info::createFromInfo(info, creation_context));
         for (auto info_handle : view_constructor.displayed_secondary_infos) {
-            infos.emplace_back(Info::createFromInfo(*view_constructor.load_secondary_info(info_handle), creation_context));
+            infos.emplace_back(Info::createFromInfo(*view_constructor.loadSecondaryInfo(info_handle), creation_context));
         }
         return Diagnostic(std::move(infos));
     }

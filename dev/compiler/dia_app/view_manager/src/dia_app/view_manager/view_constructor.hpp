@@ -40,7 +40,7 @@ namespace dia_app {
             if (info_group.contains("displayed_secondary_infos")) {
                 ASSUME_ARR(info_group, "displayed_secondary_infos");
                 for (auto &el : info_group["displayed_secondary_infos"]) {
-                    displayed_secondary_infos.push_back(InfoParamsHandle::add(el, data_handle()));
+                    displayed_secondary_infos.push_back(InfoParamsHandle::add(el, dataHandle()));
                 }
             }
 
@@ -48,22 +48,22 @@ namespace dia_app {
             entities = info_group["entities"];
         }
 
-        std::expected<message_template::Info, message_template::Error> load_secondary_info(InfoHandle info_handle) {
-            uint idx = InfoParamsHandle::load(info_handle, data_handle());
+        std::expected<message_template::Info, message_template::Error> loadSecondaryInfo(InfoHandle info_handle) {
+            uint idx = InfoParamsHandle::load(info_handle, dataHandle());
             ASSUME(idx < secondary_infos.size(), "secondary info index out-of-bounds");
-            return load_info(secondary_infos[idx]);
+            return loadInfo(secondary_infos[idx]);
         }
 
-        std::expected<message_template::Info, message_template::Error> load_main_info() {
-            return load_info(main_info);
+        std::expected<message_template::Info, message_template::Error> loadMainInfo() {
+            return loadInfo(main_info);
         }
 
-        DataHandle data_handle() {
+        DataHandle dataHandle() {
             return DataHandle(entities, secondary_infos, info_handles);
         }
     private:
-        std::expected<message_template::Info, message_template::Error> load_info(const ParamData &param_data) {
-            return message_template::apply(param_data, data_handle());
+        std::expected<message_template::Info, message_template::Error> loadInfo(const ParamData &param_data) {
+            return message_template::apply(param_data, dataHandle());
         }
     };
 }

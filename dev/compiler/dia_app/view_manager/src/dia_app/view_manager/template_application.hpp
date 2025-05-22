@@ -12,7 +12,7 @@ namespace message_template {
         if (!message) return nullptr;
         
         // Evaluate the template.
-        return message->to_display(handle);
+        return message->toDisplay(handle);
     }
 
     struct DisplayPointerMessage {
