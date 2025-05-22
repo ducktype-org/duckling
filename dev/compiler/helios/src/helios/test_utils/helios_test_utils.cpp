@@ -25,7 +25,7 @@ namespace compiler::helios::test_utils {
 		return { module, base::anyCast<ScopeID>(main_file_root_scope) };
 	}
 
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope) {
+	SymbolList getChain(const std::string_view chain, ScopeID scope) {
 		auto       symbols = base::strSplit(chain, ".");
 		SymbolList result;
 		bool       first_symbol = true;
@@ -44,7 +44,7 @@ namespace compiler::helios::test_utils {
 			}
 			first_symbol = false;
 		}
-		return result.list;
+		return result;
 	}
 
 	i64 getValue(const std::string_view chain, ScopeID scope) {
