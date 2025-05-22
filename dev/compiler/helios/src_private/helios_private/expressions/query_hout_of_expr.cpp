@@ -4,7 +4,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
-#include <helios_private/builtin_operations/builtins.hpp>
+#include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -172,7 +172,7 @@ namespace compiler::helios::code {
 
 				// this is very temporary:
 				SymbolList looked_up_symbol
-					= { { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() } };
+					= { { querySymIDOfHOUTExpr(ctx, atom_expr.value().ref()).value() } };
 
 				// @note If optional is not empty it means there has been a call.
 				base::Optional<std::vector<Box<Expr>>> call_arguments;
