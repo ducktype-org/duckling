@@ -362,7 +362,6 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			std::cerr << "WELCOME TO VIRTUAL CALL\n";
 			// Get the pointer data.
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			// Get the inheritance metadata for this pointer
@@ -381,15 +380,8 @@ namespace vm {
 
 			const vm::InheritanceMetadata& inh_metadata = *opt_inh_meta;
 
-			std::cerr << "Pointers virtual method implementations\n";
-			for (auto& [name, impl]: inh_metadata.vtable)
-				std::cerr << "{" << name.strView() << ", " << impl->getName().strView() << "} | ";
-			std::cerr << "\n============\n";
-
 			auto method_name = thread.executing_program->method_name_pool[instr->arg1];
-			std::cerr << "Method name: " << method_name.strView() << '\n';
 			auto implementation_name = inh_metadata.vtable[method_name];
-			std::cerr << "Implementation name: " << implementation_name->getName().strView() << '\n';
 			
 			// TODO: Use the helper method.
 			bool  found         = false;
@@ -408,7 +400,6 @@ namespace vm {
 			// This is copied 1:1 from call_func;
 			auto& runtime_data = thread.runtime_data;
 			auto& called_func  = thread.executing_program->functions[function_id];
-			std::cerr << "Found function: " << function_id << ", " << called_func.name.strView() << '\n';
 
 			// Size of the shared stack space between called functions.
 			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;

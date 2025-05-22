@@ -212,6 +212,17 @@ namespace vm::loader::compiler {
 				curr_stack_size -= type_size;
 			};
 
+			auto seek_method_param_count
+				= [&](const base::StrID& method_name) -> base::Optional<u64> {
+				for (const auto& type: ctx.type_map) {
+					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+						if (inh_meta.virtual_methods.contains(method_name))
+							return inh_meta.virtual_methods[method_name]->getParameterCount();
+					}
+				}
+				return {};
+			};
+
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
 			push(base::StrID("ret_val"), func_type.result->getName());
 			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
@@ -276,6 +287,14 @@ namespace vm::loader::compiler {
 					variant_case(Op_call_builtin_func, instr) {
 						for (usize i = 0;
 						     i < ctx.type_map.at(instr.arg0.function_name)->getParameterCount();
+						     i++) {
+							pop();
+						}
+						index++;
+					}
+					variant_case(Op_virtual_call_lptr_method, instr) {
+						// TODO: This is strange. You should change that.
+						for (usize i = 0; i < *seek_method_param_count(instr.arg1.method_name);
 						     i++) {
 							pop();
 						}

@@ -12,10 +12,10 @@ class VmInheritanceSemanticsTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
-		// TESTER_ADD_TEST(downcast);
-		// TESTER_ADD_TEST(upcast);
+		TESTER_ADD_TEST(downcast);
+		TESTER_ADD_TEST(upcast);
 		TESTER_ADD_TEST(dynamicDispatch);
-		// TESTER_ADD_TEST(semantics);
+		TESTER_ADD_TEST(semantics);
 	}
 
 
@@ -30,18 +30,9 @@ private:
 	}
 
 	void dynamicDispatch() {
-		// runTestOnVm("semantics/error.dbc", "", "420420", {}, 0);
-		runTestOnVm("semantics/dynamic_call_with_args.dbc", "12 13", "25", {}, 0);
-		// runTestOnVm("semantics/very_simple_dispatch.dbc", "", "420", {}, 0);
-		// runTestOnVm("semantics/nested_simple_dispatch_1.dbc", "", "2137", {}, 0);
-		// runTestOnVm("semantics/nested_simple_dispatch_2.dbc", "", "2137", {}, 0);
-		// runTestOnVm("semantics/dynamic_dispatch_1.dbc", "", "0", {}, 0);
-		// runTestOnVm("semantics/dynamic_dispatch_2.dbc", "", "2", {}, 0);
-		// runTestOnVm("semantics/dynamic_dispatch_3.dbc", "", "3", {}, 0);
-		// runTestOnVm("semantics/dynamic_dispatch_4.dbc", "", "4", {}, 0);
-		// runTestOnVm("semantics/dynamic_dispatch_all.dbc", "", "0 2 3 4", {}, 0);
-		// runTestOnVm("semantics/deep_dynamic_dispatch.dbc", "", "", {}, 0);
-		// runTestOnVm("semantics/dynamic_call_with_args.dbc", "", "", {}, 0);
+		runTestOnVm("semantics/method_call_with_args.dbc", "12 13", "25", {}, 0);
+		runTestOnVm("semantics/simple_dispatch.dbc", "", "420", {}, 0);
+		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "44542321", {}, 0);
 	}
 
 	void semantics() {

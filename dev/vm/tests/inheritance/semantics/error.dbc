@@ -11,6 +11,7 @@ function method_foo_void_impl_A {
     mov_l64_imm x, 420;
     output_l64 x;
     deinit;
+    deinit;
     ret;
 }
 
@@ -18,6 +19,7 @@ function method_foo_void_impl_B {
     init_lany_type x, i64;
     mov_l64_imm x, 2137;
     output_l64 x;
+    deinit;
     deinit;
     ret;
 }
@@ -27,9 +29,9 @@ function method_bar_void_impl_B {
     mov_l64_imm x, 1337;
     output_l64 x;
     deinit;
+    deinit;
     ret;
 }
-
 
 type class: A {
     fields: {
@@ -58,18 +60,20 @@ type class: B {
 }
 
 function main {
-    init_lany_type a_obj, pointer_A;
+    init_lany_type a_obj, pointer_A; # 32
     alloc_lptr_type a_obj, A;
     setVTable_lptr_type a_obj, A;
-    init_lany_type a_ptr, pointer_A;
+    init_lany_type a_ptr, pointer_A; # 48
     mov_lptr_lptr a_ptr, a_obj;
     virtual_call_lptr_method a_obj, foo;
 
     init_lany_type b_obj, pointer_B;
     alloc_lptr_type b_obj, B;
     setVTable_lptr_type b_obj, B;
+    
     init_lany_type b_ptr, pointer_B;
-    mov_lptr_lptr b_ptr, b_obj;
+    mov_lptr_lptr b_ptr, b_obj; 
+    
     virtual_call_lptr_method b_obj, bar;
 
     deinit; # b_obj
