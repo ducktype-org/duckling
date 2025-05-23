@@ -64,6 +64,7 @@ public:
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
@@ -913,6 +914,33 @@ private:
 				std::cerr.flush();
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
+		}
+	}
+
+	/**
+	 * This checks for all symbols that if a given
+	 * symbol `s` is in the scope `N`, then it is also in the
+	 * output of QuerySymbolsInScope(N).
+	 */
+	void testScopeSymbolsConsistency() {
+		auto all_symbols = compiler::helios::getAllHeliosSymbols();
+
+		// this is quadratic in theory, if it ever get too slow,
+		// we can optimize it with some maps.
+		for (auto symbol: all_symbols) {
+			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			if (maybe_scope.empty()) continue;
+			auto scope            = maybe_scope.value();
+			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
+
+			auto found = false;
+			for (auto s: *symbols_in_scope) {
+				if (s == symbol) {
+					found = true;
+					break;
+				}
+			}
+			assertTrue(found, "Symbol was not fount in its scope");
 		}
 	}
 };
