@@ -52,6 +52,15 @@ namespace compiler::helios {
 
 	ScopeID scope(SymID id) { return getSymRef(id)->getPSTData()->scope; }
 
+	base::Optional<ScopeID> maybeScope(SymID id) {
+		variant_match(getSymRef(id)->other) {
+			variant_case(PstSymbolData, pst_data) { return pst_data.scope; }
+			variant_case_novalue(builtin::BuiltinFunctionData) { return base::Optional<ScopeID>{}; }
+			variant_default { CORE_PANIC("Unhandled symbol kind"); }
+		}
+		CORE_UNREACHABLE();
+	}
+
 	base::Optional<pst::Access<pst::Stmt>> stmt(query::Context& ctx, SymID id) {
 		return getSymRef(id)->stmtCast(ctx);
 	}

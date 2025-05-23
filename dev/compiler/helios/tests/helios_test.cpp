@@ -927,7 +927,9 @@ private:
 		// this is quadratic in theory, if it ever get too slow,
 		// we can optimize it with some maps.
 		for (auto symbol: all_symbols) {
-			auto scope            = compiler::helios::scope(symbol);
+			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			if (maybe_scope.empty()) continue;
+			auto scope            = maybe_scope.value();
 			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
 
 			auto found = false;

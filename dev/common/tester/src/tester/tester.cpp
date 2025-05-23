@@ -97,12 +97,12 @@ namespace tester {
 	}
 
 	void TestSuite::addTest(TestType test, std::string_view test_name) {
-		tests.push_back(TestData{ test, std::string(test_name) });
+		tests.push_back(TestData{ .test = test, .name = std::string(test_name) });
 	}
 
 	void TestSuite::runTest(TestType test) {
+		(this->*test)();
 		try {
-			(this->*test)();
 		} catch (const CritTestError& e) {
 		} catch (const base::Panic& panic) {
 			curr_global_res->success = false;
