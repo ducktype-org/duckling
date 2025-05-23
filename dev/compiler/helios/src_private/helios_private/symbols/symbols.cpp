@@ -75,6 +75,18 @@ namespace compiler::helios {
 		}
 	}
 
+	std::vector<SymID> getAllHeliosSymbols() {
+		CORE_ASSERT(
+			query::Context::getGraph().queryStackSize() == 0, "getAllHeliosSymbols called from within query!"
+		);
+		std::vector<SymID> output;
+		output.reserve(symbol_table.size());
+		for (auto& symbol: symbol_table) {
+			output.push_back(GetSymRef_Functor::make(symbol.ref()));
+		}
+		return output;
+	}
+
 	/**
 	 * @brief SymbolData Factory.
 	 * Make symbols from PST statements.
