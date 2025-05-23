@@ -212,14 +212,14 @@ namespace vm::code {
 	};
 
 	DEFINE_TYPE_ERROR(
-		InvalidImplementsError, "This interface/class can implement only other interfaces: "
+		InvalidImplementsError, "This object can implement only existing interfaces other than itself: "
 	);
 	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
 	DEFINE_TYPE_ERROR(
 		DuplicatedImplementsError,
 		"This interface/class tried implementing the same interface twice: "
 	);
-	DEFINE_TYPE_ERROR(InvalidExtendsError, "This class can extend only other classes: ");
+	DEFINE_TYPE_ERROR(InvalidExtendsError, "This class can extend only existing classes other than itself: ");
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);

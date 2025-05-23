@@ -34,7 +34,6 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -56,11 +55,6 @@
 	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
 #endif
-
-namespace {
-
-
-}
 
 namespace vm {
 

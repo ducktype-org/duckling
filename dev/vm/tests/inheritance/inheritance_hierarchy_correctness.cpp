@@ -6,8 +6,6 @@
 #include <vm/api/api.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 
-#include <array>
-
 class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceHierarchyCorrectnessTest

@@ -323,11 +323,20 @@ void vm::code::TypeContext::validateTypes() const {
         status[name] = Visited;
         variant_match(type) {
             variant_case(ClassType, clazz) {
-                if_opt_some(clazz.extends, superclass) self(*types_ref.at(superclass));
-                for (auto iface: clazz.implements) self(*types_ref.at(iface));
+                if_opt_some(clazz.extends, superclass) {
+                    if (!types_ref.contains(superclass)) throw InvalidExtendsError(clazz);
+                    self(*types_ref.at(superclass));
+                }
+                for (auto iface: clazz.implements) {
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz);
+                    self(*types_ref.at(iface));
+                }
             }
             variant_case(InterfaceType, interface) {
-                for (auto iface: interface.implements) self(*types_ref.at(iface));
+                for (auto iface: interface.implements) {
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(interface);
+                    self(*types_ref.at(iface));
+                }
             }
         }
         status[name] = Done;

@@ -52,7 +52,7 @@ void VmTestSuite::loadInvalidDbc(
 	auto core_op = std::get<vm::api::CoreOperationError>(err);
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
 	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-	// std::cerr << err_str << '\n';
+	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
 		assertTrue(
 			err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
