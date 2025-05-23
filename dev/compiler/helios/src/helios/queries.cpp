@@ -5,6 +5,7 @@
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/expressions/coercion.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/pst_visitor.hpp>
@@ -192,8 +193,6 @@ namespace compiler::helios {
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
 				// @TODO: do something with mut/immut
 
-				// @TODO: error handling
-
 				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
@@ -206,6 +205,18 @@ namespace compiler::helios {
 				auto initial_value
 					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
+
+				auto initial_value_coerced = coerceExpression(
+					std::move(initial_value), symbol_type
+				);
+				if (initial_value_coerced.hasError()) {
+					ctx.log(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(), "Bad type passed to variable initialization"
+						)
+					);
+					return; // fail
+				}
 
 				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
 			}
