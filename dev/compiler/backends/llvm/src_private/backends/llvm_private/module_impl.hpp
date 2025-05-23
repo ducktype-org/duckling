@@ -17,12 +17,14 @@ namespace compiler::backend_llvm {
 	 * Implements it is a way similar to pimpl idiom.
 	 */
 	struct ModuleImpl {
-		Box<llvm::Module>                        module;
-		base::Optional<Box<llvm::TargetMachine>> target_machine;
+		Box<llvm::Module>         module;
+		MBox<llvm::TargetMachine> target_machine;
 
 		ModuleImpl(Box<llvm::Module> module): module(std::move(module)) {}
 
 		~ModuleImpl() = default;
+
+		Ref<llvm::TargetMachine> getTargetMachine(const std::string& target_triple);
 
 		friend struct Module;
 	};
