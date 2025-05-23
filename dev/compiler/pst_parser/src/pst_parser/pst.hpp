@@ -2,7 +2,8 @@
 
 #include "access.hpp"
 #include "elements/hierarchy/declarations/top_level.hpp"
-#include "elements/hierarchy/lists.hpp"
+#include "elements/hierarchy/lists.hpp"           // IWYU pragma: keep
+#include "elements/hierarchy/not_statements.hpp"  // IWYU pragma: keep
 #include "lang_parser_state.hpp"
 
 #include <token_source/source.hpp>

@@ -1,12 +1,12 @@
 #pragma once
 
-#include "block.hpp"      // IWYU pragma: keep
-#include "class.hpp"      // IWYU pragma: keep
-#include "const.hpp"      // IWYU pragma: keep
-#include "for.hpp"        // IWYU pragma: keep
-#include "function.hpp"   // IWYU pragma: keep
-#include "if.hpp"         // IWYU pragma: keep
-#include "namespace.hpp"  // IWYU pragma: keep
-#include "top_level.hpp"  // IWYU pragma: keep
-#include "variable.hpp"   // IWYU pragma: keep
+#include "block.hpp"      // IWYU pragma: export
+#include "class.hpp"      // IWYU pragma: export
+#include "const.hpp"      // IWYU pragma: export
+#include "for.hpp"        // IWYU pragma: export
+#include "function.hpp"   // IWYU pragma: export
+#include "if.hpp"         // IWYU pragma: export
+#include "namespace.hpp"  // IWYU pragma: export
+#include "top_level.hpp"  // IWYU pragma: export
+#include "variable.hpp"   // IWYU pragma: export
 #include "while.hpp"      // IWYU pragma: keep

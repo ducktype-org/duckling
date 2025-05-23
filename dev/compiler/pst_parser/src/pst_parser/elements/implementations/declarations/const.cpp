@@ -1,5 +1,6 @@
 #include "../../hierarchy/declarations/const.hpp"
 
+#include "../../hierarchy/not_statements.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 #include "var_parse.hpp"
 

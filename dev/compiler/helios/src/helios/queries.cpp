@@ -9,6 +9,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/actions/return.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <pst_parser/elements/hierarchy/statements/expr_stmt.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>

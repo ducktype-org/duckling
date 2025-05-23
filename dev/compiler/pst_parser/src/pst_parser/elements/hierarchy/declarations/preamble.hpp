@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../statements.hpp"
+#include "../statements/declaration.hpp"
 
 #define DECL_CHILD_CONSTRUCTOR(class_name, element_type_)                                   \
 	class_name(const dia::SourcePosition& position): Decl(StmtKind::class_name, position) { \

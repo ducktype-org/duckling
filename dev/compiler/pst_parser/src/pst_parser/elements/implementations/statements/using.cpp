@@ -1,3 +1,6 @@
+#include "../../hierarchy/statements/using.hpp"
+
+#include "../../hierarchy/not_statements.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -11,6 +14,8 @@ namespace pst {
 
 		return out;
 	}
+
+	bool Using::isStar() const { return names.internal()->getStar(); }
 
 	void Using::dprint(std::ostream& out) const { nullAwareDprint(names, out); }
 

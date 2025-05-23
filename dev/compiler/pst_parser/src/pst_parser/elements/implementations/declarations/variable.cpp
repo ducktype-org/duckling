@@ -1,5 +1,7 @@
 #include "../../hierarchy/declarations/variable.hpp"
 
+#include "../../hierarchy/expr_holders.hpp"    // IWYU pragma: keep
+#include "../../hierarchy/not_statements.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 #include "var_parse.hpp"
 

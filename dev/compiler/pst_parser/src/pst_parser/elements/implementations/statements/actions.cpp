@@ -1,10 +1,6 @@
-#include "../../hierarchy/actions/break.hpp"
-#include "../../hierarchy/actions/continue.hpp"
-#include "../../hierarchy/actions/defer.hpp"
-#include "../../hierarchy/actions/redo.hpp"
-#include "../../hierarchy/actions/restart.hpp"
-#include "../../hierarchy/actions/return.hpp"
-#include "../../hierarchy/actions/throw.hpp"
+#include "../../hierarchy/actions/all_actions.hpp"
+#include "../../hierarchy/expr_holders.hpp"
+#include "../../hierarchy/not_statements.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

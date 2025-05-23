@@ -1,5 +1,5 @@
 #include "../../hierarchy/declarations/all_declarations.hpp"
-#include "../../hierarchy/statements.hpp"
+#include "../../hierarchy/statements/all_statements.hpp"
 #include "preamble.hpp"
 
 namespace pst {
