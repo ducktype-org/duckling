@@ -2,8 +2,9 @@
 
 #include "diagnostic_converters.hpp"
 
-#include <ranges>
 #include <base/int_conv.hpp>
+
+#include <ranges>
 
 namespace dia {
 
@@ -19,7 +20,8 @@ namespace dia {
 			printer::StreamPrinter::newline(2);
 		}
 
-		const auto severity_id = base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));
+		const auto severity_id
+			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
