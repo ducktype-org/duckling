@@ -35,6 +35,16 @@ namespace {
 }
 
 /**
+ * Simple function for showing compilation errors.
+ */
+void printContextErrors() {
+	if (query::Context::logger.messageCount() > 0) {
+		std::cerr << "Compilation errors logged in context: \n";
+		query::Context::logger.dumpLog(true, std::cerr);
+	}
+}
+
+/**
  * @brief Type of command callback. The returned int value is the value
  * that will be returned by hole application (i.e. exit status).
  */
@@ -370,6 +380,8 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto options = configureDuckMainWith(clap, command_args);
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
+
+		defer (printContextErrors());
 
 		// @TODO: error handling
 		using namespace compiler;

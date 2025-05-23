@@ -10,7 +10,7 @@ namespace compiler::helios {
         if (from->expression_type.getSymbolType() == to) {
             return from;
         } else {
-            return {};
+            return errors::HError{ InvalidCoercion{} };
         }
     }
 }

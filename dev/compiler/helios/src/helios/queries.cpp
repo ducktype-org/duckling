@@ -212,13 +212,18 @@ namespace compiler::helios {
 				if (initial_value_coerced.hasError()) {
 					ctx.log(
 						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
-							stmt->getValue().value().unlock(ctx)->getSourcePosition(), "Bad type passed to variable initialization"
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+							base::strConcat( 
+								"Bad type passed to variable initialization\n",
+								"Expected: ", symbol_type.toString(), "\n",
+								"Got: ", initial_value->expression_type.getSymbolType().toString(), "\n"
+							)
 						)
 					);
 					return; // fail
 				}
 
-				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
+				output(code::VariableStmt(std::move(initial_value_coerced.value()), symbol_type, symbol));
 			}
 		};
 
