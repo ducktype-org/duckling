@@ -919,7 +919,7 @@ private:
 	/**
 	 * This checks for all symbols that if a given
 	 * symbol `s` is in the scope `N`, then it is also in the
-	 * output of QuerySymbolsInScope(N). 
+	 * output of QuerySymbolsInScope(N).
 	 */
 	void testScopeSymbolsConsistency() {
 		auto all_symbols = compiler::helios::getAllHeliosSymbols();
@@ -927,7 +927,7 @@ private:
 		// this is quadratic in theory, if it ever get too slow,
 		// we can optimize it with some maps.
 		for (auto symbol: all_symbols) {
-			auto scope = compiler::helios::scope(symbol);
+			auto scope            = compiler::helios::scope(symbol);
 			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
 
 			auto found = false;
