@@ -95,13 +95,19 @@ namespace tsh {
 
 		static auto provide(Context& context, const QKey key) -> PResult {
 			using Impl = IntegralAbstractType::Impl;
+			using enum IntegralAbstractType::Signedness;
 
-			static std::map<std::pair<usize, bool>, Impl> cache = {
-				{ { 8, true }, Impl{ 8, true } },     { { 8, false }, Impl{ 8, false } },
-				{ { 16, true }, Impl{ 16, true } },   { { 16, false }, Impl{ 16, false } },
-				{ { 32, true }, Impl{ 32, true } },   { { 32, false }, Impl{ 32, false } },
-				{ { 64, true }, Impl{ 64, true } },   { { 64, false }, Impl{ 64, false } },
-				{ { 128, true }, Impl{ 128, true } }, { { 128, false }, Impl{ 128, false } },
+			static std::map<std::pair<usize, IntegralAbstractType::Signedness>, Impl> cache = {
+				{ { 8, Signed }, Impl{ 8, Signed } },
+				{ { 8, Unsigned }, Impl{ 8, Unsigned } },
+				{ { 16, Signed }, Impl{ 16, Signed } },
+				{ { 16, Unsigned }, Impl{ 16, Unsigned } },
+				{ { 32, Signed }, Impl{ 32, Signed } },
+				{ { 32, Unsigned }, Impl{ 32, Unsigned } },
+				{ { 64, Signed }, Impl{ 64, Signed } },
+				{ { 64, Unsigned }, Impl{ 64, Unsigned } },
+				{ { 128, Signed }, Impl{ 128, Signed } },
+				{ { 128, Unsigned }, Impl{ 128, Unsigned } },
 			};
 
 			const auto [size, signedness] = key;

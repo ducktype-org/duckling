@@ -222,8 +222,8 @@ namespace tsh::internal {
 	};
 
 	class IntegralAbstractTypeImpl final: public AbstractTypeImpl {
-		Bits size;
-		bool signedness;
+		Bits                             size;
+		IntegralAbstractType::Signedness signedness;
 
 	public:
 		[[nodiscard]]
@@ -241,17 +241,19 @@ namespace tsh::internal {
 			return size;
 		}
 
-		explicit IntegralAbstractTypeImpl(const usize size, const bool signedness):
+		explicit IntegralAbstractTypeImpl(
+			const usize size, const IntegralAbstractType::Signedness signedness
+		):
 			  size(Bits(size)),
 			  signedness(signedness) {
-			if (signedness)
+			if (signedness == IntegralAbstractType::Signedness::Signed)
 				representation = base::strConcat("i", size);
 			else
 				representation = base::strConcat("u", size);
 		}
 
 		[[nodiscard]]
-		bool getSignedness() const {
+		IntegralAbstractType::Signedness getSignedness() const {
 			return signedness;
 		}
 
