@@ -508,7 +508,6 @@ namespace vm::loader::parser {
 				}
 				case lang_def::Keyword::BCFields: {
 					state.parse().one(lang_def::NamedOperator::Colon);
-					// The first field is the VTable pointer
 					for (auto field: parseFields(state)) fields.push_back(field);
 					state.parse().one(lang_def::Special::Semicolon);
 					break;

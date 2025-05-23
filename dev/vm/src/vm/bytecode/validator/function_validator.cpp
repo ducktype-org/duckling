@@ -183,6 +183,49 @@ public:
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	void popMethodCallArgs(
+		const opargs::MethodName&    method,
+		const opargs::StackLocalPtr& obj_ptr
+	) {
+		// TODO: This implementation seeking occurs in a couple of places. Think of a better way.
+		base::StrID impl_name;
+		for (const auto& type: *type_metadata) {
+			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+				if (inh_meta.virtual_methods.contains(method.method_name)) {
+					impl_name = inh_meta.virtual_methods[method.method_name]->getName();
+					break;
+				}
+			}
+		}
+
+		auto generic_arg   = opargs::OpCodeArg{ method };
+		auto func_type     = std::get<FunctionType>(*tod_map->at(impl_name));
+		bool check_ret_val = func_type.result != base::StrID("void");
+
+		if (func_type.parameters.size() > stack_state.size() + check_ret_val)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
+			if (code::typeName(*stack_state.back().type) != param)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+			local_name_to_type.erase(stack_state.back().local_name);
+			stack_state.pop_back();
+		}
+
+		// In method call validation, the first argument of the called function has to be the same
+		// as an object pointer on which the method is invoked.
+		auto type_name    = code::typeName(*stack_state.back().type);
+		auto ptr_on_stack = std::get<PointerType>(*tod_map->at(type_name));
+		auto ptr_in_call  = std::get<PointerType>(*local_name_to_type[obj_ptr.var_name]);
+		if (ptr_in_call.inner != ptr_on_stack.inner)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		local_name_to_type.erase(stack_state.back().local_name);
+		stack_state.pop_back();
+
+		if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
 	void validateTailcall(
 		const opargs::OpCodeFunctionArg& called_function, const FunctionType& current_function_type
 	) const {
@@ -680,6 +723,10 @@ class FunctionValidator {
 				}
 				variant_case(Op_call_builtin_func, instr) {
 					local_stack.popCallArgsFor(instr.arg0);
+					index++;
+				}
+				variant_case(Op_virtual_call_lptr_method, instr) {
+					local_stack.popMethodCallArgs(instr.arg1, instr.arg0);
 					index++;
 				}
 				variant_case(Op_ret_tailcall_func, instr) {

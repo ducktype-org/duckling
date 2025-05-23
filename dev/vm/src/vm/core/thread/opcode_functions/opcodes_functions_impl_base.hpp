@@ -34,6 +34,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -55,6 +56,11 @@
 	#define FUNCTION_CONT(step)                OPFUN_CONT(step)
 	#define FUNCTION_CONT_CHECK_STRATEGY(step) OPFUN_CONT_CHECK_STRATEGY(step)
 #endif
+
+namespace {
+
+
+}
 
 namespace vm {
 
@@ -231,73 +237,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
 		{
-			// We have to change variables passed in the arguments (FUNCTION_ARGS). After this
-			// function: `instr` should be pointer to the instruction in the new function, `frame`
-			// should be pointer to the next frame, `local_stack` should be pointer to the local
-			// stack of the new function. Old values of `instr` nad `local_stack` should be saved on
-			// the frame of the caller.
-			auto& runtime_data = thread.runtime_data;
-			auto  function_id  = static_cast<usize>(instr->arg0);
-			auto& called_func  = thread.executing_program->functions[function_id];
-
-			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-
-			// Save current registers and flow.
-			frame->instr                = instr + 1;
-			frame->local_stack          = local_stack;
-			frame->called_func_arg_size = called_func.arg_size;
-			frame->called_func_ret_size = called_func.ret_size;
-
-			// Save the last frame
-			auto* prev_frame = frame;
-
-			frame++;
-
-			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
-
-			// Update values passed as arguments.
-			instr = called_func.bc.data();
-			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_val and arguments passed to callee.
-			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
-
-			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
-
-			// Move shared blocks into callee's block stack and block_local_offset map.
-			// This is the id of the first shared block in the caller's block_stack. If the called
-			// function is non-void we also count the ret_val block.
-			auto called_func_type = thread.executing_program->types->at(called_func.name);
-			u64  arg_count
-				= called_func_type->getParameterCount().expect("Parameter count not set!");
-			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
-			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
-
-			frame->local_stack_head = shared_stack_space_size;
-			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
-				frame->block_stack.push_back(prev_frame->block_stack[i]);
-				auto callers_local_offset = prev_frame->block_idx_to_local_offset[i];
-				// This points to the ret_val offset.
-				auto offset_before_ret_val = prev_frame->local_stack_head - shared_stack_space_size;
-				auto new_offset            = callers_local_offset - offset_before_ret_val;
-
-				frame->local_offset_to_block_idx.put(new_offset, i - shared_blocks_start_ix);
-				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
-			}
-
-			// Remove the argument blocks from caller's block stack. Only the return value stays in
-			// the block stack.
-			// @note: We require that the callee can't deinitialize the return value passed by the
-			// caller.
-			prev_frame->local_stack_head -= called_func.arg_size;
-			for (u64 i = 0; i < arg_count; i++) {
-				prev_frame->block_stack.pop_back();
-				// @note: Removing block_id to local_offset mappings from the frame is not needed,
-				// since a new init (after returning from a called function) to the same
-				// offset/block_idx will overwrite the old values.
-			}
+			prepareCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0));
 		}
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
@@ -357,102 +297,28 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			// TODO: MERGE WITH CALL_FUNC, after merge.
-			// Get the pointer data.
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
-			// Get the inheritance metadata for this pointer
-			// Object are guaranteed to hold a inheritance metadata pointes as their first field.
+			// Objects are guaranteed to hold a inheritance metadata pointes as their first field.
 			// This is verified by static verification.
-			const vm::Type** inh_meta_pointer = reinterpret_cast<const vm::Type**>(
+			const vm::Type* inh_meta_pointer = *reinterpret_cast<const vm::Type**>(
 				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
 			);
-			const vm::Type* inheritance_metadata_pointer = *inh_meta_pointer;
-			if (!inheritance_metadata_pointer)
-				CORE_PANIC("Invalid vtable pointer in virtual call funs.");
-
-			auto opt_inh_meta = inheritance_metadata_pointer->getInheritanceMetadata();
-			if (!opt_inh_meta.has_value())
-				CORE_PANIC("Invalid vtable pointer in virtual call funs.");
-
-			const vm::InheritanceMetadata& inh_metadata = *opt_inh_meta;
+			const vm::InheritanceMetadata& inh_metadata = *inh_meta_pointer->getInheritanceMetadata();
 
 			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
-			auto implementation_name = inh_metadata.vtable[method_name];
+			auto implementation_name = inh_metadata.vtable[method_name]->getName();
 
-			// TODO: Use the helper method, after merge.
-			bool  found         = false;
+			// TODO: vtable should hold function ids instead of names for fast lookup during execution.
 			usize function_id   = 0;
 			auto& all_functions = thread.executing_program->functions;
 			for (usize i = 0; i < all_functions.size(); i++) {
-				if (all_functions[i].name == implementation_name->getName()) {
+				if (all_functions[i].name == implementation_name) {
 					function_id = i;
-					found       = true;
+					break;
 				}
 			}
-			if (!found) CORE_PANIC("Implementation for method not found during call");
-
-			// This is copied 1:1 from call_func;
-			auto& runtime_data = thread.runtime_data;
-			auto& called_func  = thread.executing_program->functions[function_id];
-
-			// Size of the shared stack space between called functions.
-			auto shared_stack_space_size = called_func.arg_size + called_func.ret_size;
-
-			// Save current registers and flow.
-			frame->instr                = instr + 1;
-			frame->local_stack          = local_stack;
-			frame->called_func_arg_size = called_func.arg_size;
-			frame->called_func_ret_size = called_func.ret_size;
-
-			// Save the last frame
-			auto* prev_frame = frame;
-
-			frame++;
-
-			if (frame + 1 >= runtime_data.frame_stack_end) CORE_PANIC("VM stack overflow.");
-
-			// Update values passed as arguments.
-			instr = called_func.bc.data();
-			// New local_stack address is the local_stack_head (all typed initialized by the caller
-			// up to this point) - the size of ret_val and arguments passed to callee.
-			local_stack += prev_frame->local_stack_head - shared_stack_space_size;
-
-			// Assumes that local_stack_size = ret_val + passed_args + new_local_args.
-			if (local_stack + called_func.local_stack_size > runtime_data.local_stack_end)
-				CORE_PANIC("VM stack overflow.");
-
-			// Move shared blocks into callee's block stack and block_local_offset map.
-			// This is the id of the first shared block in the caller's block_stack. If the called
-			// function is non-void we also count the ret_val block.
-			auto called_func_type = thread.executing_program->types->at(called_func.name);
-			u64  arg_count
-				= called_func_type->getParameterCount().expect("Parameter count not set!");
-			u64 shared_block_count     = called_func.ret_size != 0 ? arg_count + 1 : arg_count;
-			u64 shared_blocks_start_ix = prev_frame->block_stack.size() - shared_block_count;
-
-			frame->local_stack_head = shared_stack_space_size;
-			for (u64 i = shared_blocks_start_ix; i < prev_frame->block_stack.size(); i++) {
-				frame->block_stack.push_back(prev_frame->block_stack[i]);
-				auto callers_local_offset = prev_frame->block_idx_to_local_offset[i];
-				// This points to the ret_val offset.
-				auto offset_before_ret_val = prev_frame->local_stack_head - shared_stack_space_size;
-				auto new_offset            = callers_local_offset - offset_before_ret_val;
-
-				frame->local_offset_to_block_idx.put(new_offset, i - shared_blocks_start_ix);
-				frame->block_idx_to_local_offset.put(i - shared_blocks_start_ix, new_offset);
-			}
-
-			// Remove the argument blocks from caller's block stack. Only the return value stays in
-			// the block stack.
-			// @note: We require that the callee can't deinitialize the return value passed by the
-			// caller.
-			prev_frame->local_stack_head -= called_func.arg_size;
-			for (u64 i = 0; i < arg_count; i++) {
-				prev_frame->block_stack.pop_back();
-				// @note: Removing block_id to local_offset mappings from the frame is not needed,
-				// since a new init (after returning from a called function) to the same
-				// offset/block_idx will overwrite the old values.
-			}
+			
+			prepareCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}

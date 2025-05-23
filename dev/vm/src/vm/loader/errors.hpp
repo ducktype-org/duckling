@@ -44,29 +44,6 @@ namespace vm::loader {
 		DuplicatedTypeNote(dia::SourcePosition pos): dia::NoteWithPosition(pos) {}
 	};
 
-	class UnknownMethodError final: public dia::Error {
-		base::StrID method_name;
-
-	public:
-		constexpr static const std::string_view ERR_MSG = "Method does not exist: ";
-
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return base::strConcat(ERR_MSG, method_name);
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::StaticVerification;
-		}
-
-		UnknownMethodError(dia::SourcePosition pos, base::StrID method_name):
-			  dia::Error(pos),
-			  method_name(method_name) {}
-	};
-
 	class DuplicatedFunctionError final: public dia::Error {
 	public:
 		constexpr static const std::string_view ERR_MSG = "Function with this name already exists.";

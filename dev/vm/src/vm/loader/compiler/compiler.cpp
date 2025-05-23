@@ -29,14 +29,12 @@ namespace vm::loader::compiler {
 			const StableTypeIdNameMap<code::Function>&         func_map;
 			const TypeMetadata&                                type_map;
 			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
-			const base::HashMap<i32, base::StrID>&
-				method_id_to_name;  // Used when translating virtual_call_lptr_method.
-			const base::HashMap<base::StrID, i32>&
-				method_name_to_id;  // Used when translating virtual_call_lptr_method.
-			base::Optional<code::Function>    function{};
-			base::HashMap<base::StrID, usize> label_positions{};
-			base::HashMap<base::StrID, usize> local_offset_map{};
-			usize                             local_stack_size{};
+			const base::HashMap<i32, base::StrID>&             method_id_to_name;
+			const base::HashMap<base::StrID, i32>&             method_name_to_id;
+			base::Optional<code::Function>                     function{};
+			base::HashMap<base::StrID, usize>                  label_positions{};
+			base::HashMap<base::StrID, usize>                  local_offset_map{};
+			usize                                              local_stack_size{};
 		};
 
 		i64 getOpCodeArgValue(

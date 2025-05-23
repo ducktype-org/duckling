@@ -108,7 +108,6 @@ namespace vm::code {
 		const code::TypeOfData                  NEW_ELEMENT;
 		const code::TypeOfData                  PREVIOUS_ELEMENT;
 
-		// TODO: Why isn't this done with the macro?
 		DuplicatedTypeError(code::TypeOfData new_element, code::TypeOfData previous_element):
 			  ValidationError(ERR_MSG.data()),
 			  NEW_ELEMENT(std::move(new_element)),
@@ -220,7 +219,7 @@ namespace vm::code {
 		DuplicatedImplementsError,
 		"This interface/class tried implementing the same interface twice: "
 	);
-	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
+	DEFINE_TYPE_ERROR(InvalidExtendsError, "This class can extend only other classes: ");
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);

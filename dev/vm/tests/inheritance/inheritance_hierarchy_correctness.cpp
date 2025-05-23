@@ -31,11 +31,11 @@ private:
 			},
 			{
 				"invalid_hierarchy/extends_interface.dbc",
-				InvalidExtends::ERR_MSG,
+				InvalidExtendsError::ERR_MSG,
 			},
 			{
 				"invalid_hierarchy/extends_plain.dbc",
-				InvalidExtends::ERR_MSG,
+				InvalidExtendsError::ERR_MSG,
 			},
 			{
 				"invalid_hierarchy/implements_class.dbc",

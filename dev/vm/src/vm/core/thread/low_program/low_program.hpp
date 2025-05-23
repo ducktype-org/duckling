@@ -55,7 +55,6 @@ namespace vm::low {
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.
-		// TODO: Create a MethodID.
 		base::HashMap<i32, base::StrID> method_name_pool;
 	};
 }

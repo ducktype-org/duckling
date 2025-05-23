@@ -1,12 +1,5 @@
 #include "type_validator.hpp"
 
-#include <base/exceptions.hpp>
-#include <base/macros/for_each.hpp>
-#include <base/optional.hpp>
-#include <base/ref.hpp>
-#include <base/str_utils.hpp>
-#include <base/variant.hpp>
-
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -35,7 +28,7 @@ void vm::code::TypeContext::collectFieldsRecursive(
 	if constexpr (std::is_same_v<FieldableType, ClassType>) {
 		if (fieldable.extends) {
 			const auto& super_class = getType<ClassType>(*fieldable.extends, error_context, [&]() {
-				return InvalidExtends(fieldable);
+				return InvalidExtendsError(fieldable);
 			});
 			collectFieldsRecursive(super_class, error_context, fields);
 		}
@@ -63,7 +56,7 @@ void vm::code::TypeContext::collectVirtualMethodsRecursive(
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtends(inh);
+				return InvalidExtendsError(inh);
 			});
 			collectVirtualMethodsRecursive(super_class, error_context_inh, virtual_methods);
 		}
@@ -91,7 +84,7 @@ void vm::code::TypeContext::collectImplementationsRecursive(
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtends(inh);
+				return InvalidExtendsError(inh);
 			});
 			collectImplementationsRecursive(super_class, error_context_inh, implementations);
 		}
@@ -205,7 +198,7 @@ void vm::code::TypeContext::buildVTableRecursive(
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtends(inh);
+				return InvalidExtendsError(inh);
 			});
 			buildVTableRecursive(super_class, error_context_inh, vtable, metadata);
 		}
@@ -225,7 +218,7 @@ vm::code::TypeContext::FieldVector vm::code::TypeContext::buildFieldVector(
 			= [&](const vm::code::ClassType& clazz) {
 				  if (clazz.extends) {
 					  const auto& super_class_code = getType<vm::code::ClassType>(
-						  *clazz.extends, inh, [&]() { return InvalidExtends(inh); }
+						  *clazz.extends, inh, [&]() { return InvalidExtendsError(inh); }
 					  );
 					  collect_class_fields_recursive(super_class_code);
 				  }
@@ -375,7 +368,6 @@ Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() co
 				);
 			}
 			variant_case(vm::code::DataType, data) {
-				// TODO: Why not use buildFieldVector?
 				FieldVector fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
