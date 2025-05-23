@@ -230,9 +230,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{
-			prepareCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0));
-		}
+		{ prepareCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0)); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -297,7 +295,8 @@ namespace vm {
 			const vm::Type* inh_meta_pointer = *reinterpret_cast<const vm::Type**>(
 				thread.process_memory.getPointerData(pointer, sizeof(Type*)).getBegin()
 			);
-			const vm::InheritanceMetadata& inh_metadata = *inh_meta_pointer->getInheritanceMetadata();
+			const vm::InheritanceMetadata& inh_metadata
+				= *inh_meta_pointer->getInheritanceMetadata();
 
 			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
 			auto implementation_name = inh_metadata.vtable[method_name]->getName();
@@ -311,7 +310,7 @@ namespace vm {
 					break;
 				}
 			}
-			
+
 			prepareCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);

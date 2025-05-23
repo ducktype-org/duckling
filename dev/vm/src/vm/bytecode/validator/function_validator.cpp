@@ -183,10 +183,7 @@ public:
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
-	void popMethodCallArgs(
-		const opargs::MethodName&    method,
-		const opargs::StackLocalPtr& obj_ptr
-	) {
+	void popMethodCallArgs(const opargs::MethodName& method, const opargs::StackLocalPtr& obj_ptr) {
 		// TODO: This implementation seeking occurs in a couple of places. Think of a better way.
 		base::StrID impl_name;
 		for (const auto& type: *type_metadata) {

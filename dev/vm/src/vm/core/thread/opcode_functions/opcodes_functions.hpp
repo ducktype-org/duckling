@@ -2,7 +2,7 @@
 
 #include "../config.hpp"
 
-#include "vm/core/thread/vmthread.hpp"
+#include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
 
 #ifdef USE_TAIL_CALLS
