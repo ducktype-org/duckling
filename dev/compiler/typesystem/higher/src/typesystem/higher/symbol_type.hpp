@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstract_type.hpp"
+#include "mutability.hpp"
 
 namespace tsh {
 	/**
@@ -29,18 +30,6 @@ namespace tsh {
 		 * This kind of reference can only be constructed from a DIRECT or BOX reference.
 		 */
 		Ref,
-	};
-
-	enum class Mutability : bool {
-		/**
-		 * @brief The value is mutable.
-		 */
-		Mutable,
-
-		/**
-		 * @brief The value is immutable.
-		 */
-		Immutable,
 	};
 
 	enum class Leakage : bool {

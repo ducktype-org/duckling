@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../all.hpp"
+#include "../mutability.hpp"
 #include "queries.hpp"
 
 #include <helios/scope_symbol_id.hpp>
