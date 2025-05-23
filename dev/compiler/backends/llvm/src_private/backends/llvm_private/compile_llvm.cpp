@@ -52,12 +52,10 @@ namespace compiler::backend_llvm {
 				auto features = "";
 
 				llvm::TargetOptions opt;
-				auto tm     = Box<llvm::TargetMachine>::fromPointer(target->createTargetMachine(
-                    target_triple, cpu, features, opt, llvm::Reloc::PIC_
-                ));
-				auto tm_ref = tm.refMut();
-				this->target_machine = std::move(tm);
-				return tm_ref;
+				this->target_machine = Box<llvm::TargetMachine>::fromPointer(
+					target->createTargetMachine(target_triple, cpu, features, opt, llvm::Reloc::PIC_)
+				);
+				return this->target_machine.refMut().toOpt().value();
 			}
 		}
 		CORE_UNREACHABLE();
