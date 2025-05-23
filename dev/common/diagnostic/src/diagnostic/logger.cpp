@@ -2,7 +2,8 @@
 
 #include "diagnostic_converters.hpp"
 
-#include <algorithm>
+#include <base/int_conv.hpp>
+
 #include <ranges>
 
 namespace dia {
@@ -11,15 +12,16 @@ namespace dia {
 
 	void Logger::setImmediatelyDump(bool value) { immediately_dump = value; }
 
-	void Logger::log(Box<Message> message_ptr, const bool detailed, const bool immediately_dump) {
-		if (immediately_dump) {
+	void Logger::log(Box<Message> message_ptr, const bool detailed, const bool immediately_dump_arg) {
+		if (immediately_dump_arg) {
 			printer::StreamPrinter::print(
 				DiagnosticToUserConverter::toPrinterContents(message_ptr.ref(), detailed)
 			);
 			printer::StreamPrinter::newline(2);
 		}
 
-		const auto severity_id = static_cast<usize>(message_ptr->getSeverity());
+		const auto severity_id
+			= base::safeIntConv<usize>(std::to_underlying(message_ptr->getSeverity()));
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
@@ -45,7 +47,7 @@ namespace dia {
 	template void Logger::dumpLog<DiagnosticToJSONConverter>(bool, std::ostream&) const;
 
 	usize Logger::messageCount(Message::Severity s) const {
-		return message_log.at(static_cast<usize>(s)).size();
+		return message_log.at(base::safeIntConv<usize>(std::to_underlying(s))).size();
 	}
 
 	usize Logger::messageCount() const {
