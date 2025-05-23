@@ -22,7 +22,7 @@ LLVM_INCLUDE_END()
 
 namespace compiler::backend_llvm {
 
-	Ref<llvm::TargetMachine> ModuleImpl::getTargetMachine(const std::string& target_triple) {
+	Ref<llvm::TargetMachine> ModuleImpl::setTargetMachine(const std::string& target_triple) {
 		if (target_triple == llvm::sys::getDefaultTargetTriple()) {
 			if (llvm::InitializeNativeTarget())
 				CORE_PANIC("LLVM error: failed to initialize native target");
@@ -103,7 +103,7 @@ namespace compiler::backend_llvm {
 	) {
 		auto m              = module_impl->module.refMut();
 		auto target_triple  = llvm::sys::getDefaultTargetTriple();
-		auto target_machine = module_impl->getTargetMachine(target_triple);
+		auto target_machine = module_impl->setTargetMachine(target_triple);
 
 		std::error_code error_code;
 

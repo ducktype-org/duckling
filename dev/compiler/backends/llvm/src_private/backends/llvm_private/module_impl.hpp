@@ -24,7 +24,7 @@ namespace compiler::backend_llvm {
 
 		~ModuleImpl() = default;
 
-		Ref<llvm::TargetMachine> getTargetMachine(const std::string& target_triple);
+		Ref<llvm::TargetMachine> setTargetMachine(const std::string& target_triple);
 
 		friend struct Module;
 	};
