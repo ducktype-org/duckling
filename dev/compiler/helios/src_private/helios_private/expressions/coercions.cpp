@@ -7,7 +7,8 @@ namespace compiler::helios {
         tsh::SymbolType<> to
     ) {
         // this is for now a mock:
-        if (from->expression_type.getSymbolType() == to) {
+        auto expected = from->expression_type.getSymbolType().getType();
+        if (expected == to.getType()) {
             return from;
         } else {
             return errors::HError{ InvalidCoercion{} };

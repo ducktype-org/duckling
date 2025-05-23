@@ -206,6 +206,9 @@ namespace compiler::helios {
 					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
 				          .expect("Not handling errors here yet... (variable initial value)");
 
+				// used for error reporting:	
+				auto initial_value_type = initial_value->expression_type.getSymbolType();
+				
 				auto initial_value_coerced = coerceExpression(
 					std::move(initial_value), symbol_type
 				);
@@ -216,7 +219,7 @@ namespace compiler::helios {
 							base::strConcat( 
 								"Bad type passed to variable initialization\n",
 								"Expected: ", symbol_type.toString(), "\n",
-								"Got: ", initial_value->expression_type.getSymbolType().toString(), "\n"
+								"Got: ", initial_value_type.toString(), "\n"
 							)
 						)
 					);
