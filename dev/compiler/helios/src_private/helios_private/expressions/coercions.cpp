@@ -1,6 +1,4 @@
-#pragma once
-
-#include "coercion.hpp"
+#include "coercions.hpp"
 
 namespace compiler::helios {
     
