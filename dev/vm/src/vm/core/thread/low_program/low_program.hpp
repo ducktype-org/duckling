@@ -5,8 +5,6 @@
 
 #include "instruction.hpp"
 
-#include "base/string_id.hpp"
-
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>

@@ -3,9 +3,9 @@
 
 #include <base/variant.hpp>
 
-#include "vm/bytecode/builders/errors.hpp"
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmVariantTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -82,7 +82,7 @@ private:
 	void variantInsideStruct() { runTestOnVm("inside_struct.dbc"); }
 
 	void emptyVariant() {
-		loadInvalidDbc("empty_variant.dbc", { vm::code::builders::EmptyVariantError::ERR_MSG });
+		loadInvalidDbc("empty_variant.dbc", { vm::code::EmptyVariantError::ERR_MSG });
 	}
 };
 

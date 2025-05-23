@@ -34,7 +34,6 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -376,7 +375,7 @@ namespace vm {
 				CORE_PANIC("Invalid vtable pointer in virtual call funs.");
 
 			const vm::InheritanceMetadata& inh_metadata = *opt_inh_meta;
-			
+
 			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
 			auto implementation_name = inh_metadata.vtable[method_name];
 

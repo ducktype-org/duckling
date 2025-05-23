@@ -38,9 +38,9 @@ private:
 			assertTrue(imd.virtual_methods.size() == 2, "I1 should have two virtual methods");
 			assertTrue(imd.vtable.size() == 1, "I1 should have foo in it's vtable");
 
-			auto foo_type      = imd.virtual_methods[base::StrID("foo")];
-			auto bar_type      = imd.virtual_methods[base::StrID("bar")];
-			auto vt_foo        = imd.vtable[base::StrID("foo")];
+			auto foo_type = imd.virtual_methods[base::StrID("foo")];
+			auto bar_type = imd.virtual_methods[base::StrID("bar")];
+			auto vt_foo   = imd.vtable[base::StrID("foo")];
 			assertTrue(foo_type == bar_type, "I2's methods should have the same type");
 			assertTrue(foo_type == expected_method_type, "I1's method have the wrong type");
 			assertTrue(vt_foo == expected_foo_impl_type, "I1's vtable contains wrong type");
@@ -128,7 +128,7 @@ private:
 			assertTrue(imd.virtual_methods.size() == 1, "Child should declare one virtual method");
 			assertTrue(imd.vtable.size() == 4, "Child should have 4 method in its vtable");
 
-			auto cry_type          = imd.virtual_methods[base::StrID("cry")];
+			auto cry_type = imd.virtual_methods[base::StrID("cry")];
 			assertTrue(cry_type == expected_child_method, "Invalid Child vmethod type: cry()");
 
 			auto vt_foo     = imd.vtable[base::StrID("foo")];

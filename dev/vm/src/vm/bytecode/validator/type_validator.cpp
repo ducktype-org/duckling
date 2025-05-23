@@ -1,7 +1,5 @@
 #include "type_validator.hpp"
 
-#include "base/maps.hpp"
-#include "base/string_id.hpp"
 #include <base/exceptions.hpp>
 #include <base/macros/for_each.hpp>
 #include <base/optional.hpp>
@@ -9,14 +7,8 @@
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
-#include "vm/bytecode/builders/builders.hpp"
-#include "vm/bytecode/validator/errors.hpp"
-#include "vm/core/process/type_metadata/definitions.hpp"
-#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
-#include "vm/core/process/type_metadata/type.hpp"
-#include <vm/bytecode/builders/errors.hpp>
-#include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 const vm::code::TypeOfData& vm::code::TypeContext::getTypeOfData(
@@ -133,7 +125,7 @@ void vm::code::TypeContext::validateMethodSignatureMatch(
 template<typename InheritableType>
 void vm::code::TypeContext::validateVMethodSignatures(const InheritableType& inh) const {
 	for (const auto& vmethod: inh.virtual_methods) {
-		const FunctionType& vmethod_type = getType<FunctionType>(vmethod.type, inh, [&]() {
+		const auto& vmethod_type = getType<FunctionType>(vmethod.type, inh, [&]() {
 			return TypeIsNotFunctionalError(vmethod.type);
 		});
 		validateMethodFirstArgument(inh, vmethod_type);
@@ -197,7 +189,7 @@ void vm::code::TypeContext::buildVTableRecursive(
 	const InheritableType&                inh,
 	const ErrorContextType&               error_context_inh,
 	base::HashMap<base::StrID, TypeCRef>& vtable,
-	const TypeMetadata&                   metadata
+	TypeMetadata&                         metadata
 ) const {
 	auto get_type_cref = [&](base::StrID name) -> TypeCRef {
 		return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
@@ -222,7 +214,7 @@ void vm::code::TypeContext::buildVTableRecursive(
 
 template<typename InheritableType>
 vm::code::TypeContext::FieldVector vm::code::TypeContext::buildFieldVector(
-	const InheritableType& inh, const TypeMetadata& metadata
+	const InheritableType& inh, TypeMetadata& metadata
 ) const {
 	auto to_low_type
 		= [&](const TypeOfData& tod) { return metadata.at(VISIT(tod, type, return type.name)); };
@@ -254,10 +246,10 @@ vm::code::TypeContext::FieldVector vm::code::TypeContext::buildFieldVector(
 
 template<typename InheritableType>
 vm::InheritanceMetadata vm::code::TypeContext::buildInheritanceMetadata(
-	const InheritableType& inh, const TypeMetadata& metadata
+	const InheritableType& inh, TypeMetadata& metadata
 ) const {
-	TypeRef tp            = metadata.at(inh.name);
-	auto    get_type_cref = [&](base::StrID name) -> TypeCRef {
+	TypeCRef tp            = metadata.at(inh.name);
+	auto     get_type_cref = [&](base::StrID name) -> TypeCRef {
         return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
 	};
 	auto implements
@@ -416,16 +408,16 @@ Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() co
 			}
 			variant_case(vm::code::ClassType, clazz) {
 				TypeRef                 tp     = metadata->at(clazz.name);
-				FieldVector             fields = buildFieldVector(clazz, *metadata.ref());
+				FieldVector             fields = buildFieldVector(clazz, *metadata.refMut());
 				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(clazz, *metadata.ref());
+					= buildInheritanceMetadata(clazz, *metadata.refMut());
 				tp->defineData(fields, std::move(inh_metadata));
 			}
 			variant_case(vm::code::InterfaceType, interface) {
 				TypeRef                 tp     = metadata->at(interface.name);
-				FieldVector             fields = buildFieldVector(interface, *metadata.ref());
+				FieldVector             fields = buildFieldVector(interface, *metadata.refMut());
 				vm::InheritanceMetadata inh_metadata
-					= buildInheritanceMetadata(interface, *metadata.ref());
+					= buildInheritanceMetadata(interface, *metadata.refMut());
 				tp->defineData(fields, std::move(inh_metadata));
 			}
 			variant_default { CORE_PANIC("bad type"); }

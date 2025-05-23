@@ -329,6 +329,24 @@ class FunctionValidator {
 					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 						throw UnknownFunctionError(generic_arg);
 				}
+				variant_case(opargs::MethodName, method_value) {
+					auto method_name = method_value.method_name;
+					auto generic_arg = opargs::OpCodeArg{ method_value };
+					bool valid       = false;
+					for (const auto& type: tod_map) {
+						std::visit(
+							[&](const auto& t) {
+								if constexpr (requires { t.virtual_methods; }) {
+									for (const auto& vmethod: t.virtual_methods)
+										if (vmethod.name == method_name) valid = true;
+								}
+							},
+							type
+						);
+						if (valid) break;
+					}
+					if (!valid) throw UnknownMethodError(generic_arg);
+				}
 				variant_case(opargs::Label, label_value) {
 					variant_match(instruction) {
 						variant_case_novalue(Op_label) {}
@@ -476,6 +494,7 @@ class FunctionValidator {
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
 			variant_case_novalue(Op_call_builtin_func) {}
+			variant_case_novalue(Op_virtual_call_lptr_method) {}
 			variant_case_novalue(Op_ret_tailcall_func) {}
 			variant_case_novalue(Op_ret) {}
 			variant_case_novalue(Op_deinit) {}

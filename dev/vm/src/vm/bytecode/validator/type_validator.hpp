@@ -150,7 +150,7 @@ namespace vm::code {
 			const InheritableType&                inh,
 			const ErrorContextType&               error_context_inh,
 			base::HashMap<base::StrID, TypeCRef>& implementations,
-			const TypeMetadata&                    metadata
+			TypeMetadata&                         metadata
 		) const;
 
 		/**
@@ -158,7 +158,7 @@ namespace vm::code {
 		 * fields from superclasses.
 		 */
 		template<typename FieldableType>
-		FieldVector buildFieldVector(const FieldableType& inh, const TypeMetadata& metadata) const;
+		FieldVector buildFieldVector(const FieldableType& inh, TypeMetadata& metadata) const;
 
 		/**
 		 * @brief Builds inheritance metadata for a given inheritable. Builds a field vector and a
@@ -166,7 +166,7 @@ namespace vm::code {
 		 */
 		template<typename InheritableType>
 		vm::InheritanceMetadata buildInheritanceMetadata(
-			const InheritableType& inh, const TypeMetadata& metadata
+			const InheritableType& inh, TypeMetadata& metadata
 		) const;
 	};
 }

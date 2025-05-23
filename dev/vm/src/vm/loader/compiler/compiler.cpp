@@ -318,11 +318,9 @@ namespace vm::loader::compiler {
 			converted_functions.push_back(converted_func);
 		}
 
-		return low::LowVMProgram{
-			std::move(types),
-			converted_functions,
-			{ program.globals() | std::ranges::to<std::vector>() },
-			method_id_to_name
-		};
+		return low::LowVMProgram{ std::move(types),
+			                      converted_functions,
+			                      { program.globals() | std::ranges::to<std::vector>() },
+			                      method_id_to_name };
 	}
 }
