@@ -19,7 +19,7 @@ namespace dia {
 			printer::StreamPrinter::newline(2);
 		}
 
-		const int severity_id = static_cast<int>(message_ptr->getSeverity());
+		const auto severity_id = static_cast<usize>(message_ptr->getSeverity());
 		message_log.at(severity_id).emplace_back(std::move(message_ptr));
 	}
 
@@ -45,7 +45,7 @@ namespace dia {
 	template void Logger::dumpLog<DiagnosticToJSONConverter>(bool, std::ostream&) const;
 
 	usize Logger::messageCount(Message::Severity s) const {
-		return message_log.at(static_cast<int>(s)).size();
+		return message_log.at(static_cast<usize>(s)).size();
 	}
 
 	usize Logger::messageCount() const {
