@@ -4,15 +4,23 @@
 
 #include <filesystem/file.hpp>
 
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/block.hpp>
 #include <vm/core/process/memory/pointer.hpp>
 
 #include <variant>
+#include <vector>
 
 namespace vm::api {
 	namespace request {
-		struct Load {
-			fs::FilePath filename;
+		struct LoadStdlib {};
+
+		struct LoadFiles {
+			std::vector<fs::FilePath> filenames;
+		};
+
+		struct LoadCode {
+			std::vector<code::CodeCollection> code_collections;
 		};
 
 		struct Pause {};
@@ -21,7 +29,16 @@ namespace vm::api {
 
 		struct Stop {};
 
-		struct Run {};
+		struct Run {
+			std::vector<std::string> program_args;
+		};
+
+		struct RunFunction {
+			std::string func_name;
+			// @todo: This should be a vector of any VM type, not just u64.
+			// This should change after: https://github.com/ducktype-org/duckling/issues/721
+			std::vector<i64> func_args;
+		};
 
 		struct Input {
 			std::string input;
@@ -61,11 +78,14 @@ namespace vm::api {
 
 	// @Deprecated - ExecutorRequest will have template based api (not variant based)
 	using ExecutorRequest = std::variant<
-		request::Load,
+		request::LoadStdlib,
+		request::LoadFiles,
+		request::LoadCode,
 		request::Resume,
 		request::Pause,
 		request::Stop,
 		request::Run,
+		request::RunFunction,
 		request::Join,
 		request::Step,
 		request::WaitForBreakpoint,
@@ -78,7 +98,10 @@ namespace vm::api {
 
 	struct StatusRequest {};
 
-	using RequestVariant = std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest>;
+	struct ExitCodeRequest {};
+
+	using RequestVariant
+		= std::variant<ExecutorRequest, DataRequest, StatusRequest, IORequest, ExitCodeRequest>;
 
 	struct SupervisorRequest {
 		PID            pid;
@@ -88,5 +111,6 @@ namespace vm::api {
 	SupervisorRequest makeExecutorRequest(PID pid, ExecutorRequest&& data);
 	SupervisorRequest makeDataRequest(PID pid, DataRequest&& data);
 	SupervisorRequest makeStatusRequest(PID pid);
+	SupervisorRequest makeExitCodeRequest(PID pid);
 	SupervisorRequest makeIORequest(PID pid, IORequest&& data);
 }

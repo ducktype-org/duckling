@@ -1,14 +1,34 @@
 #include "mir_structure.hpp"
 
-#include <helios/symbols/symbols.hpp>
+#include <helios/symbols/simple.hpp>
 
 #include <base/variant.hpp>
 
 #include <sstream>
 
 namespace compiler::mir {
+	Function::Function(
+		base::StrID                         name,
+		tsh::SymbolType<>                   return_type,
+		std::vector<tsh::SymbolType<>>      parameter_types,
+		base::StableHashMap<BlockID, Block> blocks,
+		std::vector<BlockID>                block_order,
+		base::StableVector<const MirLocal>  local_list,
+		LifetimeScopeTree                   lifetime_scope_tree,
+		ScopeRef                            no_lifetime_scope,
+		helios::SymID                       helios_id
+	):
+		  name(name),
+		  return_type(return_type),
+		  parameter_types(std::move(parameter_types)),
+		  blocks(std::move(blocks)),
+		  block_order(std::move(block_order)),
+		  local_list(std::move(local_list)),
+		  lifetime_scope_tree(std::move(lifetime_scope_tree)),
+		  no_lifetime_scope(no_lifetime_scope),
+		  helios_id(helios_id) {}
 
-	base::HashT Function::customPerfectHash() const { return base::perfectHash(helios_id); }
+	u64 Function::queryUnstablePerfectHash() const { return helios_id.queryUnstablePerfectHash(); }
 
 	bool isTerminating(Operation op) {
 		switch (op) {
@@ -43,7 +63,7 @@ namespace compiler::mir {
 		}
 	}
 
-	helios::ScopeID Block::beginScope() const {
+	ScopeRef Block::beginScope() const {
 		if (instructions.empty())
 			return terminator.scope;
 		else
@@ -51,19 +71,22 @@ namespace compiler::mir {
 	}
 
 	void Function::debugPrint(std::ostream& output) const {
-		output << "Function " << name.strView() << ": TODO -> " << this->return_type.toString()
-			   << "\n";
+		output << "[MIR] Function " << name.strView() << ": TODO -> "
+			   << this->return_type.toString() << "\n";
 
 		for (auto& local: this->local_list) {
 			output << "    ";
 			local->debugPrint(output, true);
 			output << "\n";
 		}
+		output << "No Lifetime Scope: " << no_lifetime_scope->id << "\n";
 		output << "{\n";
 
-		for (const auto& block: blocks | std::views::reverse) {
+		for (const auto block_id: block_order) {
+			const auto& block = blocks[block_id];
+
 			output << "  block " << u64(block.id);
-			if (block.id == entry_block) output << " [entry]";
+			if (block.id == block_order[0]) output << " [entry]";
 			output << ":\n";
 			for (const auto& instruction: block.instructions) {
 				output << "    ";
@@ -111,7 +134,7 @@ namespace compiler::mir {
 			flag.debugPrint(output);
 			separator = ", ";
 		}
-		output << "], scope:" << scope.customPerfectHash();
+		output << "], scope:" << scope->id;
 
 		// restore flags
 		output.flags(output_flags);
@@ -123,7 +146,7 @@ namespace compiler::mir {
 			output << ": Helios Name: " << getName().strView();
 			output << ", Type: ";
 			output << this->type.toString();
-			output << ", Lifetime Scope: " << this->lifetime_scope.customPerfectHash();
+			output << ", Lifetime Scope: " << this->scope.value()->id;
 			if (parameter_index.has_value())
 				output << ", Parameter Index: " << parameter_index.value();
 		}
@@ -132,6 +155,11 @@ namespace compiler::mir {
 	base::StrID MirLocal::getName() const {
 		if (helios_id.has_value()) return name(helios_id.value());
 		return base::StrID(base::strConcat(id.asInt(), ".tmp").c_str());
+	}
+
+	void MirLocal::setLifetimeScope(ScopeRef scope) {
+		CORE_ASSERT(this->scope.empty(), "lifetime_scope is already set");
+		this->scope.emplace(scope);
 	}
 
 	void MIRValue::debugPrint(std::ostream& output) const {
@@ -161,5 +189,24 @@ namespace compiler::mir {
 		}
 		output << " ";
 		local->debugPrint(output);
+	}
+
+	base::OkBad Function::validateBlockIDs() const {
+		if (blocks.size() != block_order.size()) return base::BAD;
+
+		for (const auto& block_id: block_order) {
+			if (blocks.atMaybe(block_id).empty()) return base::BAD;
+			if (blocks[block_id].id != block_id) return base::BAD;
+		}
+
+		for (const auto& block_id: block_order) {
+			const auto& block = blocks[block_id];
+
+			auto successors = getTerminatorSuccessors(block.terminator);
+			for (const auto successor: successors)
+				if (not blocks.contains(successor)) return base::BAD;
+		}
+
+		return base::OK;
 	}
 }

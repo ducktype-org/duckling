@@ -15,6 +15,6 @@ int main(int argc, char** argv) {
 
 	pst::PST<> pst{ file };
 
-	if (pst.getLogger().bad())
-		pst.getLogger().dumpLog<dia::DiagnosticToJSONConverter>(false, std::cout);
+	if (pst.getLogger()->bad())
+		pst.getLogger()->dumpLog<dia::DiagnosticToJSONConverter>(false, std::cout);
 }

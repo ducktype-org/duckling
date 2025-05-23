@@ -1,22 +1,16 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 16;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-  code: {
-    # [0, 8) -> main ret_val
-    # [8, 16) -> x
+	# conditional so that the code inbetween the target and jump does not get eliminated
+	jmpIf_label           Inside;
 
-    jmpRel_label  Inside;
+	init_lany_type      x, i64;
+	label               Inside;
+	deinit; # x
 
-    init_type     int64; # x
-    label         Inside;
-    deinit; # x
-
-    ret;
-  }
-
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

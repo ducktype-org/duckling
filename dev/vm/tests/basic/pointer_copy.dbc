@@ -1,44 +1,32 @@
-type primitive: int64 8
-type pointer: p64 int64
-type fun: main {} int64
-
 function main {
-    arg_size: 0;
-    ret_size: 8;
-    
-    # ret_val - 0
-    # x - 8
-    # y - 16
-    # p - 24
-    # q - 40
-    # r - 56
-    local_size: 72;
-    
-    code: {
-        init_type int64;            # x
-        init_type int64;            # y
-        init_type p64;              # p
-        init_type p64;              # q
-        init_type p64;              # r
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-        ref_lptr_any 24, 8;         # p := &x
-        # from null to non-null
-        mov_lptr_lptr 40, 24;       # q = p
-        
-        mov_l64_imm 16, 42;         # y = 42
-        store_lptr_l64_ofs 40, 16;  # *q := y
-        output_l64 8;               # print(x)
+	init_lany_type           x, i64;
+	init_lany_type           y, i64;
+	init_lany_type           p, ptr_i64;
+	init_lany_type           q, ptr_i64;
+	init_lany_type           r, ptr_i64;
 
+	ref_lptr_lany        p, x;      # p := &x
 
-        # from non-null to null
-        mov_lptr_lptr 24, 56;       # p = r
+	# from null to non-null
+	mov_lptr_lptr       q, p;      # q = p
 
-        deinit;                     # r
-        deinit;                     # q
-        deinit;                     # p
-        deinit;                     # y
-        deinit;                     # x
+	mov_l64_imm         y, 42;     # y = 42
+	store_lptr_lany  q, y;      # *q := y
+	output_l64          x;         # print(x)
 
-        ret;
-    }
+	# from non-null to null
+	mov_lptr_lptr       p, r;      # p = r
+
+	deinit; # r
+	deinit; # q
+	deinit; # p
+	deinit; # y
+	deinit; # x
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

@@ -1,21 +1,6 @@
 #include "preamble.hpp"
 
 namespace pst {
-	class FunParamEndError final: public dia::Error {
-	protected:
-		[[nodiscard]]
-		std::string toStringBrief() const override {
-			return "Unexpected end to function parameter";
-		}
-
-	public:
-		[[nodiscard]]
-		Domain getDomain() const override {
-			return Domain::Parser;
-		}
-
-		FunParamEndError(dia::SourcePosition pos): dia::Error(pos) {}
-	};
 
 	MBox<FunParam> FunParam::parse(LangParserState& state) {
 		auto position = state.getPosition();

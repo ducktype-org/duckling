@@ -12,8 +12,8 @@ namespace vm::api {
 	struct TypeAnalysis {};
 
 	struct ExecutionPanicked {
-		std::exception exception;
-		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, exception);
+		std::string error_message;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(ExecutionPanicked, error_message);
 	};
 
 	struct Paused {};
@@ -24,7 +24,12 @@ namespace vm::api {
 
 	struct NotStarted {};
 
-	struct ExecutionCompleted {};
+	using ExitCode = i64;
+
+	struct ExecutionCompleted {
+		ExitCode exit_code;
+		NLOHMANN_DEFINE_TYPE_INTRUSIVE(vm::api::ExecutionCompleted, exit_code);
+	};
 
 	struct ExecutionStopped {};
 
@@ -49,6 +54,7 @@ namespace vm::api {
 	};
 
 	using ProcStatus = std::variant<ExecutionNotStarted, Parsing, TypeAnalysis, Executing>;
+
 }
 
 

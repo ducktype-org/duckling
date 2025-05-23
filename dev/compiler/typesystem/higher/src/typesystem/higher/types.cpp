@@ -99,6 +99,10 @@ namespace tsh {
 
 	bool FunctionAbstractType::isFree() const { return toCPimpl(pimpl)->isFree(); }
 
+	SymbolType<> DynamicArrayAbstractType::getElementType() const {
+		return toCPimpl(pimpl)->getElementType();
+	}
+
 	/*****************\
 	|  NOMINAL TYPES  |
 	\*****************/
@@ -120,18 +124,19 @@ namespace tsh {
 		return toCPimpl(pimpl)->getBaseClassType(ctx);
 	}
 
-	base::Optional<compiler::helios::SymID>
-		ClassAbstractType::getBaseClassSymbol(query::Context& ctx) const {
+	base::Optional<compiler::helios::SymID> ClassAbstractType::getBaseClassSymbol(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getBaseClassSymbol(ctx);
 	}
 
-	std::vector<ClassAbstractType>
-		ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx) const {
+	std::vector<ClassAbstractType> ClassAbstractType::getImplementedInterfaceTypes(query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceTypes(ctx);
 	}
 
-	std::vector<compiler::helios::SymID>
-		ClassAbstractType::getImplementedInterfaceSymbols(query::Context& ctx) const {
+	std::vector<compiler::helios::SymID> ClassAbstractType::getImplementedInterfaceSymbols(
+		query::Context& ctx
+	) const {
 		return toCPimpl(pimpl)->getImplementedInterfaceSymbols(ctx);
 	}
 
@@ -165,8 +170,10 @@ namespace tsh {
 	INSTANTIATE_CHECKED_CAST(FloatAbstractType)
 	INSTANTIATE_CHECKED_CAST(RawPointerAbstractType)
 	INSTANTIATE_CHECKED_CAST(PointerAbstractType)
+	INSTANTIATE_CHECKED_CAST(StringAbstractType)
 	INSTANTIATE_CHECKED_CAST(TupleAbstractType)
 	INSTANTIATE_CHECKED_CAST(FunctionAbstractType)
+	INSTANTIATE_CHECKED_CAST(DynamicArrayAbstractType)
 	INSTANTIATE_CHECKED_CAST(VariantAbstractType)
 	INSTANTIATE_CHECKED_CAST(ClassAbstractType)
 	INSTANTIATE_CHECKED_CAST(NamespaceAbstractType)

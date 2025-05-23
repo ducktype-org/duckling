@@ -1,16 +1,7 @@
-type primitive: int32 4
-type fun: main {} int32
+type fun: main {} i32
 
 function main {
-  arg_size: 0;
-  ret_size: 4;
-  local_size: 12;
-
-  code: {
-    # [0, 4) -> main ret_val
-    init_type int32;
-    deinit;
-    ret;
-  }
-
+	init_lany_type x, i32;
+	deinit; # x
+	ret;
 }

@@ -1,36 +1,26 @@
-type primitive: int64 8
-type fun: main {} int64
-
 function main {
-  arg_size: 0;
-  local_size: 16;
-  ret_size: 8;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-  code: {
-    # [0, 8) -> main ret_val
+	jmp_label           A;
 
-    jmpRel_label    A;
+	init_lany_type      x, i64;
+	label               B;
+	jmp_label           B;
+	deinit; # x
+	jmp_label           A;
 
-    init_type     int64; # x
+	label               A;
 
-    jmpRel_label    B;
-    label           B;
+	init_lany_type      y, i64;
 
-    deinit; # x
-    
-    jmpRel_label    A;
-    label           A;
-    
-    init_type     int64; # x
+	jmp_label           C;
+	label               C;
 
-    label           C;
-    jmpRel_label    C;
+	deinit; # y
 
-    deinit; # x
-
-    jmpRel_label    A;
-
-    ret;
-  }
-
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

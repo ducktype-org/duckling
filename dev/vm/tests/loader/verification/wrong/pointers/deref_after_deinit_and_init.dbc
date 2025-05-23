@@ -1,34 +1,23 @@
-type primitive: int64 8
-type pointer: ptrint64 int64
-type fun: main {} int64
-
 function main {
-  arg_size: 0;
-  ret_size: 8;
-  local_size: 32;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-  code: {
-    # [0, 8) -> main ret_val
-    # [8, 24) -> x
-    # [24, 32) -> y
-    
-    init_type ptrint64;
-    init_type int64;
+	init_lany_type 		x, ptr_i64;
+	init_lany_type 		y, i64;
 
-    mov_l64_imm         24, 1;
-    ref_lptr_any        8, 24;  # x = &y
+	mov_l64_imm         y, 1;
+	ref_lptr_lany        x, y;  # x = &y
 
-    deinit;
+	deinit; # y
 
-    # [24, 32) -> z
-    init_type int64;
+	init_lany_type 		z, i64;
 
-    load_l64_lptr       24, 8;  # z = *x
+	staticTableLoad_lany_lptr       z, x;  # z = *x
 
-    deinit;
-    deinit;
-
-    ret;
-  }
-
+	deinit; # z
+	deinit; # x
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

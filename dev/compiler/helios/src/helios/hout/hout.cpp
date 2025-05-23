@@ -2,6 +2,10 @@
 
 #include "elements.hpp"
 
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>  // for parent
+#include <helios_private/symbols/symbols.hpp>
 #include <query_framework/context.hpp>
 
 #include <sstream>
@@ -46,10 +50,10 @@ namespace compiler::helios {
 		return out.str();
 	}
 
-	base::HashT HOUTFunction::customPerfectHash() const {
+	u64 HOUTFunction::queryUnstablePerfectHash() const {
 		// @note: see
 		// https://github.com/orgs/ducktype-org/projects/8/views/1?pane=issue&itemId=70870558
-		return base::perfectHash(original_symbol);
+		return original_symbol.queryUnstablePerfectHash();
 	}
 
 	HOUTFunction::HOUTFunction(SymID symbol, query::Context& ctx):
@@ -68,7 +72,7 @@ namespace compiler::helios {
 			original_name,
 			" (",
 			"Symbol ",
-			helios_symbol.customPerfectHash(),
+			helios_symbol.queryUnstablePerfectHash(),
 			")"
 			" := ",
 			value,

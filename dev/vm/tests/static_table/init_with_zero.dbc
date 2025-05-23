@@ -1,53 +1,41 @@
-type primitive: int64 8
-type static_table: tableint64 int64 2
-type fun: main {} int64
+type static_table: tablei64 i64 2
+type pointer: ptr_tablei64 tablei64
 
 function main {
-  arg_size: 0;
-  ret_size: 8;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-  # x - 0
-  # i - 8
-  # y - 16
-  # t - 24
-  local_size: 48;
+	init_lany_type           x, i64;
+	init_lany_type           i, i64;
+	init_lany_type           y, i64;
+	init_lany_type           t, ptr_tablei64;
 
-  code: {
-    # [0, 8) main ret_val
-    init_type           int64; # [8, 16) x
-    init_type           int64; # [16, 24) i
-    init_type           int64; # [24, 32) y
-    init_type           int64; # [32, 40) t
+	alloc_lptr_type     t, tablei64;
 
-    mov_l64_imm         32, 42;
-    mov_l64_imm         40, 42;
+	# x := t[0]
+	mov_l64_imm         		i, 0;
+	staticTableLoad_lany_lptr   x, t;
+	ext_l64 					i;
 
-    alloc_lptr_type     32, tableint64;
+	mov_l64_l64         y, x;
 
-    # x := t[0]
-    mov_l64_imm         16, 0;
-    load_l64_lptr_ofs   8, 32;
-    ext_l64             16;
+	# x := t[1]
+	mov_l64_imm         		i, 1;
+	staticTableLoad_lany_lptr   x, t;
+	ext_l64             		i;
 
-    mov_l64_l64         24, 8;
+	add_l64_l64         y, x;
 
-    # x := t[1]
-    mov_l64_imm         16, 1;
-    load_l64_lptr_ofs   8, 32;
-    ext_l64             16;
+	output_l64          y;
 
-    add_l64_l64         24, 8;
+	free_lptr           t;
 
-    output_l64          24;
-
-    free_lptr           32;
-
-    deinit;
-    deinit;
-    deinit;
-    deinit;
-
-    ret;
-  }
-
+	deinit;
+	deinit;
+	deinit;
+	deinit;
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

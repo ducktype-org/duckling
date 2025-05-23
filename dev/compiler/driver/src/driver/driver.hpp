@@ -12,6 +12,8 @@
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
 
+#include <expected>
+
 namespace compiler::driver {
 	enum class BackendType : std::uint8_t { LLVM, DVM };
 
@@ -28,13 +30,22 @@ namespace compiler::driver {
 	 * @brief Compilation options.
 	 */
 	struct Options {
-		BackendType              backend_type;
-		base::StrID              output_file;
-		bool                     compile_to_assembly;
-		bool                     dump_llvm_ir;
+		BackendType backend_type;
+		bool        compile_to_assembly;
+		bool        dump_llvm_ir;
+
+		/**
+		 * Do not saves the compiled DBC to file.
+		 * Useful when wanting to run the compiled bytecode.
+		 */
+		bool                     dvm_code_only_memory;
 		bool                     add_builtin_library;
 		std::vector<base::StrID> external_objects_files;
 		std::vector<base::StrID> external_libs;
+	};
+
+	struct RunOutput final {
+		int exit_code;
 	};
 
 	/**
@@ -57,7 +68,15 @@ namespace compiler::driver {
 		 */
 		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
 
-		virtual void link() = 0;
+		/**
+		 * @brief Link all compiled modules into a single program.
+		 */
+		virtual void link(base::StrID output_file) = 0;
+
+		/**
+		 * @brief Run the compiled program. (only for DVM)
+		 */
+		virtual auto run() -> std::expected<RunOutput, std::string> = 0;
 
 		virtual ~BackendDriver() = default;
 	};
@@ -73,7 +92,22 @@ namespace compiler::driver {
 			  options(std::move(opts)),
 			  backend_driver(createBackendDriver(&options)) {}
 
+		/**
+		 * @brief Compiles the HOUTUnit to the backend module.
+		 */
 		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
+
+		/**
+		 * @brief Links all module compiled so far into a complete program.
+		 */
+		void link(base::StrID output_file);
+
+		/**
+		 * @brief Execute modules compiled with `compileModule` method.
+		 * Only relevant for DVM backend.
+		 * Returns the exit code of the executed program or an error message.
+		 */
+		auto run() -> std::expected<RunOutput, std::string>;
 
 	private:
 		Options            options;

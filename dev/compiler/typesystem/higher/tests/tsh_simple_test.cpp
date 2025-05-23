@@ -35,6 +35,8 @@ public:
 		TESTER_ADD_TEST(simpleInts);
 		TESTER_ADD_TEST(simpleFloats);
 		TESTER_ADD_TEST(simplePointer);
+		TESTER_ADD_TEST(simpleString);
+		TESTER_ADD_TEST(simpleDynamicArray);
 		TESTER_ADD_TEST(simpleTuple);
 		TESTER_ADD_TEST(simpleVariant);
 		TESTER_ADD_TEST(simpleFunction);
@@ -232,6 +234,53 @@ private:
 	}
 
 	/**
+	 * Test that there is only one string type, and that it is correctly cast.
+	 */
+	void simpleString() {
+		const auto str_1 = query::entryPoint<QueryStringType>({});
+		const auto str_2 = query::entryPoint<QueryStringType>({});
+
+		assertTrue(str_1 == str_2, "There should only be one String type.");
+
+		assertTrue(str_1.getKind() == String, "String type should have kind String.");
+
+		const AbstractType       type_str = str_1;
+		const StringAbstractType str_3    = type_str;
+		assertTrue(str_3.getKind() == String, "String should survive casting.");
+	}
+
+	/**
+	 * Test that dynamic array with different elements are different types
+	 * and that they are correctly cast.
+	 */
+	void simpleDynamicArray() {
+		const auto int_16 = query::entryPoint<QueryIntegralType>({ 16 });
+		const auto int_32 = query::entryPoint<QueryIntegralType>({ 32 });
+
+		const auto arr_1 = query::entryPoint<QueryDynamicArrayType>(st(int_16));
+		assertTrue(arr_1.getKind() == DynamicArray, "DynamicArray should have kind DynamicArray.");
+		assertTrue(arr_1.getElementType() == st(int_16), "Element type should be as constructed.");
+
+		const AbstractType             type_arr = arr_1;
+		const DynamicArrayAbstractType arr_2    = type_arr;
+		assertTrue(arr_2.getKind() == DynamicArray, "DynamicArray should survive casting.");
+
+		const auto arr_3 = query::entryPoint<QueryDynamicArrayType>(st(int_16));
+		assertTrue(arr_1 == arr_3, "DynamicArrays with the same element types should be equal.");
+
+		const auto arr_4 = query::entryPoint<QueryDynamicArrayType>(st(int_32));
+		assertTrue(
+			arr_1 != arr_4, "DynamicArrays with different element types should be different."
+		);
+
+		const auto arr_5 = query::entryPoint<QueryDynamicArrayType>(st(int_16, true));
+		assertTrue(
+			arr_1 != arr_5,
+			"DynamicArrays with element with different mutability should be different."
+		);
+	}
+
+	/**
 	 * Test that tuples with different components are treated as different types
 	 * and that they are correctly cast.
 	 */
@@ -324,8 +373,7 @@ private:
 		const auto fun_different_output
 			= query::entryPoint<QueryFunctionType>({ { st(int_16), st(int_32) }, st(int_16) });
 		assertTrue(
-			fun_1 != fun_different_output,
-			"Functions of different output types should be different."
+			fun_1 != fun_different_output, "Functions of different output types should be different."
 		);
 		const auto fun_different_flags = query::entryPoint<QueryFunctionType>(
 			{ { st(int_16), st(int_32) }, st(int_32), true, true }

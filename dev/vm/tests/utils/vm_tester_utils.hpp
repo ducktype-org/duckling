@@ -3,6 +3,11 @@
 #include <tester/tester.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/api_error.hpp>
+#include <vm/api/data/status.hpp>
+#include <vm/bytecode/bytecode.hpp>
+
+#include <expected>
 
 
 #define VM_TESTER_TEST_SIMPLE_CONSTRUCTOR(...)                            \
@@ -11,12 +16,66 @@
 
 class VmTestSuite: public tester::TestSuite {
 public:
-	VmTestSuite(tester ::TestConfig&& config, std::string_view name):
+	VmTestSuite(tester::TestConfig&& config, std::string_view name):
 		  tester::TestSuite(std::move(config), name) {}
 
 protected:
+	struct TestResult {
+		vm::PID                               pid;
+		std::expected<i64, vm::api::ApiError> run_result;  // exit code or error
+	};
+
+private:
+	TestResult runTestImpl(
+		vm::PID                            pid,
+		const base::Optional<std::string>& optional_input,
+		const base::Optional<std::string>& optional_output,
+		const std::vector<std::string>&    args
+	);
+
+protected:
+	vm::PID initProcess();
+
+	void handleTestResult(const TestResult& test_result, i64 exit_code);
+
+	/**
+	 * @brief Runs a program from a given filepath with the specified input and command-line
+	 * arguments. Asserts that the actual output matches the expected one.
+	 */
 	void runTestOnVm(
-		const std::string& rbc_filename, const std::string& input, const std::string& output
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0,
+		bool                               add_stdlib      = false
+	);
+	/**
+	 * @brief Same as above, but the program is given as an argument
+	 */
+	void runTestOnVm(
+		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		i64                                exit_code       = 0,
+		bool                               add_stdlib      = false
+	);
+
+	TestResult runTestOnVmGetResult(
+		const std::string&                 dbc_filename,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		bool                               add_stdlib      = false
+	);
+
+	TestResult runTestOnVmGetResult(
+		const vm::code::CodeCollection&    code,
+		const base::Optional<std::string>& optional_input  = {},
+		const base::Optional<std::string>& optional_output = {},
+		const std::vector<std::string>&    args            = {},
+		bool                               add_stdlib      = false
 	);
 
 	/**

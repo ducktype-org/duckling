@@ -2,11 +2,11 @@
 
 #include <diagnostic/source_position.hpp>
 #include <filesystem/file.hpp>
-#include <token_file/file.hpp>
 #include <token_parser_core/automatic.hpp>
 #include <token_parser_core/base_element.hpp>
 #include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
+#include <token_source/source.hpp>
 
 #include <base/box.hpp>
 #include <base/macros/for_each.hpp>
@@ -22,17 +22,16 @@ namespace vm::loader::parser {
 
 	class F8ParserState final: public tpc::ParserState {
 	public:
-		F8ParserState(tpc::TokenStream&& stream, dia::Logger& err):
+		F8ParserState(tpc::TokenStream&& stream, Ref<dia::Logger> err):
 			  tpc::ParserState(std::move(stream), err) {}
 
 		tpc::GenericAutomatic<F8ParserState> parse();
 	};
 
 	struct AsmElement: tpc::Element {
-		Box<dia::SourcePosition> position;
+		dia::SourcePosition position;
 
-		AsmElement(const dia::SourcePosition& position):
-			  position(makeBox<dia::SourcePosition>(position)) {}
+		AsmElement(const dia::SourcePosition& position): position(position) {}
 
 		void debugPrint(std::ostream& out) const override;
 	};
@@ -42,6 +41,17 @@ namespace vm::loader::parser {
 
 		code::TypeOfData  datatype;
 		static MBox<Type> parse(F8ParserState& state);
+
+		void dprint(std::ostream& out) const override;
+	};
+
+	struct GlobalData final: AsmElement {
+		using AsmElement::AsmElement;
+
+		tpc::Identifier name;
+		tpc::Identifier type;
+
+		static Box<GlobalData> parse(F8ParserState& state);
 
 		void dprint(std::ostream& out) const override;
 	};
@@ -78,9 +88,6 @@ namespace vm::loader::parser {
 		using AsmElement::AsmElement;
 
 		tpc::Identifier name;
-		usize           arg_size   = SIZE_T_MAX;
-		usize           local_size = SIZE_T_MAX;
-		usize           ret_size   = SIZE_T_MAX;
 		MBox<ByteCode>  code;
 
 		static MBox<Func> parse(F8ParserState& state);
@@ -91,9 +98,10 @@ namespace vm::loader::parser {
 	};
 
 	struct ParsedFile final {
-		std::vector<Box<Func>> functions;
-		std::vector<Box<Type>> types;
-		fs::FilePath           source_file;
+		std::vector<Box<Func>>       functions;
+		std::vector<Box<Type>>       types;
+		std::vector<Box<GlobalData>> global_data;
+		fs::FilePath                 source_file;
 
 		ParsedFile(fs::FilePath source_file);
 

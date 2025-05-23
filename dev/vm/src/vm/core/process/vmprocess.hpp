@@ -5,28 +5,39 @@
 #include <base/optional.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/data/request.hpp>
+#include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/proc_io.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/loader/loader.hpp>
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
 
 #include <condition_variable>
 #include <deque>
+#include <expected>
 #include <shared_mutex>
+#include <string>
+#include <variant>
+#include <vector>
 
 namespace vm::loader {
 	class Loader;
 }
 
 namespace vm {
-	using ServiceManager = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ServiceManager       = ServiceManagerDef<ReferenceCounter, Profiler>;
+	using ProgramRunArguments  = std::vector<std::string>;
+	using FunctionRunArguments = std::vector<i64>;
+	using RunArguments         = std::variant<ProgramRunArguments, FunctionRunArguments>;
 
 	/**
 	 * @brief The API for using the virtual process of the VM.
@@ -57,14 +68,9 @@ namespace vm {
 
 		base::Optional<vm::low::LowVMProgram> loaded_program = {};
 
-		std::expected<api::Response, api::LoadProgramError> loadProgram(const fs::FilePath& path);
-
 		Memory memory;
 
-		Box<loader::Loader> loader;
-
-		//@TODO: For now assume that bytecode validation is always turned on.
-		static constexpr const bool VALIDATE_CODE = true;
+		loader::Loader loader{};
 
 		/**
 		 * @brief Performs external execution request on the VCPU.
@@ -75,8 +81,9 @@ namespace vm {
 		 * @param request Request that performs action on the Execution Thread.
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::ExecutorRequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::ExecutorRequest& request
+		);
 
 		/**
 		 * @brief Performs external data request on the VCPU.
@@ -89,16 +96,27 @@ namespace vm {
 		 * @param request
 		 * @return std::expected<api::Response, api::CoreOperationError>
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::DataRequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(
+			const api::DataRequest& request
+		);
 
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::IORequest& request);
+		std::expected<api::Response, api::CoreOperationError> doRequest(const api::IORequest& request
+		);
 
 		/**
-		 * @brief Creates new thread that runs the code in the Executor service.
+		 * @brief Loads the program from a given source into the current loader program state,
+		 * recompiles the program as a whole and moves an updated program into VMProcesses memory.
 		 */
-		std::expected<api::Response, api::CoreOperationError> run();
+		std::expected<api::Response, api::LoadProgramError> loadProgram(
+			const std::variant<std::vector<fs::FilePath>, std::vector<code::CodeCollection>>& source
+		);
+
+		/**
+		 * @brief Creates new thread that runs a function in the Executor service.
+		 */
+		std::expected<api::Response, api::CoreOperationError> runFunction(
+			const std::string& func_name, const RunArguments& run_arguments
+		);
 
 		/**
 		 * @brief Joins the executing thread.
@@ -116,8 +134,8 @@ namespace vm {
 		 * If the executing thread is paused and waiting for input, it will resume.
 		 * Relevant if "uses_stdio" is false.
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			input(const api::request::Input& request);
+		std::expected<api::Response, api::CoreOperationError> input(const api::request::Input& request
+		);
 
 		/**
 		 * @brief Gets the output of the executing thread and clears the output stream.
@@ -127,11 +145,18 @@ namespace vm {
 		std::expected<api::Response, api::CoreOperationError> output();
 
 		/**
-		 * @brief Gets the Status of the VCPU (memory-safe).
+		 * @brief Gets the status of the process (memory-safe).
 		 *
-		 * @return api::VCPUStatus
+		 * @return api::ProcStatus
 		 */
 		api::ProcStatus getStatus();
+
+		/**
+		 * @brief Returns exit code of the process - i.e. return value of `main` bytecode function.
+		 *
+		 * @return api::Response
+		 */
+		std::expected<api::Response, api::StateError> getExitCode();
 
 		/**
 		 * @brief Holds all services. When it's constructed, it initializes all services.
@@ -145,8 +170,9 @@ namespace vm {
 		 * @brief Attaching means all IO is interactive, input is read from stdin, output
 		 * @brief is automatically forwarded to stdout.
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			attach(std::istream& istream = std::cin, std::ostream& ostream = std::cout);
+		std::expected<api::Response, api::CoreOperationError> attach(
+			std::istream& istream = std::cin, std::ostream& ostream = std::cout
+		);
 
 		std::expected<api::Response, api::CoreOperationError> detach();
 
@@ -173,8 +199,7 @@ namespace vm {
 		/**
 		 * @brief Entry point to perform requests on the process.
 		 */
-		std::expected<api::Response, api::CoreOperationError>
-			doRequest(const api::RequestVariant& request);
+		std::expected<api::Response, api::ApiError> doRequest(const api::RequestVariant& request);
 
 		VMProcess();
 

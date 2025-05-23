@@ -13,6 +13,8 @@ namespace pst::expr {
 		SuffixOperator,
 		BinaryOperator,
 		ExprValue,
+		ExprStrValue,
+		ExprCharValue,
 		TemplateSpecifier,
 		IdentifierLiteral,
 		KeywordLiteral,
@@ -26,4 +28,4 @@ namespace pst::expr {
 		Comma,
 		Assignment
 	);
-};
+}

@@ -174,13 +174,61 @@ namespace pst {
 	};
 
 	/**
+	 * @brief Const compile time variable declaration.
+	 */
+	class Const final: public Decl {
+		tpc::Identifier                                 name;
+		base::Optional<AccessInternal<CommaExprHolder>> type;
+		base::Optional<AccessInternal<CommaExprHolder>> value;
+
+		template<typename T, lang_def::Keyword key>
+		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
+
+	public:
+		DECL_CHILD_CONSTRUCTOR(Const, ElementKind::Const);
+		static MBox<Const> parse(LangParserState& state);
+
+		[[nodiscard]]
+		base::StrID getName() const {
+			return name.value;
+		}
+
+		bool trailingSemicolon() override;
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getType() const {
+			if (type.has_value()) return { type.value().give() };
+			return {};
+		}
+
+		[[nodiscard]]
+		base::Optional<AccessLocked<ExprHolder>> getValue() const {
+			if (value.has_value()) return { value.value().give() };
+			return {};
+		}
+
+		~Const() final = default;
+		void dprint(std::ostream& out) const final;
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return "Const";
+		}
+	};
+
+	/**
 	 * @brief Variable declaration
 	 */
 	class Variable final: public Decl {
-		tpc::Identifier                 name;
-		AccessInternal<CommaExprHolder> type;
-		AccessInternal<CommaExprHolder> value;
-		bool                            is_const = true;
+		tpc::Identifier                                 name;
+		base::Optional<AccessInternal<CommaExprHolder>> type;
+		base::Optional<AccessInternal<CommaExprHolder>> value;
+		bool                                            is_const = true;
+
+		template<typename T, lang_def::Keyword key>
+		friend MBox<T> parseVariableTemplate(pst::LangParserState& state);
 
 	public:
 		DECL_CHILD_CONSTRUCTOR(Variable, ElementKind::Variable);
@@ -193,13 +241,15 @@ namespace pst {
 		bool trailingSemicolon() override;
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getType() const {
-			return type.give();
+		base::Optional<AccessLocked<ExprHolder>> getType() const {
+			if (type.has_value()) return { type.value().give() };
+			return {};
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getValue() const {
-			return value.give();
+		base::Optional<AccessLocked<ExprHolder>> getValue() const {
+			if (value.has_value()) return { value.value().give() };
+			return {};
 		}
 
 		[[nodiscard]]

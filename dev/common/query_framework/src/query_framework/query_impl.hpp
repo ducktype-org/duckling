@@ -6,11 +6,11 @@
 
 #include "context.hpp"
 #include "detail/acd.hpp"
-#include "detail/dep_graph.hpp"
-#include "detail/logs.hpp"
-#include "detail/node_making.hpp"
-#include "detail/query_id_provider.hpp"  // IWYU pragma: export
-#include "query_cache_macros.hpp"        // IWYU pragma: export
+#include "detail/context_access.hpp"
+#include "detail/query_graph/node_making.hpp"
+#include "detail/utils/logs.hpp"
+#include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_hash.hpp"
 #include "query_int.hpp"
 
 #include <base/defer.hpp>
@@ -25,12 +25,6 @@
 #include <utility>
 
 namespace query::detail {
-	/**
-	 * @brief Internal helper struct used to create context
-	 */
-	struct ContextMaker final {
-		static auto make(NodeID my_node) { return Context(my_node); }
-	};
 
 	/**
 	 * @brief Internal function implementing the call to a query.
@@ -45,20 +39,18 @@ namespace query::detail {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		if (auto v = QueryImplType::load(key)) {
+		const auto unstable_hash = unstableHashKey(key);
+
+		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
 			);
 
-			// @todo: This might bind & to a const&, via std::move "creating" &&.
-			// It should works for all cases in our codebase,
-			// but I'm not sure if it will work always and if it is
-			// standardized behaviour.
 			return std::move(v.value().data);
 		} else {
 			auto node_id = makeNodeID(QueryImplType::QueryType::getID(), key);
-			auto context = ContextMaker::make(node_id);
+			auto context = ContextAccess::make(node_id);
 
 			// @FUTURE: provide legit acd here
 			ACD acd;
@@ -69,24 +61,19 @@ namespace query::detail {
 			// @TODO: in the future we might want to guarantee that query operation are no-throw
 			// apart from panics and similar stuff.
 			// We for sure need more control of what happens if query operation throws.
-			defer(dep_graph::setExit(node_id));
+			defer(ContextAccess::getGraph()->setExit(node_id));
 
 			// prolog:
-			dep_graph::setEntry(node_id, from);
+			ContextAccess::getGraph()->setEntry(node_id, from);
 
-			QUERY_DEBUG_LOG(
-				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n"
-			);
+			QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Calculating.\n");
 
 			// epilog:
-			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n")
-			);
+			defer(QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Done.\n"));
 
 			// This is all at the end, with defer above,
-			// to avoid false positive dangling reference warning.
-			// We can't do it move-less without using temporary
-			// lifetime extension, which causes the warning.
-			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			// to guarantee copy elision with "prvalue semantics".
+			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -114,10 +101,13 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QKey key) -> LoadResult;
-		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		 *  static auto load(query::QueryUnstableHash key_hash) -> LoadResult;
+		 *  static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) ->
+		 * QResult;
 		 */
+		static constexpr bool CACHE_ON_DISK = false;
 	};
+
 }
 
 /**
@@ -136,34 +126,54 @@ namespace query::detail {
  * @param type Name of a struct with query implementation
  * @param pretty_name Pretty name of the Query
  */
-#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type, pretty_name)                                \
-	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)              \
-		-> type::QResult {                                                                          \
-		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                     \
-	}                                                                                               \
-	decltype(type::QueryType::id)   type::QueryType::id = ::query::detail::newQueryID(pretty_name); \
-	decltype(type::QueryType::name) type::QueryType::name = pretty_name;                            \
-	static_assert(                                                                                  \
-		not std::is_reference_v<type::QResult>,                                                     \
-		"Query result type should not be a reference (use CRef instead)"                            \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		not std::is_reference_v<type::PResult>,                                                     \
-		"Provider result type should not be a reference (use CRef instead)"                         \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		std::is_same_v<                                                                             \
-			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>,   \
-			type::QResult>,                                                                         \
-		"Bad store result."                                                                         \
-	);                                                                                              \
-	static_assert(                                                                                  \
-		std::is_same_v<                                                                             \
-			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,           \
-			type::PResult>,                                                                         \
-		"Bad provide result."                                                                       \
+#define INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(type)                                           \
+	auto type::QueryType::internal_query(type::QKey key, ::query::detail::NodeID from)            \
+		-> type::QResult {                                                                        \
+		return ::query::detail::standardQueryEntry<type>(std::move(key), from);                   \
+	}                                                                                             \
+	decltype(type::QueryType::id) type::QueryType::id                                             \
+		= ::query::detail::registerQuery(type::QueryType::getData());                             \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::QResult>,                                                   \
+		"Query result type should not be a reference (use CRef instead)"                          \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::PResult>,                                                   \
+		"Provider result type should not be a reference (use CRef instead)"                       \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_same_v<                                                                           \
+			std::invoke_result_t<                                                                 \
+				decltype(type::store),                                                            \
+				query::QueryUnstableHash,                                                         \
+				type::PResult,                                                                    \
+				::query::ACD>,                                                                    \
+			type::QResult>,                                                                       \
+		"Bad store result."                                                                       \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_same_v<                                                                           \
+			std::invoke_result_t<decltype(type::provide), ::query::Context&, type::QKey>,         \
+			type::PResult>,                                                                       \
+		"Bad provide result."                                                                     \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not std::is_reference_v<type::QKey>,                                                      \
+		"Query key type should not be a reference (use custom struct instead)"                    \
+	);                                                                                            \
+	static_assert(                                                                                \
+		::query::HasUnstablePerfectHash<type::QKey>,                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 (query::QueryUnstableHash)." \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
+		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
+		"(QueryStableHash)."                                                                      \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_invocable_v<decltype(type::load), query::QueryUnstableHash>,                      \
+		"Load function must be callable with query::QueryUnstableHash."                           \
 	);
-
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is
@@ -171,4 +181,4 @@ namespace query::detail {
  * @param type Name of the Query
  */
 #define QUERY_IMPLEMENTATION_BOILERPLATE(query_type) \
-	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type, #query_type)
+	INTERNAL_QUERY_IMPLEMENTATION_BOILERPLATE(ImplementationOf_##query_type)

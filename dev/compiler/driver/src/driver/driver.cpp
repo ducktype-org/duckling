@@ -30,7 +30,8 @@ namespace compiler::driver {
 		functions.reserve(hout_unit->functions.size());
 
 		for (const auto& hout_function: hout_unit->functions) {
-			auto mir_function = query::entryPoint<mir::LowerToMirFunction>({ hout_function });
+			CRef mir_function
+				= &query::entryPoint<mir::LowerToMirFunction>({ hout_function })->value();
 			auto lir_function = query::entryPoint<lir::LowerToLirFunction>({ mir_function });
 			functions.push_back(lir_function);
 		}
@@ -40,7 +41,9 @@ namespace compiler::driver {
 		query::utils::withContextDo([&](query::Context& ctx) {
 			backend_driver->compileModule(ctx, module_data);
 		});
-
-		backend_driver->link();
 	}
+
+	void Driver::link(base::StrID output_file) { backend_driver->link(output_file); }
+
+	std::expected<RunOutput, std::string> Driver::run() { return backend_driver->run(); }
 }

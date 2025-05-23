@@ -1,7 +1,14 @@
 #include "helios_test_utils.hpp"
 
-#include <helios/hout/elements/query_hout_of_expr.hpp>
+#include <frontend/module_tree/queries.hpp>
+#include <helios/symbols/query_type_from_definition.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/pst_visitor.hpp>
+#include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/utils/with_context_do.hpp>
 
@@ -18,7 +25,7 @@ namespace compiler::helios::test_utils {
 		return { module, base::anyCast<ScopeID>(main_file_root_scope) };
 	}
 
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope) {
+	SymbolList getChain(const std::string_view chain, ScopeID scope) {
 		auto       symbols = base::strSplit(chain, ".");
 		SymbolList result;
 		bool       first_symbol = true;
@@ -33,7 +40,7 @@ namespace compiler::helios::test_utils {
 			auto symbol_path = symbol->getAsSingle().valueOrThrow();
 			for (auto&& elem: symbol_path) {
 				auto dealiased = query::entryPoint<QueryDealias>(elem)->valueOrThrow();
-				result.insert(result.end(), dealiased.begin(), dealiased.end());
+				result.appendList(dealiased);
 			}
 			first_symbol = false;
 		}
@@ -67,7 +74,8 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitConst(pst::Access<pst::Const> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
+				CORE_ASSERT(stmt->getValue().has_value(), "Visited Const had no declared value");
+				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};
 
@@ -88,7 +96,8 @@ namespace compiler::helios::test_utils {
 
 		public:
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
-				setExprTree(stmt->getValue().illegalAccess().value()->getExpr());
+				CORE_ASSERT(stmt->getValue().has_value(), "Visited Const had no declared value");
+				setExprTree(stmt->getValue().value().illegalAccess().value()->getExpr());
 			}
 		};
 
@@ -97,5 +106,15 @@ namespace compiler::helios::test_utils {
 		pst_stmt->acceptVisitor(visitor);
 
 		return std::move(visitor.expr_tree).value();
+	}
+
+	ScopeID getFunctionBodyScope(SymID sym) {
+		return base::anyCast<ScopeID>(
+			query::utils::withContextCompute([&](query::Context& ctx) -> std::any {
+				auto func_pst = symbolPst(sym).unlock(ctx).dynamicCast<pst::Fun>().value();
+				auto fun_body = func_pst->getBody().unlock(ctx);
+				return ctx.query<QueryPrimaryCodeScopeFor>(fun_body);
+			})
+		);
 	}
 }

@@ -2,6 +2,8 @@
 
 #include "../mir_structure/mir_structure.hpp"
 
+#include <helios/helios_errors.hpp>
+#include <helios/helios_result.hpp>
 #include <helios/hout/hout.hpp>
 #include <query_framework/query_int.hpp>
 
@@ -12,19 +14,17 @@ namespace compiler::mir {
 		helios::HOUTFunction function;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-
-		bool operator==(const KeyOf_LowerToMirFunction& oth) const {
-			return function == oth.function;
-		}
+		u64 queryUnstablePerfectHash() const;
 	};
+
+	using LowerToMirFunctionResult = helios::errors::HResult<Function, helios::errors::Failed>;
 
 	/**
 	 * @brief Lower a HOUTFunction to a MIRFunction
 	 * Performs lifetime analysis.
 	 * @note in the future it will validate move semantics and potentially other things.
 	 */
-	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<Function>)
+	DECLARE_QUERY(LowerToMirFunction, KeyOf_LowerToMirFunction, CRef<LowerToMirFunctionResult>)
 
 	/**
 	 * @brief Lower a HOUTFunction to a "Pre" MIRFunction.

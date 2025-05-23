@@ -1,28 +1,23 @@
-type primitive: int64 8
-type fun: main {} int64
-
-
 function main {
-	arg_size: 0;
-	ret_size: 8;
-	local_size: 32;
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-	code: {
-		# [0, 8) main ret_val
-		init_type 		int64; # [8, 16) a
-		init_type 		int64; # [16, 24) b
-		init_type 		int64; # [24, 32) c
-		mov_l64_imm  	8, 0;
-		mov_l64_imm  	16, 0;
-		breakpoint;
-		mov_l64_imm  	8, 0;
-		mov_l64_imm  	16, 0;
-		mov_l64_imm 	24, 0;
-		breakpoint;
+	init_lany_type 		a, i64;
+	init_lany_type 		b, i64;
+	init_lany_type 		c, i64;
+	mov_l64_imm  	a, 0;
+	mov_l64_imm  	b, 0;
+	breakpoint;
+	mov_l64_imm  	a, 0;
+	mov_l64_imm  	b, 0;
+	mov_l64_imm 	c, 0;
+	breakpoint;
 
-		deinit; # c
-		deinit; # b
-		deinit; # a
-		ret;
-	}
+	deinit; # c
+	deinit; # b
+	deinit; # a
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

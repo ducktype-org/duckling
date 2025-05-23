@@ -10,7 +10,7 @@
 
 #include "kind.hpp"
 
-#include <query_framework/query_int.hpp>
+#include <query_framework/context_fd.hpp>
 
 #include <base/ints.hpp>
 
@@ -185,7 +185,7 @@ namespace tsh {
 		const std::string& toString() const;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
+		u64 queryUnstablePerfectHash() const;
 
 	protected:
 		/**

@@ -4,6 +4,7 @@
 
 #include <base/defer.hpp>
 #include <base/exceptions.hpp>
+#include <base/optional.hpp>
 #include <base/variant.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
@@ -55,18 +56,22 @@ namespace vm {
 		kind      = kind::DynamicTable{ inner };
 	}
 
-	void Type::defineData(const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions) {
+	void Type::defineData(
+		const std::vector<std::pair<base::StrID, TypeRef>>& fields_definitions,
+		base::Optional<InheritanceMetadata>                 inheritance_metadata
+	) {
 		CORE_ASSERT(state == State::Declared, "Bad type define");
 		state = State::Defined;
 
 		kind_type = Kind::Data;
 		auto data = kind::Data{};
 		for (auto [sub_name, sub_type]: fields_definitions) {
-			data.field_name_map[sub_name] = data.fields.size();
+			data.field_name_map.put(sub_name, data.fields.size());
 			// offset is set during finalization
 			data.fields.emplace_back(kind::FieldDesc{ .offset = 0, .type = sub_type });
 		}
-		kind = data;
+		data.inheritance_metadata = std::move(inheritance_metadata);
+		kind                      = data;
 	}
 
 	void Type::defineVariant(const std::vector<TypeRef>& variants_definitions) {
@@ -86,6 +91,15 @@ namespace vm {
 		size      = POINTER_SIZE;
 		kind_type = Kind::Function;
 		kind      = kind::Function{ .parameters = std::move(parameters), .result = result };
+	}
+
+	void Type::defineOpaque(TypeSize pass_size) {
+		CORE_ASSERT(state == State::Declared, "Bad type define");
+		state = State::Defined;
+
+		kind_type = Kind::Opaque;
+		size      = pass_size;
+		kind      = kind::Opaque{};
 	}
 
 	void Type::finalize() {
@@ -168,6 +182,12 @@ namespace vm {
 				else
 					return {};
 			}
+			variant_case_novalue(kind::Opaque) {
+				if (pos == 0)
+					return TypeCRef(this);
+				else
+					return {};
+			}
 			variant_default { CORE_PANIC("Unexpected Type kind"); }
 		}
 		CORE_UNREACHABLE();
@@ -197,6 +217,10 @@ namespace vm {
 	}
 
 	// struct
+	base::Optional<usize> Type::getFieldCount() const {
+		return get<kind::Data>().map([](auto& data) { return data.fields.size(); });
+	}
+
 	base::Optional<TypeCRef> Type::getFieldType(kind::Data::FieldID field_id) const {
 		return get<kind::Data>().flatMap([field_id](const kind::Data& data) {
 			if (field_id >= data.fields.size()) return base::Optional<TypeCRef>();
@@ -211,42 +235,71 @@ namespace vm {
 		});
 	}
 
-	base::Optional<TypeCRef> Type::getFieldTypeByOffset([[maybe_unused]] Offset offset) const {
-		throw base::NotYetImplemented("getFieldTypeByOffset");
-		// return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-		// 	// @TODO: Verify this code
-		// 	usize begin = 0, end = data.fields.size(), middle = 0;
-		// 	while (end - begin) {
-		// 		middle = (begin + end) / 2;
-		// 		if (data.fields[middle].offset < offset)
-		// 			begin = middle + 1;
-		// 		else
-		// 			end = middle;
-		// 	}
-		// 	if (data.fields[begin].offset != offset) return base::Optional<TypeCRef>();
-		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
-		// });
+	base::Optional<Offset> Type::getFieldOffsetByName(base::StrID field_name) const {
+		return get<kind::Data>().flatMap(
+			[field_name](const kind::Data& data) -> base::Optional<Offset> {
+				if_opt_some(data.field_name_map.atMaybe(field_name), field_index) {
+					return data.fields[field_index].offset;
+				}
+				return {};
+			}
+		);
 	}
 
-	base::Optional<TypeCRef> Type::getFieldTypeByOffsetRecursive([[maybe_unused]] Offset offset
-	) const {
-		throw base::NotYetImplemented("getFieldTypeByOffsetRecursive");
-		// return get<kind::Data>().flatMap([offset](const kind::Data& data) {
-		// 	// @TODO: Verify this code
-		// 	usize begin = 0, end = usize(data.fields.size()), middle = 0;
-		// 	while (end - begin) {
-		// 		middle = (begin + end) / 2;
-		// 		if (data.fields[middle].offset < offset)
-		// 			begin = middle + 1;
-		// 		else
-		// 			end = middle;
-		// 	}
-		// 	if (data.fields[begin].offset != offset)
-		// 		return data.fields[begin].type->getFieldTypeByOffsetRecursive(
-		// 			offset - data.fields[begin].offset
-		// 		);
-		// 	return base::Optional<TypeCRef>(data.fields[begin].type);
-		// });
+	// inheritance
+	base::Optional<const InheritanceMetadata&> Type::getInheritanceMetadata() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if (data.inheritance_metadata.has_value()) return data.inheritance_metadata.value();
+			}
+		}
+		return {};
+	}
+
+	bool Type::inheritsFrom(TypeCRef other) const {
+		std::vector<TypeCRef> stack{ this };
+		while (!stack.empty()) {
+			auto t = stack.back();
+			stack.pop_back();
+			if (t == other) return true;
+
+			if_opt_some(t->getInheritanceMetadata(), imd) {
+				variant_match(imd.kind) {
+					variant_case(InheritanceMetadata::Class, clazz) {
+						if_opt_some(clazz.extends, super) stack.emplace_back(super);
+					}
+				}
+				for (auto i: imd.implements) stack.emplace_back(i);
+			}
+		}
+		return false;
+	}
+
+	bool Type::isInstantiable() const {
+		auto is_concrete_class = [](const InheritanceMetadata& imd) {
+			variant_match(imd.kind) {
+				variant_case(InheritanceMetadata::Class, clazz) { return !clazz.is_abstract; }
+			}
+			return false;
+		};
+
+		// This recursion follows only data and variants (not pointers),
+		// so its depth is bounded by type size, there cannot be a cycle.
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if_opt_some(data.inheritance_metadata, imd) {
+					if (!is_concrete_class(imd)) return false;
+				}
+
+				for (auto& field: data.fields)
+					if (!field.type->isInstantiable()) return false;
+			}
+			variant_case(kind::Variant, variant) {
+				for (auto& alt: variant.alternatives)
+					if (!alt->isInstantiable()) return false;
+			}
+		}
+		return true;
 	}
 
 	// variant

@@ -1,9 +1,12 @@
 #include "serializer.hpp"
 
+#include <lang_definitions/key_spec_op.hpp>
+
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/type_of_data.hpp>
 
 #include <iomanip>
@@ -11,14 +14,26 @@
 namespace vm::code {
 	std::string toString(opargs::Immediate arg) { return std::to_string(arg.value); }
 
-#define OFFSET_TO_STRING(Tp) \
-	std::string toString(vm::opargs::Tp arg) { return std::to_string(arg.offset); }
+#define LOCAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.var_name.str(); }
 
-	FOR_EACH(OFFSET_TO_STRING, VM_OPARG_OFFSET_TYPES);
+	FOR_EACH(LOCAL_TO_STRING, VM_OPARG_LOCAL_TYPES);
+#undef LOCAL_TO_STRING
+
+#define GLOBAL_TO_STRING(Tp) \
+	std::string toString(vm::opargs::Tp arg) { return arg.global_data_name.str(); }
+
+	FOR_EACH(GLOBAL_TO_STRING, VM_OPARG_GLOBAL_TYPES);
 
 	std::string toString(opargs::Type arg) { return arg.type_name.str(); }
 
+	std::string toString(opargs::Field arg) {
+		return base::strConcat(arg.type_name, ".", arg.field_name);
+	}
+
 	std::string toString(opargs::FunctionName arg) { return arg.function_name.str(); }
+
+	std::string toString(opargs::BuiltinFunctionName arg) { return arg.function_name.str(); }
 
 	std::string toString(opargs::Label arg) { return arg.label_name.str(); }
 
@@ -95,26 +110,9 @@ namespace vm::code {
 
 		void indentDown() { current_indentation -= 4; }
 
-		void writeOption(const std::string_view name, usize value) {
-			withIdentWriteLine([&](std::ostream& out) { out << name << ": " << value << ";"; });
-		}
-
-		void writeOptions() {
-			writeOption("local_size", function.local_stack_size);
-			writeOption("arg_size", function.arg_size);
-			writeOption("next_arg_size", function.next_arg_size);
-			writeOption("ret_size", function.ret_size);
-		}
-
 		void writeCode() {
-			withIdentWriteLine("code: {");
-			indentUp();
-
 			for (const auto& instruction: function.body)
 				withIdentWriteLine([&](std::ostream& out) { writeInstruction(instruction, out); });
-
-			indentDown();
-			withIdentWriteLine("}");
 		}
 
 	public:
@@ -123,13 +121,18 @@ namespace vm::code {
 			  function(function) {}
 
 		void write() {
-			out << "function " << function.name.strView() << " {\n";
+			out << "function " << function.name.str.strView() << " {\n";
+			// Needed by https://github.com/ducktype-org/duckling/issues/699
+			// bool first = true;
+			// for (const auto& param: function.parameter_types) {
+			// 	if (!first) out << ", ";
+			// 	out << param.strView();
+			// 	first = false;
+			// }
+			// out << "} " << function.result_type.strView() << "{\n";
+
 			indentUp();
-
-			writeOptions();
-			out << '\n';
 			writeCode();
-
 			indentDown();
 			out << "}\n";
 		}
@@ -148,8 +151,10 @@ namespace vm::code {
 				out << type.size;
 			}
 
-			void operator()(const PointerType&) const {
-				throw base::NotYetImplemented("PointerType serialization");
+			void operator()(const PointerType& type) const {
+				out << "type pointer: ";
+				out << type.name.strView() << " ";
+				out << type.inner.strView();
 			}
 
 			void operator()(const StaticTableType& type) const {
@@ -180,11 +185,48 @@ namespace vm::code {
 					if (first)
 						out << " ";
 					else
-						out << ",";
-					out << param.strView() << " ";
+						out << ", ";
+					out << param.strView();
 					first = false;
 				}
-				out << "} " << fun.result.strView();
+				out << " } " << fun.result.strView();
+			}
+
+			void operator()(const OpaqueType& type) const {
+				out << "type opaque: ";
+				out << type.name.strView() << " ";
+				out << type.size;
+			}
+
+			void operator()(const ClassType& clazz) const {
+				out << "type class:  " << clazz.name.strView() << "{\n";
+				out << "    fields: [";
+				for (auto field: clazz.fields)
+					out << field.name.strView() << ": " << field.name.strView() << ", ";
+				out << "]\n";
+				out << "    abstract: " << clazz.is_abstract << ";\n";
+				if (clazz.extends.has_value())
+					out << "    extends: " << clazz.extends.value().strView() << ";\n";
+				out << "    implements: [";
+				for (auto& iface: clazz.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: clazz.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
+			}
+
+			void operator()(const InterfaceType& interface) const {
+				out << "type interface:  " << interface.name.strView() << "{\n";
+				out << "    implements: [";
+				for (auto& iface: interface.implements) out << iface.strView() << ", ";
+				out << "]\n";
+				out << "    virtual_methods: [";
+				for (auto method: interface.virtual_methods)
+					out << method.name.strView() << ": " << method.name.strView() << ", ";
+				out << "]\n";
+				out << "}";
 			}
 		};
 
@@ -192,6 +234,22 @@ namespace vm::code {
 		TypeSerializer(std::ostream& out, const TypeOfData& type): out(out), type(type) {}
 
 		void write() const { std::visit(TypeSerializerVisitor{ out }, type); }
+	};
+
+	class GlobalDataSerializer final {
+		std::ostream&     out;
+		const GlobalData& global_data;
+
+	public:
+		GlobalDataSerializer(std::ostream& out, const GlobalData& global_data):
+			  out(out),
+			  global_data(global_data) {}
+
+		void write() {
+			out << lang_def::keywordToStr(lang_def::Keyword::BCGlobalData).strView() << ' ';
+			out << global_data.name.str.strView() << " " << global_data.type.str.strView();
+			out << lang_def::specialToStr(lang_def::Special::Semicolon).strView();
+		}
 	};
 
 	void serialize(const Function& function, std::ostream& out) {
@@ -206,4 +264,28 @@ namespace vm::code {
 		out << '\n';
 	}
 
+	void serialize(const GlobalData& global_data, std::ostream& out) {
+		GlobalDataSerializer serializer(out, global_data);
+		serializer.write();
+		out << '\n';
+	}
+
+	void serialize(const CodeCollection& code, std::ostream& out) {
+		for (const auto& type: code.types) serialize(type, out);
+		out << '\n';
+		for (const auto& global_data: code.global_data) serialize(global_data, out);
+		out << '\n';
+		for (const auto& func: code.functions) serialize(func, out);
+		out << '\n';
+	}
+
+	std::string argumentToString(const opargs::OpCodeArg& arg) {
+		return VISIT(arg, a, return toString(a));
+	}
+
+	std::string instructionToString(const Instruction& instruction) {
+		std::stringstream ss;
+		writeInstruction(instruction, ss);
+		return ss.str();
+	}
 }

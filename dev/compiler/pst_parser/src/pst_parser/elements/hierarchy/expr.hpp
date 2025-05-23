@@ -167,6 +167,62 @@ namespace pst {
 		};
 
 		/**
+		 * @brief Element representing a string value in an expression
+		 */
+		class ExprStrValue final: public ExprElement {
+			tpc::StringValue string;
+
+		public:
+			[[nodiscard]]
+			tpc::StringValue getValue() const {
+				return string;
+			}
+
+			explicit ExprStrValue(const dia::SourcePosition& position, tpc::StringValue value):
+				  ExprElement(position, 0),
+				  string(value) {}
+
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			~ExprStrValue() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			std::string elementType() const override {
+				return "String Value Expr";
+			}
+		};
+
+		/**
+		 * @brief Element representing a Char value in an expression
+		 */
+		class ExprCharValue final: public ExprElement {
+			tpc::CharValue string;
+
+		public:
+			[[nodiscard]]
+			tpc::CharValue getValue() const {
+				return string;
+			}
+
+			explicit ExprCharValue(const dia::SourcePosition& position, tpc::CharValue value):
+				  ExprElement(position, 0),
+				  string(value) {}
+
+			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			~ExprCharValue() override = default;
+			void dprint(std::ostream& out) const final;
+			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			std::string elementType() const override {
+				return "Char Value Expr";
+			}
+		};
+
+		/**
 		 * @brief This is a helper element for parsing literals and bracket subexpressions that
 		 * decides which literal to parse.
 		 */
@@ -479,8 +535,7 @@ namespace pst {
 			 */
 			static i64 skipAtom(const LangParserState& state, i64 base, i64 length);
 
-			static MBox<ExprElement>
-				parseRecursive(LangParserState& state, const BuilderExpr& expr);
+			static MBox<ExprElement> parseRecursive(LangParserState& state, const BuilderExpr& expr);
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
 
@@ -510,6 +565,16 @@ namespace pst {
 			}
 
 			static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+			[[nodiscard]]
+			const auto& getOperators() const {
+				return operators;
+			}
+
+			[[nodiscard]]
+			auto getSubExpr(u64 index) const {
+				return sub_expr.at(index).give();
+			}
 
 			~ComparisonChain() override = default;
 			void dprint(std::ostream& out) const final;
@@ -593,6 +658,13 @@ namespace pst {
 			~Ternary() override = default;
 			void dprint(std::ostream& out) const final;
 			void acceptExprVisitor(PstExprVisitor& visitor) const final;
+
+			[[nodiscard]]
+			AccessLocked<ExprElement> getCondition() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfTrue() const;
+			[[nodiscard]]
+			AccessLocked<ExprElement> getIfFalse() const;
 		};
 
 		/**

@@ -1,38 +1,51 @@
 #include "vm_tester_utils.hpp"
 
-void VmTestSuite::runTestOnVm(
-	const std::string& rbc_filename, const std::string& input, const std::string& output
-) {
+#include <nlohmann/json_fwd.hpp>
+#include <tester/tester.hpp>
+
+#include <vm/api/data/status.hpp>
+#include <vm/api/vm.hpp>
+
+#include <variant>
+
+vm::PID VmTestSuite::initProcess() {
 	auto process_pid_response = vm::api::spawn();
-	assertTrue(process_pid_response.has_value(), "Spawn failed (1)");
-	auto pid = process_pid_response.value().pid;  // "Spawn failed (2)"
+	ASSERT_TRUE(process_pid_response.has_value());
+	return process_pid_response->pid;
+}
 
-	fs::FilePath file(path(rbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
-	assertTrue(loaded_file_response.has_value(), "Load failed (1)");
+void VmTestSuite::runTestOnVm(
+	const std::string&                 dbc_filename,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	i64                                exit_code,
+	bool                               add_stdlib
+) {
+	handleTestResult(
+		runTestOnVmGetResult(dbc_filename, optional_input, optional_output, args, add_stdlib),
+		exit_code
+	);
+}
 
-	auto run_response = vm::api::run(pid);
-	assertTrue(run_response.has_value(), "Run failed (1)");
-
-	auto input_response = vm::api::input(pid, input);
-	assertTrue(input_response.has_value(), "Input failed (1)");
-
-	auto output_response = vm::api::output(pid);
-	assertTrue(output_response.has_value(), "Output failed (1)");
-	std::cerr << output_response.value().output << "\n";
-	ASSERT_EQUAL(output, output_response.value().output);
-
-	auto join_response = vm::api::join(pid);
-	assertTrue(join_response.has_value(), "Join failed (1)");
+void VmTestSuite::runTestOnVm(
+	const vm::code::CodeCollection&    code,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	i64                                exit_code,
+	bool                               add_stdlib
+) {
+	handleTestResult(
+		runTestOnVmGetResult(code, optional_input, optional_output, args, add_stdlib), exit_code
+	);
 }
 
 void VmTestSuite::loadInvalidDbc(
 	const std::string& dbc_filename, const std::vector<std::string_view>& error_keywords
 ) {
-	auto pid = vm::api::spawn()->pid;
-
 	fs::FilePath file(path(dbc_filename));
-	auto         loaded_file_response = vm::api::loadFile(pid, file);
+	auto         loaded_file_response = vm::api::loadFiles(initProcess(), { file });
 	ASSERT_TRUE(!loaded_file_response.has_value());
 	auto err = loaded_file_response.error();
 	ASSERT_TRUE(std::holds_alternative<vm::api::CoreOperationError>(err));
@@ -48,7 +61,66 @@ void VmTestSuite::loadInvalidDbc(
 }
 
 void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
-	ASSERT_TRUE(
-		vm::api::loadFile(vm::api::spawn()->pid, fs::FilePath(path(dbc_filename))).has_value()
-	);
+	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::FilePath(path(dbc_filename)) }).has_value());
+}
+
+#define EXPECT_VOID(result) \
+	if (!result.has_value()) return { .pid = pid, .run_result = std::unexpected(result.error()) };
+
+auto VmTestSuite::runTestImpl(
+	vm::PID                            pid,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args
+) -> TestResult {
+	EXPECT_VOID(vm::api::run(pid, args));
+
+	if_opt_some(optional_input, input) { EXPECT_VOID(vm::api::input(pid, input)); }
+
+	EXPECT_VOID(vm::api::join(pid));
+
+	if_opt_some(optional_output, output) {
+		auto output_response = vm::api::output(pid);
+		EXPECT_VOID(output_response);
+		ASSERT_EQUAL_PRINT(output, output_response->output);
+	}
+
+	return { .pid = pid, .run_result = vm::api::getExitCode(pid) };
+}
+
+auto VmTestSuite::runTestOnVmGetResult(
+	const std::string&                 dbc_filename,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	bool                               add_stdlib
+) -> TestResult {
+	auto pid  = initProcess();
+	auto file = fs::FilePath(path(dbc_filename));
+	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
+	EXPECT_VOID(vm::api::loadFiles(pid, { file }));
+	return runTestImpl(pid, optional_input, optional_output, args);
+}
+
+auto VmTestSuite::runTestOnVmGetResult(
+	const vm::code::CodeCollection&    code,
+	const base::Optional<std::string>& optional_input,
+	const base::Optional<std::string>& optional_output,
+	const std::vector<std::string>&    args,
+	bool                               add_stdlib
+) -> TestResult {
+	auto pid = initProcess();
+	if (add_stdlib) EXPECT_VOID(vm::api::loadStdlib(pid));
+	EXPECT_VOID(vm::api::loadCode(pid, { code }));
+	return runTestImpl(pid, optional_input, optional_output, args);
+}
+
+#undef EXPECT_VOID
+
+void VmTestSuite::handleTestResult(const TestResult& test_result, i64 exit_code) {
+	if (!test_result.run_result.has_value()) {
+		auto err_str = to_string(nlohmann::json(test_result.run_result.error()));
+		fail(err_str);
+	}
+	ASSERT_EQUAL_PRINT(test_result.run_result.value(), exit_code);
 }

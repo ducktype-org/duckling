@@ -1,10 +1,9 @@
 #pragma once
 
+#include <filesystem/file.hpp>
+#include <frontend/module_tree/module_id.hpp>
 #include <helios/hout/elements/expr.hpp>  // @todo relax this dependency, just expr is needed (#404)
-#include <helios/scopes/scopes.hpp>
-#include <helios/symbols/symbols.hpp>
-
-#include <vector>
+#include <helios/scope_symbol_id.hpp>
 
 namespace compiler::helios::test_utils {
 	/**
@@ -21,7 +20,7 @@ namespace compiler::helios::test_utils {
 	 * @return The symbols of all elements of a chain. In particular, the symbol of the last
 	 * element in the chain is accessed with the `back()` method.
 	 */
-	std::vector<SymID> getChain(const std::string_view chain, ScopeID scope);
+	SymbolList getChain(const std::string_view chain, ScopeID scope);
 
 	/**
 	 * Get the integral value of the last symbol in a symbol chain in a given scope.
@@ -71,4 +70,10 @@ namespace compiler::helios::test_utils {
 	 * @note It's a hack-ish method, for easy testing only
 	 */
 	Box<code::Expr> getExprOfVariable(SymID sym);
+
+	/**
+	 * @brief Gets function body scope of given function.
+	 * @param sym The function symbol ID.
+	 */
+	helios::ScopeID getFunctionBodyScope(SymID sym);
 }

@@ -14,7 +14,6 @@
 
 #include <string>
 
-// clang-format off
 MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 	Namespace,
 	Class,
@@ -41,7 +40,6 @@ MAKE_STRINGIFYABLE_ENUM(lsp, int8_t, Type,
 	Operator,
 	Unknown
 )
-// clang-format on
 
 namespace lsp {
 	class SemanticToken;

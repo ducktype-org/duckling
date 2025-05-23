@@ -4,6 +4,7 @@
 
 #include <diagnostic/source_position.hpp>
 #include <token_parser_core/automatic.hpp>
+#include <token_parser_core/common_elements.hpp>
 #include <token_parser_core/token_stream.hpp>
 
 #include <base/macros/for_each.hpp>
@@ -41,54 +42,72 @@ namespace vm::loader::parser {
 		template<class T>
 		concept IsOpCodeArg = std::is_constructible_v<vm::opargs::OpCodeArg, T>;
 
+		/**
+		 * @brief Parses opcode argument. Template specializations change only the return type.
+		 */
 		template<IsOpCodeArg ArgType>
 		auto parseArg(F8ParserState& state) -> ArgType;
 
-#define HANDLE_OFFSET(Type)                                   \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::Type { \
-		return { parseInt<i64, vm::opargs::Type>(state) };    \
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
+			auto pos         = state.getPosition();
+			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
+			);
+			return arg;
+		}
+
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+			tpc::Identifier type_name, field_name;
+			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			auto field         = vm::opargs::Field{ type_name, field_name };
+			field.bytecode_pos = dia::SourcePosition(
+				type_name.position.getLocation(),
+				type_name.position.getStart(),
+				field_name.position.getEnd()
+			);
+			return field;
+		}
+
+#define HANDLE_STR_ARG(TYPE)                                                        \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto pos         = state.getPosition();                                     \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
+			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
+		);                                                                          \
+		return { arg };                                                             \
 	}
 
-		FOR_EACH(HANDLE_OFFSET, Immediate, VM_OPARG_OFFSET_TYPES);
+		FOR_EACH(
+			HANDLE_STR_ARG,
+			Type,
+			FunctionName,
+			BuiltinFunctionName,
+			Label,
+			VM_OPARG_GLOBAL_TYPES,
+			VM_OPARG_LOCAL_TYPES
+		)
 
-#undef HANDLE_OFFSET
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Type {
-			return { parseStr(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::FunctionName {
-			return { parseStr(state) };
-		}
-
-		template<>
-		auto parseArg(F8ParserState& state) -> vm::opargs::Label {
-			return { parseStr(state) };
-		}
+#undef HANDLE_STR_ARG
 
 		std::vector<opargs::OpCodeArg> parseOpCode0Args(F8ParserState&) { return {}; }
 
 		template<IsOpCodeArg Arg0>
 		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
-
-			return { arg0 };
+			return { parseArg<Arg0>(state) };
 		}
 
 		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
 		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
+			auto arg0 = parseArg<Arg0>(state);
 			state.parse().one(lang_def::Special::Comma);
-			auto pos1         = state.getPosition();
-			auto arg1         = parseArg<Arg1>(state);
-			arg1.bytecode_pos = pos1;
+			auto arg1 = parseArg<Arg1>(state);
 			return { arg0, arg1 };
 		}
 
@@ -108,6 +127,24 @@ namespace vm::loader::parser {
 #undef HANDLE_OPCODE_1ARGS
 #undef HANDLE_OPCODE_2ARGS
 #undef MAKE_LINK
+	}
+
+	Box<GlobalData> GlobalData::parse(F8ParserState& state) {
+		using namespace vm::code;
+		auto out = makeBox<GlobalData>(state.getPosition());
+
+		state.parse().one(lang_def::Keyword::BCGlobalData);
+
+		state.parse().one(&out->name);
+		state.parse().one(&out->type);
+
+		auto end_position = state.getPosition().getEnd();
+		out->position     = dia::SourcePosition(
+            out->position.getLocation(), out->position.getStart(), end_position
+        );
+
+		state.parse().one(lang_def::Special::Semicolon);
+		return out;
 	}
 
 	MBox<OpCode> OpCode::parse(F8ParserState& state) {
@@ -130,15 +167,14 @@ namespace vm::loader::parser {
 					// Update end to contains args
 					if (!out->args.empty()) {
 						auto end = VISIT(out->args.back(), arg, return *arg.bytecode_pos).getEnd();
-						const auto& pos = *out->position;
-						out->position
-							= makeBox<dia::SourcePosition>(pos.getSource(), pos.getStart(), end);
+						auto pos = out->position;
+
+						out->position = { pos, end };
 					}
 
 					return out;
 				} else if (!logged) {
-					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value)
-					);
+					state.log(makeBox<UnknownOpCodeError>(state.getPosition(-1), identifier1.value));
 					logged = true;
 				}
 			} else {
@@ -172,113 +208,72 @@ namespace vm::loader::parser {
 		state.parse().all(lang_def::Keyword::BCFunction, &out->name);
 
 		if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-			state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+			state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 			return nullptr;
 		}
+
+		/**
+		    // This code will be needed in the upcoming PR
+		    // https://github.com/ducktype-org/duckling/issues/699
+		    state.goDown();
+		    while (state.notEmpty()) {
+		        tpc::Identifier field_type;
+		        state.parse().one(&field_type);
+		        out->parameters.emplace_back(field_type);
+
+		        if (state.empty()) break;
+		        if (state[0].is(lang_def::Special::Comma)) {
+		            state.parse().one(lang_def::Special::Comma);
+		        } else {
+		            state.err->failAndLog(state.getPosition(), "expected comma or }");
+		            state.tokens().skip();
+		        }
+		    }
+		    state.goUpAndSkip();
+		    state.parse().one(&out->result_type);
+
+		    if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+		        state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+		        return nullptr;
+		    }
+		 */
 
 		state.goDown();
-
-		while (state.ctokens().peek().isKeyword()) {
-			auto next = state.tokens().next();
-
-			switch (next.asKeyword()) {
-			case lang_def::Keyword::BCArgSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->arg_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "arg_size duplicate");
-				auto value = state.tokens().next();
-
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
-				try {
-					out->arg_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "arg_size argument is not num-literal"
-					);
-				}
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCLocalSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->local_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "local_size duplicate");
-				auto value = state.tokens().next();
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "local_size argument is not num-literal"
-					);
-				try {
-					out->local_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "local_size argument is not num-literal"
-					);
-				}
-
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCRetSize: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (out->ret_size != SIZE_T_MAX)
-					state.err.failAndLog(state.getPosition(), "ret_size duplicate");
-				auto value = state.tokens().next();
-				if (!value.isNumLiteral())
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
-				try {
-					out->ret_size = strIDToNum<usize>(value.getValue());
-				} catch (std::logic_error& e) {
-					state.err.failAndLog(
-						state.getPosition(), "ret_size argument is not num-literal"
-					);
-				}
-
-				state.parse().one(lang_def::Special::Semicolon);
-				break;
-			}
-
-			case lang_def::Keyword::BCDefine: {
-				throw base::NotYetImplemented("BCDefine");
-			}
-
-			case lang_def::Keyword::BCCode: {
-				state.parse().one(lang_def::NamedOperator::Colon);
-				if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly))
-					state.err.failAndLog(state.getPosition(), "no {} on code:");
-
-				state.goDown();
-				state.parse().one(&out->code);
-				state.goUpAndSkip();
-				break;
-			}
-
-			default:
-				state.err.failAndLog(state.getPosition(), "bad keyword in function");
-			}
-		}
-
-		if (state.notEmpty()) {
-			state.err.failAndLog(state.getPosition(-1), "Unexpected function content!");
-
-			state.goUpAndSkip();
-			return nullptr;
-		}
-
+		state.parse().one(&out->code);
 		state.goUpAndSkip();
 
-		if (out->local_size == SIZE_T_MAX) state.fail(0, "Local size not set");
-		if (out->arg_size == SIZE_T_MAX) state.fail(0, "Arg size not set");
-		if (out->ret_size == SIZE_T_MAX) state.fail(0, "Ret size not set");
-
 		return out;
+	}
+
+	namespace {
+		std::vector<code::Field> parseFields(F8ParserState& state) {
+			std::vector<code::Field> out;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+				return {};
+			}
+
+			state.goDown();
+			while (state.notEmpty()) {
+				tpc::Identifier field_name;
+				tpc::Identifier field_type;
+				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
+				auto& field        = out.emplace_back(field_name.value, field_type.value);
+				field.bytecode_pos = field_name.position;
+
+				if (state.empty()) break;
+				if (state[0].is(lang_def::Special::Comma)) {
+					state.parse().one(lang_def::Special::Comma);
+				} else {
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
+					state.tokens().skip();
+				}
+			}
+			state.goUpAndSkip();
+
+			return out;
+		}
 	}
 
 	MBox<Type> Type::parse(F8ParserState& state) {
@@ -298,10 +293,10 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPrimitive: {
 			lexer::Token value = state.tokens().next();
 			if (!value.isNumLiteral()) {
-				state.err.failAndLog(state.getPosition(), "expected number");
+				state.err->failAndLog(state.getPosition(), "expected number");
 			} else {
 				auto tp = PrimitiveType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -309,10 +304,10 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCPointer: {
 			auto pointed_type = state.tokens().next();
 			if (!pointed_type.isIdentifier())
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = PointerType{ name, pointed_type.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
@@ -320,16 +315,16 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCStaticTable: {
 			auto type_name = state.tokens().next();
 			if (!type_name.isIdentifier()) {
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			} else {
 				auto size = state.tokens().next();
 				if (!size.isNumLiteral()) {
-					state.err.failAndLog(state.getPosition(), "expected number");
+					state.err->failAndLog(state.getPosition(), "expected number");
 				} else {
 					auto tp         = StaticTableType{ name,
                                                type_name.getValue(),
                                                static_cast<usize>(strIDToNum(size.getValue())) };
-					tp.bytecode_pos = *out->position;
+					tp.bytecode_pos = out->position;
 					out->datatype   = tp;
 				}
 			}
@@ -338,48 +333,23 @@ namespace vm::loader::parser {
 		case lang_def::Keyword::BCDynamicTable: {
 			const lexer::Token& type_name = state.tokens().next();
 			if (!type_name.isIdentifier())
-				state.err.failAndLog(state.getPosition(), "expected identifier");
+				state.err->failAndLog(state.getPosition(), "expected identifier");
 			else {
 				auto tp         = DynamicTableType{ name, type_name.getValue() };
-				tp.bytecode_pos = *out->position;
+				tp.bytecode_pos = out->position;
 				out->datatype   = tp;
 			}
 			break;
 		}
 		case lang_def::Keyword::BCData: {
-			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
-				return nullptr;
-			}
-
-			state.goDown();
-			std::vector<DataType::Field> fields;
-			while (state.notEmpty()) {
-				tpc::Identifier field_name;
-				tpc::Identifier field_type;
-				state.parse().all(&field_name, lang_def::NamedOperator::Colon, &field_type);
-				fields.emplace_back(field_name.value, field_type.value);
-				fields.back().bytecode_pos = field_name.position;
-
-
-				if (state.empty()) break;
-
-				if (state.ctokens().peek().is(lang_def::Special::Comma)) {
-					state.parse().one(lang_def::Special::Comma);
-				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
-					state.tokens().skip();
-				}
-			}
-			state.goUpAndSkip();
-			auto tp         = DataType{ name, fields };
-			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			auto tp         = DataType{ name, parseFields(state) };
+			tp.bytecode_pos = out->position;
+			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCVariant: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -394,19 +364,19 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
 			state.goUpAndSkip();
 			auto tp         = VariantType{ name, alternatives };
-			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			tp.bytecode_pos = out->position;
+			out->datatype   = std::move(tp);
 			break;
 		}
 		case lang_def::Keyword::BCFunType: {
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
-				state.err.failAndLog(state.getPosition(-1), "expected `{` after here");
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
 				return nullptr;
 			}
 
@@ -421,7 +391,7 @@ namespace vm::loader::parser {
 				if (state[0].is(lang_def::Special::Comma)) {
 					state.parse().one(lang_def::Special::Comma);
 				} else {
-					state.err.failAndLog(state.getPosition(), "expected comma or }");
+					state.err->failAndLog(state.getPosition(), "expected comma or }");
 					state.tokens().skip();
 				}
 			}
@@ -429,12 +399,145 @@ namespace vm::loader::parser {
 			tpc::Identifier result;
 			state.parse().one(&result);
 			auto tp         = FunctionType{ name, arguments, result };
-			tp.bytecode_pos = *out->position;
-			out->datatype   = tp;
+			tp.bytecode_pos = out->position;
+			out->datatype   = std::move(tp);
+			break;
+		}
+		case lang_def::Keyword::BCOpaque: {
+			lexer::Token value = state.tokens().next();
+			if (!value.isNumLiteral()) {
+				state.err->failAndLog(state.getPosition(), "expected number");
+			} else {
+				auto tp = OpaqueType{ name, static_cast<usize>(strIDToNum(value.getValue())) };
+				tp.bytecode_pos = out->position;
+				out->datatype   = tp;
+			}
+			break;
+		}
+		case lang_def::Keyword::BCClass:
+		case lang_def::Keyword::BCInterface: {
+			bool                        is_interface = type == lang_def::Keyword::BCInterface;
+			bool                        is_abstract  = false;
+			std::vector<Field>          fields;
+			std::vector<base::StrID>    implements;
+			std::vector<Field>          virtual_methods;
+			base::Optional<base::StrID> extends;
+
+			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+				state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+				return nullptr;
+			}
+
+			state.goDown();
+
+			while (state[0].isKeyword()) {
+				auto next = state.tokens().next();
+				switch (next.asKeyword()) {
+				case lang_def::Keyword::BCExtends: {
+					if (is_interface) {
+						state.err->failAndLog(
+							state.getPosition(), "interfaces cannot extend classes"
+						);
+					} else {
+						tpc::Identifier superclass;
+						state.parse().all(
+							lang_def::NamedOperator::Colon, &superclass, lang_def::Special::Semicolon
+						);
+						extends.emplace(superclass.value);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCAbstract: {
+					if (is_interface) {
+						state.err->failAndLog(state.getPosition(), "interfaces cannot be abstract");
+					} else {
+						state.parse().one(lang_def::NamedOperator::Colon);
+						switch (state.tokens().next().asKeyword()) {
+						case lang_def::Keyword::BCTrue:
+							is_abstract = true;
+							break;
+						case lang_def::Keyword::BCFalse:
+							is_abstract = false;
+							break;
+						default:
+							state.err->failAndLog(state.getPosition(), "bad keyword");
+							break;
+						}
+						state.parse().one(lang_def::Special::Semicolon);
+					}
+					break;
+				}
+				case lang_def::Keyword::BCImplements: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
+						state.err->failAndLog(state.getPosition(-1), "expected `{` after here");
+						return nullptr;
+					}
+
+					state.goDown();
+					while (state.notEmpty()) {
+						tpc::Identifier interface;
+						state.parse().one(&interface);
+						implements.push_back(interface.value);
+
+						if (state.empty()) break;
+						if (state[0].is(lang_def::Special::Comma)) {
+							state.parse().one(lang_def::Special::Comma);
+						} else {
+							state.err->failAndLog(state.getPosition(), "expected comma or }");
+							state.tokens().skip();
+						}
+					}
+					state.goUpAndSkip();
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCVirtualMethods: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					virtual_methods = parseFields(state);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				case lang_def::Keyword::BCFields: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					// The first field is the VTable pointer
+					for (auto field: parseFields(state)) fields.push_back(field);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
+				default: {
+					state.err->failAndLog(state.getPosition(), "bad keyword");
+					return nullptr;
+				}
+				}
+			}
+
+			if (state.notEmpty()) {
+				state.err->failAndLog(state.getPosition(-1), "unexpected class/interface content");
+
+				state.goUpAndSkip();
+				return nullptr;
+			}
+
+			state.goUpAndSkip();
+
+			auto tp = is_interface ? TypeOfData(InterfaceType(
+										 name, std::move(implements), std::move(virtual_methods)
+									 ))
+			                       : TypeOfData(ClassType(
+										 name,
+										 fields,
+										 is_abstract,
+										 extends,
+										 std::move(implements),
+										 std::move(virtual_methods)
+									 ));
+			VISIT(tp, t, t.bytecode_pos = out->position);
+			out->datatype = std::move(tp);
 			break;
 		}
 		default: {
-			state.err.failAndLog(state.getPosition(), "expected variant of type");
+			state.err->failAndLog(state.getPosition(), "expected variant of type");
 			break;
 		}
 		}
@@ -448,6 +551,9 @@ namespace vm::loader::parser {
 			if (state[0].is(lang_def::Keyword::BCType)) {
 				auto type = Type::parse(state).toOptBox();
 				if (type) out->types.emplace_back(std::move(*type));
+			} else if (state[0].is(lang_def::Keyword::BCGlobalData)) {
+				auto global_data = GlobalData::parse(state);
+				out->global_data.emplace_back(std::move(global_data));
 			} else if (state[0].is(lang_def::Keyword::BCFunction)) {
 				auto func = Func::parse(state).toOptBox();
 				if (func) out->functions.emplace_back(std::move(*func));
@@ -476,12 +582,12 @@ namespace vm::loader::parser {
 			variant_match(arg) {
 				variant_case(vm::opargs::Immediate, num_arg) { out << num_arg.value << " "; }
 
-#define HANDLE_OFFSET(Type) \
-	variant_case(vm::opargs::Type, offset_type) { out << offset_type.offset << " "; }
+#define HANDLE_LOCAL(Type) \
+	variant_case(vm::opargs::Type, local_type) { out << local_type.var_name.strView() << " "; }
 
-				FOR_EACH(HANDLE_OFFSET, VM_OPARG_OFFSET_TYPES);
+				FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
 
-#undef HANDLE_OFFSET
+#undef HANDLE_LOCAL
 
 				variant_case(vm::opargs::Type, type_arg) {
 					out << type_arg.type_name.strView() << " ";
@@ -498,19 +604,28 @@ namespace vm::loader::parser {
 	}
 
 	void ByteCode::dprint(std::ostream& out) const {
-		out << "    code {\n";
 		for (auto& opcode: opcodes) opcode->dprint(out);
-		out << "    }\n";
+	}
+
+	void GlobalData::dprint(std::ostream& out) const {
+		out << "global_data ";
+		out << name.value.strView() << " " << type.value.strView();
+		out << ";";
 	}
 
 	void Func::dprint(std::ostream& out) const {
-		out << "function {\n";
-		out << "    name: " << name.value.strView() << "\n";
-		out << "    arg_size: " << arg_size << "\n";
-		out << "    local_size: " << local_size << "\n";
-		out << "    ret_size: " << ret_size << "\n";
+		out << "function ";
+		out << name.value.strView() << "{\n";
+		// Needed by: https://github.com/ducktype-org/duckling/issues/699
+		// bool first = true;
+		// for (const auto& param: parameters) {
+		// 	if (!first) out << ", ";
+		// 	out << param.value.strView();
+		// 	first = false;
+		// }
+		// out << "} " << result_type.value.strView() << "{\n";
 		code->dprint(out);
-		out << "\n}";
+		out << "}\n";
 	}
 
 	void ParsedFile::dprint(std::ostream& out) const {

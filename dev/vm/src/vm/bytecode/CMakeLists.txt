@@ -1,6 +1,9 @@
 add_files(
-    builders/builders.cpp
+    builtin_types.cpp
     builders/instruction_builder.cpp
     serializer/serializer.cpp
+    validator/function_validator.cpp
+    validator/type_validator.cpp
+    validator/valid_program.cpp
 )
-set(vm_sources ${vm_sources} ${files} PARENT_SCOPE)
+set(vm_common_sources ${vm_common_sources} ${files} PARENT_SCOPE)

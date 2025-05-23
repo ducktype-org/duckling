@@ -12,6 +12,8 @@
 #include <base/maps.hpp>
 #include <base/ref.hpp>
 
+#include <variant>
+
 /**
  * @brief The namespace of all definitions of the Lower Type System.
  * Short for "Type System: Low(er)".
@@ -70,8 +72,9 @@ namespace tsl {
 		 * @return A string describing the layout.
 		 */
 		[[nodiscard]]
-		virtual std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const
+		virtual std::string toStringDefinition(
+			query::Context& ctx, bool recursive = true, u32 indent = 0
+		) const
 			= 0;
 
 		/**
@@ -169,6 +172,100 @@ namespace tsl {
 	};
 
 	/**
+	 * @brief Layout of the string type.
+	 * It is similar to DynamicArrayTypeLayout, but intentionally implemented separately.
+	 */
+	class StringTypeLayout final: public TypeLayoutABC {
+		/**
+		 * The string type consists of four parts of information:
+		 * -# Pointer to the start of data
+		 * -# Offset of the end of data wrt. the pointer to its start
+		 * -# Offset of the start of reserved memory
+		 * -# Offset of the end of reserved memory
+		 * The pointer and offsets are arranged in this exact order in memory.
+		 */
+		static constexpr auto OFFSET_SIZE = Bytes(8);
+
+	public:
+		explicit StringTypeLayout(const tsh::StringAbstractType string_type):
+			  TypeLayoutABC(POINTER_SIZE + base::bytes2bits(OFFSET_SIZE) * 3, string_type) {}
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override {
+			return getIndent(indent) + "string : " + std::to_string(getSize());
+		}
+
+		/**
+		 * @return The offset of the end of data offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfDataOffsetPosition() const {
+			return POINTER_SIZE_BYTES;
+		}
+
+		/**
+		 * @return The offset of the start of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getStartOfMemoryOffsetPosition() const {
+			return POINTER_SIZE_BYTES + OFFSET_SIZE;
+		}
+
+		/**
+		 * @return The offset of the end of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfMemoryOffsetPosition() const {
+			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
+		}
+	};
+
+	/**
+	 * @brief Layout of a dynamic array type.
+	 */
+	class DynamicArrayTypeLayout final: public TypeLayoutABC {
+		/**
+		 * The dynamic array type consists of four parts of information:
+		 * -# Pointer to the start of data
+		 * -# Offset of the end of data
+		 * -# Offset of the start of reserved memory
+		 * -# Offset of the end of reserved memory
+		 * The pointer and offsets are arranged in this exact order in memory.
+		 */
+		static constexpr auto OFFSET_SIZE = Bytes(8);
+
+	public:
+		DynamicArrayTypeLayout(tsh::DynamicArrayAbstractType dynamic_array_type, query::Context& ctx);
+
+		[[nodiscard]]
+		std::string toStringDefinition(query::Context&, bool, const u32 indent) const override;
+
+		/**
+		 * @return The offset of the end of data offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfDataOffsetPosition() const {
+			return POINTER_SIZE_BYTES;
+		}
+
+		/**
+		 * @return The offset of the start of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getStartOfMemoryOffsetPosition() const {
+			return POINTER_SIZE_BYTES + OFFSET_SIZE;
+		}
+
+		/**
+		 * @return The offset of the end of reserved memory offset
+		 */
+		[[nodiscard]]
+		Bytes getEndOfMemoryOffsetPosition() const {
+			return POINTER_SIZE_BYTES + OFFSET_SIZE * 2;
+		}
+	};
+
+	/**
 	 * @brief Layout of a variant type.
 	 */
 	class VariantTypeLayout final: public TypeLayoutABC {
@@ -229,8 +326,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -278,8 +375,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -319,8 +416,8 @@ namespace tsl {
 		}
 
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive, u32 indent) const override;
+		std::string toStringDefinition(query::Context& ctx, bool recursive, u32 indent)
+			const override;
 	};
 
 	/**
@@ -396,9 +493,11 @@ namespace tsl {
 		FloatTypeLayout,
 		VariantTypeLayout,
 		TupleTypeLayout,
+		DynamicArrayTypeLayout,
 		ClassTypeLayout,
 		FunctionalTypeLayout,
-		PointerTypeLayout>;
+		PointerTypeLayout,
+		StringTypeLayout>;
 
 	/**
 	 * @brief The ADT representing the layout of a type.
@@ -431,8 +530,8 @@ namespace tsl {
 		 * @copydoc TypeLayoutABC::toStringDefinition
 		 */
 		[[nodiscard]]
-		std::string
-			toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0) const;
+		std::string toStringDefinition(query::Context& ctx, bool recursive = true, u32 indent = 0)
+			const;
 
 		/**
 		 * @copydoc TypeLayoutABC::toStringIdentification

@@ -1,7 +1,7 @@
 /**
  * @file keywords.hpp
  * @brief
- * Moduł pozwalający wykrywać i definiować keyword-y
+ * Module allowing for detecting and defining keywords.
  *
  *
  * Usage:
@@ -64,6 +64,9 @@ namespace lang_def {
 		Switch,
 		Case,
 
+		// Macro
+		Expand,
+
 		// Actions:
 		Return,
 		Break,
@@ -104,7 +107,8 @@ namespace lang_def {
 		// NOLINTEND
 
 		Char,
-		Bool,  // ...
+		Bool,
+		Str,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,
@@ -147,13 +151,6 @@ namespace lang_def {
 
 		// BC:
 		BCFunction,
-		BCLocalSize,
-		BCRetSize,
-		BCArgSize,
-		BCDefine,
-		BCArg,
-		BCLocal,
-		BCCode,
 		BCType,
 		BCPrimitive,
 		BCPointer,
@@ -162,6 +159,18 @@ namespace lang_def {
 		BCData,
 		BCVariant,
 		BCFunType,
+		BCGlobalData,
+		BCOpaque,
+		BCClass,
+		BCAbstract,
+		BCInterface,
+		BCExtends,
+		BCImplements,
+		BCVirtualMethods,
+		BCFields,
+		BCTrue,
+		BCFalse,
+		COUNT,
 	};
 
 	enum class Special {

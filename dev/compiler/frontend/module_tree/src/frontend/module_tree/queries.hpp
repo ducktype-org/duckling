@@ -1,6 +1,7 @@
 #pragma once
 
-#include "module_tree.hpp"  // @TODO: #404 this dependency can be relaxed by separating ModuleID and FileID
+#include "file_id.hpp"
+#include "module_id.hpp"
 
 #include <filesystem/file.hpp>
 #include <pst_parser/pst.hpp>
@@ -36,17 +37,26 @@ namespace compiler::frontend {
 	 */
 	DECLARE_QUERY(QuerySourceFiles, ModuleID, CRef<std::vector<FileID>>)
 
+
+	using QuerySubmodules_Result = CRef<base::HashMap<base::StrID, ModuleID>>;
 	/**
 	 * @brief Query map of children modules aka submodules
 	 * of given module.
 	 */
-	DECLARE_QUERY(QuerySubmodules, ModuleID, CRef<base::HashMap<base::StrID COMMA ModuleID>>)
+	DECLARE_QUERY(QuerySubmodules, ModuleID, QuerySubmodules_Result)
 
 
 	/**
 	 * @brief Query PST of given file.
 	 */
 	DECLARE_QUERY(QueryFilePST, FileID, CRef<pst::PST<>>)
+
+	/**
+	 * @brief Gets module-tree PST of given file, performing some guess about what FileID is given
+	 * path pointing to. It was added for go-to definition and simillar features.
+	 * @TODO: make it better during frontend queryfication #731.
+	 */
+	CRef<pst::PST<>> queryPSTFromFilePath(query::Context&, const fs::FilePath& file_path);
 
 	/**
 	 * @brief Returns ModuleID
@@ -72,6 +82,7 @@ namespace compiler::frontend {
 	 *
 	 * @return Found module, none if no matching module was found.
 	 */
-	base::Optional<ModuleID>
-		getRelativeModule(query::Context&, ModuleID from, const std::vector<base::StrID>& path);
+	base::Optional<ModuleID> getRelativeModule(
+		query::Context&, ModuleID from, const std::vector<base::StrID>& path
+	);
 }

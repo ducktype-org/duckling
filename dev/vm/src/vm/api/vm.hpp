@@ -7,6 +7,9 @@
 #include <filesystem/file.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/bytecode/bytecode.hpp>
+
+#include <vector>
 
 namespace vm::api {
 	/**
@@ -37,14 +40,21 @@ namespace vm::api {
 	 */
 	std::expected<response::CodePosition, ApiError> waitForBreakpoint(PID pid);
 
-	std::expected<void, ApiError> loadFile(PID pid, const fs::FilePath& path);
-	std::expected<void, ApiError> run(PID pid);
+	std::expected<void, ApiError> loadStdlib(PID pid);
+	std::expected<void, ApiError> loadFiles(PID pid, const std::vector<fs::FilePath>& path);
+	std::expected<void, ApiError> loadCode(PID pid, const std::vector<code::CodeCollection>& code);
+	std::expected<void, ApiError> run(PID pid, const std::vector<std::string>& args = {});
+	std::expected<void, ApiError> runFunction(
+		PID pid, const std::string& func_name, const std::vector<i64>& args = {}
+	);
 	std::expected<void, ApiError> join(PID pid);
 	std::expected<void, ApiError> attach(PID pid, std::istream& input, std::ostream& output);
 	std::expected<void, ApiError> detach(PID pid);
 	std::expected<void, ApiError> stop(PID pid);
 	std::expected<void, ApiError> kill(PID pid);
 	std::expected<void, ApiError> input(PID pid, const std::string& input);
+
+	std::expected<ExitCode, ApiError> getExitCode(PID pid);
 
 	std::expected<response::Output, ApiError> output(PID pid);
 

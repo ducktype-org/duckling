@@ -5,17 +5,23 @@
 #include <base/visitor.hpp>
 
 namespace compiler::helios::code {
-	MAKE_VISITOR(
-		HoutStmt, ReturnStmt, VoidReturnStmt, ExprStmt, IfStmt, VariableStmt, AssignmentStmt
+	MAKE_VISITOR(HoutStmt,
+		ReturnStmt,
+		VoidReturnStmt,
+		ExprStmt,
+		IfStmt,
+		VariableStmt,
+		AssignmentStmt
 	);
-	MAKE_VISITOR(
-		HoutExpr,
+	MAKE_VISITOR(HoutExpr,
 		LiteralIntExpr,
 		LiteralBoolExpr,
+		LiteralStringExpr,
 		LiteralTypeExpr,
 		IdentifierExpr,
 		BinaryOperatorExpr,
 		UnaryOperatorExpr,
+		TernaryOperatorExpr,
 		ParenthesisExpr,
 		TupleTypeConstructorExpr,
 		VariantTypeConstructorExpr,

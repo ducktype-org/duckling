@@ -64,6 +64,15 @@ namespace pst {
 		bool                         star = false;
 
 	public:
+		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {
+			this->element_kind = ElementKind::DottedName;
+		}
+
+		[[nodiscard]]
+		const std::vector<tpc::Identifier>& getNames() const {
+			return names;
+		}
+
 		[[nodiscard]]
 		auto begin() const {
 			return names.cbegin();
@@ -79,12 +88,8 @@ namespace pst {
 			return "Dotted Name";
 		}
 
-		explicit DottedName(const dia::SourcePosition& position): NotStmt(position) {}
-
 		static MBox<DottedName> parse(LangParserState& state);
 
-		[[nodiscard]]
-		std::vector<base::StrID> getNames() const;
 		[[nodiscard]]
 		bool getStar() const;
 

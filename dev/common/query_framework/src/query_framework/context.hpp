@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "context_fd.hpp"  // IWYU pragma: keep
-#include "detail/dep_graph.hpp"
-#include "detail/node_id.hpp"
-#include "detail/node_making.hpp"  // IWYU pragma: export
+#include "context_fd.hpp"                      // IWYU pragma: keep
+#include "detail/query_graph/node_id.hpp"
+#include "detail/query_graph/node_making.hpp"  // IWYU pragma: export
+#include "detail/query_graph/query_graph.hpp"
 
 #include <diagnostic/logger.hpp>
 #include <diagnostic/message.hpp>
@@ -17,7 +17,7 @@
 namespace query {
 
 	namespace detail {
-		struct ContextMaker;
+		struct ContextAccess;
 	}
 
 	/**
@@ -37,7 +37,14 @@ namespace query {
 		bool           active = true;
 
 		Context(detail::NodeID my_node): my_node(my_node) {}
-		friend struct query::detail::ContextMaker;
+		friend struct query::detail::ContextAccess;
+
+		/**
+		 * Main query graph, that query calls work on.
+		 */
+		static detail::QueryGraph main_query_graph;
+
+		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
 
 	public:
 		// @TODO: Make the context (and thus the logger) be propagated through query calls,
@@ -48,13 +55,11 @@ namespace query {
 		Context(const Context&) = delete;
 		Context(Context&&)      = delete;
 
-		void assertActive() const { CORE_ASSERT(active, "Context is inactive."); }
-
 		template<typename OthQuery>
 		auto query(typename OthQuery::QKey key) -> decltype(auto) {
 			assertActive();
 			detail::NodeID dep_id = makeNodeID(OthQuery::id, key);
-			detail::dep_graph::addDependency(my_node, dep_id);
+			main_query_graph.addDependency(my_node, dep_id);
 
 			this->active = false;
 			defer(this->active = true);
@@ -68,6 +73,10 @@ namespace query {
 		 */
 		void log(Box<dia::Message> message);
 
-		void setSidePSTInput(/*...*/){ /* @TODO: add implementation */ };
+		/**
+		 * @brief Returns a const reference to the main query graph.
+		 * Can be safely used outside query framework.
+		 */
+		static const detail::QueryGraph& getGraph() { return main_query_graph; }
 	};
 }

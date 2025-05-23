@@ -3,8 +3,11 @@
 #include "../all.hpp"
 #include "queries.hpp"
 
-#include <helios/symbols/symbols.hpp>
-#include <query_framework/query_int.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/simple.hpp>
+#include <query_framework/context_fd.hpp>
+
+#include <base/box.hpp>
 
 #include <utility>
 #include <vector>
@@ -359,6 +362,50 @@ namespace tsh::internal {
 
 		[[nodiscard]]
 		bool isImplicitlyCoercible(AbstractType target, query::Context& ctx) const override;
+	};
+
+	class StringAbstractTypeImpl final: public AbstractTypeImpl {
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::String;
+
+		StringAbstractTypeImpl() { representation = "string"; }
+	};
+
+	class DynamicArrayAbstractTypeImpl final: public AbstractTypeImpl {
+		SymbolType<> element_type;
+
+	public:
+		[[nodiscard]]
+		Kind getKind() const override {
+			return STATIC_KIND;
+		}
+
+		/**
+		 * @brief The Kind of types described by objects of this class.
+		 */
+		static constexpr Kind STATIC_KIND = Kind::DynamicArray;
+
+		DynamicArrayAbstractTypeImpl(const SymbolType<> element): element_type(element) {
+			representation = base::strConcat("dynamic_array(", element.toString(), ")");
+		}
+
+		[[nodiscard]]
+		SymbolType<> getElementType() const {
+			return element_type;
+		}
+
+		[[nodiscard]]
+		bool isImplicitlyCoercible(AbstractType, query::Context&) const override {
+			return false;
+		}
 	};
 
 	class TupleAbstractTypeImpl final: public AbstractTypeImpl {

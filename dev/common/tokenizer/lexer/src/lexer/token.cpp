@@ -44,9 +44,7 @@ namespace lexer {
 
 		// sets str_id of brackets to the pair of brackets for example "()"
 		std::string s;
-		icu::UnicodeString(bracket_type)
-			.append(u_getBidiPairedBracket(bracket_type))
-			.toUTF8String(s);
+		icu::UnicodeString(bracket_type).append(u_getBidiPairedBracket(bracket_type)).toUTF8String(s);
 		str_id = base::StrID(base::RawView(s.data()));
 	}
 
@@ -72,8 +70,7 @@ namespace lexer {
 		return { Type::Operator, oper, position };
 	}
 
-	Token
-		Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
+	Token Token::makeIdentifier(const base::RawView identifier, const dia::SourcePosition& position) {
 		if (lang_def::strAsKeyword(base::StrID(identifier)) != Keyword::NotAKeyword)
 			return makeKeyword(identifier, position);
 		return { Type::Identifier, identifier, position };
@@ -93,6 +90,10 @@ namespace lexer {
 
 	Token Token::makeString(const base::RawView string, const dia::SourcePosition& position) {
 		return { Type::String, string, position };
+	}
+
+	Token Token::makeChar(const base::RawView string, const dia::SourcePosition& position) {
+		return { Type::Char, string, position };
 	}
 
 	Token Token::makeBracketGroup(
@@ -173,7 +174,9 @@ namespace lexer {
 
 	bool Token::isOperatorSymbol() const { return type == Type::Operator; }
 
-	bool Token::isOperatorSymbolOrText() const { return isOperatorSymbol() || isKeyword(); }
+	bool Token::isOperatorSymbolOrText() const {
+		return isOperatorSymbol() || isKeyword() || isIdentifier();
+	}
 
 	bool Token::isPrefixOperator() const {
 		return isOperatorSymbol()
@@ -206,6 +209,8 @@ namespace lexer {
 	bool Token::isComment() const { return type == Type::Comment; }
 
 	bool Token::isString() const { return type == Type::String; }
+
+	bool Token::isChar() const { return type == Type::Char; }
 
 	bool Token::isStr(base::StrID str) const { return getValue() == str; }
 

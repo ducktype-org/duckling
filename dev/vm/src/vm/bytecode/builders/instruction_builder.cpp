@@ -1,11 +1,13 @@
-#include "builders.hpp"
+#include "instruction_builder.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/variant.hpp>
 
+#include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 
 #include <sstream>
+#include <unordered_map>
 
 namespace vm::code::builders {
 	namespace {
@@ -81,20 +83,7 @@ namespace vm::code::builders {
 		 * @brief Appends opcode argument as string to a to a stream.
 		 */
 		void pushOpcodeArg(const opargs::OpCodeArg& arg, std::ostream& out) {
-			using namespace opargs;
-			variant_match(arg) {
-				variant_case_novalue(Immediate) out << "imm";
-				variant_case_novalue(StackLocalI8) out << "l8";
-				variant_case_novalue(StackLocalI16) out << "l16";
-				variant_case_novalue(StackLocalI32) out << "l32";
-				variant_case_novalue(StackLocalI64) out << "l64";
-				variant_case_novalue(StackLocalAny) out << "any";
-				variant_case_novalue(StackLocalPtr) out << "lptr";
-				variant_case_novalue(opargs::Type) out << "type";
-				variant_case_novalue(FunctionName) out << "func";
-				variant_case_novalue(Label) out << "label";
-				variant_default CORE_PANIC("Unhandled arg type during opcode generation.");
-			}
+			out << std::visit([]<class T>(const T&) { return T::OP_SHORT; }, arg);
 		}
 
 		/**
@@ -125,15 +114,15 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 	std::vector new_args = args;
 
 	// Transforms arguments.
-	if ((kind == OpKind::load || kind == OpKind::store) && args.size() == 3) {
-		InstructionBuilder load_or_store_instr(kind);
-		load_or_store_instr.pushArgs(new_args[0], new_args[1]);
-		auto built = load_or_store_instr.build();
+	if (args.size() > 2) {
+		InstructionBuilder base_instr(kind);
+		base_instr.pushArgs(new_args[0], new_args[1]);
+		auto built = base_instr.build();
 		result.insert(result.end(), built.begin(), built.end());
 
 		InstructionBuilder ext(OpKind::ext);
-		ext.pushArg(new_args[2]);
-		auto built2 = load_or_store_instr.build();
+		for (usize i = 2; i < new_args.size(); i++) ext.pushArg(new_args[i]);
+		auto built2 = ext.build();
 		result.insert(result.end(), built2.begin(), built2.end());
 		return { result.begin(), result.end() };
 	}
@@ -150,14 +139,14 @@ std::vector<vm::code::Instruction> vm::code::builders::InstructionBuilder::build
 
 	std::string opcode_name = name_stream.str();
 
-	if (arg_count == 0)
-		result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
-	else if (arg_count == 1)
-		result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
-	else if (arg_count == 2)
-		result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
-	else
-		CORE_PANIC("Opcode: ", opcode_name, " does not exist!");
+	try {
+		if (arg_count == 0)
+			result.emplace_back(OPCODE_TO_0_ARGS_FACTORY.at(opcode_name)());
+		else if (arg_count == 1)
+			result.emplace_back(OPCODE_TO_1_ARGS_FACTORY.at(opcode_name)(new_args[0]));
+		else
+			result.emplace_back(OPCODE_TO_2_ARGS_FACTORY.at(opcode_name)(new_args[0], new_args[1]));
+	} catch (std::out_of_range&) { CORE_PANIC("Opcode: ", opcode_name, " does not exist!"); }
 
 	CORE_ASSERT(!result.empty(), "No instructions were created.");
 	return { result.begin(), result.end() };

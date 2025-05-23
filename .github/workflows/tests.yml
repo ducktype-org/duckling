@@ -39,7 +39,7 @@ jobs:
       # it should not override if the step if skipped.
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
-    timeout-minutes: 16  # (Per matrix run)
+    timeout-minutes: 20  # (Per matrix run)
 
     runs-on: ubuntu-24.04
 
@@ -51,17 +51,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install lcov, LLVM
+      - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo apt -y install lcov llvm llvm-dev
+        run: sudo apt -y install lcov
 
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
 
+      - name: Install LLVM
+        run: sudo apt -y install llvm-19 llvm-19-dev
+
       - name: Install GCC 14 and gcov-14
         run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
           sudo apt update
           sudo apt install -y ${{ env.CC_COMPILER }} ${{ env.CXX_COMPILER }} # gcov is included in gcc package
 

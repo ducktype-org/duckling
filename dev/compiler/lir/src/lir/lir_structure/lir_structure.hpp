@@ -9,7 +9,6 @@
 #include <base/stable_container.hpp>
 #include <base/stringifyable_enum.hpp>
 
-// clang-format off
 // Doc style is intentional, caused by inexplicable funkiness in how Doxygen interacts with macros.
 MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	/** Placeholder for uninitialized value, should not be in LIR output. */
@@ -37,6 +36,9 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	IntegerULt,
 	IntegerSLt,
 	IntegerNeg,
+	BooleanAnd,
+	BooleanOr,
+	BooleanNot,
 	Call,
 
 	ReturnVoid,
@@ -44,8 +46,6 @@ MAKE_STRINGIFYABLE_ENUM(compiler::lir, u64, Operation,
 	Jump,
 	Branch
 )
-
-// clang-format on
 
 namespace compiler::lir {
 	struct LirLocal;
