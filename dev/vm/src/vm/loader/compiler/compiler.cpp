@@ -293,11 +293,8 @@ namespace vm::loader::compiler {
 						index++;
 					}
 					variant_case(Op_virtual_call_lptr_method, instr) {
-						// TODO: This is strange. You should change that.
-						for (usize i = 0; i < *seek_method_param_count(instr.arg1.method_name);
-						     i++) {
+						for (usize i = 0; i < *seek_method_param_count(instr.arg1.method_name); i++)
 							pop();
-						}
 						index++;
 					}
 					variant_case(Op_ret_tailcall_func, instr) {
@@ -316,7 +313,6 @@ namespace vm::loader::compiler {
 	std::expected<low::LowVMProgram, LoaderLogger> compile(const Program& program) {
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.funcMap().size());
-		// Here VTable building should appear.
 
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
@@ -363,8 +359,8 @@ namespace vm::loader::compiler {
 
 		if (ctx.log.bad()) return std::unexpected(std::move(ctx.log));
 		return low::LowVMProgram{
-			converted_functions,
 			std::move(types),
+			converted_functions,
 			{ program.globalMap().begin(), program.globalMap().end() },
 			method_id_to_name,
 		};

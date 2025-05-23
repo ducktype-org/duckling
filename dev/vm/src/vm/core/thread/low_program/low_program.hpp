@@ -5,6 +5,8 @@
 
 #include "instruction.hpp"
 
+#include "base/string_id.hpp"
+
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -38,8 +40,8 @@ namespace vm::low {
 	 */
 	struct LowVMProgram {
 		LowVMProgram(
-			const std::vector<FuncData>&           functions,
 			Box<TypeMetadata>                      types,
+			const std::vector<FuncData>&           functions,
 			const std::vector<code::GlobalData>&   global_data,
 			const base::HashMap<i32, base::StrID>& method_name_pool
 		):
@@ -50,8 +52,8 @@ namespace vm::low {
 				this->global_data.insert(this->types->at(global.type), global.name);
 		}
 
-		StableTypeIdNameMap<FuncData, usize>        functions;
 		Box<TypeMetadata>                           types;
+		StableTypeIdNameMap<FuncData, usize>        functions;
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> global_data;
 		// Contains all method names in the program. It's used by the executor to determine the
 		// names of called functions.

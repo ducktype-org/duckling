@@ -6,7 +6,6 @@
 #include <vm/bytecode/element_base.hpp>
 
 #include <utility>
-#include <vector>
 
 namespace vm::code {
 	/**

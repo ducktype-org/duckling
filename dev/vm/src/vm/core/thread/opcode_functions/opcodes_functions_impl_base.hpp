@@ -34,6 +34,7 @@
 #include <base/ints.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/definitions.hpp"
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -357,7 +358,7 @@ namespace vm {
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(virtual_call_lptr_method)(FUNCTION_ARGS) {
 		{
-			// TODO: MERGE WITH CALL_FUNC
+			// TODO: MERGE WITH CALL_FUNC, after merge.
 			// Get the pointer data.
 			auto pointer = derefStack<Pointer>(local_stack, instr->arg0);
 			// Get the inheritance metadata for this pointer
@@ -375,11 +376,11 @@ namespace vm {
 				CORE_PANIC("Invalid vtable pointer in virtual call funs.");
 
 			const vm::InheritanceMetadata& inh_metadata = *opt_inh_meta;
-
+			
 			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
 			auto implementation_name = inh_metadata.vtable[method_name];
 
-			// TODO: Use the helper method.
+			// TODO: Use the helper method, after merge.
 			bool  found         = false;
 			usize function_id   = 0;
 			auto& all_functions = thread.executing_program->functions;

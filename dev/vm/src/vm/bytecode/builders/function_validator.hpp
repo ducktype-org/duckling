@@ -4,7 +4,6 @@
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
 
-#include "vm/bytecode/opcode_args.hpp"
 #include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
