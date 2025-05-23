@@ -1,3 +1,5 @@
+#include "../../hierarchy/class_elements/destructor.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {

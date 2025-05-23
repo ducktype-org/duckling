@@ -3,7 +3,7 @@
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/class_elements.hpp>
+#include <pst_parser/elements/hierarchy/class_elements/field.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>

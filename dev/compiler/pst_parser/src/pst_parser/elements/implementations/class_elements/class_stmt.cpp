@@ -1,3 +1,5 @@
+#include "../../hierarchy/class_elements/all_class_elements.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/meta.hpp"
 #include "preamble.hpp"
 
 namespace pst {

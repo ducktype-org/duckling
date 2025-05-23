@@ -1,3 +1,5 @@
+#include "../../hierarchy/class_elements/method.hpp"
+
 #include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 

@@ -1,3 +1,6 @@
+#include "../../hierarchy/class_elements/non_class_stmt.hpp"
+
+#include "../../hierarchy/expr.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
