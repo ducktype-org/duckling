@@ -5,6 +5,7 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
+#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -284,9 +285,8 @@ namespace vm::loader::compiler {
 		base::HashMap<i32, base::StrID> method_id_to_name;
 		base::HashMap<base::StrID, i32> method_name_to_id;
 		for (const auto& type: *types) {
-			auto opt_metadata = type.getInheritanceMetadata();
-			if_opt_some(opt_metadata, metadata) {
-				for (auto& [name, impl]: metadata.virtual_methods) {
+			if_opt_some(type.getInheritanceMetadata(), metadata) {
+				for (auto& [name, impl]: metadata.vtable) {
 					if (!method_name_to_id.contains(name)) {
 						method_id_to_name.put(current_ix, name);
 						method_name_to_id.put(name, current_ix);

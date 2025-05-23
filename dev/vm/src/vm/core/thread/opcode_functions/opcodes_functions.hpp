@@ -2,8 +2,8 @@
 
 #include "../config.hpp"
 
-#include <vm/core/thread/vmthread.hpp>
 #include <vm/core/thread/low_program/instruction.hpp>
+#include <vm/core/thread/vmthread.hpp>
 
 #ifdef USE_TAIL_CALLS
 	#define OPFUN_ARGS OPFUN_TC_ARGS

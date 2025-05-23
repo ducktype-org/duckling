@@ -298,18 +298,9 @@ namespace vm {
 			const vm::InheritanceMetadata& inh_metadata
 				= *inh_meta_pointer->getInheritanceMetadata();
 
-			auto method_name         = thread.executing_program->method_name_pool[instr->arg1];
-			auto implementation_name = inh_metadata.vtable[method_name]->getName();
-
-			// TODO: vtable should hold function ids instead of names for fast lookup during execution.
-			usize function_id   = 0;
-			auto& all_functions = thread.executing_program->functions;
-			for (usize i = 0; i < all_functions.size(); i++) {
-				if (all_functions[i].name == implementation_name) {
-					function_id = i;
-					break;
-				}
-			}
+			auto  method_name         = thread.executing_program->method_name_pool[instr->arg1];
+			auto  implementation_name = inh_metadata.vtable[method_name]->getName();
+			usize function_id = *thread.executing_program->functions.idOf(implementation_name);
 
 			prepareCall(instr, local_stack, frame, thread, function_id);
 		}

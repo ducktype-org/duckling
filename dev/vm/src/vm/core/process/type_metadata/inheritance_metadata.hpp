@@ -25,8 +25,7 @@ namespace vm {
 		// Virtual method declarations for this class. Contains only method introduced in this class.
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
 		// Contains all the implementations of virtual methods for this class/interface.
-		// Unimplemented method do not exist in the vtable.
-		// TODO: This should contain function ids.
+		// Unimplemented methods do not exist in the vtable.
 		base::HashMap<base::StrID, TypeCRef> vtable;
 
 		InheritanceMetadata(
