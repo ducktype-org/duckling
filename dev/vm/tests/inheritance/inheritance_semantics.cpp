@@ -4,7 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceSemanticsTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -24,7 +24,7 @@ private:
 	void upcast() {
 		runTestOnVm("semantics/valid_upcast.dbc", {}, {}, {}, 0);
 		loadInvalidDbc(
-			"semantics/invalid_upcast.dbc", { vm::code::builders::InvalidUpcastError::ERR_MSG }
+			"semantics/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG }
 		);
 	}
 
@@ -35,7 +35,7 @@ private:
 	}
 
 	void semantics() {
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "semantics/invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
 			{ "semantics/missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },

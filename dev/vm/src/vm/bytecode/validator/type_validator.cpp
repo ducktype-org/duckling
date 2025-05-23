@@ -1,4 +1,4 @@
-#include "builders.hpp"
+#include "type_validator.hpp"
 
 #include "base/maps.hpp"
 #include "base/string_id.hpp"
@@ -9,65 +9,24 @@
 #include <base/str_utils.hpp>
 #include <base/variant.hpp>
 
+#include "vm/bytecode/builders/builders.hpp"
+#include "vm/bytecode/validator/errors.hpp"
 #include "vm/core/process/type_metadata/definitions.hpp"
 #include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include "vm/core/process/type_metadata/type.hpp"
 #include <vm/bytecode/builders/errors.hpp>
 #include <vm/bytecode/builders/function_validator.hpp>
 #include <vm/bytecode/builtin_types.hpp>
-#include <vm/bytecode/bytecode.hpp>
-#include <vm/bytecode/instructions.hpp>
-#include <vm/bytecode/opcode_args.hpp>
-#include <vm/bytecode/type_of_data.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-#include <algorithm>
-#include <functional>
-#include <ranges>
-#include <type_traits>
-#include <utility>
-#include <variant>
-#include <vector>
-
-using namespace vm::code::builders;
-
-FunctionBuilder::FunctionBuilder(
-	vm::code::Identifier name, const GlobalDataMap& globals, const TypeContext& types
-):
-	  name(name),
-	  type_context(types),
-	  globals(globals) {}
-
-vm::code::Function FunctionBuilder::build() const {
-	FunctionValidator validator(name, type_context, globals, instructions);
-	validator.validate();
-	Function function;
-	function.body = validator.extractReachableCode();
-	function.name = name;
-	return function;
-}
-
-void FunctionBuilder::addInstruction(const Instruction& instruction) {
-	instructions.push_back(instruction);
-}
-
-void FunctionBuilder::addInstruction(const InstructionBuilder& instruction) {
-	for (auto&& instr: instruction.build()) this->addInstruction(instr);
-}
-
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::builders::TypeContextBuilder::getTypes(
-) const {
-	return types;
-}
-
-const vm::code::TypeOfData& TypeContextBuilder::getTypeOfData(
+const vm::code::TypeOfData& vm::code::TypeContext::getTypeOfData(
 	base::StrID name, const TypeOfData& context
 ) const {
 	return *types.atMaybe(name).expect<UnknownSubtypeError>(context, name);
 }
 
 template<typename ExpectedType, typename ErrorFactory>
-const ExpectedType& TypeContextBuilder::getType(
+const ExpectedType& vm::code::TypeContext::getType(
 	base::StrID name, const TypeOfData& context, ErrorFactory error_factory
 ) const {
 	const TypeOfData& type_of_data = getTypeOfData(name, context);
@@ -76,7 +35,7 @@ const ExpectedType& TypeContextBuilder::getType(
 }
 
 template<typename FieldableType>
-void TypeContextBuilder::collectFieldsRecursive(
+void vm::code::TypeContext::collectFieldsRecursive(
 	const FieldableType&                     fieldable,
 	const TypeOfData&                        error_context,
 	base::HashMap<base::StrID, base::StrID>& fields
@@ -97,7 +56,7 @@ void TypeContextBuilder::collectFieldsRecursive(
 }
 
 template<typename InheritableType, typename ErrorContextType>
-void TypeContextBuilder::collectVirtualMethodsRecursive(
+void vm::code::TypeContext::collectVirtualMethodsRecursive(
 	const InheritableType&                   inh,
 	const ErrorContextType&                  error_context_inh,
 	base::HashMap<base::StrID, base::StrID>& virtual_methods
@@ -125,7 +84,7 @@ void TypeContextBuilder::collectVirtualMethodsRecursive(
 }
 
 template<typename InheritableType, typename ErrorContextType>
-void TypeContextBuilder::collectImplementationsRecursive(
+void vm::code::TypeContext::collectImplementationsRecursive(
 	const InheritableType&                   inh,
 	const ErrorContextType&                  error_context_inh,
 	base::HashMap<base::StrID, base::StrID>& implementations
@@ -148,7 +107,7 @@ void TypeContextBuilder::collectImplementationsRecursive(
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateMethodFirstArgument(
+void vm::code::TypeContext::validateMethodFirstArgument(
 	const InheritableType& inh, const FunctionType& func_type
 ) const {
 	if (func_type.parameters.empty()) throw MethodFirstArgumentError(inh, func_type.name);
@@ -160,7 +119,7 @@ void TypeContextBuilder::validateMethodFirstArgument(
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateMethodSignatureMatch(
+void vm::code::TypeContext::validateMethodSignatureMatch(
 	const InheritableType& inh, const FunctionType& vmethod_type, const FunctionType& impl_type
 ) const {
 	if (vmethod_type.result != impl_type.result) throw MethodTypeError(inh, impl_type.name);
@@ -172,7 +131,7 @@ void TypeContextBuilder::validateMethodSignatureMatch(
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateVMethodSignatures(const InheritableType& inh) const {
+void vm::code::TypeContext::validateVMethodSignatures(const InheritableType& inh) const {
 	for (const auto& vmethod: inh.virtual_methods) {
 		const FunctionType& vmethod_type = getType<FunctionType>(vmethod.type, inh, [&]() {
 			return TypeIsNotFunctionalError(vmethod.type);
@@ -182,7 +141,7 @@ void TypeContextBuilder::validateVMethodSignatures(const InheritableType& inh) c
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateImplementations(
+void vm::code::TypeContext::validateImplementations(
 	const InheritableType& inh, const base::HashMap<base::StrID, base::StrID>& virtual_methods
 ) const {
 	base::HashMap<base::StrID, base::StrID> implementations;
@@ -208,7 +167,7 @@ void TypeContextBuilder::validateImplementations(
 	}
 }
 
-void TypeContextBuilder::validateAllMethodsImplemented(
+void vm::code::TypeContext::validateAllMethodsImplemented(
 	const ClassType& clazz, const base::HashMap<base::StrID, base::StrID>& virtual_methods
 ) const {
 	base::HashMap<base::StrID, base::StrID> implementations;
@@ -219,13 +178,13 @@ void TypeContextBuilder::validateAllMethodsImplemented(
 }
 
 template<typename FieldableType>
-void TypeContextBuilder::validateFieldDuplicates(const FieldableType& fieldable) const {
+void vm::code::TypeContext::validateFieldDuplicates(const FieldableType& fieldable) const {
 	base::HashMap<base::StrID, base::StrID> fields;
 	collectFieldsRecursive(fieldable, fieldable, fields);
 }
 
 template<typename InheritableType>
-void TypeContextBuilder::validateImplementsDuplicates(const InheritableType& inh) const {
+void vm::code::TypeContext::validateImplementsDuplicates(const InheritableType& inh) const {
 	base::HashMap<base::StrID, base::StrID> interfaces;
 	for (const auto& impl: inh.implements) {
 		if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh);
@@ -234,14 +193,14 @@ void TypeContextBuilder::validateImplementsDuplicates(const InheritableType& inh
 }
 
 template<typename InheritableType, typename ErrorContextType>
-void TypeContextBuilder::buildVTableRecursive(
+void vm::code::TypeContext::buildVTableRecursive(
 	const InheritableType&                inh,
 	const ErrorContextType&               error_context_inh,
 	base::HashMap<base::StrID, TypeCRef>& vtable,
-	const TypeContext&                    tctx
+	const TypeMetadata&                   metadata
 ) const {
 	auto get_type_cref = [&](base::StrID name) -> TypeCRef {
-		return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(inh, name);
+		return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
 	};
 
 	for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
@@ -249,25 +208,24 @@ void TypeContextBuilder::buildVTableRecursive(
 		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
 			return InvalidImplementsError(error_context_inh);
 		});
-		buildVTableRecursive(interface, error_context_inh, vtable, tctx);
+		buildVTableRecursive(interface, error_context_inh, vtable, metadata);
 	}
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
 				return InvalidExtends(inh);
 			});
-			buildVTableRecursive(super_class, error_context_inh, vtable, tctx);
+			buildVTableRecursive(super_class, error_context_inh, vtable, metadata);
 		}
 	}
 }
 
 template<typename InheritableType>
-TypeContextBuilder::FieldVector TypeContextBuilder::buildFieldVector(
-	const InheritableType& inh, const TypeContext& tctx
+vm::code::TypeContext::FieldVector vm::code::TypeContext::buildFieldVector(
+	const InheritableType& inh, const TypeMetadata& metadata
 ) const {
-	auto to_low_type = [&](const TypeOfData& tod) {
-		return tctx.metadata->at(VISIT(tod, type, return type.name));
-	};
+	auto to_low_type
+		= [&](const TypeOfData& tod) { return metadata.at(VISIT(tod, type, return type.name)); };
 	FieldVector fields{ { base::StrID("vt"), to_low_type(SpecialTypes::get().vtable_ptr) } };
 
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
@@ -283,7 +241,7 @@ TypeContextBuilder::FieldVector TypeContextBuilder::buildFieldVector(
 				  for (const vm::code::Field& field_code: clazz.fields) {
 					  fields.emplace_back(
 						  field_code.name,
-						  tctx.metadata->atMaybe(field_code.type)
+						  metadata.atMaybe(field_code.type)
 							  .expect<UnknownSubtypeError>(inh, field_code.name)
 					  );
 				  }
@@ -295,12 +253,12 @@ TypeContextBuilder::FieldVector TypeContextBuilder::buildFieldVector(
 }
 
 template<typename InheritableType>
-vm::InheritanceMetadata TypeContextBuilder::buildInheritanceMetadata(
-	const InheritableType& inh, const TypeContext& tctx
+vm::InheritanceMetadata vm::code::TypeContext::buildInheritanceMetadata(
+	const InheritableType& inh, const TypeMetadata& metadata
 ) const {
-	TypeRef tp            = tctx.metadata->at(inh.name);
+	TypeRef tp            = metadata.at(inh.name);
 	auto    get_type_cref = [&](base::StrID name) -> TypeCRef {
-        return tctx.getMetadata().atMaybe(name).expect<UnknownSubtypeError>(inh, name);
+        return metadata.atMaybe(name).expect<UnknownSubtypeError>(inh, name);
 	};
 	auto implements
 		= inh.implements | std::views::transform(get_type_cref) | std::ranges::to<std::vector>();
@@ -314,7 +272,7 @@ vm::InheritanceMetadata TypeContextBuilder::buildInheritanceMetadata(
 		implementations.put(method.name, get_type_cref(method.type));
 
 	base::HashMap<base::StrID, TypeCRef> vtable;
-	buildVTableRecursive(inh, inh, vtable, tctx);
+	buildVTableRecursive(inh, inh, vtable, metadata);
 
 	vm::InheritanceMetadata::Kind kind;
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
@@ -327,15 +285,11 @@ vm::InheritanceMetadata TypeContextBuilder::buildInheritanceMetadata(
 	}
 
 	return {
-		tp,
-		kind,
-		std::move(implements),
-		std::move(virtual_methods),
-		std::move(vtable),
+		tp, kind, std::move(implements), std::move(virtual_methods), std::move(vtable),
 	};
 }
 
-void TypeContextBuilder::validateType(const TypeOfData& type) const {
+void vm::code::TypeContext::validateType(const TypeOfData& type) const {
 	variant_match(type) {
 		variant_case(VariantType, variant) {
 			if (variant.variant_alternatives.empty()) throw EmptyVariantError(variant);
@@ -364,7 +318,7 @@ void TypeContextBuilder::validateType(const TypeOfData& type) const {
 	}
 }
 
-void TypeContextBuilder::validateTypes() const {
+void vm::code::TypeContext::validateTypes() const {
 	// Check for cycles in hierarchy.
 	enum Status { Waiting, Visited, Done };
 
@@ -399,96 +353,97 @@ void TypeContextBuilder::validateTypes() const {
 	for (const auto& type: types) validateType(type);
 }
 
-TypeContext TypeContextBuilder::build() const {
+Box<vm::TypeMetadata> vm::code::TypeContext::validateAndProduceTypeMetadata() const {
 	validateTypes();
-	TypeContext tctx;
-	tctx.types = types;
-	for (const auto& type: types)
-		tctx.metadata->addType(Type::declareType(VISIT(type, tp, return tp.name)));
-	for (const auto& type: tctx.types) {
+	Box<TypeMetadata> metadata = makeBox<TypeMetadata>();
+
+	// Declare all types first
+	for (const auto& type: types) metadata->addType(Type::declareType(typeName(type)));
+
+	// Well-define every type.
+	for (const auto& type: types) {
 		variant_match(type) {
 			variant_case(vm::code::PrimitiveType, data) {
-				tctx.metadata->at(data.name)->definePrimitive(data.size);
+				metadata->at(data.name)->definePrimitive(data.size);
 			}
 			variant_case(vm::code::PointerType, data) {
-				tctx.metadata->at(data.name)->definePointer(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+				metadata->at(data.name)->definePointer(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::StaticTableType, data) {
-				tctx.metadata->at(data.name)->defineStaticTable(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
+				metadata->at(data.name)->defineStaticTable(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner),
 					data.table_size
 				);
 			}
 			variant_case(vm::code::DynamicTableType, data) {
-				tctx.metadata->at(data.name)->defineDynamicTable(
-					tctx.metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
+				metadata->at(data.name)->defineDynamicTable(
+					metadata->atMaybe(data.inner).expect<UnknownSubtypeError>(data, data.inner)
 				);
 			}
 			variant_case(vm::code::DataType, data) {
+				// TODO: Why not use buildFieldVector?
 				FieldVector fields;
 				fields.reserve(data.fields.size());
 				for (auto& field: data.fields)
 					fields.emplace_back(
 						field.name,
-						tctx.metadata->atMaybe(field.type)
-							.expect<UnknownSubtypeError>(data, field.name)
+						metadata->atMaybe(field.type).expect<UnknownSubtypeError>(data, field.name)
 					);
-				tctx.metadata->at(data.name)->defineData(fields, {});
+				metadata->at(data.name)->defineData(fields, {});
 			}
 			variant_case(vm::code::VariantType, data) {
 				std::vector<vm::TypeRef> variants;
 				variants.reserve(data.variant_alternatives.size());
 				for (auto& variant: data.variant_alternatives)
 					variants.emplace_back(
-						tctx.metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
+						metadata->atMaybe(variant).expect<UnknownSubtypeError>(data, variant)
 					);
-				tctx.metadata->at(data.name)->defineVariant(variants);
+				metadata->at(data.name)->defineVariant(variants);
 			}
 			variant_case(vm::code::FunctionType, data) {
 				std::vector<vm::TypeCRef> parameters;
 				parameters.reserve(data.parameters.size());
-				for (auto& param: data.parameters)
-					parameters.emplace_back(tctx.metadata->at(param));
-				tctx.metadata->at(data.name)->defineFunction(
+				for (auto& param: data.parameters) parameters.emplace_back(metadata->at(param));
+				metadata->at(data.name)->defineFunction(
 					parameters,
-					tctx.metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
+					metadata->atMaybe(data.result).expect<UnknownSubtypeError>(data, data.result)
 				);
 			}
 			variant_case(vm::code::OpaqueType, opaque) {
-				tctx.metadata->at(opaque.name)->defineOpaque(opaque.size);
+				metadata->at(opaque.name)->defineOpaque(opaque.size);
 			}
 			variant_case(vm::code::ClassType, clazz) {
-				TypeRef                 tp           = tctx.metadata->at(clazz.name);
-				FieldVector             fields       = buildFieldVector(clazz, tctx);
-				vm::InheritanceMetadata inh_metadata = buildInheritanceMetadata(clazz, tctx);
+				TypeRef                 tp     = metadata->at(clazz.name);
+				FieldVector             fields = buildFieldVector(clazz, *metadata.ref());
+				vm::InheritanceMetadata inh_metadata
+					= buildInheritanceMetadata(clazz, *metadata.ref());
 				tp->defineData(fields, std::move(inh_metadata));
 			}
 			variant_case(vm::code::InterfaceType, interface) {
-				TypeRef                 tp           = tctx.metadata->at(interface.name);
-				FieldVector             fields       = buildFieldVector(interface, tctx);
-				vm::InheritanceMetadata inh_metadata = buildInheritanceMetadata(interface, tctx);
+				TypeRef                 tp     = metadata->at(interface.name);
+				FieldVector             fields = buildFieldVector(interface, *metadata.ref());
+				vm::InheritanceMetadata inh_metadata
+					= buildInheritanceMetadata(interface, *metadata.ref());
 				tp->defineData(fields, std::move(inh_metadata));
 			}
 			variant_default { CORE_PANIC("bad type"); }
 		}
 	}
-	tctx.metadata->finalize();
-	return tctx;
+	metadata->finalize();
+	return metadata;
 }
 
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& TypeContext::getTypes() const { return types; }
+const vm::StableTypeIdNameMap<vm::code::TypeOfData>& vm::code::TypeContext::getCurrentTypes() const {
+	return types;
+}
 
-const vm::TypeMetadata& TypeContext::getMetadata() const { return *metadata; }
-
-Box<vm::TypeMetadata> TypeContext::moveMetadata() && { return std::move(metadata); }
-
-void TypeContextBuilder::addType(const TypeOfData& type) {
-	const auto name = VISIT(type, tp, return tp.name);
+void vm::code::TypeContext::insertType(const TypeOfData& type) {
+	const auto name = typeName(type);
 	match_optional(types.atMaybe(name)) {
-		opt_some(tp) {
-			if (type != *tp) throw DuplicatedTypeError(type);
+		opt_some(previous_type) {
+			if (type != *previous_type) throw DuplicatedTypeError(type, *previous_type);
 		}
 		opt_none { types.insert(type, name); }
 	}

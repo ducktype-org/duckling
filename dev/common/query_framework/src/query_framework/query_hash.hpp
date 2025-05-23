@@ -37,9 +37,4 @@ namespace query {
 	concept HasStablePerfectHash = requires(KeyType t) {
 		{ t.queryStablePerfectHash() } -> std::same_as<QueryStableHash>;
 	};
-
-	template<class KeyType>
-	struct QueryUnstableHashFunctor final {
-		std::size_t operator()(const KeyType& key) const { return unstableHashKey(key); }
-	};
 }

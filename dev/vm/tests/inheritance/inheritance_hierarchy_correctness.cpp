@@ -4,7 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 #include <array>
 
@@ -23,7 +23,7 @@ private:
 	void hierarchyCorrectness() {
 		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
 
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{
 				"invalid_hierarchy/extends_cycle.dbc",
@@ -56,7 +56,7 @@ private:
 	}
 
 	void virtualMethodImplementationCorrectness() {
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{
 				"vmethod_implementation/implement_non_existing_method.dbc",
@@ -105,7 +105,7 @@ private:
 	}
 
 	void duplicateCorrectness() {
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto invalid_filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{
 				"duplicates/duplicated_field.dbc",

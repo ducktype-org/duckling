@@ -2,7 +2,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
@@ -79,7 +79,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/use_argument_after_call.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -89,8 +89,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -99,8 +99,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -109,8 +109,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -120,7 +120,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -129,7 +129,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -138,7 +138,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -147,7 +147,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/invalid_name.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -156,7 +156,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/repeated_name.dbc",
 			{
-				vm::code::builders::DuplicatedLocalNameError::ERR_MSG,
+				vm::code::DuplicatedLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -205,7 +205,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_mov.dbc",
 			{
-				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -214,7 +214,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
 			{
-				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
@@ -223,7 +223,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/global_wrong_type_mov.dbc",
 			{
-				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -232,7 +232,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/global_wrong_type_size.dbc",
 			{
-				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
@@ -241,16 +241,16 @@ private:
 		loadInvalidDbc(
 			"wrong/types/using_pointer_as_primitive.dbc",
 			{
-				vm::code::builders::InvalidArgumentTypeError::ERR_MSG,
+				vm::code::InvalidArgumentTypeError::ERR_MSG,
 			}
 		);
 	}
-	
+
 	void duplicatedDataFields() {
 		loadInvalidDbc(
 			"wrong/data_type/duplicated_fields.dbc",
 			{
-				vm::code::builders::DuplicatedFieldError::ERR_MSG,
+				vm::code::DuplicatedFieldError::ERR_MSG,
 			}
 		);
 	}
@@ -259,7 +259,7 @@ private:
 		loadInvalidDbc(
 			"wrong/unknown_method.dbc",
 			{
-				vm::code::builders::UnknownMethodError::ERR_MSG,
+				vm::code::UnknownMethodError::ERR_MSG,
 			}
 		);
 	}

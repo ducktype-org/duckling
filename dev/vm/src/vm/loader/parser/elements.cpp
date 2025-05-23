@@ -138,6 +138,12 @@ namespace vm::loader::parser {
 
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
+
+		auto end_position = state.getPosition().getEnd();
+		out->position     = dia::SourcePosition(
+            out->position.getLocation(), out->position.getStart(), end_position
+        );
+
 		state.parse().one(lang_def::Special::Semicolon);
 		return out;
 	}
