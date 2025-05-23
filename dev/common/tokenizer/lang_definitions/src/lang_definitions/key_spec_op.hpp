@@ -107,7 +107,8 @@ namespace lang_def {
 		// NOLINTEND
 
 		Char,
-		Bool,  // ...
+		Bool,
+		Str,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,
