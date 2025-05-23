@@ -1,6 +1,5 @@
 #pragma once
 
-#include "declarations.hpp"
 #include "not_statements.hpp"
 
 #include <base/variant.hpp>

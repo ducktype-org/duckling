@@ -1,7 +1,7 @@
 #pragma once
 
 #include "access.hpp"
-#include "elements/hierarchy/declarations.hpp"
+#include "elements/hierarchy/declarations/top_level.hpp"
 #include "elements/hierarchy/lists.hpp"
 #include "lang_parser_state.hpp"
 

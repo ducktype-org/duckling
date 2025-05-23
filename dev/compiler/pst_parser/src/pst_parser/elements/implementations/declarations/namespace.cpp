@@ -1,3 +1,5 @@
+#include "../../hierarchy/declarations/namespace.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {

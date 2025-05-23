@@ -1,4 +1,4 @@
-#include "../../hierarchy/declarations.hpp"
+#include "../../hierarchy/declarations/all_declarations.hpp"
 #include "../../hierarchy/statements.hpp"
 #include "preamble.hpp"
 

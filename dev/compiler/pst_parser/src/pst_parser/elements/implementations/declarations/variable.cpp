@@ -1,3 +1,5 @@
+#include "../../hierarchy/declarations/variable.hpp"
+
 #include "preamble.hpp"
 #include "var_parse.hpp"
 

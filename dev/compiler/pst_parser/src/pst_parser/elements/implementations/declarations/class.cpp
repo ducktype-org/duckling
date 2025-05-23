@@ -1,3 +1,5 @@
+#include "../../hierarchy/declarations/class.hpp"
+
 #include "../../hierarchy/expr.hpp"
 #include "preamble.hpp"
 

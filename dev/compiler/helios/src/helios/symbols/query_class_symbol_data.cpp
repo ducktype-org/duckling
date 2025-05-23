@@ -8,7 +8,7 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
 #include <pst_parser/elements/basic.hpp>
-#include <pst_parser/elements/hierarchy/declarations.hpp>
+#include <pst_parser/elements/hierarchy/declarations/class.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
 

@@ -7,6 +7,7 @@
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
+#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/context.hpp>
 #include <query_framework/query_entry_point.hpp>
