@@ -64,56 +64,6 @@ MAKE_STRINGIFYABLE_ENUM(vm::code::builders, std::uint8_t, OpKind,
 // NOLINTEND
 
 namespace vm::code::builders {
-	class TypeContextBuilder;
-
-	/**
-	 * @brief TypeContext contains built types.
-	 * It can be used built using TypesContext<TypesContextState::AddingTypes>.
-	 */
-	class TypeContext {
-		friend TypeContextBuilder;
-		TypeContext() = default;
-
-		Box<TypeMetadata>               metadata = makeBox<TypeMetadata>();
-		StableTypeIdNameMap<TypeOfData> types;
-
-	public:
-		[[nodiscard]] const StableTypeIdNameMap<TypeOfData>& getTypes() const;
-
-		[[nodiscard]] const TypeMetadata& getMetadata() const;
-
-		Box<TypeMetadata> moveMetadata() &&;
-	};
-
-	/**
-	 * @brief TypeContextBuilder allows for adding types.
-	 * It is used to build TypeContext.
-	 */
-	class TypeContextBuilder {
-		StableTypeIdNameMap<TypeOfData> types;
-
-		/*
-		 * @brief Throws a builder error if type is invalid.
-		 */
-		void validateType(const TypeOfData& type) const;
-
-		/*
-		 * @brief Throws a builder error if types are invalid.
-		 * Checks each type individually and inheritance
-		 * hierarchy soundness.
-		 */
-		void validateTypes() const;
-
-	public:
-		void                                   addType(const TypeOfData& type);
-		const StableTypeIdNameMap<TypeOfData>& getTypes() const;
-
-		/**
-		 * @brief Builds currently added types by building them.
-		 */
-		TypeContext build() const;
-	};
-
 	/**
 	 * @brief Helper to compose bytecode instructions.
 	 * It supports creating all available opcodes.
@@ -146,32 +96,4 @@ namespace vm::code::builders {
 
 		[[nodiscard]] std::vector<Instruction> build() const;
 	};
-
-	using GlobalDataMap = StableTypeIdNameMap<GlobalData, GlobalDataID>;
-
-	/**
-	 * @brief Helper to compose bytecode functions.
-	 */
-	class FunctionBuilder {
-		std::vector<Instruction> instructions{};
-		Identifier               name;
-		const TypeContext&       type_context;
-		const GlobalDataMap&     globals;
-
-	public:
-		FunctionBuilder(Identifier name, const GlobalDataMap& globals, const TypeContext& types);
-
-		/**
-		 * @brief Adds instruction to the function.
-		 */
-		void addInstruction(const Instruction& instruction);
-
-		/**
-		 * @brief Builds and adds instruction(s) to the function.
-		 */
-		void addInstruction(const InstructionBuilder& instruction);
-
-		[[nodiscard]] Function build() const;
-	};
-
 }

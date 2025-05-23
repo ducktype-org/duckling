@@ -12,6 +12,7 @@ class VmVariantTest: public VmTestSuite {
 
 public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(verySimpleVariant);
 		TESTER_ADD_TEST(simpleVariant0);
 		TESTER_ADD_TEST(simpleVariant1);
 		TESTER_ADD_TEST(simpleVariant2);
@@ -50,6 +51,8 @@ private:
 			}
 		}
 	}
+
+	void verySimpleVariant() { runTestOnVm("very_simple_variant.dbc", "42", "42"); }
 
 	void simpleVariant0() { runTestOnVm("simple_variant.dbc", "0", "13"); }
 
