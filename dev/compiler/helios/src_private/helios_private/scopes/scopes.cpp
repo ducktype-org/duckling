@@ -9,6 +9,7 @@
 #include <helios_private/scopes/scope_data.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
+#include <pst_parser/elements/hierarchy/expr.hpp>
 #include <pst_parser/lang_parser_element.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <pst_parser/pst_visitor.hpp>

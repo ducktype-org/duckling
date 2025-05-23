@@ -1,6 +1,6 @@
 #include "pst_walkers.hpp"
 
-#include <pst_parser/elements/elements.hpp>
+#include <pst_parser/elements/hierarchy/class_elements.hpp>
 
 #include <base/exceptions.hpp>
 

@@ -7,7 +7,7 @@
 #include <helios_private/lookup/lookup_chain.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/elements.hpp>
+#include <pst_parser/elements/hierarchy/class_elements.hpp>
 #include <pst_parser/elements/hierarchy/not_statements.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>

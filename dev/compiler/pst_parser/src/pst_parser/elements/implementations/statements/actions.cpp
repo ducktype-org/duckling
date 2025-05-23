@@ -1,5 +1,10 @@
-#include "../../hierarchy/actions.hpp"
-
+#include "../../hierarchy/actions/break.hpp"
+#include "../../hierarchy/actions/continue.hpp"
+#include "../../hierarchy/actions/defer.hpp"
+#include "../../hierarchy/actions/redo.hpp"
+#include "../../hierarchy/actions/restart.hpp"
+#include "../../hierarchy/actions/return.hpp"
+#include "../../hierarchy/actions/throw.hpp"
 #include "preamble.hpp"
 
 namespace pst {

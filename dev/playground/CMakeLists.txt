@@ -8,13 +8,10 @@ duck_add_playground(fs_parser fs_parser_playground.cpp USES Base ModuleTree Clap
 target_link_libraries(clap_example_cat Base Clap)
 
 duck_add_playground(llvm_example llvm_example_playground.cpp USES)
-llvm_map_components_to_libnames(llvm_libs
-    Core
-    ExecutionEngine
-    Interpreter
-    MC
-    MCJIT
-    Support
-    nativecodegen)
+
+execute_process(COMMAND llvm-config --libs Core ExecutionEngine Interpreter MC MCJIT Support nativecodegen
+                OUTPUT_VARIABLE llvm_libs
+                OUTPUT_STRIP_TRAILING_WHITESPACE)
+
 target_include_directories(llvm_example_playground PRIVATE ${LLVM_INCLUDE_DIRS})
 target_link_libraries(llvm_example_playground ${llvm_libs} llvm_helpers)
