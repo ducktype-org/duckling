@@ -95,13 +95,17 @@ private:
 				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "a") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>({ 64, true })
+						ctx.query<tsh::QueryIntegralType>(
+							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						)
 					);
 				}
 				if (local->helios_id.has_value() and helios::name(local->helios_id.value()) == "b") {
 					ASSERT_EQUAL(
 						local->layout.getSourceType(),
-						ctx.query<tsh::QueryIntegralType>({ 32, true })
+						ctx.query<tsh::QueryIntegralType>(
+							{ 32, tsh::IntegralAbstractType::Signedness::Signed }
+						)
 					);
 				}
 			}

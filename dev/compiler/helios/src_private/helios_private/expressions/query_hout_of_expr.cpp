@@ -264,6 +264,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
+				using enum tsh::IntegralAbstractType::Signedness;
 				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
@@ -291,53 +292,53 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Signed })
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Signed })
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Signed })
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Signed })
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Signed })
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Unsigned })
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Unsigned })
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Unsigned })
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Unsigned })
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Unsigned })
 					);
 					break;
 

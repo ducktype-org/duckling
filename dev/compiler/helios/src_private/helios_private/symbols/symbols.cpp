@@ -338,7 +338,9 @@ namespace compiler::helios {
 					std::vector<SymID> output;
 
 					auto i64_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryIntegralType>({ 64, true }),
+						ctx.query<tsh::QueryIntegralType>(
+							{ 64, tsh::IntegralAbstractType::Signedness::Signed }
+						),
 						tsh::ReferenceKind::Direct,
 						tsh::Mutability::Mutable
 					);

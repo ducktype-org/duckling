@@ -71,6 +71,7 @@ private:
 	// @TODO: test_modules/aliases are not used in tests
 
 	using enum tsh::Mutability;
+	using enum tsh::IntegralAbstractType::Signedness;
 
 	static tsh::SymbolType<> st(const tsh::AbstractType abstract_type) {
 		return tsh::SymbolType{
@@ -132,8 +133,8 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
-		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto f16_type   = query::entryPoint<tsh::QueryFloatType>(16);
 		const auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
@@ -647,17 +648,17 @@ private:
 	void testKeywordLiterals() {
 		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
 
-		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
-		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
-		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, true });
+		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, Signed });
+		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
+		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, Signed });
 
-		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
-		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
-		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
-		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
-		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, false });
+		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, Unsigned });
+		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
+		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
+		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
+		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, Unsigned });
 
 		auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
 		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
@@ -722,8 +723,8 @@ private:
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
 
-		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
