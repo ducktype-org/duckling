@@ -83,6 +83,7 @@ namespace lang_def {
 			{ Keyword::f128, "f128", KeywordFlags() },
 			{ Keyword::Char, "char", KeywordFlags() },
 			{ Keyword::Bool, "bool", KeywordFlags() },
+			{ Keyword::Str, "str", KeywordFlags() },
 
 			{ Keyword::Vec, "vec", KeywordFlags() },
 			{ Keyword::Set, "set", KeywordFlags() },

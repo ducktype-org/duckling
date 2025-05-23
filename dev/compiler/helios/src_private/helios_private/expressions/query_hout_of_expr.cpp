@@ -59,16 +59,26 @@ namespace compiler::helios::code {
 			return sub_exprs;
 		}
 
+		/**
+		 * Visitor that implements logic of creation of HOUT expressions from PST expressions.
+		 */
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
 
+			/**
+			 * The "output" of the visitor.
+			 */
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
 				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+			}
+
+			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
+				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
 			}
 
 			/**
@@ -271,6 +281,10 @@ namespace compiler::helios::code {
 
 				case pst::Keyword::Char:
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
+					break;
+
+				case pst::Keyword::Str:
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryStringType>({}));
 					break;
 
 					// @todo: add meta keyword and type
