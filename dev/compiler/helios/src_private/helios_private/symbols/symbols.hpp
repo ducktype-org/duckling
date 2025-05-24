@@ -18,6 +18,13 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Return all symbols currently stored by HELIOS.
+	 * @note: This should be used for tests and debug only,
+	 * and never in an actual query.
+	 * @return std::vector<SymID>
+	 */
+	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
 	 * @brief Query symbols associated with given element in PST

@@ -45,18 +45,22 @@ namespace tsh {
 		/**
 		 * @brief Whether the Integral type is signed or not.
 		 */
-		bool signedness{ true };
+		IntegralAbstractType::Signedness signedness;
 
 		// These constructor definitions are to force giving at least the first argument.
 		KeyFor_QueryIntegralType() = delete;
 
-		KeyFor_QueryIntegralType(const usize size, const bool signedness = true):
+		KeyFor_QueryIntegralType(
+			const usize                            size,
+			const IntegralAbstractType::Signedness signedness
+			= IntegralAbstractType::Signedness::Signed
+		):
 			  size(size),
 			  signedness(signedness) {}
 
 		[[nodiscard]]
 		u64 queryUnstablePerfectHash() const {
-			return size + signedness;
+			return size + (signedness == IntegralAbstractType::Signedness::Signed);
 		}
 	};
 

@@ -35,9 +35,17 @@ namespace compiler::helios {
 	SymbolKind kind(SymID);
 
 	/**
-	 * @return scope that given symbol was defined within
+	 * @return scope that given symbol was defined within.
+	 * Throws in symbol doesn't have a scope.
 	 */
 	ScopeID scope(SymID);
+
+	/**
+	 * Gets scope that given symbol was defined within.
+	 * Returns empty optional if the symbol doesn't have a scope.
+	 * E.g. builtin functions don't have a scope.
+	 */
+	base::Optional<ScopeID> maybeScope(SymID);
 
 	/**
 	 * @return PST Stmt element symbol was created from.

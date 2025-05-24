@@ -45,7 +45,9 @@ namespace tsh {
 
 	Bits FloatAbstractType::getSize() const { return toCPimpl(pimpl)->getSize(); }
 
-	bool IntegralAbstractType::getSignedness() const { return toCPimpl(pimpl)->getSignedness(); }
+	IntegralAbstractType::Signedness IntegralAbstractType::getSignedness() const {
+		return toCPimpl(pimpl)->getSignedness();
+	}
 
 	bool RawPointerAbstractType::isMutable() const { return toCPimpl(pimpl)->isMutable(); }
 
