@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../not_statements/fun_param.hpp"
 #include "preamble.hpp"
 
 namespace pst {

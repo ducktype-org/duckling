@@ -8,8 +8,6 @@
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/lists/implements_list.hpp>
-#include <pst_parser/elements/hierarchy/lists/parameter_list.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block_or_statement.hpp>

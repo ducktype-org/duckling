@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../meta.hpp"
-#include "../not_statements/expr_element.hpp"
+#include "../meta.hpp"                         // IWYU pragma: export
+#include "../not_statements/expr_element.hpp"  // IWYU pragma: export
 
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
