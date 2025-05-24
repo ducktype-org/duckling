@@ -214,7 +214,7 @@ namespace compiler::helios {
 				);
 				if (initial_value_coerced.hasError()) {
 					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::Lookup>>(
+						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
 							base::strConcat( 
 								"Bad type passed to variable initialization\n",

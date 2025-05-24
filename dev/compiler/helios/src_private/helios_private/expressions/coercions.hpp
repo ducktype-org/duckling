@@ -5,7 +5,7 @@
 #include <typesystem/higher/symbol_type.hpp>
 
 namespace compiler::helios {
-    struct InvalidCoercion final {    };
+    struct InvalidCoercion final { };
 
     /**
      * Wraps expression with appropriate coercion expression.
