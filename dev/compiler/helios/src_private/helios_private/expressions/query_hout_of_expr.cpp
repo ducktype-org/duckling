@@ -261,6 +261,9 @@ namespace compiler::helios::code {
 							std::move(arguments[i]), call_type.getType().getParameterTypes()[i]
 						);
 						if (coerced.hasError()) {
+							// this have suboptimal error position,
+							// for not it is left like this, since
+							// this function will be reworked anyway:
 							ctx.log(
 								makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
 									stmt->getSourcePosition(), "Invalid argument type"
