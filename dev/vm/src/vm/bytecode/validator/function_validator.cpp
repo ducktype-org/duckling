@@ -492,6 +492,15 @@ class FunctionValidator {
 				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
 				if (std::ranges::find(possible_types, expected_type) == possible_types.end())
 					throw VariantTypeMismatchError(instr);
+				if (next_instruction.empty()) throw MissingExtTypeError(instr);
+				variant_match(next_instruction.value()) {
+					variant_case(Op_ext_type, ext) {
+						if (expected_type != ext.arg0.type_name) throw MissingExtTypeError(instr);
+					}
+					variant_default {
+						throw MissingExtTypeError(instr);
+					}
+				}
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
 				PointerType variant_pointer_type
@@ -520,6 +529,15 @@ class FunctionValidator {
 					if (variant_type->getNthVariantType(i)->get()->getName() == expected_type)
 						found = true;
 				if (!found) throw VariantTypeMismatchError(instr);
+				if (next_instruction.empty()) throw MissingExtTypeError(instr);
+				variant_match(next_instruction.value()) {
+					variant_case(Op_ext_type, ext) {
+						if (expected_type != ext.arg0.type_name) throw MissingExtTypeError(instr);
+					}
+					variant_default {
+						throw MissingExtTypeError(instr);
+					}
+				}
 			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
@@ -679,7 +697,7 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 < instructions.size() ? base::Optional<const Instruction&>()
+				index + 1 >= instructions.size() ? base::Optional<const Instruction&>()
 												: instructions[index + 1],
 				local_stack
 			);
