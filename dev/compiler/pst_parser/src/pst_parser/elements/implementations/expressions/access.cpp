@@ -1,3 +1,7 @@
+#include "../../hierarchy/expressions/access.hpp"
+
+#include "../../hierarchy/expressions/template_specifier.hpp"
+#include "../../hierarchy/lists/template_list.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

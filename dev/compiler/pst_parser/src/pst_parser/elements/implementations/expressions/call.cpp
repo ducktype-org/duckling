@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/call.hpp"
+
+#include "../../hierarchy/lists/call_list.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

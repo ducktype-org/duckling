@@ -8,8 +8,10 @@ namespace pst {
 	// Lists
 	class ParamList;
 	class ImplementsList;
+	class TemplateList;
 	class AtrArgList;
 	class InitList;
+	class CallList;
 	// Not Statements
 	class FunParam;
 	class DottedName;
@@ -70,6 +72,7 @@ namespace pst {
 		class KeywordLiteral;
 		class Access;
 		class Call;
+		class Atom;
 		class ChainExpr;
 		class RoundExpr;
 		class BlockExpr;

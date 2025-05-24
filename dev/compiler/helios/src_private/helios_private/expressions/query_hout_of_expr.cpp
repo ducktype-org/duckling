@@ -8,7 +8,9 @@
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
-#include <pst_parser/elements/hierarchy/expr.hpp>
+#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
+#include <pst_parser/elements/hierarchy/lists/call_list.hpp>
+#include <pst_parser/elements/hierarchy/lists/template_list.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/code_block.hpp>
 #include <pst_parser/pst_expr_visitor.hpp>
 #include <query_framework/query_impl.hpp>

@@ -1,3 +1,5 @@
+#include "../../hierarchy/expressions/block_expr.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {

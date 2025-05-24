@@ -10,7 +10,7 @@
 #include <helios_private/symbols/symbols.hpp>
 #include <helios_private/utils/pst_walkers.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
-#include <pst_parser/elements/hierarchy/expr.hpp>
+#include <pst_parser/elements/hierarchy/expressions/all_expr.hpp>
 #include <pst_parser/elements/hierarchy/lists/all_lists.hpp>
 #include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <pst_parser/elements/hierarchy/statements/expand.hpp>

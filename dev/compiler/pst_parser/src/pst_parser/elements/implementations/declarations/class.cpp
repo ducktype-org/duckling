@@ -1,6 +1,6 @@
 #include "../../hierarchy/declarations/class.hpp"
 
-#include "../../hierarchy/expr.hpp"
+#include "../../hierarchy/expressions/chain_expr.hpp"
 #include "../../hierarchy/lists/implements_list.hpp"      // IWYU pragma: keep
 #include "../../hierarchy/not_statements/class_block.hpp"
 #include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep

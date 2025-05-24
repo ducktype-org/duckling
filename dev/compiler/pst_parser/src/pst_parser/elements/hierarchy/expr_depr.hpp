@@ -15,8 +15,6 @@
 #define CONDITION(name) static bool name(const LangParserState& state, i64 fwd = 0)
 
 namespace pst {
-	class CodeBlock;
-
 	/**
 	 * @brief For now these are some more general expr classification functions.
 	 *

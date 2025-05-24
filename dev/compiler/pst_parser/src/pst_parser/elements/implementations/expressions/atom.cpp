@@ -1,4 +1,12 @@
-#include "../../hierarchy/not_statements/expr_element.hpp"
+#include "../../hierarchy/expressions/atom.hpp"
+
+#include "../../hierarchy/expressions/block_expr.hpp"
+#include "../../hierarchy/expressions/char_value.hpp"
+#include "../../hierarchy/expressions/identifier_literal.hpp"
+#include "../../hierarchy/expressions/keyword_literal.hpp"
+#include "../../hierarchy/expressions/round_expr.hpp"
+#include "../../hierarchy/expressions/string_value.hpp"
+#include "../../hierarchy/expressions/value.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {
