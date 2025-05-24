@@ -1,8 +1,5 @@
 #include "type_validator.hpp"
 
-#include "base/optional.hpp"
-
-#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
