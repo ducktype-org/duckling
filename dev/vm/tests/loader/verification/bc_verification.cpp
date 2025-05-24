@@ -49,6 +49,7 @@ public:
 		TESTER_ADD_TEST(globalWrongTypeSize);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
 		TESTER_ADD_TEST(variantWrongType);
+		TESTER_ADD_TEST(staticTableWrongType);
 	}
 
 private:
@@ -252,6 +253,15 @@ private:
 			"wrong/types/variant_wrong_type.dbc",
 			{
 				vm::code::VariantTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void staticTableWrongType() {
+		loadInvalidDbc(
+			"wrong/types/static_table_wrong_type.dbc",
+			{
+				vm::code::StaticTableTypeMismatchError::ERR_MSG,
 			}
 		);
 	}

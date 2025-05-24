@@ -576,9 +576,57 @@ class FunctionValidator {
 			variant_case_novalue(Op_structLea_lptr_lptr) {}
 			variant_case_novalue(Op_structLoad_lany_lptr) {}
 			variant_case_novalue(Op_structStore_lptr_lany) {}
-			variant_case_novalue(Op_staticTableLea_lptr_lptr) {}
-			variant_case_novalue(Op_staticTableLoad_lany_lptr) {}
-			variant_case_novalue(Op_staticTableStore_lptr_lany) {}
+			variant_case(Op_staticTableLea_lptr_lptr, instr) {
+				PointerType table_pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
+				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
+				TypeCRef inner_type = table_type->getInnerType().value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
+				base::StrID      other_type_id = typeName(*other_type);
+				if (inner_type->getName() != other_type_id) throw StaticTableTypeMismatchError(instr);
+				if (next_instruction.empty()) throw MissingExtL64Error(instr);
+				variant_match(next_instruction.value()) {
+					variant_case_novalue(Op_ext_l64) {}
+					variant_default {
+						throw MissingExtL64Error(instr);
+					}
+				}
+			}
+			variant_case(Op_staticTableLoad_lany_lptr, instr) {
+				PointerType table_pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
+				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
+				TypeCRef inner_type = table_type->getInnerType().value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
+				base::StrID      other_type_id = typeName(*other_type);
+				if (inner_type->getName() != other_type_id) throw StaticTableTypeMismatchError(instr);
+				if (next_instruction.empty()) throw MissingExtL64Error(instr);
+				variant_match(next_instruction.value()) {
+					variant_case_novalue(Op_ext_l64) {}
+					variant_default {
+						throw MissingExtL64Error(instr);
+					}
+				}
+			}
+			variant_case(Op_staticTableStore_lptr_lany, instr) {
+				PointerType table_pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
+				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
+				TypeCRef inner_type = table_type->getInnerType().value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_id = typeName(*other_type);
+				if (inner_type->getName() != other_type_id) throw StaticTableTypeMismatchError(instr);
+				if (next_instruction.empty()) throw MissingExtL64Error(instr);
+				variant_match(next_instruction.value()) {
+					variant_case_novalue(Op_ext_l64) {}
+					variant_default {
+						throw MissingExtL64Error(instr);
+					}
+				}
+			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
 			variant_case_novalue(Op_ext_field) {}
