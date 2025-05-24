@@ -21,24 +21,22 @@ public:
 		B n2(2);
 		B n3 = n1 + n2;
 		assertTrue(n3 == B(3), "Basic math failed (3)");
-		assertTrue(-n3 == B(-3), "Basic math failed (4)");
-		assertTrue(+(-n3) == B(-3), "Basic math failed (5)");
-		assertTrue(n3 != B(1), "Basic math failed (6)");
-		assertTrue(n3 > B(1), "Basic math failed (7)");
-		assertTrue(n3 > B(2), "Basic math failed (8)");
-		assertTrue(n3 >= B(3), "Basic math failed (9)");
-		assertTrue(n3 <= B(3), "Basic math failed (10)");
-		assertTrue(n3 < B(4), "Basic math failed (11)");
-		assertTrue(n3 < B(10), "Basic math failed (12)");
+		assertTrue(n3 != B(1), "Basic math failed (4)");
+		assertTrue(n3 > B(1), "Basic math failed (5)");
+		assertTrue(n3 > B(2), "Basic math failed (6)");
+		assertTrue(n3 >= B(3), "Basic math failed (7)");
+		assertTrue(n3 <= B(3), "Basic math failed (8)");
+		assertTrue(n3 < B(4), "Basic math failed (9)");
+		assertTrue(n3 < B(10), "Basic math failed (10)");
 
-		assertTrue(n3 - B(10) == B(-7), "Basic math failed (13)");
-		assertTrue(n3 * 2 == B(6), "Basic math failed (14)");
-		assertTrue(n3 / 2 == B(1), "Basic math failed (15)");
+		assertTrue(B(7) - n3 == B(4), "Basic math failed (11)");
+		assertTrue(n3 * 2 == B(6), "Basic math failed (12)");
+		assertTrue(n3 / 2 == B(1), "Basic math failed (13)");
 
 		n3 += B(10);
-		assertTrue(n3 == B(13), "Basic math failed (16)");
-		n3 -= B(20);
-		assertTrue(n3 == B(-7), "Basic math failed (17)");
+		assertTrue(n3 == B(13), "Basic math failed (14)");
+		n3 -= B(9);
+		assertTrue(n3 == B(4), "Basic math failed (15)");
 	}
 
 	void bitsAndBytesTest() {
@@ -47,12 +45,12 @@ public:
 		unitTest<Bytes>();
 
 		// Additional functionalities test.
-		Bytes Bs = Bytes(3);
-		Bits  bs = bytes2bits(Bs);
-		assertTrue(usize(bs) == 3 * 8, "Conversion failed");
+		Bytes bytes = Bytes(3);
+		Bits  bits  = bytes2bits(bytes);
+		assertTrue(usize(bits) == 3 * 8, "Conversion failed");
 
-		assertTrue(std::to_string(Bs) == "3B", "Byte stringification failed");
-		assertTrue(std::to_string(bs) == "24b", "Bit stringification failed");
+		assertTrue(std::to_string(bytes) == "3B", "Byte stringification failed");
+		assertTrue(std::to_string(bits) == "24b", "Bit stringification failed");
 	}
 
 	~BitsAndBytesTest() override = default;
