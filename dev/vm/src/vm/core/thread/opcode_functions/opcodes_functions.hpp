@@ -85,7 +85,7 @@ namespace vm {
 		 * `local_stack` should be pointer to the local stack of the new function.
 		 * Old values of `instr` nad `local_stack` should be saved on the frame of the caller.
 		 */
-		static void prepareCall(
+		static __attribute__((always_inline)) void prepareCall(
 			const Fix8Instruction*& instr,
 			std::byte*&             local_stack,
 			Frame*&                 frame,

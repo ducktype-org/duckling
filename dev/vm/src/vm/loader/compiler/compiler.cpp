@@ -1,12 +1,10 @@
 #include "compiler.hpp"
 
-#include "base/exceptions.hpp"
 #include <base/int_conv.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include "vm/core/process/type_metadata/inheritance_metadata.hpp"
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
@@ -183,13 +181,14 @@ namespace vm::loader::compiler {
 
 			auto seek_method_param_count
 				= [&](const base::StrID& method_name) -> base::Optional<u64> {
+				// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 				for (const auto& type: ctx.type_map) {
 					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
 						if (inh_meta.virtual_methods.contains(method_name))
 							return inh_meta.virtual_methods[method_name]->getParameterCount();
 					}
 				}
-				CORE_UNREACHABLE(); 
+				CORE_UNREACHABLE();
 			};
 
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
@@ -287,6 +286,7 @@ namespace vm::loader::compiler {
 		base::HashMap<base::StrID, i32> method_name_to_id;
 		for (const auto& type: *types) {
 			if_opt_some(type.getInheritanceMetadata(), metadata) {
+				//@todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
 				for (auto& [name, impl]: metadata.vtable) {
 					if (!method_name_to_id.contains(name)) {
 						method_id_to_name.put(current_ix, name);
