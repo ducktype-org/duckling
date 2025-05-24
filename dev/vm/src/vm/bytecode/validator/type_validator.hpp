@@ -40,12 +40,6 @@ namespace vm::code {
 		void validateTypes() const;
 
 		/**
-		 * @brief Retrieves the TypeOfData variant for a given type name, throws UnknownSubtypeError
-		 * if the type is not found.
-		 */
-		const vm::code::TypeOfData& getTypeOfData(base::StrID name, const TypeOfData& context) const;
-
-		/**
 		 * @brief Retrieves a specific type from a TypeOfData variant, throws UnknownSubtypeError if
 		 * the type is not found and an error returned by the error factory if the expected type
 		 * mismatches the actual one.

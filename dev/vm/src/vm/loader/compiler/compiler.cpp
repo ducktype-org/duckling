@@ -1,5 +1,6 @@
 #include "compiler.hpp"
 
+#include "base/exceptions.hpp"
 #include <base/int_conv.hpp>
 #include <base/optional.hpp>
 #include <base/string_id.hpp>
@@ -188,7 +189,7 @@ namespace vm::loader::compiler {
 							return inh_meta.virtual_methods[method_name]->getParameterCount();
 					}
 				}
-				return {};
+				CORE_UNREACHABLE(); 
 			};
 
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();

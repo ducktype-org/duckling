@@ -4,17 +4,11 @@
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
-const vm::code::TypeOfData& vm::code::TypeContext::getTypeOfData(
-	base::StrID name, const TypeOfData& context
-) const {
-	return *types.atMaybe(name).expect<UnknownSubtypeError>(context, name);
-}
-
 template<typename ExpectedType, typename ErrorFactory>
 const ExpectedType& vm::code::TypeContext::getType(
 	base::StrID name, const TypeOfData& context, ErrorFactory error_factory
 ) const {
-	const TypeOfData& type_of_data = getTypeOfData(name, context);
+	const TypeOfData& type_of_data = *types.atMaybe(name).expect<UnknownSubtypeError>(context, name);
 	if (const auto* specific_type = std::get_if<ExpectedType>(&type_of_data)) return *specific_type;
 	throw error_factory();
 }
@@ -28,7 +22,7 @@ void vm::code::TypeContext::collectFieldsRecursive(
 	if constexpr (std::is_same_v<FieldableType, ClassType>) {
 		if (fieldable.extends) {
 			const auto& super_class = getType<ClassType>(*fieldable.extends, error_context, [&]() {
-				return InvalidExtendsError(fieldable);
+				return InvalidExtendsError(fieldable, *fieldable.extends);
 			});
 			collectFieldsRecursive(super_class, error_context, fields);
 		}
@@ -48,7 +42,7 @@ void vm::code::TypeContext::collectVirtualMethodsRecursive(
 ) const {
 	for (const auto& interface_name: inh.implements) {
 		const auto& interface = getType<InterfaceType>(interface_name, inh, [&]() {
-			return InvalidImplementsError(error_context_inh);
+			return InvalidImplementsError(inh, interface_name);
 		});
 		collectVirtualMethodsRecursive(interface, error_context_inh, virtual_methods);
 	}
@@ -56,7 +50,7 @@ void vm::code::TypeContext::collectVirtualMethodsRecursive(
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtendsError(inh);
+				return InvalidExtendsError(inh, *inh.extends);
 			});
 			collectVirtualMethodsRecursive(super_class, error_context_inh, virtual_methods);
 		}
@@ -77,14 +71,14 @@ void vm::code::TypeContext::collectImplementationsRecursive(
 	for (const auto& impl: inh.implementations) implementations.put(impl.name, impl.type);
 	for (const auto& interface_name: inh.implements) {
 		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
-			return InvalidImplementsError(error_context_inh);
+			return InvalidImplementsError(inh, interface_name);
 		});
 		collectImplementationsRecursive(interface, error_context_inh, implementations);
 	}
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtendsError(inh);
+				return InvalidExtendsError(inh, *inh.extends);
 			});
 			collectImplementationsRecursive(super_class, error_context_inh, implementations);
 		}
@@ -172,7 +166,7 @@ template<typename InheritableType>
 void vm::code::TypeContext::validateImplementsDuplicates(const InheritableType& inh) const {
 	base::HashMap<base::StrID, base::StrID> interfaces;
 	for (const auto& impl: inh.implements) {
-		if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh);
+		if (interfaces.contains(impl)) throw DuplicatedImplementsError(inh, impl);
 		interfaces.put(impl);
 	}
 }
@@ -191,14 +185,14 @@ void vm::code::TypeContext::buildVTableRecursive(
 	for (const auto& impl: inh.implementations) vtable.put(impl.name, get_type_cref(impl.type));
 	for (const auto& interface_name: inh.implements) {
 		const auto& interface = getType<InterfaceType>(interface_name, error_context_inh, [&]() {
-			return InvalidImplementsError(error_context_inh);
+			return InvalidImplementsError(error_context_inh, interface_name);
 		});
 		buildVTableRecursive(interface, error_context_inh, vtable, metadata);
 	}
 	if constexpr (std::is_same_v<InheritableType, ClassType>) {
 		if (inh.extends) {
 			const auto& super_class = getType<ClassType>(*inh.extends, error_context_inh, [&]() {
-				return InvalidExtendsError(inh);
+				return InvalidExtendsError(inh, *inh.extends);
 			});
 			buildVTableRecursive(super_class, error_context_inh, vtable, metadata);
 		}
@@ -217,9 +211,10 @@ vm::code::TypeContext::FieldVector vm::code::TypeContext::buildFieldVector(
 		std::function<void(const vm::code::ClassType&)> collect_class_fields_recursive
 			= [&](const vm::code::ClassType& clazz) {
 				  if (clazz.extends) {
-					  const auto& super_class_code = getType<vm::code::ClassType>(
-						  *clazz.extends, inh, [&]() { return InvalidExtendsError(inh); }
-					  );
+					  const auto& super_class_code
+						  = getType<vm::code::ClassType>(*clazz.extends, inh, [&]() {
+								return InvalidExtendsError(inh, *clazz.extends);
+							});
 					  collect_class_fields_recursive(super_class_code);
 				  }
 
@@ -324,17 +319,18 @@ void vm::code::TypeContext::validateTypes() const {
         variant_match(type) {
             variant_case(ClassType, clazz) {
                 if_opt_some(clazz.extends, superclass) {
-                    if (!types_ref.contains(superclass)) throw InvalidExtendsError(clazz);
+                    if (!types_ref.contains(superclass))
+                        throw InvalidExtendsError(clazz, superclass);
                     self(*types_ref.at(superclass));
                 }
                 for (auto iface: clazz.implements) {
-                    if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz);
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(clazz, iface);
                     self(*types_ref.at(iface));
                 }
             }
             variant_case(InterfaceType, interface) {
                 for (auto iface: interface.implements) {
-                    if (!types_ref.contains(iface)) throw InvalidImplementsError(interface);
+                    if (!types_ref.contains(iface)) throw InvalidImplementsError(interface, iface);
                     self(*types_ref.at(iface));
                 }
             }

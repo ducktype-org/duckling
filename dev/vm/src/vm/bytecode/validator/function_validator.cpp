@@ -183,8 +183,20 @@ public:
 			throw InvalidFunctionCallArgumentsError(generic_arg);
 	}
 
+	/**
+	 * @brief Validates the stack state at the moment of a method call.
+	 *
+	 * @note Method calls need their own handling.
+	 * - The argument is only the name of the method and we need to find an implementation
+	 *   corresponding to that name.
+	 * - The first argument on the stack should be pointer which points to the same type as the
+	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_lptr_method`).
+	 *   Since virtual_method map contains only the signatures of methods, the implementations of them
+	 *   may declare a pointer to a different type (a pointer to a subclass). 
+	 *   Validating just the pointer type name like in normal function calls would simply don't work.
+	 */
 	void popMethodCallArgs(const opargs::MethodName& method, const opargs::StackLocalPtr& obj_ptr) {
-		// TODO: This implementation seeking occurs in a couple of places. Think of a better way.
+		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
 		base::StrID impl_name;
 		for (const auto& type: *type_metadata) {
 			if_opt_some(type.getInheritanceMetadata(), inh_meta) {
@@ -209,8 +221,6 @@ public:
 			stack_state.pop_back();
 		}
 
-		// In method call validation, the first argument of the called function has to be the same
-		// as an object pointer on which the method is invoked.
 		auto type_name    = code::typeName(*stack_state.back().type);
 		auto ptr_on_stack = std::get<PointerType>(*tod_map->at(type_name));
 		auto ptr_in_call  = std::get<PointerType>(*local_name_to_type[obj_ptr.var_name]);

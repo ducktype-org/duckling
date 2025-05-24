@@ -22,7 +22,7 @@ namespace vm {
 		TypeCRef              type;
 		Kind                  kind;
 		std::vector<TypeCRef> implements;
-		// Virtual method declarations for this class. Contains only method introduced in this class.
+		// Virtual method declarations for this class. Contains only methods introduced in this class.
 		base::HashMap<base::StrID, TypeCRef> virtual_methods;
 		// Contains all the implementations of virtual methods for this class/interface.
 		// Unimplemented methods do not exist in the vtable.

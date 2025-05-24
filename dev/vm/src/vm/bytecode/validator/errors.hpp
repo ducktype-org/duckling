@@ -157,12 +157,12 @@ namespace vm::code {
 		}
 	};
 
-	class TypeWithAttributeBase: public ValidationError {
+	class TypeAttributeBase: public ValidationError {
 	public:
 		const TypeOfData  TYPE;
 		const base::StrID ATTRIBUTE_NAME;
 
-		TypeWithAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
+		TypeAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
 			  ValidationError(std::move(msg)),
 			  TYPE(std::move(argument)),
 			  ATTRIBUTE_NAME(field_name) {}
@@ -200,60 +200,61 @@ namespace vm::code {
 			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	};
 
-#define DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(error_name, msg)                           \
-	class error_name: public TypeWithAttributeBase {                                \
+#define DEFINE_TYPE_ATTRIBUTE_ERROR(error_name, msg)                                \
+	class error_name: public TypeAttributeBase {                                    \
 	public:                                                                         \
 		constexpr static const std::string_view ERR_MSG = (msg);                    \
                                                                                     \
 		error_name(TypeOfData type, base::StrID field_name):                        \
-			  TypeWithAttributeBase(                                                \
+			  TypeAttributeBase(                                                    \
 				  base::strConcat(ERR_MSG, field_name), std::move(type), field_name \
 			  ) {}                                                                  \
 	};
 
 	DEFINE_TYPE_ERROR(
+		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
+	);
+	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidImplementsError,
 		"This object can implement only existing interfaces other than itself: "
 	);
-	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
-	DEFINE_TYPE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		DuplicatedImplementsError,
 		"This interface/class tried implementing the same interface twice: "
 	);
-	DEFINE_TYPE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidExtendsError, "This class can extend only existing classes other than itself: "
 	);
-	DEFINE_TYPE_ERROR(
-		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
-	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		MethodTypeError,
 		"Implementations and virtual method declarations should have the same signature: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
-		MethodFirstArgumentError, "Methods first argument should be a this*: "
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		MethodFirstArgumentError,
+		"Methods first argument should be a pointer to an object the method is defined for: "
 	);
 
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(DuplicatedFieldError, "This objects' field is duplicated: ");
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
-		DuplicatedVirtualMethodError, "This objects' virtual method declaration is duplicated: "
+	DEFINE_TYPE_ATTRIBUTE_ERROR(DuplicatedFieldError, "This object's field is duplicated: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedVirtualMethodError, "This object's virtual method declaration is duplicated: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		DuplicatedVirtualMethodImplementationError,
-		"This objects' virtual method implementation is duplicated: "
+		"This object's virtual method implementation is duplicated: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		UnimplementedVirtualMethodError,
 		"This virtual method is unimplemented in an instantiable class: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		VirtualMethodSignatureError, "This class implements a method with wrong signature: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
 		InvalidVirtualMethodImplementationError,
 		"Method implementation lacks it's declaration as a virtual method: "
 	);
-	DEFINE_TYPE_WITH_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
