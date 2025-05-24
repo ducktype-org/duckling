@@ -1,5 +1,8 @@
 #include "type_validator.hpp"
 
+#include "base/optional.hpp"
+
+#include "vm/bytecode/type_of_data.hpp"
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/validator/errors.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
@@ -38,10 +41,10 @@ namespace {
 	// const ExpectedType getType(
 	// TODO: What the heck.
 	const ExpectedType& getType(
-		const TypeContext& ctx,
-		const base::StrID&        name,
-		const TypeOfData&  context_for_error,
-		const ErrorFactory&       error_factory
+		const TypeContext&  ctx,
+		const base::StrID&  name,
+		const TypeOfData&   context_for_error,
+		const ErrorFactory& error_factory
 	) {
 		const TypeOfData& type_of_data
 			= *ctx.getCurrentTypes().atMaybe(name).expect<UnknownSubtypeError>(
