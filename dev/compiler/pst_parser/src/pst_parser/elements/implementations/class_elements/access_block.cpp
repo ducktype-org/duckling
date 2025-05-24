@@ -24,7 +24,7 @@ namespace pst {
 		auto position = state.getPosition();
 		auto out      = makeBox<AccessBlock>(position, ctx);
 
-		if (not access_specifiers.contains(state[0].asKeyword())) {
+		if (not ACCESS_SPECIFIERS.contains(state[0].asKeyword())) {
 			state.log(makeBox<NoSpecifierError>(position));
 		} else {
 			out->context.specifiers.emplace_back(&state[0]);

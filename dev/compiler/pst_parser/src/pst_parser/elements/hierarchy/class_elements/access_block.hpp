@@ -10,7 +10,7 @@ namespace pst {
 	 * They are used to change the visibility of multiple definitions in a class
 	 */
 	class AccessBlock final: public ClassStmt {
-		static inline const std::set<lang_def::Keyword> access_specifiers = {
+		static inline const std::set<lang_def::Keyword> ACCESS_SPECIFIERS = {
 			lang_def::Keyword::Public,
 			lang_def::Keyword::Private,
 			lang_def::Keyword::Protected,

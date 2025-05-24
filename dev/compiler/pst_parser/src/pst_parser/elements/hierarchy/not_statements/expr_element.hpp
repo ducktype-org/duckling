@@ -7,7 +7,7 @@ namespace pst {
 	 * @brief Common root for expression sub-elements.
 	 */
 	class ExprElement: public NotStmt {
-		const i64 precedence;
+		const i64 PRECEDENCE;
 
 	protected:
 		/**
@@ -22,7 +22,7 @@ namespace pst {
 
 		explicit ExprElement(const dia::SourcePosition& position, i64 precedence):
 			  NotStmt(position),
-			  precedence(precedence) {
+			  PRECEDENCE(precedence) {
 			this->element_kind = ElementKind::ExprElement;
 		}
 
