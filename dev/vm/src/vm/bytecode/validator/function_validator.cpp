@@ -160,11 +160,7 @@ public:
 		stack_state.pop_back();
 	}
 
-	void castPrimitive(
-		const opargs::OpCodePrimitiveArg& local,
-		const opargs::Type&               type,
-		const Instruction&                instruction
-	) {
+	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
 		auto& curr_type = local_name_to_type.at(VISIT(local, l, return l.var_name));
 		auto  new_type  = tod_map->at(type.type_name);
 		curr_type       = new_type;
@@ -706,10 +702,10 @@ class FunctionValidator {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
-#define HANDLE_CAST(SIZE)                                         \
-	variant_case(Op_cast_l##SIZE##_type, instr) {                 \
-		local_stack.castPrimitive(instr.arg0, instr.arg1, instr); \
-		index++;                                                  \
+#define HANDLE_CAST(SIZE)                                  \
+	variant_case(Op_cast_l##SIZE##_type, instr) {          \
+		local_stack.castPrimitive(instr.arg0, instr.arg1); \
+		index++;                                           \
 	}
 
 				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
