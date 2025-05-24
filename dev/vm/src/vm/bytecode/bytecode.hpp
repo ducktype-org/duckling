@@ -39,7 +39,7 @@ namespace vm::code {
 	/**
 	 * @brief Represents global data, like a constant or a variable.
 	 */
-	struct GlobalData {
+	struct GlobalData final: ElementBase {
 		Identifier name;
 		Identifier type;
 	};

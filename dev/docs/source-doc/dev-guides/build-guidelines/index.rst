@@ -16,7 +16,8 @@ Installing dependencies
 * **Doxygen** is used for generating documentation.
 * **Graphviz** is dependency used for generating diagrams by the compiler.
 * **CMake** and **Ninja** are used for building the project.
-* **g++** with version 13 or higher is required for building the project.
+* **g++** with version 14 or higher is required for building the project.
+* [alternatively to g++] **clang++** with version 19 or higher is required for building the project.
 * **lcov** is used for generating coverage reports.
 * **LLVM** is required for building the project.
 
@@ -93,7 +94,7 @@ This:
 
 .. code-block:: bash
 	
-	./toolbox.py download-llvm
+	./toolbox.py install-llvm
 
 
 In case of trouble during build or :code:`setup-build` step, it is advised
@@ -102,9 +103,9 @@ to install the latest supported version of LLVM for your system
 But the most reliable way is to download the LLVM locally using toolbox with this command.
 
 After using this command, LLVM is **NOT installed system-wide**, but only for this project.
-Using version :code:`18.1.8` should work for most platforms.
+Using version :code:`19.1.7` should work for most platforms.
 
-The downloaded library is placed in the :code:`scripts/downloads` directory.
+The installed library is placed in the :code:`scripts/downloads` directory.
 
 Create a build folder
 ---------------------

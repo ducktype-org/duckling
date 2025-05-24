@@ -29,10 +29,9 @@ int main(int argc, const char** argv) {
 	                         .build());
 	// .addPositional(FileParser) tells clap to expect at least one file.
 
-	clap::ParsingResult result;
 	try {
 		// Real parsing happens here. Only this operation may throw clap exception.
-		result = clap.parse(base::safeIntConv<usize>(argc), argv);
+		const clap::ParsingResult result = clap.parse(base::safeIntConv<usize>(argc), argv);
 
 		i64 times = result.getValue<i64>('n').valueOr(1);
 		while (times--) {

@@ -7,7 +7,6 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/queries.hpp>
-#include <helios/query_hout_of_expr.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <pst_parser/lang_parser_element.hpp>
@@ -66,21 +65,20 @@ namespace lsp {
 	}
 
 	base::Optional<Definition> findDefinition(pst::AccessLocked<pst::LangElement> element) {
-		auto expr = query::entryPoint<compiler::helios::QueryHoutOfExpr>({ MCRef<pst::ExprElement>(
-			dynamic_cast<const pst::ExprElement*>(&*element.illegalAccess().value())
-		) });
+		auto pst_expr = element.dynamicCast<pst::ExprElement>();
 
-		if (!expr.hasValue()) return {};
+		if (pst_expr.illegalAccess().empty()) return {};
 
 		base::Optional<Definition> result;
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			auto stmt = compiler::helios::stmt(
-				ctx, compiler::helios::querySymIDOfExpr(ctx, expr.value().ref()).value()
-			);
-			result = Definition(&*stmt.value());
+			auto sym_id = compiler::helios::querySymIDOfPSTExpr(ctx, pst_expr);
+			if (sym_id.has_value()) {
+				auto stmt = compiler::helios::stmt(ctx, sym_id.value());
+				result    = Definition(&*stmt.value());
+			}
 		});
 
-		return { result };
+		return result;
 	}
 }

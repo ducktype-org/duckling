@@ -58,6 +58,10 @@ namespace compiler::helios {
 	}
 
 	std::vector<ScopeID> getAllHeliosScopes() {
+		CORE_ASSERT(
+			query::Context::getGraph().queryStackSize() == 0,
+			"getAllHeliosScopes called from within query!"
+		);
 		std::vector<ScopeID> out;
 		for (auto& scope_data: scope_table)
 			out.emplace_back(ScopeAccess_Functor::idOf(scope_data.refMut()));
@@ -185,7 +189,6 @@ namespace compiler::helios {
 				.is_root             = true,
 				.related_pst_element = {},
 				.parent_module       = key,
-				.symbols             = {},
 				.depth               = 0,
 			});
 		}
@@ -234,7 +237,6 @@ namespace compiler::helios {
 				.parent              = parent,
 				.related_pst_element = element,
 				.parent_module       = module(parent),
-				.symbols             = {},
 				.depth               = scopeDepth(parent) + 1,
 			});
 		}
@@ -458,16 +460,7 @@ namespace compiler::helios {
 			return output;
 		}
 
-		static auto load(QKey key) -> LoadResult {
-			if (const auto& cache = key.ref->symbols)
-				return QResWithACD{ &cache->data, cache->acd };
-			return {};
-		}
-
-		static auto store(QKey key, PResult p_res, query::ACD acd) -> QResult {
-			key.ref->symbols.emplace(PResWithACD{ std::move(p_res), acd });
-			return &key.ref->symbols.value().data;
-		}
+		QUERY_AUTO_CACHE_REF
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QuerySymbolsInScope);
@@ -513,10 +506,7 @@ namespace compiler::helios {
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScope);
 
 	struct IMPLEMENT_QUERY(QueryMacroExpansion, pst::PST<pst::Stmt>) {
-		static inline base::HashMap<
-			QKey,
-			query::CacheEntry<pst::PST<pst::Stmt>>,
-			::query::QueryUnstableHashFunctor<QKey>>
+		static inline base::HashMap<query::QueryUnstableHash, query::CacheEntry<pst::PST<pst::Stmt>>>
 			cache;
 
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
@@ -542,13 +532,13 @@ namespace compiler::helios {
 			}
 		}
 
-		static auto load(const QKey& key) -> LoadResult {
+		static auto load(query::QueryUnstableHash key) -> LoadResult {
 			if (const auto& value = cache.atMaybe(key))
 				return QResWithACD{ extractResult(value.value().data), value->acd };
 			return {};
 		}
 
-		static auto store(const QKey& key, PResult res, query::ACD acd) -> QResult {
+		static auto store(query::QueryUnstableHash key, PResult res, query::ACD acd) -> QResult {
 			cache.put(key, { .data = std::move(res), .acd = acd });
 			return extractResult(cache.at(key).data);
 		}

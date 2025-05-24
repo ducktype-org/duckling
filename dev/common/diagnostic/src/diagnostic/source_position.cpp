@@ -47,9 +47,8 @@ namespace dia {
 		auto error  = source->viewSplitRange(source_start, fixed_end + 1);
 		auto after  = source->viewSplitRange(fixed_end + 1, end_char);
 
-		usize prev_line = -1ULL;
-
-		printer::Color line_col = printer::Color::BRIGHT_BLUE;
+		usize          prev_line = -1ULL;
+		printer::Color line_col  = printer::Color::BRIGHT_BLUE;
 
 		for (auto [line, view]: before) {
 			if (line != prev_line) {
