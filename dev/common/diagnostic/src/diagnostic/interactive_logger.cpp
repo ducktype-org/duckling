@@ -1,6 +1,6 @@
 #include "interactive_logger.hpp"
 #include <dia_app/view_manager/view_manager.hpp>
-#include <dia_app/term_ui/message.hpp>
+#include <dia_app/term_ui/view.hpp>
 
 void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	json j{ message };
@@ -11,8 +11,9 @@ void dia::InteractiveLogger::m_log(base::Box<InteractiveMessage> message) {
 	view_manager.getView(vm_data);
 
 	// Format and print the static message to the terminal.
-	term_ui::Message term_msg(vm_data);
-	term_msg.print();
+	term_ui::View term_msg(*vm_data);
+	term_msg.print(std::cerr);
+	delete vm_data;
 	
 	if (dump_static) {
 		// Now we have view data in the format declared in view.proto

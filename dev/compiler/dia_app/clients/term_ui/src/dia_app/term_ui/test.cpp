@@ -1,16 +1,15 @@
-#include "message.hpp"
+#include "view.hpp"
 
 using namespace term_ui;
 
 #define _C(...) CodePiece(__VA_ARGS__)
 
-const CodeFragment::Location sample_loc("main.dmf", 15, 16);
+const CodeSection::Location sample_loc("main.dmf", 15, 16);
 
-Message sample_1() {
-    auto ptrs = {
-        PointerMessage("value moved here", StyleType::Note),
-        PointerMessage("value used here after move", StyleType::Error)
-    };
+Info sample_1() {
+    auto ptrs = std::map<uint, PointerMessage>();
+    ptrs.insert({0, PointerMessage("value moved here", StyleType::Note)});
+    ptrs.insert({1, PointerMessage("value used here after move", StyleType::Error)});
 
     auto line_1 = CodeLine(19, {_C("let bob = have * a + dog;")});
     auto line_2 = CodeLine(20, {
@@ -26,15 +25,15 @@ Message sample_1() {
         _C("let alice = have * a + cat;"),
     });
     
-    CodeFragment code(sample_loc, {
+    CodeSection code(sample_loc, {
         line_1,
         line_2,
         line_3
     }, ptrs);
 
-    Message m(
+    Info m(
         StyleType::Error,
-        "1010",
+        1010,
         "alice, bob, and cat",
         "",
         code
@@ -43,14 +42,13 @@ Message sample_1() {
     return m;
 }
 
-Message sample_2() {
-    auto ptrs = {
-        PointerMessage("first underline", StyleType::Warning),
-        PointerMessage("second underline", StyleType::Warning),
-        PointerMessage("third underline", StyleType::Warning),
-        PointerMessage("fourth underline", StyleType::Warning),
-        PointerMessage("fifth underline", StyleType::Warning)
-    };
+Info sample_2() {
+    auto ptrs = std::map<uint, PointerMessage>();
+    ptrs.insert({0, PointerMessage("first underline", StyleType::Warning)});
+    ptrs.insert({1, PointerMessage("second underline", StyleType::Warning)});
+    ptrs.insert({2, PointerMessage("third underline", StyleType::Warning)});
+    ptrs.insert({3, PointerMessage("fourth underline", StyleType::Warning)});
+    ptrs.insert({4, PointerMessage("fifth underline", StyleType::Warning)});
 
     auto line_1 = CodeLine(9, {
         _C("this", {4}),
@@ -62,13 +60,13 @@ Message sample_2() {
         _C("there", {0}),
     });
 
-    CodeFragment code(sample_loc, {
+    CodeSection code(sample_loc, {
         line_1
     }, ptrs);
 
-    Message m(
+    Info m(
         StyleType::Warning,
-        "5051",
+        5051,
         "that is quite some underlining",
         "The underlining strategy is complex and non-trivial. It may be used to convey additional information.",
         code
@@ -77,10 +75,9 @@ Message sample_2() {
     return m;
 }
 
-Message sample_3() {
-    auto ptrs = {
-        PointerMessage("message goes here", StyleType::Hint)
-    };
+Info sample_3() {
+    auto ptrs = std::map<uint, PointerMessage>();
+    ptrs.insert({0, PointerMessage("message goes here", StyleType::Hint)});
 
     auto line_1 = CodeLine(99, {
         _C("this is "),
@@ -97,16 +94,16 @@ Message sample_3() {
         _C(" that's all")
     });
 
-    CodeFragment code(sample_loc, {
+    CodeSection code(sample_loc, {
         line_1,
         line_2,
         line_3,
         line_4
     }, ptrs);
 
-    Message m(
+    Info m(
         StyleType::Hint,
-        "15",
+        15,
         "hint here, hint there",
         "",
         code
@@ -115,11 +112,10 @@ Message sample_3() {
     return m;
 }
 
-Message sample_4() {
-    auto ptrs = {
-        PointerMessage("first underline", StyleType::Error),
-        PointerMessage("second underline", StyleType::Note)
-    };
+Info sample_4() {
+    auto ptrs = std::map<uint, PointerMessage>();
+    ptrs.insert({0, PointerMessage("first underline", StyleType::Error)});
+    ptrs.insert({1, PointerMessage("second underline", StyleType::Note)});
 
     auto line_1 = CodeLine(1000, {
         _C("this ", {1}),
@@ -127,13 +123,13 @@ Message sample_4() {
         _C(" text", {0})
     });
 
-    CodeFragment code(sample_loc, {
+    CodeSection code(sample_loc, {
         line_1
     }, ptrs);
 
-    Message m(
+    Info m(
         StyleType::Note,
-        "15",
+        15,
         "this is a note, even though an error underlining is used in the code sample",
         "Do not do this in production. Error style is to be used only for errors.",
         code
@@ -142,31 +138,30 @@ Message sample_4() {
     return m;
 }
 
-Message sample_5() {
-    auto ptrs = {
-        PointerMessage("first underline", StyleType::Error),
-        PointerMessage("second underline", StyleType::Error),
-        PointerMessage("third underline", StyleType::Note),
-        PointerMessage("fourth underline", StyleType::Note)
-    };
+Info sample_5() {
+    auto ptrs = std::map<uint, PointerMessage>();
+    ptrs.insert({0, PointerMessage("first underline", StyleType::Docs)});
+    ptrs.insert({1, PointerMessage("second underline", StyleType::Docs)});
+    ptrs.insert({2, PointerMessage("third underline", StyleType::Hint)});
+    ptrs.insert({30, PointerMessage("fourth underline", StyleType::Hint)});
 
     auto line_1 = CodeLine(9999999, {
         _C("a", {0, 1}),
         _C(" "),
-        _C("a", {2, 3})
+        _C("a", {2, 30})
     });
     auto line_2 = CodeLine(10000000, {
         _C("aaaa")
     });
 
-    CodeFragment code(sample_loc, {
+    CodeSection code(sample_loc, {
         line_1,
         line_2
     }, ptrs);
 
-    Message m(
+    Info m(
         StyleType::Docs,
-        "15",
+        15,
         "docs color, nice one",
         "Again, do not use error underlining within non-error messages. This is for demonstration purposes only.",
         code
@@ -177,13 +172,13 @@ Message sample_5() {
 
 int main() {
 
-    sample_1().print();
+    sample_1().print(std::cerr);
     std::cerr << std::endl;
-    sample_2().print();
+    sample_2().print(std::cerr);
     std::cerr << std::endl;
-    sample_3().print();
+    sample_3().print(std::cerr);
     std::cerr << std::endl;
-    sample_4().print();
+    sample_4().print(std::cerr);
     std::cerr << std::endl;
-    sample_5().print();
+    sample_5().print(std::cerr);
 }

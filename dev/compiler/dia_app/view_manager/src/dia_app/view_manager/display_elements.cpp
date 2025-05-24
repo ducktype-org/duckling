@@ -385,7 +385,7 @@ namespace dia_file {
     // ---------------- functions ---------------- //
 
     /* Order of message type evaluation:
-        handle -> entity -> interact -> start_line -> concat -> text */
+        lazy -> entity -> interact -> start_line -> code -> concat -> text */
     Ptr parse(const json &msg) {
         if (msg.contains("type") && msg["type"] == "lazy") {
             return std::make_shared<LazyElement>(msg);

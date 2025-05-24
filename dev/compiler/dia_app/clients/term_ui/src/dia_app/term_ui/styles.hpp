@@ -1,11 +1,12 @@
 #pragma once
 #include <rang.hpp>
 #include <assert.h>
+#include <proto/view.pb.h>
 
 namespace term_ui {
 
-    inline void reset_styles() {
-        std::cerr << rang::fg::reset << rang::style::reset;
+    inline void reset_styles(std::ostream& out) {
+        out << rang::fg::reset << rang::style::reset;
     }
 
     enum class StyleType {
@@ -16,8 +17,21 @@ namespace term_ui {
         Docs
     };
 
+    StyleType style_type_of(view::InfoType type) {
+        switch (type) {
+            case view::InfoType::Error: return StyleType::Error;
+            case view::InfoType::Warning: return StyleType::Warning;
+            case view::InfoType::Note: return StyleType::Note;
+            case view::InfoType::Hint: return StyleType::Hint;
+            case view::InfoType::Docs: return StyleType::Docs;
+        }
+        assert(false);
+        return StyleType::Error;
+    }
+
     struct Style {
         std::string name;
+        std::string prefix;
         bool print_id;
         rang::fg color;
         rang::style style;
@@ -26,43 +40,44 @@ namespace term_ui {
         char lowering_char;
         char lowering_attach_char;
 
-        Style(std::string name, bool print_id, rang::fg color, rang::style style, rang::style main_text_style,
+        Style(std::string name, std::string prefix, bool print_id, rang::fg color, rang::style style, rang::style main_text_style,
               char underline_char = ' ', char lowering_char = ' ', char lowering_attach_char = ' ') :
-            name(name), print_id(print_id), color(color), style(style), main_text_style(main_text_style), underline_char(underline_char),
+            name(name), prefix(prefix), print_id(print_id), color(color), style(style), main_text_style(main_text_style), underline_char(underline_char),
             lowering_char(lowering_char), lowering_attach_char(lowering_attach_char) {}
         
-        void prepare() const {
-            std::cerr << color << style;
+        void prepare(std::ostream& out) const {
+            out << color << style;
         }
 
-        void print_with(const std::string &text) const {
-            prepare();
-            std::cerr << text;
-            reset_styles();
+        void printWith(const std::string &text, std::ostream& out) const {
+            prepare(out);
+            out << text;
+            reset_styles(out);
         }
 
-        void prepare_main_text() const {
-            std::cerr << main_text_style;
+        void prepareMainText(std::ostream& out) const {
+            out << main_text_style;
         }
 
-        void print_main_with(const std::string &text) const {
-            prepare_main_text();
-            std::cerr << text;
-            reset_styles();
+        void printMainWith(const std::string &text, std::ostream& out) const {
+            prepareMainText(out);
+            out << text;
+            reset_styles(out);
         }
 
-        void print_name(std::string id = "") const {
-            prepare();
-            std::cerr << name;
+        void printName(uint id, std::ostream& out) const {
+            prepare(out);
+            out << name;
             if (print_id) {
-                std::cerr << '[' << id << ']';
+                out << '[' << prefix << id << ']';
             }
-            reset_styles();
+            reset_styles(out);
         }
     };
 
     const Style ERROR_STYLE(
         "error",
+        "E",
         true,
         rang::fg::red,
         rang::style::bold,
@@ -73,6 +88,7 @@ namespace term_ui {
     );
     const Style WARNING_STYLE(
         "warning",
+        "W",
         true,
         rang::fg::yellow,
         rang::style::bold,
@@ -83,6 +99,7 @@ namespace term_ui {
     );
     const Style NOTE_STYLE(
         "note",
+        "N",
         false,
         rang::fg::blue,
         rang::style::bold,
@@ -93,6 +110,7 @@ namespace term_ui {
     );
     const Style HINT_STYLE(
         "hint",
+        "H",
         false,
         rang::fg::green,
         rang::style::bold,
@@ -103,6 +121,7 @@ namespace term_ui {
     );
     const Style DOCS_STYLE(
         "docs",
+        "D",
         false,
         rang::fg::cyan,
         rang::style::bold,
@@ -113,6 +132,7 @@ namespace term_ui {
     );
 
     const Style LINE_START_STYLE(
+        "",
         "",
         false,
         rang::fg::reset,
@@ -130,5 +150,23 @@ namespace term_ui {
         }
         assert(false);
         return ERROR_STYLE;
+    }
+
+    inline void print_line_start(uint tab_space, uint line_no, std::ostream& out) {
+        std::string line_no_str = std::to_string(line_no);
+        std::string line_start =
+            // Print line number.
+            line_no_str +
+            // Fill the whitespace before the line bar.
+            std::string(tab_space - std::to_string(line_no).size(), ' ') +
+            // Print the line bar.
+            "| ";
+    
+        LINE_START_STYLE.printWith(line_start, out);
+    }
+
+    inline void print_line_start(uint tab_space, std::ostream& out) {
+        // Print tab space and line bar.
+        LINE_START_STYLE.printWith(std::string(tab_space, ' ') + "| ", out);
     }
 }
