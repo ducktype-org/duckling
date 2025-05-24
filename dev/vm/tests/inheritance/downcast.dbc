@@ -21,8 +21,10 @@ function main {
 	init_lany_type dog, DogPtr;
 	init_lany_type x, i64;
 
-	alloc_lptr_type animal, Dog;
-	setVTable_lptr_type animal, Dog;
+	init_lany_type helper_dog, DogPtr;
+	alloc_lptr_type helper_dog, Dog;
+	setVTable_lptr_type helper_dog, Dog;
+	upcast_lptr_lptr animal, helper_dog;
 
 	downcast_lptr_lptr cat, animal;  # cat := static_cast<CatPtr>(animal)
 	ext_type Cat;

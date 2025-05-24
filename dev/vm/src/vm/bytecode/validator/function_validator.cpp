@@ -398,10 +398,7 @@ class FunctionValidator {
 				validateArgInstantiable(instr.arg1);
 				CRef<TypeOfData> type         = current_stack.at(instr.arg0.var_name);
 				PointerType      pointer_type = std::get<PointerType>(*type);
-				auto             type_arg0    = type_metadata.at(pointer_type.inner);
-				auto             type_arg1    = type_metadata.at(instr.arg1.type_name);
-				if (pointer_type.inner != instr.arg1.type_name
-				    && !type_arg1->inheritsFrom(type_arg0))
+				if (pointer_type.inner != instr.arg1.type_name)
 					throw PointerTypeMismatchError(instr);
 			}
 			variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
