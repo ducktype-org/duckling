@@ -38,8 +38,6 @@ namespace {
 	 * should return an InvalidExtendsError.
 	 */
 	template<TypeOfDataConcept ExpectedType, ErrorFactoryConcept ErrorFactory>
-	// const ExpectedType getType(
-	// TODO: What the heck.
 	const ExpectedType& getType(
 		const TypeContext&  ctx,
 		const base::StrID&  name,
