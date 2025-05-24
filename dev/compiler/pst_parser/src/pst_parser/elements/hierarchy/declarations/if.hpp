@@ -1,6 +1,5 @@
 #pragma once
 
-#include "../not_statements.hpp"
 #include "preamble.hpp"
 
 namespace pst {
@@ -28,9 +27,7 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		AccessLocked<ExprHolder> getCondition() const {
-			return condition.internal()->getExpr();
-		}
+		AccessLocked<ExprHolder> getCondition() const;
 
 		[[nodiscard]]
 		AccessLocked<CodeBlockOrStmt> getBody() const {

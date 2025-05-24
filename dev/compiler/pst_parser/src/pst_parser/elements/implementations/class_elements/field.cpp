@@ -1,7 +1,5 @@
 #include "../../hierarchy/class_elements/field.hpp"
 
-#include "../../hierarchy/expr.hpp"          // IWYU pragma: keep
-#include "../../hierarchy/expr_holders.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

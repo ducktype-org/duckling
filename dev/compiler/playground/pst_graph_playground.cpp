@@ -2,7 +2,6 @@
 #include <graphviz/gvc.h>
 #include <init/init.hpp>
 #include <lexer/lexer.hpp>
-#include <pst_parser/elements/hierarchy/lists.hpp>
 #include <pst_parser/pst.hpp>
 
 #include <base/variant.hpp>

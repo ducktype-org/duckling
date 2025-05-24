@@ -1,8 +1,9 @@
 #pragma once
 
-#include "lists.hpp"           // IWYU pragma: keep
+#include "lists/call_list.hpp"              // IWYU pragma: keep
+#include "lists/template_list.hpp"          // IWYU pragma: keep
 #include "meta.hpp"
-#include "not_statements.hpp"  // IWYU pragma: keep
+#include "not_statements/expr_element.hpp"  // IWYU pragma: keep
 
 #include <lang_definitions/key_spec_op.hpp>
 #include <lexer/token_common.hpp>

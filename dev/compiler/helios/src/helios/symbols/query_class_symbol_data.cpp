@@ -7,8 +7,10 @@
 #include <helios_private/comp_time/type_eval.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbol_data.hpp>
-#include <pst_parser/elements/basic.hpp>
 #include <pst_parser/elements/hierarchy/declarations/class.hpp>
+#include <pst_parser/elements/hierarchy/lists/implements_list.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/class_block.hpp>
+#include <pst_parser/elements/includes/basic.hpp>
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
 

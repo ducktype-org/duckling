@@ -1,6 +1,5 @@
 #include "../../hierarchy/statements/expand.hpp"
 
-#include "../../hierarchy/not_statements.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

@@ -1,4 +1,6 @@
 #include "../../hierarchy/declarations/all_declarations.hpp"
+#include "../../hierarchy/lists/all_lists.hpp"                    // IWYU pragma: keep
+#include "../../hierarchy/not_statements/all_not_statements.hpp"  // IWYU pragma: keep
 #include "../../hierarchy/statements/all_statements.hpp"
 #include "preamble.hpp"
 

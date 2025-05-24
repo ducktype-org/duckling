@@ -1,6 +1,5 @@
 #include "../../hierarchy/statements/using.hpp"
 
-#include "../../hierarchy/not_statements.hpp"
 #include "preamble.hpp"
 
 namespace pst {

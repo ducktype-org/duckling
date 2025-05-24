@@ -1,5 +1,8 @@
 #include "../../hierarchy/declarations/function.hpp"
 
+#include "../../hierarchy/lists/parameter_list.hpp"                    // IWYU pragma: keep
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/fun_param.hpp"                // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -11,7 +14,7 @@ namespace pst {
 		if (!assertStmtChoice<Fun>(state, state[0].is(Keyword::Fun))) return nullptr;
 
 		state.parse(out).all(Keyword::Fun, &out->name);
-		state.parse(out).with<ParamList>(&out->params, ParamList::parse);
+		state.parse(out).one(&out->params);
 
 		if (state.parse(out).tryEat(NamedOperator::SingleArrow)) state.parse(out).one(&out->ret);
 

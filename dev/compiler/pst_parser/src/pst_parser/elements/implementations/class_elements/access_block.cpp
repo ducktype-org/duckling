@@ -1,6 +1,6 @@
 #include "../../hierarchy/class_elements/access_block.hpp"
 
-#include "../../hierarchy/not_statements.hpp"
+#include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
 namespace pst {

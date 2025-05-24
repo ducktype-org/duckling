@@ -1,5 +1,7 @@
 #include "../../hierarchy/declarations/while.hpp"
 
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/round_group_expression.hpp"   // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

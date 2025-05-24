@@ -2,7 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <pst_parser/access.hpp>
-#include <pst_parser/elements/hierarchy/not_statements.hpp>  // @TODO for pst::ExprElement #404 relax it
+#include <pst_parser/elements/elements_list.hpp>
 #include <query_framework/query_int.hpp>
 
 #include <base/optional.hpp>
