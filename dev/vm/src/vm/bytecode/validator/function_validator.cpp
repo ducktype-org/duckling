@@ -565,7 +565,6 @@ class FunctionValidator {
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
 				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
 				base::StrID field = field_instr.arg0.field_name;
-				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
 				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
 				variant_match(*other_type) {
@@ -585,7 +584,6 @@ class FunctionValidator {
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
 				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
 				base::StrID field = field_instr.arg0.field_name;
-				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
 				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
@@ -597,7 +595,6 @@ class FunctionValidator {
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
 				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
 				base::StrID field = field_instr.arg0.field_name;
-				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
 				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
@@ -607,7 +604,6 @@ class FunctionValidator {
 				PointerType table_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
-				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
 				TypeCRef inner_type = table_type->getInnerType().value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
 				variant_match(*other_type) {
@@ -624,7 +620,6 @@ class FunctionValidator {
 				PointerType table_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
-				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
 				TypeCRef inner_type = table_type->getInnerType().value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
@@ -634,7 +629,6 @@ class FunctionValidator {
 				PointerType table_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				TypeCRef table_type = type_metadata.at(table_pointer_type.inner);
-				if (table_type->getInnerType().empty()) throw InvalidArgumentTypeError(instr.arg1);
 				TypeCRef inner_type = table_type->getInnerType().value();
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
