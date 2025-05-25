@@ -161,9 +161,12 @@ public:
 	}
 
 	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
-		auto& curr_type = local_name_to_type.at(VISIT(local, l, return l.var_name));
-		auto  new_type  = tod_map->at(type.type_name);
-		curr_type       = new_type;
+		auto  local_name = VISIT(local, l, return l.var_name);
+		auto& curr_type  = local_name_to_type.at(local_name);
+		auto  new_type   = tod_map->at(type.type_name);
+		curr_type        = new_type;
+		for (auto& entry: stack_state)
+			if (entry.local_name == local_name) entry.type = new_type;
 	}
 
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
