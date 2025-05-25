@@ -755,8 +755,7 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 >= instructions.size() ? base::Optional<const Instruction&>()
-												: instructions[index + 1],
+				index + 1 < instructions.size() ? instructions[index + 1] : base::Optional<const Instruction&>(),
 				local_stack
 			);
 
