@@ -125,7 +125,7 @@ namespace compiler::helios {
 
 	/**
 	 * @brief Helper struct used to access private SymID data.
-	 * It is used by HELIOS only.
+	 * It is used by HELIOS only. It is a struct so SymID can friend it.
 	 */
 	struct GetSymRef_Functor final {
 		static auto get(SymID id) { return id.ref; }
