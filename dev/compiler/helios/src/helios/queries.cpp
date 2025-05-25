@@ -199,34 +199,38 @@ namespace compiler::helios {
 					"Handling errors is not supported in HOUT yet"
 				);
 
-				// for now initial value is assumed to always be present:
-				// this will probably change:
-				// @TODO: handle potential lack of value
-				auto initial_value
-					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet... (variable initial value)");
-
-				// used for error reporting:	
-				auto initial_value_type = initial_value->expression_type.getSymbolType();
-				
-				auto initial_value_coerced = coerceExpression(
-					std::move(initial_value), symbol_type
-				);
-				if (initial_value_coerced.hasError()) {
-					ctx.log(
-						makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
-							base::strConcat( 
-								"Bad type passed to variable initialization\n",
-								"Expected: ", symbol_type.toString(), "\n",
-								"Got: ", initial_value_type.toString(), "\n"
-							)
-						)
-					);
-					return; // fail
+				if (stmt->getValue().empty()) {
+					// no initial value case
+					output(code::VariableStmt({}, symbol_type, symbol));
+					return;
 				}
-
-				output(code::VariableStmt(std::move(initial_value_coerced.value()), symbol_type, symbol));
+				else {
+					auto initial_value
+					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
+					.expect("Not handling errors here yet... (variable initial value)");
+					
+					// used for error reporting:	
+					auto initial_value_type = initial_value->expression_type.getSymbolType();
+					
+					auto initial_value_coerced = coerceExpression(
+						std::move(initial_value), symbol_type
+					);
+					if (initial_value_coerced.hasError()) {
+						ctx.log(
+							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+								stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+								base::strConcat( 
+									"Bad type passed to variable initialization\n",
+									"Expected: ", symbol_type.toString(), "\n",
+									"Got: ", initial_value_type.toString(), "\n"
+								)
+							)
+						);
+						return; // fail
+					}
+					
+					output(code::VariableStmt(std::move(initial_value_coerced.value()), symbol_type, symbol));
+				}
 			}
 		};
 
