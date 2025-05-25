@@ -63,8 +63,7 @@ namespace compiler::helios::code {
 		if (this->initial_value.has_value()) {
 			out << " = ";
 			this->initial_value.value()->debugPrint(out);
-		}
-		else {
+		} else {
 			out << " = <no initial value provided>";
 		}
 

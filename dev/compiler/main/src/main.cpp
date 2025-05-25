@@ -381,7 +381,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto path_to_compile = options.getValue<fs::FilePath>("module").value();
 
-		defer (printContextErrors());
+		defer(printContextErrors());
 
 		// @TODO: error handling
 		using namespace compiler;

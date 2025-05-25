@@ -2,8 +2,8 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/symbols/simple.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
 #include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/expressions/coercions.hpp>
@@ -237,20 +237,18 @@ namespace compiler::helios::code {
 				}
 
 				if (call_arguments) {
-					auto call_symbol = looked_up_symbol.back();
+					auto call_symbol      = looked_up_symbol.back();
 					auto call_type_result = ctx.query<QueryTypeOfSymbol>({ call_symbol });
-					if (call_type_result->hasError()) {
-						return; // fail
-					}
-					tsh::SymbolType<tsh::FunctionAbstractType> call_type = call_type_result->value();
+					if (call_type_result->hasError()) return;  // fail
+					tsh::SymbolType<tsh::FunctionAbstractType> call_type
+						= call_type_result->value();
 
 					auto arguments = std::move(call_arguments.value());
 					if (call_type.getType().getParameterTypes().size() != arguments.size()) {
-						ctx.log(
-							makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-								stmt->getSourcePosition(), "Invalid number of arguments"
-							)
-						);
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getSourcePosition(), "Invalid number of arguments"
+						));
 						return;  // failed
 					}
 
@@ -264,11 +262,11 @@ namespace compiler::helios::code {
 							// this have suboptimal error position,
 							// for not it is left like this, since
 							// this function will be reworked anyway:
-							ctx.log(
-								makeBox<dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
-									stmt->getSourcePosition(), "Invalid argument type"
-								)
-							);
+							ctx.log(makeBox<dia::PlaceholderMessage<
+										dia::Error,
+										dia::Message::Domain::TypeCheck>>(
+								stmt->getSourcePosition(), "Invalid argument type"
+							));
 							return;  // failed
 						}
 						coerced_arguments.emplace_back(std::move(coerced.value()));
@@ -280,11 +278,8 @@ namespace compiler::helios::code {
 						"Invalid number of arguments after type check"
 					);
 
-					node = makeBox<CallExpr>(
-						ctx, call_symbol, std::move(coerced_arguments)
-					);
-				}
-				else {
+					node = makeBox<CallExpr>(ctx, call_symbol, std::move(coerced_arguments));
+				} else {
 					node = makeBox<LinkedIdentifierExpr>(ctx, std::move(looked_up_symbol));
 				}
 			}
