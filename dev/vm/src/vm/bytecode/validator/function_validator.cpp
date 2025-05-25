@@ -489,15 +489,8 @@ class FunctionValidator {
 				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
 				if (std::ranges::find(possible_types, expected_type) == possible_types.end())
 					throw VariantTypeMismatchError(instr);
-				if (next_instruction.empty()) throw MissingExtTypeError(instr);
-				variant_match(next_instruction.value()) {
-					variant_case(Op_ext_type, ext) {
-						if (expected_type != ext.arg0.type_name) throw MissingExtTypeError(instr);
-					}
-					variant_default {
-						throw MissingExtTypeError(instr);
-					}
-				}
+				Op_ext_type ext = std::get<Op_ext_type>(next_instruction.value());
+				if (expected_type != ext.arg0.type_name) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
 				PointerType variant_pointer_type
@@ -526,15 +519,8 @@ class FunctionValidator {
 					if (variant_type->getNthVariantType(i)->get()->getName() == expected_type)
 						found = true;
 				if (!found) throw VariantTypeMismatchError(instr);
-				if (next_instruction.empty()) throw MissingExtTypeError(instr);
-				variant_match(next_instruction.value()) {
-					variant_case(Op_ext_type, ext) {
-						if (expected_type != ext.arg0.type_name) throw MissingExtTypeError(instr);
-					}
-					variant_default {
-						throw MissingExtTypeError(instr);
-					}
-				}
+				Op_ext_type ext = std::get<Op_ext_type>(next_instruction.value());
+				if (expected_type != ext.arg0.type_name) throw VariantTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
@@ -577,65 +563,45 @@ class FunctionValidator {
 				PointerType struct_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
-				if (next_instruction.empty()) throw MissingExtFieldError(instr);
-				variant_match(next_instruction.value()) {
-					variant_case(Op_ext_field, field_instr) {
-						base::StrID field = field_instr.arg0.field_name;
-						if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
-						TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
-						CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
-						variant_match(*other_type) {
-							variant_case(PointerType, pointer_type) {
-								base::StrID      other_type_id = pointer_type.inner;
-								if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
-							}
-							variant_default {
-								throw InvalidArgumentTypeError(instr.arg0);
-							}
-						}
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				base::StrID field = field_instr.arg0.field_name;
+				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
+				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
+				variant_match(*other_type) {
+					variant_case(PointerType, pointer_type) {
+						base::StrID      other_type_id = pointer_type.inner;
+						if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
 					}
 					variant_default {
-						throw MissingExtFieldError(instr);
+						throw InvalidArgumentTypeError(instr.arg0);
 					}
 				}
+				
 			}
 			variant_case(Op_structLoad_lany_lptr, instr) {
 				PointerType struct_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
-				if (next_instruction.empty()) throw MissingExtFieldError(instr);
-				variant_match(next_instruction.value()) {
-					variant_case(Op_ext_field, field_instr) {
-						base::StrID field = field_instr.arg0.field_name;
-						if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
-						TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
-						CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
-						base::StrID      other_type_id = typeName(*other_type);
-						if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
-					}
-					variant_default {
-						throw MissingExtFieldError(instr);
-					}
-				}
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				base::StrID field = field_instr.arg0.field_name;
+				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
+				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
+				base::StrID      other_type_id = typeName(*other_type);
+				if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
 			}
 			variant_case(Op_structStore_lptr_lany, instr) {
 				PointerType struct_pointer_type
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
 				TypeCRef struct_type = type_metadata.at(struct_pointer_type.inner);
-				if (next_instruction.empty()) throw MissingExtFieldError(instr);
-				variant_match(next_instruction.value()) {
-					variant_case(Op_ext_field, field_instr) {
-						base::StrID field = field_instr.arg0.field_name;
-						if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
-						TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
-						CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
-						base::StrID      other_type_id = typeName(*other_type);
-						if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
-					}
-					variant_default {
-						throw MissingExtFieldError(instr);
-					}
-				}
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				base::StrID field = field_instr.arg0.field_name;
+				if (struct_type->getFieldTypeByName(field).empty()) throw UnknownFieldError(field_instr.arg0);
+				TypeCRef inner_type = struct_type->getFieldTypeByName(field).value();
+				CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_id = typeName(*other_type);
+				if (inner_type->getName() != other_type_id) throw StructTypeMismatchError(instr);
 			}
 			variant_case(Op_staticTableLea_lptr_lptr, instr) {
 				PointerType table_pointer_type
@@ -653,13 +619,6 @@ class FunctionValidator {
 						throw InvalidArgumentTypeError(instr.arg0);
 					}
 				}
-				if (next_instruction.empty()) throw MissingExtL64Error(instr);
-				variant_match(next_instruction.value()) {
-					variant_case_novalue(Op_ext_l64) {}
-					variant_default {
-						throw MissingExtL64Error(instr);
-					}
-				}
 			}
 			variant_case(Op_staticTableLoad_lany_lptr, instr) {
 				PointerType table_pointer_type
@@ -670,13 +629,6 @@ class FunctionValidator {
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg0.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
 				if (inner_type->getName() != other_type_id) throw StaticTableTypeMismatchError(instr);
-				if (next_instruction.empty()) throw MissingExtL64Error(instr);
-				variant_match(next_instruction.value()) {
-					variant_case_novalue(Op_ext_l64) {}
-					variant_default {
-						throw MissingExtL64Error(instr);
-					}
-				}
 			}
 			variant_case(Op_staticTableStore_lptr_lany, instr) {
 				PointerType table_pointer_type
@@ -687,13 +639,6 @@ class FunctionValidator {
 				CRef<TypeOfData> other_type    = current_stack.at(instr.arg1.var_name);
 				base::StrID      other_type_id = typeName(*other_type);
 				if (inner_type->getName() != other_type_id) throw StaticTableTypeMismatchError(instr);
-				if (next_instruction.empty()) throw MissingExtL64Error(instr);
-				variant_match(next_instruction.value()) {
-					variant_case_novalue(Op_ext_l64) {}
-					variant_default {
-						throw MissingExtL64Error(instr);
-					}
-				}
 			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}

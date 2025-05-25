@@ -253,9 +253,6 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		VariantTypeMismatchError, "Possible variant types do not match expected type."
 	);
-	DEFINE_INSTRUCTION_ERROR(MissingExtTypeError, "Missing ext_type after the instruction.");
-	DEFINE_INSTRUCTION_ERROR(MissingExtL64Error, "Missing ext_l64 after the instruction.");
-	DEFINE_INSTRUCTION_ERROR(MissingExtFieldError, "Missing ext_field after the instruction.");
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 
