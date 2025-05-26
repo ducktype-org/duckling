@@ -84,8 +84,11 @@ namespace vm {
 		 * `frame` should be pointer to the next frame,
 		 * `local_stack` should be pointer to the local stack of the new function.
 		 * Old values of `instr` nad `local_stack` should be saved on the frame of the caller.
+		 *
+		 * @note The function has to be inlined since it's used by the `call_func` and
+		 * `virtual_call` opcodes and breaks tailcalling of opcode function if not inlined.
 		 */
-		static __attribute__((always_inline)) void prepareCall(
+		static __attribute__((always_inline)) void performFunctionCall(
 			const Fix8Instruction*& instr,
 			std::byte*&             local_stack,
 			Frame*&                 frame,

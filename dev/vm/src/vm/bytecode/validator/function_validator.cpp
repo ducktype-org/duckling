@@ -189,6 +189,11 @@ public:
 		local_name_to_type.put(local.var_name, tod);
 	}
 
+	/**
+	 * @brief Pops the top element from the stack state and updates local variable mappings.
+	 * Can be only used with instructions which effectively deinitialize the local stack
+	 * (deinit, call_func, virtual_call and call_builtin_func)
+	 */
 	template<DeinitializingInstruction InstructionType>
 	void pop(const InstructionType& cause) {
 		if (stack_state.size() == 1) throw RetValDeinitError(cause);
@@ -269,7 +274,6 @@ class FunctionValidator {
 	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
 		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
 		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
-		// Use std::ranges::find_if to locate the implementation name.
 		base::StrID impl_name;
 		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
             if_opt_some(type.getInheritanceMetadata(), inh_meta) {
@@ -657,7 +661,34 @@ class FunctionValidator {
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
 			variant_case_novalue(Op_call_builtin_func) {}
-			variant_case_novalue(Op_virtual_call_lptr_method) {}
+			variant_case(Op_virtual_call_lptr_method, instr) {
+				// For a method all to be valid, the called method has to be declared as a virtual
+				// method in this inheritable or it's superclasses or interfaces.
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& inh_meta
+					= type_metadata.at(pointer_type.inner)->getInheritanceMetadata();
+
+				const auto& obj_type = type_metadata.at(pointer_type.inner);
+
+				bool                          valid                  = false;
+				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
+					if (valid) return;
+					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
+						if (imd.virtual_methods.contains(instr.arg1.method_name)) {
+							valid = true;
+							return;
+						}
+						for (const auto& iface: imd.implements) check_for_superclasses(iface);
+
+						if_opt_some(inh_type->getSuperClass(), super) {
+							check_for_superclasses(super);
+						}
+					}
+				};
+				check_for_superclasses(obj_type);
+				if (!inh_meta.has_value() || !valid) throw InvalidVirtualCallError(instr);
+			}
 			variant_case_novalue(Op_ret_tailcall_func) {}
 			variant_case_novalue(Op_ret) {}
 			variant_case_novalue(Op_deinit) {}

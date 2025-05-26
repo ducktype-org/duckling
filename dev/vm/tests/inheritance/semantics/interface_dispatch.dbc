@@ -68,8 +68,6 @@ function main {
     init_lany_type ptr_child, pointer_Child;
 
     init_lany_type actual_child, pointer_Child;
-    init_lany_type dummy_i64_arg, i64;
-    mov_l64_imm dummy_i64_arg, 7;
 
     # --- Object Child, pointer I1* ---
     alloc_lptr_type actual_child, Child;
@@ -97,7 +95,6 @@ function main {
     mov_lptr_lptr temp_this_child_cry, ptr_child;
     virtual_call_lptr_method ptr_child, cry; # Expected: 55
 
-    deinit;
     deinit;
     deinit;
     deinit;

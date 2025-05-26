@@ -294,6 +294,9 @@ namespace vm::code {
 		PointerTypeMismatchError, "Inner pointer type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(
+		InvalidVirtualCallError, "Provided method does not exists for a given argument."
+	);
+	DEFINE_INSTRUCTION_ERROR(
 		StaticTableTypeMismatchError, "Inner static table type does not match expected type."
 	);
 	DEFINE_INSTRUCTION_ERROR(

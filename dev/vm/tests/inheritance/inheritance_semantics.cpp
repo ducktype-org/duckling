@@ -31,6 +31,13 @@ private:
 		runTestOnVm("semantics/simple_dispatch.dbc", "", "420", {}, 0);
 		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "44542321", {}, 0);
 		runTestOnVm("semantics/interface_dispatch.dbc", "", "11224455", {}, 0);
+
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_1.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_2.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
 	}
 
 	void semantics() {

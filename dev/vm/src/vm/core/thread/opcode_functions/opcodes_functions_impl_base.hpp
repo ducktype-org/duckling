@@ -230,7 +230,7 @@ namespace vm {
 	}
 
 	RETURN_TYPE OpFuns::OPCODE_NAME(call_func)(FUNCTION_ARGS) {
-		{ prepareCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0)); }
+		{ performFunctionCall(instr, local_stack, frame, thread, static_cast<usize>(instr->arg0)); }
 		// After acquiring the `executing_code` of the new function we have instruction pointer
 		// (`instr`) pointing at the first instruction of the new function, so moving forward by one
 		// would mean that we skipped the first instruction. That's why we move forward zero
@@ -302,7 +302,7 @@ namespace vm {
 			auto  implementation_name = inh_metadata.vtable[method_name]->getName();
 			usize function_id = *thread.executing_program->functions.idOf(implementation_name);
 
-			prepareCall(instr, local_stack, frame, thread, function_id);
+			performFunctionCall(instr, local_stack, frame, thread, function_id);
 		}
 		FUNCTION_CONT_CHECK_STRATEGY(0);
 	}
