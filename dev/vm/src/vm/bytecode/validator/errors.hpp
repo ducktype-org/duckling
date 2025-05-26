@@ -178,7 +178,7 @@ namespace vm::code {
 			  TypeErrorBase(                                                                 \
 				  base::strConcat(ERR_MSG, VISIT(type, tp, return tp.name)), std::move(type) \
 			  ) {}                                                                           \
-	};
+	}
 
 #define DEFINE_INSTRUCTION_ERROR(error_name, msg)                                          \
 	class error_name: public InstructionErrorBase {                                        \
@@ -186,7 +186,7 @@ namespace vm::code {
 		constexpr static const std::string_view ERR_MSG = (msg);                           \
                                                                                            \
 		error_name(Instruction instruction): InstructionErrorBase(ERR_MSG, instruction) {} \
-	};
+	}
 
 #define DEFINE_ARGUMENT_ERROR(error_name, msg)                                                     \
 	class error_name: public ArgumentErrorBase {                                                   \
@@ -195,7 +195,7 @@ namespace vm::code {
                                                                                                    \
 		error_name(opargs::OpCodeArg argument):                                                    \
 			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
-	};
+	}
 
 	DEFINE_TYPE_ERROR(
 		InvalidImplementsError, "This interface/class can implement only other interfaces: "
@@ -214,8 +214,8 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
-	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.")
-	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.")
+	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.");
+	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
 
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
@@ -230,7 +230,7 @@ namespace vm::code {
 	);
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallSignatureError,
-		"The callee must have the same signature as the caller when tailcalling: "
+		"The called must have the same signature as the caller when tailcalling: "
 	);
 	DEFINE_ARGUMENT_ERROR(
 		InvalidTailcallArgumentsError,
@@ -241,9 +241,8 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentSizeError, "Invalid instruction argument size: ");
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
 	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
-	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.")
+	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.");
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
-	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primtive type:");
-
+	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
 }
