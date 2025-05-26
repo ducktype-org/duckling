@@ -123,7 +123,8 @@ namespace {
 		base::StrID          expected_field_type,
 		Args&&... error_args
 	) {
-		if (ztruct.name != field_arg.type_name) throw StructTypeMismatchError(std::forward<Args>(error_args)...);
+		if (ztruct.name != field_arg.type_name)
+			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
 
 		base::StrID field_name = field_arg.field_name;
 		Field       field      = *std::ranges::find(ztruct.fields, field_name, &Field::name);
@@ -583,9 +584,7 @@ class FunctionValidator {
 				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
 
 				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction);
-				validateStructExtFieldType(
-					ztruct, field_instr.arg0, destination.inner, instr
-				);
+				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
 			}
 			variant_case(Op_structLoad_lany_lptr, instr) {
 				const auto& destination = current_stack.at(instr.arg0.var_name);
@@ -613,29 +612,30 @@ class FunctionValidator {
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				const auto& table_type = expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
 
 				if (destination.inner != table_type.inner)
 					throw StaticTableTypeMismatchError(instr);
 			}
 			variant_case(Op_staticTableLoad_lany_lptr, instr) {
-				const auto& destination
-					= current_stack.at(instr.arg0.var_name);
+				const auto& destination = current_stack.at(instr.arg0.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
-				const auto& table_type = expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
 
 				if (typeName(*destination) != table_type.inner)
 					throw StaticTableTypeMismatchError(instr);
 			}
 			variant_case(Op_staticTableStore_lptr_lany, instr) {
-				const auto& source
-					= current_stack.at(instr.arg1.var_name);
+				const auto& source = current_stack.at(instr.arg1.var_name);
 
 				const auto& table_pointer
 					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
-				const auto& table_type = expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
 
 				if (table_type.inner != typeName(*source))
 					throw StaticTableTypeMismatchError(instr);

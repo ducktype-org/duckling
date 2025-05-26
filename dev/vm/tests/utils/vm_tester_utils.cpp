@@ -64,8 +64,9 @@ void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::FilePath(path(dbc_filename)) }).has_value());
 }
 
-#define EXPECT_VOID(action) \
-	if (auto&& result = action; !result.has_value()) return { .pid = pid, .run_result = std::unexpected(result.error()) };
+#define EXPECT_VOID(action)                          \
+	if (auto&& result = action; !result.has_value()) \
+		return { .pid = pid, .run_result = std::unexpected(result.error()) };
 
 auto VmTestSuite::runTestImpl(
 	vm::PID                            pid,
