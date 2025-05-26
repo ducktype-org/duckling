@@ -103,6 +103,36 @@ namespace {
 	}
 }
 
+namespace {
+	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
+	const ExpectedT& expectPointerType(
+		const PointerType&                     pointer,
+		const StableTypeIdNameMap<TypeOfData>& tod_map,
+		Args&&... error_args
+	) {
+		const auto& pointed_type = tod_map.at(pointer.inner);
+		if (!std::holds_alternative<ExpectedT>(*pointed_type))
+			throw ErrorT(std::forward<Args>(error_args)...);
+		return std::get<ExpectedT>(*pointed_type);
+	}
+
+	template<class ErrorT = PointerTypeMismatchError, class... Args>
+	void validateStructExtFieldType(
+		const DataType&      ztruct,
+		const opargs::Field& field_arg,
+		base::StrID          expected_field_type,
+		Args&&... error_args
+	) {
+		if (ztruct.name != field_arg.type_name)
+			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
+
+		base::StrID field_name = field_arg.field_name;
+		Field       field      = *std::ranges::find(ztruct.fields, field_name, &Field::name);
+
+		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
+	}
+}
+
 /**
  * @brief Represents a local stack variable.
  */
@@ -360,14 +390,9 @@ class FunctionValidator {
 					auto type = tod_map.at(field.type_name);
 					variant_match(*type) {
 						variant_case(DataType, ztruct) {
-							bool good = false;
-							for (auto& ztruct_field: ztruct.fields) {
-								if (ztruct_field.name == field.field_name) {
-									good = true;
-									break;
-								}
-							}
-							if (!good) throw UnknownFieldError(field);
+							if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
+							    == ztruct.fields.end())
+								throw UnknownFieldError(field);
 						}
 						variant_default { throw InvalidArgumentTypeError(arg); }
 					}
@@ -403,7 +428,12 @@ class FunctionValidator {
 	) const {
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
-			variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+			variant_case(Op_alloc_lptr_type, instr) {
+				validateArgInstantiable(instr.arg1);
+				CRef<TypeOfData> variable = current_stack.at(instr.arg0.var_name);
+				PointerType      pointer  = std::get<PointerType>(*variable);
+				if (pointer.inner != instr.arg1.type_name) throw PointerTypeMismatchError(instr);
+			}
 			variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
 			variant_case(Op_cast_l8_type, instr) {
 				validatePrimititiveCast(instr.arg0, instr.arg1, instruction, current_stack);
@@ -487,10 +517,54 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
-			variant_case_novalue(Op_variantSetInner_lvnt_type) {}
-			variant_case_novalue(Op_variantGetInner_lptr_lvnt) {}
-			variant_case_novalue(Op_variantSetInner_lptr_type) {}
-			variant_case_novalue(Op_variantGetInner_lptr_lptr) {}
+			variant_case(Op_variantSetInner_lvnt_type, instr) {
+				const auto& variant_type
+					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID                     wanted_type    = instr.arg1.type_name;
+				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
+				if (!std::ranges::contains(possible_types, wanted_type))
+					throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantGetInner_lptr_lvnt, instr) {
+				const auto& variant_type
+					= std::get<VariantType>(*current_stack.at(instr.arg1.var_name));
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID                     wanted_type    = pointer_type.inner;
+				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
+				if (!std::ranges::contains(possible_types, wanted_type))
+					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantSetInner_lptr_type, instr) {
+				const auto& variant_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& variant_type
+					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+
+				base::StrID wanted_type = instr.arg1.type_name;
+				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+					throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantGetInner_lptr_lptr, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID wanted_type = pointer_type.inner;
+
+				const auto& variant_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& variant_type
+					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+
+				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
 			variant_case_novalue(Op_jmpIf_label) {}
@@ -507,15 +581,92 @@ class FunctionValidator {
 			variant_case_novalue(Op_setVTable_lptr_type) {}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
-			variant_case_novalue(Op_store_lptr_lany) {}
-			variant_case_novalue(Op_load_lany_lptr) {}
-			variant_case_novalue(Op_ref_lptr_lany) {}
-			variant_case_novalue(Op_structLea_lptr_lptr) {}
-			variant_case_novalue(Op_structLoad_lany_lptr) {}
-			variant_case_novalue(Op_structStore_lptr_lany) {}
-			variant_case_novalue(Op_staticTableLea_lptr_lptr) {}
-			variant_case_novalue(Op_staticTableLoad_lany_lptr) {}
-			variant_case_novalue(Op_staticTableStore_lptr_lany) {}
+			variant_case(Op_store_lptr_lany, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_load_lany_lptr, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg0.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_ref_lptr_lany, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_structLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction);
+				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
+			}
+			variant_case(Op_structLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*destination), instr);
+			}
+			variant_case(Op_structStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
+			}
+			variant_case(Op_staticTableLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (destination.inner != table_type.inner)
+					throw StaticTableTypeMismatchError(instr);
+			}
+			variant_case(Op_staticTableLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (typeName(*destination) != table_type.inner)
+					throw StaticTableTypeMismatchError(instr);
+			}
+			variant_case(Op_staticTableStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (table_type.inner != typeName(*source))
+					throw StaticTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
 			variant_case_novalue(Op_ext_field) {}
@@ -647,8 +798,8 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 < instructions.size() ? base::Optional<const Instruction&>()
-												: instructions[index + 1],
+				index + 1 < instructions.size() ? instructions[index + 1]
+												: base::Optional<const Instruction&>(),
 				local_stack
 			);
 

@@ -242,6 +242,18 @@ namespace vm::code {
 	DEFINE_ARGUMENT_ERROR(InvalidArgumentTypeError, "Invalid instruction argument type: ");
 	DEFINE_ARGUMENT_ERROR(TypeIsNotDataError, "Invalid instruction argument type: ");
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.");
+	DEFINE_INSTRUCTION_ERROR(
+		PointerTypeMismatchError, "Inner pointer type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		StaticTableTypeMismatchError, "Inner static table type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		StructTypeMismatchError, "Inner struct type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		VariantTypeMismatchError, "Possible variant types do not match expected type."
+	);
 	DEFINE_ARGUMENT_ERROR(UnknownGlobalNameError, "Unknown global name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFieldError, "Given data does not contain this field: ");
 	DEFINE_ARGUMENT_ERROR(NonPrimitiveCastError, "Cannot in-place cast to non-primitive type: ");
