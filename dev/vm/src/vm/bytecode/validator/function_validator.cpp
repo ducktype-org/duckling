@@ -534,6 +534,9 @@ class FunctionValidator {
 				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
 				if (!std::ranges::contains(possible_types, wanted_type))
 					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case(Op_variantSetInner_lptr_type, instr) {
 				const auto& variant_pointer
@@ -558,6 +561,9 @@ class FunctionValidator {
 
 				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
 					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
 			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
