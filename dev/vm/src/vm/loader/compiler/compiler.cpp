@@ -182,11 +182,15 @@ namespace vm::loader::compiler {
 			auto seek_method_param_count
 				= [&](const base::StrID& method_name) -> base::Optional<u64> {
 				// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
-				for (const auto& type: ctx.type_map) {
+				auto it = std::ranges::find_if(ctx.type_map, [&](const auto& type) {
 					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
-						if (inh_meta.virtual_methods.contains(method_name))
-							return inh_meta.virtual_methods[method_name]->getParameterCount();
+						return inh_meta.virtual_methods.contains(method_name);
 					}
+					return false;
+				});
+				if (it != ctx.type_map.end()) {
+					auto inh_meta = it->getInheritanceMetadata().value();
+					return inh_meta.virtual_methods[method_name]->getParameterCount();
 				}
 				CORE_UNREACHABLE();
 			};

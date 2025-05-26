@@ -1,3 +1,5 @@
+type pointer: ptr_ptri64 ptr_i64
+
 function main {
 	# ret_val -> main ret_val
 	# arg0 -> argc
@@ -13,7 +15,7 @@ function main {
 	store_lptr_lany p, y;   	# *p := y
 	output_l64 x;               # print(x)
 
-	init_lany_type q, ptr_i64;
+	init_lany_type q, ptr_ptri64;
 	ref_lptr_lany q, p;        # q := &p
 	# There are no instructions to check if that worked,
 	# so let's for now just check if it doesn't panic.
