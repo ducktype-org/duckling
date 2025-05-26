@@ -160,6 +160,15 @@ public:
 		stack_state.pop_back();
 	}
 
+	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
+		auto  local_name = VISIT(local, l, return l.var_name);
+		auto& curr_type  = local_name_to_type.at(local_name);
+		auto  new_type   = tod_map->at(type.type_name);
+		curr_type        = new_type;
+		for (auto& entry: stack_state)
+			if (entry.local_name == local_name) entry.type = new_type;
+	}
+
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
 	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
@@ -396,6 +405,18 @@ class FunctionValidator {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
 			variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
 			variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
+			variant_case(Op_cast_l8_type, instr) {
+				validatePrimititiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l16_type, instr) {
+				validatePrimititiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l32_type, instr) {
+				validatePrimititiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l64_type, instr) {
+				validatePrimititiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
 
 			variant_case_novalue(Comment) {}
 			variant_case_novalue(Op_mov_l8_imm) {}
@@ -559,6 +580,22 @@ class FunctionValidator {
 		if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 	}
 
+	void validatePrimititiveCast(
+		const opargs::OpCodePrimitiveArg& local,
+		const opargs::Type&               type,
+		const Instruction&                instruction,
+		const LocalStack&                 current_stack
+	) const {
+		// These are guaranteed to exist by `validateArgTypes`.
+		auto curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
+		auto new_type       = tod_map.at(type.type_name);
+		auto curr_primitive = getTypeKind<PrimitiveType>(*curr_type).value();
+
+		auto new_primitive
+			= getTypeKind<PrimitiveType>(*new_type).expect<NonPrimitiveCastError>(type);
+		if (curr_primitive.size != new_primitive.size) throw CastSizeMismatchError(instruction);
+	}
+
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
@@ -668,6 +705,14 @@ class FunctionValidator {
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
+#define HANDLE_CAST(SIZE)                                  \
+	variant_case(Op_cast_l##SIZE##_type, instr) {          \
+		local_stack.castPrimitive(instr.arg0, instr.arg1); \
+		index++;                                           \
+	}
+
+				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
+#undef HANDLE_CAST
 				variant_default { index++; }
 			}
 		}
