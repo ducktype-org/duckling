@@ -3,12 +3,12 @@
 #include <base/strongly_typed_id.hpp>
 
 
-STRONG_TYPEDEF_ID(SimpleStruct);
+STRONG_TYPEDEF_ID(A);
 STRONG_TYPEDEF_ID(B);
 
 STRONG_TYPEDEF_ID_DIRECT_CREATION(Direct);
 
-ID_STD_HASH(SimpleStruct);
+ID_STD_HASH(A);
 ID_STD_HASH(Direct);
 
 template<class T>
@@ -27,11 +27,11 @@ public:
 	}
 
 	void basicTest() {
-		auto id0 = SimpleStruct::next();
+		auto id0 = A::next();
 		ASSERT_EQUAL(id0.asInt(), 0);
 		ASSERT_EQUAL(u64(id0), 0);
 
-		auto id1 = SimpleStruct::next();
+		auto id1 = A::next();
 		ASSERT_EQUAL(id1.asInt(), 1);
 		ASSERT_EQUAL(u64(id1), 1);
 		assertTrue(id1.isGood(), "ID is not good.");
@@ -61,8 +61,8 @@ public:
 
 		ASSERT_EQUAL(usize(id0), 0);
 
-		B            bad_id_b;
-		SimpleStruct bad_id_a;
+		B bad_id_b;
+		A bad_id_a;
 		assertTrue(bad_id_a.isBad(), "Bad BadID");
 		assertTrue(bad_id_b.isBad(), "Bad BadID");
 		assertTrue(id_copy_1_a.isGood(), "Bad BadID");

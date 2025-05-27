@@ -6,18 +6,18 @@
 
 class SimpleIDMapsTest;
 
-class SimpleStruct {
+class A {
 private:
 	i32               x;
 	usize             count{ 0 };
 	SimpleIDMapsTest* test;
 
 public:
-	SimpleStruct(i32 x, SimpleIDMapsTest* test): x(x), test(test) {}
+	A(i32 x, SimpleIDMapsTest* test): x(x), test(test) {}
 
-	SimpleStruct(const SimpleStruct& other);
+	A(const A& other);
 
-	SimpleStruct(SimpleStruct&& other) noexcept: x(other.x), count(other.count), test(other.test) {}
+	A(A&& other) noexcept: x(other.x), count(other.count), test(other.test) {}
 };
 
 class SimpleIDMapsTest: public tester::TestSuite {
@@ -32,7 +32,7 @@ public:
 
 	~SimpleIDMapsTest() override = default;
 
-	friend SimpleStruct;
+	friend A;
 
 private:
 	void basicMapTest() {
@@ -47,10 +47,10 @@ private:
 		assertTrue(map.erase("abc"), "Map element not erased");
 		assertTrue(map.empty(), "Map is not empty");
 
-		base::HashMap<int, SimpleStruct> map2;
-		SimpleStruct                     a(4, this);
+		base::HashMap<int, A> map2;
+		A                     a(4, this);
 		map2.put(5, a);
-		map2.put(3, SimpleStruct(3, this));
+		map2.put(3, A(3, this));
 
 		base::VectorMap<int, int> map3;
 		assertThrows<std::exception>(
@@ -77,10 +77,7 @@ private:
 	}
 };
 
-SimpleStruct::SimpleStruct(const SimpleStruct& other):
-	  x(other.x),
-	  count(other.count),
-	  test(other.test) {
+A::A(const A& other): x(other.x), count(other.count), test(other.test) {
 	count++;
 	test->assertTrue(count < 2, "A constructor called to many times");
 }
