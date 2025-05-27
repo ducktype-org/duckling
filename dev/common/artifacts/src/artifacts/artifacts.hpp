@@ -11,21 +11,35 @@
 #include <type_traits>
 
 namespace artifacts {
+	/**
+	 * @brief Represents a type, that is trivially interpretable as simple bytes.
+	 * @note In the future this might be improved to feature custom serialization and
+	 * deserialization as well.
+	 */
 	template<class T>
-	requires std::is_standard_layout_v<T> && std::is_trivial_v<T>
-	const T& interpret(base::RawView view) {
+	concept SerdeType = std::is_standard_layout_v<T> && std::is_trivial_v<T>;
+
+	/**
+	 * @brief Constructs type `T` from bytes.
+	 */
+	template<SerdeType T>
+	const T& deserialize(base::RawView view) {
 		CORE_ASSERT(view.size() == sizeof(T), "View\'s size does not match T\'s size");
 		return *reinterpret_cast<T*>(view.getBegin());
 	}
 
 	/**
 	 * @brief A collection of bytes.
-	 * @note It cannot be read-only, because `std::vector<const byte>` does not compile.
+	 * @note `byte` cannot be read-only, because `std::vector<const byte>` does not compile.
 	 */
 	using Bytes = const std::vector<byte>;
 
 	class ArtifactCollection;
 
+	/**
+	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
+	 * compiler.
+	 */
 	struct FileArtifact {
 		const Ref<ArtifactCollection> PARENT;
 		const base::StrID             NAME;
@@ -33,7 +47,7 @@ namespace artifacts {
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
 		 * @note Currently we are not providing any functionality regarding read/writing, so
-		 * feel free to simple read and write to and from this file
+		 * feel free to simply read and write to and from this file
 		 * @note fs::FilePath when lazily reads the content for pointed file the first time, it will
 		 * not reload it's content.
 		 * @TODO Reviewer, do you think we should you std::filesystem::path for those?
@@ -41,29 +55,42 @@ namespace artifacts {
 		const fs::FilePath FILE;
 	};
 
+	/**
+	 * @brief Represents an artifact, that can be represented as bytes, e.g. result of a query that
+	 * returns an int.
+	 */
 	struct BlobArtifact {
 		const Ref<ArtifactCollection> PARENT;
 		const base::StrID             NAME;
 
 		/**
-		 * @brief Sets blob's data. Invalidates current blob's data pointers.
+		 * @brief Sets blob's data.
+		 * @note Invalidates current blob's data pointers.
 		 */
-		void setData(const byte* ptr, usize n_bytes) const;
+		void setData(const byte* ptr, usize n_bytes);
 
-		template<class T>
-		requires std::is_standard_layout_v<T> && std::is_trivial_v<T>
-		void setData(const T& data) const {
+		/**
+		 * @brief Sets blob's data from serializable type `T`.
+		 * @note Invalidates current blob's data pointers.
+		 */
+		template<SerdeType T>
+		void setData(const T& data) {
 			setData(&data, sizeof(data));
 		}
 
 		/**
-		 * @brief Gets blob's data. Data pointers can be invalidated by calls to `setData`.
+		 * @brief Gets blob's data.
+		 * @note Data pointers can be invalidated by calls to `setData`.
 		 */
 		[[nodiscard]] base::RawView getDataView() const;
 
-		template<class T>
-		requires std::is_standard_layout_v<T> && std::is_trivial_v<T> T& getData() {
-			return interpret<T>(getDataView());
+		/**
+		 * @brief Gets blob's data and interprets them as a `T` object.
+		 * @note Data pointers can be invalidated by calls to `setData`.
+		 */
+		template<SerdeType T>
+		T& getData() const {
+			return deserialize<T>(getDataView());
 		}
 	};
 
@@ -84,12 +111,16 @@ namespace artifacts {
 	public:
 		const fs::FilePath PATH;
 
+		/**
+		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
+		 * `ArtifactCollection`s (if any).
+		 */
+		ArtifactCollection(fs::FilePath root);
+
 		ArtifactCollection(const ArtifactCollection&)            = default;
 		ArtifactCollection(ArtifactCollection&&)                 = default;
 		ArtifactCollection& operator=(const ArtifactCollection&) = delete;
 		ArtifactCollection& operator=(ArtifactCollection&&)      = delete;
-
-		ArtifactCollection(fs::FilePath root);
 
 		///////////////////////// GENERAL OPERATIONS ///////////////////////
 
@@ -129,20 +160,18 @@ namespace artifacts {
 
 		base::Optional<const BlobArtifact&> blobArtifactAtMaybe(base::StrID artifact_name) const;
 
-		void setBlobData(BlobArtifact blob, const byte* ptr, usize n_bytes);
+		void setBlobData(const BlobArtifact& blob, const byte* ptr, usize n_bytes);
 
-		template<class T>
-		requires std::is_standard_layout_v<T> && std::is_trivial_v<T>
-		void setBlobData(BlobArtifact blob, const T& data) {
+		template<SerdeType T>
+		void setBlobData(const BlobArtifact& blob, const T& data) {
 			setBlobData(blob, &data, sizeof(data));
 		}
 
-		base::RawView getBlobDataView(BlobArtifact blob) const;
+		base::RawView getBlobDataView(const BlobArtifact& blob) const;
 
-		template<class T>
-		requires std::is_standard_layout_v<T> && std::is_trivial_v<T>
-		const T& getBlobData(BlobArtifact blob) const {
-			return interpret<T>(getBlobDataView(blob));
+		template<SerdeType T>
+		const T& getBlobData(const BlobArtifact& blob) const {
+			return deserialize<T>(getBlobDataView(blob));
 		}
 	};
 }

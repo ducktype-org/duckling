@@ -1,14 +1,16 @@
 #include <artifacts/artifacts.hpp>
 
-void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) const {
-	throw base::NotYetImplemented("setData");
+void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
+	PARENT->setBlobData(*this, ptr, n_bytes);
 }
 
 base::RawView artifacts::BlobArtifact::getDataView() const {
-	throw base::NotYetImplemented("getData");
+	return PARENT->getBlobDataView(*this);
 }
 
-artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root): PATH(std::move(root)) {}
+artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root): PATH(std::move(root)) {
+	throw base::NotYetImplemented("loading files from disk");
+}
 
 void artifacts::ArtifactCollection::flush() {
 	// Dump a DB to disk.
@@ -16,7 +18,8 @@ void artifacts::ArtifactCollection::flush() {
 	// for (auto& collection: sub_collections) collection->flush();
 }
 
-Ref<ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(base::StrID collection_name
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(
+	base::StrID collection_name
 ) {
 	// @note For the reviewer: this is not enforced as I'm convinced it's needed.
 	// Also, currently there is no `FilePath::getType()` method, but the field exists.
@@ -32,17 +35,19 @@ Ref<ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(base::St
 	return subCollectionAt(collection_name);
 }
 
-Ref<ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
 	base::StrID collection_name
 ) {
 	return subCollectionAtMaybe(collection_name).valueOr(subCollectionNew(collection_name));
 }
 
-Ref<ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(base::StrID collection_name) {
+Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
+	base::StrID collection_name
+) {
 	return sub_collections.at(collection_name).refMut();
 }
 
-base::Optional<Ref<ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
+base::Optional<Ref<artifacts::ArtifactCollection>> artifacts::ArtifactCollection::subCollectionAtMaybe(
 	base::StrID collection_name
 ) {
 	return sub_collections.atMaybe(collection_name).map([](const auto& ref) {
@@ -77,7 +82,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(bas
 	return file_artifacts.at(artifact_name);
 }
 
-base::Optional<const FileArtifact&> artifacts::ArtifactCollection::fileArtifactAtMaybe(
+base::Optional<const artifacts::FileArtifact&> artifacts::ArtifactCollection::fileArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return file_artifacts.atMaybe(artifact_name);
@@ -103,18 +108,20 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(bas
 	return blob_artifacts.at(artifact_name);
 }
 
-base::Optional<const BlobArtifact&> artifacts::ArtifactCollection::blobArtifactAtMaybe(
+base::Optional<const artifacts::BlobArtifact&> artifacts::ArtifactCollection::blobArtifactAtMaybe(
 	base::StrID artifact_name
 ) const {
 	return blob_artifacts.atMaybe(artifact_name);
 }
 
-void artifacts::ArtifactCollection::setBlobData(BlobArtifact blob, const byte* ptr, usize n_bytes) {
+void artifacts::ArtifactCollection::setBlobData(
+	const BlobArtifact& blob, const byte* ptr, usize n_bytes
+) {
 	CORE_ASSERT(blob.PARENT.get() == this, "Blob does not belong to this collection");
 	blob_data.put(blob.NAME, makeBox<Bytes>(ptr, ptr + n_bytes));
 }
 
-base::RawView artifacts::ArtifactCollection::getBlobDataView(BlobArtifact blob) const {
+base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
 	CORE_ASSERT(blob.PARENT.get() == this, "Blob does not belong to this collection");
 	const auto& data = blob_data[blob.NAME];
 	return { data->data(), data->size() };
