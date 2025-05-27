@@ -107,8 +107,8 @@ namespace artifacts {
 		 */
 		ArtifactCollection(std::filesystem::path root);
 
-		ArtifactCollection(const ArtifactCollection&)            = default;
-		ArtifactCollection(ArtifactCollection&&)                 = default;
+		ArtifactCollection(const ArtifactCollection&)            = delete;
+		ArtifactCollection(ArtifactCollection&&)                 = delete;
 		ArtifactCollection& operator=(const ArtifactCollection&) = delete;
 		ArtifactCollection& operator=(ArtifactCollection&&)      = delete;
 
