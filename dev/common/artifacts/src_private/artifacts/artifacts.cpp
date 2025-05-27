@@ -32,7 +32,7 @@ artifacts::ArtifactCollection::ArtifactCollection(
 	loadData();
 }
 
-void artifacts::ArtifactCollection::loadArtcFile(std::stringstream& content) {
+void artifacts::ArtifactCollection::parseBlobsFromBytes(std::stringstream& content) {
 	std::string buffer;
 
 	u32 blob_count = 0;
@@ -75,7 +75,7 @@ void artifacts::ArtifactCollection::loadData() {
 		std::ifstream     artc_file(artc_file_path);
 		std::stringstream content;
 		content << artc_file.rdbuf();
-		loadArtcFile(content);
+		parseBlobsFromBytes(content);
 		artc_file.close();
 
 		// Read file artifacts and other sub-collections.

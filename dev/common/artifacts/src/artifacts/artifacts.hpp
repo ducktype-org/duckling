@@ -188,9 +188,9 @@ namespace artifacts {
 		ArtifactCollection(std::filesystem::path path, Ref<ArtifactCollection> parent);
 
 		/**
-		 * @brief Reads blobs from `content` and inserts them to the collection.
+		 * @brief Parses blobs from `content` and inserts them to the collection.
 		 */
-		void loadArtcFile(std::stringstream& content);
+		void parseBlobsFromBytes(std::stringstream& content);
 
 		/**
 		 * @brief Iterates over `PATH` files and directories, attaches artifacts and sub-collections.
