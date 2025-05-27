@@ -75,7 +75,7 @@ namespace artifacts {
 		 */
 		template<SerdeType T>
 		void setData(const T& data) {
-			setData(&data, sizeof(data));
+			setData(reinterpret_cast<const byte*>(&data), sizeof(data));
 		}
 
 		/**
@@ -108,12 +108,21 @@ namespace artifacts {
 		base::HashMap<base::StrID, Box<ArtifactCollection>>
 			sub_collections;  /// Box, because we may need stable refs.
 
+		const base::Optional<Ref<ArtifactCollection>> PARENT;
+
+		/**
+		 * @brief [Private] Performs the real flushing. Also, calls `flushDown()` on sub-collections.
+		 */
+		void flushDown();
+
+		ArtifactCollection(fs::FilePath root, Ref<ArtifactCollection> parent);
+
 	public:
 		const fs::FilePath PATH;
 
 		/**
 		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
-		 * `ArtifactCollection`s (if any).
+		 * `ArtifactCollection`s at `root` (if any).
 		 */
 		ArtifactCollection(fs::FilePath root);
 
@@ -126,7 +135,6 @@ namespace artifacts {
 
 		/**
 		 * @brief Flushes ArtifactCollection's data to the disk.
-		 * @note
 		 */
 		void flush();
 
@@ -164,7 +172,7 @@ namespace artifacts {
 
 		template<SerdeType T>
 		void setBlobData(const BlobArtifact& blob, const T& data) {
-			setBlobData(blob, &data, sizeof(data));
+			setBlobData(blob, reinterpret_cast<const byte*>(&data), sizeof(data));
 		}
 
 		base::RawView getBlobDataView(const BlobArtifact& blob) const;

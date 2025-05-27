@@ -1,5 +1,7 @@
 #include <artifacts/artifacts.hpp>
 
+#include <utility>
+
 void artifacts::BlobArtifact::setData(const byte* ptr, usize n_bytes) {
 	PARENT->setBlobData(*this, ptr, n_bytes);
 }
@@ -12,10 +14,24 @@ artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root): PATH(std::
 	throw base::NotYetImplemented("loading files from disk");
 }
 
+artifacts::ArtifactCollection::ArtifactCollection(fs::FilePath root, Ref<ArtifactCollection> parent):
+	  PARENT(parent),
+	  PATH(std::move(root)) {
+	throw base::NotYetImplemented("loading files from disk");
+}
+
+void artifacts::ArtifactCollection::flushDown() {
+	auto file_name = PATH.name();
+	throw base::NotYetImplemented("saving files to disk");
+
+	for (auto&& [_, sub_collection]: sub_collections) sub_collection->flushDown();
+}
+
 void artifacts::ArtifactCollection::flush() {
-	// Dump a DB to disk.
-	throw base::NotYetImplemented("flushing");
-	// for (auto& collection: sub_collections) collection->flush();
+	if (PARENT)
+		PARENT.value()->flush();
+	else
+		flushDown();
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionNew(
@@ -30,7 +46,7 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 	);
 	auto new_path = PATH.createDirectoryIn(collection_name.strView());
 	sub_collections.put(
-		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path))
+		collection_name, Box<ArtifactCollection>::fromPointer(new ArtifactCollection(new_path, this))
 	);
 	return subCollectionAt(collection_name);
 }
@@ -59,15 +75,15 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
 	base::StrID artifact_name
 ) {
 	CORE_ASSERT(!file_artifacts.contains(artifact_name), "Duplicated blob artifact");
+	auto file_path = PATH.createFileIn("");
 	file_artifacts.put(
 		artifact_name,
 		FileArtifact{
 			.PARENT = this,
 			.NAME   = artifact_name,
-			.FILE   = PATH,
+			.FILE   = file_path,
 		}
 	);
-	throw base::NotYetImplemented("Creating a file on a DISK");
 	return fileArtifactAt(artifact_name);
 }
 
@@ -118,7 +134,7 @@ void artifacts::ArtifactCollection::setBlobData(
 	const BlobArtifact& blob, const byte* ptr, usize n_bytes
 ) {
 	CORE_ASSERT(blob.PARENT.get() == this, "Blob does not belong to this collection");
-	blob_data.put(blob.NAME, makeBox<Bytes>(ptr, ptr + n_bytes));
+	blob_data[blob.NAME] = makeBox<Bytes>(ptr, ptr + n_bytes);
 }
 
 base::RawView artifacts::ArtifactCollection::getBlobDataView(const BlobArtifact& blob) const {
