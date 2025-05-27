@@ -6,13 +6,22 @@
 
 constexpr int VALUE = 42;
 
+struct SimpleStruct {
+	float     x;
+	long long z;
+	bool      operator==(const SimpleStruct& other) const noexcept = default;
+};
+
 int main() {
-	fs::FilePath root = fs::FilePath::createTempDirectory();
+	fs::FilePath          fs_root_path = fs::FilePath::createTempDirectory();
+	std::filesystem::path root         = fs_root_path.absolutePath();
 
 	const auto b0 = base::StrID("b0");
+	const auto b1 = base::StrID("b1");
 	const auto f0 = base::StrID("f0");
 	const auto s0 = base::StrID("s0");
 
+	SimpleStruct simple_struct{ .x = 10.5, .z = 50 };
 	{
 		// Create a collection
 		artifacts::ArtifactCollection collection(root);
@@ -22,9 +31,13 @@ int main() {
 		blob0.setData<decltype(VALUE)>(VALUE);
 		assert(blob0.getData<decltype(VALUE)>() == VALUE);
 
+		// Save struct
+		auto blob1 = collection.blobArtifactNew(b1);
+		blob1.setData(simple_struct);
+
 		// Create a file artifact
 		auto          file0 = collection.fileArtifactNew(f0);
-		std::ofstream file(file0.FILE.absolutePath());
+		std::ofstream file(file0.FILE);
 		file << "Hello!\n";
 		file.close();
 
@@ -41,8 +54,10 @@ int main() {
 
 		assert(collection.blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE);
 
+		assert(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
+
 		auto          file0 = collection.fileArtifactAt(f0);
-		std::ifstream file(file0.FILE.absolutePath());
+		std::ifstream file(file0.FILE);
 		std::string   data;
 		file >> data;
 		file.close();

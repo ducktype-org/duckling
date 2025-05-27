@@ -8,6 +8,7 @@
 #include <base/raw_view.hpp>
 #include <base/string_id.hpp>
 
+#include <sstream>
 #include <type_traits>
 
 namespace artifacts {
@@ -25,7 +26,7 @@ namespace artifacts {
 	template<SerdeType T>
 	const T& deserialize(base::RawView view) {
 		CORE_ASSERT(view.size() == sizeof(T), "View\'s size does not match T\'s size");
-		return *reinterpret_cast<T*>(view.getBegin());
+		return *reinterpret_cast<const T*>(view.getBegin());
 	}
 
 	/**
@@ -47,12 +48,12 @@ namespace artifacts {
 		/**
 		 * @brief File that stores this `FileArtifact`'s data.
 		 * @note Currently we are not providing any functionality regarding read/writing, so
-		 * feel free to simply read and write to and from this file
+		 * feel free to simply read and write to and from this file.
 		 * @note fs::FilePath when lazily reads the content for pointed file the first time, it will
-		 * not reload it's content.
-		 * @TODO Reviewer, do you think we should you std::filesystem::path for those?
+		 * not reload it's content. Also, we heavily modify filesystem structure, which our
+		 * `fs::FilePath` is not suited for.
 		 */
-		const fs::FilePath FILE;
+		const std::filesystem::path FILE;
 	};
 
 	/**
@@ -89,7 +90,7 @@ namespace artifacts {
 		 * @note Data pointers can be invalidated by calls to `setData`.
 		 */
 		template<SerdeType T>
-		T& getData() const {
+		const T& getData() const {
 			return deserialize<T>(getDataView());
 		}
 	};
@@ -99,32 +100,12 @@ namespace artifacts {
 	 * All collections can be modified independently (because as of now there is no state hashing).
 	 */
 	class ArtifactCollection {
-		static constexpr i64 PROTOCOL_VERSION = 1;
-
-		base::HashMap<base::StrID, FileArtifact> file_artifacts;
-		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
-		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
-
-		base::HashMap<base::StrID, Box<ArtifactCollection>>
-			sub_collections;  /// Box, because we may need stable refs.
-
-		const base::Optional<Ref<ArtifactCollection>> PARENT;
-
-		/**
-		 * @brief [Private] Performs the real flushing. Also, calls `flushDown()` on sub-collections.
-		 */
-		void flushDown();
-
-		ArtifactCollection(fs::FilePath root, Ref<ArtifactCollection> parent);
-
 	public:
-		const fs::FilePath PATH;
-
 		/**
 		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
 		 * `ArtifactCollection`s at `root` (if any).
 		 */
-		ArtifactCollection(fs::FilePath root);
+		ArtifactCollection(std::filesystem::path root);
 
 		ArtifactCollection(const ArtifactCollection&)            = default;
 		ArtifactCollection(ArtifactCollection&&)                 = default;
@@ -135,6 +116,8 @@ namespace artifacts {
 
 		/**
 		 * @brief Flushes ArtifactCollection's data to the disk.
+		 * @note This should always be performed after state modifications (especially after
+		 * modifying blob artifacts).
 		 */
 		void flush();
 
@@ -181,5 +164,42 @@ namespace artifacts {
 		const T& getBlobData(const BlobArtifact& blob) const {
 			return deserialize<T>(getBlobDataView(blob));
 		}
+
+	private:
+		const std::filesystem::path PATH;
+
+		base::HashMap<base::StrID, FileArtifact> file_artifacts;
+		base::HashMap<base::StrID, BlobArtifact> blob_artifacts;
+		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
+
+		base::HashMap<base::StrID, Box<ArtifactCollection>>
+			sub_collections;  /// Box, because we may need stable refs.
+
+		const base::Optional<Ref<ArtifactCollection>> PARENT;
+
+		/**
+		 * @brief Performs the real flushing. Also, calls `flushDown()` on sub-collections.
+		 */
+		void flushDown();
+
+		/**
+		 * @brief Construct a new ArtifactCollection and sets the parent variable.
+		 */
+		ArtifactCollection(std::filesystem::path path, Ref<ArtifactCollection> parent);
+
+		/**
+		 * @brief Reads blobs from `content` and inserts them to the collection.
+		 */
+		void loadArtcFile(std::stringstream& content);
+
+		/**
+		 * @brief Iterates over `PATH` files and directories, attaches artifacts and sub-collections.
+		 */
+		void loadData();
+
+		/**
+		 * @brief Return path to a `.artc` file with blob content.
+		 */
+		std::filesystem::path getArtcFile() const;
 	};
 }
