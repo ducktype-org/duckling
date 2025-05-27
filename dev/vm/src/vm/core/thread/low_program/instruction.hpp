@@ -13,7 +13,7 @@
  * OPFUN_TC_ARGS are OpFun arguments for the Tail Call version.
  * OPFUN_REF_ARGS are OpFun arguments for the non tail call version.
  * The difference is that the OPFUN_REF_ARGS are pointers passed by reference.
- * It is because the OpFun's can change the underelying pointers to point to something else,
+ * It is because the OpFun's can change the underlying pointers to point to something else,
  * like the next instruction or the new frame.
  * In switch case we call the OpFuns directly from the cases, so to see the changes in pointers
  * in the main switch function we need to pass the pointers by reference.

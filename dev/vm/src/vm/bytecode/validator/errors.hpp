@@ -18,7 +18,7 @@ namespace vm::code {
 	public:
 		ValidationError(std::string reason): base::LogicError(std::move(reason)) {}
 
-		// @brief element causing the error
+		// Element causing the error.
 		[[nodiscard]] virtual base::Optional<CRef<ElementBase>> maybeElement() const { return {}; }
 	};
 
@@ -51,8 +51,10 @@ namespace vm::code {
 			  FUNC_NAME(func_name) {}
 	};
 
-	// @brief position-less error for function definitions.
-	// For function name arguments, like in call instructions, use UnknownFunctionError.
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class MissingFunctionalTypeError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Functional type is not declared for: ";
@@ -63,8 +65,10 @@ namespace vm::code {
 			  FUNC_NAME(func_name) {}
 	};
 
-	// @brief position-less error for function definitions.
-	// For function name arguments, like in call instructions, use UnknownFunctionError.
+	/**
+	 * @brief position-less error for function definitions.
+	 * For function name arguments, like in call instructions, use UnknownFunctionError.
+	 */
 	class TypeIsNotFunctionalError: public ValidationError {
 	public:
 		constexpr const static std::string_view ERR_MSG = "Type is not functional: ";
@@ -73,22 +77,6 @@ namespace vm::code {
 		TypeIsNotFunctionalError(base::StrID type_name):
 			  ValidationError(base::strConcat(ERR_MSG, type_name)),
 			  TYPE_NAME(type_name) {}
-	};
-
-	class UnknownSubtypeError: public ValidationError {
-	public:
-		constexpr static const std::string_view ERR_MSG = "This subtype is not defined anywhere: ";
-		const TypeOfData                        BASE_TYPE;
-		const base::StrID                       MISSING_NAME;
-
-		UnknownSubtypeError(TypeOfData base_type, base::StrID missing_name):
-			  ValidationError(base::strConcat(ERR_MSG, missing_name)),
-			  BASE_TYPE(std::move(base_type)),
-			  MISSING_NAME(missing_name) {}
-
-		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
-			return VISIT(BASE_TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
-		}
 	};
 
 #define DEFINE_DUPLICATED_ELEMENT_ERROR(NAME, ELEMENT_TYPE, ERROR)                      \
@@ -169,6 +157,21 @@ namespace vm::code {
 		}
 	};
 
+	class TypeAttributeBase: public ValidationError {
+	public:
+		const TypeOfData  TYPE;
+		const base::StrID ATTRIBUTE_NAME;
+
+		TypeAttributeBase(std::string msg, TypeOfData argument, base::StrID field_name):
+			  ValidationError(std::move(msg)),
+			  TYPE(std::move(argument)),
+			  ATTRIBUTE_NAME(field_name) {}
+
+		[[nodiscard]] base::Optional<CRef<ElementBase>> maybeElement() const override {
+			return VISIT(TYPE, tp, return static_cast<CRef<ElementBase>>(&tp));
+		}
+	};
+
 #define DEFINE_TYPE_ERROR(error_name, msg)                                                   \
 	class error_name: public TypeErrorBase {                                                 \
 	public:                                                                                  \
@@ -197,16 +200,61 @@ namespace vm::code {
 			  ArgumentErrorBase(base::strConcat(ERR_MSG, argumentToString(argument)), argument) {} \
 	}
 
-	DEFINE_TYPE_ERROR(
-		InvalidImplementsError, "This interface/class can implement only other interfaces: "
-	);
-	DEFINE_TYPE_ERROR(InvalidExtends, "This class can extend only other classes: ");
-	DEFINE_TYPE_ERROR(
-		MissingAncestorFieldError, "This class does not contain all of its ancestors' fields: "
-	);
+#define DEFINE_TYPE_ATTRIBUTE_ERROR(error_name, msg)                                \
+	class error_name: public TypeAttributeBase {                                    \
+	public:                                                                         \
+		constexpr static const std::string_view ERR_MSG = (msg);                    \
+                                                                                    \
+		error_name(TypeOfData type, base::StrID field_name):                        \
+			  TypeAttributeBase(                                                    \
+				  base::strConcat(ERR_MSG, field_name), std::move(type), field_name \
+			  ) {}                                                                  \
+	};
+
 	DEFINE_TYPE_ERROR(
 		CycleInHierarchyError, "This interface/class is a part of an inheritance cycle: "
 	);
+	DEFINE_TYPE_ERROR(EmptyVariantError, "This variant type is empty: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		InvalidImplementsError,
+		"This object can implement only existing interfaces other than itself: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedImplementsError,
+		"This interface/class tried implementing the same interface twice: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		InvalidExtendsError, "This class can extend only existing classes other than itself: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		MethodTypeError,
+		"Implementations and virtual method declarations should have the same signature: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		MethodFirstArgumentError,
+		"Methods first argument should be a pointer to an object the method is defined for: "
+	);
+
+	DEFINE_TYPE_ATTRIBUTE_ERROR(DuplicatedFieldError, "This object's field is duplicated: ");
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedVirtualMethodError, "This object's virtual method declaration is duplicated: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		DuplicatedVirtualMethodImplementationError,
+		"This object's virtual method implementation is duplicated: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		UnimplementedVirtualMethodError,
+		"This virtual method is unimplemented in an instantiable class: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		VirtualMethodSignatureError, "This class implements a method with wrong signature: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(
+		InvalidVirtualMethodImplementationError,
+		"Method implementation lacks it's declaration as a virtual method: "
+	);
+	DEFINE_TYPE_ATTRIBUTE_ERROR(UnknownSubtypeError, "This subtype is not defined anywhere: ");
 
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidUpcastError, "The source type does not inherit from the destination type"
@@ -214,15 +262,15 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(
 		InvalidInstructionExtensionError, "The preceding instruction cannot be extended this way"
 	);
-	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitalised.");
+	DEFINE_INSTRUCTION_ERROR(RetValDeinitError, "The return value cannot be deinitialized.");
 	DEFINE_INSTRUCTION_ERROR(CastSizeMismatchError, "Cannot cast to type of different size.");
-
 	DEFINE_ARGUMENT_ERROR(UnknownTypeError, "Unknown type: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLocalNameError, "Unknown local name: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLocalNameError, "Duplicated local name: ");
 	DEFINE_ARGUMENT_ERROR(UnknownLabelError, "Unknown label: ");
 	DEFINE_ARGUMENT_ERROR(DuplicatedLabelError, "Duplicated label: ");
 	DEFINE_ARGUMENT_ERROR(UnknownFunctionError, "Unknown function: ");
+	DEFINE_ARGUMENT_ERROR(UnknownMethodError, "Unknown method: ");
 	DEFINE_ARGUMENT_ERROR(
 		InvalidFunctionCallArgumentsError,
 		"Invalid function call arguments. Values on the stack do not have proper types for "
@@ -244,6 +292,9 @@ namespace vm::code {
 	DEFINE_INSTRUCTION_ERROR(ArgumentMismatchError, "Instruction arguments have different types.");
 	DEFINE_INSTRUCTION_ERROR(
 		PointerTypeMismatchError, "Inner pointer type does not match expected type."
+	);
+	DEFINE_INSTRUCTION_ERROR(
+		InvalidVirtualCallError, "Provided method does not exists for a given argument."
 	);
 	DEFINE_INSTRUCTION_ERROR(
 		StaticTableTypeMismatchError, "Inner static table type does not match expected type."

@@ -1,0 +1,19 @@
+type pointer: pointer_A A
+type pointer: pointer_B B
+type fun: method_foo_A {pointer_A} void
+type fun: method_foo_B {pointer_B} void
+
+type class: A {
+    abstract: true;
+    virtual_methods: {
+        foo: method_foo_A, 
+    };
+}
+
+type class: B {
+    extends: A;
+    abstract: true;
+    virtual_methods: {
+        foo: method_foo_B, 
+    };
+}

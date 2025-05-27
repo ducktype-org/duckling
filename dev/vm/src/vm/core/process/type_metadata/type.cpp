@@ -256,6 +256,21 @@ namespace vm {
 		return {};
 	}
 
+	base::Optional<TypeCRef> Type::getSuperClass() const {
+		variant_match(kind) {
+			variant_case(kind::Data, data) {
+				if_opt_some(data.inheritance_metadata, imd) {
+					variant_match(imd.kind) {
+						variant_case(InheritanceMetadata::Class, class_kind) {
+							if (class_kind.extends.has_value()) return class_kind.extends.value();
+						}
+					}
+				}
+			}
+		}
+		return {};
+	}
+
 	bool Type::inheritsFrom(TypeCRef other) const {
 		std::vector<TypeCRef> stack{ this };
 		while (!stack.empty()) {
