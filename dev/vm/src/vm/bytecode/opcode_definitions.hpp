@@ -246,6 +246,8 @@ DEF_OPCODE(setVTable_lptr_type, vm::opargs::StackLocalPtr, vm::opargs::Type)
 DEF_OPCODE(upcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
 // tries to cast pointed object to its subclass, requires that ext_64 is next
 DEF_OPCODE(downcast_lptr_lptr, vm::opargs::StackLocalPtr, vm::opargs::StackLocalPtr)
+// calls a method of specified name on an a pointer. Performs the dynamic dispatch.
+DEF_OPCODE(virtual_call_lptr_method, vm::opargs::StackLocalPtr, vm::opargs::MethodName)
 
 // ========= GENERAL POINTER OPERATIONS ========
 

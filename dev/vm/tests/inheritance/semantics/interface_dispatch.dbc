@@ -1,0 +1,103 @@
+type pointer: pointer_I1 I1
+type pointer: pointer_Parent Parent
+type pointer: pointer_Child Child
+
+type fun: method_I1_void {pointer_I1} void
+type fun: method_parent_void {pointer_Parent} void
+type fun: method_child_void {pointer_Child} void
+
+type fun: I1_foo_default_impl_type {pointer_I1} void
+type fun: Child_I1_bar_impl_type {pointer_Child} void
+type fun: Parent_getAge_impl_type {pointer_Parent} void
+type fun: Child_getAge_impl_type {pointer_Child} void
+type fun: Child_cry_impl_type {pointer_Child} void
+
+type interface: I1 {
+    virtual_methods: { 
+        foo: method_I1_void, 
+        bar: method_I1_void,
+    };
+    implementations: { 
+        foo: I1_foo_default_impl_type,
+    };
+}
+
+type class: Parent {
+    virtual_methods: { 
+        getAge: method_parent_void,
+    };
+    implementations: {
+        getAge: Parent_getAge_impl_type, 
+    };
+}
+
+type class: Child {
+    extends: Parent;
+    abstract: false;
+    implements: {I1};
+    virtual_methods: { 
+        cry: method_child_void,
+    };
+    implementations: {
+        getAge: Child_getAge_impl_type,
+        bar: Child_I1_bar_impl_type, 
+        cry: Child_cry_impl_type,
+    };
+}
+
+# ============ METHODS IMPLEMENTATION ============ 
+function I1_foo_default_impl_type {
+    init_lany_type res, i64; mov_l64_imm res, 11; output_l64 res; deinit; deinit; ret;
+}
+function Child_I1_bar_impl_type {
+    init_lany_type res, i64; mov_l64_imm res, 22; output_l64 res; deinit; deinit; ret;
+}
+function Parent_getAge_impl_type {
+    init_lany_type res, i64; mov_l64_imm res, 33; output_l64 res; deinit; ret;
+}
+function Child_getAge_impl_type {
+    init_lany_type res, i64; mov_l64_imm res, 44; output_l64 res; deinit; deinit; ret;
+}
+function Child_cry_impl_type {
+    init_lany_type res, i64; mov_l64_imm res, 55; output_l64 res; deinit; deinit; ret;
+}
+
+function main {
+    init_lany_type ptr_i1, pointer_I1;
+    init_lany_type ptr_parent, pointer_Parent;
+    init_lany_type ptr_child, pointer_Child;
+
+    init_lany_type actual_child, pointer_Child;
+
+    # --- Object Child, pointer I1* ---
+    alloc_lptr_type actual_child, Child;
+    setVTable_lptr_type actual_child, Child;
+    upcast_lptr_lptr ptr_i1, actual_child;
+
+    init_lany_type temp_this_i1_foo, pointer_I1;
+    mov_lptr_lptr temp_this_i1_foo, ptr_i1;
+    virtual_call_lptr_method ptr_i1, foo; # Expected: 11
+
+    init_lany_type temp_this_i1_bar, pointer_I1;
+    mov_lptr_lptr temp_this_i1_bar, ptr_i1;
+    virtual_call_lptr_method ptr_i1, bar; # Expected: 22
+
+    # --- Same Child object, pointer Parent* ---
+    upcast_lptr_lptr ptr_parent, actual_child;
+
+    init_lany_type temp_ptr_parent, pointer_Parent;
+    mov_lptr_lptr temp_ptr_parent, ptr_parent ;
+    virtual_call_lptr_method ptr_parent, getAge; # Expected: 44
+
+    # --- Same Child object, pointer Child* ---
+    mov_lptr_lptr ptr_child, actual_child;
+    init_lany_type temp_this_child_cry, pointer_Child;
+    mov_lptr_lptr temp_this_child_cry, ptr_child;
+    virtual_call_lptr_method ptr_child, cry; # Expected: 55
+
+    deinit;
+    deinit;
+    deinit;
+    deinit;
+    ret;
+}

@@ -16,10 +16,6 @@ public:
 		TESTER_ADD_TEST(initDeinit);
 		TESTER_ADD_TEST(twoInits);
 
-		// @note: This tests breaks the current implementation of jump verification, but will be
-		// used soon when better verification is implemented.
-		//  TESTER_ADD_TEST(validJumpOutOfBlock);
-
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
@@ -28,7 +24,10 @@ public:
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
+		TESTER_ADD_TEST(duplicatedDataFields);
+		TESTER_ADD_TEST(unknownMethod);
 		TESTER_ADD_TEST(jumpWithInplaceCast);
+		TESTER_ADD_TEST(validJumpOutOfBlock);
 
 		// Local variable verification
 		TESTER_ADD_TEST(noInit);
@@ -173,8 +172,6 @@ private:
 		);
 	}
 
-// @TODO Use these tests when typecheck gets implemented,
-// but swap those deleted loader errors for (then freshly added by you) builder ones.
 #if 0
 	// Pointer verification
 	void derefAfterDeinit() {
@@ -260,11 +257,29 @@ private:
 		);
 	}
 
+	void duplicatedDataFields() {
+		loadInvalidDbc(
+			"wrong/data_type/duplicated_fields.dbc",
+			{
+				vm::code::DuplicatedFieldError::ERR_MSG,
+			}
+		);
+	}
+
 	void variantWrongType() {
 		loadInvalidDbc(
 			"wrong/types/variant_wrong_type.dbc",
 			{
 				vm::code::VariantTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void unknownMethod() {
+		loadInvalidDbc(
+			"wrong/unknown_method.dbc",
+			{
+				vm::code::UnknownMethodError::ERR_MSG,
 			}
 		);
 	}

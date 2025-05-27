@@ -1,0 +1,70 @@
+# Method bbb() is unimplemented in an instantiable class.
+type pointer: pointer_A A
+type pointer: pointer_I1 I1
+type pointer: pointer_I2 I2
+type pointer: pointer_B B
+
+type fun: method_aaa {pointer_I1} void
+type fun: method_bbb {pointer_I1} void
+type fun: method_aaa_impl {pointer_I1} void
+
+type fun: method_ccc {pointer_I2} void
+type fun: method_ddd {pointer_I2} void
+type fun: method_ccc_impl {pointer_I2} void
+
+type fun: method_eee {pointer_A} void
+type fun: method_fff {pointer_A} void
+type fun: method_eee_impl {pointer_A} void
+
+type fun: method_ggg {pointer_B} void
+type fun: method_aaa_impl_B {pointer_B} void
+type fun: method_bbb_impl {pointer_B} void
+type fun: method_ddd_impl {pointer_B} void
+type fun: method_fff_impl {pointer_B} void
+type fun: method_ggg_impl {pointer_B} void
+
+type interface: I1 {
+    virtual_methods: {
+        aaa: method_aaa,
+        bbb: method_bbb,
+    };
+    implementations: {
+        aaa: method_aaa_impl,
+    };
+}
+
+type interface: I2 {
+    virtual_methods: {
+        ccc: method_ccc,
+        ddd: method_ddd,
+    };
+    implementations: {
+        ccc: method_ccc_impl,
+    };
+}
+
+type class: A {
+    abstract: true;
+    virtual_methods: {
+        eee: method_eee, 
+        fff: method_fff,
+    };
+    implementations: {
+        eee: method_eee_impl, 
+    };
+}
+
+type class: B {
+    extends: A;
+    implements: {I1, I2};
+    virtual_methods: {
+        ggg: method_ggg,
+    };
+    implementations: {
+        aaa: method_aaa_impl_B, # Override implementation.
+        bbb: method_bbb_impl,
+        ddd: method_ddd_impl,
+        fff: method_fff_impl,
+        ggg: method_ggg_impl,
+    };
+}

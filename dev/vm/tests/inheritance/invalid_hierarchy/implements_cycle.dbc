@@ -9,7 +9,3 @@ type interface: B {
 type interface: C {
 	implements: { A };
 }
-
-function main {
-	ret;
-}

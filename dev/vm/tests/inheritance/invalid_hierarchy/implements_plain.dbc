@@ -6,7 +6,3 @@ type data: Point {
 type interface: Spacial {
 	implements: { Point };
 }
-
-function main {
-	ret;
-}

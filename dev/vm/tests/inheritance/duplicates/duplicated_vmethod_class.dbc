@@ -1,0 +1,11 @@
+type pointer: pointer_A A
+type fun: method_foo {pointer_A} void
+type fun: method_bar {pointer_A} void
+
+type class: A {
+    abstract: true;
+    virtual_methods: {
+        foo: method_foo, 
+        foo: method_bar, 
+    };
+}

@@ -25,17 +25,5 @@ namespace vm::code {
 
 	private:
 		StableTypeIdNameMap<TypeOfData> types;
-
-		/**
-		 * @brief Throws a builder error if type is invalid in current context.
-		 */
-		void validateType(const TypeOfData& type) const;
-
-		/**
-		 * @brief Throws a builder error if types are invalid in current context.
-		 * Checks each type individually and inheritance
-		 * hierarchy soundness.
-		 */
-		void validateTypes() const;
 	};
 }
