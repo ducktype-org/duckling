@@ -4,7 +4,7 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceHierarchyCorrectnessTest: public VmTestSuite {
 #undef TESTER_CLASS
@@ -19,7 +19,7 @@ private:
 		runTestOnVm("inheritance_metadata.dbc", {}, {}, {}, 0);
 
 		// Invalid
-		using namespace vm::code::builders;
+		using namespace vm::code;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
 			{ "invalid_hierarchy/missing_ancestor_field.dbc", MissingAncestorFieldError::ERR_MSG },
 			{ "invalid_hierarchy/extends_plain.dbc", InvalidExtends::ERR_MSG },

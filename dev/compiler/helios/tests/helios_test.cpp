@@ -48,7 +48,7 @@ public:
 		TESTER_ADD_TEST(testHoutVariables);
 		TESTER_ADD_TEST(testExprTree);
 		TESTER_ADD_TEST(testSimpleHOUT);
-		TESTER_ADD_TEST(testSinglefileModuleHOUT);
+		TESTER_ADD_TEST(testSingleFileModuleHOUT);
 		TESTER_ADD_TEST(testModuleHOUT);
 		TESTER_ADD_TEST(testDependencyHOUT);
 		TESTER_ADD_TEST(testHoutVisitor);
@@ -64,12 +64,14 @@ public:
 		// this is at the end
 		// so we test all the scopes created in helios tests:
 		TESTER_ADD_TEST(testScopeParentsAndDepth);
+		TESTER_ADD_TEST(testScopeSymbolsConsistency);
 	}
 
 private:
 	// @TODO: test_modules/aliases are not used in tests
 
 	using enum tsh::Mutability;
+	using enum tsh::IntegralAbstractType::Signedness;
 
 	static tsh::SymbolType<> st(const tsh::AbstractType abstract_type) {
 		return tsh::SymbolType{
@@ -131,16 +133,18 @@ private:
 	void testTypeOf() {
 		auto [_, root_scope] = getModule(fs::FilePath(path("test_modules/types")));
 
-		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
+		const auto int16_type = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
 		const auto f16_type   = query::entryPoint<tsh::QueryFloatType>(16);
 		const auto f32_type   = query::entryPoint<tsh::QueryFloatType>(32);
 		const auto bool_type  = query::entryPoint<tsh::QueryBoolType>({});
 		const auto meta_type  = query::entryPoint<tsh::QueryMetaType>({});
+		const auto str_type   = query::entryPoint<tsh::QueryStringType>({});
 
 		ASSERT_EQUAL(int32_type, getTypeOf("SimpleInt", root_scope));
 		ASSERT_EQUAL(f32_type, getTypeOf("SimpleFloat", root_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("SimpleBool", root_scope));
+		ASSERT_EQUAL(str_type, getTypeOf("SimpleString", root_scope));
 
 		const auto tuple_int_int = getTypeOf("TupleII", root_scope);
 		const auto tuple_int_int_abstract_type
@@ -215,7 +219,7 @@ private:
 		[[maybe_unused]] auto hout_debug_print = hout->debugPrint();
 	}
 
-	void testSinglefileModuleHOUT() {
+	void testSingleFileModuleHOUT() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/simple_scopes")));
 
 		auto houts = query::entryPoint<compiler::helios::QueryModuleHOUTRecursively>(module);
@@ -424,6 +428,12 @@ private:
 		Ref  expr_cmp_casted
 			= dynamic_cast<const compiler::helios::code::BinaryOperatorExpr*>(&*expr_cmp);
 		ASSERT_EQUAL(compiler::helios::code::BuiltinBinary::IntegerLt, expr_cmp_casted->operation);
+
+		auto get_str  = getChain("STR", root_scope).back();
+		auto expr_str = getExprOfConst(get_str);
+		Ref  expr_str_casted
+			= dynamic_cast<const compiler::helios::code::LiteralStringExpr*>(&*expr_str);
+		ASSERT_EQUAL("quack", expr_str_casted->value.str());
 	}
 
 	void testError() {
@@ -638,17 +648,17 @@ private:
 	void testKeywordLiterals() {
 		auto [module, top_scope] = getModule(fs::FilePath(path("test_modules/keyword_literals")));
 
-		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, true });
-		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, true });
-		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
-		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, true });
+		auto i8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, Signed });
+		auto i16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Signed });
+		auto i32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		auto i64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
+		auto i128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, Signed });
 
-		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, false });
-		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, false });
-		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, false });
-		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, false });
-		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, false });
+		auto u8_type   = query::entryPoint<tsh::QueryIntegralType>({ 8, Unsigned });
+		auto u16_type  = query::entryPoint<tsh::QueryIntegralType>({ 16, Unsigned });
+		auto u32_type  = query::entryPoint<tsh::QueryIntegralType>({ 32, Unsigned });
+		auto u64_type  = query::entryPoint<tsh::QueryIntegralType>({ 64, Unsigned });
+		auto u128_type = query::entryPoint<tsh::QueryIntegralType>({ 128, Unsigned });
 
 		auto f16_type = query::entryPoint<tsh::QueryFloatType>(16);
 		auto f32_type = query::entryPoint<tsh::QueryFloatType>(32);
@@ -660,6 +670,8 @@ private:
 		auto char_type = query::entryPoint<tsh::QueryCharType>({});
 
 		auto bool_type = query::entryPoint<tsh::QueryBoolType>({});
+
+		auto str_type = query::entryPoint<tsh::QueryStringType>({});
 
 		// a simple way to get function scope through hout:
 		auto foo            = getChain("foo", top_scope).back();
@@ -690,6 +702,8 @@ private:
 		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_t", foo_body_scope));
 		ASSERT_EQUAL(bool_type, getTypeOf("v_bool_f", foo_body_scope));
 
+		ASSERT_EQUAL(str_type, getTypeOf("v_str", foo_body_scope));
+
 		// true, false literals:
 		auto true_expr  = getExprOfVariable(getChain("v_bool_t", foo_body_scope).back());
 		auto false_expr = getExprOfVariable(getChain("v_bool_f", foo_body_scope).back());
@@ -709,8 +723,8 @@ private:
 	void testFunctionParameters() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/parameters")));
 
-		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, true });
-		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, true });
+		const auto int32_type = query::entryPoint<tsh::QueryIntegralType>({ 32, Signed });
+		const auto int64_type = query::entryPoint<tsh::QueryIntegralType>({ 64, Signed });
 
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto hout = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
@@ -900,6 +914,33 @@ private:
 				std::cerr.flush();
 			}
 			assertTrue(parent(scope).empty(), "Scope at depth 0 can't have a parent");
+		}
+	}
+
+	/**
+	 * This checks for all symbols that if a given
+	 * symbol `s` is in the scope `N`, then it is also in the
+	 * output of QuerySymbolsInScope(N).
+	 */
+	void testScopeSymbolsConsistency() {
+		auto all_symbols = compiler::helios::getAllHeliosSymbols();
+
+		// this is quadratic in theory, if it ever get too slow,
+		// we can optimize it with some maps.
+		for (auto symbol: all_symbols) {
+			auto maybe_scope = compiler::helios::maybeScope(symbol);
+			if (maybe_scope.empty()) continue;
+			auto scope            = maybe_scope.value();
+			auto symbols_in_scope = query::entryPoint<compiler::helios::QuerySymbolsInScope>(scope);
+
+			auto found = false;
+			for (auto s: *symbols_in_scope) {
+				if (s == symbol) {
+					found = true;
+					break;
+				}
+			}
+			assertTrue(found, "Symbol was not fount in its scope");
 		}
 	}
 };

@@ -766,6 +766,13 @@ namespace vm {
 		FUNCTION_CONT(2);
 	}
 
+	// `cast_lN_type` instructions are no-ops at runtime, they are only used by the validator.
+#define CAST_PRIMIVE(SIZE) \
+	RETURN_TYPE OpFuns::OPCODE_NAME(cast_l##SIZE##_type)(FUNCTION_ARGS) { FUNCTION_CONT(1); }
+
+	FOR_EACH(CAST_PRIMIVE, 8, 16, 32, 64)
+#undef CAST_PRIMIVE
+
 	RETURN_TYPE OpFuns::OPCODE_NAME(breakpoint)(FUNCTION_ARGS) {
 		{
 			instr += 1;

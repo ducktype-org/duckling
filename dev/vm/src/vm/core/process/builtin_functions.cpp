@@ -4,10 +4,11 @@
 #include <base/int_conv.hpp>
 #include <base/macros/for_each.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/opcode_definitions.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/vmprocess.hpp>
@@ -146,25 +147,23 @@ namespace vm::builtins {
 
 	CRef<code::CodeCollection> getStdlibModule() {
 		static const code::CodeCollection builtin_module = []() {
-			code::CodeCollection               code_collection;
-			code::builders::TypeContextBuilder type_context_builder(code::getBuiltinTypes());
+			code::CodeCollection code_collection;
 			for (const auto& [id, func_type]: *getBuiltinFunctionTypes())
-				type_context_builder.addType(func_type);
-
-			auto type_context     = type_context_builder.build();
-			code_collection.types = type_context.getTypes() | std::ranges::to<std::vector>();
+				code_collection.types.emplace_back(func_type);
 
 			for (auto& [id, func_type]: *getBuiltinFunctionTypes()) {
-				code::builders::FunctionBuilder func_builder(
-					code::Identifier(func_type.name), {}, type_context
-				);
-				func_builder.addInstruction({ code::instructions::Op_call_builtin_func(
+				code::Function builtin_function;
+				builtin_function.name = func_type.name;
+				builtin_function.body.emplace_back(code::instructions::Op_call_builtin_func(
 					vm::opargs::BuiltinFunctionName(func_type.name)
-				) });
-				func_builder.addInstruction(code::instructions::Op_ret{});
-				code_collection.functions.push_back(func_builder.build());
+				));
+				builtin_function.body.emplace_back(code::instructions::Op_ret{});
+				code_collection.functions.push_back(builtin_function);
 			}
-			return code_collection;
+			// This is to ensure the produced std library is valid.
+			return code::ValidProgram::withBuiltins()
+			    .newInsertCode(code_collection)
+			    .produceValidCodeCollection();
 		}();
 
 		return &builtin_module;

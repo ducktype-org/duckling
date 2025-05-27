@@ -2,7 +2,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
@@ -24,10 +24,11 @@ public:
 		TESTER_ADD_TEST(multipleFunctions);
 		TESTER_ADD_TEST(useArgumentAfterCall);
 
-		// Jump verfification
+		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
+		TESTER_ADD_TEST(jumpWithInplaceCast);
 
 		// Local variable verification
 		TESTER_ADD_TEST(noInit);
@@ -39,15 +40,18 @@ public:
 		// @note: Not implemented yet
 		// TESTER_ADD_TEST(derefAfterDeinit);
 		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
-		// TESTER_ADD_TEST(derefWrongType);
-		// TESTER_ADD_TEST(refOnPrimitive);
+		TESTER_ADD_TEST(derefWrongType);
+		TESTER_ADD_TEST(refOnPrimitive);
 
-		// Type varification
+		// Type verification
 		TESTER_ADD_TEST(wrongTypeMov);
 		TESTER_ADD_TEST(wrongTypeSize);
 		TESTER_ADD_TEST(globalWrongTypeMov);
 		TESTER_ADD_TEST(globalWrongTypeSize);
 		TESTER_ADD_TEST(usingPointerAsPrimitive);
+		TESTER_ADD_TEST(variantWrongType);
+		TESTER_ADD_TEST(staticTableWrongType);
+		TESTER_ADD_TEST(inplaceCasts);
 	}
 
 private:
@@ -77,7 +81,7 @@ private:
 		loadInvalidDbc(
 			"wrong/functions/use_argument_after_call.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -87,8 +91,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -97,8 +101,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -107,8 +111,18 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
+			}
+		);
+	}
+
+	void jumpWithInplaceCast() {
+		loadInvalidDbc(
+			"wrong/jumps/jump_with_inplace_cast.dbc",
+			{
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -118,7 +132,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -127,7 +141,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -136,7 +150,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -145,7 +159,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/invalid_name.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -154,7 +168,7 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/repeated_name.dbc",
 			{
-				vm::code::builders::DuplicatedLocalNameError::ERR_MSG,
+				vm::code::DuplicatedLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -180,12 +194,13 @@ private:
 			}
 		);
 	}
+#endif
 
 	void derefWrongType() {
 		loadInvalidDbc(
 			"wrong/pointers/deref_wrong_type.dbc",
 			{
-				vm::loader::DeferenceTypeMismatchError::ERR_MSG,
+				vm::code::PointerTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -194,18 +209,17 @@ private:
 		loadInvalidDbc(
 			"wrong/pointers/ref_on_primitive.dbc",
 			{
-				vm::loader::LocalUsedAsPointerError::ERR_MSG,
+				vm::code::InvalidArgumentTypeError::ERR_MSG,
 			}
 		);
 	}
-#endif
 
 	// Type verification
 	void wrongTypeMov() {
 		loadInvalidDbc(
 			"wrong/types/wrong_type_mov.dbc",
 			{
-				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -214,7 +228,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
 			{
-				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
@@ -223,7 +237,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/global_wrong_type_mov.dbc",
 			{
-				vm::code::builders::ArgumentMismatchError::ERR_MSG,
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -232,7 +246,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/global_wrong_type_size.dbc",
 			{
-				vm::code::builders::InvalidArgumentSizeError::ERR_MSG,
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
@@ -241,7 +255,35 @@ private:
 		loadInvalidDbc(
 			"wrong/types/using_pointer_as_primitive.dbc",
 			{
-				vm::code::builders::InvalidArgumentTypeError::ERR_MSG,
+				vm::code::InvalidArgumentTypeError::ERR_MSG,
+			}
+		);
+	}
+
+	void variantWrongType() {
+		loadInvalidDbc(
+			"wrong/types/variant_wrong_type.dbc",
+			{
+				vm::code::VariantTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void staticTableWrongType() {
+		loadInvalidDbc(
+			"wrong/types/static_table_wrong_type.dbc",
+			{
+				vm::code::StaticTableTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void inplaceCasts() {
+		runTestOnVm("right/inplace_cast.dbc", {}, "42");
+		loadInvalidDbc(
+			"wrong/types/inplace_cast_size_mismatch.dbc",
+			{
+				vm::code::CastSizeMismatchError::ERR_MSG,
 			}
 		);
 	}

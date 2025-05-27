@@ -4,7 +4,7 @@
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/utils/go_to_definition.hpp>
-#include <helios_private/builtin_operations/builtins.hpp>
+#include <helios_private/expressions/builtin_operations.hpp>
 #include <helios_private/lookup/interface.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -59,16 +59,26 @@ namespace compiler::helios::code {
 			return sub_exprs;
 		}
 
+		/**
+		 * Visitor that implements logic of creation of HOUT expressions from PST expressions.
+		 */
 		struct PstExprToHoutExprVisitor final: public pst::expr::PstExprVisitorPanicky {
 			explicit PstExprToHoutExprVisitor(query::Context& ctx): ctx(ctx) {}
 
 			query::Context& ctx;
 
+			/**
+			 * The "output" of the visitor.
+			 */
 			base::Optional<base::Box<Expr>> node;
 
 			void visitExprValue(pst::Access<pst::expr::ExprValue> stmt) override {
 				// @TODO: Change literal value from i64 to something more appropriate.
 				node = makeBox<LiteralIntExpr>(ctx, std::stoi(stmt->getValue().str()));
+			}
+
+			void visitExprStrValue(pst::Access<pst::expr::ExprStrValue> stmt) override {
+				node = makeBox<LiteralStringExpr>(ctx, stmt->getValue());
 			}
 
 			/**
@@ -172,7 +182,7 @@ namespace compiler::helios::code {
 
 				// this is very temporary:
 				SymbolList looked_up_symbol
-					= { querySymIDOfExpr(ctx, atom_expr.value().ref()).value() };
+					= { { querySymIDOfHOUTExpr(ctx, atom_expr.value().ref()).value() } };
 
 				// @note If optional is not empty it means there has been a call.
 				base::Optional<std::vector<Box<Expr>>> call_arguments;
@@ -199,11 +209,7 @@ namespace compiler::helios::code {
 
 						if (!new_symbols) return;  // failed
 
-						looked_up_symbol.insert(
-							looked_up_symbol.end(),
-							new_symbols.value().begin(),
-							new_symbols.value().end()
-						);
+						looked_up_symbol.appendList(new_symbols.value());
 					} else if (auto pst_call_opt = el.unlock(ctx).dynamicCast<pst::expr::Call>()) {
 						auto pst_call = pst_call_opt.value();
 						if (pst_call->getType() != lexer::Token::Round) {
@@ -258,6 +264,7 @@ namespace compiler::helios::code {
 			}
 
 			void visitKeywordLiteral(pst::Access<pst::expr::KeywordLiteral> stmt) override {
+				using enum tsh::IntegralAbstractType::Signedness;
 				switch (stmt->getKeyword()) {
 				// true, false:
 				case pst::Keyword::True:
@@ -277,57 +284,61 @@ namespace compiler::helios::code {
 					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryCharType>({}));
 					break;
 
+				case pst::Keyword::Str:
+					node = makeBox<LiteralTypeExpr>(ctx, ctx.query<tsh::QueryStringType>({}));
+					break;
+
 					// @todo: add meta keyword and type
 
 				case pst::Keyword::i128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Signed })
 					);
 					break;
 				case pst::Keyword::i64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Signed })
 					);
 					break;
 				case pst::Keyword::i32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Signed })
 					);
 					break;
 				case pst::Keyword::i16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Signed })
 					);
 					break;
 				case pst::Keyword::i8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, true })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Signed })
 					);
 					break;
 
 				case pst::Keyword::u128:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 128, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 128, Unsigned })
 					);
 					break;
 				case pst::Keyword::u64:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 64, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 64, Unsigned })
 					);
 					break;
 				case pst::Keyword::u32:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 32, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 32, Unsigned })
 					);
 					break;
 				case pst::Keyword::u16:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 16, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 16, Unsigned })
 					);
 					break;
 				case pst::Keyword::u8:
 					node = makeBox<LiteralTypeExpr>(
-						ctx, ctx.query<tsh::QueryIntegralType>({ 8, false })
+						ctx, ctx.query<tsh::QueryIntegralType>({ 8, Unsigned })
 					);
 					break;
 

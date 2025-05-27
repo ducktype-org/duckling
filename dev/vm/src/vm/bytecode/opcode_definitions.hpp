@@ -162,27 +162,28 @@ DEF_OPCODE(cmpNull_lptr, vm::opargs::StackLocalPtr)
 // ========= VARIANT OPERATIONS ========
 
 
-// Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to it's data.
+// Sets `variant`'s inner type to `inner_type`. It also invalidates pointers to its data.
 DEF_OPCODE(
 	variantSetInner_lvnt_type,
 	vm::opargs::StackLocalVnt /* variant */,
-	vm::opargs::Type /* 			 inner_type */
+	vm::opargs::Type /* 		 inner_type */
 )
 /**
  * @brief Sets `destination` to point at `variant`'s data. Expects `variant` to has `expected_type`
  * set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected.
+ * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
+ * type information in the implementation.
  */
 DEF_OPCODE(
 	variantGetInner_lptr_lvnt,
-	vm::opargs::StackLocalPtr /* 	 destination */,
+	vm::opargs::StackLocalPtr /* destination */,
 	vm::opargs::StackLocalVnt /* variant,
-    vm::opargs::Type 				 expected_type*/
+    vm::opargs::Type 			 expected_type */
 )
 
 /**
  * @brief Sets inner type of variant under `variant_ptr` to `inner_type`. It also invalidates
- * pointers to it's data.
+ * pointers to its data.
  */
 DEF_OPCODE(
 	variantSetInner_lptr_type,
@@ -193,7 +194,8 @@ DEF_OPCODE(
 /**
  * @brief Sets `destination` to point at data of variant under `variant_ptr`. Expects the variant to
  * have `expected_type` set, and if it's not, `destination` becomes nullptr.
- * @note `ext_type` required to know which type is to be expected.
+ * @note `ext_type` required to know which type is to be expected. There is no other way to obtain
+ * type information in the implementation.
  */
 DEF_OPCODE(
 	variantGetInner_lptr_lptr,
@@ -343,6 +345,15 @@ DEF_OPCODE(
 // DEF_OPCODE(pointerTableLoad_lany_lptr, vm::opargs::StackLocalAny, vm::opargs::StackLocalPtr)
 // expects `ext_type_l64` to be the next instruction
 // DEF_OPCODE(pointerTableStore_lptr_lany, vm::opargs::StackLocalPtr, vm::opargs::StackLocalAny)
+
+// ========= TYPE OPERATIONS ========
+
+// Casts a primitive type in-place. This does nothing at runtime, but is needed
+// for type checking.
+DEF_OPCODE(cast_l8_type, vm::opargs::StackLocalI8, vm::opargs::Type)
+DEF_OPCODE(cast_l16_type, vm::opargs::StackLocalI16, vm::opargs::Type)
+DEF_OPCODE(cast_l32_type, vm::opargs::StackLocalI32, vm::opargs::Type)
+DEF_OPCODE(cast_l64_type, vm::opargs::StackLocalI64, vm::opargs::Type)
 
 // ========= EXT DEFINITIONS ========
 

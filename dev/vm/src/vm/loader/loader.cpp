@@ -4,6 +4,7 @@
 #include "parser/parser.hpp"
 
 #include <diagnostic/logger.hpp>
+#include <diagnostic/source_position.hpp>
 
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
@@ -11,20 +12,22 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/element_base.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/bytecode/validator/errors.hpp>
+#include <vm/bytecode/validator/valid_program.hpp>
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/process/vmprocess.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/low_program/opcodes.hpp>
 #include <vm/loader/compiler/compiler.hpp>
 #include <vm/loader/errors.hpp>
+#include <vm/loader/logger.hpp>
 
 #include <expected>
 #include <unordered_map>
@@ -96,99 +99,6 @@ namespace {
 	vm::code::Instruction translateInstruction(const parser::OpCode& opcode) {
 		return instr_to_factory.at(opcode.opcode_name.str())(opcode);
 	}
-
-	void insertType(
-		const vm::code::TypeOfData&             type,
-		vm::code::builders::TypeContextBuilder& types,
-		LoaderLogger&                           log
-	) {
-		using namespace vm;
-		try {
-			types.addType(type);
-		} catch (code::builders::DuplicatedTypeError&) {
-			base::StrID name = VISIT(type, tp, return tp.name);
-			auto base = VISIT(type, value, return static_cast<const vm::code::ElementBase&>(value));
-			log.logMap<DuplicatedTypeError>(
-				base,
-				[&](auto& err) {
-					for (const code::TypeOfData& duplicated_type: types.getTypes()) {
-						base::StrID other_name = VISIT(duplicated_type, value, return value.name);
-						if (name == other_name)
-							log.addNote<DuplicatedTypeNote>(err, duplicated_type, name);
-					}
-				},
-				name
-			);
-		}
-	}
-
-	void insertGlobalData(
-		const vm::code::GlobalData&        global,
-		vm::code::builders::GlobalDataMap& globals_map,
-		LoaderLogger&                      log
-	) {
-		if (globals_map.contains(global.name) && globals_map.at(global.name)->type != global.type)
-			log.log<DuplicatedGlobalDataError>(global.name, global.name.str);
-		globals_map.insert(global, global.name);
-	}
-}
-
-std::expected<Program, LoaderLogger> Program::from(const code::CodeCollection& code_collection) {
-	Program      program;
-	LoaderLogger log;
-
-	program.insertTypes(code_collection.types, log);
-	program.insertGlobals(code_collection.global_data, log);
-	program.insertFunctions(code_collection.functions, log);
-	if (!log.good()) return std::unexpected(std::move(log));
-	return program;
-}
-
-void Program::insertCode(
-	const std::vector<code::CodeCollection>& code_collections, LoaderLogger& logger
-) {
-	for (const auto& code_collection: code_collections) {
-		insertTypes(code_collection.types, logger);
-		insertFunctions(code_collection.functions, logger);
-		insertGlobals(code_collection.global_data, logger);
-	}
-}
-
-void Program::insertTypes(const std::vector<code::TypeOfData>& new_types, LoaderLogger& logger) {
-	for (const auto& type: new_types) insertType(type, type_context_builder, logger);
-}
-
-void Program::insertFunctions(
-	const std::vector<code::Function>& new_functions, LoaderLogger& logger
-) {
-	for (const auto& func: new_functions) {
-		if (const auto func_name = func.name.str; functions.contains(func_name)) {
-			logger.logMap<DuplicatedFunctionError>(func.name, [&](auto& err) {
-				const auto dup_func = functions.at(func_name);
-				logger.addNote<DuplicatedFunctionNote>(err, dup_func->name);
-			});
-		} else {
-			functions.insert(func, func_name);
-		}
-	}
-}
-
-void Program::insertGlobals(const std::vector<code::GlobalData>& new_globals, LoaderLogger& logger) {
-	for (const auto& global: new_globals) insertGlobalData(global, globals_map, logger);
-}
-
-Box<vm::TypeMetadata> Program::produceTypeMetadata() const {
-	return std::move(type_context_builder.build()).moveMetadata();
-}
-
-const vm::StableTypeIdNameMap<vm::code::Function>& Program::funcMap() const { return functions; }
-
-const vm::StableTypeIdNameMap<vm::code::TypeOfData>& Program::typeMap() const {
-	return type_context_builder.getTypes();
-}
-
-const vm::code::builders::GlobalDataMap& vm::loader::Program::globalMap() const {
-	return globals_map;
 }
 
 std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
@@ -197,77 +107,80 @@ std::expected<vm::code::CodeCollection, LoaderLogger> Loader::loadFiles(
 	match_optional(parser::parse(files)) {
 		opt_err(err) return std::unexpected(std::move(err));
 		opt_some(parsed_files) {
-			auto type_context_builder = vm::code::getBuiltinTypes();
-			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
-
-			code::builders::GlobalDataMap globals;
-			LoaderLogger                  log;
-			for (const auto& type: program.typeMap()) type_context_builder.addType(type);
-			for (const auto& g: program.globalMap()) insertGlobalData(g, globals, log);
+			code::CodeCollection new_code;
 
 			for (const auto& parsed_file: parsed_files) {
 				for (const auto& global: parsed_file.global_data) {
-					auto code_global
-						= code::GlobalData{ .name = global->name, .type = global->type };
-					insertGlobalData(code_global, globals, log);
+					code::GlobalData code_global;
+					code_global.name         = global->name;
+					code_global.type         = global->type;
+					code_global.bytecode_pos = global->position;
+					new_code.global_data.emplace_back(code_global);
 				}
-				for (const auto& tp: parsed_file.types)
-					insertType(tp->datatype, type_context_builder, log);
-			}
+				for (const auto& tp: parsed_file.types) new_code.types.push_back(tp->datatype);
 
-			try {
-				auto                        type_context = type_context_builder.build();
-				std::vector<code::Function> functions;
+				for (const auto& func: parsed_file.functions) {
+					code::Identifier func_name;
+					func_name.str          = func->name.value;
+					func_name.bytecode_pos = func->name.position;
+					code::Function function;
 
-				for (const auto& parsed_file: parsed_files) {
-					for (const auto& func: parsed_file.functions) {
-						code::Identifier func_name;
-						func_name.str          = func->name.value;
-						func_name.bytecode_pos = func->name.position;
-						code::builders::FunctionBuilder func_builder(
-							func_name, globals, type_context
-						);
+					function.name         = func_name;
+					function.bytecode_pos = func->position;
 
-						for (const auto& instr: func->code->opcodes)
-							func_builder.addInstruction(translateInstruction(*instr));
+					for (const auto& instr: func->code->opcodes)
+						function.body.push_back(translateInstruction(*instr));
 
-						functions.emplace_back(func_builder.build());
-					}
-				}
-				if (log.good())
-					return code::CodeCollection{
-						.functions   = functions,
-						.types       = type_context.getTypes() | std::ranges::to<std::vector>(),
-						.global_data = globals | std::ranges::to<std::vector>(),
-					};
-			} catch (vm::code::builders::StackStructureMismatchError& e) {
-				log.logMap<SomeBuilderError>(
-					e.label,
-					[&](Box<SomeBuilderError>& err) {
-						for (const auto& instruction: e.jumps)
-							log.addNote<SomeBuilderNote>(err, instruction, e.NOTE_MSG);
-					},
-					e.what()
-				);
-			} catch (code::builders::BuilderError& e) {
-				match_optional(e.maybeElement()) {
-					opt_some(elem) { log.log<SomeBuilderError>(*elem, e.what()); }
-					opt_none { log.logSimple(e.what()); }
+					new_code.functions.push_back(std::move(function));
 				}
 			}
-			return std::unexpected(std::move(log));
+
+			return new_code;
 		}
 	}
+
 	CORE_UNREACHABLE();
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
-	const std::vector<code::CodeCollection>& code_collection
+	const std::vector<code::CodeCollection>& code_collections
 ) {
-	LoaderLogger logger;
-	program.insertCode(code_collection, logger);
-	if (logger.good()) return compiler::compile(program);
-	return std::unexpected(std::move(logger));
+	LoaderLogger log;
+	try {
+		for (const auto& code: code_collections) program = program.newInsertCode(code);
+		return compiler::compile(program);
+	} catch (code::StackStructureMismatchError& e) {
+		log.logMap<SomeValidationError>(
+			e.label,
+			[&](Box<SomeValidationError>& err) {
+				for (const auto& instruction: e.jumps)
+					log.addNote<SomeValidationNote>(err, instruction, e.NOTE_MSG);
+			},
+			e.what()
+		);
+	} catch (code::DuplicatedFunctionError& e) {
+		log.logMap<DuplicatedFunctionError>(e.NEW_ELEMENT, [&](auto& err) {
+			log.addNote<DuplicatedFunctionNote>(err, e.PREVIOUS_ELEMENT);
+		});
+	} catch (code::DuplicatedGlobalDataError& e) {
+		log.logMap<DuplicatedGlobalDataError>(
+			e.NEW_ELEMENT,
+			[&](auto& err) { log.addNote<DuplicatedGlobalDataNote>(err, e.PREVIOUS_ELEMENT); },
+			e.NEW_ELEMENT.name.str
+		);
+	} catch (code::DuplicatedTypeError& e) {
+		log.logMap<DuplicatedTypeError>(
+			**e.maybeElement(),
+			[&](auto& err) { log.addNote<DuplicatedTypeNote>(err, e.PREVIOUS_ELEMENT); },
+			code::typeName(e.NEW_ELEMENT)
+		);
+	} catch (code::ValidationError& e) {
+		match_optional(e.maybeElement()) {
+			opt_some(elem) log.log<SomeValidationError>(*elem, e.what());
+			opt_none log.logSimple(e.what());
+		}
+	}
+	return std::unexpected(std::move(log));
 }
 
 std::expected<vm::low::LowVMProgram, LoaderLogger> Loader::getProgram(
