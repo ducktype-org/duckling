@@ -41,7 +41,9 @@ jobs:
 
     timeout-minutes: 20  # (Per matrix run)
 
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: SelfHostedRunners
+      labels: ubuntu-24.04
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
@@ -203,7 +205,9 @@ jobs:
   coverage:
     needs: [build]
 
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: SelfHostedRunners
+      labels: ubuntu-24.04
 
     timeout-minutes: 2
 

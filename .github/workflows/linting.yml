@@ -13,7 +13,9 @@ jobs:
   cpp-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: SelfHostedRunners
+      labels: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +63,9 @@ jobs:
   duck-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    runs-on:
+      group: SelfHostedRunners
+      labels: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
