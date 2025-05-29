@@ -86,7 +86,8 @@ message HlMessage {
     uint32 tag = 1;
     // The priority of display.
     uint32 priority = 2;
-    NoHlComponent message = 3;
+    InfoType type = 3;
+    NoHlComponent message = 4;
 }
 
 message CodeSection {
@@ -105,7 +106,8 @@ message Diagnostic {
 // A coherent piece of information related to a diagnostic.
 message Info {
     Metadata metadata = 1;
-    repeated Section sections = 2;
+    NoHlComponent header = 2;
+    repeated Section sections = 3;
 }
 
 enum InfoType {
