@@ -2,6 +2,11 @@ syntax = "proto3";
 
 package view;
 
+enum VisibilityStatus {
+    Primary = 0;
+    Alternative = 1;
+}
+
 // ---------- COMPONENTS WITHOUT HIGHLIGHT ---------- //
 
 message NoHlTextComponent {
@@ -20,7 +25,8 @@ message NoHlConcatComponent {
 
 message NoHlInteractiveComponent {
     uint32 component_id = 1;
-    NoHlComponent primary_component = 2;
+    VisibilityStatus status = 2;
+    NoHlComponent primary_component = 3;
 }
 
 message NoHlComponent {
@@ -53,7 +59,8 @@ message HlConcatComponent {
 
 message HlInteractiveComponent {
     uint32 component_id = 1;
-    HlComponent primary_component = 2;
+    VisibilityStatus status = 2;
+    HlComponent primary_component = 3;
 }
 
 message HlComponent {
