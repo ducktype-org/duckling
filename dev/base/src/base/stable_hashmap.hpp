@@ -113,30 +113,22 @@ namespace base {
 		/**
 		 * @brief Data iterator -- begin.
 		 */
-		auto begin() {
-			return data.begin();
-		}
+		auto begin() { return data.begin(); }
 
 		/**
 		 * @brief Data iterator -- end.
 		 */
-		auto end() {
-			return data.end();
-		}
+		auto end() { return data.end(); }
 
 		/**
 		 * @brief Const data iterator -- begin.
 		 */
-		auto begin() const {
-			return data.begin();
-		}
+		auto begin() const { return data.begin(); }
 
 		/**
 		 * @brief Const data iterator -- end.
 		 */
-		auto end() const {
-			return data.end();
-		}
+		auto end() const { return data.end(); }
 
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;

@@ -59,9 +59,9 @@ private:
 			// Restore a collection
 			artifacts::ArtifactCollection collection(root);
 
-			ASSERT_TRUE(collection.blobArtifactAt(b0).getData<decltype(VALUE)>() == VALUE);
+			ASSERT_TRUE(collection.blobArtifactAtOrNew(b0).getData<decltype(VALUE)>() == VALUE);
 
-			ASSERT_TRUE(collection.blobArtifactAt(b1).getData<SimpleStruct>() == simple_struct);
+			ASSERT_TRUE(collection.blobArtifactAtOrNew(b1).getData<SimpleStruct>() == simple_struct);
 
 			auto          file0 = collection.fileArtifactAt(f0);
 			std::ifstream file(file0.FILE);

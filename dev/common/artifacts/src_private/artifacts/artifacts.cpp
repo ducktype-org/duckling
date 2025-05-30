@@ -1,8 +1,8 @@
 #include <artifacts/artifacts.hpp>
 
-#include "base/optional.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
+#include <base/optional.hpp>
 
 #include <filesystem>
 #include <fstream>
