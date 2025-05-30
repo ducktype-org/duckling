@@ -44,10 +44,15 @@ class ViewServiceStub(object):
                 request_serializer=view__pb2.ClickRequest.SerializeToString,
                 response_deserializer=view__pb2.ClickResponse.FromString,
                 _registered_method=True)
-        self.CloseSideNote = channel.unary_unary(
-                '/view.ViewService/CloseSideNote',
-                request_serializer=view__pb2.CloseSideNoteRequest.SerializeToString,
-                response_deserializer=view__pb2.CloseSideNoteResponse.FromString,
+        self.CloseSideInfo = channel.unary_unary(
+                '/view.ViewService/CloseSideInfo',
+                request_serializer=view__pb2.CloseSideInfoRequest.SerializeToString,
+                response_deserializer=view__pb2.CloseSideInfoResponse.FromString,
+                _registered_method=True)
+        self.GetEdge = channel.unary_unary(
+                '/view.ViewService/GetEdge',
+                request_serializer=view__pb2.EdgeRequest.SerializeToString,
+                response_deserializer=view__pb2.EdgeResponse.FromString,
                 _registered_method=True)
 
 
@@ -66,7 +71,13 @@ class ViewServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def CloseSideNote(self, request, context):
+    def CloseSideInfo(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEdge(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -85,10 +96,15 @@ def add_ViewServiceServicer_to_server(servicer, server):
                     request_deserializer=view__pb2.ClickRequest.FromString,
                     response_serializer=view__pb2.ClickResponse.SerializeToString,
             ),
-            'CloseSideNote': grpc.unary_unary_rpc_method_handler(
-                    servicer.CloseSideNote,
-                    request_deserializer=view__pb2.CloseSideNoteRequest.FromString,
-                    response_serializer=view__pb2.CloseSideNoteResponse.SerializeToString,
+            'CloseSideInfo': grpc.unary_unary_rpc_method_handler(
+                    servicer.CloseSideInfo,
+                    request_deserializer=view__pb2.CloseSideInfoRequest.FromString,
+                    response_serializer=view__pb2.CloseSideInfoResponse.SerializeToString,
+            ),
+            'GetEdge': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEdge,
+                    request_deserializer=view__pb2.EdgeRequest.FromString,
+                    response_serializer=view__pb2.EdgeResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -156,7 +172,7 @@ class ViewService(object):
             _registered_method=True)
 
     @staticmethod
-    def CloseSideNote(request,
+    def CloseSideInfo(request,
             target,
             options=(),
             channel_credentials=None,
@@ -169,9 +185,36 @@ class ViewService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/view.ViewService/CloseSideNote',
-            view__pb2.CloseSideNoteRequest.SerializeToString,
-            view__pb2.CloseSideNoteResponse.FromString,
+            '/view.ViewService/CloseSideInfo',
+            view__pb2.CloseSideInfoRequest.SerializeToString,
+            view__pb2.CloseSideInfoResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEdge(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/view.ViewService/GetEdge',
+            view__pb2.EdgeRequest.SerializeToString,
+            view__pb2.EdgeResponse.FromString,
             options,
             channel_credentials,
             insecure,

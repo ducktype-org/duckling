@@ -21,9 +21,26 @@ def rjust_filter(value, width):
 def get_hl_info_map(response):
     hl_info_map = {}
     for diag in response.diagnostics:
-        for info in diag.hl_messages:
-            hl_info_map.setdefault(info.tag, []).append(info.message)
+        for info in diag.infos:
+            for section in info.sections:
+                if section.HasField('code_section'):
+                    for hl_message in section.code_section.hl_messages:
+                        # Convert NoHlComponent message to string representation
+                        message_str = ""
+                        if hl_message.message.HasField('text_component'):
+                            message_str = hl_message.message.text_component.content
+                        elif hl_message.message.HasField('code_component'):
+                            message_str = hl_message.message.code_component.content
+                        # Add the string message to the map
+                        hl_info_map.setdefault(str(hl_message.tag), []).append(message_str)
     return hl_info_map
+
+
+def extract_side_notes(side_paths):
+    side_notes = []
+    for path in side_paths:
+        side_notes.extend(path.infos)
+    return side_notes
 
 
 @app.route('/')
@@ -33,7 +50,7 @@ def index():
         'base.html',
         hl_info_map=get_hl_info_map(view_resp),
         diagnostics=view_resp.diagnostics,
-        side_notes=view_resp.side_notes
+        side_notes=extract_side_notes(view_resp.side_paths)
     )
 
 
@@ -42,9 +59,9 @@ def handle_click():
     component_id = int(request.args.get('component_id', '0'))
     click_type = request.args.get('click_type', 'CLICK')
     try:
-        click_enum = getattr(view_pb2, click_type)
+        click_enum = getattr(view_pb2.ClickType, click_type)
     except AttributeError:
-        click_enum = view_pb2.CLICK
+        click_enum = view_pb2.ClickType.CLICK
 
     req = view_pb2.ClickRequest(component_id=component_id, click_type=click_enum)
     resp = view_stub.Click(req)
@@ -53,9 +70,18 @@ def handle_click():
 
 @app.route('/close')
 def handle_close():
-    side_note_id = int(request.args.get('side_note_id', '0'))
-    req = view_pb2.CloseSideNoteRequest(side_note_id=side_note_id)
-    resp = view_stub.CloseSideNote(req)
+    side_info_id = int(request.args.get('side_note_id', '0'))
+    req = view_pb2.CloseSideInfoRequest(side_info_id=side_info_id)
+    resp = view_stub.CloseSideInfo(req)
+    return resp.status
+
+
+@app.route('/edge')
+def handle_edge():
+    side_info_id = int(request.args.get('side_info_id', '0'))
+    edge_id = int(request.args.get('edge_id', '0'))
+    req = view_pb2.EdgeRequest(side_info_id=side_info_id, edge_id=edge_id)
+    resp = view_stub.GetEdge(req)
     return resp.status
 
 

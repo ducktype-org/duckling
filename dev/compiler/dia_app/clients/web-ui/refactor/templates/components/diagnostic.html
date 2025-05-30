@@ -1,27 +1,34 @@
-{% from "macros/rendering.html" import render_component, render_nohl_component, render_code_section %}
+{% from "macros/rendering.html" import render_component, render_nohl_component, render_code_section -%}
 
 <div class="diagnostic">
-    {% if diag.metadata.error_code or diag.metadata.file_info %}
-        <div class="metadata">
-            {% if diag.metadata.error_code %}
-                Error: {{ diag.metadata.error_code }}
-                {% if diag.metadata.file_info %} | {% endif %}
-            {% endif %}
-            {% if diag.metadata.file_info %}
-                File: {{ diag.metadata.file_info }}
-            {% endif %}
+    {%- for info in diag.infos -%}
+        <div class="info">
+            {%- if info.metadata -%}
+                <div class="metadata">
+                    {%- if info.metadata.code -%}
+                        Error: {{ info.metadata.code }}
+                    {%- endif -%}
+                    {%- if info.metadata.type -%}
+                        Type: {{ info.metadata.type }}
+                    {%- endif -%}
+                </div>
+            {%- endif -%}
+            
+            {%- if info.header -%}
+                <div class="header">
+                    {{- render_nohl_component(info.header) -}}
+                </div>
+            {%- endif -%}
+            
+            {%- for section in info.sections -%}
+                <div class="section">
+                    {%- if section.HasField('code_section') -%}
+                        {{- render_code_section(section.code_section) -}}
+                    {%- elif section.HasField('text_section') -%}
+                        {{- render_nohl_component(section.text_section) -}}
+                    {%- endif -%}
+                </div>
+            {%- endfor -%}
         </div>
-    {% endif %}
-    
-    {% for sec in diag.sections %}
-        <div class="section">
-            {% if sec.HasField('text_section') %}
-                {{ render_component(sec.text_section.root) }}
-            {% elif sec.HasField('no_hl_text_section') %}
-                {{ render_nohl_component(sec.no_hl_text_section.root) }}
-            {% elif sec.HasField('code_section') %}
-                {{ render_code_section(sec.code_section) }}
-            {% endif %}
-        </div>
-    {% endfor %}
+    {%- endfor -%}
 </div> 

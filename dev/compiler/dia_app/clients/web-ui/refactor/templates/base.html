@@ -9,13 +9,31 @@
     #main { flex: 3; padding: 20px; background: #f7f7f7; overflow-y: auto; }
     #side { flex: 1; padding: 20px; background: #eef; border-left: 1px solid #ccc; overflow-y: auto; }
     .section { margin-bottom: 10px; }
-    .code { background: #f0f0f0; padding: 0 5px; border-radius: 3px; font-family: monospace; white-space: pre; display: inline-block; }
+    .code { 
+      background: #f0f0f0; 
+      padding: 0 5px; 
+      border-radius: 3px; 
+      font-family: monospace; 
+      white-space: pre; 
+      display: inline; 
+      line-height: inherit;
+    }
     .code-line { 
       margin: 0;
       padding: 0;
       display: flex;
-      align-items: flex-start;
-      line-height: 1;
+      align-items: center;
+      line-height: 1.2;
+      min-height: 1.2em;
+    }
+    .code-line .clickable {
+      display: inline;
+      flex: 1;
+      line-height: inherit;
+      height: 100%;
+    }
+    .code-line .clickable .code {
+      display: inline;
     }
     .lineno { 
       color: #999;
@@ -23,28 +41,40 @@
       min-width: 3em;
       text-align: right;
       position: relative;
+      user-select: none;
+      line-height: inherit;
     }
     .code-section {
       position: relative;
       display: inline-block;
       background: #f0f0f0;
       border-radius: 3px;
-      padding: 2px;
+      padding: 2px 0;
       font-family: monospace;
       white-space: pre;
-      line-height: 1;
     }
     .code-section::before {
       content: '';
       position: absolute;
-      left: calc(3em + 15px);
-      top: 2px;
-      bottom: 2px;
+      left: calc(3em + 10px);
+      top: 0;
+      bottom: 0;
       width: 1px;
       background-color: #ccc;
     }
-    .clickable { cursor: pointer; }
-    .clickable:hover { text-decoration: underline; }
+    .code-metadata {
+      padding: 0 4px;
+      color: #666;
+      font-size: 0.9em;
+      margin-bottom: 2px;
+    }
+    .clickable { 
+      cursor: pointer;
+      line-height: inherit;
+    }
+    .clickable:hover { 
+      text-decoration: underline;
+    }
     .highlight { background-color: #fff176; }
     .hl-message { background-color: #ffcdd2; padding: 4px 6px; border-radius: 3px; margin: 2px 0; font-size: 0.9em; }
     .close-note { display: inline-block; margin-top: 5px; color: inherit; }

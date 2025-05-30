@@ -1,67 +1,41 @@
-{% macro render_component(comp, inherited_tags=[]) %}
-    {% if comp.WhichOneof('component') == 'text_component' %}
-        {% set txt = comp.text_component.content %}
-        {% set own_tags = comp.text_component.hl_tags | list %}
-        {% set tags = inherited_tags + own_tags %}
-        {% if tags %}
-            <span data-groups="{{ tags | join(' ') }}">{{ txt }}</span>
-        {% else %}
-            <span>{{ txt }}</span>
-        {% endif %}
-    {% elif comp.WhichOneof('component') == 'code_component' %}
-        {% set code = comp.code_component.content %}
-        {% set own_tags = comp.code_component.hl_tags | list %}
-        {% set tags = inherited_tags + own_tags %}
-        {% if tags %}
+{% macro render_component(comp) -%}
+    {%- if comp.WhichOneof('component') == 'code_component' -%}
+        {%- set code = comp.code_component.content -%}
+        {%- set tags = comp.code_component.hl_tags | list -%}
+        {%- if tags -%}
             <span class="code" data-groups="{{ tags | join(' ') }}">{{ code }}</span>
-        {% else %}
+        {%- else -%}
             <span class="code">{{ code }}</span>
-        {% endif %}
-    {% elif comp.WhichOneof('component') == 'concat_component' %}
-        {% set own_tags = comp.concat_component.hl_tags | list %}
-        {% set tags = inherited_tags + own_tags %}
-        {% for c in comp.concat_component.components %}
-            {{ render_component(c, tags) }}
-        {% endfor %}
-    {% elif comp.WhichOneof('component') == 'interactive_component' %}
-        {% set ic = comp.interactive_component %}
-        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">
-            {{ render_component(ic.primary_component, inherited_tags) }}
-        </span>
-    {% elif comp.WhichOneof('component') == 'side_entry_component' %}
-        {% set se = comp.side_entry_component %}
-        {% if inherited_tags %}
-            <span class="clickable" onclick="handleClick(event, {{ se.side_entry_id }})" data-groups="{{ inherited_tags | join(' ') }}">[note]</span>
-        {% else %}
-            <span class="clickable" onclick="handleClick(event, {{ se.side_entry_id }})">[note]</span>
-        {% endif %}
-    {% else %}
+        {%- endif -%}
+    {%- elif comp.WhichOneof('component') == 'concat_component' -%}
+        {%- for c in comp.concat_component.components -%}
+            {{- render_component(c) -}}
+        {%- endfor -%}
+    {%- elif comp.WhichOneof('component') == 'interactive_component' -%}
+        {%- set ic = comp.interactive_component -%}
+        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">{{- render_component(ic.primary_component) -}}</span>
+    {%- else -%}
         <span>Unknown Component</span>
-    {% endif %}
-{% endmacro %}
+    {%- endif -%}
+{%- endmacro %}
 
-{% macro render_nohl_component(comp) %}
-    {% if comp.WhichOneof('component') == 'text_component' %}
+{% macro render_nohl_component(comp) -%}
+    {%- if comp.WhichOneof('component') == 'text_component' -%}
         <span>{{ comp.text_component.content }}</span>
-    {% elif comp.WhichOneof('component') == 'code_component' %}
+    {%- elif comp.WhichOneof('component') == 'code_component' -%}
         <span class="code">{{ comp.code_component.content }}</span>
-    {% elif comp.WhichOneof('component') == 'concat_component' %}
-        {% for c in comp.concat_component.components %}
-            {{ render_nohl_component(c) }}
-        {% endfor %}
-    {% elif comp.WhichOneof('component') == 'interactive_component' %}
-        {% set ic = comp.interactive_component %}
-        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">
-            {{ render_nohl_component(ic.primary_component) }}
-        </span>
-    {% elif comp.WhichOneof('component') == 'side_entry_component' %}
-        {% set se = comp.side_entry_component %}
-        <span class="clickable" onclick="handleClick(event, {{ se.side_entry_id }})">[note]</span>
-    {% else %}
+    {%- elif comp.WhichOneof('component') == 'concat_component' -%}
+        {%- for c in comp.concat_component.components -%}
+            {{- render_nohl_component(c) -}}
+        {%- endfor -%}
+    {%- elif comp.WhichOneof('component') == 'interactive_component' -%}
+        {%- set ic = comp.interactive_component -%}
+        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">{{- render_nohl_component(ic.primary_component) -}}</span>
+    {%- else -%}
         <span>Unknown NoHl</span>
-    {% endif %}
-{% endmacro %}
+    {%- endif -%}
+{%- endmacro %}
 
-{% macro render_code_section(code_sec) %}
-    <div class="code-section">{% for line in code_sec.lines %}<div class="code-line"><span class="lineno">{{ (line.line_number or '') | string | rjust(4) }}</span>{{ render_component(line.content.root) }}</div>{% endfor %}</div>
-{% endmacro %} 
+{% macro render_code_section(code_sec) -%}
+    <div class="code-section">{%- if code_sec.metadata -%}<div class="code-metadata">{%- if code_sec.metadata.filename -%}{{ code_sec.metadata.filename }}{%- endif -%}{%- if code_sec.metadata.line -%}:{{ code_sec.metadata.line }}{%- endif -%}{%- if code_sec.metadata.column -%}:{{ code_sec.metadata.column }}{%- endif -%}</div>{%- endif -%}{%- for line in code_sec.lines -%}<div class="code-line"><span class="lineno">{{ (line.line_number or '') | string | rjust(4) }}</span>{{- render_component(line.content) -}}</div>{%- endfor -%}</div>
+{%- endmacro %} 
