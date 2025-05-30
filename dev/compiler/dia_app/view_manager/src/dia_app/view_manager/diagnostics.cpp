@@ -2,6 +2,33 @@
 
 namespace dia_app {
 namespace view_manager {
+    // Utils
+
+    template<class T>
+    std::vector<std::unique_ptr<T>> filterEmptyLines(component_get_view_data_t<T> component_view_data) {
+        auto &[suffix, mid] = component_view_data;
+        std::vector<std::unique_ptr<T>> components;
+        if (suffix.has_value()) {
+            components.emplace_back(std::move(suffix.value()));
+        }
+        std::vector<std::unique_ptr<T>> mid_components;
+        for (auto &[_, component] : mid) {
+            if (component.has_value()) {
+                mid_components.emplace_back(std::move(component.value()));
+            }
+        }
+        components.insert(components.end(), std::make_move_iterator(mid_components.begin()), std::make_move_iterator(mid_components.end()));
+        return components;
+    }
+
+    std::unique_ptr<::view::NoHlComponent> concatNoHlLines(std::vector<std::unique_ptr<::view::NoHlComponent>> lines) {
+        auto result = std::make_unique<::view::NoHlComponent>();
+        for (auto &line : lines) {
+            result->mutable_concat_component()->mutable_components()->AddAllocated(line.release());
+        }
+        return result;
+    }
+
     // CodeMetadata
 
     CodeMetadata::CodeMetadata(std::string filename, line_no_t line, column_no_t column) :
@@ -21,29 +48,23 @@ namespace view_manager {
 
     // HlMessage
 
-    HlMessage::HlMessage(hl_id_t tag, priority_t priority, std::shared_ptr<Component> content) : tag(tag), priority(priority), content(std::move(content)) {}
-    
-    template<class T>
-    std::vector<std::unique_ptr<T>> filterEmptyLines(component_get_view_data_t<T> component_view_data) {
-        auto &[suffix, mid] = component_view_data;
-        std::vector<std::unique_ptr<T>> components;
-        if (suffix.has_value()) {
-            components.emplace_back(std::move(suffix.value()));
+    HlMessage::HlMessage(hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content) : tag(tag), priority(priority), type(type), content(std::move(content)) {}
+
+    ::view::InfoType toProtocol(InfoType type) {
+        switch (type) {
+            case InfoType::Error: return ::view::InfoType::Error;
+            case InfoType::Warning: return ::view::InfoType::Warning;
+            case InfoType::Note: return ::view::InfoType::Note;
+            case InfoType::Hint: return ::view::InfoType::Hint;
+            case InfoType::Docs: return ::view::InfoType::Docs;
         }
-        std::vector<std::unique_ptr<T>> mid_components;
-        for (auto &[_, component] : mid) {
-            if (component.has_value()) {
-                mid_components.emplace_back(std::move(component.value()));
-            }
-        }
-        components.insert(components.end(), std::make_move_iterator(mid_components.begin()), std::make_move_iterator(mid_components.end()));
-        return components;
     }
 
     std::unique_ptr<::view::HlMessage> HlMessage::getView() const {
         auto result = std::make_unique<::view::HlMessage>();
         result->set_tag(this->tag);
         result->set_priority(this->priority);
+        result->set_type(toProtocol(this->type));
         auto components = filterEmptyLines(this->content->getNoHlView());
         for (auto &elm : components) {
             result->mutable_message()
@@ -70,13 +91,7 @@ namespace view_manager {
     std::unique_ptr<::view::Section> TextSection::getView() const {
         debug("TextSection::getView() begin");
         auto result = std::make_unique<::view::Section>();
-        auto components = filterEmptyLines(this->root->getNoHlView());
-        auto text_section = std::make_unique<::view::NoHlComponent>();
-        for (auto &elm : components) {
-            text_section->mutable_concat_component()
-                        ->mutable_components()
-                        ->AddAllocated(elm.release());
-        }
+        auto text_section = concatNoHlLines(filterEmptyLines(this->root->getNoHlView()));
         result->set_allocated_text_section(text_section.release());
         debug("TextSection::getView() end");
         return result;
@@ -105,13 +120,12 @@ namespace view_manager {
                 creation_context.hl_name_to_id->emplace(name, id);
                 hl_messages.emplace_back(id,
                     pointer_message.priority,
+                    from_string(pointer_message.type),
                     pointer_message.message->toComponent(creation_context));
             }
         }
         return std::make_unique<CodeSection>(*code_metadata.release(), std::move(root), std::move(hl_messages));
     }
-
-    
 
     std::unique_ptr<::view::Section> CodeSection::getView() const {
         auto result = std::make_unique<::view::Section>();
@@ -121,7 +135,7 @@ namespace view_manager {
         }
         {
             debug("CodeSection::getView() begin");
-            auto [suffix, mid] = this->root->getHlView({});
+            auto [suffix, mid] = this->root->getHlView();
             debug(ssize(mid));
             std::vector<std::unique_ptr<::view::CodeLine>> lines;
             if (suffix.has_value()) {
@@ -190,15 +204,14 @@ namespace view_manager {
     }
 
     // Info
-    Info::Info(Metadata metadata, std::vector<std::unique_ptr<Section>> sections)
-    : metadata(metadata), sections(std::move(sections)) {}
+    Info::Info(Metadata metadata, std::shared_ptr<Component> header, std::vector<std::unique_ptr<Section>> sections)
+    : metadata(metadata), header(std::move(header)), sections(std::move(sections)) {}
 
     Info Info::createFromInfo(const message_template::Info &info, CreationContext &creation_context) {
         auto metadata = Metadata::createFromInfo(info);
         std::vector<std::unique_ptr<Section>> sections;
-        if (info.header_message) {
-            sections.emplace_back(std::make_unique<TextSection>(info.header_message->toComponent(creation_context)));
-        }
+        assert(info.header_message);
+        auto header = info.header_message->toComponent(creation_context);
         auto code_section = CodeSection::createFromInfo(info, creation_context);
         if (code_section) {
             sections.emplace_back(std::move(code_section));
@@ -207,7 +220,7 @@ namespace view_manager {
             sections.emplace_back(std::make_unique<TextSection>(info.description->toComponent(creation_context)));
         }
         debug("Number of sections: ", ssize(sections));
-        return Info(metadata, std::move(sections));
+        return Info(metadata, std::move(header), std::move(sections));
     }
 
     std::unique_ptr<::view::Info> Info::getView() const {
@@ -215,6 +228,10 @@ namespace view_manager {
         {
             auto metadata = this->metadata.getView();
             info->set_allocated_metadata(metadata.release());
+        }
+        {
+            auto header = concatNoHlLines(filterEmptyLines(this->header->getNoHlView()));
+            info->set_allocated_header(header.release());
         }
         {
             std::vector<std::unique_ptr<::view::Section>> section_view(ssize(this->sections));
@@ -233,6 +250,7 @@ namespace view_manager {
                 }
             }
         }
+        return info;
     }
 
     // Diagnostic

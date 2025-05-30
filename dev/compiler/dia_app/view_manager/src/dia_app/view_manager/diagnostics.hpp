@@ -21,10 +21,11 @@ namespace view_manager {
         private:
         hl_id_t tag;
         priority_t priority;
+        InfoType type;
         std::shared_ptr<Component> content;
 
         public:
-        HlMessage(hl_id_t tag, priority_t priority, std::shared_ptr<Component> content);
+        HlMessage(hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content);
 
         std::unique_ptr<::view::HlMessage> getView() const;
     };
@@ -80,10 +81,11 @@ namespace view_manager {
     class Info {
         private:
         Metadata metadata;
+        std::shared_ptr<Component> header;
         std::vector<std::unique_ptr<Section>> sections;
 
         public:
-        Info(Metadata metadata, std::vector<std::unique_ptr<Section>> sections);
+        Info(Metadata metadata, std::shared_ptr<Component> header, std::vector<std::unique_ptr<Section>> sections);
 
         static Info createFromInfo(const message_template::Info &info, CreationContext &creation_context);
 

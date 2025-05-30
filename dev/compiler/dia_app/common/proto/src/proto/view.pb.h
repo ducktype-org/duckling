@@ -145,6 +145,39 @@ namespace protobuf {
 }  // namespace google
 
 namespace view {
+enum VisibilityStatus : int {
+  Primary = 0,
+  Alternative = 1,
+  VisibilityStatus_INT_MIN_SENTINEL_DO_NOT_USE_ =
+      std::numeric_limits<::int32_t>::min(),
+  VisibilityStatus_INT_MAX_SENTINEL_DO_NOT_USE_ =
+      std::numeric_limits<::int32_t>::max(),
+};
+
+bool VisibilityStatus_IsValid(int value);
+extern const uint32_t VisibilityStatus_internal_data_[];
+constexpr VisibilityStatus VisibilityStatus_MIN = static_cast<VisibilityStatus>(0);
+constexpr VisibilityStatus VisibilityStatus_MAX = static_cast<VisibilityStatus>(1);
+constexpr int VisibilityStatus_ARRAYSIZE = 1 + 1;
+const ::google::protobuf::EnumDescriptor*
+VisibilityStatus_descriptor();
+template <typename T>
+const std::string& VisibilityStatus_Name(T value) {
+  static_assert(std::is_same<T, VisibilityStatus>::value ||
+                    std::is_integral<T>::value,
+                "Incorrect type passed to VisibilityStatus_Name().");
+  return VisibilityStatus_Name(static_cast<VisibilityStatus>(value));
+}
+template <>
+inline const std::string& VisibilityStatus_Name(VisibilityStatus value) {
+  return ::google::protobuf::internal::NameOfDenseEnum<VisibilityStatus_descriptor,
+                                                 0, 1>(
+      static_cast<int>(value));
+}
+inline bool VisibilityStatus_Parse(absl::string_view name, VisibilityStatus* value) {
+  return ::google::protobuf::internal::ParseNamedEnum<VisibilityStatus>(
+      VisibilityStatus_descriptor(), name, value);
+}
 enum InfoType : int {
   Error = 0,
   Warning = 1,
@@ -3491,10 +3524,11 @@ class NoHlInteractiveComponent final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kPrimaryComponentFieldNumber = 2,
+    kPrimaryComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
+    kStatusFieldNumber = 2,
   };
-  // .view.NoHlComponent primary_component = 2;
+  // .view.NoHlComponent primary_component = 3;
   bool has_primary_component() const;
   void clear_primary_component() ;
   const ::view::NoHlComponent& primary_component() const;
@@ -3519,12 +3553,22 @@ class NoHlInteractiveComponent final
   void _internal_set_component_id(::uint32_t value);
 
   public:
+  // .view.VisibilityStatus status = 2;
+  void clear_status() ;
+  ::view::VisibilityStatus status() const;
+  void set_status(::view::VisibilityStatus value);
+
+  private:
+  ::view::VisibilityStatus _internal_status() const;
+  void _internal_set_status(::view::VisibilityStatus value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.NoHlInteractiveComponent)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 1,
+      2, 3, 1,
       0, 2>
       _table_;
 
@@ -3546,6 +3590,7 @@ class NoHlInteractiveComponent final
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::NoHlComponent* primary_component_;
     ::uint32_t component_id_;
+    int status_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -4158,10 +4203,11 @@ class HlInteractiveComponent final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kPrimaryComponentFieldNumber = 2,
+    kPrimaryComponentFieldNumber = 3,
     kComponentIdFieldNumber = 1,
+    kStatusFieldNumber = 2,
   };
-  // .view.HlComponent primary_component = 2;
+  // .view.HlComponent primary_component = 3;
   bool has_primary_component() const;
   void clear_primary_component() ;
   const ::view::HlComponent& primary_component() const;
@@ -4186,12 +4232,22 @@ class HlInteractiveComponent final
   void _internal_set_component_id(::uint32_t value);
 
   public:
+  // .view.VisibilityStatus status = 2;
+  void clear_status() ;
+  ::view::VisibilityStatus status() const;
+  void set_status(::view::VisibilityStatus value);
+
+  private:
+  ::view::VisibilityStatus _internal_status() const;
+  void _internal_set_status(::view::VisibilityStatus value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.HlInteractiveComponent)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 1,
+      2, 3, 1,
       0, 2>
       _table_;
 
@@ -4213,6 +4269,7 @@ class HlInteractiveComponent final
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::view::HlComponent* primary_component_;
     ::uint32_t component_id_;
+    int status_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -4367,11 +4424,12 @@ class HlMessage final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kMessageFieldNumber = 3,
+    kMessageFieldNumber = 4,
     kTagFieldNumber = 1,
     kPriorityFieldNumber = 2,
+    kTypeFieldNumber = 3,
   };
-  // .view.NoHlComponent message = 3;
+  // .view.NoHlComponent message = 4;
   bool has_message() const;
   void clear_message() ;
   const ::view::NoHlComponent& message() const;
@@ -4406,12 +4464,22 @@ class HlMessage final
   void _internal_set_priority(::uint32_t value);
 
   public:
+  // .view.InfoType type = 3;
+  void clear_type() ;
+  ::view::InfoType type() const;
+  void set_type(::view::InfoType value);
+
+  private:
+  ::view::InfoType _internal_type() const;
+  void _internal_set_type(::view::InfoType value);
+
+  public:
   // @@protoc_insertion_point(class_scope:view.HlMessage)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 3, 1,
+      2, 4, 1,
       0, 2>
       _table_;
 
@@ -4434,6 +4502,7 @@ class HlMessage final
     ::view::NoHlComponent* message_;
     ::uint32_t tag_;
     ::uint32_t priority_;
+    int type_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -5270,12 +5339,13 @@ class SideInfo final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kSectionsFieldNumber = 3,
-    kEdgesFieldNumber = 4,
+    kSectionsFieldNumber = 4,
+    kEdgesFieldNumber = 5,
     kMetadataFieldNumber = 2,
+    kHeaderFieldNumber = 3,
     kSideInfoIdFieldNumber = 1,
   };
-  // repeated .view.Section sections = 3;
+  // repeated .view.Section sections = 4;
   int sections_size() const;
   private:
   int _internal_sections_size() const;
@@ -5292,7 +5362,7 @@ class SideInfo final
   const ::view::Section& sections(int index) const;
   ::view::Section* add_sections();
   const ::google::protobuf::RepeatedPtrField<::view::Section>& sections() const;
-  // repeated .view.SideEdge edges = 4;
+  // repeated .view.SideEdge edges = 5;
   int edges_size() const;
   private:
   int _internal_edges_size() const;
@@ -5324,6 +5394,21 @@ class SideInfo final
   ::view::Metadata* _internal_mutable_metadata();
 
   public:
+  // .view.NoHlComponent header = 3;
+  bool has_header() const;
+  void clear_header() ;
+  const ::view::NoHlComponent& header() const;
+  PROTOBUF_NODISCARD ::view::NoHlComponent* release_header();
+  ::view::NoHlComponent* mutable_header();
+  void set_allocated_header(::view::NoHlComponent* value);
+  void unsafe_arena_set_allocated_header(::view::NoHlComponent* value);
+  ::view::NoHlComponent* unsafe_arena_release_header();
+
+  private:
+  const ::view::NoHlComponent& _internal_header() const;
+  ::view::NoHlComponent* _internal_mutable_header();
+
+  public:
   // uint32 side_info_id = 1;
   void clear_side_info_id() ;
   ::uint32_t side_info_id() const;
@@ -5339,7 +5424,7 @@ class SideInfo final
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      2, 4, 3,
+      3, 5, 4,
       0, 2>
       _table_;
 
@@ -5362,6 +5447,7 @@ class SideInfo final
     ::google::protobuf::RepeatedPtrField< ::view::Section > sections_;
     ::google::protobuf::RepeatedPtrField< ::view::SideEdge > edges_;
     ::view::Metadata* metadata_;
+    ::view::NoHlComponent* header_;
     ::uint32_t side_info_id_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
@@ -5517,10 +5603,11 @@ class Info final
 
   // accessors -------------------------------------------------------
   enum : int {
-    kSectionsFieldNumber = 2,
+    kSectionsFieldNumber = 3,
     kMetadataFieldNumber = 1,
+    kHeaderFieldNumber = 2,
   };
-  // repeated .view.Section sections = 2;
+  // repeated .view.Section sections = 3;
   int sections_size() const;
   private:
   int _internal_sections_size() const;
@@ -5552,12 +5639,27 @@ class Info final
   ::view::Metadata* _internal_mutable_metadata();
 
   public:
+  // .view.NoHlComponent header = 2;
+  bool has_header() const;
+  void clear_header() ;
+  const ::view::NoHlComponent& header() const;
+  PROTOBUF_NODISCARD ::view::NoHlComponent* release_header();
+  ::view::NoHlComponent* mutable_header();
+  void set_allocated_header(::view::NoHlComponent* value);
+  void unsafe_arena_set_allocated_header(::view::NoHlComponent* value);
+  ::view::NoHlComponent* unsafe_arena_release_header();
+
+  private:
+  const ::view::NoHlComponent& _internal_header() const;
+  ::view::NoHlComponent* _internal_mutable_header();
+
+  public:
   // @@protoc_insertion_point(class_scope:view.Info)
  private:
   class _Internal;
   friend class ::google::protobuf::internal::TcParser;
   static const ::google::protobuf::internal::TcParseTable<
-      1, 2, 2,
+      2, 3, 3,
       0, 2>
       _table_;
 
@@ -5579,6 +5681,7 @@ class Info final
     ::google::protobuf::internal::CachedSize _cached_size_;
     ::google::protobuf::RepeatedPtrField< ::view::Section > sections_;
     ::view::Metadata* metadata_;
+    ::view::NoHlComponent* header_;
     PROTOBUF_TSAN_DECLARE_MEMBER
   };
   union { Impl_ _impl_; };
@@ -6483,7 +6586,29 @@ inline void NoHlInteractiveComponent::_internal_set_component_id(::uint32_t valu
   _impl_.component_id_ = value;
 }
 
-// .view.NoHlComponent primary_component = 2;
+// .view.VisibilityStatus status = 2;
+inline void NoHlInteractiveComponent::clear_status() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.status_ = 0;
+}
+inline ::view::VisibilityStatus NoHlInteractiveComponent::status() const {
+  // @@protoc_insertion_point(field_get:view.NoHlInteractiveComponent.status)
+  return _internal_status();
+}
+inline void NoHlInteractiveComponent::set_status(::view::VisibilityStatus value) {
+  _internal_set_status(value);
+  // @@protoc_insertion_point(field_set:view.NoHlInteractiveComponent.status)
+}
+inline ::view::VisibilityStatus NoHlInteractiveComponent::_internal_status() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::view::VisibilityStatus>(_impl_.status_);
+}
+inline void NoHlInteractiveComponent::_internal_set_status(::view::VisibilityStatus value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.status_ = value;
+}
+
+// .view.NoHlComponent primary_component = 3;
 inline bool NoHlInteractiveComponent::has_primary_component() const {
   bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
   PROTOBUF_ASSUME(!value || _impl_.primary_component_ != nullptr);
@@ -7129,7 +7254,29 @@ inline void HlInteractiveComponent::_internal_set_component_id(::uint32_t value)
   _impl_.component_id_ = value;
 }
 
-// .view.HlComponent primary_component = 2;
+// .view.VisibilityStatus status = 2;
+inline void HlInteractiveComponent::clear_status() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.status_ = 0;
+}
+inline ::view::VisibilityStatus HlInteractiveComponent::status() const {
+  // @@protoc_insertion_point(field_get:view.HlInteractiveComponent.status)
+  return _internal_status();
+}
+inline void HlInteractiveComponent::set_status(::view::VisibilityStatus value) {
+  _internal_set_status(value);
+  // @@protoc_insertion_point(field_set:view.HlInteractiveComponent.status)
+}
+inline ::view::VisibilityStatus HlInteractiveComponent::_internal_status() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::view::VisibilityStatus>(_impl_.status_);
+}
+inline void HlInteractiveComponent::_internal_set_status(::view::VisibilityStatus value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.status_ = value;
+}
+
+// .view.HlComponent primary_component = 3;
 inline bool HlInteractiveComponent::has_primary_component() const {
   bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
   PROTOBUF_ASSUME(!value || _impl_.primary_component_ != nullptr);
@@ -7747,7 +7894,29 @@ inline void HlMessage::_internal_set_priority(::uint32_t value) {
   _impl_.priority_ = value;
 }
 
-// .view.NoHlComponent message = 3;
+// .view.InfoType type = 3;
+inline void HlMessage::clear_type() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.type_ = 0;
+}
+inline ::view::InfoType HlMessage::type() const {
+  // @@protoc_insertion_point(field_get:view.HlMessage.type)
+  return _internal_type();
+}
+inline void HlMessage::set_type(::view::InfoType value) {
+  _internal_set_type(value);
+  // @@protoc_insertion_point(field_set:view.HlMessage.type)
+}
+inline ::view::InfoType HlMessage::_internal_type() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  return static_cast<::view::InfoType>(_impl_.type_);
+}
+inline void HlMessage::_internal_set_type(::view::InfoType value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  _impl_.type_ = value;
+}
+
+// .view.NoHlComponent message = 4;
 inline bool HlMessage::has_message() const {
   bool value = (_impl_._has_bits_[0] & 0x00000001u) != 0;
   PROTOBUF_ASSUME(!value || _impl_.message_ != nullptr);
@@ -8194,7 +8363,103 @@ inline void Info::set_allocated_metadata(::view::Metadata* value) {
   // @@protoc_insertion_point(field_set_allocated:view.Info.metadata)
 }
 
-// repeated .view.Section sections = 2;
+// .view.NoHlComponent header = 2;
+inline bool Info::has_header() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.header_ != nullptr);
+  return value;
+}
+inline void Info::clear_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.header_ != nullptr) _impl_.header_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000002u;
+}
+inline const ::view::NoHlComponent& Info::_internal_header() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::view::NoHlComponent* p = _impl_.header_;
+  return p != nullptr ? *p : reinterpret_cast<const ::view::NoHlComponent&>(::view::_NoHlComponent_default_instance_);
+}
+inline const ::view::NoHlComponent& Info::header() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:view.Info.header)
+  return _internal_header();
+}
+inline void Info::unsafe_arena_set_allocated_header(::view::NoHlComponent* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.header_);
+  }
+  _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.Info.header)
+}
+inline ::view::NoHlComponent* Info::release_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::view::NoHlComponent* released = _impl_.header_;
+  _impl_.header_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::view::NoHlComponent* Info::unsafe_arena_release_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:view.Info.header)
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::view::NoHlComponent* temp = _impl_.header_;
+  _impl_.header_ = nullptr;
+  return temp;
+}
+inline ::view::NoHlComponent* Info::_internal_mutable_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.header_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::NoHlComponent>(GetArena());
+    _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(p);
+  }
+  return _impl_.header_;
+}
+inline ::view::NoHlComponent* Info::mutable_header() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000002u;
+  ::view::NoHlComponent* _msg = _internal_mutable_header();
+  // @@protoc_insertion_point(field_mutable:view.Info.header)
+  return _msg;
+}
+inline void Info::set_allocated_header(::view::NoHlComponent* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete (_impl_.header_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+
+  _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(value);
+  // @@protoc_insertion_point(field_set_allocated:view.Info.header)
+}
+
+// repeated .view.Section sections = 3;
 inline int Info::_internal_sections_size() const {
   return _internal_sections().size();
 }
@@ -8658,7 +8923,103 @@ inline void SideInfo::set_allocated_metadata(::view::Metadata* value) {
   // @@protoc_insertion_point(field_set_allocated:view.SideInfo.metadata)
 }
 
-// repeated .view.Section sections = 3;
+// .view.NoHlComponent header = 3;
+inline bool SideInfo::has_header() const {
+  bool value = (_impl_._has_bits_[0] & 0x00000002u) != 0;
+  PROTOBUF_ASSUME(!value || _impl_.header_ != nullptr);
+  return value;
+}
+inline void SideInfo::clear_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.header_ != nullptr) _impl_.header_->Clear();
+  _impl_._has_bits_[0] &= ~0x00000002u;
+}
+inline const ::view::NoHlComponent& SideInfo::_internal_header() const {
+  ::google::protobuf::internal::TSanRead(&_impl_);
+  const ::view::NoHlComponent* p = _impl_.header_;
+  return p != nullptr ? *p : reinterpret_cast<const ::view::NoHlComponent&>(::view::_NoHlComponent_default_instance_);
+}
+inline const ::view::NoHlComponent& SideInfo::header() const ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  // @@protoc_insertion_point(field_get:view.SideInfo.header)
+  return _internal_header();
+}
+inline void SideInfo::unsafe_arena_set_allocated_header(::view::NoHlComponent* value) {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (GetArena() == nullptr) {
+    delete reinterpret_cast<::google::protobuf::MessageLite*>(_impl_.header_);
+  }
+  _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(value);
+  if (value != nullptr) {
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+  // @@protoc_insertion_point(field_unsafe_arena_set_allocated:view.SideInfo.header)
+}
+inline ::view::NoHlComponent* SideInfo::release_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::view::NoHlComponent* released = _impl_.header_;
+  _impl_.header_ = nullptr;
+  if (::google::protobuf::internal::DebugHardenForceCopyInRelease()) {
+    auto* old = reinterpret_cast<::google::protobuf::MessageLite*>(released);
+    released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    if (GetArena() == nullptr) {
+      delete old;
+    }
+  } else {
+    if (GetArena() != nullptr) {
+      released = ::google::protobuf::internal::DuplicateIfNonNull(released);
+    }
+  }
+  return released;
+}
+inline ::view::NoHlComponent* SideInfo::unsafe_arena_release_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  // @@protoc_insertion_point(field_release:view.SideInfo.header)
+
+  _impl_._has_bits_[0] &= ~0x00000002u;
+  ::view::NoHlComponent* temp = _impl_.header_;
+  _impl_.header_ = nullptr;
+  return temp;
+}
+inline ::view::NoHlComponent* SideInfo::_internal_mutable_header() {
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (_impl_.header_ == nullptr) {
+    auto* p = ::google::protobuf::Message::DefaultConstruct<::view::NoHlComponent>(GetArena());
+    _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(p);
+  }
+  return _impl_.header_;
+}
+inline ::view::NoHlComponent* SideInfo::mutable_header() ABSL_ATTRIBUTE_LIFETIME_BOUND {
+  _impl_._has_bits_[0] |= 0x00000002u;
+  ::view::NoHlComponent* _msg = _internal_mutable_header();
+  // @@protoc_insertion_point(field_mutable:view.SideInfo.header)
+  return _msg;
+}
+inline void SideInfo::set_allocated_header(::view::NoHlComponent* value) {
+  ::google::protobuf::Arena* message_arena = GetArena();
+  ::google::protobuf::internal::TSanWrite(&_impl_);
+  if (message_arena == nullptr) {
+    delete (_impl_.header_);
+  }
+
+  if (value != nullptr) {
+    ::google::protobuf::Arena* submessage_arena = (value)->GetArena();
+    if (message_arena != submessage_arena) {
+      value = ::google::protobuf::internal::GetOwnedMessage(message_arena, value, submessage_arena);
+    }
+    _impl_._has_bits_[0] |= 0x00000002u;
+  } else {
+    _impl_._has_bits_[0] &= ~0x00000002u;
+  }
+
+  _impl_.header_ = reinterpret_cast<::view::NoHlComponent*>(value);
+  // @@protoc_insertion_point(field_set_allocated:view.SideInfo.header)
+}
+
+// repeated .view.Section sections = 4;
 inline int SideInfo::_internal_sections_size() const {
   return _internal_sections().size();
 }
@@ -8707,7 +9068,7 @@ SideInfo::_internal_mutable_sections() {
   return &_impl_.sections_;
 }
 
-// repeated .view.SideEdge edges = 4;
+// repeated .view.SideEdge edges = 5;
 inline int SideInfo::_internal_edges_size() const {
   return _internal_edges().size();
 }
@@ -9204,6 +9565,12 @@ inline void EdgeResponse::set_allocated_status(std::string* value) {
 namespace google {
 namespace protobuf {
 
+template <>
+struct is_proto_enum<::view::VisibilityStatus> : std::true_type {};
+template <>
+inline const EnumDescriptor* GetEnumDescriptor<::view::VisibilityStatus>() {
+  return ::view::VisibilityStatus_descriptor();
+}
 template <>
 struct is_proto_enum<::view::InfoType> : std::true_type {};
 template <>

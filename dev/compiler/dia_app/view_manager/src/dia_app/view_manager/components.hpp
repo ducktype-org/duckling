@@ -50,7 +50,7 @@ namespace view_manager {
         public:
         std::weak_ptr<Component> parent;
 
-        virtual component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const;
+        virtual component_get_view_data_t<::view::HlComponent> getHlView() const;
 
         virtual component_get_view_data_t<::view::NoHlComponent> getNoHlView() const;
 
@@ -85,7 +85,7 @@ namespace view_manager {
 
         CodeComponent(std::string content, std::vector<hl_id_t> tags, std::vector<side_entry_id_t> assoc_side_infos);
 
-        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView() const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -95,12 +95,11 @@ namespace view_manager {
     class ConcatComponent : public Component {
         private:
         std::vector<std::shared_ptr<Component>> components;
-        std::vector<hl_id_t> tags;
 
         public:
-        ConcatComponent(std::vector<std::shared_ptr<Component>> components, std::vector<hl_id_t> tags);
+        ConcatComponent(std::vector<std::shared_ptr<Component>> components);
 
-        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView() const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -115,12 +114,13 @@ namespace view_manager {
     class InteractiveComponent;
     using id_to_interactive_component_mapping_t = std::unordered_map<component_id_t, std::weak_ptr<InteractiveComponent>>;
     class InteractiveComponent : public Component {
-        private:
+        public:
         enum class Status : bool {
             Primary,
             Alternative
         };
 
+        private:
         component_id_t id;
         Status status = Status::Primary;
         std::shared_ptr<Component> visible, primary, alternative;
@@ -131,7 +131,7 @@ namespace view_manager {
 
         InteractiveComponent(component_id_t id, const std::shared_ptr<Component>& primary, const std::shared_ptr<Component>& alternative, std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component);
             
-        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView() const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 
@@ -143,7 +143,7 @@ namespace view_manager {
     struct CreationContext {
         std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component;
         std::unique_ptr<std::map<std::string, hl_id_t>> hl_name_to_id;
-        std::optional<DataHandle> dataHandle;
+        std::optional<DataHandle> data_handle;
     };
 
     class StartLineComponent : public Component {
@@ -153,7 +153,7 @@ namespace view_manager {
         public:
         StartLineComponent(std::optional<uint> number);
 
-        component_get_view_data_t<::view::HlComponent> getHlView(const std::vector<component_id_t> &ancestor_tags) const override;
+        component_get_view_data_t<::view::HlComponent> getHlView() const override;
 
         component_get_view_data_t<::view::NoHlComponent> getNoHlView() const override;
 

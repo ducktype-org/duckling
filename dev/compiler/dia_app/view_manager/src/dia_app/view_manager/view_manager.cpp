@@ -25,7 +25,7 @@ namespace view_manager {
         for (uint error_id = 0; error_id < input.size(); ++error_id) {
             ViewConstructor view_constructor(error_id, input);
             // Update the view constructor context (necessary for fetching lazy content).
-            creation_context.dataHandle.emplace(view_constructor.dataHandle());
+            creation_context.data_handle.emplace(view_constructor.dataHandle());
 
             diagnostics.emplace_back(Diagnostic::createFromViewConstructor(view_constructor, creation_context));
         }
@@ -76,6 +76,7 @@ namespace view_manager {
         auto component = ptr->second.lock();
         if (component) {
             component->registerInteraction(interaction_type);
+            response->set_status("Click registered successfully!");
         }
         else {
             response->set_status("Component with given id doesn't exist!");

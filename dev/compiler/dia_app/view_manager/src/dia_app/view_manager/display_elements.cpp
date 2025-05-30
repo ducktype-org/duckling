@@ -127,13 +127,7 @@ namespace dia_file {
             sons.erase(std::remove_if(sons.begin(), sons.end(), [](const std::shared_ptr<Component> &ptr) {
                 return !ptr;
             }), sons.end());
-            // TODO: remove these tags (all are to be moved to CodeElement::toComponentImpl)
-            std::vector<hl_id_t> tags(ssize(this->groups));
-            transform(this->groups.begin(), this->groups.end(), tags.begin(),
-            [&creation_context](const std::string &name) {
-                return creation_context.hl_name_to_id->at(name);
-            });
-            this->generated_component = static_pointer_cast<Component>(make_shared<ConcatComponent>(sons, tags));
+            this->generated_component = static_pointer_cast<Component>(make_shared<ConcatComponent>(sons));
         }
         return this->generated_component;
     }
@@ -272,7 +266,7 @@ namespace dia_file {
         accumulateData(acc_data);
         // This element does not correspond to any component in the result,
         // thus the caching can be skipped.
-        return evaluated(creation_context.dataHandle.value())->toComponentImpl(creation_context, acc_data);
+        return evaluated(creation_context.data_handle.value())->toComponentImpl(creation_context, acc_data);
     }
 
 

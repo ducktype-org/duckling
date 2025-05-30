@@ -16,7 +16,7 @@ namespace view_manager {
         return {};
     }
 
-    component_get_view_data_t<::view::HlComponent> Component::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> Component::getHlView() const {
         assert(false);
         return {};
     }
@@ -57,12 +57,11 @@ namespace view_manager {
 
     CodeComponent::CodeComponent(std::string content, std::vector<hl_id_t> tags, std::vector<side_entry_id_t> assoc_side_entries) : content(std::move(content)), tags(std::move(tags)), assoc_side_entries(std::move(assoc_side_entries)) {}
 
-    component_get_view_data_t<::view::HlComponent> CodeComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> CodeComponent::getHlView() const {
         debug("CodeComponent::getHlView() begin");
         auto result = std::make_unique<::view::HlComponent>();
         result->mutable_code_component()->set_content(this->content);
         result->mutable_code_component()->mutable_hl_tags()->Add(this->tags.begin(), this->tags.end());
-        result->mutable_code_component()->mutable_hl_tags()->Add(ancestor_tags.begin(), ancestor_tags.end());
         result->mutable_code_component()->mutable_assoc_side_infos()->Add(this->assoc_side_entries.begin(), this->assoc_side_entries.end());
         auto left = line_suffix_data_t<::view::HlComponent>{std::move(result)};
         auto mid = std::vector<line_data_t<::view::HlComponent>>{};
@@ -88,8 +87,7 @@ namespace view_manager {
 
     // ConcatComponent
 
-    ConcatComponent::ConcatComponent(std::vector<std::shared_ptr<Component>> components,
-    std::vector<hl_id_t> tags) : components(std::move(components)), tags(std::move(tags)) {}
+    ConcatComponent::ConcatComponent(std::vector<std::shared_ptr<Component>> components) : components(std::move(components)) {}
 
     template<class T>
     component_get_view_data_t<T> concatGetViewHelper(std::vector<component_get_view_data_t<T>> subcomponents_results) {
@@ -149,18 +147,16 @@ namespace view_manager {
         return {std::move(suffix), std::move(wrapped)};
     }
 
-    component_get_view_data_t<::view::HlComponent> ConcatComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> ConcatComponent::getHlView() const {
         debug("ConcatComponent::getHlView() begin");
         if (components.empty()) {
             debug("ConcatComponent::getHlView() end");
             return component_get_view_data_t<::view::HlComponent>{};
         }
-        auto joint_ancestor_tags = ancestor_tags;
-        joint_ancestor_tags.insert(joint_ancestor_tags.end(), this->tags.begin(), this->tags.end());
         auto subcomponents_results = std::ranges::subrange(this->components.begin(), this->components.end())
-          | std::views::transform([joint_ancestor_tags](const std::shared_ptr<Component> &component) {
+          | std::views::transform([](const std::shared_ptr<Component> &component) {
             assert(component);
-            return component->getHlView(joint_ancestor_tags);
+            return component->getHlView();
         });
         auto result = concatGetViewHelper<::view::HlComponent>(std::vector(subcomponents_results.begin(), subcomponents_results.end()));
         debug("ConcatComponent::getHlView() end");
@@ -189,7 +185,7 @@ namespace view_manager {
             [](const std::shared_ptr<Component> &component) {
             return component->deepCopy();
         });
-        auto result = std::make_shared<ConcatComponent>(new_components, this->tags);
+        auto result = std::make_shared<ConcatComponent>(new_components);
         return std::static_pointer_cast<Component>(result);
     }
 
@@ -202,13 +198,21 @@ namespace view_manager {
         std::shared_ptr<id_to_interactive_component_mapping_t> id_to_interactive_component) :
         id(id), visible(primary->deepCopy()), primary(primary), alternative(alternative), id_to_interactive_component(std::move(id_to_interactive_component)) {}
 
+    ::view::VisibilityStatus toProtocol(const InteractiveComponent::Status &status) {
+        switch (status) {
+            case InteractiveComponent::Status::Primary: return ::view::VisibilityStatus::Primary;
+            case InteractiveComponent::Status::Alternative: return ::view::VisibilityStatus::Alternative;
+        }
+    }
+
     template<class T>
-    component_get_view_data_t<T> interactiveGetViewHelper(const component_id_t &id, component_get_view_data_t<T> visible_result) {
+    component_get_view_data_t<T> interactiveGetViewHelper(const component_id_t &id, component_get_view_data_t<T> visible_result, const InteractiveComponent::Status &status) {
         auto &[suffix, mid] = visible_result;
-        auto wrap_in_interactive = [id](std::unique_ptr<T> &to_wrap) {
+        auto wrap_in_interactive = [id, status](std::unique_ptr<T> &to_wrap) {
             auto result = std::make_unique<T>();
             result->mutable_interactive_component()->set_component_id(id);
             result->mutable_interactive_component()->set_allocated_primary_component(std::move(to_wrap).release());
+            result->mutable_interactive_component()->set_status(toProtocol(status));
             return result;
         };
         if (suffix.has_value()) {
@@ -226,16 +230,16 @@ namespace view_manager {
         return {std::move(suffix), std::move(mid)};
     }
 
-    component_get_view_data_t<::view::HlComponent> InteractiveComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> InteractiveComponent::getHlView() const {
         debug("InteractiveComponent::getHlView() begin");
-        auto result = interactiveGetViewHelper<::view::HlComponent>(this->id, visible->getHlView(ancestor_tags));
+        auto result = interactiveGetViewHelper<::view::HlComponent>(this->id, this->visible->getHlView(), this->status);
         debug("InteractiveComponent::getHlView() end");
         return result;
     }
 
     component_get_view_data_t<::view::NoHlComponent> InteractiveComponent::getNoHlView() const {
         debug("InteractiveComponent::getNoHlView() begin");
-        auto result = interactiveGetViewHelper<::view::NoHlComponent>(this->id, visible->getNoHlView());
+        auto result = interactiveGetViewHelper<::view::NoHlComponent>(this->id, this->visible->getNoHlView(), this->status);
         debug("InteractiveComponent::getNoHlView() end");
         return result;
     }
@@ -274,7 +278,7 @@ namespace view_manager {
 
     StartLineComponent::StartLineComponent(std::optional<uint> number) : number(number) {}
 
-    component_get_view_data_t<::view::HlComponent> StartLineComponent::getHlView(const std::vector<component_id_t> &ancestor_tags) const {
+    component_get_view_data_t<::view::HlComponent> StartLineComponent::getHlView() const {
         debug("StartLineComponent::getHlView() begin");
         auto left = line_suffix_data_t<::view::HlComponent>{};
         auto mid = std::vector<line_data_t<::view::HlComponent>>();

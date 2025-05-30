@@ -429,7 +429,8 @@ inline constexpr NoHlInteractiveComponent::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
         primary_component_{nullptr},
-        component_id_{0u} {}
+        component_id_{0u},
+        status_{static_cast< ::view::VisibilityStatus >(0)} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR NoHlInteractiveComponent::NoHlInteractiveComponent(::_pbi::ConstantInitialized)
@@ -506,7 +507,8 @@ inline constexpr HlInteractiveComponent::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
         primary_component_{nullptr},
-        component_id_{0u} {}
+        component_id_{0u},
+        status_{static_cast< ::view::VisibilityStatus >(0)} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR HlInteractiveComponent::HlInteractiveComponent(::_pbi::ConstantInitialized)
@@ -533,7 +535,8 @@ inline constexpr HlMessage::Impl_::Impl_(
       : _cached_size_{0},
         message_{nullptr},
         tag_{0u},
-        priority_{0u} {}
+        priority_{0u},
+        type_{static_cast< ::view::InfoType >(0)} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR HlMessage::HlMessage(::_pbi::ConstantInitialized)
@@ -640,6 +643,7 @@ inline constexpr SideInfo::Impl_::Impl_(
         sections_{},
         edges_{},
         metadata_{nullptr},
+        header_{nullptr},
         side_info_id_{0u} {}
 
 template <typename>
@@ -666,7 +670,8 @@ inline constexpr Info::Impl_::Impl_(
     ::_pbi::ConstantInitialized) noexcept
       : _cached_size_{0},
         sections_{},
-        metadata_{nullptr} {}
+        metadata_{nullptr},
+        header_{nullptr} {}
 
 template <typename>
 PROTOBUF_CONSTEXPR Info::Info(::_pbi::ConstantInitialized)
@@ -764,7 +769,7 @@ struct ViewResponseDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
     PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ViewResponseDefaultTypeInternal _ViewResponse_default_instance_;
 }  // namespace view
-static const ::_pb::EnumDescriptor* file_level_enum_descriptors_view_2eproto[2];
+static const ::_pb::EnumDescriptor* file_level_enum_descriptors_view_2eproto[3];
 static constexpr const ::_pb::ServiceDescriptor**
     file_level_service_descriptors_view_2eproto = nullptr;
 const ::uint32_t
@@ -808,7 +813,9 @@ const ::uint32_t
         ~0u,  // no _split_
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::NoHlInteractiveComponent, _impl_.component_id_),
+        PROTOBUF_FIELD_OFFSET(::view::NoHlInteractiveComponent, _impl_.status_),
         PROTOBUF_FIELD_OFFSET(::view::NoHlInteractiveComponent, _impl_.primary_component_),
+        ~0u,
         ~0u,
         0,
         ~0u,  // no _has_bits_
@@ -853,7 +860,9 @@ const ::uint32_t
         ~0u,  // no _split_
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::HlInteractiveComponent, _impl_.component_id_),
+        PROTOBUF_FIELD_OFFSET(::view::HlInteractiveComponent, _impl_.status_),
         PROTOBUF_FIELD_OFFSET(::view::HlInteractiveComponent, _impl_.primary_component_),
+        ~0u,
         ~0u,
         0,
         ~0u,  // no _has_bits_
@@ -901,7 +910,9 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::HlMessage, _impl_.tag_),
         PROTOBUF_FIELD_OFFSET(::view::HlMessage, _impl_.priority_),
+        PROTOBUF_FIELD_OFFSET(::view::HlMessage, _impl_.type_),
         PROTOBUF_FIELD_OFFSET(::view::HlMessage, _impl_.message_),
+        ~0u,
         ~0u,
         ~0u,
         0,
@@ -937,8 +948,10 @@ const ::uint32_t
         ~0u,  // no _split_
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::Info, _impl_.metadata_),
+        PROTOBUF_FIELD_OFFSET(::view::Info, _impl_.header_),
         PROTOBUF_FIELD_OFFSET(::view::Info, _impl_.sections_),
         0,
+        1,
         ~0u,
         ~0u,  // no _has_bits_
         PROTOBUF_FIELD_OFFSET(::view::Metadata, _internal_metadata_),
@@ -981,10 +994,12 @@ const ::uint32_t
         ~0u,  // no sizeof(Split)
         PROTOBUF_FIELD_OFFSET(::view::SideInfo, _impl_.side_info_id_),
         PROTOBUF_FIELD_OFFSET(::view::SideInfo, _impl_.metadata_),
+        PROTOBUF_FIELD_OFFSET(::view::SideInfo, _impl_.header_),
         PROTOBUF_FIELD_OFFSET(::view::SideInfo, _impl_.sections_),
         PROTOBUF_FIELD_OFFSET(::view::SideInfo, _impl_.edges_),
         ~0u,
         0,
+        1,
         ~0u,
         ~0u,
         ~0u,  // no _has_bits_
@@ -1077,31 +1092,31 @@ static const ::_pbi::MigrationSchema
         {0, -1, -1, sizeof(::view::NoHlTextComponent)},
         {10, -1, -1, sizeof(::view::NoHlCodeComponent)},
         {20, -1, -1, sizeof(::view::NoHlConcatComponent)},
-        {29, 39, -1, sizeof(::view::NoHlInteractiveComponent)},
-        {41, -1, -1, sizeof(::view::NoHlComponent)},
-        {54, -1, -1, sizeof(::view::HlCodeComponent)},
-        {65, -1, -1, sizeof(::view::HlConcatComponent)},
-        {74, 84, -1, sizeof(::view::HlInteractiveComponent)},
-        {86, -1, -1, sizeof(::view::HlComponent)},
-        {98, -1, -1, sizeof(::view::CodeMetadata)},
-        {109, 119, -1, sizeof(::view::CodeLine)},
-        {121, 132, -1, sizeof(::view::HlMessage)},
-        {135, 146, -1, sizeof(::view::CodeSection)},
-        {149, -1, -1, sizeof(::view::Diagnostic)},
-        {158, 168, -1, sizeof(::view::Info)},
-        {170, -1, -1, sizeof(::view::Metadata)},
-        {180, -1, -1, sizeof(::view::Section)},
-        {191, -1, -1, sizeof(::view::SideEdge)},
-        {201, 213, -1, sizeof(::view::SideInfo)},
-        {217, -1, -1, sizeof(::view::SidePath)},
-        {226, -1, -1, sizeof(::view::ViewRequest)},
-        {234, -1, -1, sizeof(::view::ViewResponse)},
-        {244, -1, -1, sizeof(::view::ClickRequest)},
-        {254, -1, -1, sizeof(::view::ClickResponse)},
-        {263, -1, -1, sizeof(::view::CloseSideInfoRequest)},
-        {272, -1, -1, sizeof(::view::CloseSideInfoResponse)},
-        {281, -1, -1, sizeof(::view::EdgeRequest)},
-        {291, -1, -1, sizeof(::view::EdgeResponse)},
+        {29, 40, -1, sizeof(::view::NoHlInteractiveComponent)},
+        {43, -1, -1, sizeof(::view::NoHlComponent)},
+        {56, -1, -1, sizeof(::view::HlCodeComponent)},
+        {67, -1, -1, sizeof(::view::HlConcatComponent)},
+        {76, 87, -1, sizeof(::view::HlInteractiveComponent)},
+        {90, -1, -1, sizeof(::view::HlComponent)},
+        {102, -1, -1, sizeof(::view::CodeMetadata)},
+        {113, 123, -1, sizeof(::view::CodeLine)},
+        {125, 137, -1, sizeof(::view::HlMessage)},
+        {141, 152, -1, sizeof(::view::CodeSection)},
+        {155, -1, -1, sizeof(::view::Diagnostic)},
+        {164, 175, -1, sizeof(::view::Info)},
+        {178, -1, -1, sizeof(::view::Metadata)},
+        {188, -1, -1, sizeof(::view::Section)},
+        {199, -1, -1, sizeof(::view::SideEdge)},
+        {209, 222, -1, sizeof(::view::SideInfo)},
+        {227, -1, -1, sizeof(::view::SidePath)},
+        {236, -1, -1, sizeof(::view::ViewRequest)},
+        {244, -1, -1, sizeof(::view::ViewResponse)},
+        {254, -1, -1, sizeof(::view::ClickRequest)},
+        {264, -1, -1, sizeof(::view::ClickResponse)},
+        {273, -1, -1, sizeof(::view::CloseSideInfoRequest)},
+        {282, -1, -1, sizeof(::view::CloseSideInfoResponse)},
+        {291, -1, -1, sizeof(::view::EdgeRequest)},
+        {301, -1, -1, sizeof(::view::EdgeResponse)},
 };
 static const ::_pb::Message* const file_default_instances[] = {
     &::view::_NoHlTextComponent_default_instance_._instance,
@@ -1140,73 +1155,79 @@ const char descriptor_table_protodef_view_2eproto[] ABSL_ATTRIBUTE_SECTION_VARIA
     " \003(\r\"@\n\021NoHlCodeComponent\022\017\n\007content\030\001 \001"
     "(\t\022\032\n\022assoc_side_entries\030\002 \003(\r\">\n\023NoHlCo"
     "ncatComponent\022\'\n\ncomponents\030\001 \003(\0132\023.view"
-    ".NoHlComponent\"`\n\030NoHlInteractiveCompone"
-    "nt\022\024\n\014component_id\030\001 \001(\r\022.\n\021primary_comp"
-    "onent\030\002 \001(\0132\023.view.NoHlComponent\"\372\001\n\rNoH"
-    "lComponent\0221\n\016text_component\030\001 \001(\0132\027.vie"
-    "w.NoHlTextComponentH\000\0221\n\016code_component\030"
-    "\002 \001(\0132\027.view.NoHlCodeComponentH\000\0225\n\020conc"
-    "at_component\030\003 \001(\0132\031.view.NoHlConcatComp"
-    "onentH\000\022\?\n\025interactive_component\030\004 \001(\0132\036"
-    ".view.NoHlInteractiveComponentH\000B\013\n\tcomp"
-    "onent\"M\n\017HlCodeComponent\022\017\n\007content\030\001 \001("
-    "\t\022\030\n\020assoc_side_infos\030\002 \003(\r\022\017\n\007hl_tags\030\003"
-    " \003(\r\":\n\021HlConcatComponent\022%\n\ncomponents\030"
-    "\001 \003(\0132\021.view.HlComponent\"\\\n\026HlInteractiv"
-    "eComponent\022\024\n\014component_id\030\001 \001(\r\022,\n\021prim"
-    "ary_component\030\002 \001(\0132\021.view.HlComponent\"\277"
-    "\001\n\013HlComponent\022/\n\016code_component\030\001 \001(\0132\025"
-    ".view.HlCodeComponentH\000\0223\n\020concat_compon"
-    "ent\030\002 \001(\0132\027.view.HlConcatComponentH\000\022=\n\025"
-    "interactive_component\030\003 \001(\0132\034.view.HlInt"
-    "eractiveComponentH\000B\013\n\tcomponent\">\n\014Code"
-    "Metadata\022\020\n\010filename\030\001 \001(\t\022\014\n\004line\030\002 \001(\r"
-    "\022\016\n\006column\030\003 \001(\r\"X\n\010CodeLine\022\030\n\013line_num"
-    "ber\030\001 \001(\rH\000\210\001\001\022\"\n\007content\030\002 \001(\0132\021.view.H"
-    "lComponentB\016\n\014_line_number\"P\n\tHlMessage\022"
-    "\013\n\003tag\030\001 \001(\r\022\020\n\010priority\030\002 \001(\r\022$\n\007messag"
-    "e\030\003 \001(\0132\023.view.NoHlComponent\"x\n\013CodeSect"
-    "ion\022$\n\010metadata\030\001 \001(\0132\022.view.CodeMetadat"
-    "a\022\035\n\005lines\030\002 \003(\0132\016.view.CodeLine\022$\n\013hl_m"
-    "essages\030\003 \003(\0132\017.view.HlMessage\"\'\n\nDiagno"
-    "stic\022\031\n\005infos\030\001 \003(\0132\n.view.Info\"I\n\004Info\022"
-    " \n\010metadata\030\001 \001(\0132\016.view.Metadata\022\037\n\010sec"
-    "tions\030\002 \003(\0132\r.view.Section\"6\n\010Metadata\022\034"
-    "\n\004type\030\001 \001(\0162\016.view.InfoType\022\014\n\004code\030\002 \001"
-    "(\r\"l\n\007Section\022)\n\014code_section\030\001 \001(\0132\021.vi"
-    "ew.CodeSectionH\000\022+\n\014text_section\030\002 \001(\0132\023"
-    ".view.NoHlComponentH\000B\t\n\007section\"0\n\010Side"
-    "Edge\022\017\n\007edge_id\030\001 \001(\r\022\023\n\013description\030\002 \001"
-    "(\t\"\202\001\n\010SideInfo\022\024\n\014side_info_id\030\001 \001(\r\022 \n"
-    "\010metadata\030\002 \001(\0132\016.view.Metadata\022\037\n\010secti"
-    "ons\030\003 \003(\0132\r.view.Section\022\035\n\005edges\030\004 \003(\0132"
-    "\016.view.SideEdge\")\n\010SidePath\022\035\n\005infos\030\001 \003"
-    "(\0132\016.view.SideInfo\"\r\n\013ViewRequest\"Y\n\014Vie"
-    "wResponse\022%\n\013diagnostics\030\001 \003(\0132\020.view.Di"
-    "agnostic\022\"\n\nside_paths\030\002 \003(\0132\016.view.Side"
-    "Path\"I\n\014ClickRequest\022\024\n\014component_id\030\001 \001"
-    "(\r\022#\n\nclick_type\030\002 \001(\0162\017.view.ClickType\""
-    "\037\n\rClickResponse\022\016\n\006status\030\001 \001(\t\",\n\024Clos"
-    "eSideInfoRequest\022\024\n\014side_info_id\030\001 \001(\r\"\'"
-    "\n\025CloseSideInfoResponse\022\016\n\006status\030\001 \001(\t\""
-    "4\n\013EdgeRequest\022\024\n\014side_info_id\030\001 \001(\r\022\017\n\007"
-    "edge_id\030\002 \001(\r\"\036\n\014EdgeResponse\022\016\n\006status\030"
-    "\001 \001(\t*@\n\010InfoType\022\t\n\005Error\020\000\022\013\n\007Warning\020"
-    "\001\022\010\n\004Note\020\002\022\010\n\004Hint\020\003\022\010\n\004Docs\020\004*M\n\tClick"
-    "Type\022\t\n\005CLICK\020\000\022\025\n\021CLICK_INTERACTIVE\020\001\022\036"
-    "\n\032CLICK_INTERACTIVE_ROLLBACK\020\0022\355\001\n\013ViewS"
-    "ervice\0220\n\007GetView\022\021.view.ViewRequest\032\022.v"
-    "iew.ViewResponse\0220\n\005Click\022\022.view.ClickRe"
-    "quest\032\023.view.ClickResponse\022H\n\rCloseSideI"
-    "nfo\022\032.view.CloseSideInfoRequest\032\033.view.C"
-    "loseSideInfoResponse\0220\n\007GetEdge\022\021.view.E"
-    "dgeRequest\032\022.view.EdgeResponseb\006proto3"
+    ".NoHlComponent\"\210\001\n\030NoHlInteractiveCompon"
+    "ent\022\024\n\014component_id\030\001 \001(\r\022&\n\006status\030\002 \001("
+    "\0162\026.view.VisibilityStatus\022.\n\021primary_com"
+    "ponent\030\003 \001(\0132\023.view.NoHlComponent\"\372\001\n\rNo"
+    "HlComponent\0221\n\016text_component\030\001 \001(\0132\027.vi"
+    "ew.NoHlTextComponentH\000\0221\n\016code_component"
+    "\030\002 \001(\0132\027.view.NoHlCodeComponentH\000\0225\n\020con"
+    "cat_component\030\003 \001(\0132\031.view.NoHlConcatCom"
+    "ponentH\000\022\?\n\025interactive_component\030\004 \001(\0132"
+    "\036.view.NoHlInteractiveComponentH\000B\013\n\tcom"
+    "ponent\"M\n\017HlCodeComponent\022\017\n\007content\030\001 \001"
+    "(\t\022\030\n\020assoc_side_infos\030\002 \003(\r\022\017\n\007hl_tags\030"
+    "\003 \003(\r\":\n\021HlConcatComponent\022%\n\ncomponents"
+    "\030\001 \003(\0132\021.view.HlComponent\"\204\001\n\026HlInteract"
+    "iveComponent\022\024\n\014component_id\030\001 \001(\r\022&\n\006st"
+    "atus\030\002 \001(\0162\026.view.VisibilityStatus\022,\n\021pr"
+    "imary_component\030\003 \001(\0132\021.view.HlComponent"
+    "\"\277\001\n\013HlComponent\022/\n\016code_component\030\001 \001(\013"
+    "2\025.view.HlCodeComponentH\000\0223\n\020concat_comp"
+    "onent\030\002 \001(\0132\027.view.HlConcatComponentH\000\022="
+    "\n\025interactive_component\030\003 \001(\0132\034.view.HlI"
+    "nteractiveComponentH\000B\013\n\tcomponent\">\n\014Co"
+    "deMetadata\022\020\n\010filename\030\001 \001(\t\022\014\n\004line\030\002 \001"
+    "(\r\022\016\n\006column\030\003 \001(\r\"X\n\010CodeLine\022\030\n\013line_n"
+    "umber\030\001 \001(\rH\000\210\001\001\022\"\n\007content\030\002 \001(\0132\021.view"
+    ".HlComponentB\016\n\014_line_number\"n\n\tHlMessag"
+    "e\022\013\n\003tag\030\001 \001(\r\022\020\n\010priority\030\002 \001(\r\022\034\n\004type"
+    "\030\003 \001(\0162\016.view.InfoType\022$\n\007message\030\004 \001(\0132"
+    "\023.view.NoHlComponent\"x\n\013CodeSection\022$\n\010m"
+    "etadata\030\001 \001(\0132\022.view.CodeMetadata\022\035\n\005lin"
+    "es\030\002 \003(\0132\016.view.CodeLine\022$\n\013hl_messages\030"
+    "\003 \003(\0132\017.view.HlMessage\"\'\n\nDiagnostic\022\031\n\005"
+    "infos\030\001 \003(\0132\n.view.Info\"n\n\004Info\022 \n\010metad"
+    "ata\030\001 \001(\0132\016.view.Metadata\022#\n\006header\030\002 \001("
+    "\0132\023.view.NoHlComponent\022\037\n\010sections\030\003 \003(\013"
+    "2\r.view.Section\"6\n\010Metadata\022\034\n\004type\030\001 \001("
+    "\0162\016.view.InfoType\022\014\n\004code\030\002 \001(\r\"l\n\007Secti"
+    "on\022)\n\014code_section\030\001 \001(\0132\021.view.CodeSect"
+    "ionH\000\022+\n\014text_section\030\002 \001(\0132\023.view.NoHlC"
+    "omponentH\000B\t\n\007section\"0\n\010SideEdge\022\017\n\007edg"
+    "e_id\030\001 \001(\r\022\023\n\013description\030\002 \001(\t\"\247\001\n\010Side"
+    "Info\022\024\n\014side_info_id\030\001 \001(\r\022 \n\010metadata\030\002"
+    " \001(\0132\016.view.Metadata\022#\n\006header\030\003 \001(\0132\023.v"
+    "iew.NoHlComponent\022\037\n\010sections\030\004 \003(\0132\r.vi"
+    "ew.Section\022\035\n\005edges\030\005 \003(\0132\016.view.SideEdg"
+    "e\")\n\010SidePath\022\035\n\005infos\030\001 \003(\0132\016.view.Side"
+    "Info\"\r\n\013ViewRequest\"Y\n\014ViewResponse\022%\n\013d"
+    "iagnostics\030\001 \003(\0132\020.view.Diagnostic\022\"\n\nsi"
+    "de_paths\030\002 \003(\0132\016.view.SidePath\"I\n\014ClickR"
+    "equest\022\024\n\014component_id\030\001 \001(\r\022#\n\nclick_ty"
+    "pe\030\002 \001(\0162\017.view.ClickType\"\037\n\rClickRespon"
+    "se\022\016\n\006status\030\001 \001(\t\",\n\024CloseSideInfoReque"
+    "st\022\024\n\014side_info_id\030\001 \001(\r\"\'\n\025CloseSideInf"
+    "oResponse\022\016\n\006status\030\001 \001(\t\"4\n\013EdgeRequest"
+    "\022\024\n\014side_info_id\030\001 \001(\r\022\017\n\007edge_id\030\002 \001(\r\""
+    "\036\n\014EdgeResponse\022\016\n\006status\030\001 \001(\t*0\n\020Visib"
+    "ilityStatus\022\013\n\007Primary\020\000\022\017\n\013Alternative\020"
+    "\001*@\n\010InfoType\022\t\n\005Error\020\000\022\013\n\007Warning\020\001\022\010\n"
+    "\004Note\020\002\022\010\n\004Hint\020\003\022\010\n\004Docs\020\004*M\n\tClickType"
+    "\022\t\n\005CLICK\020\000\022\025\n\021CLICK_INTERACTIVE\020\001\022\036\n\032CL"
+    "ICK_INTERACTIVE_ROLLBACK\020\0022\355\001\n\013ViewServi"
+    "ce\0220\n\007GetView\022\021.view.ViewRequest\032\022.view."
+    "ViewResponse\0220\n\005Click\022\022.view.ClickReques"
+    "t\032\023.view.ClickResponse\022H\n\rCloseSideInfo\022"
+    "\032.view.CloseSideInfoRequest\032\033.view.Close"
+    "SideInfoResponse\0220\n\007GetEdge\022\021.view.EdgeR"
+    "equest\032\022.view.EdgeResponseb\006proto3"
 };
 static ::absl::once_flag descriptor_table_view_2eproto_once;
 PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_view_2eproto = {
     false,
     false,
-    2638,
+    2874,
     descriptor_table_protodef_view_2eproto,
     "view.proto",
     &descriptor_table_view_2eproto_once,
@@ -1220,9 +1241,18 @@ PROTOBUF_CONSTINIT const ::_pbi::DescriptorTable descriptor_table_view_2eproto =
     file_level_service_descriptors_view_2eproto,
 };
 namespace view {
-const ::google::protobuf::EnumDescriptor* InfoType_descriptor() {
+const ::google::protobuf::EnumDescriptor* VisibilityStatus_descriptor() {
   ::google::protobuf::internal::AssignDescriptors(&descriptor_table_view_2eproto);
   return file_level_enum_descriptors_view_2eproto[0];
+}
+PROTOBUF_CONSTINIT const uint32_t VisibilityStatus_internal_data_[] = {
+    131072u, 0u, };
+bool VisibilityStatus_IsValid(int value) {
+  return 0 <= value && value <= 1;
+}
+const ::google::protobuf::EnumDescriptor* InfoType_descriptor() {
+  ::google::protobuf::internal::AssignDescriptors(&descriptor_table_view_2eproto);
+  return file_level_enum_descriptors_view_2eproto[1];
 }
 PROTOBUF_CONSTINIT const uint32_t InfoType_internal_data_[] = {
     327680u, 0u, };
@@ -1231,7 +1261,7 @@ bool InfoType_IsValid(int value) {
 }
 const ::google::protobuf::EnumDescriptor* ClickType_descriptor() {
   ::google::protobuf::internal::AssignDescriptors(&descriptor_table_view_2eproto);
-  return file_level_enum_descriptors_view_2eproto[1];
+  return file_level_enum_descriptors_view_2eproto[2];
 }
 PROTOBUF_CONSTINIT const uint32_t ClickType_internal_data_[] = {
     196608u, 0u, };
@@ -2072,7 +2102,13 @@ NoHlInteractiveComponent::NoHlInteractiveComponent(
   _impl_.primary_component_ = (cached_has_bits & 0x00000001u) ? ::google::protobuf::Message::CopyConstruct<::view::NoHlComponent>(
                               arena, *from._impl_.primary_component_)
                         : nullptr;
-  _impl_.component_id_ = from._impl_.component_id_;
+  ::memcpy(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, component_id_),
+           reinterpret_cast<const char *>(&from._impl_) +
+               offsetof(Impl_, component_id_),
+           offsetof(Impl_, status_) -
+               offsetof(Impl_, component_id_) +
+               sizeof(Impl_::status_));
 
   // @@protoc_insertion_point(copy_constructor:view.NoHlInteractiveComponent)
 }
@@ -2086,9 +2122,9 @@ inline void NoHlInteractiveComponent::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, primary_component_),
            0,
-           offsetof(Impl_, component_id_) -
+           offsetof(Impl_, status_) -
                offsetof(Impl_, primary_component_) +
-               sizeof(Impl_::component_id_));
+               sizeof(Impl_::status_));
 }
 NoHlInteractiveComponent::~NoHlInteractiveComponent() {
   // @@protoc_insertion_point(destructor:view.NoHlInteractiveComponent)
@@ -2138,15 +2174,15 @@ const ::google::protobuf::internal::ClassData* NoHlInteractiveComponent::GetClas
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 1, 0, 2> NoHlInteractiveComponent::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 1, 0, 2> NoHlInteractiveComponent::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_._has_bits_),
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
+    3,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     _class_data_.base(),
@@ -2156,19 +2192,26 @@ const ::_pbi::TcParseTable<1, 2, 1, 0, 2> NoHlInteractiveComponent::_table_ = {
     ::_pbi::TcParser::GetTable<::view::NoHlInteractiveComponent>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .view.NoHlComponent primary_component = 2;
-    {::_pbi::TcParser::FastMtS1,
-     {18, 0, 0, PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.primary_component_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // uint32 component_id = 1;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlInteractiveComponent, _impl_.component_id_), 63>(),
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.component_id_)}},
+    // .view.VisibilityStatus status = 2;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(NoHlInteractiveComponent, _impl_.status_), 63>(),
+     {16, 63, 0, PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.status_)}},
+    // .view.NoHlComponent primary_component = 3;
+    {::_pbi::TcParser::FastMtS1,
+     {26, 0, 0, PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.primary_component_)}},
   }}, {{
     65535, 65535
   }}, {{
     // uint32 component_id = 1;
     {PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.component_id_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
-    // .view.NoHlComponent primary_component = 2;
+    // .view.VisibilityStatus status = 2;
+    {PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.status_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
+    // .view.NoHlComponent primary_component = 3;
     {PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.primary_component_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
@@ -2189,7 +2232,9 @@ PROTOBUF_NOINLINE void NoHlInteractiveComponent::Clear() {
     ABSL_DCHECK(_impl_.primary_component_ != nullptr);
     _impl_.primary_component_->Clear();
   }
-  _impl_.component_id_ = 0u;
+  ::memset(&_impl_.component_id_, 0, static_cast<::size_t>(
+      reinterpret_cast<char*>(&_impl_.status_) -
+      reinterpret_cast<char*>(&_impl_.component_id_)) + sizeof(_impl_.status_));
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -2216,11 +2261,18 @@ PROTOBUF_NOINLINE void NoHlInteractiveComponent::Clear() {
                 1, this_._internal_component_id(), target);
           }
 
+          // .view.VisibilityStatus status = 2;
+          if (this_._internal_status() != 0) {
+            target = stream->EnsureSpace(target);
+            target = ::_pbi::WireFormatLite::WriteEnumToArray(
+                2, this_._internal_status(), target);
+          }
+
           cached_has_bits = this_._impl_._has_bits_[0];
-          // .view.NoHlComponent primary_component = 2;
+          // .view.NoHlComponent primary_component = 3;
           if (cached_has_bits & 0x00000001u) {
             target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                2, *this_._impl_.primary_component_, this_._impl_.primary_component_->GetCachedSize(), target,
+                3, *this_._impl_.primary_component_, this_._impl_.primary_component_->GetCachedSize(), target,
                 stream);
           }
 
@@ -2249,7 +2301,7 @@ PROTOBUF_NOINLINE void NoHlInteractiveComponent::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // .view.NoHlComponent primary_component = 2;
+            // .view.NoHlComponent primary_component = 3;
             cached_has_bits = this_._impl_._has_bits_[0];
             if (cached_has_bits & 0x00000001u) {
               total_size += 1 +
@@ -2261,6 +2313,11 @@ PROTOBUF_NOINLINE void NoHlInteractiveComponent::Clear() {
             if (this_._internal_component_id() != 0) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_component_id());
+            }
+            // .view.VisibilityStatus status = 2;
+            if (this_._internal_status() != 0) {
+              total_size += 1 +
+                            ::_pbi::WireFormatLite::EnumSize(this_._internal_status());
             }
           }
           return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -2289,6 +2346,9 @@ void NoHlInteractiveComponent::MergeImpl(::google::protobuf::MessageLite& to_msg
   if (from._internal_component_id() != 0) {
     _this->_impl_.component_id_ = from._impl_.component_id_;
   }
+  if (from._internal_status() != 0) {
+    _this->_impl_.status_ = from._impl_.status_;
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -2306,8 +2366,8 @@ void NoHlInteractiveComponent::InternalSwap(NoHlInteractiveComponent* PROTOBUF_R
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.component_id_)
-      + sizeof(NoHlInteractiveComponent::_impl_.component_id_)
+      PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.status_)
+      + sizeof(NoHlInteractiveComponent::_impl_.status_)
       - PROTOBUF_FIELD_OFFSET(NoHlInteractiveComponent, _impl_.primary_component_)>(
           reinterpret_cast<char*>(&_impl_.primary_component_),
           reinterpret_cast<char*>(&other->_impl_.primary_component_));
@@ -3355,7 +3415,13 @@ HlInteractiveComponent::HlInteractiveComponent(
   _impl_.primary_component_ = (cached_has_bits & 0x00000001u) ? ::google::protobuf::Message::CopyConstruct<::view::HlComponent>(
                               arena, *from._impl_.primary_component_)
                         : nullptr;
-  _impl_.component_id_ = from._impl_.component_id_;
+  ::memcpy(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, component_id_),
+           reinterpret_cast<const char *>(&from._impl_) +
+               offsetof(Impl_, component_id_),
+           offsetof(Impl_, status_) -
+               offsetof(Impl_, component_id_) +
+               sizeof(Impl_::status_));
 
   // @@protoc_insertion_point(copy_constructor:view.HlInteractiveComponent)
 }
@@ -3369,9 +3435,9 @@ inline void HlInteractiveComponent::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, primary_component_),
            0,
-           offsetof(Impl_, component_id_) -
+           offsetof(Impl_, status_) -
                offsetof(Impl_, primary_component_) +
-               sizeof(Impl_::component_id_));
+               sizeof(Impl_::status_));
 }
 HlInteractiveComponent::~HlInteractiveComponent() {
   // @@protoc_insertion_point(destructor:view.HlInteractiveComponent)
@@ -3421,15 +3487,15 @@ const ::google::protobuf::internal::ClassData* HlInteractiveComponent::GetClassD
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 1, 0, 2> HlInteractiveComponent::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 1, 0, 2> HlInteractiveComponent::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_._has_bits_),
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
+    3,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     _class_data_.base(),
@@ -3439,19 +3505,26 @@ const ::_pbi::TcParseTable<1, 2, 1, 0, 2> HlInteractiveComponent::_table_ = {
     ::_pbi::TcParser::GetTable<::view::HlInteractiveComponent>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // .view.HlComponent primary_component = 2;
-    {::_pbi::TcParser::FastMtS1,
-     {18, 0, 0, PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.primary_component_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // uint32 component_id = 1;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlInteractiveComponent, _impl_.component_id_), 63>(),
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.component_id_)}},
+    // .view.VisibilityStatus status = 2;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlInteractiveComponent, _impl_.status_), 63>(),
+     {16, 63, 0, PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.status_)}},
+    // .view.HlComponent primary_component = 3;
+    {::_pbi::TcParser::FastMtS1,
+     {26, 0, 0, PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.primary_component_)}},
   }}, {{
     65535, 65535
   }}, {{
     // uint32 component_id = 1;
     {PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.component_id_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
-    // .view.HlComponent primary_component = 2;
+    // .view.VisibilityStatus status = 2;
+    {PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.status_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
+    // .view.HlComponent primary_component = 3;
     {PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.primary_component_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
@@ -3472,7 +3545,9 @@ PROTOBUF_NOINLINE void HlInteractiveComponent::Clear() {
     ABSL_DCHECK(_impl_.primary_component_ != nullptr);
     _impl_.primary_component_->Clear();
   }
-  _impl_.component_id_ = 0u;
+  ::memset(&_impl_.component_id_, 0, static_cast<::size_t>(
+      reinterpret_cast<char*>(&_impl_.status_) -
+      reinterpret_cast<char*>(&_impl_.component_id_)) + sizeof(_impl_.status_));
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -3499,11 +3574,18 @@ PROTOBUF_NOINLINE void HlInteractiveComponent::Clear() {
                 1, this_._internal_component_id(), target);
           }
 
+          // .view.VisibilityStatus status = 2;
+          if (this_._internal_status() != 0) {
+            target = stream->EnsureSpace(target);
+            target = ::_pbi::WireFormatLite::WriteEnumToArray(
+                2, this_._internal_status(), target);
+          }
+
           cached_has_bits = this_._impl_._has_bits_[0];
-          // .view.HlComponent primary_component = 2;
+          // .view.HlComponent primary_component = 3;
           if (cached_has_bits & 0x00000001u) {
             target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                2, *this_._impl_.primary_component_, this_._impl_.primary_component_->GetCachedSize(), target,
+                3, *this_._impl_.primary_component_, this_._impl_.primary_component_->GetCachedSize(), target,
                 stream);
           }
 
@@ -3532,7 +3614,7 @@ PROTOBUF_NOINLINE void HlInteractiveComponent::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // .view.HlComponent primary_component = 2;
+            // .view.HlComponent primary_component = 3;
             cached_has_bits = this_._impl_._has_bits_[0];
             if (cached_has_bits & 0x00000001u) {
               total_size += 1 +
@@ -3544,6 +3626,11 @@ PROTOBUF_NOINLINE void HlInteractiveComponent::Clear() {
             if (this_._internal_component_id() != 0) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_component_id());
+            }
+            // .view.VisibilityStatus status = 2;
+            if (this_._internal_status() != 0) {
+              total_size += 1 +
+                            ::_pbi::WireFormatLite::EnumSize(this_._internal_status());
             }
           }
           return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -3572,6 +3659,9 @@ void HlInteractiveComponent::MergeImpl(::google::protobuf::MessageLite& to_msg, 
   if (from._internal_component_id() != 0) {
     _this->_impl_.component_id_ = from._impl_.component_id_;
   }
+  if (from._internal_status() != 0) {
+    _this->_impl_.status_ = from._impl_.status_;
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -3589,8 +3679,8 @@ void HlInteractiveComponent::InternalSwap(HlInteractiveComponent* PROTOBUF_RESTR
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.component_id_)
-      + sizeof(HlInteractiveComponent::_impl_.component_id_)
+      PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.status_)
+      + sizeof(HlInteractiveComponent::_impl_.status_)
       - PROTOBUF_FIELD_OFFSET(HlInteractiveComponent, _impl_.primary_component_)>(
           reinterpret_cast<char*>(&_impl_.primary_component_),
           reinterpret_cast<char*>(&other->_impl_.primary_component_));
@@ -4625,9 +4715,9 @@ HlMessage::HlMessage(
                offsetof(Impl_, tag_),
            reinterpret_cast<const char *>(&from._impl_) +
                offsetof(Impl_, tag_),
-           offsetof(Impl_, priority_) -
+           offsetof(Impl_, type_) -
                offsetof(Impl_, tag_) +
-               sizeof(Impl_::priority_));
+               sizeof(Impl_::type_));
 
   // @@protoc_insertion_point(copy_constructor:view.HlMessage)
 }
@@ -4641,9 +4731,9 @@ inline void HlMessage::SharedCtor(::_pb::Arena* arena) {
   ::memset(reinterpret_cast<char *>(&_impl_) +
                offsetof(Impl_, message_),
            0,
-           offsetof(Impl_, priority_) -
+           offsetof(Impl_, type_) -
                offsetof(Impl_, message_) +
-               sizeof(Impl_::priority_));
+               sizeof(Impl_::type_));
 }
 HlMessage::~HlMessage() {
   // @@protoc_insertion_point(destructor:view.HlMessage)
@@ -4693,15 +4783,15 @@ const ::google::protobuf::internal::ClassData* HlMessage::GetClassData() const {
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 3, 1, 0, 2> HlMessage::_table_ = {
+const ::_pbi::TcParseTable<2, 4, 1, 0, 2> HlMessage::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(HlMessage, _impl_._has_bits_),
     0, // no _extensions_
-    3, 24,  // max_field_number, fast_idx_mask
+    4, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967288,  // skipmap
+    4294967280,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    3,  // num_field_entries
+    4,  // num_field_entries
     1,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     _class_data_.base(),
@@ -4711,16 +4801,18 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> HlMessage::_table_ = {
     ::_pbi::TcParser::GetTable<::view::HlMessage>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    {::_pbi::TcParser::MiniParse, {}},
+    // .view.NoHlComponent message = 4;
+    {::_pbi::TcParser::FastMtS1,
+     {34, 0, 0, PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.message_)}},
     // uint32 tag = 1;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlMessage, _impl_.tag_), 63>(),
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.tag_)}},
     // uint32 priority = 2;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlMessage, _impl_.priority_), 63>(),
      {16, 63, 0, PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.priority_)}},
-    // .view.NoHlComponent message = 3;
-    {::_pbi::TcParser::FastMtS1,
-     {26, 0, 0, PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.message_)}},
+    // .view.InfoType type = 3;
+    {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(HlMessage, _impl_.type_), 63>(),
+     {24, 63, 0, PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.type_)}},
   }}, {{
     65535, 65535
   }}, {{
@@ -4730,7 +4822,10 @@ const ::_pbi::TcParseTable<2, 3, 1, 0, 2> HlMessage::_table_ = {
     // uint32 priority = 2;
     {PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.priority_), -1, 0,
     (0 | ::_fl::kFcSingular | ::_fl::kUInt32)},
-    // .view.NoHlComponent message = 3;
+    // .view.InfoType type = 3;
+    {PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.type_), -1, 0,
+    (0 | ::_fl::kFcSingular | ::_fl::kOpenEnum)},
+    // .view.NoHlComponent message = 4;
     {PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.message_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
@@ -4752,8 +4847,8 @@ PROTOBUF_NOINLINE void HlMessage::Clear() {
     _impl_.message_->Clear();
   }
   ::memset(&_impl_.tag_, 0, static_cast<::size_t>(
-      reinterpret_cast<char*>(&_impl_.priority_) -
-      reinterpret_cast<char*>(&_impl_.tag_)) + sizeof(_impl_.priority_));
+      reinterpret_cast<char*>(&_impl_.type_) -
+      reinterpret_cast<char*>(&_impl_.tag_)) + sizeof(_impl_.type_));
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
 }
@@ -4787,11 +4882,18 @@ PROTOBUF_NOINLINE void HlMessage::Clear() {
                 2, this_._internal_priority(), target);
           }
 
+          // .view.InfoType type = 3;
+          if (this_._internal_type() != 0) {
+            target = stream->EnsureSpace(target);
+            target = ::_pbi::WireFormatLite::WriteEnumToArray(
+                3, this_._internal_type(), target);
+          }
+
           cached_has_bits = this_._impl_._has_bits_[0];
-          // .view.NoHlComponent message = 3;
+          // .view.NoHlComponent message = 4;
           if (cached_has_bits & 0x00000001u) {
             target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                3, *this_._impl_.message_, this_._impl_.message_->GetCachedSize(), target,
+                4, *this_._impl_.message_, this_._impl_.message_->GetCachedSize(), target,
                 stream);
           }
 
@@ -4820,7 +4922,7 @@ PROTOBUF_NOINLINE void HlMessage::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // .view.NoHlComponent message = 3;
+            // .view.NoHlComponent message = 4;
             cached_has_bits = this_._impl_._has_bits_[0];
             if (cached_has_bits & 0x00000001u) {
               total_size += 1 +
@@ -4837,6 +4939,11 @@ PROTOBUF_NOINLINE void HlMessage::Clear() {
             if (this_._internal_priority() != 0) {
               total_size += ::_pbi::WireFormatLite::UInt32SizePlusOne(
                   this_._internal_priority());
+            }
+            // .view.InfoType type = 3;
+            if (this_._internal_type() != 0) {
+              total_size += 1 +
+                            ::_pbi::WireFormatLite::EnumSize(this_._internal_type());
             }
           }
           return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -4868,6 +4975,9 @@ void HlMessage::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::googl
   if (from._internal_priority() != 0) {
     _this->_impl_.priority_ = from._impl_.priority_;
   }
+  if (from._internal_type() != 0) {
+    _this->_impl_.type_ = from._impl_.type_;
+  }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
   _this->_internal_metadata_.MergeFrom<::google::protobuf::UnknownFieldSet>(from._internal_metadata_);
 }
@@ -4885,8 +4995,8 @@ void HlMessage::InternalSwap(HlMessage* PROTOBUF_RESTRICT other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   ::google::protobuf::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.priority_)
-      + sizeof(HlMessage::_impl_.priority_)
+      PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.type_)
+      + sizeof(HlMessage::_impl_.type_)
       - PROTOBUF_FIELD_OFFSET(HlMessage, _impl_.message_)>(
           reinterpret_cast<char*>(&_impl_.message_),
           reinterpret_cast<char*>(&other->_impl_.message_));
@@ -5512,6 +5622,9 @@ Info::Info(
   _impl_.metadata_ = (cached_has_bits & 0x00000001u) ? ::google::protobuf::Message::CopyConstruct<::view::Metadata>(
                               arena, *from._impl_.metadata_)
                         : nullptr;
+  _impl_.header_ = (cached_has_bits & 0x00000002u) ? ::google::protobuf::Message::CopyConstruct<::view::NoHlComponent>(
+                              arena, *from._impl_.header_)
+                        : nullptr;
 
   // @@protoc_insertion_point(copy_constructor:view.Info)
 }
@@ -5523,7 +5636,12 @@ inline PROTOBUF_NDEBUG_INLINE Info::Impl_::Impl_(
 
 inline void Info::SharedCtor(::_pb::Arena* arena) {
   new (&_impl_) Impl_(internal_visibility(), arena);
-  _impl_.metadata_ = {};
+  ::memset(reinterpret_cast<char *>(&_impl_) +
+               offsetof(Impl_, metadata_),
+           0,
+           offsetof(Impl_, header_) -
+               offsetof(Impl_, metadata_) +
+               sizeof(Impl_::header_));
 }
 Info::~Info() {
   // @@protoc_insertion_point(destructor:view.Info)
@@ -5534,6 +5652,7 @@ inline void Info::SharedDtor(MessageLite& self) {
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
   delete this_._impl_.metadata_;
+  delete this_._impl_.header_;
   this_._impl_.~Impl_();
 }
 
@@ -5585,16 +5704,16 @@ const ::google::protobuf::internal::ClassData* Info::GetClassData() const {
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<1, 2, 2, 0, 2> Info::_table_ = {
+const ::_pbi::TcParseTable<2, 3, 3, 0, 2> Info::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(Info, _impl_._has_bits_),
     0, // no _extensions_
-    2, 8,  // max_field_number, fast_idx_mask
+    3, 24,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967292,  // skipmap
+    4294967288,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    2,  // num_field_entries
-    2,  // num_aux_entries
+    3,  // num_field_entries
+    3,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     _class_data_.base(),
     nullptr,  // post_loop_handler
@@ -5603,23 +5722,31 @@ const ::_pbi::TcParseTable<1, 2, 2, 0, 2> Info::_table_ = {
     ::_pbi::TcParser::GetTable<::view::Info>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // repeated .view.Section sections = 2;
-    {::_pbi::TcParser::FastMtR1,
-     {18, 63, 1, PROTOBUF_FIELD_OFFSET(Info, _impl_.sections_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // .view.Metadata metadata = 1;
     {::_pbi::TcParser::FastMtS1,
      {10, 0, 0, PROTOBUF_FIELD_OFFSET(Info, _impl_.metadata_)}},
+    // .view.NoHlComponent header = 2;
+    {::_pbi::TcParser::FastMtS1,
+     {18, 1, 1, PROTOBUF_FIELD_OFFSET(Info, _impl_.header_)}},
+    // repeated .view.Section sections = 3;
+    {::_pbi::TcParser::FastMtR1,
+     {26, 63, 2, PROTOBUF_FIELD_OFFSET(Info, _impl_.sections_)}},
   }}, {{
     65535, 65535
   }}, {{
     // .view.Metadata metadata = 1;
     {PROTOBUF_FIELD_OFFSET(Info, _impl_.metadata_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-    // repeated .view.Section sections = 2;
-    {PROTOBUF_FIELD_OFFSET(Info, _impl_.sections_), -1, 1,
+    // .view.NoHlComponent header = 2;
+    {PROTOBUF_FIELD_OFFSET(Info, _impl_.header_), _Internal::kHasBitsOffset + 1, 1,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // repeated .view.Section sections = 3;
+    {PROTOBUF_FIELD_OFFSET(Info, _impl_.sections_), -1, 2,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
     {::_pbi::TcParser::GetTable<::view::Metadata>()},
+    {::_pbi::TcParser::GetTable<::view::NoHlComponent>()},
     {::_pbi::TcParser::GetTable<::view::Section>()},
   }}, {{
   }},
@@ -5634,9 +5761,15 @@ PROTOBUF_NOINLINE void Info::Clear() {
 
   _impl_.sections_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    ABSL_DCHECK(_impl_.metadata_ != nullptr);
-    _impl_.metadata_->Clear();
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      ABSL_DCHECK(_impl_.metadata_ != nullptr);
+      _impl_.metadata_->Clear();
+    }
+    if (cached_has_bits & 0x00000002u) {
+      ABSL_DCHECK(_impl_.header_ != nullptr);
+      _impl_.header_->Clear();
+    }
   }
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<::google::protobuf::UnknownFieldSet>();
@@ -5665,14 +5798,21 @@ PROTOBUF_NOINLINE void Info::Clear() {
                 stream);
           }
 
-          // repeated .view.Section sections = 2;
+          // .view.NoHlComponent header = 2;
+          if (cached_has_bits & 0x00000002u) {
+            target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+                2, *this_._impl_.header_, this_._impl_.header_->GetCachedSize(), target,
+                stream);
+          }
+
+          // repeated .view.Section sections = 3;
           for (unsigned i = 0, n = static_cast<unsigned>(
                                    this_._internal_sections_size());
                i < n; i++) {
             const auto& repfield = this_._internal_sections().Get(i);
             target =
                 ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                    2, repfield, repfield.GetCachedSize(),
+                    3, repfield, repfield.GetCachedSize(),
                     target, stream);
           }
 
@@ -5701,7 +5841,7 @@ PROTOBUF_NOINLINE void Info::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // repeated .view.Section sections = 2;
+            // repeated .view.Section sections = 3;
             {
               total_size += 1UL * this_._internal_sections_size();
               for (const auto& msg : this_._internal_sections()) {
@@ -5709,12 +5849,17 @@ PROTOBUF_NOINLINE void Info::Clear() {
               }
             }
           }
-           {
+          cached_has_bits = this_._impl_._has_bits_[0];
+          if (cached_has_bits & 0x00000003u) {
             // .view.Metadata metadata = 1;
-            cached_has_bits = this_._impl_._has_bits_[0];
             if (cached_has_bits & 0x00000001u) {
               total_size += 1 +
                             ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.metadata_);
+            }
+            // .view.NoHlComponent header = 2;
+            if (cached_has_bits & 0x00000002u) {
+              total_size += 1 +
+                            ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.header_);
             }
           }
           return this_.MaybeComputeUnknownFieldsSize(total_size,
@@ -5733,13 +5878,24 @@ void Info::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google::pr
   _this->_internal_mutable_sections()->MergeFrom(
       from._internal_sections());
   cached_has_bits = from._impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    ABSL_DCHECK(from._impl_.metadata_ != nullptr);
-    if (_this->_impl_.metadata_ == nullptr) {
-      _this->_impl_.metadata_ =
-          ::google::protobuf::Message::CopyConstruct<::view::Metadata>(arena, *from._impl_.metadata_);
-    } else {
-      _this->_impl_.metadata_->MergeFrom(*from._impl_.metadata_);
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      ABSL_DCHECK(from._impl_.metadata_ != nullptr);
+      if (_this->_impl_.metadata_ == nullptr) {
+        _this->_impl_.metadata_ =
+            ::google::protobuf::Message::CopyConstruct<::view::Metadata>(arena, *from._impl_.metadata_);
+      } else {
+        _this->_impl_.metadata_->MergeFrom(*from._impl_.metadata_);
+      }
+    }
+    if (cached_has_bits & 0x00000002u) {
+      ABSL_DCHECK(from._impl_.header_ != nullptr);
+      if (_this->_impl_.header_ == nullptr) {
+        _this->_impl_.header_ =
+            ::google::protobuf::Message::CopyConstruct<::view::NoHlComponent>(arena, *from._impl_.header_);
+      } else {
+        _this->_impl_.header_->MergeFrom(*from._impl_.header_);
+      }
     }
   }
   _this->_impl_._has_bits_[0] |= cached_has_bits;
@@ -5759,7 +5915,12 @@ void Info::InternalSwap(Info* PROTOBUF_RESTRICT other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   _impl_.sections_.InternalSwap(&other->_impl_.sections_);
-  swap(_impl_.metadata_, other->_impl_.metadata_);
+  ::google::protobuf::internal::memswap<
+      PROTOBUF_FIELD_OFFSET(Info, _impl_.header_)
+      + sizeof(Info::_impl_.header_)
+      - PROTOBUF_FIELD_OFFSET(Info, _impl_.metadata_)>(
+          reinterpret_cast<char*>(&_impl_.metadata_),
+          reinterpret_cast<char*>(&other->_impl_.metadata_));
 }
 
 ::google::protobuf::Metadata Info::GetMetadata() const {
@@ -6655,6 +6816,9 @@ SideInfo::SideInfo(
   _impl_.metadata_ = (cached_has_bits & 0x00000001u) ? ::google::protobuf::Message::CopyConstruct<::view::Metadata>(
                               arena, *from._impl_.metadata_)
                         : nullptr;
+  _impl_.header_ = (cached_has_bits & 0x00000002u) ? ::google::protobuf::Message::CopyConstruct<::view::NoHlComponent>(
+                              arena, *from._impl_.header_)
+                        : nullptr;
   _impl_.side_info_id_ = from._impl_.side_info_id_;
 
   // @@protoc_insertion_point(copy_constructor:view.SideInfo)
@@ -6684,6 +6848,7 @@ inline void SideInfo::SharedDtor(MessageLite& self) {
   this_._internal_metadata_.Delete<::google::protobuf::UnknownFieldSet>();
   ABSL_DCHECK(this_.GetArena() == nullptr);
   delete this_._impl_.metadata_;
+  delete this_._impl_.header_;
   this_._impl_.~Impl_();
 }
 
@@ -6739,16 +6904,16 @@ const ::google::protobuf::internal::ClassData* SideInfo::GetClassData() const {
   return _class_data_.base();
 }
 PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1
-const ::_pbi::TcParseTable<2, 4, 3, 0, 2> SideInfo::_table_ = {
+const ::_pbi::TcParseTable<3, 5, 4, 0, 2> SideInfo::_table_ = {
   {
     PROTOBUF_FIELD_OFFSET(SideInfo, _impl_._has_bits_),
     0, // no _extensions_
-    4, 24,  // max_field_number, fast_idx_mask
+    5, 56,  // max_field_number, fast_idx_mask
     offsetof(decltype(_table_), field_lookup_table),
-    4294967280,  // skipmap
+    4294967264,  // skipmap
     offsetof(decltype(_table_), field_entries),
-    4,  // num_field_entries
-    3,  // num_aux_entries
+    5,  // num_field_entries
+    4,  // num_aux_entries
     offsetof(decltype(_table_), aux_entries),
     _class_data_.base(),
     nullptr,  // post_loop_handler
@@ -6757,18 +6922,24 @@ const ::_pbi::TcParseTable<2, 4, 3, 0, 2> SideInfo::_table_ = {
     ::_pbi::TcParser::GetTable<::view::SideInfo>(),  // to_prefetch
     #endif  // PROTOBUF_PREFETCH_PARSE_TABLE
   }, {{
-    // repeated .view.SideEdge edges = 4;
-    {::_pbi::TcParser::FastMtR1,
-     {34, 63, 2, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.edges_)}},
+    {::_pbi::TcParser::MiniParse, {}},
     // uint32 side_info_id = 1;
     {::_pbi::TcParser::SingularVarintNoZag1<::uint32_t, offsetof(SideInfo, _impl_.side_info_id_), 63>(),
      {8, 63, 0, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.side_info_id_)}},
     // .view.Metadata metadata = 2;
     {::_pbi::TcParser::FastMtS1,
      {18, 0, 0, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.metadata_)}},
-    // repeated .view.Section sections = 3;
+    // .view.NoHlComponent header = 3;
+    {::_pbi::TcParser::FastMtS1,
+     {26, 1, 1, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.header_)}},
+    // repeated .view.Section sections = 4;
     {::_pbi::TcParser::FastMtR1,
-     {26, 63, 1, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.sections_)}},
+     {34, 63, 2, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.sections_)}},
+    // repeated .view.SideEdge edges = 5;
+    {::_pbi::TcParser::FastMtR1,
+     {42, 63, 3, PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.edges_)}},
+    {::_pbi::TcParser::MiniParse, {}},
+    {::_pbi::TcParser::MiniParse, {}},
   }}, {{
     65535, 65535
   }}, {{
@@ -6778,14 +6949,18 @@ const ::_pbi::TcParseTable<2, 4, 3, 0, 2> SideInfo::_table_ = {
     // .view.Metadata metadata = 2;
     {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.metadata_), _Internal::kHasBitsOffset + 0, 0,
     (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
-    // repeated .view.Section sections = 3;
-    {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.sections_), -1, 1,
+    // .view.NoHlComponent header = 3;
+    {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.header_), _Internal::kHasBitsOffset + 1, 1,
+    (0 | ::_fl::kFcOptional | ::_fl::kMessage | ::_fl::kTvTable)},
+    // repeated .view.Section sections = 4;
+    {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.sections_), -1, 2,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
-    // repeated .view.SideEdge edges = 4;
-    {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.edges_), -1, 2,
+    // repeated .view.SideEdge edges = 5;
+    {PROTOBUF_FIELD_OFFSET(SideInfo, _impl_.edges_), -1, 3,
     (0 | ::_fl::kFcRepeated | ::_fl::kMessage | ::_fl::kTvTable)},
   }}, {{
     {::_pbi::TcParser::GetTable<::view::Metadata>()},
+    {::_pbi::TcParser::GetTable<::view::NoHlComponent>()},
     {::_pbi::TcParser::GetTable<::view::Section>()},
     {::_pbi::TcParser::GetTable<::view::SideEdge>()},
   }}, {{
@@ -6802,9 +6977,15 @@ PROTOBUF_NOINLINE void SideInfo::Clear() {
   _impl_.sections_.Clear();
   _impl_.edges_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    ABSL_DCHECK(_impl_.metadata_ != nullptr);
-    _impl_.metadata_->Clear();
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      ABSL_DCHECK(_impl_.metadata_ != nullptr);
+      _impl_.metadata_->Clear();
+    }
+    if (cached_has_bits & 0x00000002u) {
+      ABSL_DCHECK(_impl_.header_ != nullptr);
+      _impl_.header_->Clear();
+    }
   }
   _impl_.side_info_id_ = 0u;
   _impl_._has_bits_.Clear();
@@ -6841,25 +7022,32 @@ PROTOBUF_NOINLINE void SideInfo::Clear() {
                 stream);
           }
 
-          // repeated .view.Section sections = 3;
+          // .view.NoHlComponent header = 3;
+          if (cached_has_bits & 0x00000002u) {
+            target = ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
+                3, *this_._impl_.header_, this_._impl_.header_->GetCachedSize(), target,
+                stream);
+          }
+
+          // repeated .view.Section sections = 4;
           for (unsigned i = 0, n = static_cast<unsigned>(
                                    this_._internal_sections_size());
                i < n; i++) {
             const auto& repfield = this_._internal_sections().Get(i);
             target =
                 ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                    3, repfield, repfield.GetCachedSize(),
+                    4, repfield, repfield.GetCachedSize(),
                     target, stream);
           }
 
-          // repeated .view.SideEdge edges = 4;
+          // repeated .view.SideEdge edges = 5;
           for (unsigned i = 0, n = static_cast<unsigned>(
                                    this_._internal_edges_size());
                i < n; i++) {
             const auto& repfield = this_._internal_edges().Get(i);
             target =
                 ::google::protobuf::internal::WireFormatLite::InternalWriteMessage(
-                    4, repfield, repfield.GetCachedSize(),
+                    5, repfield, repfield.GetCachedSize(),
                     target, stream);
           }
 
@@ -6888,14 +7076,14 @@ PROTOBUF_NOINLINE void SideInfo::Clear() {
 
           ::_pbi::Prefetch5LinesFrom7Lines(&this_);
            {
-            // repeated .view.Section sections = 3;
+            // repeated .view.Section sections = 4;
             {
               total_size += 1UL * this_._internal_sections_size();
               for (const auto& msg : this_._internal_sections()) {
                 total_size += ::google::protobuf::internal::WireFormatLite::MessageSize(msg);
               }
             }
-            // repeated .view.SideEdge edges = 4;
+            // repeated .view.SideEdge edges = 5;
             {
               total_size += 1UL * this_._internal_edges_size();
               for (const auto& msg : this_._internal_edges()) {
@@ -6903,12 +7091,17 @@ PROTOBUF_NOINLINE void SideInfo::Clear() {
               }
             }
           }
-           {
+          cached_has_bits = this_._impl_._has_bits_[0];
+          if (cached_has_bits & 0x00000003u) {
             // .view.Metadata metadata = 2;
-            cached_has_bits = this_._impl_._has_bits_[0];
             if (cached_has_bits & 0x00000001u) {
               total_size += 1 +
                             ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.metadata_);
+            }
+            // .view.NoHlComponent header = 3;
+            if (cached_has_bits & 0x00000002u) {
+              total_size += 1 +
+                            ::google::protobuf::internal::WireFormatLite::MessageSize(*this_._impl_.header_);
             }
           }
            {
@@ -6936,13 +7129,24 @@ void SideInfo::MergeImpl(::google::protobuf::MessageLite& to_msg, const ::google
   _this->_internal_mutable_edges()->MergeFrom(
       from._internal_edges());
   cached_has_bits = from._impl_._has_bits_[0];
-  if (cached_has_bits & 0x00000001u) {
-    ABSL_DCHECK(from._impl_.metadata_ != nullptr);
-    if (_this->_impl_.metadata_ == nullptr) {
-      _this->_impl_.metadata_ =
-          ::google::protobuf::Message::CopyConstruct<::view::Metadata>(arena, *from._impl_.metadata_);
-    } else {
-      _this->_impl_.metadata_->MergeFrom(*from._impl_.metadata_);
+  if (cached_has_bits & 0x00000003u) {
+    if (cached_has_bits & 0x00000001u) {
+      ABSL_DCHECK(from._impl_.metadata_ != nullptr);
+      if (_this->_impl_.metadata_ == nullptr) {
+        _this->_impl_.metadata_ =
+            ::google::protobuf::Message::CopyConstruct<::view::Metadata>(arena, *from._impl_.metadata_);
+      } else {
+        _this->_impl_.metadata_->MergeFrom(*from._impl_.metadata_);
+      }
+    }
+    if (cached_has_bits & 0x00000002u) {
+      ABSL_DCHECK(from._impl_.header_ != nullptr);
+      if (_this->_impl_.header_ == nullptr) {
+        _this->_impl_.header_ =
+            ::google::protobuf::Message::CopyConstruct<::view::NoHlComponent>(arena, *from._impl_.header_);
+      } else {
+        _this->_impl_.header_->MergeFrom(*from._impl_.header_);
+      }
     }
   }
   if (from._internal_side_info_id() != 0) {
