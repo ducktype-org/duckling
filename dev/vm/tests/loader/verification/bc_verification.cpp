@@ -2,7 +2,7 @@
 
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 #include <vm/loader/errors.hpp>
 
 class BCVerificationTests: public VmTestSuite {
@@ -14,32 +14,43 @@ public:
 		TESTER_ADD_TEST(jumpSkipBlock);
 		TESTER_ADD_TEST(manyJumps);
 		TESTER_ADD_TEST(initDeinit);
-
-		// @note: This tests breaks the current implementation of jump verification, but will be
-		// used soon when better verification is implemented.
-		//  TESTER_ADD_TEST(validJumpOutOfBlock);
+		TESTER_ADD_TEST(twoInits);
 
 		// Function verification
 		TESTER_ADD_TEST(multipleFunctions);
+		TESTER_ADD_TEST(useArgumentAfterCall);
 
-		// Jump verfification
+		// Jump verification
 		TESTER_ADD_TEST(jumpBetween);
 		TESTER_ADD_TEST(jumpIntoBlock);
 		TESTER_ADD_TEST(jumpOutOfBlock);
+		TESTER_ADD_TEST(duplicatedDataFields);
+		TESTER_ADD_TEST(unknownMethod);
+		TESTER_ADD_TEST(jumpWithInplaceCast);
+		TESTER_ADD_TEST(validJumpOutOfBlock);
+
+		// Local variable verification
+		TESTER_ADD_TEST(noInit);
+		TESTER_ADD_TEST(beforeInit);
+		TESTER_ADD_TEST(afterDeinit);
+		TESTER_ADD_TEST(invalidName);
+		TESTER_ADD_TEST(repeatedName);
 
 		// @note: Not implemented yet
-		// TESTER_ADD_TEST(noInit);
-		// TESTER_ADD_TEST(beforeInit);
-		// TESTER_ADD_TEST(afterDeinit);
-		// TESTER_ADD_TEST(invalidOffset);
-
 		// TESTER_ADD_TEST(derefAfterDeinit);
 		// TESTER_ADD_TEST(derefAfterDeinitAndInit);
-		// TESTER_ADD_TEST(derefWrongType);
-		// TESTER_ADD_TEST(refOnPrimitive);
+		TESTER_ADD_TEST(derefWrongType);
+		TESTER_ADD_TEST(refOnPrimitive);
 
-		// TESTER_ADD_TEST(wrongTypeMov);
-		// TESTER_ADD_TEST(wrongTypeSize);
+		// Type verification
+		TESTER_ADD_TEST(wrongTypeMov);
+		TESTER_ADD_TEST(wrongTypeSize);
+		TESTER_ADD_TEST(globalWrongTypeMov);
+		TESTER_ADD_TEST(globalWrongTypeSize);
+		TESTER_ADD_TEST(usingPointerAsPrimitive);
+		TESTER_ADD_TEST(variantWrongType);
+		TESTER_ADD_TEST(staticTableWrongType);
+		TESTER_ADD_TEST(inplaceCasts);
 	}
 
 private:
@@ -52,6 +63,8 @@ private:
 
 	void manyJumps() { loadValidDbc("right/many_jumps.dbc"); }
 
+	void twoInits() { loadValidDbc("right/two_inits.dbc"); }
+
 	// Function verification
 	void multipleFunctions() {
 		loadInvalidDbc(
@@ -62,13 +75,23 @@ private:
 		);
 	}
 
+	// Function verification
+	void useArgumentAfterCall() {
+		loadInvalidDbc(
+			"wrong/functions/use_argument_after_call.dbc",
+			{
+				vm::code::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
 	// Jump verification
 	void jumpBetween() {
 		loadInvalidDbc(
 			"wrong/jumps/jump_between.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -77,8 +100,8 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_into_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
@@ -87,31 +110,37 @@ private:
 		loadInvalidDbc(
 			"wrong/jumps/jump_out_of_block.dbc",
 			{
-				vm::code::builders::StackStructureMismatchError::ERR_MSG,
-				vm::code::builders::StackStructureMismatchError::NOTE_MSG,
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
 			}
 		);
 	}
 
-	// Deinitialized valued verification
+	void jumpWithInplaceCast() {
+		loadInvalidDbc(
+			"wrong/jumps/jump_with_inplace_cast.dbc",
+			{
+				vm::code::StackStructureMismatchError::ERR_MSG,
+				vm::code::StackStructureMismatchError::NOTE_MSG,
+			}
+		);
+	}
+
+	// Deinitialized value verification
 	void noInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/no_init.dbc",
 			{
-				vm::code::builders::UnknownLocalNameError::ERR_MSG,
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
 
-	// @TODO Use these tests when typecheck gets implemented,
-	// but swap those deleted loader errors for (then freshly added by you) builder ones.
-#if 0
 	void beforeInit() {
 		loadInvalidDbc(
 			"wrong/init_deinit/before_init.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
@@ -120,12 +149,30 @@ private:
 		loadInvalidDbc(
 			"wrong/init_deinit/after_deinit.dbc",
 			{
-				vm::loader::UninitializedLocalError::ERR_MSG,
-
+				vm::code::UnknownLocalNameError::ERR_MSG,
 			}
 		);
 	}
 
+	void invalidName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/invalid_name.dbc",
+			{
+				vm::code::UnknownLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+	void repeatedName() {
+		loadInvalidDbc(
+			"wrong/init_deinit/repeated_name.dbc",
+			{
+				vm::code::DuplicatedLocalNameError::ERR_MSG,
+			}
+		);
+	}
+
+#if 0
 	// Pointer verification
 	void derefAfterDeinit() {
 		loadInvalidDbc(
@@ -144,12 +191,13 @@ private:
 			}
 		);
 	}
+#endif
 
 	void derefWrongType() {
 		loadInvalidDbc(
 			"wrong/pointers/deref_wrong_type.dbc",
 			{
-				vm::loader::DeferenceTypeMismatchError::ERR_MSG,
+				vm::code::PointerTypeMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -158,7 +206,7 @@ private:
 		loadInvalidDbc(
 			"wrong/pointers/ref_on_primitive.dbc",
 			{
-				vm::loader::LocalUsedAsPointerError::ERR_MSG,
+				vm::code::InvalidArgumentTypeError::ERR_MSG,
 			}
 		);
 	}
@@ -168,7 +216,7 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_mov.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::ArgumentMismatchError::ERR_MSG,
 			}
 		);
 	}
@@ -177,12 +225,83 @@ private:
 		loadInvalidDbc(
 			"wrong/types/wrong_type_size.dbc",
 			{
-				vm::loader::OpCodeTypeMismatchError::ERR_MSG,
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
 			}
 		);
 	}
 
-#endif
+	void globalWrongTypeMov() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_mov.dbc",
+			{
+				vm::code::ArgumentMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void globalWrongTypeSize() {
+		loadInvalidDbc(
+			"wrong/types/global_wrong_type_size.dbc",
+			{
+				vm::code::InvalidArgumentSizeError::ERR_MSG,
+			}
+		);
+	}
+
+	void usingPointerAsPrimitive() {
+		loadInvalidDbc(
+			"wrong/types/using_pointer_as_primitive.dbc",
+			{
+				vm::code::InvalidArgumentTypeError::ERR_MSG,
+			}
+		);
+	}
+
+	void duplicatedDataFields() {
+		loadInvalidDbc(
+			"wrong/data_type/duplicated_fields.dbc",
+			{
+				vm::code::DuplicatedFieldError::ERR_MSG,
+			}
+		);
+	}
+
+	void variantWrongType() {
+		loadInvalidDbc(
+			"wrong/types/variant_wrong_type.dbc",
+			{
+				vm::code::VariantTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void unknownMethod() {
+		loadInvalidDbc(
+			"wrong/unknown_method.dbc",
+			{
+				vm::code::UnknownMethodError::ERR_MSG,
+			}
+		);
+	}
+
+	void staticTableWrongType() {
+		loadInvalidDbc(
+			"wrong/types/static_table_wrong_type.dbc",
+			{
+				vm::code::StaticTableTypeMismatchError::ERR_MSG,
+			}
+		);
+	}
+
+	void inplaceCasts() {
+		runTestOnVm("right/inplace_cast.dbc", {}, "42");
+		loadInvalidDbc(
+			"wrong/types/inplace_cast_size_mismatch.dbc",
+			{
+				vm::code::CastSizeMismatchError::ERR_MSG,
+			}
+		);
+	}
 };
 
 TESTER_COMMON_MAIN("/vm/tests/loader/verification/");

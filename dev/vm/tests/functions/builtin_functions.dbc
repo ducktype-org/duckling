@@ -4,27 +4,27 @@
 # output = n
 
 function main {
-    # [0, 8) main ret_val
-    # [8, 16) argc
-    # [16, 32) *argv
+	# [0, 8) main ret_val
+	# [8, 16) argc
+	# [16, 32) *argv
 
-    init_lany_type          x, i64; # [32, 40)
-    call_func  builtin_input_i64;
+	init_lany_type          x, i64; # [32, 40)
+	call_func  builtin_input_i64;
 
-    init_lany_type          y, i64; # [40, 48)
-    call_func  builtin_input_i64;
+	init_lany_type          y, i64; # [40, 48)
+	call_func  builtin_input_i64;
 
-    add_l64_l64        y,   x;
+	add_l64_l64        y,   x;
 
-    call_func  builtin_output_i64; # should output "input1 + input2"
+	call_func  builtin_output_i64; # should output "input1 + input2"
 
-    init_lany_type          z, i64; # [16, 24)
-    mov_l64_l64        y,   x;
+	init_lany_type          z, i64; # [16, 24)
+	mov_l64_l64        z,   x;
 
-    call_func  builtin_output_i64; # should output the size of outputed value
+	call_func  builtin_output_i64; # should output the size of outputed value
 
-    deinit; # [8, 16) ret_val
-    deinit; # *argv
-    deinit; # argc
-    ret;
+	deinit; # [8, 16) ret_val
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

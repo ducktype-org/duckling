@@ -2,8 +2,6 @@
 
 #include <query_framework/query_int.hpp>
 
-#include <base/perfect_hash.hpp>
-
 #include <string>  // std::string
 
 /**
@@ -16,7 +14,7 @@ struct Key {
 	// for example:
 	uint64_t v;
 
-	base::HashT customPerfectHash() { return v; }
+	[[nodiscard]] u64 queryUnstablePerfectHash() const { return v; }
 };
 
 /**

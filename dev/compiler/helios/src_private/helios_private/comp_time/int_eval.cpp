@@ -2,7 +2,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <helios/hout/visitors.hpp>
-#include <helios/query_hout_of_expr.hpp>
+#include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/symbols/symbols.hpp>
 #include <query_framework/query_impl.hpp>
 
@@ -30,6 +30,10 @@ namespace compiler::helios {
 
 			void visitLiteralBoolExpr(const code::LiteralBoolExpr&) final {
 				throw base::NotYetImplemented("Evaluation of boolean values is not implemented yet");
+			}
+
+			void visitLiteralStringExpr(const code::LiteralStringExpr&) final {
+				throw base::NotYetImplemented("Evaluation of string values is not implemented yet");
 			}
 
 			void visitCallExpr(const code::CallExpr&) final {

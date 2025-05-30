@@ -1,3 +1,5 @@
+#include "get_parameter_types.hpp"
+
 #include <backends/dvm/backend.hpp>
 #include <helios/symbols/simple.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -8,9 +10,9 @@
 #include <base/string_id.hpp>
 #include <base/variant.hpp>
 
-#include <vm/bytecode/builders/builders.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/builders/instruction_builder.hpp>
 #include <vm/bytecode/builtin_types.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/instructions.hpp>
 #include <vm/bytecode/opcode_args.hpp>
 #include <vm/bytecode/type_of_data.hpp>
@@ -36,6 +38,16 @@
 
 using namespace vm::code;
 using namespace vm::code::builders;
+
+namespace {
+	void pushInstruction(vm::code::Function& function, const Instruction& instruction) {
+		function.body.push_back(instruction);
+	}
+
+	void pushInstruction(vm::code::Function& function, const InstructionBuilder& builder) {
+		for (const auto& instruction: builder.build()) pushInstruction(function, instruction);
+	}
+}
 
 namespace compiler::backend_vm {
 	namespace {
@@ -74,9 +86,26 @@ namespace compiler::backend_vm {
 			CORE_UNREACHABLE();
 		}
 
+		vm::code::FunctionType getFunctionTypeFromLayouts(
+			base::StrID                         function_name,
+			const std::vector<tsl::TypeLayout>& parameter_layouts,
+			const tsl::TypeLayout&              return_type_layout
+		) {
+			auto param_types = parameter_layouts | std::views::transform([](auto&& layout) {
+								   return getTypeFromLayout(layout);
+							   });
+
+			auto param_type_names
+				= param_types | std::views::transform([](auto&& type) { return typeName(type); })
+			    | std::ranges::to<std::vector>();
+			auto result_type      = getTypeFromLayout(return_type_layout);
+			auto result_type_name = typeName(result_type);
+			return vm::code::FunctionType{ function_name, param_type_names, result_type_name };
+		}
+
 		struct AddLirFuncContext {
-			CRef<lir::Function> lir_function;
-			FunctionBuilder     func_builder;
+			CRef<lir::Function> lir_func;
+			Function            bytecode_func;
 
 			base::HashMap<usize, base::StrID>     block_id_to_label;
 			base::Map<lir::LocalRef, base::StrID> lir_local_to_name;
@@ -86,17 +115,16 @@ namespace compiler::backend_vm {
 			usize                                        next_call_id = 0;
 			base::Map<lir::LocalRef, u64>                variable_to_id;
 			base::Map<lir::BlockRef, u64>                block_to_id;
-			const vm::TypeMetadata&                      types;
 			const base::HashMap<base::StrID, TypeOfData> TYPE_OF_DATA;
 
-			AddLirFuncContext(CRef<lir::Function> lir_function, const TypeContext& type_context):
-				  lir_function(lir_function),
-				  func_builder(lir_function->name, {}, type_context),
-				  types(type_context.getMetadata()),
-				  TYPE_OF_DATA([&type_context] {
+			AddLirFuncContext(
+				CRef<lir::Function> lir_function, const vm::StableTypeIdNameMap<TypeOfData>& type_map
+			):
+				  lir_func(lir_function),
+				  bytecode_func(Function({}, lir_function->name, {})),
+				  TYPE_OF_DATA([&type_map] {
 					  base::HashMap<base::StrID, TypeOfData> map;
-					  for (auto&& type: type_context.getTypes())
-						  map.put(VISIT(type, tp, return tp.name), type);
+					  for (auto&& type: type_map) map.put(typeName(type), type);
 					  return map;
 				  }()) {
 				variable_to_id = lir_function->getLocalVariableIDs();
@@ -108,21 +136,20 @@ namespace compiler::backend_vm {
 		 * @brief Generate `init_lany_type` instruction.
 		 */
 		void initType(AddLirFuncContext& ctx, base::StrID variable_name, base::StrID type_name) {
-			ctx.func_builder.addInstruction(instructions::Op_init_lany_type(variable_name, type_name)
+			pushInstruction(
+				ctx.bytecode_func, instructions::Op_init_lany_type(variable_name, type_name)
 			);
 		}
 
 		void initLocals(AddLirFuncContext& ctx) {
-			auto func_type = ctx.types.at(ctx.lir_function->name);
 			CORE_ASSERT(
-				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name)),
+				std::holds_alternative<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->name)),
 				"Type not functional"
 			);
-			auto func_type_tod
-				= std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_function->name));
+			auto func_type_tod = std::get<FunctionType>(ctx.TYPE_OF_DATA.at(ctx.lir_func->name));
 
 			// Save locals offset
-			for (const auto& var: ctx.lir_function->local_list) {
+			for (const auto& var: ctx.lir_func->local_list) {
 				// This is most likely redundant
 				CORE_ASSERT(!ctx.lir_local_to_name.contains(var.ref()), "Duplicated lir local");
 
@@ -152,37 +179,76 @@ namespace compiler::backend_vm {
 			}
 		}
 
-		void insertFunctionType(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
+		/**
+		 * @brief Inserts function signature type and types used by the signature.
+		 */
+		void insertFunctionSignatureType(
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
+		) {
 			auto param_types
 				= lir_function->parameter_layouts
 			    | std::views::transform([](auto&& layout) { return getTypeFromLayout(layout); });
 
-			std::ranges::for_each(param_types, [&](auto&& type) { type_context.addType(type); });
-
-			auto param_names = param_types
-			                 | std::views::transform([](auto&& type) { return typeName(type); })
-			                 | std::ranges::to<std::vector>();
+			std::ranges::for_each(param_types, [&](auto&& type) { types.push_back(type); });
 
 			auto result_type = getTypeFromLayout(lir_function->return_type_layout);
-			type_context.addType(result_type);
-
-			auto result_type_name = typeName(result_type);
+			types.push_back(result_type);
 
 			if (lir_function->name != "main") {
-				type_context.addType(FunctionType{
-					lir_function->name, param_names, result_type_name });
+				types.emplace_back(getFunctionTypeFromLayouts(
+					lir_function->name,
+					lir_function->parameter_layouts,
+					lir_function->return_type_layout
+				));
 			}
 		}
 
-		void insertTypes(TypeContextBuilder& type_context, CRef<lir::Function> lir_function) {
-			// Insert function type
-			insertFunctionType(type_context, lir_function);
-
-			// Insert local types
+		/**
+		 * @brief Inserts types used by function's local variables.
+		 */
+		void insertFunctionLocalTypes(
+			std::vector<TypeOfData>& types, CRef<lir::Function> lir_function
+		) {
 			auto local_layouts = lir_function->local_list
 			                   | std::views::transform([](auto&& local) { return local->layout; });
 
-			for (const auto& layout: local_layouts) type_context.addType(getTypeFromLayout(layout));
+			for (const auto& layout: local_layouts) types.push_back(getTypeFromLayout(layout));
+		}
+
+		/**
+		 * @brief Insert function types for all functions that are called somewhere in the LIR
+		 * code. Used to add function types for functions that are not in the current module.
+		 */
+		void insertCalledFunctionTypes(
+			query::Context&          query_ctx,
+			std::vector<TypeOfData>& types,
+			CRef<lir::Function>      lir_function
+		) {
+			for (const auto& lir_block: lir_function->block_order) {
+				for (const auto& lir_instruction: lir_block->instructions) {
+					if (lir_instruction.operation == lir::Operation::Call) {
+						const auto callee_helios_id
+							= lir_instruction.arguments.at(0).get<lir::FunctionLiteral>().helios_id;
+						auto name = compiler::helios::name(callee_helios_id);
+						auto called_func_signature
+							= getParameterAndResultFromSymID(query_ctx, callee_helios_id);
+
+						types.emplace_back(getFunctionTypeFromLayouts(
+							name, called_func_signature.parameters, called_func_signature.result_type
+						));
+					}
+				}
+			}
+		}
+
+		void insertTypesUsedByFunction(
+			query::Context&          query_ctx,
+			std::vector<TypeOfData>& types,
+			CRef<lir::Function>      lir_function
+		) {
+			insertFunctionSignatureType(types, lir_function);
+			insertFunctionLocalTypes(types, lir_function);
+			insertCalledFunctionTypes(query_ctx, types, lir_function);
 		}
 
 		void registerBlock(AddLirFuncContext& ctx, lir::BlockRef block) {
@@ -193,7 +259,7 @@ namespace compiler::backend_vm {
 
 		void addBlockLabel(AddLirFuncContext& ctx, lir::BlockRef block) {
 			auto id = ctx.block_to_id.at(block);
-			ctx.func_builder.addInstruction(instructions::Op_label{ ctx.block_id_to_label[id] });
+			pushInstruction(ctx.bytecode_func, instructions::Op_label{ ctx.block_id_to_label[id] });
 		}
 
 		vm::opargs::OpCodeArg outputToOpArg(vm::code::TypeOfData type, base::StrID name) {
@@ -350,25 +416,33 @@ namespace compiler::backend_vm {
 				InstructionBuilder mov_arg(OpKind::mov);
 				mov_arg.pushArg(outputToOpArg(ctx.TYPE_OF_DATA[type_name], arg_name));
 				mov_arg.pushArg(op_arg);
-				ctx.func_builder.addInstruction(mov_arg);
+				pushInstruction(ctx.bytecode_func, mov_arg);
 			}
 
-			ctx.func_builder.addInstruction({ OpKind::call, called_func_arg });
+			pushInstruction(ctx.bytecode_func, { OpKind::call, called_func_arg });
 
-			ctx.func_builder.addInstruction({
-				OpKind::mov,
-				lir_result_argument,
-				func_result_argument,
-			});
-			ctx.func_builder.addInstruction(instructions::Op_deinit());  // Deinit func result
+			pushInstruction(
+				ctx.bytecode_func,
+				{
+					OpKind::mov,
+					lir_result_argument,
+					func_result_argument,
+				}
+			);
+			pushInstruction(
+				ctx.bytecode_func, { instructions::Op_deinit() }
+			);  // Deinit func result
 		}
 
 		void addLirInstruction(AddLirFuncContext& ctx, const lir::Instruction& lir_instruction) {
 			// Insert a comment about operation type.
 			// @TODO: Improve this to contain more information.
-			ctx.func_builder.addInstruction(vm::code::instructions::Comment(base::StrID(
-				base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
-			)));
+			pushInstruction(
+				ctx.bytecode_func,
+				vm::code::instructions::Comment(base::StrID(
+					base::strConcat("Operation: ", base::enumToStr(lir_instruction.operation)).data()
+				))
+			);
 
 			const auto kind   = lirOpToOpKind(lir_instruction.operation);
 			const auto output = lirOutputToOpArg(ctx, lir_instruction);
@@ -393,7 +467,7 @@ namespace compiler::backend_vm {
 					// by splitting it into two instructions:
 					// a = b;
 					// a += c;
-					ctx.func_builder.addInstruction({ OpKind::mov, args[0], args[1] });
+					pushInstruction(ctx.bytecode_func, { OpKind::mov, args[0], args[1] });
 
 					args.pop_front();
 					args.pop_front();
@@ -411,7 +485,7 @@ namespace compiler::backend_vm {
 					// a = -a;
 
 					// a = b;
-					ctx.func_builder.addInstruction({ OpKind::mov, args[0], args[1] });
+					pushInstruction(ctx.bytecode_func, { OpKind::mov, args[0], args[1] });
 					args.pop_back();
 				}
 			} else if (kind == OpKind::call) {
@@ -423,16 +497,19 @@ namespace compiler::backend_vm {
 
 			for (const auto& arg: args) instr.pushArgs(arg);
 
-			ctx.func_builder.addInstruction(instr);
+			pushInstruction(ctx.bytecode_func, instr);
 		}
 	}
 
 	void addTerminator(AddLirFuncContext& ctx, const lir::BlockRef lir_block) {
 		const auto& terminator = lir_block->terminator;
 
-		ctx.func_builder.addInstruction(instructions::Comment(base::StrID(
-			base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
-		)));
+		pushInstruction(
+			ctx.bytecode_func,
+			instructions::Comment(base::StrID(
+				base::strConcat("Terminator: ", base::enumToStr(terminator.operation)).data()
+			))
+		);
 
 		if (terminator.operation == lir::Operation::Branch) {
 			auto bool_arg    = lirValueToOpArg(ctx, terminator.arguments.at(0));
@@ -442,16 +519,16 @@ namespace compiler::backend_vm {
 			variant_match(terminator.arguments.at(0).getVariant()) {
 				variant_case(bool, value) {
 					if (value)
-						ctx.func_builder.addInstruction({ OpKind::jmp, true_block });
+						pushInstruction(ctx.bytecode_func, { OpKind::jmp, true_block });
 					else
-						ctx.func_builder.addInstruction({ OpKind::jmp, false_block });
+						pushInstruction(ctx.bytecode_func, { OpKind::jmp, false_block });
 				}
 				variant_default {
-					ctx.func_builder.addInstruction(
-						{ OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } }
+					pushInstruction(
+						ctx.bytecode_func, { OpKind::cmpEq, bool_arg, vm::opargs::Immediate{ 1 } }
 					);
-					ctx.func_builder.addInstruction({ OpKind::jmpIf, true_block });
-					ctx.func_builder.addInstruction({ OpKind::jmpIfNot, false_block });
+					pushInstruction(ctx.bytecode_func, { OpKind::jmpIf, true_block });
+					pushInstruction(ctx.bytecode_func, { OpKind::jmpIfNot, false_block });
 				}
 			}
 
@@ -465,32 +542,44 @@ namespace compiler::backend_vm {
 				CORE_ASSERT(
 					terminator.arguments.size() == 1, "Invalid number of arguments for value-return."
 				);
-				ctx.func_builder.addInstruction({
-					OpKind::mov,
-					vm::opargs::StackLocalI64(base::StrID("ret_val")),
-					lirValueToOpArg(ctx, terminator.arguments.at(0)),
-				});
+				pushInstruction(
+					ctx.bytecode_func,
+					{
+						OpKind::mov,
+						vm::opargs::StackLocalI64(base::StrID("ret_val")),
+						lirValueToOpArg(ctx, terminator.arguments.at(0)),
+					}
+				);
 			} else {
 				for (auto&& lir_location: terminator.arguments)
 					terminator_instr.pushArg(lirValueToOpArg(ctx, lir_location));
 			}
 
-			ctx.func_builder.addInstruction(terminator_instr);
+			pushInstruction(ctx.bytecode_func, terminator_instr);
 		}
 	}
 
-	Module::Module(base::StrID module_id, const std::vector<CRef<lir::Function>>& functions):
+	Module::Module(
+		query::Context&                         query_ctx,
+		base::StrID                             module_id,
+		const std::vector<CRef<lir::Function>>& functions
+	):
 		  module_id(module_id),
-		  type_context_builder(vm::code::getBuiltinTypes()) {
-		for (const auto& lir_function: functions) insertTypes(type_context_builder, lir_function);
+		  valid_program(ValidProgram::withBuiltins()) {
+		CodeCollection compiled_types;
 
-		TypeContext type_context = type_context_builder.build();
-		code.types               = type_context.getTypes() | std::ranges::to<std::vector>();
+		for (const auto& lir_function: functions)
+			insertTypesUsedByFunction(query_ctx, compiled_types.types, lir_function);
+
+		// Insert and validate types:
+		valid_program.insertCode(compiled_types);
+
+		CodeCollection compiled_functions;
 
 		for (const auto& lir_function: functions) {
 			std::cerr << "Adding function: " << lir_function->name.strView() << "\n";
 
-			AddLirFuncContext ctx(lir_function, type_context);
+			AddLirFuncContext ctx(lir_function, valid_program.types());
 			initLocals(ctx);
 
 			for (auto&& lir_block: lir_function->block_order) registerBlock(ctx, lir_block);
@@ -503,9 +592,14 @@ namespace compiler::backend_vm {
 				addTerminator(ctx, lir_block);
 			}
 
-			code.functions.emplace_back(ctx.func_builder.build());
+			compiled_functions.functions.emplace_back(std::move(ctx.bytecode_func));
 		}
+
+		// Insert and validate functions:
+		valid_program.insertCode(compiled_functions);
 	}
 
-	vm::code::CodeCollection Module::build() const { return code; }
+	vm::code::CodeCollection Module::build() const {
+		return valid_program.produceValidCodeCollection();
+	}
 }

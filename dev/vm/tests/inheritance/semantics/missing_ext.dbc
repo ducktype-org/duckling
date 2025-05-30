@@ -1,0 +1,27 @@
+type class: Widget {
+	abstract: true;
+}
+type class: Button {
+	extends: Widget;
+}
+type pointer: WidgetPtr Widget
+type pointer: ButtonPtr Button
+
+function main {
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
+	init_lany_type widget, WidgetPtr;
+	init_lany_type button, ButtonPtr;
+
+	init_lany_type helper_button, ButtonPtr;
+	alloc_lptr_type helper_button, Button;
+	setVTable_lptr_type helper_button, Button;
+	upcast_lptr_lptr widget, helper_button;
+
+	downcast_lptr_lptr button, widget;
+	# Whoops, I forgot about:
+	# ext_type Button;
+
+	ret;
+}

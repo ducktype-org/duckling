@@ -28,7 +28,7 @@ namespace compiler::helios::mangler {
         bool operator==(const KeyOf_MangledSymbol& rhs) const = default;
 
         [[nodiscard]]
-        base::HashT customPerfectHash() const {
+        u64 queryUnstablePerfectHash() const {
             static base::Map<KeyOf_MangledSymbol, u64> hashes{};
             
             if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

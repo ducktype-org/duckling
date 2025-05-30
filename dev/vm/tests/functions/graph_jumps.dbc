@@ -1,21 +1,21 @@
 function main {
-    jmpIf_label different_init;
-    init_lany_type x, i64;
-    jmp_label variable_usage;
+	jmpIf_label different_init;
+	init_lany_type x, i64;
+	jmp_label variable_usage;
 
-    label different_init;
-    init_lany_type x, i64;
-    
-    label variable_usage;
-    mov_l64_imm x, 42;
-    output_l64 x;
+	label different_init;
+	init_lany_type x, i64;
+	
+	label variable_usage;
+	mov_l64_imm x, 42;
+	output_l64 x;
 
 
-    jmpIf_label different_deinit;
-    deinit;  # x
-    ret;
+	jmpIf_label different_deinit;
+	deinit;  # x
+	ret;
 
-    label different_deinit;
-    deinit;  # x
-    ret;
+	label different_deinit;
+	deinit;  # x
+	ret;
 }

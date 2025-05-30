@@ -1,26 +1,26 @@
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
-    jmp_label           A;
+	jmp_label           A;
 
-    init_lany_type      x, i64;
-    label               B;
-    jmp_label           B;
-    deinit; # x
-    jmp_label           A;
+	init_lany_type      x, i64;
+	label               B;
+	jmp_label           B;
+	deinit; # x
+	jmp_label           A;
 
-    label               A;
+	label               A;
 
-    init_lany_type      y, i64;
+	init_lany_type      y, i64;
 
-    jmp_label           C;
+	jmp_label           C;
 	label               C;
 
-    deinit; # y
+	deinit; # y
 
-    deinit; # *argv
-    deinit; # argc
-    ret;
+	deinit; # *argv
+	deinit; # argc
+	ret;
 }

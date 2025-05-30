@@ -1,14 +1,14 @@
 #include "cli.hpp"
 
-#include "api/data/api_error.hpp"
-
 #include <json/json.hpp>
 
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
+#include <vm/api/data/api_error.hpp>
 #include <vm/api/data/core_operation_error.hpp>
 #include <vm/api/data/load_program_error.hpp>
+#include <vm/api/data/process_info.hpp>
 
 #include <iostream>
 
@@ -19,42 +19,39 @@ std::string convertError(const vm::api::ApiError& api_error) {
 				variant_case(vm::api::LoadProgramError, load) { return load.why; }
 			}
 		}
-		variant_case(vm::api::WrongResponse, _) return "Wrong response.";
 	}
-	return nlohmann::to_string(nlohmann::json(api_error));
+	return vm::api::errorToString(api_error);
 }
 
-template<class T, class E>
-T expect(std::expected<T, E> r) {
-	std::expected<T, std::string> r1 = r.transform_error(convertError);
-	if (!r1.has_value()) {
-		std::cout << r1.error() << "\n";
-		std::exit(-1);  // NOLINT: Potential exit race condition
-	}
-	return r.value();
-}
-
-template<class E>
-void expect(std::expected<void, E> r) {
-	std::expected<void, std::string> r1 = r.transform_error(convertError);
-	if (!r1.has_value()) {
-		std::cout << r1.error() << "\n";
-		std::exit(-1);  // NOLINT: Potential exit race condition
-	}
-}
-
-void cli(bool load_stdlib) {
+int cli(bool load_stdlib) {
 	std::string filepath;
 	std::cout << "Path to file: ";
 	std::cin >> filepath;
-	cli(fs::FilePath(filepath), load_stdlib);
+	return cli(fs::FilePath(filepath), load_stdlib);
 }
 
-void cli(const fs::FilePath& filepath, bool load_stdlib) {
-	vm::PID pid = expect(vm::api::spawn()).pid;
-	if (load_stdlib) expect(vm::api::loadStdlib(pid));
-	expect(vm::api::loadFiles(pid, { filepath }));
-	expect(vm::api::attach(pid, std::cin, std::cout));
-	expect(vm::api::run(pid));
-	expect(vm::api::join(pid));
+int cli(const fs::FilePath& filepath, bool load_stdlib) {
+	vm::PID pid{};
+
+	std::expected<vm::api::ExitCode, std::string> result
+		= vm::api::spawn()
+	          .and_then([&](vm::api::ProcessInfo info) {
+				  pid = info.pid;
+
+				  if (load_stdlib) return vm::api::loadStdlib(pid);
+				  return std::expected<void, vm::api::ApiError>{};
+			  })
+	          .and_then([&] { return vm::api::loadFiles(pid, { filepath }); })
+	          .and_then([&] { return vm::api::attach(pid, std::cin, std::cout); })
+	          .and_then([&] { return vm::api::run(pid); })
+	          .and_then([&] { return vm::api::join(pid); })
+	          .and_then([&] { return vm::api::getExitCode(pid); })
+	          .transform_error(convertError);
+
+	if (result.has_value())
+		return base::safeIntConv<int>(result.value());
+	else {
+		std::cerr << result.error();
+		return 1;
+	}
 }

@@ -1,7 +1,7 @@
 #include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmFunctionsTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -53,7 +53,7 @@ private:
 		loadInvalidDbc(
 			"deinit_ret_val.dbc",
 			{
-				vm::code::builders::RetValDeinitError::ERR_MSG,
+				vm::code::RetValDeinitError::ERR_MSG,
 			}
 		);
 	}
@@ -82,7 +82,7 @@ private:
 			loadInvalidDbc(
 				filename,
 				{
-					vm::code::builders::PathWithoutEndError::ERR_MSG,
+					vm::code::PathWithoutEndError::ERR_MSG,
 				}
 			);
 

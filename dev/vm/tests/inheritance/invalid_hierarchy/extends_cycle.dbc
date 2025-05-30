@@ -1,15 +1,11 @@
 type class: A {
-    extends: B;
+	extends: B;
 }
 
 type class: B {
-    extends: C;
+	extends: C;
 }
 
 type class: C {
-    extends: A;
-}
-
-function main {
-    ret;
+	extends: A;
 }

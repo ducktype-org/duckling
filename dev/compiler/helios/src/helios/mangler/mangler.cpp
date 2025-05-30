@@ -90,7 +90,7 @@ namespace compiler::helios::mangler {
         std::string symbol_name(query::Context& ctx, SymID symbol_id) {
             std::cerr << __PRETTY_FUNCTION__ << '\n';
 
-            std::cerr << "symbol_id: " << symbol_id.customPerfectHash() << '\n';
+            std::cerr << "symbol_id: " << symbol_id.queryUnstablePerfectHash() << '\n';
             std::cerr << "symbol PstID: " << symbolPst(symbol_id).unlock(ctx)->getID().asInt() << '\n';
 
             auto scope_id = scope(symbol_id);
@@ -113,7 +113,7 @@ namespace compiler::helios::mangler {
                     for(const auto& sym : symbols_in_parent) {
                         auto pst_sym = symbolPst(sym).unlock(ctx);
                         
-                        std::cerr << "\t" << sym.customPerfectHash() << " - " << compiler::helios::name(sym).str() << '\t';
+                        std::cerr << "\t" << sym.queryUnstablePerfectHash() << " - " << compiler::helios::name(sym).str() << '\t';
                         std::cerr << "elem type: " << symbolPst(sym).unlock(ctx)->elementType() << '\n';
                         
                         if(pst_sym->getElementKind() == pst::ElementKind::Namespace) {
@@ -170,24 +170,14 @@ namespace compiler::helios::mangler {
             std::string ret;
             if(kind(symbol_id) == SymbolKind::Function) {
                 ret = "F";
-                auto func = symbolPst(symbol_id).unlock(ctx).dynamicCast<pst::Fun>().value();
-                auto func_ret = func->getRet();
-                if(func_ret.has_value()) {
-                    auto value = func_ret.value().unlock(ctx);
-                    std::cerr << "Function return type:\n";
-                    value->debugPrint(std::cerr);
-                    for(auto&& child : value->viewChildren()) {
-                        std::cerr << "\ntype: " << child.unlock(ctx)->elementType() << '\n';
-                        
-                    }
-                }
+                auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+                auto fun_type = tsh::FunctionAbstractType(type);
+                
+                auto ret_type = fun_type.getResultType();
+                ret += ret_type.toString();
+                for(auto param : fun_type.getParameterTypes())
+                    ret += param.toString();
 
-                for(auto&& param : *func->getParams().unlock(ctx)) {
-                    auto param_symbol = ctx.query<QuerySymbolOfSTMT>({ param });
-					auto param_name   = name(param_symbol);
-					auto param_type   = ctx.query<QueryTypeOfSymbol>({ param_symbol });
-                    ret += param_type->value().getType().toString();
-                }
                 ret += "E";
             } else if(kind(symbol_id) == SymbolKind::Method) {
                 // @future: methods

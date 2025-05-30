@@ -28,6 +28,7 @@
 
 #include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/type_of_data.hpp>
+#include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/vmvalue.hpp>
 
 namespace vm {
@@ -71,6 +72,7 @@ namespace vm::builtins {
 		BuiltinFunctionID           id,
 		TypeCRef                    builtin_func_type,
 		VMThread&                   thread,
+		Memory&                     memory,
 		const std::vector<VmValue>& arguments
 	);
 

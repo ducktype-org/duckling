@@ -130,10 +130,12 @@ private:
 	 * of sizes from 8 bits to 128 bits, and that they are correctly cast.
 	 */
 	void simpleInts() {
+		using enum IntegralAbstractType::Signedness;
+
 		for (usize i = 0; i < 5; i++) {
 			const auto int_1 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
 			const auto int_2 = query::entryPoint<QueryIntegralType>({ 8U * (1 << i) });
-			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), false });
+			const auto int_u = query::entryPoint<QueryIntegralType>({ 8U * (1 << i), Unsigned });
 			assertTrue(int_1.getKind() == Integral, "Int should have kind Integral.");
 
 			assertTrue(
@@ -149,10 +151,10 @@ private:
 			IntegralAbstractType int_3    = type_int;
 			assertTrue(int_3.getKind() == Integral, "Int should survive casting.");
 
-			ASSERT_TRUE(int_1.getSignedness());
-			ASSERT_TRUE(int_2.getSignedness());
-			ASSERT_TRUE(not int_u.getSignedness());
-			ASSERT_TRUE(int_3.getSignedness());
+			ASSERT_TRUE(int_1.getSignedness() == Signed);
+			ASSERT_TRUE(int_2.getSignedness() == Signed);
+			ASSERT_TRUE(int_u.getSignedness() == Unsigned);
+			ASSERT_TRUE(int_3.getSignedness() == Signed);
 		}
 
 		assertTrue(

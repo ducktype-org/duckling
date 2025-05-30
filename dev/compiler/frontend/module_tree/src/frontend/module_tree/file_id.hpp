@@ -8,5 +8,4 @@ namespace compiler::frontend {
 	 * @brief Structure holding FileID within SourceFile
 	 */
 	STRONG_TYPEDEF_ID(FileID);
-	ID_PERFECT_HASH(FileID);
 }
