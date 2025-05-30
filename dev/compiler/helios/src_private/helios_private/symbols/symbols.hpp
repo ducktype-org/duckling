@@ -8,7 +8,7 @@
 #include <helios/helios_result.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <query_framework/query_int.hpp>
@@ -19,6 +19,13 @@
 
 namespace compiler::helios {
 
+	/**
+	 * @brief Return all symbols currently stored by HELIOS.
+	 * @note: This should be used for tests and debug only,
+	 * and never in an actual query.
+	 * @return std::vector<SymID>
+	 */
+	std::vector<SymID> getAllHeliosSymbols();
 
 	/**
 	 * @brief Query symbols associated with given element in PST
@@ -42,8 +49,7 @@ namespace compiler::helios {
 		bool follow_wildcards;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_LookupInSymbol&) const = default;
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**
@@ -53,8 +59,9 @@ namespace compiler::helios {
 	DECLARE_QUERY(QueryLookupInSymbol, KeyOf_LookupInSymbol, CRef<LookupResult>);
 
 	using QueryDealias_Result = errors::HResult<SymbolList, errors::Failed>;
+
 	/**
-	 * A query that returns an "absolute path" to the symbol without aliases.
+	 * A query that returns dealiased symbol list of a given alias symbol.
 	 */
 	DECLARE_QUERY(QueryDealias, SymID, CRef<QueryDealias_Result>);
 

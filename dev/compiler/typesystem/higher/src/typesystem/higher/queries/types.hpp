@@ -45,18 +45,22 @@ namespace tsh {
 		/**
 		 * @brief Whether the Integral type is signed or not.
 		 */
-		bool signedness{ true };
+		IntegralAbstractType::Signedness signedness;
 
 		// These constructor definitions are to force giving at least the first argument.
 		KeyFor_QueryIntegralType() = delete;
 
-		KeyFor_QueryIntegralType(const usize size, const bool signedness = true):
+		KeyFor_QueryIntegralType(
+			const usize                            size,
+			const IntegralAbstractType::Signedness signedness
+			= IntegralAbstractType::Signedness::Signed
+		):
 			  size(size),
 			  signedness(signedness) {}
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
-			return size + signedness;
+		u64 queryUnstablePerfectHash() const {
+			return size + (signedness == IntegralAbstractType::Signedness::Signed);
 		}
 	};
 
@@ -103,7 +107,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryTupleType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -127,7 +131,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryVariantType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
@@ -173,7 +177,7 @@ namespace tsh {
 			= default;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			static base::Map<KeyFor_QueryFunctionType, u64> hashes{};
 
 			if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;

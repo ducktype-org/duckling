@@ -20,13 +20,12 @@
 
 #include <frontend/module_tree/module_id.hpp>
 #include <helios/scope_symbol_id.hpp>
-#include <helios_private/lookup_utils/lookup_result.hpp>
+#include <helios_private/lookup/lookup_result.hpp>
 #include <pst_parser/elements/elements.hpp>
 #include <pst_parser/generic_query_key.hpp>
 #include <pst_parser/lang_parser_state.hpp>
 #include <query_framework/query_int.hpp>
 
-#include <base/perfect_hash.hpp>
 #include <base/string_id.hpp>
 
 namespace compiler::helios {
@@ -93,8 +92,7 @@ namespace compiler::helios {
 		bool        with_wildcards;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-		bool        operator==(const KeyOf_LookupInScope&) const = default;
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	/**

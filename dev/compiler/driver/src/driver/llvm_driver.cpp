@@ -36,7 +36,7 @@ namespace compiler::driver {
 		object_file_paths.push_back(object_file_path);
 	}
 
-	void LLVMDriver::link() {
+	void LLVMDriver::link(base::StrID output_file) {
 		if (options->add_builtin_library) {
 			auto mod                 = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
 			auto builtin_object_path = base::StrID("builtin.o");
@@ -64,7 +64,7 @@ namespace compiler::driver {
 		command.addArg("-lc");  // Link the C standard library.
 
 		command.addArg("-o");
-		command.addArg(options->output_file.str());
+		command.addArg(output_file.str());
 		command.execute();
 	}
 }

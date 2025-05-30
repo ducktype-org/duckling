@@ -1,8 +1,8 @@
 #pragma once
 
 #include "allocator/block_data.hpp"
+#include "allocator/dummy_allocator.hpp"
 #include "allocator/heap_allocator.hpp"
-#include "allocator/stack_allocator.hpp"
 #include "block.hpp"
 #include "frame.hpp"
 #include "pointer.hpp"
@@ -20,7 +20,6 @@
 #include <cstring>
 #include <deque>
 #include <mutex>
-#include <shared_mutex>
 
 namespace vm {
 	/**
@@ -29,9 +28,11 @@ namespace vm {
 	 */
 	class Memory final {
 	private:
-		mutable std::shared_mutex mutex;
-		HeapAllocator             heap_allocator;
-		StackAllocator            stack_allocator;
+		// We either have recursive_mutex or a shared_mutex.
+		// https://stackoverflow.com/questions/36619715/a-shared-recursive-mutex-in-standard-c
+		std::recursive_mutex mutex;
+		HeapAllocator        heap_allocator;
+		DummyAllocator       dummy_allocator;
 
 		std::deque<ThreadStack> threads_frame_stacks;
 
@@ -64,9 +65,13 @@ namespace vm {
 		// =================== Used by executor ===================
 
 		auto initializeFrameStack() -> Ref<ThreadStack>;
+
 		auto allocateHeap(TypeCRef type) -> Ref<Block>;
 
-		auto allocateStack(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
+		/**
+		 * @brief Creates a block with externally managed data life-time.
+		 */
+		auto allocateDummy(TypeCRef type, Ref<std::byte> stack_pointer) -> Ref<Block>;
 
 		void freeBlock(Ref<Block> block);
 
@@ -75,56 +80,57 @@ namespace vm {
 		/**
 		 * @brief Returns a view of global data by the id.
 		 */
-		[[nodiscard]]
-		__attribute__((always_inline)) auto getGlobalData(GlobalDataID id) -> base::ModRawView {
+		[[nodiscard]] constexpr __attribute__((always_inline)) auto getGlobalData(GlobalDataID id)
+			-> base::ModRawView {
+			std::lock_guard lock(mutex);
 			return global_data.atMaybe(id).expect("Id not stored!").modView();
 		}
+
+		// =================== Variant operations ===================
+
+		/**
+		 * @brief Gets the nested block from block at offset.
+		 * @note Parent pointer also stores offset within the parent block where to take the
+		 * nested view block from.
+		 */
+		static MRef<Block> getNestedViewBlock(Pointer parent_pointer, TypeCRef type);
+
+		/**
+		 * @brief Creates new block at position.
+		 * @note Parent pointer also stores offset within the parent block where to create the new
+		 * nested view block.
+		 */
+		void setNestedViewBlock(Pointer parent_pointer, TypeCRef type);
 
 		// =================== Block operations ===================
 
 		[[nodiscard]]
-		static auto getBlockType(Ref<Block> block) -> TypeCRef {
-			std::shared_lock lock(*block->shared_mutex);
-			return block->data.element_type;
-		}
+		static auto getBlockType(Ref<Block> block) -> TypeCRef;
 
 		// ======================== Pointers ========================
 
 		[[nodiscard]]
-		static auto getPointer(Ref<Block> block) -> Pointer {
-			std::unique_lock lock(*block->shared_mutex);
-			block->refcount++;
-			return { block, 0 };
-		}
+		static auto newBlockReference(Ref<Block> block, u64 offset) -> Pointer;
 
 		// @todo panics slows down the execution of the code in executor
 		// we should implement entirely different error handling (maybe exception free)
 		[[nodiscard]]
-		static __attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
-			-> base::ModRawView {
-			std::shared_lock lock(*pointer.block->shared_mutex);
+		static constexpr
+			__attribute__((always_inline)) auto getPointerData(Pointer pointer, u64 size_bytes)
+				-> base::ModRawView {
 			if (pointer.block == nullptr) CORE_PANIC("Accessing null pointer");
+			std::lock_guard lock(*pointer.block->mutex_ref);
 			if (pointer.block->deallocated) CORE_PANIC("Data was freed");
 			if (pointer.offset + size_bytes > pointer.block->data.view.size())
 				CORE_PANIC("Accessing data out of bounds");
 			return { pointer.block->data.view.getBegin() + pointer.offset, size_bytes };
 		}
 
-		auto destroyPointer(Pointer pointer) -> void {
-			if_opt_some(pointer.block.toOpt(), block) {
-				std::unique_lock lock(*block->shared_mutex);
-				destroyReference(block);
-			}
-		}
+		auto copyPointedData(Pointer dst, Pointer src, TypeCRef type) -> void;
 
-		auto setPointer(Pointer& dst, Pointer src) -> void {
-			destroyPointer(dst);
-			if_opt_some(src.block.toOpt(), block) {
-				std::unique_lock lock(*block->shared_mutex);
-				block->refcount++;
-				dst = src;
-			}
-		}
+		auto destroyBlockReference(Pointer pointer) -> void;
+
+		auto setPointer(Pointer& dst, Pointer src) -> void;
 
 		// ======================== Requests ========================
 

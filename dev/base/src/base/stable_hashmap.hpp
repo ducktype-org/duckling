@@ -110,12 +110,6 @@ namespace base {
 			return data.size();
 		}
 
-		/**
-		 * It currently compares pointers, not the underlying data.
-		 * @todo Implement a proper comparison.
-		 */
-		bool operator==(const StableHashMap& other) const { return data == other.data; }
-
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;
 	};

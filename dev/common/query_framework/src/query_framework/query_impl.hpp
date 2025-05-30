@@ -10,6 +10,7 @@
 #include "detail/query_graph/node_making.hpp"
 #include "detail/utils/logs.hpp"
 #include "query_cache_macros.hpp"  // IWYU pragma: export
+#include "query_hash.hpp"
 #include "query_int.hpp"
 
 #include <base/defer.hpp>
@@ -38,7 +39,9 @@ namespace query::detail {
 		typename QueryImplType::QResult {
 		QUERY_DEBUG_LOG("[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Enter.\n");
 
-		if (auto v = QueryImplType::load(key)) {
+		const auto unstable_hash = unstableHashKey(key);
+
+		if (auto v = QueryImplType::load(unstable_hash)) {
 			// @FUTURE: Add ACD check here...
 			QUERY_DEBUG_LOG(
 				"[QUERY \"", QueryImplType::QueryType::getName(), "\"]: Cached. Done.\n"
@@ -70,7 +73,7 @@ namespace query::detail {
 
 			// This is all at the end, with defer above,
 			// to guarantee copy elision with "prvalue semantics".
-			return QueryImplType::store(key, QueryImplType::provide(context, key), acd);
+			return QueryImplType::store(unstable_hash, QueryImplType::provide(context, key), acd);
 		}
 	}
 
@@ -98,10 +101,13 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(QKey key) -> LoadResult;
-		 *  static auto store(QKey key, PResult res, query::ACD acd) -> QResult;
+		 *  static auto load(query::QueryUnstableHash key_hash) -> LoadResult;
+		 *  static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) ->
+		 * QResult;
 		 */
+		static constexpr bool CACHE_ON_DISK = false;
 	};
+
 }
 
 /**
@@ -137,7 +143,11 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		std::is_same_v<                                                                           \
-			std::invoke_result_t<decltype(type::store), type::QKey, type::PResult, ::query::ACD>, \
+			std::invoke_result_t<                                                                 \
+				decltype(type::store),                                                            \
+				query::QueryUnstableHash,                                                         \
+				type::PResult,                                                                    \
+				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
 		"Bad store result."                                                                       \
 	);                                                                                            \
@@ -150,8 +160,20 @@ namespace query::detail {
 	static_assert(                                                                                \
 		not std::is_reference_v<type::QKey>,                                                      \
 		"Query key type should not be a reference (use custom struct instead)"                    \
+	);                                                                                            \
+	static_assert(                                                                                \
+		::query::HasUnstablePerfectHash<type::QKey>,                                              \
+		"queryUnstablePerfectHash must be implemented and return u64 (query::QueryUnstableHash)." \
+	);                                                                                            \
+	static_assert(                                                                                \
+		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
+		"If cache_on_disk is true, queryStablePerfectHash must be implemented and return Bit256 " \
+		"(QueryStableHash)."                                                                      \
+	);                                                                                            \
+	static_assert(                                                                                \
+		std::is_invocable_v<decltype(type::load), query::QueryUnstableHash>,                      \
+		"Load function must be callable with query::QueryUnstableHash."                           \
 	);
-
 
 /**
  * @brief Macro used to define boilerplate implementation elements of given Query. This is

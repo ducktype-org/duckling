@@ -4,6 +4,7 @@
 
 #include <helios/utils/symbol_list.hpp>
 #include <query_framework/query_int.hpp>
+#include <token_parser_core/common_elements.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
 #include <base/box.hpp>
@@ -57,6 +58,23 @@ namespace compiler::helios::code {
 		bool value;
 
 		LiteralBoolExpr(query::Context& ctx, bool value);
+
+		void debugPrint(std::ostream& out) const final;
+		void acceptVisitor(HoutExprVisitor&) const final;
+	};
+
+	/**
+	 * @brief Represents a string literal value written in the expression ("Hello world" etc.).
+	 */
+	struct LiteralStringExpr final: public Expr {
+		/**
+		 * @note value is a StringValue, not a String.
+		 * Thus the character escaping sequences are kept in the value.
+		 * Ex. in "Hello world\n" new line character is kept as "\n" not as literal new line.
+		 */
+		tpc::StringValue value;
+
+		LiteralStringExpr(query::Context& ctx, tpc::StringValue value);
 
 		void debugPrint(std::ostream& out) const final;
 		void acceptVisitor(HoutExprVisitor&) const final;
@@ -232,7 +250,6 @@ namespace compiler::helios::code {
 
 	/**
 	 * @brief Represents a call in an expression.
-	 * @note This is a mock, with this representation it's impossible to handle overloads.
 	 */
 	struct CallExpr final: public Expr {
 		SymID                        callee;

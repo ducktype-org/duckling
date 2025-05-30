@@ -73,7 +73,7 @@ namespace pst {
 
 		[[nodiscard]]
 		auto getPointed() const {
-			return names.internal()->getNames();
+			return names.give();
 		}
 
 		[[nodiscard]]
@@ -173,8 +173,8 @@ namespace pst {
 		}
 
 		[[nodiscard]]
-		auto getPointed() const {
-			return points_to.internal()->getNames();
+		AccessLocked<DottedName> getPointed() const {
+			return points_to.give();
 		}
 
 		static MBox<Alias> parse(LangParserState& state);

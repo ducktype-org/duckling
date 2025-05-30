@@ -31,8 +31,8 @@ namespace compiler::lir {
 	 */
 	using MutBlockRef = Ref<Block>;
 
-	base::HashT KeyOf_LowerToLirFunction::customPerfectHash() const {
-		return base::perfectHash(*function);
+	u64 KeyOf_LowerToLirFunction::queryUnstablePerfectHash() const {
+		return function->queryUnstablePerfectHash();
 	}
 
 	/**
@@ -271,7 +271,8 @@ namespace compiler::lir {
 					variant_case(mir::LocalRef, local) {
 						const auto arg_type = local->type.getType();
 						return arg_type.getKind() == tsh::Kind::Integral
-						   and tsh::IntegralAbstractType(arg_type).getSignedness();
+						   and tsh::IntegralAbstractType(arg_type).getSignedness()
+						           == tsh::IntegralAbstractType::Signedness::Signed;
 					}
 					variant_default { return false; }
 				}

@@ -20,6 +20,7 @@ namespace compiler::helios::code {
 
 	EXPR_VISITOR(LiteralIntExpr)
 	EXPR_VISITOR(LiteralBoolExpr)
+	EXPR_VISITOR(LiteralStringExpr)
 	EXPR_VISITOR(LiteralTypeExpr)
 	EXPR_VISITOR(IdentifierExpr)
 	EXPR_VISITOR(BinaryOperatorExpr)
@@ -64,6 +65,22 @@ namespace compiler::helios::code {
 
 	void LiteralBoolExpr::debugPrint(std::ostream& out) const { out << (value ? "true" : "false"); }
 
+	LiteralStringExpr::LiteralStringExpr(query::Context& ctx, tpc::StringValue value):
+		  Expr(
+
+			  tsh::ExpressionType<>(
+				  tsh::SymbolType{
+					  ctx.query<tsh::QueryStringType>({}),
+					  tsh::ReferenceKind::Direct,
+					  tsh::Mutability::Immutable,
+				  },
+				  tsh::ValueCategory(tsh::PrimaryCategory::Literal)
+			  )
+		  ),
+		  value(value) {}
+
+	void LiteralStringExpr::debugPrint(std::ostream& out) const { out << value.str(); }
+
 	LiteralTypeExpr::LiteralTypeExpr(query::Context& ctx, tsh::AbstractType type):
 		  Expr(
 
@@ -97,7 +114,7 @@ namespace compiler::helios::code {
 		  symbol(symbol) {}
 
 	void IdentifierExpr::debugPrint(std::ostream& out) const {
-		out << strConcat("(Symbol ", name(symbol), " (", symbol.customPerfectHash(), "))");
+		out << strConcat("(Symbol ", name(symbol), " (", symbol.queryUnstablePerfectHash(), "))");
 	}
 
 	tsh::AbstractType builtinOperationToReturnType(

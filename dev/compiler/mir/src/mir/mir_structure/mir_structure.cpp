@@ -28,15 +28,7 @@ namespace compiler::mir {
 		  no_lifetime_scope(no_lifetime_scope),
 		  helios_id(helios_id) {}
 
-	bool Function::operator==(const Function& other) const {
-		// This doesn't make much sense, in general
-		// MIR Functions should be treated as unique objects.
-		// This is a temporary solution to make it work with the current hash-query system.
-		// It will be deleted during the hash-query refactor #523
-		return helios_id == other.helios_id;
-	}
-
-	base::HashT Function::customPerfectHash() const { return base::perfectHash(helios_id); }
+	u64 Function::queryUnstablePerfectHash() const { return helios_id.queryUnstablePerfectHash(); }
 
 	bool isTerminating(Operation op) {
 		switch (op) {

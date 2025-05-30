@@ -14,11 +14,7 @@ namespace compiler::mir {
 		helios::HOUTFunction function;
 
 		[[nodiscard]]
-		base::HashT customPerfectHash() const;
-
-		bool operator==(const KeyOf_LowerToMirFunction& oth) const {
-			return function == oth.function;
-		}
+		u64 queryUnstablePerfectHash() const;
 	};
 
 	using LowerToMirFunctionResult = helios::errors::HResult<Function, helios::errors::Failed>;

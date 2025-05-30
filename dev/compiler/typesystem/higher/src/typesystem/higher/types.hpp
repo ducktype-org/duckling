@@ -132,6 +132,8 @@ namespace tsh {
 	public:
 		SETUP_TYPE_WITH_BASE(IntegralAbstractType, AbstractType)
 
+		enum class Signedness : bool { Signed = true, Unsigned = false };
+
 		/**
 		 * @brief Get the size of the integral type.
 		 * @return The size of the type.
@@ -143,7 +145,7 @@ namespace tsh {
 		 * @return true if the integer is singed
 		 */
 		[[nodiscard]]
-		bool getSignedness() const;
+		Signedness getSignedness() const;
 
 		CONSTRUCT_WITH_CHECKED_CAST(IntegralAbstractType)
 

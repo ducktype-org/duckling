@@ -1,7 +1,7 @@
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
 	init_lany_type 		x, ptr_i64;
 	init_lany_type 		y, i64;
@@ -12,11 +12,11 @@ function main {
 
 	deinit; # z
 
-	load_l64_lptr_ofs       y, x;  # y = *x
+	staticTableLoad_lany_lptr       y, x;  # y = *x
 
 	deinit; # y
 	deinit; # x
-    deinit; # *argv
-    deinit; # argc
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

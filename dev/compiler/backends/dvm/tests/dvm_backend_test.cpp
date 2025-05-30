@@ -12,6 +12,7 @@
 #include <base/str_utils.hpp>
 
 #include <vm/api/vm.hpp>
+#include <vm/bytecode/bytecode.hpp>
 #include <vm/bytecode/serializer/serializer.hpp>
 
 #include <utility>
@@ -24,6 +25,7 @@ public:
 	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
 		TESTER_ADD_TEST(simpleTest);
 		TESTER_ADD_TEST(functionCallsTest);
+		TESTER_ADD_TEST(builtinFuncsTest);
 	}
 
 protected:
@@ -35,6 +37,7 @@ private:
 
 		std::vector<CRef<lir::Function>> funcs;
 		base::StrID                      module_name;
+		vm::code::CodeCollection         code;
 		query::utils::withContextDo([&](query::Context& ctx) {
 			auto module    = ctx.query<frontend::QueryModuleTree>(fs::FilePath(path(module_path)));
 			module_name    = moduleName(module);
@@ -46,29 +49,33 @@ private:
 				);
 				funcs.emplace_back(lir_fun);
 			}
+			backend_vm::Module m{ ctx, module_name, funcs };
+			code = m.build();
 		});
-		return backend_vm::Module(module_name, funcs);
+		return code;
 	}
 
 	void runTest(
 		std::string                        module_path,
-		const base::Optional<std::string>& input     = {},
-		const base::Optional<std::string>& output    = {},
-		const std::vector<std::string>&    args      = {},
-		i64                                exit_code = 0
+		const base::Optional<std::string>& input      = {},
+		const base::Optional<std::string>& output     = {},
+		const std::vector<std::string>&    args       = {},
+		i64                                exit_code  = 0,
+		bool                               add_stdlib = true
 	) {
 		using namespace compiler;
-		auto module = getModuleFromPath(std::move(module_path));
-		auto code   = module.build();
+		auto code = getModuleFromPath(std::move(module_path));
 
 		for (auto& type: code.types) vm::code::serialize(type, std::cerr);
 		for (auto& func: code.functions) vm::code::serialize(func, std::cerr);
-		runTestOnVm(code, input, output, args, exit_code);
+		runTestOnVm(code, input, output, args, exit_code, add_stdlib);
 	}
 
 	void simpleTest() { runTest("modules/simple", {}, {}, {}, 42); }
 
 	void functionCallsTest() { runTest("modules/function_calls", {}, {}, {}, 4); }
+
+	void builtinFuncsTest() { runTest("modules/builtin_funcs", "9", "81\n82\n", {}, 82); }
 };
 
 

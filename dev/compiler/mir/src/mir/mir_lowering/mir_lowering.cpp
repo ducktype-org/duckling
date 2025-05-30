@@ -19,6 +19,7 @@
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
 
+#include <base/exceptions.hpp>
 #include <base/stable_container.hpp>
 #include <base/stable_hashmap.hpp>
 #include <base/variant.hpp>
@@ -30,8 +31,8 @@ namespace compiler::mir {
 
 	namespace hc = helios::code;
 
-	base::HashT KeyOf_LowerToMirFunction::customPerfectHash() const {
-		return base::perfectHash(function);
+	u64 KeyOf_LowerToMirFunction::queryUnstablePerfectHash() const {
+		return function.queryUnstablePerfectHash();
 	}
 
 	struct InstructionHole;
@@ -755,6 +756,10 @@ namespace compiler::mir {
 
 		void visitLiteralBoolExpr(const hc::LiteralBoolExpr& expr) override {
 			output({ .begin = continuation, .value = MIRValue{ MirBoolConst{ expr.value } } });
+		}
+
+		void visitLiteralStringExpr(const hc::LiteralStringExpr&) override {
+			throw base::NotYetImplemented("string literal");
 		}
 
 		void visitLiteralTypeExpr(const hc::LiteralTypeExpr&) override {

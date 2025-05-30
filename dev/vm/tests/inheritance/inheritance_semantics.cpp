@@ -4,27 +4,47 @@
 #include <base/variant.hpp>
 
 #include <vm/api/api.hpp>
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmInheritanceSemanticsTest: public VmTestSuite {
 #undef TESTER_CLASS
 #define TESTER_CLASS VmInheritanceSemanticsTest
 
 public:
-	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() { TESTER_ADD_TEST(semantics); }
-
+	VM_TESTER_TEST_SIMPLE_CONSTRUCTOR() {
+		TESTER_ADD_TEST(downcast);
+		TESTER_ADD_TEST(upcast);
+		TESTER_ADD_TEST(dynamicDispatch);
+		TESTER_ADD_TEST(semantics);
+	}
 
 private:
-	void semantics() {
-		runTestOnVm("valid_upcast.dbc", {}, {}, {}, 0);
-		runTestOnVm("downcast.dbc", "", "10", {}, 0);
+	void downcast() { runTestOnVm("semantics/downcast.dbc", "", "10", {}, 0); }
 
-		// Invalid
-		using namespace vm::code::builders;
+	void upcast() {
+		runTestOnVm("semantics/valid_upcast.dbc", {}, {}, {}, 0);
+		loadInvalidDbc("semantics/invalid_upcast.dbc", { vm::code::InvalidUpcastError::ERR_MSG });
+	}
+
+	void dynamicDispatch() {
+		runTestOnVm("semantics/method_call_with_args.dbc", "12 13", "25", {}, 0);
+		runTestOnVm("semantics/simple_dispatch.dbc", "", "420", {}, 0);
+		runTestOnVm("semantics/dynamic_dispatch.dbc", "", "44542321", {}, 0);
+		runTestOnVm("semantics/interface_dispatch.dbc", "", "11224455", {}, 0);
+
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_1.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+		loadInvalidDbc(
+			"semantics/invalid_virtual_call_2.dbc", { vm::code::InvalidVirtualCallError::ERR_MSG }
+		);
+	}
+
+	void semantics() {
+		using namespace vm::code;
 		auto filename_and_error = std::to_array<std::pair<std::string, std::string_view>>({
-			{ "invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
-			{ "missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },
-			// { "invalid_upcast.dbc", InvalidUpcast::ERR_MSG }, // @TODO after #732
+			{ "semantics/invalid_instantiation.dbc", UninstantiableValueError::ERR_MSG },
+			{ "semantics/missing_ext.dbc", InvalidInstructionExtensionError::ERR_MSG },
 		});
 
 		for (auto& [filename, error]: filename_and_error) loadInvalidDbc(filename, { error });

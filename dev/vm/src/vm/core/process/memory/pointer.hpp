@@ -39,7 +39,12 @@ namespace vm {
 		[[nodiscard]]
 		auto getBlock() -> Ref<Block> {
 			if (block == nullptr) CORE_PANIC("Accessing null pointer");
-			return block.toOpt()->get();
+			return &*block;
+		}
+
+		[[nodiscard]]
+		auto getOffset() {
+			return offset;
 		}
 
 		[[nodiscard]]
