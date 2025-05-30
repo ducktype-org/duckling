@@ -115,7 +115,7 @@ namespace compiler::helios {
 
 			// @TODO: some stuff in here are also symbols (like named if's)
 			// "query symbol in scope" should be able to just work
-			// and provide correct symbols for lookup, but same care
+			// and provide correct symbols for lookup, but some care
 			// has to be taken, to ensure consistency between this code and scope states.
 
 			template<class T>
