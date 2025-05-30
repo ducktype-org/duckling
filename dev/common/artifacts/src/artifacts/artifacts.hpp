@@ -3,6 +3,7 @@
 #include <filesystem/file.hpp>
 #include <hashing/hash.hpp>
 
+#include "base/stable_hashmap.hpp"
 #include <base/box.hpp>
 #include <base/optional.hpp>
 #include <base/raw_view.hpp>
@@ -173,7 +174,7 @@ namespace artifacts {
 		base::HashMap<base::StrID, Box<Bytes>>   blob_data;
 
 		base::HashMap<base::StrID, Box<ArtifactCollection>>
-			sub_collections;  /// Box, because we may need stable refs.
+			sub_collections;  /// Box, because we may need stable refs. Cannot be base::StableHashMap, because we are using a private constructor of collection.
 
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 

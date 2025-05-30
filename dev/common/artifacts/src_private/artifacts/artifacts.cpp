@@ -1,5 +1,6 @@
 #include <artifacts/artifacts.hpp>
 
+#include "base/optional.hpp"
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
 
@@ -138,7 +139,11 @@ Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionN
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAtOrNew(
 	base::StrID collection_name
 ) {
-	return subCollectionAtMaybe(collection_name).valueOr(subCollectionNew(collection_name));
+	match_optional(subCollectionAtMaybe(collection_name)) {
+		opt_some(collection) return collection;
+		opt_none return subCollectionNew(collection_name);
+	}
+	CORE_UNREACHABLE();
 }
 
 Ref<artifacts::ArtifactCollection> artifacts::ArtifactCollection::subCollectionAt(
@@ -177,7 +182,11 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactNew(
 const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNew(
 	base::StrID artifact_name
 ) {
-	return fileArtifactAtMaybe(artifact_name).valueOr(fileArtifactNew(artifact_name));
+	match_optional(fileArtifactAtMaybe(artifact_name)) {
+		opt_some(artifact) return artifact;
+		opt_none return fileArtifactAt(artifact_name);
+	}
+	CORE_UNREACHABLE();
 }
 
 const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAt(base::StrID artifact_name
@@ -203,7 +212,11 @@ const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactNew(
 const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAtOrNew(
 	base::StrID artifact_name
 ) {
-	return blobArtifactAtMaybe(artifact_name).valueOr(blobArtifactNew(artifact_name));
+	match_optional(blobArtifactAtMaybe(artifact_name)) {
+		opt_some(artifact) return artifact;
+		opt_none return blobArtifactAt(artifact_name);
+	}
+	CORE_UNREACHABLE();
 }
 
 const artifacts::BlobArtifact& artifacts::ArtifactCollection::blobArtifactAt(base::StrID artifact_name
