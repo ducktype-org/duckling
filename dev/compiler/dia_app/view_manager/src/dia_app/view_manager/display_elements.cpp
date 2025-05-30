@@ -189,6 +189,11 @@ namespace dia_file {
         content = parse(elem_json["content"]);
         ASSUME_HAS(elem_json, "alt_content");
         alt_content = parse(elem_json["alt_content"]);
+
+        if (elem_json.contains("groups")) {
+            ASSUME_ARR(elem_json, "groups");
+            groups = elem_json["groups"];
+        }
     }
     InteractElement::InteractElement(const InteractElement &other) :
         DisplayElement(other),
@@ -284,6 +289,11 @@ namespace dia_file {
         } else {
             ASSUME_HAS(elem_json, "content");
             content = parse(elem_json["content"]);
+
+            if (elem_json.contains("groups")) {
+                ASSUME_ARR(elem_json, "groups");
+                groups = elem_json["groups"];
+            }
         }
     }
     EntityElement::EntityElement(const EntityElement &other) :
@@ -345,6 +355,11 @@ namespace dia_file {
         ASSUME_VAL(elem_json, "type", "code");
         ASSUME_HAS_STR(elem_json, "content");
         content = elem_json["content"];
+
+        if (elem_json.contains("groups")) {
+            ASSUME_ARR(elem_json, "groups");
+            groups = elem_json["groups"];
+        }
     }
     CodeElement::CodeElement(const CodeElement &other) :
         DisplayElement(other), content(other.content) {}

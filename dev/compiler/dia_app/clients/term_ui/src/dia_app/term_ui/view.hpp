@@ -17,7 +17,7 @@ namespace term_ui {
         void print(std::ostream& out) const {
             for (auto &diag : diags) {
                 diag.print(out);
-                out << std::string('-', TERM_UI_SEPARATOR_WIDTH) << std::endl;
+                out << std::string(TERM_UI_SEPARATOR_WIDTH, '-') << std::endl;
             }
         }
     };

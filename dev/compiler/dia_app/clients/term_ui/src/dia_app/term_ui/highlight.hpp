@@ -83,7 +83,7 @@ namespace term_ui {
 
         // TODO: extract type from hl_info.
         PointerMessage(const view::HlMessage &message) :
-            text(TextPieces(message.message()).to_string()), type(StyleType::Error), priority(message.priority()) {}
+            text(TextPieces(message.message()).to_string()), type(style_type_of(message.type())), priority(message.priority()) {}
         
         const std::string &getText() const {
             return text;

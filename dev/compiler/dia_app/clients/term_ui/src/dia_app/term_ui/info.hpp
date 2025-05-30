@@ -11,7 +11,7 @@ namespace term_ui {
 
         StyleType type;
         uint id;
-        std::optional<TextSection> main_section;
+        TextSection main_section;
         std::vector<TextOrCode> sections;
 
         // Constructor for testing purposes only.
@@ -32,12 +32,8 @@ namespace term_ui {
             id = info.metadata().code();
 
             // Extract sections.
-            uint i = 0;
-            if (info.sections_size() > 0 && info.sections(0).has_text_section()) {
-                main_section = TextPieces(info.sections(0).text_section()).to_string();
-                ++i;
-            }
-            for (; i < info.sections_size(); ++i) {
+            main_section = TextPieces(info.header()).to_string();
+            for (uint i = 0; i < info.sections_size(); ++i) {
                 if (info.sections(i).has_text_section()) {
                     auto &section = info.sections(i).text_section();
                     sections.emplace_back(TextPieces(section).to_string());
@@ -53,11 +49,9 @@ namespace term_ui {
             style.printName(id, out);
             style.printWith(":", out);
 
-            if (main_section.has_value()) {
-                out << ' ';
-                style.printMainWith(main_section.value(), out);
-                out << '\n';
-            }
+            out << ' ';
+            style.printMainWith(main_section, out);
+            out << '\n';
 
             for (auto &section : sections) {
                 if (std::holds_alternative<TextSection>(section)) {
