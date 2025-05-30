@@ -9,9 +9,40 @@
     #main { flex: 3; padding: 20px; background: #f7f7f7; overflow-y: auto; }
     #side { flex: 1; padding: 20px; background: #eef; border-left: 1px solid #ccc; overflow-y: auto; }
     .section { margin-bottom: 10px; }
-    .code { background: #f0f0f0; padding: 5px; border-radius: 3px; font-family: monospace; white-space: pre; display: inline-block; }
-    .code-line { margin: 0; padding: 2px 0; }
-    .lineno { color: #999; padding-right: 10px; }
+    .code { background: #f0f0f0; padding: 0 5px; border-radius: 3px; font-family: monospace; white-space: pre; display: inline-block; }
+    .code-line { 
+      margin: 0;
+      padding: 0;
+      display: flex;
+      align-items: flex-start;
+      line-height: 1;
+    }
+    .lineno { 
+      color: #999;
+      padding-right: 10px;
+      min-width: 3em;
+      text-align: right;
+      position: relative;
+    }
+    .code-section {
+      position: relative;
+      display: inline-block;
+      background: #f0f0f0;
+      border-radius: 3px;
+      padding: 2px;
+      font-family: monospace;
+      white-space: pre;
+      line-height: 1;
+    }
+    .code-section::before {
+      content: '';
+      position: absolute;
+      left: calc(3em + 15px);
+      top: 2px;
+      bottom: 2px;
+      width: 1px;
+      background-color: #ccc;
+    }
     .clickable { cursor: pointer; }
     .clickable:hover { text-decoration: underline; }
     .highlight { background-color: #fff176; }

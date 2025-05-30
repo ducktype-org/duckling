@@ -63,12 +63,5 @@
 {% endmacro %}
 
 {% macro render_code_section(code_sec) %}
-    <div class="code-section">
-        {% for line in code_sec.lines %}
-            <div class="code-line">
-                <span class="lineno">{{ (line.line_number or '') | string | rjust(4) }}</span>
-                {{ render_component(line.content.root) }}
-            </div>
-        {% endfor %}
-    </div>
+    <div class="code-section">{% for line in code_sec.lines %}<div class="code-line"><span class="lineno">{{ (line.line_number or '') | string | rjust(4) }}</span>{{ render_component(line.content.root) }}</div>{% endfor %}</div>
 {% endmacro %} 
