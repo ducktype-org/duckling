@@ -25,7 +25,31 @@
   </style>
   <script>
     const hlInfo = {{ hl_info_map | tojson | safe }};
+
+    // Save scroll positions before page reload
+    function saveScrollPositions() {
+      localStorage.setItem('mainScroll', document.getElementById('main').scrollTop);
+      localStorage.setItem('sideScroll', document.getElementById('side').scrollTop);
+    }
+
+    // Restore scroll positions after page load
+    function restoreScrollPositions() {
+      const mainScroll = localStorage.getItem('mainScroll');
+      const sideScroll = localStorage.getItem('sideScroll');
+      
+      if (mainScroll !== null) {
+        document.getElementById('main').scrollTop = parseInt(mainScroll, 10);
+      }
+      if (sideScroll !== null) {
+        document.getElementById('side').scrollTop = parseInt(sideScroll, 10);
+      }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
+      // Restore scroll positions
+      restoreScrollPositions();
+
+      // Set up highlight functionality
       document.querySelectorAll("[data-groups]").forEach(el => {
         el.addEventListener("mouseover", () => {
           let groups = el.getAttribute("data-groups")
@@ -69,6 +93,7 @@
     });
 
     function handleClick(event, componentId) {
+      saveScrollPositions();
       let clickType = 'CLICK';
       if (event.ctrlKey && event.shiftKey) {
         clickType = 'CLICK_INTERACTIVE_ROLLBACK';
@@ -82,6 +107,7 @@
     }
 
     function closeSide(id) {
+      saveScrollPositions();
       fetch(`/close?side_note_id=${id}`)
         .then(r => r.text())
         .then(_ => window.location.reload())
