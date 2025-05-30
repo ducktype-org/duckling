@@ -26,13 +26,11 @@
   <script>
     const hlInfo = {{ hl_info_map | tojson | safe }};
 
-    // Save scroll positions before page reload
     function saveScrollPositions() {
       localStorage.setItem('mainScroll', document.getElementById('main').scrollTop);
       localStorage.setItem('sideScroll', document.getElementById('side').scrollTop);
     }
 
-    // Restore scroll positions after page load
     function restoreScrollPositions() {
       const mainScroll = localStorage.getItem('mainScroll');
       const sideScroll = localStorage.getItem('sideScroll');
@@ -46,10 +44,8 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Restore scroll positions
       restoreScrollPositions();
 
-      // Set up highlight functionality
       document.querySelectorAll("[data-groups]").forEach(el => {
         el.addEventListener("mouseover", () => {
           let groups = el.getAttribute("data-groups")
