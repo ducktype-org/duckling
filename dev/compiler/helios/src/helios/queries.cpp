@@ -4,6 +4,7 @@
 #include <helios/hout/elements.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/expressions/coercions.hpp>
 #include <helios_private/expressions/query_hout_of_expr.hpp>
 #include <helios_private/scopes/scopes.hpp>
 #include <helios_private/symbols/symbols.hpp>
@@ -114,7 +115,7 @@ namespace compiler::helios {
 
 			// @TODO: some stuff in here are also symbols (like named if's)
 			// "query symbol in scope" should be able to just work
-			// and provide correct symbols for lookup, but same care
+			// and provide correct symbols for lookup, but some care
 			// has to be taken, to ensure consistency between this code and scope states.
 
 			template<class T>
@@ -192,22 +193,47 @@ namespace compiler::helios {
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
 				// @TODO: do something with mut/immut
 
-				// @TODO: error handling
-
 				auto symbol = ctx.query<QuerySymbolOfSTMT>(stmt);
 
 				auto symbol_type = ctx.query<QueryTypeOfSymbol>(symbol)->expect(
 					"Handling errors is not supported in HOUT yet"
 				);
 
-				// for now initial value is assumed to always be present:
-				// this will probably change:
-				// @TODO: handle potential lack of value
-				auto initial_value
-					= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
-				          .expect("Not handling errors here yet... (variable initial value)");
+				if (stmt->getValue().empty()) {
+					// no initial value case
+					output(code::VariableStmt({}, symbol_type, symbol));
+					return;
+				} else {
+					auto initial_value
+						= ctx.query<QueryHoutOfExpr>(stmt->getValue().value().unlock(ctx)->getExpr())
+					          .expect("Not handling errors here yet... (variable initial value)");
 
-				output(code::VariableStmt(std::move(initial_value), symbol_type, symbol));
+					// used for error reporting:
+					auto initial_value_type = initial_value->expression_type.getSymbolType();
+
+					auto initial_value_coerced
+						= coerceExpression(std::move(initial_value), symbol_type);
+					if (initial_value_coerced.hasError()) {
+						ctx.log(makeBox<
+								dia::PlaceholderMessage<dia::Error, dia::Message::Domain::TypeCheck>>(
+							stmt->getValue().value().unlock(ctx)->getSourcePosition(),
+							base::strConcat(
+								"Bad type passed to variable initialization\n",
+								"Expected: ",
+								symbol_type.toString(),
+								"\n",
+								"Got: ",
+								initial_value_type.toString(),
+								"\n"
+							)
+						));
+						return;  // fail
+					}
+
+					output(code::VariableStmt(
+						std::move(initial_value_coerced.value()), symbol_type, symbol
+					));
+				}
 			}
 		};
 
