@@ -1,0 +1,50 @@
+# Method gaa() lacks implementation in an instantiable class C.
+type pointer: pointer_A A
+type pointer: pointer_B B
+type pointer: pointer_C C
+
+type fun: method_foo {pointer_A} void
+type fun: method_bar {pointer_A} void
+type fun: method_goo {pointer_B} void
+type fun: method_gaa {pointer_C} void
+
+type fun: method_foo_impl_A {pointer_A} void
+type fun: method_foo_impl_B {pointer_B} void
+type fun: method_bar_impl_B {pointer_B} void
+type fun: method_goo_impl_C {pointer_C} void
+type fun: method_gaa_impl_C {pointer_C} void
+
+type class: A {
+    abstract: true;
+    virtual_methods: {
+        foo: method_foo, 
+        bar: method_bar,
+    };
+    implementations: {
+        foo: method_foo_impl_A, 
+    };
+}
+
+type class: B {
+    abstract: true;
+    extends: A;
+    virtual_methods: {
+        goo: method_goo,
+    };
+    implementations: {
+        foo: method_foo_impl_B, 
+        bar: method_bar_impl_B, 
+    };
+}
+
+type class: C {
+    extends: B;
+    virtual_methods: {
+        gaa: method_gaa,
+    };
+    implementations: {
+        goo: method_goo_impl_C, 
+        # Someone forgot about gaa()?
+        # gaa: method_gaa_impl_C, 
+    };
+}

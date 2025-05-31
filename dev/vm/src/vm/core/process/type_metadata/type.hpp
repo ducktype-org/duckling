@@ -146,6 +146,8 @@ namespace vm {
 		[[nodiscard]]
 		base::Optional<const InheritanceMetadata&> getInheritanceMetadata() const;
 		[[nodiscard]]
+		base::Optional<TypeCRef> getSuperClass() const;
+		[[nodiscard]]
 		bool inheritsFrom(TypeCRef other) const;
 		[[nodiscard]]
 		bool isInstantiable() const;

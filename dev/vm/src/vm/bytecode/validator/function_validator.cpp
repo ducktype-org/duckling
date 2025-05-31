@@ -54,8 +54,16 @@ namespace {
 
 	using ValidLastInstructions = std::tuple<Op_ret, Op_ret_tailcall_func, Op_jmp_label>;
 	using ExtensionTypes        = std::tuple<Op_ext_l64, Op_ext_type, Op_ext_field>;
+	using DeinitializingInstructions
+		= std::tuple<Op_deinit, Op_call_func, Op_call_builtin_func, Op_virtual_call_lptr_method>;
+	using CallingInstructions = std::tuple<Op_call_func, Op_call_builtin_func>;
 	template<typename T>
 	concept Extension = IsIn<T, ExtensionTypes>::VALUE;
+	template<typename T>
+	concept DeinitializingInstruction = IsIn<T, DeinitializingInstructions>::VALUE;
+
+	template<typename T>
+	concept CallingInstruction = IsIn<T, CallingInstructions>::VALUE;
 
 	template<Extension E>
 	struct ExtensionMetadata;
@@ -100,6 +108,34 @@ namespace {
 
 	bool requiresSomeExtension(const Instruction& instr) {
 		return holdsOneOf<CatRequired<ExtensionTypes>::Value>(instr);
+	}
+
+	template<class ExpectedT, class ErrorT = PointerTypeMismatchError, class... Args>
+	const ExpectedT& expectPointerType(
+		const PointerType&                     pointer,
+		const StableTypeIdNameMap<TypeOfData>& tod_map,
+		Args&&... error_args
+	) {
+		const auto& pointed_type = tod_map.at(pointer.inner);
+		if (!std::holds_alternative<ExpectedT>(*pointed_type))
+			throw ErrorT(std::forward<Args>(error_args)...);
+		return std::get<ExpectedT>(*pointed_type);
+	}
+
+	template<class ErrorT = PointerTypeMismatchError, class... Args>
+	void validateStructExtFieldType(
+		const DataType&      ztruct,
+		const opargs::Field& field_arg,
+		base::StrID          expected_field_type,
+		Args&&... error_args
+	) {
+		if (ztruct.name != field_arg.type_name)
+			throw StructTypeMismatchError(std::forward<Args>(error_args)...);
+
+		base::StrID field_name = field_arg.field_name;
+		Field       field      = *std::ranges::find(ztruct.fields, field_name, &Field::name);
+
+		if (field.type != expected_field_type) throw ErrorT(std::forward<Args>(error_args)...);
 	}
 }
 
@@ -153,62 +189,41 @@ public:
 		local_name_to_type.put(local.var_name, tod);
 	}
 
-	void pop(const Op_deinit& cause) {
+	/**
+	 * @brief Pops the top element from the stack state and updates local variable mappings.
+	 * Can be only used with instructions which effectively deinitialize the local stack
+	 * (deinit, call_func, virtual_call and call_builtin_func)
+	 */
+	template<DeinitializingInstruction InstructionType>
+	void pop(const InstructionType& cause) {
 		if (stack_state.size() == 1) throw RetValDeinitError(cause);
 		const auto& top = stack_state.back();
 		local_name_to_type.erase(top.local_name);
 		stack_state.pop_back();
 	}
 
+	usize size() const { return stack_state.size(); }
+
+	const LocalStackEntry& back() const { return stack_state.back(); }
+
+	const LocalStackEntry& front() const { return stack_state.front(); }
+
+	void castPrimitive(const opargs::OpCodePrimitiveArg& local, const opargs::Type& type) {
+		auto  local_name = VISIT(local, l, return l.var_name);
+		auto& curr_type  = local_name_to_type.at(local_name);
+		auto  new_type   = tod_map->at(type.type_name);
+		curr_type        = new_type;
+		for (auto& entry: stack_state)
+			if (entry.local_name == local_name) entry.type = new_type;
+	}
+
 	bool contains(base::StrID local_name) const { return local_name_to_type.contains(local_name); }
 
 	CRef<TypeOfData> at(base::StrID local_name) const { return local_name_to_type.at(local_name); }
-
-	void popCallArgsFor(const opargs::OpCodeFunctionArg& function) {
-		auto fun_name = VISIT(function, f, return f.function_name);
-		// Used for errors.
-		auto generic_arg   = VISIT(function, f, return opargs::OpCodeArg{ f });
-		auto func_type     = std::get<FunctionType>(*tod_map->at(fun_name));
-		bool check_ret_val = func_type.result != base::StrID("void");
-
-		if (func_type.parameters.size() > stack_state.size() + check_ret_val)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
-		for (auto param: func_type.parameters | std::views::reverse) {
-			if (code::typeName(*stack_state.back().type) != param)
-				throw InvalidFunctionCallArgumentsError(generic_arg);
-			local_name_to_type.erase(stack_state.back().local_name);
-			stack_state.pop_back();
-		}
-		if (check_ret_val && code::typeName(*stack_state.back().type) != func_type.result)
-			throw InvalidFunctionCallArgumentsError(generic_arg);
-	}
-
-	void validateTailcall(
-		const opargs::OpCodeFunctionArg& called_function, const FunctionType& current_function_type
-	) const {
-		auto fun_name = VISIT(called_function, f, return f.function_name);
-		// Used for errors.
-		auto generic_arg = VISIT(called_function, f, return opargs::OpCodeArg{ f });
-		auto func_type   = std::get<FunctionType>(*tod_map->at(fun_name));
-
-		if (!(func_type.result == current_function_type.result
-		      && func_type.parameters == current_function_type.parameters))
-			throw InvalidTailcallSignatureError(generic_arg);
-
-		if (func_type.parameters.size() + 1 != stack_state.size())
-			throw InvalidTailcallArgumentsError(generic_arg);
-
-		if (code::typeName(*stack_state.front().type) != func_type.result)
-			throw InvalidTailcallArgumentsError(generic_arg);
-		for (auto [param, stack_elem]:
-		     std::views::zip(func_type.parameters, stack_state | std::views::drop(1)))
-			if (code::typeName(*stack_elem.type) != param)
-				throw InvalidTailcallArgumentsError(generic_arg);
-	}
 };
 
-/*
- * Class responsible for function validation.
+/**
+ * @brief Class responsible for function validation.
  * Processes the control-flow graph and simulates
  * stack operations. Throws subclasses of ValidationError.
  */
@@ -223,6 +238,102 @@ class FunctionValidator {
 	base::HashMap<base::StrID, std::vector<LocalStackEntry>> stack_at_label;
 	base::HashMap<base::StrID, usize>                        index_of_label;
 	base::HashMap<base::StrID, std::vector<Instruction>>     jumps_to_label;
+
+	template<CallingInstruction CallInstructionType>
+	void validateCallAndPop(LocalStack& local_stack, const CallInstructionType& instr) {
+		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
+		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
+		// Used for errors.
+		auto generic_arg   = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
+		auto func_type     = std::get<FunctionType>(*tod_map.at(fun_name));
+		bool check_ret_val = func_type.result != base::StrID("void");
+
+		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		for (auto param: func_type.parameters | std::views::reverse) {
+			if (code::typeName(*local_stack.back().type) != param)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+			local_stack.pop(instr);
+		}
+		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
+	/**
+	 * @brief Validates the stack state at the moment of a method call.
+	 *
+	 * @note Method calls need their own handling.
+	 * - The argument is only the name of the method and we need to find an implementation
+	 *   corresponding to that name.
+	 * - The first argument on the stack should be pointer which points to the same type as the
+	 *   pointer passed as the `obj_ptr` (an argument to `virtual_call_lptr_method`).
+	 *   Since virtual_method map contains only the signatures of methods, the implementations of
+	 * them may declare a pointer to a different type (a pointer to a subclass). Validating just the
+	 * pointer type name like in normal function calls would simply don't work.
+	 */
+	void validateMethodCallAndPop(LocalStack& local_stack, const Op_virtual_call_lptr_method& instr) {
+		// @todo: This implementation seeking occurs in a couple of places. Think of a better way.
+		// https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+		base::StrID impl_name;
+		auto        it       = std::ranges::find_if(type_metadata, [&](const auto& type) {
+            if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+                return inh_meta.virtual_methods.contains(instr.arg1.method_name);
+            }
+            return false;
+        });
+		auto        inh_meta = it->getInheritanceMetadata().value();
+		impl_name            = inh_meta.virtual_methods[instr.arg1.method_name]->getName();
+
+		auto generic_arg   = opargs::OpCodeArg{ instr.arg1 };
+		auto func_type     = std::get<FunctionType>(*tod_map.at(impl_name));
+		bool check_ret_val = func_type.result != base::StrID("void");
+
+		if (func_type.parameters.size() > local_stack.size() + check_ret_val)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+
+		for (auto param: func_type.parameters | std::views::drop(1) | std::views::reverse) {
+			if (code::typeName(*local_stack.back().type) != param)
+				throw InvalidFunctionCallArgumentsError(generic_arg);
+			local_stack.pop(instr);
+		}
+
+		auto type_name    = code::typeName(*local_stack.back().type);
+		auto ptr_on_stack = std::get<PointerType>(*tod_map.at(type_name));
+		auto ptr_in_call  = std::get<PointerType>(*local_stack.at(instr.arg0.var_name));
+		if (ptr_in_call.inner != ptr_on_stack.inner)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+		local_stack.pop(instr);
+
+		if (check_ret_val && code::typeName(*local_stack.back().type) != func_type.result)
+			throw InvalidFunctionCallArgumentsError(generic_arg);
+	}
+
+	void validateTailcall(
+		const LocalStack&           local_stack,
+		const Op_ret_tailcall_func& instr,
+		const FunctionType&         current_function_type
+	) const {
+		opargs::OpCodeFunctionArg func_arg = opargs::OpCodeFunctionArg{ instr.arg0 };
+		auto                      fun_name = VISIT(func_arg, f, return f.function_name);
+		// Used for errors.
+		auto generic_arg = VISIT(func_arg, f, return opargs::OpCodeArg{ f });
+		auto func_type   = std::get<FunctionType>(*tod_map.at(fun_name));
+
+		if (!(func_type.result == current_function_type.result
+		      && func_type.parameters == current_function_type.parameters))
+			throw InvalidTailcallSignatureError(generic_arg);
+
+		if (func_type.parameters.size() + 1 != local_stack.size())
+			throw InvalidTailcallArgumentsError(generic_arg);
+
+		if (code::typeName(*local_stack.front().type) != func_type.result)
+			throw InvalidTailcallArgumentsError(generic_arg);
+		for (auto [param, stack_elem]: std::views::zip(
+				 func_type.parameters, local_stack.getStackState() | std::views::drop(1)
+			 ))
+			if (code::typeName(*stack_elem.type) != param)
+				throw InvalidTailcallArgumentsError(generic_arg);
+	}
 
 	/**
 	 * @brief Validates instruction's arguments in a trivial, generic way, i.e. if an
@@ -329,6 +440,24 @@ class FunctionValidator {
 					if (!std::holds_alternative<FunctionType>(*maybe_func_type))
 						throw UnknownFunctionError(generic_arg);
 				}
+				variant_case(opargs::MethodName, method_value) {
+					auto method_name = method_value.method_name;
+					auto generic_arg = opargs::OpCodeArg{ method_value };
+					bool valid       = false;
+					for (const auto& type: tod_map) {
+						std::visit(
+							[&](const auto& t) {
+								if constexpr (requires { t.virtual_methods; }) {
+									for (const auto& vmethod: t.virtual_methods)
+										if (vmethod.name == method_name) valid = true;
+								}
+							},
+							type
+						);
+						if (valid) break;
+					}
+					if (!valid) throw UnknownMethodError(generic_arg);
+				}
 				variant_case(opargs::Label, label_value) {
 					variant_match(instruction) {
 						variant_case_novalue(Op_label) {}
@@ -351,14 +480,9 @@ class FunctionValidator {
 					auto type = tod_map.at(field.type_name);
 					variant_match(*type) {
 						variant_case(DataType, ztruct) {
-							bool good = false;
-							for (auto& ztruct_field: ztruct.fields) {
-								if (ztruct_field.name == field.field_name) {
-									good = true;
-									break;
-								}
-							}
-							if (!good) throw UnknownFieldError(field);
+							if (std::ranges::find(ztruct.fields, field.field_name, &Field::name)
+							    == ztruct.fields.end())
+								throw UnknownFieldError(field);
 						}
 						variant_default { throw InvalidArgumentTypeError(arg); }
 					}
@@ -394,8 +518,25 @@ class FunctionValidator {
 	) const {
 		variant_match(instruction) {
 			variant_case(Op_init_lany_type, instr) { validateArgInstantiable(instr.arg1); }
-			variant_case(Op_alloc_lptr_type, instr) { validateArgInstantiable(instr.arg1); }
+			variant_case(Op_alloc_lptr_type, instr) {
+				validateArgInstantiable(instr.arg1);
+				CRef<TypeOfData> variable = current_stack.at(instr.arg0.var_name);
+				PointerType      pointer  = std::get<PointerType>(*variable);
+				if (pointer.inner != instr.arg1.type_name) throw PointerTypeMismatchError(instr);
+			}
 			variant_case(Op_upcast_lptr_lptr, instr) { validateUpcast(instr, current_stack); }
+			variant_case(Op_cast_l8_type, instr) {
+				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l16_type, instr) {
+				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l32_type, instr) {
+				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
+			variant_case(Op_cast_l64_type, instr) {
+				validatePrimitiveCast(instr.arg0, instr.arg1, instruction, current_stack);
+			}
 
 			variant_case_novalue(Comment) {}
 			variant_case_novalue(Op_mov_l8_imm) {}
@@ -466,16 +607,88 @@ class FunctionValidator {
 			variant_case_novalue(Op_cmpG_l8_l8) {}
 			variant_case_novalue(Op_cmpG_l8_imm) {}
 			variant_case_novalue(Op_cmpNull_lptr) {}
-			variant_case_novalue(Op_variantSetInner_lvnt_type) {}
-			variant_case_novalue(Op_variantGetInner_lptr_lvnt) {}
-			variant_case_novalue(Op_variantSetInner_lptr_type) {}
-			variant_case_novalue(Op_variantGetInner_lptr_lptr) {}
+			variant_case(Op_variantSetInner_lvnt_type, instr) {
+				const auto& variant_type
+					= std::get<VariantType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID                     wanted_type    = instr.arg1.type_name;
+				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
+				if (!std::ranges::contains(possible_types, wanted_type))
+					throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantGetInner_lptr_lvnt, instr) {
+				const auto& variant_type
+					= std::get<VariantType>(*current_stack.at(instr.arg1.var_name));
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID                     wanted_type    = pointer_type.inner;
+				const std::vector<base::StrID>& possible_types = variant_type.variant_alternatives;
+				if (!std::ranges::contains(possible_types, wanted_type))
+					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantSetInner_lptr_type, instr) {
+				const auto& variant_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& variant_type
+					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+
+				base::StrID wanted_type = instr.arg1.type_name;
+				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+					throw VariantTypeMismatchError(instr);
+			}
+			variant_case(Op_variantGetInner_lptr_lptr, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				base::StrID wanted_type = pointer_type.inner;
+
+				const auto& variant_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& variant_type
+					= expectPointerType<VariantType>(variant_pointer, tod_map, instr);
+
+				if (!std::ranges::contains(variant_type.variant_alternatives, wanted_type))
+					throw VariantTypeMismatchError(instr);
+
+				const auto& ext = std::get<Op_ext_type>(*next_instruction);
+				if (ext.arg0.type_name != wanted_type) throw VariantTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_label) {}
 			variant_case_novalue(Op_jmp_label) {}
 			variant_case_novalue(Op_jmpIf_label) {}
 			variant_case_novalue(Op_jmpIfNot_label) {}
 			variant_case_novalue(Op_call_func) {}
 			variant_case_novalue(Op_call_builtin_func) {}
+			variant_case(Op_virtual_call_lptr_method, instr) {
+				// For a method all to be valid, the called method has to be declared as a virtual
+				// method in this inheritable or it's superclasses or interfaces.
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& inh_meta
+					= type_metadata.at(pointer_type.inner)->getInheritanceMetadata();
+
+				const auto& obj_type = type_metadata.at(pointer_type.inner);
+
+				bool                          valid                  = false;
+				std::function<void(TypeCRef)> check_for_superclasses = [&](TypeCRef inh_type) {
+					if (valid) return;
+					if_opt_some(inh_type->getInheritanceMetadata(), imd) {
+						if (imd.virtual_methods.contains(instr.arg1.method_name)) {
+							valid = true;
+							return;
+						}
+						for (const auto& iface: imd.implements) check_for_superclasses(iface);
+
+						if_opt_some(inh_type->getSuperClass(), super) {
+							check_for_superclasses(super);
+						}
+					}
+				};
+				check_for_superclasses(obj_type);
+				if (!inh_meta.has_value() || !valid) throw InvalidVirtualCallError(instr);
+			}
 			variant_case_novalue(Op_ret_tailcall_func) {}
 			variant_case_novalue(Op_ret) {}
 			variant_case_novalue(Op_deinit) {}
@@ -486,15 +699,92 @@ class FunctionValidator {
 			variant_case_novalue(Op_setVTable_lptr_type) {}
 			variant_case_novalue(Op_downcast_lptr_lptr) {}
 			variant_case_novalue(Op_free_lptr) {}
-			variant_case_novalue(Op_store_lptr_lany) {}
-			variant_case_novalue(Op_load_lany_lptr) {}
-			variant_case_novalue(Op_ref_lptr_lany) {}
-			variant_case_novalue(Op_structLea_lptr_lptr) {}
-			variant_case_novalue(Op_structLoad_lany_lptr) {}
-			variant_case_novalue(Op_structStore_lptr_lany) {}
-			variant_case_novalue(Op_staticTableLea_lptr_lptr) {}
-			variant_case_novalue(Op_staticTableLoad_lany_lptr) {}
-			variant_case_novalue(Op_staticTableStore_lptr_lany) {}
+			variant_case(Op_store_lptr_lany, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_load_lany_lptr, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg0.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_ref_lptr_lany, instr) {
+				const auto& pointer_type
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				CRef<TypeOfData> other_type      = current_stack.at(instr.arg1.var_name);
+				base::StrID      other_type_name = typeName(*other_type);
+				if (pointer_type.inner != other_type_name) throw PointerTypeMismatchError(instr);
+			}
+			variant_case(Op_structLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(*next_instruction);
+				validateStructExtFieldType(ztruct, field_instr.arg0, destination.inner, instr);
+			}
+			variant_case(Op_structLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*destination), instr);
+			}
+			variant_case(Op_structStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+
+				const auto& ztruct_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& ztruct = expectPointerType<DataType>(ztruct_pointer, tod_map, instr);
+
+				Op_ext_field field_instr = std::get<Op_ext_field>(next_instruction.value());
+				validateStructExtFieldType(ztruct, field_instr.arg0, typeName(*source), instr);
+			}
+			variant_case(Op_staticTableLea_lptr_lptr, instr) {
+				const auto& destination
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (destination.inner != table_type.inner)
+					throw StaticTableTypeMismatchError(instr);
+			}
+			variant_case(Op_staticTableLoad_lany_lptr, instr) {
+				const auto& destination = current_stack.at(instr.arg0.var_name);
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg1.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (typeName(*destination) != table_type.inner)
+					throw StaticTableTypeMismatchError(instr);
+			}
+			variant_case(Op_staticTableStore_lptr_lany, instr) {
+				const auto& source = current_stack.at(instr.arg1.var_name);
+
+				const auto& table_pointer
+					= std::get<PointerType>(*current_stack.at(instr.arg0.var_name));
+				const auto& table_type
+					= expectPointerType<StaticTableType>(table_pointer, tod_map, instr);
+
+				if (table_type.inner != typeName(*source))
+					throw StaticTableTypeMismatchError(instr);
+			}
 			variant_case_novalue(Op_ext_l64) {}
 			variant_case_novalue(Op_ext_type) {}
 			variant_case_novalue(Op_ext_field) {}
@@ -559,6 +849,22 @@ class FunctionValidator {
 		if (!src_type->inheritsFrom(dst_type)) throw InvalidUpcastError(instruction);
 	}
 
+	void validatePrimitiveCast(
+		const opargs::OpCodePrimitiveArg& local,
+		const opargs::Type&               type,
+		const Instruction&                instruction,
+		const LocalStack&                 current_stack
+	) const {
+		// These are guaranteed to exist by `validateArgTypes`.
+		auto curr_type      = current_stack.at(VISIT(local, l, return l.var_name));
+		auto new_type       = tod_map.at(type.type_name);
+		auto curr_primitive = getTypeKind<PrimitiveType>(*curr_type).value();
+
+		auto new_primitive
+			= getTypeKind<PrimitiveType>(*new_type).expect<NonPrimitiveCastError>(type);
+		if (curr_primitive.size != new_primitive.size) throw CastSizeMismatchError(instruction);
+	}
+
 	void validateFunctionEnd() const {
 		if (function.body.empty()
 		    || (visited_instructions.back()
@@ -610,8 +916,8 @@ class FunctionValidator {
 
 			validateArgTypesNonTrivially(
 				instructions[index],
-				index + 1 < instructions.size() ? base::Optional<const Instruction&>()
-												: instructions[index + 1],
+				index + 1 < instructions.size() ? instructions[index + 1]
+												: base::Optional<const Instruction&>(),
 				local_stack
 			);
 
@@ -656,18 +962,30 @@ class FunctionValidator {
 					dfs_stack.pop_back();
 				}
 				variant_case(Op_call_func, instr) {
-					local_stack.popCallArgsFor(instr.arg0);
+					validateCallAndPop(local_stack, instr);
 					index++;
 				}
 				variant_case(Op_call_builtin_func, instr) {
-					local_stack.popCallArgsFor(instr.arg0);
+					validateCallAndPop(local_stack, instr);
+					index++;
+				}
+				variant_case(Op_virtual_call_lptr_method, instr) {
+					validateMethodCallAndPop(local_stack, instr);
 					index++;
 				}
 				variant_case(Op_ret_tailcall_func, instr) {
-					local_stack.validateTailcall(instr.arg0, function_type);
+					validateTailcall(local_stack, instr, function_type);
 					std::tie(index, local_stack) = dfs_stack.back();
 					dfs_stack.pop_back();
 				}
+#define HANDLE_CAST(SIZE)                                  \
+	variant_case(Op_cast_l##SIZE##_type, instr) {          \
+		local_stack.castPrimitive(instr.arg0, instr.arg1); \
+		index++;                                           \
+	}
+
+				FOR_EACH(HANDLE_CAST, 8, 16, 32, 64)
+#undef HANDLE_CAST
 				variant_default { index++; }
 			}
 		}

@@ -134,11 +134,12 @@ namespace lang_def {
 			{ Keyword::BCImplements, "implements", KeywordFlags() },
 			{ Keyword::BCVirtualMethods, "virtual_methods", KeywordFlags() },
 			{ Keyword::BCFields, "fields", KeywordFlags() },
+			{ Keyword::BCMethodImplementations, "implementations", KeywordFlags() },
 			{ Keyword::BCTrue, "true", KeywordFlags() },
 			{ Keyword::BCFalse, "false", KeywordFlags() },
 		});
 
-	// `- 1` because of `Keyword::NotAKeword`
+	// `- 1` because of `Keyword::NotAKeyword`
 	static_assert(
 		static_cast<usize>(Keyword::COUNT) - 1
 		== LANG_KEYWORDS_ARRAY.size() + BC_KEYWORDS_ARRAY.size()

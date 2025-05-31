@@ -1,0 +1,7 @@
+type class: A {
+    abstract: false;
+    fields: {
+        foo: i64,
+        foo: i32,
+    };
+}

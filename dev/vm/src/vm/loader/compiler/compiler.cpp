@@ -29,6 +29,8 @@ namespace vm::loader::compiler {
 			const StableTypeIdNameMap<code::Function>&         func_map;
 			const TypeMetadata&                                type_map;
 			const StableTypeIdNameMap<TypeCRef, GlobalDataID>& globals;
+			const base::HashMap<i32, base::StrID>&             method_id_to_name;
+			const base::HashMap<base::StrID, i32>&             method_name_to_id;
 			base::Optional<code::Function>                     function{};
 			base::HashMap<base::StrID, usize>                  label_positions{};
 			base::HashMap<base::StrID, usize>                  local_offset_map{};
@@ -76,6 +78,9 @@ namespace vm::loader::compiler {
 					return base::safeIntConv<i64>(
 						static_cast<std::underlying_type_t<builtins::BuiltinFunctionID>>(func_id)
 					);
+				}
+				variant_case(vm::opargs::MethodName, method) {
+					return ctx.method_name_to_id[method.method_name];
 				}
 				variant_case(vm::opargs::Label, label) {
 					// Labels are guaranteed to exist by static verification.
@@ -174,6 +179,22 @@ namespace vm::loader::compiler {
 				curr_stack_size -= type_size;
 			};
 
+			auto seek_method_param_count
+				= [&](const base::StrID& method_name) -> base::Optional<u64> {
+				// @todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+				auto it = std::ranges::find_if(ctx.type_map, [&](const auto& type) {
+					if_opt_some(type.getInheritanceMetadata(), inh_meta) {
+						return inh_meta.virtual_methods.contains(method_name);
+					}
+					return false;
+				});
+				if (it != ctx.type_map.end()) {
+					auto inh_meta = it->getInheritanceMetadata().value();
+					return inh_meta.virtual_methods[method_name]->getParameterCount();
+				}
+				CORE_UNREACHABLE();
+			};
+
 			auto func_type = ctx.type_map.at(ctx.function->name)->get<kind::Function>().value();
 			push(base::StrID("ret_val"), func_type.result->getName());
 			for (auto [idx, param_type]: std::views::enumerate(func_type.parameters))
@@ -243,6 +264,11 @@ namespace vm::loader::compiler {
 						}
 						index++;
 					}
+					variant_case(Op_virtual_call_lptr_method, instr) {
+						for (usize i = 0; i < *seek_method_param_count(instr.arg1.method_name); i++)
+							pop();
+						index++;
+					}
 					variant_case(Op_ret_tailcall_func, instr) {
 						std::tie(index, type_size_stack, curr_stack_size) = dfs_stack.back();
 						dfs_stack.pop_back();
@@ -259,11 +285,29 @@ namespace vm::loader::compiler {
 	low::LowVMProgram compile(const code::ValidProgram& program) {
 		Box<TypeMetadata> types = program.produceTypeMetadata();
 
+		i32                             current_ix = 0;
+		base::HashMap<i32, base::StrID> method_id_to_name;
+		base::HashMap<base::StrID, i32> method_name_to_id;
+		for (const auto& type: *types) {
+			if_opt_some(type.getInheritanceMetadata(), metadata) {
+				//@todo: https://github.com/ducktype-org/rift-dev-zpp32/issues/55
+				for (auto& [name, impl]: metadata.vtable) {
+					if (!method_name_to_id.contains(name)) {
+						method_id_to_name.put(current_ix, name);
+						method_name_to_id.put(name, current_ix);
+						current_ix++;
+					}
+				}
+			}
+		}
+
 		std::vector<low::FuncData> converted_functions;
 		converted_functions.reserve(program.functions().size());
 
 		StableTypeIdNameMap<TypeCRef, GlobalDataID> globals;
-		auto ctx = CompilationContext(program.functions(), *types, globals);
+		auto                                        ctx = CompilationContext(
+            program.functions(), *types, globals, method_id_to_name, method_name_to_id
+        );
 
 		for (const auto& global: program.globals())
 			globals.insert(types->at(global.type), global.name);
@@ -277,10 +321,9 @@ namespace vm::loader::compiler {
 			converted_functions.push_back(converted_func);
 		}
 
-		return low::LowVMProgram{
-			converted_functions,
-			std::move(types),
-			{ program.globals() | std::ranges::to<std::vector>() },
-		};
+		return low::LowVMProgram{ std::move(types),
+			                      converted_functions,
+			                      { program.globals() | std::ranges::to<std::vector>() },
+			                      method_id_to_name };
 	}
 }
