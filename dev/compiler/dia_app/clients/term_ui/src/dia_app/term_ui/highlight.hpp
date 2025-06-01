@@ -81,7 +81,6 @@ namespace term_ui {
         PointerMessage(std::string text, StyleType type, uint priority = 0) :
             text(text), type(type), priority(priority) {}
 
-        // TODO: extract type from hl_info.
         PointerMessage(const view::HlMessage &message) :
             text(TextPieces(message.message()).to_string()), type(style_type_of(message.type())), priority(message.priority()) {}
         
