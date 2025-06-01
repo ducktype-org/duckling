@@ -1,4 +1,7 @@
-#include "../../hierarchy/expr.hpp"
+#include "../../hierarchy/declarations/class.hpp"
+
+#include "../../hierarchy/expressions/chain_expr.hpp"
+#include "../../hierarchy/not_statements/class_block.hpp"
 #include "preamble.hpp"
 
 namespace pst {

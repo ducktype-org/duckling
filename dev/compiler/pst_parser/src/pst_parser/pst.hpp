@@ -1,7 +1,8 @@
 #pragma once
 
 #include "access.hpp"
-#include "elements/elements.hpp"  // toplevel only, @TODO: change it to something better (#404)
+#include "elements/hierarchy/declarations/top_level.hpp"
+#include "elements/includes/basic.hpp"  // IWYU pragma: keep
 #include "lang_parser_state.hpp"
 
 #include <token_source/source.hpp>

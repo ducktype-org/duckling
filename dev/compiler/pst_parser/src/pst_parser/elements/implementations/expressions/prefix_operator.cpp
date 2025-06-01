@@ -1,3 +1,5 @@
+#include "../../hierarchy/expressions/prefix_operator.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {

@@ -1,3 +1,5 @@
+#include "../../hierarchy/not_statements/dotted_name.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {

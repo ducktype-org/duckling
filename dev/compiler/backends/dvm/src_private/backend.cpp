@@ -19,7 +19,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 
 #include <algorithm>
-#include <ostream>
+#include <iostream>
 #include <ranges>
 #include <variant>
 

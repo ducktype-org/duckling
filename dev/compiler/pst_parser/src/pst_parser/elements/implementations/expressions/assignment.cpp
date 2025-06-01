@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/assignment.hpp"
+
+#include "../../hierarchy/expressions/comma.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

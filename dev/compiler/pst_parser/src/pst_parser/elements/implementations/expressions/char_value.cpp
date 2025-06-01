@@ -1,3 +1,5 @@
+#include "../../hierarchy/expressions/char_value.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {
@@ -49,7 +51,7 @@ namespace pst::expr {
 			return nullptr;
 		}
 
-		auto out = makeBox<ExprStrValue>(pos, state[0].getValue());
+		auto out = makeBox<ExprCharValue>(pos, state[0].getValue());
 		state.parse(out).eatOne();
 
 		if (length > 1) {
