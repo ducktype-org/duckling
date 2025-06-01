@@ -418,20 +418,23 @@ namespace dia_app {
 			data_handle.entities[entity_handle.first] = entity_handle.second;
 		}
 
-		std::set<InfoHandle> scan_entity_metadata(const json& entity, DataHandle handle) {
-			// Note: during scanning it may be necessary to fetch
-			//       some other entities - that's what the data handle is for.
-			std::set<InfoHandle> res;
-
-			// Definition scan.
-			if (entity.contains("defined_at")) {
-				ASSUME_UINT(entity, "defined_at");
-				res.insert(InfoParamsHandle::add(entity["defined_at"], handle));
-			}
-			// TODO: more functionalities may be added here.
-
-			return res;
-		}
+    std::set<InfoHandle> scan_entity_metadata(const json &entity, DataHandle handle) {
+        // Note: during scanning it may be necessary to fetch
+        //       some other entities - that's what the data handle is for.
+        std::set<InfoHandle> res;
+        
+        // Plain associated infos scan.
+        if (entity.contains("assoc_infos")) {
+            ASSUME_ARR(entity, "assoc_infos");
+            for (auto &info : entity["assoc_infos"]) {
+                ASSUME(info.is_number_unsigned(), "assoc info handle must be an unsigned integer (TODO: to be replaced by proper handles in the future)");
+                res.insert(InfoParamsHandle::add(info, handle));
+            }
+        }
+        // TODO: more functionalities may be added here.
+        
+        return res;
+    }
 
 	}  // namespace dia_file
 }  // namespace dia_app

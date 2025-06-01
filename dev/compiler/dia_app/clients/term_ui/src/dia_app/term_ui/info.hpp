@@ -55,9 +55,10 @@ namespace term_ui {
 
             for (auto &section : sections) {
                 if (std::holds_alternative<TextSection>(section)) {
-                    out << '\n' << std::get<TextSection>(section) << '\n';
+                    out << std::get<TextSection>(section) << '\n' << '\n';
                 } else {
                     std::get<CodeSection>(section).print(out);
+                    out << '\n';
                 }
             }
         }

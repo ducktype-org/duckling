@@ -67,7 +67,7 @@ namespace term_ui {
         void print(std::ostream &out) const {
             location.print(tab_space, out);
             print_line_start(tab_space, out);
-            std::cerr << std::endl;
+            out << std::endl;
             for (uint l = 0; l < lines.size(); ++l) {
                 auto lowered = lines[l].print(tab_space, pointers, out);
                 
