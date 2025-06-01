@@ -1,18 +1,28 @@
 {% from "macros/rendering.html" import render_component, render_nohl_component, render_code_section %}
 
 <div class="side-note" id="side-{{ idx }}">
-    {% for diag in note.diagnostics %}
-        {% for sec in diag.sections %}
-            <div class="section">
-                {% if sec.HasField('text_section') %}
-                    {{ render_component(sec.text_section.root) }}
-                {% elif sec.HasField('no_hl_text_section') %}
-                    {{ render_nohl_component(sec.no_hl_text_section.root) }}
-                {% elif sec.HasField('code_section') %}
-                    {{ render_code_section(sec.code_section) }}
-                {% endif %}
-            </div>
-        {% endfor %}
+    {% if note.header %}
+        <div class="section">
+            {{ render_nohl_component(note.header) }}
+        </div>
+    {% endif %}
+    {% for sec in note.sections %}
+        <div class="section">
+            {% if sec.HasField('text_section') %}
+                {{ render_nohl_component(sec.text_section) }}
+            {% elif sec.HasField('code_section') %}
+                {{ render_code_section(sec.code_section) }}
+            {% endif %}
+        </div>
     {% endfor %}
-    <span class="clickable close-note" onclick="closeSide({{ idx }})">Close Note</span>
+    {% if note.edges %}
+        <div class="side-edges">
+            {% for edge in note.edges %}
+                <div class="side-edge{% if edge.is_active %} active{% endif %}" onclick="handleSideInfo(event, {{ note.side_info_id }}, {{ edge.edge_id }})">
+                    {{ edge.description }}
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+    <div class="close-note" onclick="closeSide({{ note.side_info_id }})">Close Note</div>
 </div> 

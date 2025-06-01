@@ -1,34 +1,7 @@
-{% from "macros/rendering.html" import render_component, render_nohl_component, render_code_section -%}
+{% from "macros/rendering.html" import render_info %}
 
 <div class="diagnostic">
     {%- for info in diag.infos -%}
-        <div class="info">
-            {%- if info.metadata -%}
-                <div class="metadata">
-                    {%- if info.metadata.code -%}
-                        Error: {{ info.metadata.code }}
-                    {%- endif -%}
-                    {%- if info.metadata.type -%}
-                        Type: {{ info.metadata.type }}
-                    {%- endif -%}
-                </div>
-            {%- endif -%}
-            
-            {%- if info.header -%}
-                <div class="header">
-                    {{- render_nohl_component(info.header) -}}
-                </div>
-            {%- endif -%}
-            
-            {%- for section in info.sections -%}
-                <div class="section">
-                    {%- if section.HasField('code_section') -%}
-                        {{- render_code_section(section.code_section) -}}
-                    {%- elif section.HasField('text_section') -%}
-                        {{- render_nohl_component(section.text_section) -}}
-                    {%- endif -%}
-                </div>
-            {%- endfor -%}
-        </div>
+        {{- render_info(info) -}}
     {%- endfor -%}
 </div> 
