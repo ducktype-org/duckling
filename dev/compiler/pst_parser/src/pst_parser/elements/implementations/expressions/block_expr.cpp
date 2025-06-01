@@ -1,6 +1,6 @@
 #include "../../hierarchy/expressions/block_expr.hpp"
-#include "../../hierarchy/not_statements/code_block.hpp" // IWYU pragma: keep
 
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
