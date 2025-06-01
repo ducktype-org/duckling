@@ -1,5 +1,6 @@
 # Here we find all the source files of elements implementations
-# and group them into unity build groups:
+# and group them into unity build groups.
+# See https://cmake.org/cmake/help/latest/prop_tgt/UNITY_BUILD.html for more details.
 
 file(GLOB StatementElementsImplementationFiles CONFIGURE_DEPENDS
 	"src/pst_parser/elements/implementations/statements/*.cpp"	
