@@ -25,6 +25,9 @@ set_source_files_properties(${ExpressionElementsImplementationFiles}
 file(GLOB ClassElementsImplementationFiles CONFIGURE_DEPENDS
 	"src/pst_parser/elements/implementations/class_elements/*.cpp"
 )
+set_source_files_properties(${ClassElementsImplementationFiles}
+	PROPERTIES UNITY_GROUP "pst_class_elements"
+)
 
 file(GLOB OtherElementsImplementationFiles CONFIGURE_DEPENDS
 	"src/pst_parser/elements/implementations/meta/*.cpp"
@@ -48,13 +51,8 @@ add_library(PstParser
 	src/pst_parser/pst_visitor.hpp
 )
 
-# get_target_property(pst_non_elements_sources PstParser SOURCES)
-# list(REMOVE_ITEM pst_non_elements_sources ${ElementImplementationFiles})
-# set_source_files_properties(${pst_non_elements_sources} PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE)
-
 set_target_properties(PstParser PROPERTIES UNITY_BUILD ON)
 set_target_properties(PstParser PROPERTIES UNITY_BUILD_MODE GROUP)
-# set_target_properties(PstParser PROPERTIES UNITY_BUILD_BATCH_SIZE 32)
 
 make_module(PstParser USES Lexer Printer TPC QueryFramework)
 
