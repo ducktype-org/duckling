@@ -1,24 +1,76 @@
 #pragma once
 #include "components.hpp"
+#include "diagnostics.hpp"
 
 namespace dia_app {
-namespace view_manager {
-    using edge_id_t = uint32_t;
+	namespace view_manager {
+		using edge_id_t      = uint32_t;
+		using side_info_id_t = uint32_t;
 
-    class SidePath {
-        private:
-        // TODO - sprawdzić jak to się w ogóle parsuje
+		class SideEdge {
+		public:
+			edge_id_t   edge_id;
+			std::string description;
 
-        public:
-        std::unique_ptr<::view::SidePath> getView() const;
-    };
+			SideEdge(edge_id_t edge_id, std::string description);
 
-    class SideEdge {
+			std::unique_ptr<::view::SideEdge> getView() const;
+		};
 
-    };
+		class SideInfo {
+		private:
+			side_info_id_t                        id;
+			Metadata                              metadata;
+			std::shared_ptr<Component>            header;
+			std::vector<std::unique_ptr<Section>> sections;
+			std::vector<SideEdge>                 edges;
 
-    class SideInfo {
+		public:
+			SideInfo(
+				Metadata                              metadata,
+				std::shared_ptr<Component>            header,
+				std::vector<std::unique_ptr<Section>> sections,
+				std::vector<SideEdge>                 edges
+			);
 
-    };
-} // namespace view_manager
-} // namespace dia_app
+			static SideInfo createFromInfoHandle(
+				InfoHandle                        info_handle,
+				std::shared_ptr<ViewConstructor>& view_constructor,
+				std::shared_ptr<CreationContext>                  creation_context
+			);
+
+			std::unique_ptr<::view::SideInfo> getView() const;
+
+			side_info_id_t getId();
+
+			std::optional<SideInfo> getEdge(edge_id_t handle, std::shared_ptr<ViewConstructor> view_constructor, std::shared_ptr<CreationContext> creation_context);
+		};
+
+		class SidePath {
+		private:
+			std::vector<SideInfo> infos;
+			std::weak_ptr<ViewConstructor> view_constructor;
+
+		public:
+			SidePath(std::vector<SideInfo> infos, std::weak_ptr<ViewConstructor> view_constructor);
+
+			static SidePath createFromInfoHandle(
+				InfoHandle                        info_handle,
+				std::shared_ptr<ViewConstructor>& view_constructor,
+				std::shared_ptr<CreationContext>                  creation_context
+			);
+
+			std::unique_ptr<::view::SidePath> getView() const;
+
+			bool isEmpty();
+
+			void tryCloseSideInfo(side_info_id_t side_info_id);
+
+			void tryGetEdge(side_info_id_t side_info_id, edge_id_t edge_id, std::shared_ptr<CreationContext> creation_context);
+		};
+
+		void openSideEntries(
+			const std::vector<side_entry_id_t>& side_entries, const std::weak_ptr<ViewConstructor> &view_constructor, InteractionContext& interaction_context
+		);
+	}  // namespace view_manager
+}  // namespace dia_app

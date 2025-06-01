@@ -1,149 +1,136 @@
 #pragma once
-#include <yaml-cpp/yaml.h>
-#include "utils.hpp"
 #include "dia_parser.hpp"
 #include "template_parser.hpp"
+#include "utils.hpp"
+
+#include <yaml-cpp/yaml.h>
 
 namespace dia_app {
-namespace message_template {
-    
-    struct TemplateElement;
-    using Ptr = std::shared_ptr<TemplateElement>;
-    Ptr parse(const YAML::Node &msg);
-    
-    struct TemplateElement {
-        using DisplayPtr = dia_file::Ptr;
+	namespace message_template {
 
-        virtual ~TemplateElement() {}
-        virtual DisplayPtr toDisplay(TemplateDataHandle handle) const = 0;
-    };
+		struct TemplateElement;
+		using Ptr = std::shared_ptr<TemplateElement>;
+		Ptr parse(const YAML::Node& msg);
 
-    struct TextElement : public TemplateElement {
-        std::string text;
+		struct TemplateElement {
+			using DisplayPtr = dia_file::Ptr;
 
-        TextElement(const std::string &text) : text(text) {}
+			virtual ~TemplateElement() {}
 
-        DisplayPtr toDisplay(TemplateDataHandle _) const override {
-            return std::make_shared<dia_file::TextElement>(text);
-        }
-    };
+			virtual DisplayPtr toDisplay(TemplateDataHandle handle) const = 0;
+		};
 
-    struct ConcatElement : public TemplateElement {
-        std::vector<Ptr> elems;
-        
-        ConcatElement(const YAML::Node &elem_node) {
-            assert(elem_node.IsSequence() && "concat element is not a sequence");
-            for (const auto &el : elem_node) {
-                elems.push_back(parse(el));
-            }
-        }
+		struct TextElement: public TemplateElement {
+			std::string text;
 
-        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-            std::vector<DisplayPtr> display_elems;
-            for (const auto &elem : elems) {
-                display_elems.push_back(elem->toDisplay(handle));
-            }
-            return std::make_shared<dia_file::ConcatElement>(display_elems);
-        }
-    };
+			TextElement(const std::string& text): text(text) {}
 
-    struct ParamElement : public TemplateElement {
-        std::string param;
+			DisplayPtr toDisplay(TemplateDataHandle _) const override {
+				return std::make_shared<dia_file::TextElement>(text);
+			}
+		};
 
-        ParamElement(const YAML::Node &elem_node) {
-            assert(elem_node["param"] && elem_node["param"].IsScalar());
-            param = elem_node["param"].as<std::string>();
-        }
+		struct ConcatElement: public TemplateElement {
+			std::vector<Ptr> elems;
 
-        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-            assert(handle.param_data.params.count(param));
-            // Deep copy so independent transformations
-            return handle.param_data.params.at(param)->copy();
-        }
-    };
+			ConcatElement(const YAML::Node& elem_node) {
+				assert(elem_node.IsSequence() && "concat element is not a sequence");
+				for (const auto& el: elem_node) elems.push_back(parse(el));
+			}
 
-    struct MacroElement : public TemplateElement {
-        std::string macro;
+			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+				std::vector<DisplayPtr> display_elems;
+				for (const auto& elem: elems) display_elems.push_back(elem->toDisplay(handle));
+				return std::make_shared<dia_file::ConcatElement>(display_elems);
+			}
+		};
 
-        MacroElement(const YAML::Node &elem_node) {
-            assert(elem_node["macro"] && elem_node["macro"].IsScalar());
-            macro = elem_node["macro"].as<std::string>();
-        }
+		struct ParamElement: public TemplateElement {
+			std::string param;
 
-        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-            assert(handle.template_data.macros.count(macro));
-            return handle.template_data.macros.at(macro)->toDisplay(handle);
-        }
-    };
+			ParamElement(const YAML::Node& elem_node) {
+				assert(elem_node["param"] && elem_node["param"].IsScalar());
+				param = elem_node["param"].as<std::string>();
+			}
 
-    struct IncludeElement : public TemplateElement {
-        ShortMetadata include;
-        Ptr on;
+			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+				assert(handle.param_data.params.count(param));
+				// Deep copy so independent transformations
+				return handle.param_data.params.at(param)->copy();
+			}
+		};
 
-        IncludeElement(const YAML::Node &elem_node) {
-            assert(elem_node["include"]);
-            include = elem_node["include"];
-            assert(elem_node["on"]);
-            on = parse(elem_node["on"]);
-        }
+		struct MacroElement: public TemplateElement {
+			std::string macro;
 
-        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-            DisplayPtr res = on->toDisplay(handle);
-            InfoHandle info = InfoParamsHandle::add(include, handle.toDataHandle());
-            res->assoc_infos.insert(info);
-            return res;
-        }
-    };
+			MacroElement(const YAML::Node& elem_node) {
+				assert(elem_node["macro"] && elem_node["macro"].IsScalar());
+				macro = elem_node["macro"].as<std::string>();
+			}
 
-    struct CaseOfElement : public TemplateElement {
-        Ptr pattern;
-        std::map<std::string, Ptr> cases;
+			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+				assert(handle.template_data.macros.count(macro));
+				return handle.template_data.macros.at(macro)->toDisplay(handle);
+			}
+		};
 
-        CaseOfElement(const YAML::Node &elem_node) {
-            assert(elem_node["case"]);
-            pattern = parse(elem_node["case"]);
+		struct IncludeElement: public TemplateElement {
+			ShortMetadata include;
+			Ptr           on;
 
-            assert(elem_node["of"] && elem_node["of"].IsMap());
-            for (const auto &it : elem_node["of"]) {
-                const std::string key = it.first.as<std::string>();
-                cases[key] = parse(it.second);
-            }
-            assert(elem_node["of"]["[other]"] && "CaseOfElement missing [other] case");
-        }
+			IncludeElement(const YAML::Node& elem_node) {
+				assert(elem_node["include"]);
+				include = elem_node["include"];
+				assert(elem_node["on"]);
+				on = parse(elem_node["on"]);
+			}
 
-        DisplayPtr toDisplay(TemplateDataHandle handle) const override {
-            DisplayPtr pattern_display = pattern->toDisplay(handle);
-            for (const auto &kv : cases) {
-                const std::string &key = kv.first;
-                const Ptr &val = kv.second;
-                if (is_case_exact(key)) {
-                    if (key == pattern_display->toText(handle.toDataHandle())) {
-                        return val->toDisplay(handle);
-                    }
-                }
-            }
-            return cases.at("[other]")->toDisplay(handle);
-        }
-    };
+			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+				DisplayPtr res  = on->toDisplay(handle);
+				InfoHandle info = InfoParamsHandle::add(include, handle.toDataHandle());
+				res->assoc_infos.insert(info);
+				return res;
+			}
+		};
 
-    inline Ptr parse(const YAML::Node &msg) {
-        if (msg.IsScalar()) {
-            return std::make_shared<TextElement>(msg.as<std::string>());
-        }
-        if (msg.IsSequence()) {
-            return std::make_shared<ConcatElement>(msg);
-        }
-        if (msg["param"]) {
-            return std::make_shared<ParamElement>(msg);
-        }
-        if (msg["macro"]) {
-            return std::make_shared<MacroElement>(msg);
-        }
-        if (msg["include"]) {
-            return std::make_shared<IncludeElement>(msg);
-        }
-        return std::make_shared<CaseOfElement>(msg);
-    }
+		struct CaseOfElement: public TemplateElement {
+			Ptr                        pattern;
+			std::map<std::string, Ptr> cases;
 
-} // namespace message_template
-} // namespace dia_app
+			CaseOfElement(const YAML::Node& elem_node) {
+				assert(elem_node["case"]);
+				pattern = parse(elem_node["case"]);
+
+				assert(elem_node["of"] && elem_node["of"].IsMap());
+				for (const auto& it: elem_node["of"]) {
+					const std::string key = it.first.as<std::string>();
+					cases[key]            = parse(it.second);
+				}
+				assert(elem_node["of"]["[other]"] && "CaseOfElement missing [other] case");
+			}
+
+			DisplayPtr toDisplay(TemplateDataHandle handle) const override {
+				DisplayPtr pattern_display = pattern->toDisplay(handle);
+				for (const auto& kv: cases) {
+					const std::string& key = kv.first;
+					const Ptr&         val = kv.second;
+					if (is_case_exact(key)) {
+						if (key == pattern_display->toText(handle.toDataHandle()))
+							return val->toDisplay(handle);
+					}
+				}
+				return cases.at("[other]")->toDisplay(handle);
+			}
+		};
+
+		inline Ptr parse(const YAML::Node& msg) {
+			if (msg.IsScalar()) return std::make_shared<TextElement>(msg.as<std::string>());
+			if (msg.IsSequence()) return std::make_shared<ConcatElement>(msg);
+			if (msg["param"]) return std::make_shared<ParamElement>(msg);
+			if (msg["macro"]) return std::make_shared<MacroElement>(msg);
+			if (msg["include"]) return std::make_shared<IncludeElement>(msg);
+			return std::make_shared<CaseOfElement>(msg);
+		}
+
+	}  // namespace message_template
+}  // namespace dia_app

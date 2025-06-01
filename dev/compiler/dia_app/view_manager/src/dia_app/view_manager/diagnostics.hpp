@@ -1,107 +1,126 @@
 #pragma once
+#include "components.hpp"
 #include "view_constructor.hpp"
 
 namespace dia_app {
-namespace view_manager {
-    class CodeMetadata {
-        private:
-        std::string filename;
-        line_no_t line;
-        column_no_t column;
+	namespace view_manager {
+		class CodeMetadata {
+		private:
+			std::string filename;
+			line_no_t   line;
+			column_no_t column;
 
-        public:
-        CodeMetadata(std::string filename, line_no_t line, column_no_t column);
+		public:
+			CodeMetadata(std::string filename, line_no_t line, column_no_t column);
 
-        static std::unique_ptr<CodeMetadata> createFromLocation(const dia_file::CodeData::Location &location);
+			static std::unique_ptr<CodeMetadata> createFromLocation(
+				const dia_file::CodeData::Location& location
+			);
 
-        std::unique_ptr<::view::CodeMetadata> getView() const;
-    };
+			std::unique_ptr<::view::CodeMetadata> getView() const;
+		};
 
-    class HlMessage {
-        private:
-        hl_id_t tag;
-        priority_t priority;
-        InfoType type;
-        std::shared_ptr<Component> content;
+		class HlMessage {
+		private:
+			hl_id_t                    tag;
+			priority_t                 priority;
+			InfoType                   type;
+			std::shared_ptr<Component> content;
 
-        public:
-        HlMessage(hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content);
+		public:
+			HlMessage(
+				hl_id_t tag, priority_t priority, InfoType type, std::shared_ptr<Component> content
+			);
 
-        std::unique_ptr<::view::HlMessage> getView() const;
-    };
+			std::unique_ptr<::view::HlMessage> getView() const;
+		};
 
-    class Section {
-        private:
+		class Section {
+		private:
 
-        public:
-        virtual ~Section();
+		public:
+			virtual ~Section();
 
-        virtual std::unique_ptr<::view::Section> getView() const;
-    };
+			virtual std::unique_ptr<::view::Section> getView() const;
+		};
 
-    class TextSection : public Section {
-        private:
-        std::shared_ptr<Component> root;
+		class TextSection: public Section {
+		private:
+			std::shared_ptr<Component> root;
 
-        public:
-        TextSection(std::shared_ptr<Component> root);
-        
-        std::unique_ptr<::view::Section> getView() const override;
-    };
-    
-    class CodeSection : public Section {
-        private:
-        CodeMetadata code_metadata;
-        std::shared_ptr<Component> root;
-        std::vector<HlMessage> hl_messages;
+		public:
+			TextSection(std::shared_ptr<Component> root);
 
-        public:
-        CodeSection(CodeMetadata code_metadata, std::shared_ptr<Component> root, std::vector<HlMessage> hl_messages);
+			std::unique_ptr<::view::Section> getView() const override;
+		};
 
-        static std::unique_ptr<CodeSection> createFromInfo(const message_template::Info &info, CreationContext &creation_context);
+		class CodeSection: public Section {
+		private:
+			CodeMetadata               code_metadata;
+			std::shared_ptr<Component> root;
+			std::vector<HlMessage>     hl_messages;
 
-        std::unique_ptr<::view::Section> getView() const override;
-    };
+		public:
+			CodeSection(
+				CodeMetadata               code_metadata,
+				std::shared_ptr<Component> root,
+				std::vector<HlMessage>     hl_messages
+			);
 
-    using error_code_t = uint32_t;
+			static std::unique_ptr<CodeSection> createFromInfo(
+				const message_template::Info& info, std::shared_ptr<CreationContext> creation_context
+			);
 
-    class Metadata {
-        private:
-        InfoType type;
-        error_code_t code;
+			std::unique_ptr<::view::Section> getView() const override;
+		};
 
-        public:
-        Metadata(InfoType type, error_code_t code);
+		using error_code_t = uint32_t;
 
-        static Metadata createFromInfo(const message_template::Info &info);
+		class Metadata {
+		private:
+			InfoType     type;
+			error_code_t code;
 
-        std::unique_ptr<::view::Metadata> getView() const;
-    };
+		public:
+			Metadata(InfoType type, error_code_t code);
 
-    class Info {
-        private:
-        Metadata metadata;
-        std::shared_ptr<Component> header;
-        std::vector<std::unique_ptr<Section>> sections;
+			static Metadata createFromInfo(const message_template::Info& info);
 
-        public:
-        Info(Metadata metadata, std::shared_ptr<Component> header, std::vector<std::unique_ptr<Section>> sections);
+			std::unique_ptr<::view::Metadata> getView() const;
+		};
 
-        static Info createFromInfo(const message_template::Info &info, CreationContext &creation_context);
+		class Info {
+		private:
+			Metadata                              metadata;
+			std::shared_ptr<Component>            header;
+			std::vector<std::unique_ptr<Section>> sections;
 
-        std::unique_ptr<::view::Info> getView() const;
-    };
+		public:
+			Info(
+				Metadata                              metadata,
+				std::shared_ptr<Component>            header,
+				std::vector<std::unique_ptr<Section>> sections
+			);
 
-    class Diagnostic {
-        private:
-        std::vector<Info> infos;
+			static Info createFromInfo(
+				const message_template::Info& info, std::shared_ptr<CreationContext> creation_context
+			);
 
-        public:
-        Diagnostic(std::vector<Info> infos);
+			std::unique_ptr<::view::Info> getView() const;
+		};
 
-        static Diagnostic createFromViewConstructor(ViewConstructor &view_constructor, CreationContext &creation_context);
+		class Diagnostic {
+		private:
+			std::vector<Info> infos;
 
-        std::unique_ptr<::view::Diagnostic> getView() const;
-    };
-    } // namespace view_manager
-} // namespace dia_app
+		public:
+			Diagnostic(std::vector<Info> infos);
+
+			static Diagnostic createFromViewConstructor(
+				std::shared_ptr<ViewConstructor>& view_constructor, std::shared_ptr<CreationContext> creation_context
+			);
+
+			std::unique_ptr<::view::Diagnostic> getView() const;
+		};
+	}  // namespace view_manager
+}  // namespace dia_app

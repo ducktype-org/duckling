@@ -2,68 +2,69 @@
 #include "template_application.hpp"
 
 namespace dia_app {
-    
-    struct ViewConstructor {
-        using ParamData = dia_file::ParamData;
 
-        // Main info section (error or warning).
-        ParamData main_info;
-        // List of secondary infos which can appear in the message.
-        std::vector<ParamData> secondary_infos;
-        // List of secondary infos displayed alongside the main info
-        // in the specified order (others can be displayed after
-        // interactions).
-        std::vector<InfoHandle> displayed_secondary_infos;
-        std::map<std::string, json> entities;
+	struct ViewConstructor {
+		using ParamData = dia_file::ParamData;
 
-        // A collection of info handles to avoid duplicate info fetches.
-        // 
-        // Motivation: `InfoParamsHandle` has state - it is either
-        //             an index into `secondary_infos` or a handle
-        //             for an unfetched data. We need one designated
-        //             place to reliably store that state without
-        //             handle duplicates. That's why we have
-        //             "stateless handles (`InfoHandle`) for stateful
-        //             handles (`InfoParamsHandle`)".
-        std::map<InfoHandle, InfoParamsHandle> info_handles;
+		// Main info section (error or warning).
+		ParamData main_info;
+		// List of secondary infos which can appear in the message.
+		std::vector<ParamData> secondary_infos;
+		// List of secondary infos displayed alongside the main info
+		// in the specified order (others can be displayed after
+		// interactions).
+		std::vector<InfoHandle>     displayed_secondary_infos;
+		std::map<std::string, json> entities;
 
-        ViewConstructor(uint error_no, const json &data) {
-            const json &info_group = data[error_no];
+		// A collection of info handles to avoid duplicate info fetches.
+		//
+		// Motivation: `InfoParamsHandle` has state - it is either
+		//             an index into `secondary_infos` or a handle
+		//             for an unfetched data. We need one designated
+		//             place to reliably store that state without
+		//             handle duplicates. That's why we have
+		//             "stateless handles (`InfoHandle`) for stateful
+		//             handles (`InfoParamsHandle`)".
+		std::map<InfoHandle, InfoParamsHandle> info_handles;
 
-            main_info = ParamData(info_group["main_info"]);
+		ViewConstructor(uint error_no, const json& data) {
+			const json& info_group = data[error_no];
 
-            ASSUME_HAS(info_group, "secondary_infos");
-            for (auto &info : info_group["secondary_infos"]) {
-                secondary_infos.push_back(ParamData(info));
-            }
+			main_info = ParamData(info_group["main_info"]);
 
-            if (info_group.contains("displayed_secondary_infos")) {
-                ASSUME_ARR(info_group, "displayed_secondary_infos");
-                for (auto &el : info_group["displayed_secondary_infos"]) {
-                    displayed_secondary_infos.push_back(InfoParamsHandle::add(el, dataHandle()));
-                }
-            }
+			ASSUME_HAS(info_group, "secondary_infos");
+			for (auto& info: info_group["secondary_infos"])
+				secondary_infos.push_back(ParamData(info));
 
-            ASSUME_OBJ(info_group["entities"]);
-            entities = info_group["entities"];
-        }
+			if (info_group.contains("displayed_secondary_infos")) {
+				ASSUME_ARR(info_group, "displayed_secondary_infos");
+				for (auto& el: info_group["displayed_secondary_infos"])
+					displayed_secondary_infos.push_back(InfoParamsHandle::add(el, dataHandle()));
+			}
 
-        std::expected<message_template::Info, message_template::Error> loadSecondaryInfo(InfoHandle info_handle) {
-            uint idx = InfoParamsHandle::load(info_handle, dataHandle());
-            ASSUME(idx < secondary_infos.size(), "secondary info index out-of-bounds");
-            return loadInfo(secondary_infos[idx]);
-        }
+			ASSUME_OBJ(info_group["entities"]);
+			entities = info_group["entities"];
+		}
 
-        std::expected<message_template::Info, message_template::Error> loadMainInfo() {
-            return loadInfo(main_info);
-        }
+		std::expected<message_template::Info, message_template::Error> loadSecondaryInfo(
+			InfoHandle info_handle
+		) {
+			uint idx = InfoParamsHandle::load(info_handle, dataHandle());
+			ASSUME(idx < secondary_infos.size(), "secondary info index out-of-bounds");
+			return loadInfo(secondary_infos[idx]);
+		}
 
-        DataHandle dataHandle() {
-            return DataHandle(entities, secondary_infos, info_handles);
-        }
-    private:
-        std::expected<message_template::Info, message_template::Error> loadInfo(const ParamData &param_data) {
-            return message_template::apply(param_data, dataHandle());
-        }
-    };
+		std::expected<message_template::Info, message_template::Error> loadMainInfo() {
+			return loadInfo(main_info);
+		}
+
+		DataHandle dataHandle() { return DataHandle(entities, secondary_infos, info_handles); }
+
+	private:
+		std::expected<message_template::Info, message_template::Error> loadInfo(
+			const ParamData& param_data
+		) {
+			return message_template::apply(param_data, dataHandle());
+		}
+	};
 }
