@@ -50,8 +50,9 @@ namespace compiler::helios::code {
 	 * @brief Represents `var/let a : T = ..;` statement in HOUT
 	 */
 	struct VariableStmt final: public Stmt {
-		// @TODO: decide where we handle non-initial value (pre hout/post hout):
-		// currently PST always have it.
+		// Right now we allow no-initial value here for testing purposes.
+		// In the future either HELIOS or MIR should emit default initialization.
+		// For now MIR panics on no initial value.
 		base::Optional<Box<Expr>> initial_value;
 		tsh::SymbolType<>         type;
 

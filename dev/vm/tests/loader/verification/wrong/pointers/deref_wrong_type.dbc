@@ -11,7 +11,7 @@ function main {
 
 	mov_l64_imm         z, 1;
 	ref_lptr_lany        x, z;  # x = &z
-	staticTableLoad_lany_lptr       y, z;  # y = *x
+	load_lany_lptr       y, x;  # y = *x
 
 	deinit; # z
 	deinit; # y

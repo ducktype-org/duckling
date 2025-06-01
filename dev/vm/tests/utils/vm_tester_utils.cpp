@@ -52,7 +52,7 @@ void VmTestSuite::loadInvalidDbc(
 	auto core_op = std::get<vm::api::CoreOperationError>(err);
 	ASSERT_TRUE(std::holds_alternative<vm::api::LoadProgramError>(core_op));
 	auto err_str = std::get<vm::api::LoadProgramError>(core_op).why;
-	// std::cerr << err_str << '\n';
+	std::cerr << err_str << '\n';
 	for (auto err_key: error_keywords) {
 		assertTrue(
 			err_str.find(err_key) != std::string::npos, base::strConcat("Not found: ", err_key)
@@ -64,8 +64,9 @@ void VmTestSuite::loadValidDbc(const std::string& dbc_filename) {
 	ASSERT_TRUE(vm::api::loadFiles(initProcess(), { fs::FilePath(path(dbc_filename)) }).has_value());
 }
 
-#define EXPECT_VOID(result) \
-	if (!result.has_value()) return { .pid = pid, .run_result = std::unexpected(result.error()) };
+#define EXPECT_VOID(action)                          \
+	if (auto&& result = action; !result.has_value()) \
+		return { .pid = pid, .run_result = std::unexpected(result.error()) };
 
 auto VmTestSuite::runTestImpl(
 	vm::PID                            pid,

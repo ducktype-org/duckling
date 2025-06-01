@@ -1,0 +1,15 @@
+type pointer: pointer_A A
+type pointer: pointer_B B
+
+type class: A {
+    fields: {
+        x: i64,
+    };
+}
+
+type class: B {
+    extends: A;
+    fields: {
+        x: i64,
+    };
+}

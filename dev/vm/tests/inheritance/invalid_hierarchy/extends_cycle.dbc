@@ -9,7 +9,3 @@ type class: B {
 type class: C {
 	extends: A;
 }
-
-function main {
-	ret;
-}
