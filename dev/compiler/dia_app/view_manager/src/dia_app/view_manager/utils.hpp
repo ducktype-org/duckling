@@ -176,6 +176,14 @@ namespace dia_app {
     using InfoHandle = uint;
     struct InfoParamsHandle;
 
+    struct ExploreEdge {
+        std::string description;
+        InfoHandle handle;
+
+        ExploreEdge(const std::string &description, InfoHandle handle) :
+            description(description), handle(handle) {}
+    };
+
     // A data handle for accessing and modifying the entities and secondary_infos
     // of a view constructor instance.
     // 

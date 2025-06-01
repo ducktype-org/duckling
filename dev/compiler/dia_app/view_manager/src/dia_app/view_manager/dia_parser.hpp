@@ -63,7 +63,7 @@ namespace dia_file {
         ShortMetadata metadata;
         std::map<std::string, Ptr> params;
         std::optional<CodeData> code;
-        std::vector<InfoHandle> explore_edges;
+        std::vector<ExploreEdge> explore_edges;
         
         ParamData() {}
         ParamData(const json &param_data) {
@@ -82,8 +82,10 @@ namespace dia_file {
 
             if (param_data.contains("explore_edges")) {
                 for (auto &edge : param_data["explore_edges"]) {
-                    ASSUME(edge.is_number_unsigned(), "explore edge is not an unsigned integer");
-                    explore_edges.push_back(edge);
+                    ASSUME_OBJ(edge);
+                    ASSUME_HAS_STR(edge, "description");
+                    ASSUME_HAS_UINT(edge, "handle");
+                    explore_edges.push_back(ExploreEdge(edge["description"], edge["handle"]));
                 }
             }
         }

@@ -36,7 +36,7 @@ namespace message_template {
         std::optional<CodeData> code;
         std::map<std::string, DisplayPointerMessage> pointer_messages;
         dia_file::Ptr description;
-        std::vector<uint> explore_edges;
+        std::vector<ExploreEdge> explore_edges;
 
         Info(TemplateDataHandle handle) :
             metadata(handle.template_data.metadata),
