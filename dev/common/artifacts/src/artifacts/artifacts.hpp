@@ -40,7 +40,7 @@ namespace artifacts {
 	 * @brief Represents an artifact that maps to a file, e.g. an object file produced by the
 	 * compiler.
 	 */
-	struct FileArtifact {
+	struct FileArtifact final {
 		const Ref<ArtifactCollection> PARENT;
 		const base::StrID             NAME;
 
@@ -59,7 +59,7 @@ namespace artifacts {
 	 * @brief Represents an artifact, that can be represented as bytes, e.g. result of a query that
 	 * returns an int.
 	 */
-	struct BlobArtifact {
+	struct BlobArtifact final {
 		const Ref<ArtifactCollection> PARENT;
 		const base::StrID             NAME;
 
@@ -98,7 +98,7 @@ namespace artifacts {
 	 * @brief Represents an artifact group. (It basically maps to a directory.).
 	 * All collections can be modified independently (because as of now there is no state hashing).
 	 */
-	class ArtifactCollection {
+	class ArtifactCollection final {
 	public:
 		/**
 		 * @brief Constructs ArtifactCollection, looks into `root` and restores previously saved
@@ -114,9 +114,7 @@ namespace artifacts {
 		///////////////////////// GENERAL OPERATIONS ///////////////////////
 
 		/**
-		 * @brief Flushes ArtifactCollection's data to the disk.
-		 * @note This should always be performed after state modifications (especially after
-		 * modifying blob artifacts).
+		 * @brief Flushes ArtifactCollection tree data to the disk.
 		 */
 		void flush();
 
@@ -164,6 +162,8 @@ namespace artifacts {
 			return deserialize<T>(getBlobDataView(blob));
 		}
 
+		/////////////////////////// PRIVATE /////////////////////////
+
 	private:
 		const std::filesystem::path PATH;
 
@@ -179,6 +179,7 @@ namespace artifacts {
 
 		/**
 		 * @brief Performs the real flushing. Also, calls `flushDown()` on sub-collections.
+		 * This is a helper method for `flush()`.
 		 */
 		void flushDown();
 
