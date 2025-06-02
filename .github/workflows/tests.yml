@@ -98,6 +98,12 @@ jobs:
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
 
+      - name: Clean workspace (self-hosted only)
+        if: contains(runner.labels, 'self-hosted')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+        
       - name: Checkout repository
         uses: actions/checkout@v4
 
