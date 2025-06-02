@@ -178,7 +178,8 @@ namespace artifacts {
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 
 		/**
-		 * @brief Implementation that writes the blob data on the disk and propagates down the ArtifactCollection tree.
+		 * @brief Implementation that writes the blob data on the disk and propagates down the
+		 * ArtifactCollection tree.
 		 * @note It is a helper method for `flush()`.
 		 */
 		void flushDown();
