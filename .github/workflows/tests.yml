@@ -87,19 +87,28 @@ jobs:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
-      - name: Ustaw liczbę wątków
-        id: set-jobs
+      - name: Set self-hosted flag
+        id: set-self-hosted
         run: |
           if [[ "${{ matrix.build-type }}" == "Debug" && "${{ needs.determine-runners.outputs.runner1 }}" == *"SelfHostedRunners"* ]]; then
-            echo "jobs=4" >> $GITHUB_OUTPUT
+            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
           elif [[ "${{ matrix.build-type }}" == "Release" && "${{ needs.determine-runners.outputs.runner2 }}" == *"SelfHostedRunners"* ]]; then
+            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-self-hosted=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set number of threads
+        id: set-jobs
+        run: |
+          if [[ "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
             echo "jobs=4" >> $GITHUB_OUTPUT
           else
             echo "jobs=2" >> $GITHUB_OUTPUT
           fi
 
       - name: Clean workspace (self-hosted only)
-        if: contains(runner.labels, 'self-hosted')
+        if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
         run: |
           echo "Cleaning up workspace on self-hosted runner..."
           rm -rf ${{ github.workspace }}
