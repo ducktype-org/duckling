@@ -25,15 +25,24 @@
         {%- endif -%}
     {%- elif comp.WhichOneof('component') == 'concat_component' -%}
         {%- for c in comp.concat_component.components -%}
-            {%- if c.WhichOneof('component') == 'code_component' -%}<span class="code">{{- c.code_component.content -}}</span>{%- elif c.WhichOneof('component') == 'text_component' -%}{{- c.text_component.content -}}{%- else -%}{{- render_component(c) -}}{%- endif -%}
+            {%- if c.WhichOneof('component') == 'code_component' -%}
+                {%- set tags = c.code_component.hl_tags | list -%}
+                {%- if tags -%}
+                    <span class="code" data-groups="{{ tags | join(' ') }}">{{- c.code_component.content -}}</span>
+                {%- else -%}
+                    <span class="code">{{- c.code_component.content -}}</span>
+                {%- endif -%}
+            {%- elif c.WhichOneof('component') == 'text_component' -%}
+                {{- c.text_component.content -}}
+            {%- else -%}
+                {{- render_component(c) -}}
+            {%- endif -%}
         {%- endfor -%}
     {%- elif comp.WhichOneof('component') == 'interactive_component' -%}
         {%- set ic = comp.interactive_component -%}
         <span class="clickable" onclick="handleClick(event, '{{ ic.component_id }}')">{{- render_component(ic.primary_component) -}}</span>
     {%- else -%}
-        {{- 'Unknown component type: %s' | format(comp.WhichOneof('component')) | log_warning -}}
-        {{- 'Component data: %s' | format(comp) | log_debug -}}
-        <span class="unknown-component" title="Check logs for details">?</span>
+        <span class="unknown-component" title="Unknown component type">?</span>
     {%- endif -%}
 {%- endmacro %}
 
@@ -60,9 +69,7 @@
         {%- set ic = comp.interactive_component -%}
         <span class="clickable" onclick="handleClick(event, '{{ ic.component_id }}')">{{- render_nohl_component(ic.primary_component) -}}</span>
     {%- else -%}
-        {{- 'Unknown NoHl component type: %s' | format(comp.WhichOneof('component')) | log_warning -}}
-        {{- 'NoHl component data: %s' | format(comp) | log_debug -}}
-        <span class="unknown-component" title="Check logs for details">?</span>
+        <span class="unknown-component" title="Unknown component type">?</span>
     {%- endif -%}
 {%- endmacro %}
 
@@ -84,7 +91,7 @@
             {%- if line_tags -%}<div class="highlight-messages">
                 {%- for tag in line_tags|sort(attribute='priority', reverse=true) -%}
                     {%- set msg_info = hl_info_map.get(tag|string) -%}
-                    {%- if msg_info -%}<div class="highlight-message highlight-type-{{ msg_info.type|lower }}"><div class="highlight-message-content">{{- render_nohl_component(msg_info.message) -}}</div></div>{%- endif -%}
+                    {%- if msg_info -%}<div class="highlight-message highlight-type-{{ msg_info.type|lower }}" data-highlight-tag="{{ tag }}"><div class="highlight-message-content">{{- render_nohl_component(msg_info.message) -}}</div></div>{%- endif -%}
                 {%- endfor -%}
             </div>{%- endif -%}
         {%- endfor -%}

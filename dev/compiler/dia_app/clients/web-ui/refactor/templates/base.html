@@ -123,7 +123,10 @@
       background: inherit;
     }
     
-    /* Highlight messages */
+    .code-highlight {
+      background-color: #fff7d6 !important;
+    }
+
     .highlight-messages {
       margin: 4px 0;
       padding-left: calc(3em + 18px);
@@ -240,13 +243,30 @@
     
     document.addEventListener('DOMContentLoaded', () => {
       restoreScrollPositions();
-      
-      // Save scroll position on scroll
       ['main', 'side'].forEach(id => {
         document.getElementById(id).addEventListener('scroll', () => {
           saveScrollPositions();
         });
       });
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.highlight-message').forEach(message => {
+            message.addEventListener('mouseenter', function() {
+                const tag = this.dataset.highlightTag;
+                document.querySelectorAll('span.code[data-groups]').forEach(el => {
+                    if (el.dataset.groups.includes(tag)) {
+                        el.classList.add('code-highlight');
+                    }
+                });
+            });
+            
+            message.addEventListener('mouseleave', function() {
+                document.querySelectorAll('.code-highlight').forEach(el => {
+                    el.classList.remove('code-highlight');
+                });
+            });
+        });
     });
   </script>
 </head>
