@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/ternary.hpp"
+
+#include "../../hierarchy/expressions/logic_or.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

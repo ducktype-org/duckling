@@ -1,3 +1,5 @@
+#include "../../hierarchy/expressions/string_value.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {

@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/general_prefix.hpp"
+
+#include "../../hierarchy/expressions/chain_expr.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

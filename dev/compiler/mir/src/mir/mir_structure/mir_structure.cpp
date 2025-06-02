@@ -4,6 +4,7 @@
 
 #include <base/variant.hpp>
 
+#include <iomanip>
 #include <sstream>
 
 namespace compiler::mir {

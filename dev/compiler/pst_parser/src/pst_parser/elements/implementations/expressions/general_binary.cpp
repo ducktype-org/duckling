@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/general_binary.hpp"
+
+#include "../../hierarchy/expressions/general_suffix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 #include <stack>

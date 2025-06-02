@@ -1,0 +1,18 @@
+#pragma once
+
+#include "../statements/action.hpp"
+
+namespace pst {
+	/**
+	 * @todo Should throw be an action?
+	 */
+	class Throw final: public Action {
+	public:
+		explicit Throw(const dia::SourcePosition& position): Action(position) {}
+
+		void dprint(std::ostream& out) const final;
+		~Throw() final = default;
+
+		void acceptVisitor(PstVisitor& visitor) const override;
+	};
+}

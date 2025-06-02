@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/comparison_chain.hpp"
+
+#include "../../hierarchy/expressions/general_binary.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {
