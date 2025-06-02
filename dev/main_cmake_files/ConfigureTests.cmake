@@ -39,6 +39,7 @@ if(ENABLE_COVERAGE)
             "scripts/*"
             "*/tests/*"
             "*/playground/*"
+			"*/build/*"
             "${CMAKE_BINARY_DIR}/*"
             --lcov
             -o coverage.info
