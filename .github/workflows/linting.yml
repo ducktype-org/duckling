@@ -22,6 +22,14 @@ jobs:
     needs: determine-runners
     runs-on: ${{ fromJson(needs.determine-runners.outputs.runner1) }}
     steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(needs.determine-runners.outputs.runner1, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
       - uses: actions/checkout@v4
 
       - name: Install gvc, LLVM and nlohmann_json
@@ -71,6 +79,14 @@ jobs:
     needs: determine-runners
     runs-on: ${{ fromJson(needs.determine-runners.outputs.runner2) }}
     steps:
+      - name: Clean workspace (self-hosted only)
+        if: contains(needs.determine-runners.outputs.runner2, 'SelfHostedRunners')
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+
       - uses: actions/checkout@v4
 
       - name: Run duck linter
