@@ -39,25 +39,25 @@ jobs:
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
           # Pobierz dwa dostępne runnery
-          available_runners=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and (.labels[]?.name == "ubuntu-24.04")) | .name' | head -2)
+          available_runners=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and (.labels[]?.name == "build")) | .name' | head -2)
 
           runner1=$(echo "$available_runners" | sed -n '1p')
           runner2=$(echo "$available_runners" | sed -n '2p')
 
           if [ -n "$runner1" ] && [ "$runner1" != "null" ]; then
             echo "✅ Self-hosted runner dostępny: $runner1"
-            echo "runner1={\"group\": \"SelfHostedRunners\", \"labels\": \"ubuntu-24.04\"}" >> $GITHUB_OUTPUT
+            echo "runner1={\"group\": \"SelfHostedRunners\", \"labels\": \"build\"}" >> $GITHUB_OUTPUT
           else
             echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner1"
-            echo "runner1=\"ubuntu-24.04\"" >> $GITHUB_OUTPUT
+            echo "runner1=\"ubuntu-latest\"" >> $GITHUB_OUTPUT
           fi
 
           if [ -n "$runner2" ] && [ "$runner2" != "null" ]; then
             echo "✅ Self-hosted runner dostępny: $runner2"
-            echo "runner2={\"group\": \"SelfHostedRunners\", \"labels\": \"ubuntu-24.04\"}" >> $GITHUB_OUTPUT
+            echo "runner2={\"group\": \"SelfHostedRunners\", \"labels\": \"build\"}" >> $GITHUB_OUTPUT
           else
             echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner2"
-            echo "runner2=\"ubuntu-24.04\"" >> $GITHUB_OUTPUT
+            echo "runner2=\"ubuntu-latest\"" >> $GITHUB_OUTPUT
           fi
 
 
@@ -87,6 +87,17 @@ jobs:
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
+      - name: Ustaw liczbę wątków
+        id: set-jobs
+        run: |
+          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ needs.determine-runners.outputs.runner1 }}" == *"SelfHostedRunners"* ]]; then
+            echo "jobs=4" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ needs.determine-runners.outputs.runner2 }}" == *"SelfHostedRunners"* ]]; then
+            echo "jobs=4" >> $GITHUB_OUTPUT
+          else
+            echo "jobs=2" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -175,7 +186,7 @@ jobs:
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
+        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
@@ -185,7 +196,7 @@ jobs:
         id: build-deployables
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- all build_all_playgrounds
+        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- all build_all_playgrounds
         continue-on-error: true
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries
