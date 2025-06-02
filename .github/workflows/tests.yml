@@ -22,8 +22,37 @@ env:
   GCOV_VERSION: gcov-14
 
 jobs:
+  # Nowy job do dynamicznego wyboru runnera
+  determine-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      runner: ${{ steps.set-runner.outputs.runner }}
+    steps:
+      - name: Determine which runner to use
+        id: set-runner
+        env:
+          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+        run: |
+          # Sprawdź dostępność self-hosted runners w grupie SelfHostedRunners
+          echo "Sprawdzanie dostępności self-hosted runners..."
+          
+          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/${{ github.repository_owner }}/actions/runners 2>/dev/null || echo '{"runners":[]}')
+          
+          # Sprawdź czy są dostępne runnery w grupie SelfHostedRunners z labelem ubuntu-24.04
+          available=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and .runner_group_name == "SelfHostedRunners" and (.labels[]?.name == "ubuntu-24.04")) | .name' | head -1)
+          
+          if [ -n "$available" ] && [ "$available" != "null" ]; then
+            echo "✅ Self-hosted runner dostępny: $available"
+            echo 'runner={"group": "SelfHostedRunners", "labels": "ubuntu-24.04"}' >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted"
+            echo 'runner="ubuntu-24.04"' >> $GITHUB_OUTPUT
+          fi
+
+
   build:
     if: github.event.pull_request.draft == false
+    needs: determine-runner
 
     strategy:
       matrix:
@@ -40,10 +69,7 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 20  # (Per matrix run)
-
-    runs-on:
-      group: SelfHostedRunners
-      labels: ubuntu-24.04
+    runs-on: ${{ fromJson(needs.determine-runner.outputs.runner) }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
@@ -205,9 +231,7 @@ jobs:
   coverage:
     needs: [build]
 
-    runs-on:
-      group: SelfHostedRunners
-      labels: ubuntu-24.04
+    runs-on: ubuntu-24.04
 
     timeout-minutes: 2
 
