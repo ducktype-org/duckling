@@ -178,8 +178,8 @@ namespace artifacts {
 		const base::Optional<Ref<ArtifactCollection>> PARENT;
 
 		/**
-		 * @brief Performs the real flushing. Also, calls `flushDown()` on sub-collections.
-		 * This is a helper method for `flush()`.
+		 * @brief Implementation that writes the blob data on the disk and propagates down the ArtifactCollection tree.
+		 * @note It is a helper method for `flush()`.
 		 */
 		void flushDown();
 
@@ -190,6 +190,7 @@ namespace artifacts {
 
 		/**
 		 * @brief Parses blobs from `content` and inserts them to the collection.
+		 * @note It is a helper method for `loadData()`.
 		 */
 		void parseBlobsFromBytes(std::stringstream& content);
 
@@ -200,6 +201,7 @@ namespace artifacts {
 
 		/**
 		 * @brief Return path to a `.artc` file with blob content.
+		 * .artc file is the file which stores blob data.
 		 */
 		std::filesystem::path getArtcFile() const;
 	};
