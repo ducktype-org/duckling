@@ -31,6 +31,15 @@ if(ENABLE_COVERAGE)
 	# 1. compile and run the tests
 	# 2. run this target
     add_custom_target(coverage
+
+		# Initial coverage created for all files in the project.
+		COMMAND ${LCOV} --directory "${CMAKE_BINARY_DIR}"
+			--gcov-tool "${GCOV_PATH}"
+			--initial
+			--base-directory "${CMAKE_SOURCE_DIR}"
+			--no-external
+			--output-file coverage_base.info
+
         COMMAND ${FASTCOV}
             --gcov ${GCOV_VERSION}
 			--include "${CMAKE_SOURCE_DIR}"
