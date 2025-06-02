@@ -32,6 +32,7 @@ if(ENABLE_COVERAGE)
 	# 2. run this target
     add_custom_target(coverage
         COMMAND ${FASTCOV}
+			--process-gcno 
             --gcov ${GCOV_VERSION}
             --exclude "docs/*" 
             "integration_tests/*"
