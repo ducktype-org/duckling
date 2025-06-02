@@ -6,6 +6,7 @@
 
 #include "mir_lowering.hpp"
 
+#include "helios/hout/elements/stmt.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <helios/helios_result.hpp>
@@ -500,6 +501,8 @@ namespace compiler::mir {
 
 		void visitIfStmt(const hc::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
+		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
+
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
 		void visitReturnStmt(const hc::ReturnStmt&) override {}
@@ -593,6 +596,82 @@ namespace compiler::mir {
 		}
 
 		void visitIfStmt(const hc::IfStmt& stmt) override {
+			auto condition_scope = function.newScope(parent_scope);
+
+			// I'm not sure if we need these scopes,
+			// maybe we could just pass parent_scope as-is.
+			// But this way it for sure works.
+			auto then_scope = function.newScope(parent_scope);
+			auto else_scope = function.newScope(parent_scope);
+
+			// @TODO: else body
+			auto else_block = function.newBlock();
+			else_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, else_scope }
+			);
+
+			// The "then" branch requires a new block,
+			// because otherwise the "else" branch would jump to it.
+			auto then_block = function.newBlock();
+			then_block->setTerminator(
+				{ Operation::Jump, {}, { continuation->getID() }, {}, then_scope }
+			);
+			auto then_body = lowerCodeBlock(stmt.body, then_block, function, then_scope);
+
+			// @TODO: Implement jumpy code here.
+			auto condition_block = function.newBlock();
+
+			auto get_condition_return = condition_block->addHole();
+
+			auto expr_result
+				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+
+			if (expr_result.value.isLocal()) {
+				// we have to "move" the condition result
+				// into special temporary value, so we can use it
+				// after the actual condition result is destroyed.
+				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+
+				get_condition_return.fill(Instruction{
+					Operation::Assign,
+					{ condition_result_tmp },
+					{ expr_result.value },
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope,
+				});
+
+				condition_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ condition_result_tmp, then_body.begin->getID(), else_block->getID() },
+					{},
+					condition_scope,
+				});
+
+			} else {
+				// we can use the result of the expression directly:
+
+				get_condition_return.fill(Instruction{
+					Operation::Nop,
+					{},
+					{},
+					{},
+					condition_scope,
+				});
+
+				condition_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ expr_result.value, then_body.begin->getID(), else_block->getID() },
+					{},
+					condition_scope,
+				});
+			}
+
+			output({ expr_result.begin });
+		}
+
+		void visitWhileStmt(const hc::WhileStmt& stmt) override {
 			auto condition_scope = function.newScope(parent_scope);
 
 			// I'm not sure if we need these scopes,

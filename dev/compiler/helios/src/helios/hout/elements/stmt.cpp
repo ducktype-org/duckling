@@ -12,6 +12,7 @@ namespace compiler::helios::code {
 	STMT_VISITOR(VoidReturnStmt)
 	STMT_VISITOR(ExprStmt)
 	STMT_VISITOR(IfStmt)
+	STMT_VISITOR(WhileStmt)
 	STMT_VISITOR(VariableStmt)
 	STMT_VISITOR(AssignmentStmt)
 
@@ -45,6 +46,16 @@ namespace compiler::helios::code {
 	void IfStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
 		out << "if (";
+		condition->debugPrint(out);
+		out << ") {\n";
+		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);
+		addIndent(out, indent);
+		out << "}\n";
+	}
+
+	void WhileStmt::debugPrint(std::ostream& out, usize indent) const {
+		addIndent(out, indent);
+		out << "while (";
 		condition->debugPrint(out);
 		out << ") {\n";
 		for (const auto& stmt: body.statements) stmt->debugPrint(out, indent + 1);

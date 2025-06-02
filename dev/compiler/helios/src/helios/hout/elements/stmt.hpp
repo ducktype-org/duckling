@@ -138,4 +138,21 @@ namespace compiler::helios::code {
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
 	};
+
+	/**
+	 * @brief Represents While statement in HOUT
+	 */
+	struct WhileStmt final: public Stmt {
+		Box<Expr> condition;
+		CodeBlock body;
+
+		// @TODO: optional else body
+
+		WhileStmt(Box<Expr> condition, CodeBlock body):
+			  condition(std::move(condition)),
+			  body(std::move(body)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
 }

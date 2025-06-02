@@ -299,6 +299,7 @@ private:
 			usize return_stmt_count      = 0;
 			usize void_return_stmt_count = 0;
 			usize if_stmt_count          = 0;
+			usize while_stmt_count       = 0;
 
 			void visitExprStmt(const ExprStmt&) override { expr_stmt_count++; }
 
@@ -307,6 +308,8 @@ private:
 			void visitVoidReturnStmt(const VoidReturnStmt&) override { void_return_stmt_count++; }
 
 			void visitIfStmt(const IfStmt&) override { if_stmt_count++; }
+
+			void visitWhileStmt(const WhileStmt&) override { while_stmt_count++; }
 		};
 
 		{
