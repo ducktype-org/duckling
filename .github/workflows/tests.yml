@@ -23,43 +23,10 @@ env:
 
 jobs:
   determine-runners:
-    runs-on: ubuntu-latest
-    outputs:
-      runner1: ${{ steps.set-runner.outputs.runner1 }}
-      runner2: ${{ steps.set-runner.outputs.runner2 }}
-    steps:
-      - name: Determine which runner to use
-        id: set-runner
-        env:
-          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
-        run: |
-          # Sprawdź dostępność self-hosted runners
-          echo "Sprawdzanie dostępności self-hosted runners..."
-
-          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
-
-          # Pobierz dwa dostępne runnery
-          available_runners=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and (.labels[]?.name == "build")) | .name' | head -2)
-
-          runner1=$(echo "$available_runners" | sed -n '1p')
-          runner2=$(echo "$available_runners" | sed -n '2p')
-
-          if [ -n "$runner1" ] && [ "$runner1" != "null" ]; then
-            echo "✅ Self-hosted runner dostępny: $runner1"
-            echo "runner1={\"group\": \"SelfHostedRunners\", \"labels\": \"build\"}" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner1"
-            echo "runner1=\"ubuntu-latest\"" >> $GITHUB_OUTPUT
-          fi
-
-          if [ -n "$runner2" ] && [ "$runner2" != "null" ]; then
-            echo "✅ Self-hosted runner dostępny: $runner2"
-            echo "runner2={\"group\": \"SelfHostedRunners\", \"labels\": \"build\"}" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner2"
-            echo "runner2=\"ubuntu-latest\"" >> $GITHUB_OUTPUT
-          fi
-
+    uses: ./.github/workflows/determine-runners.yml
+    with:
+      target-label: 'build'
+    secrets: inherit
 
   build:
     if: github.event.pull_request.draft == false
