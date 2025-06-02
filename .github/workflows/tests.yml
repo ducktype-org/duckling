@@ -121,11 +121,7 @@ jobs:
       - name: Install lcov
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
-
-      - name: Install fastcov
-        if: ${{ env.COVERAGE_ENABLED == 'true' }}
-        run: sudo pip install fastcov --break-system-packages
-
+      
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev

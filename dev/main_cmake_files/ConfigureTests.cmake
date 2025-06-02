@@ -7,7 +7,13 @@ endfunction()
 if(ENABLE_COVERAGE)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --coverage")
 
-	find_program(FASTCOV fastcov REQUIRED)
+	find_program(PYTHON_EXECUTABLE python3 REQUIRED)
+
+	set(FASTCOV "${CMAKE_SOURCE_DIR}/scripts/py/fastcov.py")
+	if(NOT EXISTS ${FASTCOV})
+		message(FATAL_ERROR "FASTCOV script not found at ${FASTCOV}")
+	endif()
+
 	find_program(LCOV lcov REQUIRED)
 
 	if(NOT GCOV_VERSION)
@@ -24,7 +30,7 @@ if(ENABLE_COVERAGE)
 
     add_custom_target(coverage
 
-        COMMAND ${FASTCOV}
+        COMMAND ${PYTHON_EXECUTABLE} ${FASTCOV}
             --gcov ${GCOV_VERSION}
 			--include "${CMAKE_SOURCE_DIR}"
             --exclude "docs" 
