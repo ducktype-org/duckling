@@ -10,10 +10,17 @@ env:
   TIDY_VERSION: 19
 
 jobs:
+  determine-runners:
+    uses: ./.github/workflows/determine-runners.yml
+    with:
+      target-label: 'ubuntu-24.04'
+    secrets: inherit
+
   cpp-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runner1) }}
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +68,8 @@ jobs:
   duck-linter:
     if: github.event.pull_request.draft == false
 
-    runs-on: ubuntu-24.04
+    needs: determine-runners
+    runs-on: ${{ fromJson(needs.determine-runners.outputs.runner2) }}
     steps:
       - uses: actions/checkout@v4
 
