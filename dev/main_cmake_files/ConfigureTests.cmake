@@ -34,13 +34,12 @@ if(ENABLE_COVERAGE)
         COMMAND ${FASTCOV}
             --gcov ${GCOV_VERSION}
 			--include "${CMAKE_SOURCE_DIR}"
-            --exclude "docs/*" 
-            "integration_tests/*"
-            "scripts/*"
-            "*/tests/*"
-            "*/playground/*"
-			"*/build/*"
-            "${CMAKE_BINARY_DIR}/*"
+            --exclude "docs" 
+            "integration_tests"
+            "scripts"
+            "/tests/"
+            "/playground/"
+            "${CMAKE_BINARY_DIR}"
             --lcov
             -o coverage.info
             
