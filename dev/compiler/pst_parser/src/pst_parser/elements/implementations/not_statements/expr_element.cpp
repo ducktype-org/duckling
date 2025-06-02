@@ -1,4 +1,9 @@
-#include "../../hierarchy/expr.hpp"
+#include "../../hierarchy/not_statements/expr_element.hpp"
+
+#include "../../hierarchy/expressions/assignment.hpp"
+#include "../../hierarchy/expressions/comma.hpp"
+#include "../../hierarchy/expressions/ternary.hpp"
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

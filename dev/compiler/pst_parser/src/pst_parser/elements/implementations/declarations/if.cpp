@@ -1,3 +1,7 @@
+#include "../../hierarchy/declarations/if.hpp"
+
+#include "../../hierarchy/not_statements/code_block_or_statement.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/round_group_expression.hpp"   // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
@@ -26,6 +30,8 @@ namespace pst {
 		nullAwareDprint(else_body, out);
 		out << "}";
 	}
+
+	AccessLocked<ExprHolder> If::getCondition() const { return condition.internal()->getExpr(); }
 
 	void If::acceptVisitor(PstVisitor& visitor) const { visitor.visitIf(*this); }
 }

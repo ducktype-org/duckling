@@ -9,7 +9,7 @@
 
 #include <helios/scope_symbol_id.hpp>
 #include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements.hpp>  // @TODO #404 relax it somehow
+#include <pst_parser/elements/elements_list.hpp>
 
 #include <base/string_id.hpp>
 

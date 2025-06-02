@@ -1,3 +1,6 @@
+#include "../../hierarchy/declarations/namespace.hpp"
+
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

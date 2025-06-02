@@ -1,6 +1,6 @@
 #pragma once
 
-#include "preamble.hpp"
+#include "preamble.hpp"  // IWYU pragma: keep
 
 #include <unicode/unistr.h>
 

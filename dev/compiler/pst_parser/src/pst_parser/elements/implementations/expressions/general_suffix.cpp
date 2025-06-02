@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/general_suffix.hpp"
+
+#include "../../hierarchy/expressions/general_prefix.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 #include <base/int_conv.hpp>

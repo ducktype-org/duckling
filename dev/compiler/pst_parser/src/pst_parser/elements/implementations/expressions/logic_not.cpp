@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/logic_not.hpp"
+
+#include "../../hierarchy/expressions/comparison_chain.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

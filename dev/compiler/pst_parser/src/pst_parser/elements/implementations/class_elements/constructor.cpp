@@ -1,4 +1,7 @@
-#include "../../hierarchy/lists.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/class_elements/constructor.hpp"
+
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
+#include "../../hierarchy/not_statements/fun_param.hpp"   // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {
