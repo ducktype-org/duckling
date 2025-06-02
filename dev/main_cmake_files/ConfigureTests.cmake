@@ -22,14 +22,6 @@ if(ENABLE_COVERAGE)
 
 	add_custom_target(build_all_coverage_targets)
 
-	# This target is used to generate coverage report.
-	# We do it in two steps since by default lcov
-	# does not generate coverage data for files not linked by the tests.
-	# https://stackoverflow.com/a/78554322
-	# Some helpful guide: https://wiki.documentfoundation.org/Development/Lcov
-	# Usage of this target:
-	# 1. compile and run the tests
-	# 2. run this target
     add_custom_target(coverage
 
         COMMAND ${FASTCOV}
