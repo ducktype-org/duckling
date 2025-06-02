@@ -22,7 +22,7 @@ jobs:
       - name: Check runner availability
         id: set-runner
         env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_SCHED_TOKEN }}
+          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
           TARGET_LABEL: ${{ inputs.target-label }}
         run: |
           echo "Checking for runners with label: $TARGET_LABEL"
