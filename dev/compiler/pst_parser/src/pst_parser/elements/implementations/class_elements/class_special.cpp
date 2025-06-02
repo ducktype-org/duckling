@@ -1,3 +1,9 @@
+#include "../../hierarchy/class_elements/class_special.hpp"
+
+#include "../../hierarchy/class_elements/constructor.hpp"
+#include "../../hierarchy/class_elements/copy_constructor.hpp"
+#include "../../hierarchy/class_elements/destructor.hpp"
+#include "../../hierarchy/not_statements/code_block.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst {

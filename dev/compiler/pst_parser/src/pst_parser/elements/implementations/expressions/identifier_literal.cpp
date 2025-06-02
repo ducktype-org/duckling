@@ -1,4 +1,6 @@
-#include "../../hierarchy/not_statements.hpp"
+#include "../../hierarchy/expressions/identifier_literal.hpp"
+
+#include "../../hierarchy/expressions/template_specifier.hpp"  // IWYU pragma: keep
 #include "preamble.hpp"
 
 namespace pst::expr {

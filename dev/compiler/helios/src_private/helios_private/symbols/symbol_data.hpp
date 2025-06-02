@@ -3,7 +3,7 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <pst_parser/access.hpp>
-#include <pst_parser/elements/elements.hpp>
+#include <pst_parser/elements/includes/basic.hpp>
 #include <typesystem/higher/types.hpp>
 
 #include <base/string_id.hpp>

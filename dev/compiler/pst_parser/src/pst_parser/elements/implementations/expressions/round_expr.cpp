@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/round_expr.hpp"
+
+#include "../../hierarchy/expressions/comma.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {

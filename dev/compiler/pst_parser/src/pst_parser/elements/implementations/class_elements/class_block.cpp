@@ -1,3 +1,5 @@
+#include "../../hierarchy/not_statements/class_block.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {

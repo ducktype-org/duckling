@@ -1,3 +1,5 @@
+#include "../../hierarchy/expressions/binary_operator.hpp"
+
 #include "preamble.hpp"
 
 namespace pst::expr {

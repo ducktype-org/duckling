@@ -1,3 +1,6 @@
+#include "../../hierarchy/expressions/access.hpp"
+
+#include "../../hierarchy/expressions/template_specifier.hpp"
 #include "preamble.hpp"
 
 namespace pst::expr {

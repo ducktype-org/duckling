@@ -1,3 +1,5 @@
+#include "../../hierarchy/class_elements/non_class_stmt.hpp"
+
 #include "preamble.hpp"
 
 namespace pst {

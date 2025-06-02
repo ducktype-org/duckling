@@ -60,8 +60,12 @@ namespace compiler::helios::code {
 
 		// this might not be correct:?
 		out << this->type.toString();
-		out << " = ";
-		this->initial_value.value()->debugPrint(out);
+		if (this->initial_value.has_value()) {
+			out << " = ";
+			this->initial_value.value()->debugPrint(out);
+		} else {
+			out << " = <no initial value provided>";
+		}
 
 		out << ";\n";
 	}
