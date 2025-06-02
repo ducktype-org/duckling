@@ -36,7 +36,7 @@ jobs:
           # Sprawdź dostępność self-hosted runners w grupie SelfHostedRunners
           echo "Sprawdzanie dostępności self-hosted runners..."
           
-          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/${{ github.repository_owner }}/actions/runners 2>/dev/null || echo '{"runners":[]}')
+          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
           
           # Sprawdź czy są dostępne runnery w grupie SelfHostedRunners z labelem ubuntu-24.04
           available=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and .runner_group_name == "SelfHostedRunners" and (.labels[]?.name == "ubuntu-24.04")) | .name' | head -1)
