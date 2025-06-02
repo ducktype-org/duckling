@@ -61,21 +61,40 @@ def rjust_filter(value, width):
     return str(value).rjust(width)
 
 
+def collect_tags(component):
+    """Recursively collect all tags from a component and its children."""
+    tags = set()
+    
+    comp_type = component.WhichOneof('component')
+    if comp_type == 'code_component':
+        tags.update(component.code_component.hl_tags)
+    elif comp_type == 'concat_component':
+        for child in component.concat_component.components:
+            tags.update(collect_tags(child))
+    elif comp_type == 'interactive_component':
+        tags.update(collect_tags(component.interactive_component.primary_component))
+    
+    return tags
+
+# Add the function to Jinja environment
+app.jinja_env.globals['collect_tags'] = collect_tags
+
 def get_hl_info_map(response):
+    """Create a map of tag -> list of messages for all code sections."""
     hl_info_map = {}
     for diag in response.diagnostics:
         for info in diag.infos:
             for section in info.sections:
                 if section.HasField('code_section'):
                     for hl_message in section.code_section.hl_messages:
-                        # Convert NoHlComponent message to string representation
-                        message_str = ""
-                        if hl_message.message.HasField('text_component'):
-                            message_str = hl_message.message.text_component.content
-                        elif hl_message.message.HasField('code_component'):
-                            message_str = hl_message.message.code_component.content
-                        # Add the string message to the map
-                        hl_info_map.setdefault(str(hl_message.tag), []).append(message_str)
+                        # Add the message info to the map
+                        hl_info_map[str(hl_message.tag)] = {
+                            'message': hl_message.message,
+                            'type': hl_message.type,
+                            'priority': hl_message.priority
+                        }
+
+    logger.debug(f"HL info map: {hl_info_map}")
     return hl_info_map
 
 

@@ -127,25 +127,14 @@
     .highlight-messages {
       margin: 4px 0;
       padding-left: calc(3em + 18px);
-      border-top: 1px solid #e0e0e0;
     }
     
     .highlight-message {
       padding: 4px 8px;
       margin: 4px 0;
-      background: #fff;
+      background: #ffebee;
       border-radius: 3px;
       border: 1px solid #e0e0e0;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .highlight-message:hover {
-      background: #f5f5f5;
-    }
-    
-    .highlight-active {
-      background-color: #fff3e0 !important;
     }
     
     .side-note {
@@ -193,7 +182,6 @@
   </style>
   
   <script>
-    const hlInfo = {{ hl_info_map | tojson | safe }};
     let scrollPositions = {};
     
     function saveScrollPositions() {
@@ -211,20 +199,6 @@
         document.getElementById('main').scrollTop = positions.main || 0;
         document.getElementById('side').scrollTop = positions.side || 0;
       }
-    }
-    
-    function handleHighlightHover(event, groups) {
-      const highlightElements = document.querySelectorAll(`[data-groups~="${groups.join(' ')}"]`);
-      highlightElements.forEach(el => {
-        el.classList.add('highlight-active');
-      });
-    }
-    
-    function handleHighlightLeave(event, groups) {
-      const highlightElements = document.querySelectorAll(`[data-groups~="${groups.join(' ')}"]`);
-      highlightElements.forEach(el => {
-        el.classList.remove('highlight-active');
-      });
     }
     
     function handleSideInfo(event, sideEntryId, edgeId = 0) {
@@ -272,13 +246,6 @@
         document.getElementById(id).addEventListener('scroll', () => {
           saveScrollPositions();
         });
-      });
-      
-      // Initialize highlight handlers
-      document.querySelectorAll('.highlight-message').forEach(msg => {
-        const groups = msg.getAttribute('data-groups').split(' ');
-        msg.addEventListener('mouseenter', (e) => handleHighlightHover(e, groups));
-        msg.addEventListener('mouseleave', (e) => handleHighlightLeave(e, groups));
       });
     });
   </script>

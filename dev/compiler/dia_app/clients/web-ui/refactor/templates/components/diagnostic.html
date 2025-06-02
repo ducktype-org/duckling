@@ -2,6 +2,6 @@
 
 <div class="diagnostic">
     {%- for info in diag.infos -%}
-        {{- render_info(info) -}}
+        {{- render_info(info, hl_info_map) -}}
     {%- endfor -%}
 </div> 

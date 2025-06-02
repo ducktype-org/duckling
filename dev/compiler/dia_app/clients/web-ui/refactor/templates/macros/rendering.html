@@ -29,7 +29,7 @@
         {%- endfor -%}
     {%- elif comp.WhichOneof('component') == 'interactive_component' -%}
         {%- set ic = comp.interactive_component -%}
-        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">{{- render_component(ic.primary_component) -}}</span>
+        <span class="clickable" onclick="handleClick(event, '{{ ic.component_id }}')">{{- render_component(ic.primary_component) -}}</span>
     {%- else -%}
         {{- 'Unknown component type: %s' | format(comp.WhichOneof('component')) | log_warning -}}
         {{- 'Component data: %s' | format(comp) | log_debug -}}
@@ -41,14 +41,14 @@
     {%- if comp.WhichOneof('component') == 'text_component' -%}
         {%- if comp.text_component.assoc_side_entries -%}
             {%- set side_entry = comp.text_component.assoc_side_entries[0] -%}
-            <span class="clickable" onclick="handleSideInfo(event, {{ side_entry }})">{{- comp.text_component.content -}}</span>
+            <span class="clickable" onclick="handleSideInfo(event, '{{ side_entry }}')">{{- comp.text_component.content -}}</span>
         {%- else -%}
             <span>{{- comp.text_component.content -}}</span>
         {%- endif -%}
     {%- elif comp.WhichOneof('component') == 'code_component' -%}
         {%- if comp.code_component.assoc_side_entries -%}
             {%- set side_entry = comp.code_component.assoc_side_entries[0] -%}
-            <span class="clickable code" onclick="handleSideInfo(event, {{ side_entry }})">{{- comp.code_component.content -}}</span>
+            <span class="clickable code" onclick="handleSideInfo(event, '{{ side_entry }}')">{{- comp.code_component.content -}}</span>
         {%- else -%}
             <span class="code">{{- comp.code_component.content -}}</span>
         {%- endif -%}
@@ -58,7 +58,7 @@
         {%- endfor -%}
     {%- elif comp.WhichOneof('component') == 'interactive_component' -%}
         {%- set ic = comp.interactive_component -%}
-        <span class="clickable" onclick="handleClick(event, {{ ic.component_id }})">{{- render_nohl_component(ic.primary_component) -}}</span>
+        <span class="clickable" onclick="handleClick(event, '{{ ic.component_id }}')">{{- render_nohl_component(ic.primary_component) -}}</span>
     {%- else -%}
         {{- 'Unknown NoHl component type: %s' | format(comp.WhichOneof('component')) | log_warning -}}
         {{- 'NoHl component data: %s' | format(comp) | log_debug -}}
@@ -66,7 +66,7 @@
     {%- endif -%}
 {%- endmacro %}
 
-{% macro render_code_section(code_sec) -%}
+{% macro render_code_section(code_sec, hl_info_map) -%}
     <div class="code-section">
         {%- if code_sec.metadata -%}
             <div class="code-metadata">
@@ -76,24 +76,22 @@
             </div>
         {%- endif -%}
         {%- for line in code_sec.lines -%}
+            {%- set line_tags = collect_tags(line.content) -%}
             <div class="code-line">
                 <span class="lineno">{{- (line.line_number or '') | string | rjust(4) -}}</span>
                 <div class="code-content">{{- render_component(line.content) -}}</div>
             </div>
-            {%- if line.hl_messages -%}
-                <div class="highlight-messages">
-                    {%- for msg in line.hl_messages | sort(attribute='priority') -%}
-                        <div class="highlight-message" data-groups="{{- msg.tags | join(' ') -}}">
-                            {{- render_nohl_component(msg.message) -}}
-                        </div>
-                    {%- endfor -%}
-                </div>
-            {%- endif -%}
+            {%- if line_tags -%}<div class="highlight-messages">
+                {%- for tag in line_tags|sort(attribute='priority', reverse=true) -%}
+                    {%- set msg_info = hl_info_map.get(tag|string) -%}
+                    {%- if msg_info -%}<div class="highlight-message highlight-type-{{ msg_info.type|lower }}"><div class="highlight-message-content">{{- render_nohl_component(msg_info.message) -}}</div></div>{%- endif -%}
+                {%- endfor -%}
+            </div>{%- endif -%}
         {%- endfor -%}
     </div>
-{%- endmacro %}
+{%- endmacro -%}
 
-{% macro render_info(info) -%}
+{% macro render_info(info, hl_info_map) -%}
     <div class="info info-{{ info.type | lower }}">
         {%- if info.header -%}
             <div class="info-header">
@@ -106,7 +104,7 @@
                 {%- if section.HasField('text_section') -%}
                     {{- render_nohl_component(section.text_section) -}}
                 {%- elif section.HasField('code_section') -%}
-                    {{- render_code_section(section.code_section) -}}
+                    {{- render_code_section(section.code_section, hl_info_map) -}}
                 {%- endif -%}
             </div>
         {%- endfor -%}
