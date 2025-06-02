@@ -22,41 +22,48 @@ env:
   GCOV_VERSION: gcov-14
 
 jobs:
-  # Nowy job do dynamicznego wyboru runnera
-  determine-runner:
+  determine-runners:
     runs-on: ubuntu-latest
     outputs:
-      runner: ${{ steps.set-runner.outputs.runner }}
+      runner1: ${{ steps.set-runner.outputs.runner1 }}
+      runner2: ${{ steps.set-runner.outputs.runner2 }}
     steps:
       - name: Determine which runner to use
         id: set-runner
         env:
           GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
         run: |
-          # Sprawdź dostępność self-hosted runners w grupie SelfHostedRunners
+          # Sprawdź dostępność self-hosted runners
           echo "Sprawdzanie dostępności self-hosted runners..."
-          
+
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
-          
-          # Wypisz odpowiedź z API, aby sprawdzić poprawność
-          echo "Odpowiedź z API GitHub:"
-          echo "$runners" | jq '.'
-          
-          # Sprawdź czy są dostępne runnery w grupie SelfHostedRunners z labelem ubuntu-24.04
-          available=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and .runner_group_name == "SelfHostedRunners" and (.labels[]?.name == "ubuntu-24.04")) | .name' | head -1)
-          
-          if [ -n "$available" ] && [ "$available" != "null" ]; then
-            echo "✅ Self-hosted runner dostępny: $available"
-            echo 'runner={"group": "SelfHostedRunners", "labels": "ubuntu-24.04"}' >> $GITHUB_OUTPUT
+
+          # Pobierz dwa dostępne runnery
+          available_runners=$(echo "$runners" | jq -r '.runners[]? | select(.status == "online" and .busy == false and (.labels[]?.name == "ubuntu-24.04")) | .name' | head -2)
+
+          runner1=$(echo "$available_runners" | sed -n '1p')
+          runner2=$(echo "$available_runners" | sed -n '2p')
+
+          if [ -n "$runner1" ] && [ "$runner1" != "null" ]; then
+            echo "✅ Self-hosted runner dostępny: $runner1"
+            echo "runner1=$runner1" >> $GITHUB_OUTPUT
           else
-            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted"
-            echo 'runner="ubuntu-24.04"' >> $GITHUB_OUTPUT
+            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner1"
+            echo "runner1=ubuntu-24.04" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -n "$runner2" ] && [ "$runner2" != "null" ]; then
+            echo "✅ Self-hosted runner dostępny: $runner2"
+            echo "runner2=$runner2" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner2"
+            echo "runner2=ubuntu-24.04" >> $GITHUB_OUTPUT
           fi
 
 
   build:
     if: github.event.pull_request.draft == false
-    needs: determine-runner
+    needs: determine-runners
 
     strategy:
       matrix:
@@ -73,7 +80,7 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 20  # (Per matrix run)
-    runs-on: ${{ fromJson(needs.determine-runner.outputs.runner) }}
+    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runner1) || fromJson(needs.determine-runners.outputs.runner2) }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
