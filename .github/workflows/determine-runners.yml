@@ -39,7 +39,13 @@ jobs:
               ) | .name' | 
             head -2)
 
+          echo "Available runners found:"
+          echo "$available_runners"
+          
           mapfile -t runners_array <<< "$available_runners"
+          
+          echo "Runner1 candidate: ${runners_array[0]}"
+          echo "Runner2 candidate: ${runners_array[1]}"
           
           if [ -n "${runners_array[0]}" ]; then
             echo "runner1={\"group\":\"SelfHostedRunners\",\"labels\":\"$TARGET_LABEL\"}" >> $GITHUB_OUTPUT
