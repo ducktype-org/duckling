@@ -32,7 +32,6 @@ if(ENABLE_COVERAGE)
 	# 2. run this target
     add_custom_target(coverage
         COMMAND ${FASTCOV}
-			--process-gcno 
             --gcov ${GCOV_VERSION}
             --exclude "docs/*" 
             "integration_tests/*"
@@ -41,17 +40,6 @@ if(ENABLE_COVERAGE)
             "*/playground/*"
             "${CMAKE_BINARY_DIR}/*"
             --lcov
-            -o coverage_unfiltered.info
-            
-        COMMAND ${FASTCOV}
-            --lcov
-            -C coverage_unfiltered.info
-            --exclude "docs/*" 
-            "integration_tests/*"
-            "scripts/*"
-            "*/tests/*"
-            "*/playground/*"
-            "${CMAKE_BINARY_DIR}/*"
             -o coverage.info
             
         COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info
