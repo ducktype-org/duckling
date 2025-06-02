@@ -19,9 +19,7 @@ env:
 jobs:
   docs:
     if: github.repository == 'ducktype-org/duckling'
-    runs-on:
-      group: SelfHostedRunners
-      labels: ubuntu-24.04
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
