@@ -46,18 +46,18 @@ jobs:
 
           if [ -n "$runner1" ] && [ "$runner1" != "null" ]; then
             echo "✅ Self-hosted runner dostępny: $runner1"
-            echo "runner1=$runner1" >> $GITHUB_OUTPUT
+            echo "runner1={\"group\": \"SelfHostedRunners\", \"labels\": \"ubuntu-24.04\"}" >> $GITHUB_OUTPUT
           else
             echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner1"
-            echo "runner1=ubuntu-24.04" >> $GITHUB_OUTPUT
+            echo "runner1=\"ubuntu-24.04\"" >> $GITHUB_OUTPUT
           fi
 
           if [ -n "$runner2" ] && [ "$runner2" != "null" ]; then
             echo "✅ Self-hosted runner dostępny: $runner2"
-            echo "runner2=$runner2" >> $GITHUB_OUTPUT
+            echo "runner2={\"group\": \"SelfHostedRunners\", \"labels\": \"ubuntu-24.04\"}" >> $GITHUB_OUTPUT
           else
             echo "⚠️  Brak dostępnych self-hosted runners, używam GitHub-hosted dla runner2"
-            echo "runner2=ubuntu-24.04" >> $GITHUB_OUTPUT
+            echo "runner2=\"ubuntu-24.04\"" >> $GITHUB_OUTPUT
           fi
 
 
