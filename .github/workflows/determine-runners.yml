@@ -28,7 +28,8 @@ jobs:
           echo "Checking for runners with label: $TARGET_LABEL"
           
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
-          
+          echo "Runners found:"
+          echo "$runners"
           available_runners=$(echo "$runners" | 
             jq -r --arg lbl "$TARGET_LABEL" '
               .runners[]? | 
