@@ -28,8 +28,7 @@ jobs:
           echo "Checking for runners with label: $TARGET_LABEL"
           
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
-          echo "Runners found:"
-          echo "$runners"
+          
           available_runners=$(echo "$runners" | 
             jq -r --arg lbl "$TARGET_LABEL" '
               .runners[]? | 
@@ -40,13 +39,10 @@ jobs:
               ) | .name' | 
             head -2)
 
-          echo "Available runners found:"
+          echo "Available runners:"
           echo "$available_runners"
           
           mapfile -t runners_array <<< "$available_runners"
-          
-          echo "Runner1 candidate: ${runners_array[0]}"
-          echo "Runner2 candidate: ${runners_array[1]}"
           
           if [ -n "${runners_array[0]}" ]; then
             echo "runner1={\"group\":\"SelfHostedRunners\",\"labels\":\"$TARGET_LABEL\"}" >> $GITHUB_OUTPUT
