@@ -1,0 +1,45 @@
+metadata:
+  type: "note"
+  family: "features"
+  name: "dep_tracking_node"
+  code: "9903"
+  active_from: "0.0.1"
+  active_until: "now"
+
+header_message:
+  - "computed compiler query `"
+  - param: "query_name"
+  - "`"
+
+pointer_messages:
+  related:
+    priority: 1
+    type: "note"
+    content:
+      - "related argument `"
+      - param: "special_arg"
+      - "`"
+
+description:
+  - case:
+      param: "argument_count"
+    of:
+      "none": ""
+      "one":
+        - "Computed with the following argument: "
+        - param: "arguments"
+        - "."
+      "[other]":
+        - "Computed with the following arguments: "
+        - param: "arguments"
+        - "."
+
+params:
+  query_name:
+    description: "Name of the computed query."
+  argument_count:
+    description: "Length of the `arguments` list parameter: none | one | more."
+  arguments:
+    description: "A list of important arguments of this query."
+  special_arg:
+    description: "Special argument related to attached code."
