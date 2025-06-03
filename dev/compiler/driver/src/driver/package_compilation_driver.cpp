@@ -70,7 +70,7 @@ namespace compiler::driver {
             );
             auto module_name = base::StrID(base::strConcat("module_", module_id.asInt()).c_str());
 
-            binary_diver.compileHOUTUnit(&hout, module_name, output);
+            binary_diver.compileHOUTUnit(ctx, &hout, module_name, output);
 
             return output;
         }
@@ -132,6 +132,7 @@ namespace compiler::driver {
             for (const auto& object_file_path: outputs)
                 command.addArg(object_file_path.FILE.native());
 
+            command.addArg(builtin_object_path.native());
             
                 
             // for (const auto& external_object_file: options->external_objects_files)

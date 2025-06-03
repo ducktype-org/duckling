@@ -184,7 +184,7 @@ const artifacts::FileArtifact& artifacts::ArtifactCollection::fileArtifactAtOrNe
 ) {
 	match_optional(fileArtifactAtMaybe(artifact_name)) {
 		opt_some(artifact) return artifact;
-		opt_none return fileArtifactAt(artifact_name);
+		opt_none return fileArtifactNew(artifact_name);
 	}
 	CORE_UNREACHABLE();
 }

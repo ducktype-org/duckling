@@ -31,6 +31,7 @@ namespace compiler::driver {
 		 * @brief Compiles the HOUTUnit to the backend module.
 		 */
 		void compileHOUTUnit(
+			query::Context& ctx,
 			base::CRef<helios::HOUTUnit> hout_unit,
 			base::StrID module_id,
 			artifacts::FileArtifact output_artifact
