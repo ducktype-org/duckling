@@ -55,7 +55,7 @@ namespace compiler::driver {
         static Ref<artifacts::ArtifactCollection> getCollection() {
             // this is far from pretty:
             return main_collection->subCollectionAtOrNew(base::StrID("query"))->
-                subCollectionAtOrNew(base::StrID(base::strConcat("query", CompilerModuleToLLVM::getID()).c_str()));
+                subCollectionAtOrNew(base::StrID(base::strConcat("query", CompilerModuleToLLVM::getID().asInt()).c_str()));
         }
 
         static auto provide(query::Context& ctx, frontend::ModuleID module_id) -> artifacts::FileArtifact {
