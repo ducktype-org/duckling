@@ -55,10 +55,6 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
-      - name: Install graphviz
-        if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
-        run: sudo apt -y install libgraphviz-dev
-
       - name: Install LLVM
         run: sudo apt -y install llvm-19 llvm-19-dev
 
