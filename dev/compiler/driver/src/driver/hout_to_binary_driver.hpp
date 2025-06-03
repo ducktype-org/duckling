@@ -14,6 +14,7 @@
 #include <base/string_id.hpp>
 
 #include <expected>
+#include <artifacts/artifacts.hpp>
 
 namespace compiler::driver {
 	
@@ -29,12 +30,17 @@ namespace compiler::driver {
 		/**
 		 * @brief Compiles the HOUTUnit to the backend module.
 		 */
-		void compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id);
+		void compileHOUTUnit(
+			base::CRef<helios::HOUTUnit> hout_unit,
+			base::StrID module_id,
+			artifacts::FileArtifact output_artifact
+		);
 
-		/**
-		 * @brief Links all module compiled so far into a complete program.
-		 */
-		void link(base::StrID output_file);
+		// add linker submodule:
+		// /**
+		//  * @brief Links all module compiled so far into a complete program.
+		//  */
+		// void link(base::StrID output_file);
 
 		/**
 		 * @brief Execute modules compiled with `compileModule` method.

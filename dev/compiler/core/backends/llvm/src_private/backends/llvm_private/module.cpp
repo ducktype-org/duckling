@@ -44,7 +44,7 @@ namespace compiler::backend_llvm {
 		impl->module->print(ir_output_stream, nullptr);
 	}
 
-	void Module::compile(base::StrID output_file, CompilationOutputType output_type) {
+	void Module::compile(std::filesystem::path output_file, CompilationOutputType output_type) {
 		compileModuleToObject(impl.refMut(), output_file, output_type);
 	}
 

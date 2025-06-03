@@ -9,6 +9,7 @@
 #include "backend_options.hpp"
 
 #include <expected>
+#include <artifacts/artifacts.hpp>
 
 namespace compiler::driver {
 	/**
@@ -42,12 +43,8 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compileModule(query::Context& ctx, const BackendModuleData& module_data) = 0;
-
-		/**
-		 * @brief Link all compiled modules into a single program.
-		 */
-		virtual void link(base::StrID output_file) = 0;
+		virtual void compileModule(query::Context& ctx,
+			 const BackendModuleData& module_data, artifacts::FileArtifact output_artifact) = 0;
 
 		/**
 		 * @brief Run the compiled program. (only for DVM)

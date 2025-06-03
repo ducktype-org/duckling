@@ -8,7 +8,7 @@
 
 namespace compiler::driver {
 
-	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module) {
+	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module, artifacts::FileArtifact output_artifact) {
 		backend_llvm::Module mod(lir_module.module_id);
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);
@@ -24,47 +24,14 @@ namespace compiler::driver {
 		if (options->compile_to_assembly) {
 			base::StrID assembly_path
 				= base::StrID(base::strConcat(lir_module.module_id.strView(), ".s").c_str());
-			mod.compile(assembly_path, backend_llvm::CompilationOutputType::Assembly);
+			mod.compile(assembly_path.strView(), backend_llvm::CompilationOutputType::Assembly);
 		}
 
 		// @TODO there should be one instance for all duck compiler options
 		// and it should be passed to the backend drivers
-		base::StrID object_file_path
-			= base::StrID(base::strConcat(lir_module.module_id.strView(), ".o").c_str());
 
-		mod.compile(object_file_path, backend_llvm::CompilationOutputType::Object);
-		object_file_paths.push_back(object_file_path);
+		mod.compile(output_artifact.FILE, backend_llvm::CompilationOutputType::Object);
+		object_file_paths.push_back(output_artifact.FILE);
 	}
 
-	void LLVMDriver::link(base::StrID output_file) {
-		if (options->add_builtin_library) {
-			auto mod                 = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-			auto builtin_object_path = base::StrID("builtin.o");
-			mod.compile(builtin_object_path, backend_llvm::CompilationOutputType::Object);
-			object_file_paths.push_back(builtin_object_path);
-		}
-
-		// Link the object file.
-		// Use the default system linker - for Ubuntu it is advised to use gcc.
-		// Related research links:
-		// https://www.reddit.com/r/ProgrammingLanguages/comments/kji3k3/comment/ggx1ftq/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1
-		// https://github.com/rust-lang/rust/issues/71519
-		// https://github.com/rust-lang/rust/blob/c62239aeb3ba7781a6d7f7055523c1e8c22b409c/compiler/rustc_codegen_ssa/src/back/link.rs#L1442
-		system_command::SystemCommand command("gcc");
-
-		for (const auto& object_file_path: object_file_paths)
-			command.addArg(object_file_path.str());
-
-		for (const auto& external_object_file: options->external_objects_files)
-			command.addArg(external_object_file.str());
-
-		for (const auto& external_lib: options->external_libs)
-			command.addArg(base::strConcat("-l", external_lib.strView()));
-
-		command.addArg("-lc");  // Link the C standard library.
-
-		command.addArg("-o");
-		command.addArg(output_file.str());
-		command.execute();
-	}
 }

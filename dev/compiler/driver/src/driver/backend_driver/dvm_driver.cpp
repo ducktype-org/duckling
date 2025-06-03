@@ -14,13 +14,15 @@
 #include <fstream>
 
 namespace compiler::driver {
-	void DVMDriver::compileModule(query::Context& query_ctx, const BackendModuleData& data) {
+	void DVMDriver::compileModule(query::Context& query_ctx, const BackendModuleData& data, artifacts::FileArtifact output_artifact) {
+
 		backend_vm::Module       module{ query_ctx, data.module_id, data.functions };
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {
 			std::ofstream dvm_file(
-				base::strConcat(data.module_id.strView(), ".dbc").c_str(), std::ios::binary
+				output_artifact.FILE
+				/*base::strConcat(data.module_id.strView(), ".dbc").c_str()*/, std::ios::binary
 			);
 			if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 			vm::code::serialize(code_collection, dvm_file);
@@ -29,10 +31,6 @@ namespace compiler::driver {
 		}
 
 		this->code_collection.emplace_back(std::move(code_collection));
-	}
-
-	void DVMDriver::link(base::StrID) {
-		// DVM doesn't require linking.
 	}
 
 	std::expected<RunOutput, std::string> DVMDriver::run() {

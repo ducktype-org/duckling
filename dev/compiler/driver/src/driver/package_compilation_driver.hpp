@@ -11,9 +11,9 @@ namespace compiler::driver {
      * into high-level cacheable operations.
      */
     class PackageCompilationDriver final {
-        BackendOptions options;
-        base::StrID    package_location;
-        artifacts::ArtifactCollection root_artifacts;
+        BackendType backend;
+        fs::FilePath    package_location;
+        artifacts::ArtifactCollection root_artifact_collection;
 
     public:
         PackageCompilationDriver() = delete;
@@ -22,8 +22,8 @@ namespace compiler::driver {
 
         PackageCompilationDriver(
             BackendType     backend,
-            base::StrID     package_location,
-            base::StrID     artifact_location
+            fs::FilePath     package_location,
+            std::filesystem::path     artifact_location
         );
 
         /**

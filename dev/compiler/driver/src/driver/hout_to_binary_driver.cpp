@@ -12,7 +12,11 @@
 
 namespace compiler::driver {
 
-	void HoutToBinaryDriver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
+	void HoutToBinaryDriver::compileHOUTUnit(
+		base::CRef<helios::HOUTUnit> hout_unit,
+		base::StrID module_id,
+		artifacts::FileArtifact output_artifact
+	) {
 		std::vector<CRef<lir::Function>> functions;
 		functions.reserve(hout_unit->functions.size());
 
@@ -26,11 +30,11 @@ namespace compiler::driver {
 		BackendModuleData module_data{ .module_id = module_id, .functions = functions };
 
 		query::utils::withContextDo([&](query::Context& ctx) {
-			backend_driver->compileModule(ctx, module_data);
+			backend_driver->compileModule(ctx, module_data, output_artifact);
 		});
 	}
 
-	void HoutToBinaryDriver::link(base::StrID output_file) { backend_driver->link(output_file); }
+	// void HoutToBinaryDriver::link(base::StrID output_file) { backend_driver->link(output_file); }
 
 	std::expected<RunOutput, std::string> HoutToBinaryDriver::run() { return backend_driver->run(); }
 }

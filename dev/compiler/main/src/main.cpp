@@ -9,6 +9,7 @@
 #include <clap/clap.hpp>
 #include <config/config.hpp>
 #include <driver/hout_to_binary_driver.hpp>
+#include <driver/package_compilation_driver.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -344,20 +345,23 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			},
 		};
 
-		driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
+		// tmp:
+		throw "failed";
 
-		if (options.isParam("output"))
-			driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
+		// driver.compileHOUTUnit(&top_level, base::StrID("main_module"));
 
-		if (options.isFlag("dvm-run")) {
-			auto run_result = driver.run();
-			if (run_result.has_value()) {
-				return run_result.value().exit_code;
-			} else {
-				std::cerr << "Error: " << run_result.error() << "\n";
-				return 1;
-			}
-		}
+		// if (options.isParam("output"))
+		// 	driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
+
+		// if (options.isFlag("dvm-run")) {
+		// 	auto run_result = driver.run();
+		// 	if (run_result.has_value()) {
+		// 		return run_result.value().exit_code;
+		// 	} else {
+		// 		std::cerr << "Error: " << run_result.error() << "\n";
+		// 		return 1;
+		// 	}
+		// }
 
 		return 0;
 	});
@@ -370,12 +374,12 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		             .required()
 		             .build());
 
-		clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
-		             .addShortName('o')
-		             .addLongName("output")
-		             .addShortDesc("Path to the output file")
-		             .required()
-		             .build());
+		// clap.add(clap::ParamBuilder::ofValue(clap::StringParser::make())
+		//              .addShortName('o')
+		//              .addLongName("output")
+		//              .addShortDesc("Path to the output file")
+		//              .required()
+		//              .build());
 
 		auto options = configureDuckMainWith(clap, command_args);
 
@@ -383,31 +387,40 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		defer(printContextErrors());
 
-		// @TODO: error handling
-		using namespace compiler;
-		auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
-
-		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
-
-		driver::HoutToBinaryDriver driver{
-			driver::BackendOptions{
-				.backend_type           = driver::BackendType::LLVM,
-				.compile_to_assembly    = false,
-				.dump_llvm_ir           = false,
-				.dvm_code_only_memory   = false,
-				.add_builtin_library    = true,
-				.external_objects_files = {},
-				.external_libs          = {},
-			},
+		compiler::driver::PackageCompilationDriver driver{
+			// for the moment:
+			compiler::driver::BackendType::LLVM,
+			path_to_compile,
+			// for the moment:
+			"./duck_build/",
 		};
+		driver.compilerEntirePackageIntoBinary();
 
-		u64 i = 0;
-		for (const auto& module: modules)
-			driver.compileHOUTUnit(
-				&module, base::StrID(base::strConcat("main_module", i++).c_str())
-			);
+		// @TODO: error handling
+		// using namespace compiler;
+		// auto root = query::entryPoint<frontend::QueryModuleTree>(path_to_compile);
 
-		driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
+		// auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
+
+		// driver::HoutToBinaryDriver driver{
+		// 	driver::BackendOptions{
+		// 		.backend_type           = driver::BackendType::LLVM,
+		// 		.compile_to_assembly    = false,
+		// 		.dump_llvm_ir           = false,
+		// 		.dvm_code_only_memory   = false,
+		// 		.add_builtin_library    = true,
+		// 		.external_objects_files = {},
+		// 		.external_libs          = {},
+		// 	},
+		// };
+
+		// u64 i = 0;
+		// for (const auto& module: modules)
+		// 	driver.compileHOUTUnit(
+		// 		&module, base::StrID(base::strConcat("main_module", i++).c_str())
+		// 	);
+
+		// driver.link(base::StrID(options.getValue<std::string>("output").value().c_str()));
 
 		return 0;
 	});
