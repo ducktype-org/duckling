@@ -79,4 +79,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/backends/dvm/tests/")
+tester_common_main("/compiler/pipeline/backends/dvm/tests/")

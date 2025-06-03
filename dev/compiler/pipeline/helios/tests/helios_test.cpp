@@ -945,4 +945,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/helios/tests/");
+tester_common_main("/compiler/pipeline/helios/tests/");

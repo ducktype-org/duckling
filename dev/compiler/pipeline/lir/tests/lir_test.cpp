@@ -196,4 +196,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/lir/tests/")
+tester_common_main("/compiler/pipeline/lir/tests/")

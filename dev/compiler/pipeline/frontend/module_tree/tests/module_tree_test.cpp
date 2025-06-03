@@ -116,4 +116,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/frontend/module_tree/tests/");
+tester_common_main("/compiler/pipeline/frontend/module_tree/tests/");
