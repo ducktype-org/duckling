@@ -12,7 +12,7 @@ fun should_add_retvoid() = {
 }
 
 fun unreachable_end() = {    
-    if (true) {
+    while (true) {
     }
     return;
 }

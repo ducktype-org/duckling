@@ -117,14 +117,15 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generaration:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 2);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 1);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(1).operation, Nop);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Jump);
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Assign);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Branch);
+
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(2)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(2)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(2)].terminator.operation, Jump);
 
 
 			// Test debug print:
@@ -159,13 +160,14 @@ private:
 
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
-			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
-			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
+			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 3 } });
 
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
-			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
+			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 2 } COMMA BlockID{ 1 }});
+
+			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } });
 		});
 	}
 
@@ -266,8 +268,6 @@ private:
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-
-			foo_mir.debugPrint(std::cout);
 
 			auto i16_type = ctx.query<QueryIntegralType>(16);
 			auto i32_type = ctx.query<QueryIntegralType>(32);

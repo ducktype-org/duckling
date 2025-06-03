@@ -672,22 +672,29 @@ namespace compiler::mir {
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
-			auto condition_scope = function.newScope(parent_scope);
-
-			auto condition_block = function.newBlock();
-
 			auto loop_scope = function.newScope(parent_scope);
 
-			auto loop_block = function.newBlock();
-			loop_block->setTerminator(
-				{ Operation::Jump, {}, { condition_block->getID() }, {}, loop_scope }
-			);
-			auto loop_body = lowerCodeBlock(stmt.body, loop_block, function, loop_scope);
+			auto condition_scope = function.newScope(parent_scope);
 
-			auto get_condition_return = condition_block->addHole();
+			auto loop_block = function.newBlock();
+
+			auto condition_continuation_block = function.newBlock();
+
+			auto condition_entry_block = function.newBlock();
+
+			auto get_condition_return = condition_continuation_block->addHole();
 
 			auto expr_result
-				= lowerExpr(*stmt.condition, condition_block, function, condition_scope);
+				= lowerExpr(*stmt.condition, condition_continuation_block, function, condition_scope);
+
+			condition_entry_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, condition_scope }
+			);
+			
+			loop_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
+			);
+			auto loop_body = lowerCodeBlock(stmt.body, loop_block, function, loop_scope);
 
 			if (expr_result.value.isLocal()) {
 				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
@@ -700,7 +707,7 @@ namespace compiler::mir {
 					condition_scope,
 				});
 
-				condition_block->setTerminator({
+				condition_continuation_block->setTerminator({
 					Operation::Branch,
 					{},
 					{ condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
@@ -719,7 +726,7 @@ namespace compiler::mir {
 					condition_scope,
 				});
 
-				condition_block->setTerminator({
+				condition_continuation_block->setTerminator({
 					Operation::Branch,
 					{},
 					{ expr_result.value, loop_body.begin->getID(), continuation->getID() },
@@ -727,7 +734,7 @@ namespace compiler::mir {
 					condition_scope,
 				});
 			}
-			output({ expr_result.begin });
+			output({ condition_entry_block });
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
