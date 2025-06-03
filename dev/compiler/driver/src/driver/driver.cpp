@@ -1,7 +1,5 @@
 #include "driver.hpp"
 
-#include "dvm_driver.hpp"
-#include "llvm_driver.hpp"
 
 #include <lir/lir_lowering/lir_lowering.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
@@ -13,17 +11,6 @@
 #include <base/string_id.hpp>
 
 namespace compiler::driver {
-
-	Box<BackendDriver> createBackendDriver(CRef<Options> options) {
-		switch (options->backend_type) {
-		case BackendType::LLVM:
-			return base::makeBox<LLVMDriver>(options);
-		case BackendType::DVM:
-			return base::makeBox<DVMDriver>(options);
-		default:
-			CORE_PANIC("Wrong enum value");
-		}
-	}
 
 	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;

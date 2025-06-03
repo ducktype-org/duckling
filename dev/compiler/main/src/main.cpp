@@ -333,7 +333,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
 
 		driver::Driver driver{
-			driver::Options{
+			driver::BackendOptions{
 				.backend_type           = backend_type,
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
 				.dump_llvm_ir           = options.isFlag("dump-llvm-ir"),
@@ -390,7 +390,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
 
 		driver::Driver driver{
-			driver::Options{
+			driver::BackendOptions{
 				.backend_type           = driver::BackendType::LLVM,
 				.compile_to_assembly    = false,
 				.dump_llvm_ir           = false,
