@@ -49,11 +49,11 @@ add_subdirectory(dependencies)
 insertLLVM()
 
 # Source:
-add_subdirectory(base)
-add_subdirectory(common)
-add_subdirectory(compiler)
-add_subdirectory(vm)
-add_subdirectory(playground)
+add_subdirectory(src/base)
+add_subdirectory(src/common)
+add_subdirectory(src/compiler)
+add_subdirectory(src/vm)
+add_subdirectory(src/playground)
 
 # Scripts:
 add_subdirectory(scripts/cmake)
