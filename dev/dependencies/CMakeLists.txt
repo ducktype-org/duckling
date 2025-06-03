@@ -52,7 +52,25 @@ setAsSystemLibrary(Crow)
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
 
-find_library(gvc gvc)
+find_library(GVC_LIBRARY gvc REQUIRED)
+find_library(CGRAPH_LIBRARY cgraph REQUIRED)
+find_library(CDT_LIBRARY cdt REQUIRED)
+
+# Utwórz globalne cele IMPORTED
+add_library(System::gvc UNKNOWN IMPORTED GLOBAL)
+set_target_properties(System::gvc PROPERTIES
+    IMPORTED_LOCATION "${GVC_LIBRARY}"
+)
+
+add_library(System::cgraph UNKNOWN IMPORTED GLOBAL)
+set_target_properties(System::cgraph PROPERTIES
+    IMPORTED_LOCATION "${CGRAPH_LIBRARY}"
+)
+
+add_library(System::cdt UNKNOWN IMPORTED GLOBAL)
+set_target_properties(System::cdt PROPERTIES
+    IMPORTED_LOCATION "${CDT_LIBRARY}"
+)
 
 FindOrBuildICU(VERSION 74.1 URL "${ICU_RELEASE}" URL_HASH "${ICU_CONTROL}")
 
