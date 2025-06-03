@@ -353,4 +353,4 @@ public:
 	~LowerTypeSystemSimpleTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/compiler/typesystem/lower/tests/")
+TESTER_COMMON_MAIN("/compiler/pipeline/typesystem/lower/tests/")

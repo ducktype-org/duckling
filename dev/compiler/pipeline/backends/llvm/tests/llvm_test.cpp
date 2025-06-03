@@ -110,4 +110,4 @@ private:
 };
 
 
-tester_common_main("/compiler/pipeline/backends/llvm/tests/")
+TESTER_COMMON_MAIN("/compiler/pipeline/backends/llvm/tests/")

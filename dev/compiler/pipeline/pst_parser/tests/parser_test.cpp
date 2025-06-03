@@ -247,4 +247,4 @@ public:
 	~SimpleParserTest() override = default;
 };
 
-tester_common_main("/compiler/pipeline/pst_parser/tests/");
+TESTER_COMMON_MAIN("/compiler/pipeline/pst_parser/tests/");

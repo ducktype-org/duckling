@@ -536,4 +536,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/typesystem/tests/")
+TESTER_COMMON_MAIN("/compiler/pipeline/typesystem/tests/")

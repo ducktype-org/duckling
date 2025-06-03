@@ -356,4 +356,4 @@ private:
 	}
 };
 
-tester_common_main("/compiler/pipeline/mir/tests/")
+TESTER_COMMON_MAIN("/compiler/pipeline/mir/tests/")
