@@ -1,5 +1,4 @@
 /**
- * @file driver.hpp
  * @author Wojciech Rzepliński
  * @brief Main module driver, currently compiles HOUT-Unit to LLVM Module.
  */
@@ -21,9 +20,9 @@ namespace compiler::driver {
 	/**
 	 * @brief Main compilation driver of the HOUTUnit to backend module.
 	 */
-	class Driver final {
+	class HoutToBinaryDriver final {
 	public:
-		Driver(BackendOptions opts):
+		HoutToBinaryDriver(BackendOptions opts):
 			  options(std::move(opts)),
 			  backend_driver(createBackendDriver(&options)) {}
 

@@ -1,4 +1,4 @@
-#include <driver/driver.hpp>
+#include <driver/hout_to_binary_driver.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/hout/hout.hpp>
 #include <helios/queries.hpp>
@@ -28,7 +28,7 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type           = driver::BackendType::LLVM,
+		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
 		                        .compile_to_assembly    = false,
 		                        .dump_llvm_ir           = false,
 		                        .dvm_code_only_memory   = false,
@@ -53,7 +53,7 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type           = driver::BackendType::LLVM,
+		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
 		                        .compile_to_assembly    = true,
 		                        .dump_llvm_ir           = true,
 		                        .dvm_code_only_memory   = false,
@@ -78,7 +78,7 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type           = driver::BackendType::DVM,
+		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::DVM,
 		                        .compile_to_assembly    = false,
 		                        .dump_llvm_ir           = false,
 		                        .dvm_code_only_memory   = false,
@@ -99,7 +99,7 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::Driver driver({ .backend_type           = driver::BackendType::LLVM,
+		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
 		                        .compile_to_assembly    = false,
 		                        .dump_llvm_ir           = false,
 		                        .dvm_code_only_memory   = false,

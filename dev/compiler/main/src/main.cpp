@@ -8,7 +8,7 @@
 
 #include <clap/clap.hpp>
 #include <config/config.hpp>
-#include <driver/driver.hpp>
+#include <driver/hout_to_binary_driver.hpp>
 #include <filesystem/file.hpp>
 #include <frontend/module_tree/queries.hpp>
 #include <helios/queries.hpp>
@@ -332,7 +332,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 		auto backend_type
 			= options.isFlag("dvm-backend") ? driver::BackendType::DVM : driver::BackendType::LLVM;
 
-		driver::Driver driver{
+		driver::HoutToBinaryDriver driver{
 			driver::BackendOptions{
 				.backend_type           = backend_type,
 				.compile_to_assembly    = options.isFlag("compile-to-assembly"),
@@ -389,7 +389,7 @@ CommandList getCommandList(clap::CLIArgs& command_args, clap::Clap& clap) {
 
 		auto modules = query::entryPoint<helios::QueryModuleHOUTRecursively>(root);
 
-		driver::Driver driver{
+		driver::HoutToBinaryDriver driver{
 			driver::BackendOptions{
 				.backend_type           = driver::BackendType::LLVM,
 				.compile_to_assembly    = false,

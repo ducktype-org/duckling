@@ -1,4 +1,4 @@
-#include "driver.hpp"
+#include "hout_to_binary_driver.hpp"
 
 
 #include <lir/lir_lowering/lir_lowering.hpp>
@@ -12,7 +12,7 @@
 
 namespace compiler::driver {
 
-	void Driver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
+	void HoutToBinaryDriver::compileHOUTUnit(base::CRef<helios::HOUTUnit> hout_unit, base::StrID module_id) {
 		std::vector<CRef<lir::Function>> functions;
 		functions.reserve(hout_unit->functions.size());
 
@@ -30,7 +30,7 @@ namespace compiler::driver {
 		});
 	}
 
-	void Driver::link(base::StrID output_file) { backend_driver->link(output_file); }
+	void HoutToBinaryDriver::link(base::StrID output_file) { backend_driver->link(output_file); }
 
-	std::expected<RunOutput, std::string> Driver::run() { return backend_driver->run(); }
+	std::expected<RunOutput, std::string> HoutToBinaryDriver::run() { return backend_driver->run(); }
 }
