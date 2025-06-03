@@ -2,6 +2,7 @@
  * @file mir_tests.cpp
  */
 
+#include <iostream>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -265,6 +266,8 @@ private:
 			auto& foo_mir
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
+
+			foo_mir.debugPrint(std::cout);
 
 			auto i16_type = ctx.query<QueryIntegralType>(16);
 			auto i32_type = ctx.query<QueryIntegralType>(32);

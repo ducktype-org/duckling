@@ -8,6 +8,9 @@ fun foo3() = {
 	if (0) {
 		return 0;
 	}
+	while (0) {
+		return 0;
+	}
 	return A;
 }
 
