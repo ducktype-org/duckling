@@ -52,9 +52,9 @@ setAsSystemLibrary(Crow)
 FetchContent_MakeAvailable(nlohmann_json)
 setAsSystemLibrary(nlohmann_json)
 
-find_library(GVC_LIBRARY gvc REQUIRED)
-find_library(CGRAPH_LIBRARY cgraph REQUIRED)
-find_library(CDT_LIBRARY cdt REQUIRED)
+find_library(GVC_LIBRARY gvc)
+find_library(CGRAPH_LIBRARY cgraph)
+find_library(CDT_LIBRARY cdt)
 
 # Utwórz globalne cele IMPORTED
 add_library(System::gvc UNKNOWN IMPORTED GLOBAL)
