@@ -2,7 +2,6 @@
  * @file mir_tests.cpp
  */
 
-#include <iostream>
 #include <helios/queries.hpp>
 #include <helios/symbols/simple.hpp>
 #include <helios/test_utils/helios_test_utils.hpp>
@@ -13,6 +12,8 @@
 #include <query_framework/utils/with_context_do.hpp>
 #include <tester/tester.hpp>
 #include <typesystem/higher/queries.hpp>
+
+#include <iostream>
 
 using namespace tsh;
 using namespace compiler::helios::test_utils;
@@ -165,7 +166,7 @@ private:
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
-			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 2 } COMMA BlockID{ 1 }});
+			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 2 } COMMA BlockID{ 1 } });
 
 			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } });
 		});

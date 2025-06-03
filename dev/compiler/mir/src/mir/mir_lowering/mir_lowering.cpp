@@ -684,13 +684,14 @@ namespace compiler::mir {
 
 			auto get_condition_return = condition_continuation_block->addHole();
 
-			auto expr_result
-				= lowerExpr(*stmt.condition, condition_continuation_block, function, condition_scope);
+			auto expr_result = lowerExpr(
+				*stmt.condition, condition_continuation_block, function, condition_scope
+			);
 
 			condition_entry_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, condition_scope }
 			);
-			
+
 			loop_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
 			);
