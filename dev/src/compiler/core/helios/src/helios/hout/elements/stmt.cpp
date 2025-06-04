@@ -72,9 +72,9 @@ namespace compiler::helios::code {
 
 	void AssignmentStmt::debugPrint(std::ostream& out, usize indent) const {
 		addIndent(out, indent);
-		out << name(helios_symbol).strView();
+		location_expr->debugPrint(out);
 		out << " = ";
-		new_value->debugPrint(out);
+		new_value_expr->debugPrint(out);
 	}
 
 }

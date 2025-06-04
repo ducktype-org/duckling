@@ -701,24 +701,67 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-			// TODO: #469 Support arbitrary lvalues on the left.
+			
+			/**
+			 * @brief Visitor that outputs the assignment instruction depending 
+			 * on the type of the location expression.
+			 * The result is stored in the @p out member. 
+			 */
+			struct AssignmentExprVisitor final: public hc::HoutExprVisitorPanicky {
+				struct Result {
+					BlockBuilderRef begin;
+					Instruction     instruction;
+				};
+
+				BlockBuilderRef  continuation;
+				FunctionBuilder& function;
+				ScopeRef         assignment_scope;
+				MIRValue         new_value;
+
+				base::Optional<Result> out;
+
+				AssignmentExprVisitor(
+					BlockBuilderRef  continuation,
+					FunctionBuilder& function,
+					ScopeRef         assignment_scope,
+					MIRValue         new_value
+				):
+					  continuation(continuation),
+					  function(function),
+					  assignment_scope(assignment_scope),
+					  new_value(new_value) {}
+
+				void output(const Result& result) {
+					CORE_ASSERT(this->out.empty(), "Output already set.");
+					this->out.emplace(result);
+				}
+
+				void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
+					auto local = LocalRef(function.findLocal(expr.symbol).get());
+					output({ .begin       = continuation,
+					         .instruction = Instruction{ Operation::Assign,
+					                                     { local },
+					                                     { new_value },
+					                                     {},
+					                                     assignment_scope } });
+				}
+
+				// In the future the assignment instruction would depend on the type of outer
+				// expression. For example array subscript expression should convert to
+				// "array_store" MIR instruction and struct field to "struct_store" instruction.
+			};
 
 			auto assignment_scope = function.newScope(parent_scope);
 
-			auto target_location          = function.findLocal(stmt.helios_symbol);
 			auto target_construction_hole = continuation->addHole();
-			auto [sub_continuation, result]
-				= lowerExpr(*stmt.new_value, continuation, function, assignment_scope);
 
-			target_construction_hole.fill(Instruction{
-				Operation::Assign,
-				{ target_location },
-				{ result },
-				{},
-				assignment_scope,
-			});
+			auto [r_continuation, new_value]
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
-			output({ sub_continuation });
+			AssignmentExprVisitor visitor(r_continuation, function, assignment_scope, new_value);
+			target_construction_hole.fill(visitor.out->instruction);
+
+			output({ visitor.out->begin });
 		}
 	};
 

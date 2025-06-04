@@ -166,12 +166,7 @@ namespace compiler::helios {
 						"Not handling errors here yet... (rhs)"
 					);
 
-					// for now we only support lhs being an identifier:
-					// @TODO #470: make it generic.
-
-					Ref dynamic_casted_lhs = dynamic_cast<const code::IdentifierExpr*>(&*lhs);
-
-					output(code::AssignmentStmt(std::move(rhs), dynamic_casted_lhs->symbol));
+					output(code::AssignmentStmt(std::move(lhs), std::move(rhs)));
 					return;
 				}
 
