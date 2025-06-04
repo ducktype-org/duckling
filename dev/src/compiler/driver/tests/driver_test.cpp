@@ -28,13 +28,15 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
-		                                    .compile_to_assembly    = false,
-		                                    .dump_llvm_ir           = false,
-		                                    .dvm_code_only_memory   = false,
-		                                    .add_builtin_library    = false,
-		                                    .external_objects_files = {},
-		                                    .external_libs          = {} });
+		driver::HoutToBinaryDriver driver({
+			.backend_type           = driver::BackendType::LLVM,
+			.compile_to_assembly    = false,
+			.dump_llvm_ir           = false,
+			.dvm_code_only_memory   = false,
+			.add_builtin_library    = false,
+			.external_objects_files = {},
+			.external_libs          = {},
+		});
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
@@ -53,13 +55,15 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
-		                                    .compile_to_assembly    = true,
-		                                    .dump_llvm_ir           = true,
-		                                    .dvm_code_only_memory   = false,
-		                                    .add_builtin_library    = false,
-		                                    .external_objects_files = {},
-		                                    .external_libs          = {} });
+		driver::HoutToBinaryDriver driver({
+			.backend_type           = driver::BackendType::LLVM,
+			.compile_to_assembly    = true,
+			.dump_llvm_ir           = true,
+			.dvm_code_only_memory   = false,
+			.add_builtin_library    = false,
+			.external_objects_files = {},
+			.external_libs          = {},
+		});
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
@@ -78,13 +82,15 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::DVM,
-		                                    .compile_to_assembly    = false,
-		                                    .dump_llvm_ir           = false,
-		                                    .dvm_code_only_memory   = false,
-		                                    .add_builtin_library    = false,
-		                                    .external_objects_files = {},
-		                                    .external_libs          = {} });
+		driver::HoutToBinaryDriver driver({
+			.backend_type           = driver::BackendType::DVM,
+			.compile_to_assembly    = false,
+			.dump_llvm_ir           = false,
+			.dvm_code_only_memory   = false,
+			.add_builtin_library    = false,
+			.external_objects_files = {},
+			.external_libs          = {},
+		});
 
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
 
@@ -99,13 +105,15 @@ private:
 			= query::entryPoint<frontend::QueryModuleTree>(fs::FilePath(path("modules/functions")));
 		CRef<helios::HOUTUnit> top_level = query::entryPoint<helios::QueryTopLevelEntities>(module);
 
-		driver::HoutToBinaryDriver driver({ .backend_type           = driver::BackendType::LLVM,
-		                                    .compile_to_assembly    = false,
-		                                    .dump_llvm_ir           = false,
-		                                    .dvm_code_only_memory   = false,
-		                                    .add_builtin_library    = true,
-		                                    .external_objects_files = {},
-		                                    .external_libs          = {} });
+		driver::HoutToBinaryDriver driver({
+			.backend_type           = driver::BackendType::LLVM,
+			.compile_to_assembly    = false,
+			.dump_llvm_ir           = false,
+			.dvm_code_only_memory   = false,
+			.add_builtin_library    = true,
+			.external_objects_files = {},
+			.external_libs          = {},
+		});
 
 		// This method can fail on module verification
 		driver.compileHOUTUnit(top_level, base::StrID("test_module"));
