@@ -57,4 +57,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/");
+TESTER_COMMON_MAIN("/src/vm/tests/");

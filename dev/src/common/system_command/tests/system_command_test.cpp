@@ -27,4 +27,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/driver/tests/")
+TESTER_COMMON_MAIN("/src/compiler/driver/tests/")

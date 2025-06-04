@@ -96,4 +96,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/lang_definitions/tests/");
+TESTER_COMMON_MAIN("/src/common/lang_definitions/tests/");

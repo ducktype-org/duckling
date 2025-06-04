@@ -82,4 +82,4 @@ A::A(const A& other): x(other.x), count(other.count), test(other.test) {
 	test->assertTrue(count < 2, "A constructor called to many times");
 }
 
-TESTER_COMMON_MAIN("/base/tests/");
+TESTER_COMMON_MAIN("/src/base/tests/");

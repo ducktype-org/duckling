@@ -19,4 +19,4 @@ private:
 	void initWithZero() { runTestOnVm("init_with_zero.dbc", "", "0", {}); }
 };
 
-TESTER_COMMON_MAIN("/vm/tests/static_table/");
+TESTER_COMMON_MAIN("/src/vm/tests/static_table/");

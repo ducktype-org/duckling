@@ -51,4 +51,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/inheritance/");
+TESTER_COMMON_MAIN("/src/vm/tests/inheritance/");

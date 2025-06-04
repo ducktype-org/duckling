@@ -40,4 +40,4 @@ public:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/utils/");
+TESTER_COMMON_MAIN("/src/vm/tests/utils/");

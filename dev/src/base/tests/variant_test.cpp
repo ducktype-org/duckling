@@ -80,4 +80,4 @@ public:
 	}
 };
 
-TESTER_COMMON_MAIN("/base/tests");
+TESTER_COMMON_MAIN("/src/base/tests");

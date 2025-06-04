@@ -356,4 +356,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/core/mir/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/mir/tests/")

@@ -28,4 +28,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/basic/");
+TESTER_COMMON_MAIN("/src/vm/tests/basic/");

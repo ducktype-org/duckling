@@ -53,4 +53,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/config/tests/");
+TESTER_COMMON_MAIN("src/compiler/config/tests/");

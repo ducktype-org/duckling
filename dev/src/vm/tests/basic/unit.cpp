@@ -39,4 +39,4 @@ private:
 	void globalsTest() { runTestOnVm("globals.dbc", {}, "5", {}, 5); }
 };
 
-TESTER_COMMON_MAIN("/vm/tests/basic/");
+TESTER_COMMON_MAIN("/src/vm/tests/basic/");

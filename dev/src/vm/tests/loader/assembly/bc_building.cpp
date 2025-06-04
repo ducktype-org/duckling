@@ -101,4 +101,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/loader/assembly/");
+TESTER_COMMON_MAIN("/src/vm/tests/loader/assembly/");

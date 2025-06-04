@@ -515,4 +515,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/query_framework/tests/");
+TESTER_COMMON_MAIN("/src/common/query_framework/tests/");

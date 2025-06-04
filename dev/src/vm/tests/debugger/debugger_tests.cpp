@@ -124,4 +124,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/debugger/");
+TESTER_COMMON_MAIN("/src/vm/tests/debugger/");

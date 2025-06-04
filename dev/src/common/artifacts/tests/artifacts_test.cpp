@@ -76,4 +76,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/artifacts/tests/");
+TESTER_COMMON_MAIN("/src/common/artifacts/tests/");

@@ -80,4 +80,4 @@ public:
 	~OperationsTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/compiler/src/operations/tests/")
+TESTER_COMMON_MAIN("/src/compiler/src/operations/tests/")

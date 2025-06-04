@@ -196,4 +196,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/compiler/core/lir/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/lir/tests/")

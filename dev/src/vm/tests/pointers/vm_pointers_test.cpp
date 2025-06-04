@@ -26,4 +26,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/pointers/");
+TESTER_COMMON_MAIN("/src/vm/tests/pointers/");

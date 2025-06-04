@@ -30,4 +30,4 @@ private:
 	void testTailCall() { runTestOnVm("tailcall.dbc", "1000000", "0", {}); }
 };
 
-TESTER_COMMON_MAIN("/vm/tests/correctness/");
+TESTER_COMMON_MAIN("/src/vm/tests/correctness/");

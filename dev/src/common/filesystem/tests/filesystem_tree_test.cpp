@@ -92,4 +92,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/filesystem/tests/");
+TESTER_COMMON_MAIN("/src/common/filesystem/tests/");

@@ -79,4 +79,4 @@ private:
 };
 
 
-TESTER_COMMON_MAIN("/compiler/core/backends/dvm/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/backends/dvm/tests/")

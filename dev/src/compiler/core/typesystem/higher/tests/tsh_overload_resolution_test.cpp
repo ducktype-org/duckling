@@ -59,4 +59,4 @@ public:
 	~TypeSystemOverloadResolutionTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/compiler/core/typesystem/higher/tests/")
+TESTER_COMMON_MAIN("/src/compiler/core/typesystem/higher/tests/")

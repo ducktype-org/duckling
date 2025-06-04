@@ -84,4 +84,4 @@ public:
 	~SimpleExecTest() override = default;
 };
 
-TESTER_COMMON_MAIN("/compiler/src/exec/tests/")
+TESTER_COMMON_MAIN("/src/compiler/src/exec/tests/")

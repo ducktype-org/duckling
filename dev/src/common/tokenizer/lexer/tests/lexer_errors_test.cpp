@@ -89,4 +89,4 @@ public:
 
 std::vector<LexerErrorTests::GenExample*> LexerErrorTests::examples = {};
 
-TESTER_COMMON_MAIN("/compiler/tokenizer/lexer/tests");
+TESTER_COMMON_MAIN("/src/compiler/tokenizer/lexer/tests");

@@ -48,7 +48,6 @@ add_custom_test_pack(compiler)
 add_subdirectory(dependencies)
 insertLLVM()
 
-# Source:
 add_subdirectory(src/base)
 add_subdirectory(src/common)
 add_subdirectory(src/compiler)

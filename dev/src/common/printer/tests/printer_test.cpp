@@ -54,4 +54,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/common/printer/tests/");
+TESTER_COMMON_MAIN("/src/common/printer/tests/");

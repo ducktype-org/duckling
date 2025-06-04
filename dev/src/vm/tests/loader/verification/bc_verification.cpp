@@ -304,4 +304,4 @@ private:
 	}
 };
 
-TESTER_COMMON_MAIN("/vm/tests/loader/verification/");
+TESTER_COMMON_MAIN("/src/vm/tests/loader/verification/");
