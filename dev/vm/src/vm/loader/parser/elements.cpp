@@ -50,27 +50,49 @@ namespace vm::loader::parser {
 
 		template<>
 		auto parseArg(F8ParserState& state) -> vm::opargs::Immediate {
-			return { parseInt<i64, vm::opargs::Immediate>(state) };
+			auto pos         = state.getPosition();
+			auto value       = parseInt<i64, vm::opargs::Immediate>(state);
+			auto arg         = opargs::Immediate{ value };
+			arg.bytecode_pos = dia::SourcePosition(
+				pos.getLocation(), pos.getStart(), pos.getStart() + std::to_string(value).length()
+			);
+			return arg;
 		}
 
-#define HANDLE_LOCAL(TYPE)                                    \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
-	}
+		template<>
+		auto parseArg(F8ParserState& state) -> vm::opargs::Field {
+			tpc::Identifier type_name, field_name;
+			state.parse().all(&type_name, lang_def::NamedOperator::Period, &field_name);
+			auto field         = vm::opargs::Field{ type_name, field_name };
+			field.bytecode_pos = dia::SourcePosition(
+				type_name.position.getLocation(),
+				type_name.position.getStart(),
+				field_name.position.getEnd()
+			);
+			return field;
+		}
 
-		FOR_EACH(HANDLE_LOCAL, VM_OPARG_LOCAL_TYPES);
-
-#undef HANDLE_LOCAL
-
-#define HANDLE_STR_ARG(TYPE)                                  \
-	template<>                                                \
-	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE { \
-		return { parseStr(state) };                           \
+#define HANDLE_STR_ARG(TYPE)                                                        \
+	template<>                                                                      \
+	auto parseArg(F8ParserState& state) -> vm::opargs::TYPE {                       \
+		auto pos         = state.getPosition();                                     \
+		auto value       = parseStr(state);                                         \
+		auto arg         = vm::opargs::TYPE{ value };                               \
+		arg.bytecode_pos = dia::SourcePosition(                                     \
+			pos.getLocation(), pos.getStart(), pos.getStart() + value.view().size() \
+		);                                                                          \
+		return { arg };                                                             \
 	}
 
 		FOR_EACH(
-			HANDLE_STR_ARG, Type, FunctionName, BuiltinFunctionName, Label, VM_OPARG_GLOBAL_TYPES
+			HANDLE_STR_ARG,
+			Type,
+			FunctionName,
+			BuiltinFunctionName,
+			MethodName,
+			Label,
+			VM_OPARG_GLOBAL_TYPES,
+			VM_OPARG_LOCAL_TYPES
 		)
 
 #undef HANDLE_STR_ARG
@@ -79,22 +101,14 @@ namespace vm::loader::parser {
 
 		template<IsOpCodeArg Arg0>
 		std::vector<opargs::OpCodeArg> parseOpCode1Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
-
-			return { arg0 };
+			return { parseArg<Arg0>(state) };
 		}
 
 		template<IsOpCodeArg Arg0, IsOpCodeArg Arg1>
 		std::vector<opargs::OpCodeArg> parseOpCode2Args(F8ParserState& state) {
-			auto pos0         = state.getPosition();
-			auto arg0         = parseArg<Arg0>(state);
-			arg0.bytecode_pos = pos0;
+			auto arg0 = parseArg<Arg0>(state);
 			state.parse().one(lang_def::Special::Comma);
-			auto pos1         = state.getPosition();
-			auto arg1         = parseArg<Arg1>(state);
-			arg1.bytecode_pos = pos1;
+			auto arg1 = parseArg<Arg1>(state);
 			return { arg0, arg1 };
 		}
 
@@ -124,6 +138,12 @@ namespace vm::loader::parser {
 
 		state.parse().one(&out->name);
 		state.parse().one(&out->type);
+
+		auto end_position = state.getPosition().getEnd();
+		out->position     = dia::SourcePosition(
+            out->position.getLocation(), out->position.getStart(), end_position
+        );
+
 		state.parse().one(lang_def::Special::Semicolon);
 		return out;
 	}
@@ -402,6 +422,7 @@ namespace vm::loader::parser {
 			std::vector<Field>          fields;
 			std::vector<base::StrID>    implements;
 			std::vector<Field>          virtual_methods;
+			std::vector<Field>          implementations;
 			base::Optional<base::StrID> extends;
 
 			if (!state[0].isBracketGroup(lexer::Token::BracketType::Curly)) {
@@ -479,9 +500,14 @@ namespace vm::loader::parser {
 					state.parse().one(lang_def::Special::Semicolon);
 					break;
 				}
+				case lang_def::Keyword::BCMethodImplementations: {
+					state.parse().one(lang_def::NamedOperator::Colon);
+					implementations = parseFields(state);
+					state.parse().one(lang_def::Special::Semicolon);
+					break;
+				}
 				case lang_def::Keyword::BCFields: {
 					state.parse().one(lang_def::NamedOperator::Colon);
-					// The first field is the VTable pointer
 					for (auto field: parseFields(state)) fields.push_back(field);
 					state.parse().one(lang_def::Special::Semicolon);
 					break;
@@ -503,7 +529,10 @@ namespace vm::loader::parser {
 			state.goUpAndSkip();
 
 			auto tp = is_interface ? TypeOfData(InterfaceType(
-										 name, std::move(implements), std::move(virtual_methods)
+										 name,
+										 std::move(implements),
+										 std::move(virtual_methods),
+										 std::move(implementations)
 									 ))
 			                       : TypeOfData(ClassType(
 										 name,
@@ -511,7 +540,8 @@ namespace vm::loader::parser {
 										 is_abstract,
 										 extends,
 										 std::move(implements),
-										 std::move(virtual_methods)
+										 std::move(virtual_methods),
+										 std::move(implementations)
 									 ));
 			VISIT(tp, t, t.bytecode_pos = out->position);
 			out->datatype = std::move(tp);

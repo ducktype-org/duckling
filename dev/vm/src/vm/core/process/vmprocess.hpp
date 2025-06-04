@@ -16,6 +16,7 @@
 #include <vm/core/process/type_metadata/type_metadata.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
+#include <vm/loader/loader.hpp>
 #include <vm/services/profiler/profiler.hpp>
 #include <vm/services/reference_counter/reference_counter.hpp>
 #include <vm/services/service_manager.hpp>
@@ -69,10 +70,7 @@ namespace vm {
 
 		Memory memory;
 
-		Box<loader::Loader> loader;
-
-		//@TODO: For now assume that bytecode validation is always turned on.
-		static constexpr const bool VALIDATE_CODE = true;
+		loader::Loader loader{};
 
 		/**
 		 * @brief Performs external execution request on the VCPU.

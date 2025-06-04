@@ -36,7 +36,16 @@ namespace dia {
 	class SourcePosition;
 
 	/**
+	 * @brief Print line number prefix.
+	 *
+	 * @param length - Number of characters to align to.
+	 */
+	void printLineNumber(printer::PrinterOStream&, usize length, usize line, printer::Color);
+
+	/**
 	 * @brief Get lines surrounding with position colored.
+	 *
+	 * @todo Maybe rewrite to use the general highlighted printing that is newer.
 	 */
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream&, const SourcePosition&);
 
@@ -66,6 +75,13 @@ namespace dia {
 		SourcePosition& operator=(const SourcePosition& other) = default;
 
 		bool operator==(const SourcePosition& other) const;
+
+		/**
+		 * @brief Order by tuple (filepath, source_start, source_end)
+		 *
+		 * @note Fine for now, In the future might break with macros as they share filepaths.
+		 */
+		std::strong_ordering operator<=>(const SourcePosition& other) const;
 
 		/**
 		 * @brief Get formatted message contents with a given reason.
@@ -102,6 +118,8 @@ namespace dia {
 		usize getEnd() const;
 		[[nodiscard]]
 		Ref<tokenizer::TokenSource> getSource() const;
+		[[nodiscard]]
+		CRef<Location> getLocation() const;
 		[[nodiscard]]
 		LocationType getLocationType() const;
 

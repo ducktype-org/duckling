@@ -1,15 +1,15 @@
 type fun: spring { i64, i64 } i64
 
 function spring {
-    # [0, 8) ret_val
-    # [8, 16) arg0
-    # [16, 24) arg1
+	# [0, 8) ret_val
+	# [8, 16) arg0
+	# [16, 24) arg1
 
-    mov_l64_l64 ret_val, arg0;
-    mul_l64_l64 ret_val, arg1;
+	mov_l64_l64 ret_val, arg0;
+	mul_l64_l64 ret_val, arg1;
 
-    deinit; # arg1
-    deinit; # arg0 
+	deinit; # arg1
+	deinit; # arg0 
 
-    ret;
+	ret;
 }

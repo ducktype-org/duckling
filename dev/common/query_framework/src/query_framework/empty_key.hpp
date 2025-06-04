@@ -1,6 +1,6 @@
 #pragma once
 
-#include <base/perfect_hash.hpp>
+#include "query_hash.hpp"
 
 namespace query {
 	/**
@@ -8,13 +8,8 @@ namespace query {
 	 */
 	struct EmptyKey final {
 		[[nodiscard]]
-		base::HashT customPerfectHash() const {
+		QueryUnstableHash queryUnstablePerfectHash() const {
 			return 0;
-		}
-
-		[[nodiscard]]
-		bool operator==(const EmptyKey&) const {
-			return true;
 		}
 	};
 }

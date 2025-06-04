@@ -111,10 +111,24 @@ namespace base {
 		}
 
 		/**
-		 * It currently compares pointers, not the underlying data.
-		 * @todo Implement a proper comparison.
+		 * @brief Data iterator -- begin.
 		 */
-		bool operator==(const StableHashMap& other) const { return data == other.data; }
+		auto begin() { return data.begin(); }
+
+		/**
+		 * @brief Data iterator -- end.
+		 */
+		auto end() { return data.end(); }
+
+		/**
+		 * @brief Const data iterator -- begin.
+		 */
+		auto begin() const { return data.begin(); }
+
+		/**
+		 * @brief Const data iterator -- end.
+		 */
+		auto end() const { return data.end(); }
 
 	private:
 		HashMap<KEY_T, Box<DATA_T>, HASH_T> data;

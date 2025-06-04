@@ -1,7 +1,7 @@
 #include <tester/tester.hpp>
 #include <vm_tester_utils.hpp>
 
-#include <vm/bytecode/builders/errors.hpp>
+#include <vm/bytecode/validator/errors.hpp>
 
 class VmFunctionsTests: public VmTestSuite {
 #undef TESTER_CLASS
@@ -53,7 +53,7 @@ private:
 		loadInvalidDbc(
 			"deinit_ret_val.dbc",
 			{
-				vm::code::builders::RetValDeinitError::ERR_MSG,
+				vm::code::RetValDeinitError::ERR_MSG,
 			}
 		);
 	}
@@ -71,8 +71,8 @@ private:
 	void testPreservedFlag() { runTestOnVm("preserved_flag.dbc", "", "1", {}); }
 
 	void testBuiltinFunctions() {
-		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {});
-		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {});
+		runTestOnVm("builtin_functions.dbc", "5 5", "10\n3\n", {}, 0, true);
+		runTestOnVm("builtin_functions.dbc", "501 501", "1002\n5\n", {}, 0, true);
 	}
 
 	void testGraphJumps() { runTestOnVm("graph_jumps.dbc", "", "42", {}); }
@@ -82,7 +82,7 @@ private:
 			loadInvalidDbc(
 				filename,
 				{
-					vm::code::builders::PathWithoutEndError::ERR_MSG,
+					vm::code::PathWithoutEndError::ERR_MSG,
 				}
 			);
 

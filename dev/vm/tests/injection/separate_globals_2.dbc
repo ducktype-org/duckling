@@ -1,0 +1,13 @@
+# Tests if globals declared in other files are visible.
+type fun: globaler_setter {} void
+
+function globaler_setter {
+	init_lany_type  x, i64;
+	input_l64       x;
+	mov_g64_l64     counter, x;
+	mov_l64_g64     x, counter;
+	output_l64      x;
+	
+	deinit; # x
+	ret;
+}

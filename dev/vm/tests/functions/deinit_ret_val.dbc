@@ -2,13 +2,13 @@
 # This file should not load.
 
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> argv
 
-    deinit; # argv
-    deinit; # argc
-    deinit; # ret_val
+	deinit; # argv
+	deinit; # argc
+	deinit; # ret_val
 
-    ret;
+	ret;
 }

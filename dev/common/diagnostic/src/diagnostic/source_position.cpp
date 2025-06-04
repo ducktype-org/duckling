@@ -14,6 +14,13 @@
 #include <string>
 
 namespace dia {
+	void printLineNumber(printer::PrinterOStream& out, usize length, usize line, printer::Color col) {
+		std::stringstream number;
+		number << std::setw((int) length) << line;
+		out.add({ number.str(), col });
+		out << " | ";
+	}
+
 	void printPrettySourceLinesFromPosition(printer::PrinterOStream& out, const SourcePosition& pos) {
 		auto source       = pos.getSource();
 		auto source_start = pos.source_start;
@@ -40,33 +47,30 @@ namespace dia {
 		auto error  = source->viewSplitRange(source_start, fixed_end + 1);
 		auto after  = source->viewSplitRange(fixed_end + 1, end_char);
 
-		auto line_pref = [&](usize line) {
-			out << "\n";
-			std::stringstream number;
-			number << std::setw((int) length) << line;
-			out.add({ number.str(), printer::Color::BRIGHT_BLUE });
-			out << " | ";
-		};
-		usize prev_line = -1ULL;
+		usize          prev_line = -1ULL;
+		printer::Color line_col  = printer::Color::BRIGHT_BLUE;
 
 		for (auto [line, view]: before) {
 			if (line != prev_line) {
 				prev_line = line;
-				line_pref(line);
+				out << "\n";
+				printLineNumber(out, length, line, line_col);
 			}
 			out << view.stdString();
 		}
 		for (auto [line, view]: error) {
 			if (line != prev_line) {
 				prev_line = line;
-				line_pref(line);
+				out << "\n";
+				printLineNumber(out, length, line, line_col);
 			}
 			out.add({ view.stdString(), printer::Color::BRIGHT_RED });
 		}
 		for (auto [line, view]: after) {
 			if (line != prev_line) {
 				prev_line = line;
-				line_pref(line);
+				out << "\n";
+				printLineNumber(out, length, line, line_col);
 			}
 			out << view.stdString();
 		}
@@ -117,6 +121,8 @@ namespace dia {
 
 	Ref<tokenizer::TokenSource> SourcePosition::getSource() const { return location->getSource(); }
 
+	CRef<Location> SourcePosition::getLocation() const { return location; }
+
 	LocationType SourcePosition::getLocationType() const { return location_type; }
 
 	void SourcePosition::printPosition(printer::PrinterOStream& out) const {
@@ -162,4 +168,18 @@ namespace dia {
 		};  // TODO: Set last modified to real value.
 	}
 
+	std::strong_ordering SourcePosition::operator<=>(const dia::SourcePosition& other) const {
+		auto loc_ord = &*getLocation() <=> &*other.getLocation();
+		if (loc_ord != std::strong_ordering::equal) return loc_ord;
+
+		auto start_ord = getStart() <=> other.getStart();
+		if (start_ord != std::strong_ordering::equal) return start_ord;
+
+		return getEnd() <=> other.getEnd();
+	}
+
+	bool SourcePosition::operator==(const SourcePosition& other) const {
+		return getLocation() == other.getLocation() && getStart() == other.getStart()
+		    && getEnd() == other.getEnd();
+	}
 }

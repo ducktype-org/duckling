@@ -1,11 +1,8 @@
 
 #include "vmthread.hpp"
 
-#include "low_program/instruction.hpp"
-#include "low_program/opcodes.hpp"
-#include "op_case.hpp"
-#include "opcodes_functions.hpp"
-#include "opcodes_functions_debug.hpp"
+#include "opcode_functions/opcodes_functions.hpp"
+#include "opcode_functions/opcodes_functions_utils.hpp"
 
 #include <base/exceptions.hpp>
 #include <base/int_conv.hpp>
@@ -20,7 +17,9 @@
 #include <vm/core/process/memory/pointer.hpp>
 #include <vm/core/process/type_metadata/definitions.hpp>
 #include <vm/core/process/type_metadata/type.hpp>
+#include <vm/core/process/vmprocess.hpp>
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/low_program/opcodes.hpp>
 
 #include <cstring>
 #include <iostream>
@@ -34,11 +33,12 @@
 namespace vm {
 #ifdef USE_TAIL_CALLS
 	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1) \
-		Fix8Instruction { .opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
+		Fix8Instruction { .tc_opfun = OpFuns::op_##OPCODE_NAME, .arg0 = ARG_0, .arg1 = ARG_1 }
 #else
-	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                                   \
-		Fix8Instruction {                                                                          \
-			.opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, .arg1 = ARG_1 \
+	#define MAKE_BYTECODE_INSTRUCTION(OPCODE_NAME, ARG_0, ARG_1)                           \
+		Fix8Instruction {                                                                  \
+			.nontc_opcode = static_cast<u16>(low::OpcodeFix8::OPCODE_NAME), .arg0 = ARG_0, \
+			.arg1 = ARG_1                                                                  \
 		}
 #endif
 
@@ -90,9 +90,9 @@ namespace vm {
 		auto*      instr       = frame->instr;
 
 #ifdef USE_TAIL_CALLS
-		auto opcode = OpFuns::getOpcodeFromOpFun(instr->opfun);
+		auto opcode = OpFuns::getOpcodeFromOpFun(instr->tc_opfun);
 #else
-		auto opcode = static_cast<u16>(instr->opcode);
+		auto opcode = static_cast<u16>(instr->nontc_opcode);
 #endif
 
 		// Execute the instruction by calling the debug opcode function.
@@ -219,9 +219,7 @@ namespace vm {
 				start_function.bc.end(),
 				{
 					MAKE_BYTECODE_INSTRUCTION(mov_l64_imm, 32, converted_arg),
-					// @todo: This should be changed to 'store_lptr_imm_ofs' and temp_store should
-			        // be removed once it exists. https://github.com/ducktype-org/duckling/issues/778
-					MAKE_BYTECODE_INSTRUCTION(store_lptr_l64_ofs, 8, 32),
+					MAKE_BYTECODE_INSTRUCTION(staticTableStore_lptr_lany, 8, 32),
 					MAKE_BYTECODE_INSTRUCTION(ext_l64, 24, 0),
 					MAKE_BYTECODE_INSTRUCTION(add_l64_imm, 24, 1),
 				}
@@ -273,7 +271,7 @@ namespace vm {
 		const auto* instr = start_function.bc.data();
 
 #ifdef USE_TAIL_CALLS
-		instr->opfun(instr, local_stack, frame, *this);
+		instr->tc_opfun(instr, local_stack, frame, *this);
 
 #elif USE_COMPUTED_GOTO
 		// We use computed-gotos here,
@@ -291,7 +289,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 			};
 
-		goto* opcode_label[static_cast<u64>(instr->opcode)];
+		goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];
 
 	#define HANDLE_OPCODE(opcode_name)                                          \
 		LABEL_##opcode_name: {                                                  \
@@ -300,7 +298,7 @@ namespace vm {
 			              opcode_str == "exit") {                               \
 				goto End;                                                       \
 			} else {                                                            \
-				goto* opcode_label[static_cast<u64>(instr->opcode)];            \
+				goto* opcode_label[static_cast<u64>(instr->nontc_opcode)];      \
 			}                                                                   \
 		}
 	#include <vm/bytecode/opcode_definitions.hpp>
@@ -312,7 +310,7 @@ namespace vm {
 		POP_DIAGNOSTIC
 #elif USE_SWITCH_CASE
 		while (true) {
-			switch (static_cast<low::OpcodeFix8>(instr->opcode)) {
+			switch (static_cast<low::OpcodeFix8>(instr->nontc_opcode)) {
 	#define HANDLE_OPCODE(opcode_name)                                                              \
 	case low::OpcodeFix8::opcode_name: {                                                            \
 		vm::OpFuns::op_##opcode_name(instr, local_stack, frame, *this);                             \
@@ -326,7 +324,7 @@ namespace vm {
 	#undef HANDLE_OPCODE
 
 			default: {
-				CORE_PANIC("Unknown operator:", u64(instr->opcode));
+				CORE_PANIC("Unknown operator:", u64(instr->nontc_opcode));
 			}
 			}
 		}
@@ -436,7 +434,7 @@ namespace vm {
 
 		try {
 			const auto& func = *executing_program->functions.atMaybe(base::StrID(func_name.data()))
-			                        .expect("Called function does not exist!");
+			                        .expect("Called function does not exist: " + func_name);
 			low::FuncData start_function;
 			variant_match(run_arguments) {
 				variant_case(ProgramRunArguments, program_run_arguments) {
@@ -555,7 +553,7 @@ namespace vm {
 				// @TODO: catch not general std::exception&
 			} catch (const std::exception& e) {
 				std::cerr << "VMThread has panicked: " << e.what() << "\n";
-				respondExecutionRequest(api::ExecutionPanicked{});
+				respondExecutionRequest(api::ExecutionPanicked{ e.what() });
 			}
 		});
 		return waitForRunningResponse();

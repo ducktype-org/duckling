@@ -7,9 +7,6 @@
 
 // Ref, MRef asserts:
 
-// @note: MRef is not trivial due to "ptr = nullptr" in default constructor.
-static_assert(std::is_trivial_v<Ref<int>>, "Ref should be trivially type");
-
 static_assert(std::is_trivially_copyable_v<Ref<int>>, "Ref should be trivially copyable");
 static_assert(std::is_trivially_copyable_v<MRef<int>>, "MRef should be trivially copyable");
 

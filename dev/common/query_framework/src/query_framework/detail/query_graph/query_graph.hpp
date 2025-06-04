@@ -87,7 +87,7 @@ namespace query::detail {
 		 * Returns all dependencies of a @p node_id of type @p dependency_id.
 		 */
 		[[nodiscard]]
-		std::vector<NodeID> getNodeDepsFilterred(detail::NodeID node_id, QueryID dependency_id) const;
+		std::vector<NodeID> getNodeDepsFiltered(detail::NodeID node_id, QueryID dependency_id) const;
 
 		void debugPrint(std::ostream& out) const;
 		void debugPrintForDrawing(std::ostream& out) const;
@@ -107,7 +107,7 @@ namespace query::detail {
 		template<class Query>
 		auto getNodeDepsFiltered(typename Query::QKey key, detail::QueryID dependency_id) const {
 			detail::NodeID node_id = makeNodeID(Query::getID(), key);
-			return this->getNodeDepsFilterred(node_id, dependency_id);
+			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
 
 		~QueryGraph() = default;

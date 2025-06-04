@@ -10,6 +10,7 @@
 #include <vm/api/data/state_error.hpp>
 #include <vm/api/data/status.hpp>
 #include <vm/bytecode/bytecode.hpp>
+#include <vm/core/process/builtin_functions.hpp>
 #include <vm/core/process/memory/memory.hpp>
 #include <vm/core/thread/low_program/low_program.hpp>
 #include <vm/core/thread/vmthread.hpp>
@@ -37,20 +38,21 @@ namespace vm {
 		std::unique_lock                                       lock(rw_global);
 		std::expected<low::LowVMProgram, loader::LoaderLogger> code_result = [&] {
 			variant_match(source) {
-				variant_case(std::vector<fs::FilePath>, files) { return loader->getProgram(files); }
+				variant_case(std::vector<fs::FilePath>, files) { return loader.getProgram(files); }
 				variant_case(std::vector<code::CodeCollection>, code) {
-					return loader->getProgram(code);
+					return loader.getProgram(code);
 				}
 			}
 			CORE_UNREACHABLE();
 		}();
 
 		if (code_result.has_value()) {
-			loaded_program.emplace(std::move(code_result).value());
+			loaded_program.emplace(*std::move(code_result));
 			return api::Response(api::response::Empty());
 		} else {
 			std::stringstream ss;
 			code_result.error().dump(ss);
+			std::cerr << ss.str() << '\n';
 			return std::unexpected(api::LoadProgramError{ "Error in loader: \n" + ss.str() });
 		}
 	}
@@ -85,8 +87,9 @@ namespace vm {
 				return api::Response(api::response::Empty());
 			}
 			variant_case(api::ExecutionPanicked, panicked) {
-				return std::unexpected(api::CoreOperationError(api::OtherError("Execution panicked!"
-				)));
+				return std::unexpected(api::CoreOperationError(
+					api::OtherError("Execution panicked with error: " + panicked.error_message)
+				));
 			}
 			variant_default {
 				return std::unexpected(
@@ -111,7 +114,14 @@ namespace vm {
 		auto        lock = io.lock();
 		std::string content;
 		CORE_ASSERT(!io_redirecter, "Cannot read output from api when IO is being redirected");
-		io.output_empty_cv.wait(lock, [&] { return !(content = io.outputStream().str()).empty(); });
+		variant_match(status) {
+			variant_case(api::Executing, executing) {
+				// If we are still executing, then wait for at least some output.
+				if (!api::isStatusTerminal(executing.exec_status))
+					io.output_empty_cv.wait(lock, [&] { return !io.outputStream().str().empty(); });
+			}
+		}
+		content = io.outputStream().str();
 		io.outputStream().str("");
 		io.outputStream().clear();
 		return api::Response(api::response::Output{ content });
@@ -166,13 +176,17 @@ namespace vm {
 					});
 				return getMainVMThread().getCurrentPosition();
 			}
+			variant_case(api::request::LoadStdlib, load_stdlib_request) {
+				return loadProgram(std::vector<code::CodeCollection>{ *builtins::getStdlibModule() })
+				    .transform_error([](auto err) { return api::CoreOperationError{ err }; });
+			}
 			variant_case(api::request::LoadFiles, load_request) {
 				return loadProgram(load_request.filenames).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
 			variant_case(api::request::LoadCode, load_request) {
-				return loadProgram(load_request.code_collection).transform_error([](auto err) {
+				return loadProgram(load_request.code_collections).transform_error([](auto err) {
 					return api::CoreOperationError{ err };
 				});
 			}
@@ -273,11 +287,7 @@ namespace vm {
 		CORE_UNREACHABLE();
 	}
 
-	VMProcess::VMProcess():
-		  status(api::ExecutionNotStarted{}),
-		  loader(makeBox<loader::Loader>(VALIDATE_CODE)) {
-		vm_threads.emplace_back(*this);
-	}
+	VMProcess::VMProcess(): status(api::ExecutionNotStarted{}) { vm_threads.emplace_back(*this); }
 
 	VMProcess::~VMProcess() {
 		for (auto& t: vm_threads)

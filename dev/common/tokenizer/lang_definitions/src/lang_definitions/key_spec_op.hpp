@@ -1,7 +1,7 @@
 /**
  * @file keywords.hpp
  * @brief
- * Moduł pozwalający wykrywać i definiować keyword-y
+ * Module allowing for detecting and defining keywords.
  *
  *
  * Usage:
@@ -107,7 +107,8 @@ namespace lang_def {
 		// NOLINTEND
 
 		Char,
-		Bool,  // ...
+		Bool,
+		Str,  // ...
 
 		// @TODO: do we need all of them?
 		Vec,
@@ -167,6 +168,7 @@ namespace lang_def {
 		BCImplements,
 		BCVirtualMethods,
 		BCFields,
+		BCMethodImplementations,
 		BCTrue,
 		BCFalse,
 		COUNT,

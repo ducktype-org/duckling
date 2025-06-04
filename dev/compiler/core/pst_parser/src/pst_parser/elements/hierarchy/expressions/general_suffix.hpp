@@ -1,0 +1,24 @@
+#pragma once
+
+#include "preamble.hpp"
+#include "suffix_operator.hpp"
+
+namespace pst::expr {
+	/**
+	 * @brief General suffix operator
+	 */
+	class GeneralSuffix final: public SuffixOperator {
+		using Lower = GeneralPrefix;
+		using Self  = GeneralSuffix;
+
+		static MBox<ExprElement> parseRecursive(LangParserState& state, i64 length, u64 iter);
+
+	public:
+		explicit GeneralSuffix(const dia::SourcePosition& pos, Operator op):
+			  SuffixOperator(pos, op, 450) {}
+
+		static MBox<ExprElement> parse(LangParserState& state, i64 length);
+
+		~GeneralSuffix() override = default;
+	};
+}

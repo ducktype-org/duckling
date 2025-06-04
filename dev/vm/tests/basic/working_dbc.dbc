@@ -1,7 +1,7 @@
 function main {
-    # ret_val -> main ret_val
-    # arg0 -> argc
-    # arg1 -> *argv
+	# ret_val -> main ret_val
+	# arg0 -> argc
+	# arg1 -> *argv
 
 	init_lany_type 		a, i64;
 	init_lany_type 		b, i64;
@@ -22,7 +22,7 @@ function main {
 	deinit; # c
 	deinit; # b
 	deinit; # a
-    deinit; # *argv
-    deinit; # argc
+	deinit; # *argv
+	deinit; # argc
 	ret;
 }

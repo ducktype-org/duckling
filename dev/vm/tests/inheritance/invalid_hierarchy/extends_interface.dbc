@@ -1,12 +1,8 @@
 type interface: Drawable {}
 
 type class: Circle {
-    extends: Drawable;
-    fields: {
-        radius: i64,
-    };
-}
-
-function main {
-    ret;
+	extends: Drawable;
+	fields: {
+		radius: i64,
+	};
 }

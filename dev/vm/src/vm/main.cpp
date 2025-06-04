@@ -1,19 +1,18 @@
 #include "cli.hpp"
-#include "config.hpp"
 #include "server.hpp"
+#include "vm_repl.hpp"
 
 #include <clap/clap.hpp>
 #include <init/init.hpp>
 #include <printer/stream_printer.hpp>
 
 #include <vm/core/supervisor/supervisor.hpp>
+#include <vm/core/thread/low_program/instruction.hpp>
 
 void showVersion() {
-	std::cout << std::boolalpha;
 	std::cout << "VM version 0.0.\n";
 	std::cout << "Configuration: \n";
-	std::cout << "IGNORE_EXECUTION_STRATEGY: " << IGNORE_EXECUTION_STRATEGY << "\n";
-	std::cout << "USE_COMPUTED_GOTO: " << USE_COMPUTED_GOTO_VALUE << "\n";
+	std::cout << vm::getInstructionConfig() << '\n';
 }
 
 int main(int argc, const char** argv) {
@@ -40,6 +39,24 @@ int main(int argc, const char** argv) {
 	                         .addShortName('v')
 	                         .addLongName("version")
 	                         .addShortDesc("Shows version and config")
+	                         .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .conditional(
+								 [](const clap::ParsingResult& result) {
+									 return !(
+										 result.isFlag('r')
+										 && (result.isParam('f') || result.isParam('s'))
+									 );
+								 },
+								 "REPL cannot be used with -s/--server or -f/--file flags"
+							 )
+	                         .addShortName('r')
+	                         .addLongName("repl")
+	                         .addShortDesc("Executes the VM in REPL mode")
+	                         .build())
+	                .add(clap::ParamBuilder::ofFlag()
+	                         .addLongName("stdlib")
+	                         .addShortDesc("When passed, loads standard library")
 	                         .build());
 
 	clap::ParsingResult result;
@@ -64,10 +81,12 @@ int main(int argc, const char** argv) {
 
 	if (result.isFlag('v'))
 		showVersion();
+	else if (result.isFlag('r'))
+		DuckVMRepl::get().run();
 	else if (auto port = result.getValue<i64>("server"))
 		server(i32(port.value()));
 	else if (auto file = result.getValue<fs::FilePath>("file"))
-		cli(file.value());
+		return cli(file.value(), result.isFlag("stdlib"));
 	else
-		cli();
+		return cli(result.isFlag("stdlib"));
 }
