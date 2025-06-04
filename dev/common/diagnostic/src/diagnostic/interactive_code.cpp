@@ -13,6 +13,7 @@
 #include <query_framework/query_entry_point.hpp>
 #include <token_source/source.hpp>
 
+#include "base/exceptions.hpp"
 #include "base/optional.hpp"
 #include "base/ref.hpp"
 
@@ -80,11 +81,12 @@ void dia::InteractiveCode::visit_leafs(
 		return;
 	}
 
-	auto last_position = pst->getSourcePosition().getStart();
+	auto                                    last_position = pst->getSourcePosition().getStart();
+	base::Optional<compiler::helios::SymID> hid_opt       = {};
+	try {
+		hid_opt = get_symbol(pst);
+	} catch (base::NotYetImplemented*) {}  // I just want to catch cycles, but well...
 
-	// Not working because of query cycles.
-	// auto hid_opt = get_symbol(pst);
-	base::Optional<compiler::helios::SymID> hid_opt = {};
 	for (auto c: pst->viewChildren()) {
 		auto child       = c.unlock(ctx);
 		auto child_start = child->getSourcePosition().getStart();

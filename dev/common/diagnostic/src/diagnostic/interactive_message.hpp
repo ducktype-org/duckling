@@ -134,7 +134,7 @@ namespace dia {
 			  dia::InteractiveMessage(
 				  makeBox<InteractiveContent>(
 					  ContentType::ERROR,
-					  "misc"
+					  "misc",
 					  "todo",
 					  base::makeBox<Params>(message),
 					  base::makeBox<SimpleCode>(position, pointer_message{ "here", position })

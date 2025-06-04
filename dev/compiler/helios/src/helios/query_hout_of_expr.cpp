@@ -154,17 +154,14 @@ namespace compiler::helios::code {
 				} else {
 					lhs = std::move(fromPST(ctx, stmt->getLeftOperand())).value();
 					rhs = std::move(fromPST(ctx, stmt->getRightOperand())).value();
-					LOG_ERROR(
-						dia::OperatorNotFound,
+					dia::InteractiveLogger::log(base::makeBox<dia::OperatorNotFound>(
 						stmt->getSourcePosition(),
 						stmt->getOperator(),
 						std::move(lhs),
 						std::move(rhs),
-						stmt.dynamicCast<pst::LangElement>().expect(
-							"Casting to base class should always succeed right?"
-						),
+						stmt.dynamicCast<pst::LangElement>().value(),
 						ctx
-					);  // failed
+					));  // failed
 				}
 			}
 

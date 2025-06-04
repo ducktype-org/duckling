@@ -3,6 +3,8 @@
 #include "diagnostic/interactive_message.hpp"
 #include "preamble.hpp"
 
+#include "base/box.hpp"
+
 namespace pst {
 	class ForBracketError final: public dia::Error {
 	protected:
@@ -57,7 +59,7 @@ namespace pst {
 		state.parse(out).all(Keyword::For, &out->optional_name);
 
 		if (!state[0].isBracketGroup(Token::Round)) {
-			LOG_ERROR(dia::RoundBracket, state.getPosition());
+			dia::InteractiveLogger::log(base::makeBox<dia::RoundBracket>(state.getPosition()));
 			state.log(makeBox<ForBracketError>(state.getPosition()));
 		} else {
 			state.parse(out).goDown();

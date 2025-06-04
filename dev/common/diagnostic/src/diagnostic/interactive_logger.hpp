@@ -32,12 +32,6 @@ namespace dia {
 			logger.m_log(std::move(message));
 		}
 
-		static bool logging() { return InteractiveLogger::get().is_logging; }
-
-		static void set_logging(bool is_logging) {
-			InteractiveLogger::get().is_logging = is_logging;
-		}
-
 		static SerializationParams& params() { return InteractiveLogger::get().m_params; }
 
 		static void set_params(const SerializationParams& params) {
@@ -47,10 +41,3 @@ namespace dia {
 		void dump(std::string_view filename);
 	};
 }
-
-#define LOG_ERROR(ClassName, ...)                                           \
-	if (!dia::InteractiveLogger::logging()) {                               \
-		dia::InteractiveLogger::set_logging(true);                          \
-		dia::InteractiveLogger::log(base::makeBox<ClassName>(__VA_ARGS__)); \
-		dia::InteractiveLogger::set_logging(false);                         \
-	}
