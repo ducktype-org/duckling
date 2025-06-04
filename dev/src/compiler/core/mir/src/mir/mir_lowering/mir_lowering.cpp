@@ -701,15 +701,15 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-			
+
 			/**
-			 * @brief Visitor that outputs the assignment instruction depending 
+			 * @brief Visitor that outputs the assignment instruction depending
 			 * on the type of the location expression.
-			 * The result is stored in the @p out member. 
+			 * The result is stored in the @p out member.
 			 */
 			struct AssignmentExprVisitor final: public hc::HoutExprVisitorPanicky {
 				struct Result {
-					BlockBuilderRef begin;
+					BlockBuilderRef begin_continuation;
 					Instruction     instruction;
 				};
 
@@ -738,12 +738,12 @@ namespace compiler::mir {
 
 				void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
 					auto local = LocalRef(function.findLocal(expr.symbol).get());
-					output({ .begin       = continuation,
-					         .instruction = Instruction{ Operation::Assign,
-					                                     { local },
-					                                     { new_value },
-					                                     {},
-					                                     assignment_scope } });
+					output({ .begin_continuation = continuation,
+					         .instruction        = Instruction{ Operation::Assign,
+					                                            { local },
+					                                            { new_value },
+					                                            {},
+                                                         assignment_scope } });
 				}
 
 				// In the future the assignment instruction would depend on the type of outer
@@ -759,9 +759,11 @@ namespace compiler::mir {
 				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
 			AssignmentExprVisitor visitor(r_continuation, function, assignment_scope, new_value);
+			stmt.location_expr->acceptVisitor(visitor);
+
 			target_construction_hole.fill(visitor.out->instruction);
 
-			output({ visitor.out->begin });
+			output({ visitor.out->begin_continuation });
 		}
 	};
 
