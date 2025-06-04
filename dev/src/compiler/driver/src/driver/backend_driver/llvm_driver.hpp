@@ -13,7 +13,11 @@ namespace compiler::driver {
 	public:
 		LLVMDriver(CRef<BackendOptions> options): BackendDriver(options) {}
 
-		void compileModule(query::Context& ctx, const BackendModuleData& lir_module, artifacts::FileArtifact output_artifact) final;
+		void compileModule(
+			query::Context&          ctx,
+			const BackendModuleData& lir_module,
+			artifacts::FileArtifact  output_artifact
+		) final;
 
 		std::expected<RunOutput, std::string> run() final;
 	};

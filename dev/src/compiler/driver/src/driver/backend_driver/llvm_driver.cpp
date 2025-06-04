@@ -8,7 +8,11 @@
 
 namespace compiler::driver {
 
-	void LLVMDriver::compileModule(query::Context& ctx, const BackendModuleData& lir_module, artifacts::FileArtifact output_artifact) {
+	void LLVMDriver::compileModule(
+		query::Context&          ctx,
+		const BackendModuleData& lir_module,
+		artifacts::FileArtifact  output_artifact
+	) {
 		backend_llvm::Module mod(lir_module.module_id);
 		for (const auto& lir_function: lir_module.functions)
 			mod.addFunctionToModule(ctx, lir_function);

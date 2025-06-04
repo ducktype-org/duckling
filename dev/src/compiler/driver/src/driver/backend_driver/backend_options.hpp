@@ -1,13 +1,14 @@
 #pragma once
 
 #include <base/string_id.hpp>
+
 #include <vector>
 
 namespace compiler::driver {
 
-    enum class BackendType : std::uint8_t { LLVM, DVM };
+	enum class BackendType : std::uint8_t { LLVM, DVM };
 
-    /**
+	/**
 	 * @brief Compilation options.
 	 */
 	struct BackendOptions final {

@@ -1,15 +1,15 @@
 #pragma once
 
+#include "backend_options.hpp"
+
+#include <artifacts/artifacts.hpp>
 #include <lir/lir_structure/lir_structure.hpp>
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
 #include <base/string_id.hpp>
 
-#include "backend_options.hpp"
-
 #include <expected>
-#include <artifacts/artifacts.hpp>
 
 namespace compiler::driver {
 	/**
@@ -43,8 +43,11 @@ namespace compiler::driver {
 		 * Outputs the module value.
 		 * @param module_data
 		 */
-		virtual void compileModule(query::Context& ctx,
-			 const BackendModuleData& module_data, artifacts::FileArtifact output_artifact) = 0;
+		virtual void compileModule(
+			query::Context&          ctx,
+			const BackendModuleData& module_data,
+			artifacts::FileArtifact  output_artifact
+		) = 0;
 
 		/**
 		 * @brief Run the compiled program. (only for DVM)
@@ -55,7 +58,6 @@ namespace compiler::driver {
 	};
 
 	Box<BackendDriver> createBackendDriver(CRef<BackendOptions> options);
-
 
 
 }

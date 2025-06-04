@@ -16,7 +16,9 @@ namespace compiler::driver {
 	public:
 		DVMDriver(CRef<BackendOptions> options): BackendDriver(options) {}
 
-		void compileModule(query::Context&, const BackendModuleData&, artifacts::FileArtifact output_artifact) override;
+		void compileModule(
+			query::Context&, const BackendModuleData&, artifacts::FileArtifact output_artifact
+		) override;
 
 		auto run() -> std::expected<RunOutput, std::string> final;
 	};

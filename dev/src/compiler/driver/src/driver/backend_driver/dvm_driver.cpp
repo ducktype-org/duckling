@@ -14,15 +14,19 @@
 #include <fstream>
 
 namespace compiler::driver {
-	void DVMDriver::compileModule(query::Context& query_ctx, const BackendModuleData& data, artifacts::FileArtifact output_artifact) {
-
+	void DVMDriver::compileModule(
+		query::Context&          query_ctx,
+		const BackendModuleData& data,
+		artifacts::FileArtifact  output_artifact
+	) {
 		backend_vm::Module       module{ query_ctx, data.module_id, data.functions };
 		vm::code::CodeCollection code_collection = module.build();
 
 		if (not options->dvm_code_only_memory) {
 			std::ofstream dvm_file(
 				output_artifact.FILE
-				/*base::strConcat(data.module_id.strView(), ".dbc").c_str()*/, std::ios::binary
+				/*base::strConcat(data.module_id.strView(), ".dbc").c_str()*/,
+				std::ios::binary
 			);
 			if (!dvm_file.is_open()) CORE_PANIC("Failed to open DVM file for writing");
 			vm::code::serialize(code_collection, dvm_file);
