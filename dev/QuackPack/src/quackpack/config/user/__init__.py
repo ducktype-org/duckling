@@ -1,6 +1,6 @@
 from .build import BuildEntry
-from .cache import CacheLocationEntry
-from .config import Config
+from .cache import Cache
+from .configuration import Configuration
 from .packaging import PackagingEntry
 from .repository import RepositoryEntry
 from .security import Security, TypoTolerance
@@ -8,8 +8,8 @@ from .size import Size
 
 __all__ = [
     "BuildEntry",
-    "CacheLocationEntry",
-    "Config",
+    "Cache",
+    "Configuration",
     "PackagingEntry",
     "RepositoryEntry",
     "Security",

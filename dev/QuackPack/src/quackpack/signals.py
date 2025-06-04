@@ -19,7 +19,7 @@ Recommended way of using `EnableInterrupt` context is:
 ```python
 with contextlib.suppress(SignalInterrupt), EnableInterrupt:
     ...  # blocking operation
-if consume_signal():
+if consume_signal() is not None:
     ...  # handle interrupt
 ```
 """
@@ -32,9 +32,9 @@ from types import FrameType, TracebackType
 from typing import TYPE_CHECKING, Any, Final, override
 
 if TYPE_CHECKING:
-    from signal import _HANDLER as Handler  # pyright: ignore[reportPrivateUsage]
+    from signal import _HANDLER as HANDLER  # pyright: ignore[reportPrivateUsage]
 else:
-    Handler = Any  # Fallback for runtime
+    HANDLER = Any  # Fallback for runtime
 
 
 class SignalInterrupt(Exception):
@@ -48,6 +48,9 @@ class SignalInterrupt(Exception):
 
 
 def raising_signal_handler(signum: int, _frame: FrameType | None):
+    """
+    Signal handler which raises exceptions on a signal.
+    """
     raise SignalInterrupt(signum)
 
 
@@ -66,7 +69,7 @@ _robust_signal_pending: bool = False
 
 
 # Timestamp of the last received signal. Used to forcefully raise an exception
-# from robust handler if something goes wrong and process become unresonsive by
+# from robust handler if something goes wrong and process become unresponsive by
 # not calling `consume_signal`. The value is of this timestamp is measured
 # by monotonic clock. There is no guarantee that a monotonic clock will not jump
 # forward in time, however on most systems that will not happen. In case when
@@ -118,20 +121,20 @@ def _robust_signal_handler(signum: int, _frame: FrameType | None) -> None:
         raise SignalInterrupt(signum)
 
 
-def consume_signal() -> bool:
+def consume_signal() -> int | None:
     """
     Only to be used inside `RobustSignalHandler` context.
 
-    Returns, if there was a signal pending, and clears marker, if there were.
-    When interrupt exception is enabled, it may happen to clear pending signal,
-    before returning.
+    If there was a signal pending, clears it and returns its signum, otherwise
+    returns `None`.
     """
     global _robust_signal_pending
+    global _robust_signum
     if _robust_signal_pending:
         _robust_signal_pending = False
         # Signal interrupt might be delivered after assignment, but before return.
-        return True
-    return False
+        return _robust_signum
+    return None
 
 
 def _robust_enable_interrupt() -> None:
@@ -191,9 +194,9 @@ class SignalHandler(AbstractContextManager[None]):
     handlers in unexpected state, when exception occurs in them.
     """
 
-    def __init__(self, handlers: dict[Signals, Handler]) -> None:
+    def __init__(self, handlers: dict[Signals, HANDLER]) -> None:
         self.handlers_to_install = handlers
-        self.stashed_handlers: dict[Signals, Handler] = {}
+        self.stashed_handlers: dict[Signals, HANDLER] = {}
 
     @override
     def __enter__(self) -> None:
@@ -232,7 +235,7 @@ class RobustSignalHandler(SignalHandler):
     """
     `SignalHandlers` specialized for robust signal handler provided by this module.
     Installs it for all signals returned by `default_handled_signals`.
-    Entering `RobustSignalHandler` while already inside such context may loose
+    Entering `RobustSignalHandler` while already inside such context may lose
     pending signal.
     """
 

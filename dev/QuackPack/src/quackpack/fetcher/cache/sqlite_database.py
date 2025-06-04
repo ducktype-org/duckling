@@ -21,10 +21,10 @@ logger = get_logger(__name__)
 class SQLiteDatabase:
     """
     A context manager for SQLite database connections.
-    Provides methods to execute queries and fetch results.
-    ----
-    Args:
-    - `db_path`: Path to the SQLite database file.
+
+    Provides methods to execute SQL queries and retrieve results using a persistent connection.
+
+    :param pathlib.Path db_path: Path to the SQLite database file.
     """
 
     def __init__(self, db_path: Path) -> None:
@@ -33,10 +33,9 @@ class SQLiteDatabase:
 
     def close_connection(self, rollback: bool = False) -> None:
         """
-        Closes the SQLite connection, optionally rolling back any uncommitted transactions.
-        ----
-        Args:
-        - `rollback`: Whether to roll back the current transaction before closing. Defaults to False.
+        Close the SQLite connection, optionally rolling back the current transaction.
+
+        :param bool rollback: Whether to roll back before closing the connection.
         """
 
         if rollback:
@@ -46,10 +45,9 @@ class SQLiteDatabase:
     def execute_query(self, query: str, params: tuple[Any, ...] = ()) -> None:
         """
         Execute an SQL query with optional parameters.
-        ----
-        Args:
-        - `query`: The SQL query to execute.
-        - `params`: Optional tuple of parameters for the query.
+
+        :param str query: The SQL query to execute.
+        :param tuple[Any, ...] params: Tuple of parameters to substitute into the SQL query.
         """
 
         logger.debug(f"Executing SQLite query '{query}' with {params=}")
@@ -61,13 +59,11 @@ class SQLiteDatabase:
     def fetch_all(self, query: str, params: tuple[Any, ...] = ()) -> list[tuple[Any, ...]]:
         """
         Execute an SQL query and fetch all results.
-        ----
-        Args:
-        - `query`: The SQL query to execute.
-        - `params`: Optional tuple of parameters for the query.
-        ----
-        Returns:
-        - `list[tuple[Any, ...]]`: A list of tuples representing the query results.
+
+        :param str query: The SQL query to execute.
+        :param tuple[Any, ...] params: Tuple of parameters to substitute into the SQL query.
+        :return: A list of result rows, each as a tuple.
+        :rtype: list[tuple[Any, ...]]
         """
 
         logger.debug(f"Fetching all SQLite queries '{query}' with {params=}")
@@ -80,13 +76,11 @@ class SQLiteDatabase:
     def fetch_one(self, query: str, params: tuple[Any, ...] = ()) -> tuple[Any, ...] | None:
         """
         Execute an SQL query and fetch a single result.
-        ----
-        Args:
-        - `query`: The SQL query to execute.
-        - `params`: Optional tuple of parameters for the query.
-        ----
-        Returns:
-        - `tuple[Any, ...] | None`: A tuple representing the query result, or None if no result is found.
+
+        :param str query: The SQL query to execute.
+        :param tuple[Any, ...] params: Tuple of parameters to substitute into the SQL query.
+        :return: A single result row as a tuple, or None if no result is found.
+        :rtype: tuple[Any, ...] | None
         """
 
         logger.debug(f"Fetching all SQLite query '{query}' with {params=}")
@@ -99,11 +93,12 @@ class SQLiteDatabase:
 
 class SQLiteDatabaseContext[T: SQLiteDatabase](AbstractContextManager[T], ABC):
     """
-    A context manager for SQLite database connections used in `with` statements.
-    Manages the lifetime of an SQLite connection, ensuring it is opened and closed appropriately.
-    ----
-    Args:
-    - `db_path`: Path to the SQLite database file.
+    A context manager for handling the lifecycle of an SQLite database connection.
+
+    Intended to be used with a ``with`` statement. It opens the connection on entry
+    and closes it on exit, rolling back if an exception occurred.
+
+    :param pathlib.Path db_path: Path to the SQLite database file.
     """
 
     def __init__(self, db_path: Path) -> None:
@@ -132,10 +127,10 @@ class SQLiteDatabaseContext[T: SQLiteDatabase](AbstractContextManager[T], ABC):
     @abstractmethod
     def _create_instance(self) -> T:
         """
-        Creates an instance of `SQLiteDatabase`.
+        Create and return a new instance of the SQLite database wrapper.
 
-        This method must be implemented by subclasses to create an instance of the appropriate database class.
-        ----
-        Returns:
-        - `SQLiteDatabase`: An instance of the SQLite database.
+        This must be implemented by subclasses.
+
+        :return: An instance of the SQLite database.
+        :rtype: T
         """

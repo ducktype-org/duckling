@@ -22,41 +22,40 @@ from quackpack.fetcher.util.http_headers import HTTPHeaders
 class HTTPRequest:
     """
     Represents an HTTP client request.
-    ----
-    Args:
-    - `url`: The URL to send the request to.
-    - `method`: The HTTP method to use (default: "GET").
-    - `headers`: Optional dictionary or `HTTPHeaders` object containing request headers.
-    - `body`: Optional bytes or string containing the request body.
-    - `auth_username`: Optional username for authentication.
-    - `auth_password`: Optional password for authentication.
-    - `auth_mode`: Optional authentication mode.
-    - `connect_timeout`: Optional float representing the connection timeout.
-    - `request_timeout`: Optional float representing the request timeout.
-    - `if_modified_since`: Optional float or `datetime` representing the If-Modified-Since header.
-    - `follow_redirects`: Optional boolean indicating whether to follow redirects.
-    - `max_redirects`: Optional integer representing the maximum number of redirects to follow.
-    - `user_agent`: Optional string representing the User-Agent header.
-    - `use_gzip`: Optional boolean indicating whether to use gzip compression.
-    - `network_interface`: Optional string representing the network interface to use.
-    - `streaming_callback`: Optional callback function for streaming data.
-    - `header_callback`: Optional callback function for handling headers.
-    - `prepare_curl_callback`: Optional callback function for preparing cURL options.
-    - `proxy_host`: Optional string representing the proxy host.
-    - `proxy_port`: Optional integer representing the proxy port.
-    - `proxy_username`: Optional string representing the proxy username.
-    - `proxy_password`: Optional string representing the proxy password.
-    - `proxy_auth_mode`: Optional string representing the proxy authentication mode.
-    - `allow_nonstandard_methods`: Optional boolean indicating whether to allow non-standard HTTP methods.
-    - `validate_cert`: Optional boolean indicating whether to validate SSL certificates.
-    - `ca_certs`: Optional string representing the path to CA certificates.
-    - `allow_ipv6`: Optional boolean indicating whether to allow IPv6.
-    - `client_key`: Optional string representing the client key.
-    - `client_cert`: Optional string representing the client certificate.
-    - `body_producer`: Optional function producing the request body.
-    - `expect_100_continue`: Optional boolean indicating whether to expect 100 Continue.
-    - `decompress_response`: Optional boolean indicating whether to decompress the response.
-    - `ssl_options`: Optional dictionary or `SSLContext` containing SSL options.
+
+    :param str url: The URL to send the request to.
+    :param str method: The HTTP method to use (default: "GET").
+    :param dict[str, str] | quackpack.fetcher.util.HTTPHeaders | None headers: Optional dictionary or :class:`quackpack.fetcher.util.HTTPHeaders` object containing request headers.
+    :param bytes | str | None body: Optional bytes or string containing the request body.
+    :param str | None auth_username: Optional username for authentication.
+    :param str | None auth_password: Optional password for authentication.
+    :param str | None auth_mode: Optional authentication mode.
+    :param float | None connect_timeout: Optional float representing the connection timeout.
+    :param float | None request_timeout: Optional float representing the request timeout.
+    :param float | datetime.datetime | None if_modified_since: Optional float or :class:`datetime.datetime` representing the If-Modified-Since header.
+    :param bool | None follow_redirects: Optional boolean indicating whether to follow redirects.
+    :param int | None max_redirects: Optional integer representing the maximum number of redirects to follow.
+    :param str | None user_agent: Optional string representing the User-Agent header.
+    :param bool | None use_gzip: Optional boolean indicating whether to use gzip compression.
+    :param str | None network_interface: Optional string representing the network interface to use.
+    :param Callable[[bytes], None] | None streaming_callback: Optional callback function for streaming data.
+    :param Callable[[str], None] | None header_callback: Optional callback function for handling headers.
+    :param Callable[[Any], None] | None prepare_curl_callback: Optional callback function for preparing cURL options.
+    :param str | None proxy_host: Optional string representing the proxy host.
+    :param int | None proxy_port: Optional integer representing the proxy port.
+    :param str | None proxy_username: Optional string representing the proxy username.
+    :param str | None proxy_password: Optional string representing the proxy password.
+    :param str | None proxy_auth_mode: Optional string representing the proxy authentication mode.
+    :param bool | None allow_nonstandard_methods: Optional boolean indicating whether to allow non-standard HTTP methods.
+    :param bool | None validate_cert: Optional boolean indicating whether to validate SSL certificates.
+    :param str | None ca_certs: Optional string representing the path to CA certificates.
+    :param bool | None allow_ipv6: Optional boolean indicating whether to allow IPv6.
+    :param str | None client_key: Optional string representing the client key.
+    :param str | None client_cert: Optional string representing the client certificate.
+    :param Callable[[Callable[[bytes], None]], Future[None]] | None body_producer: Optional function producing the request body.
+    :param bool expect_100_continue: Optional boolean indicating whether to expect 100 Continue (default: False).
+    :param bool | None decompress_response: Optional boolean indicating whether to decompress the response.
+    :param dict[str, Any] | ssl.SSLContext | None ssl_options: Optional dictionary or :class:`ssl.SSLContext` containing SSL options.
     """
 
     _headers: dict[str, str] | HTTPHeaders | None = None
@@ -157,9 +156,9 @@ class HTTPRequest:
     def headers(self) -> HTTPHeaders:
         """
         Get the request headers.
-        ----
-        Returns:
-        - `HTTPHeaders`: The request headers.
+
+        :return: The request headers.
+        :rtype: quackpack.fetcher.util.HTTPHeaders
         """
 
         # NOTE: Original comment.
@@ -172,9 +171,9 @@ class HTTPRequest:
     def headers(self, value: dict[str, str] | HTTPHeaders | None) -> None:
         """
         Set the request headers.
-        ----
-        Args:
-        - `value`: The headers to set, either as a dictionary or `HTTPHeaders` object.
+
+        :param value: The headers to set, either as a dictionary or `HTTPHeaders` object.
+        :type value: dict[str, str] | quackpack.fetcher.util.HTTPHeaders | None
         """
 
         if value is None:
@@ -186,9 +185,9 @@ class HTTPRequest:
     def body(self) -> bytes | str | None:
         """
         Get the request body.
-        ----
-        Returns:
-        - `bytes | str | None`: The request body.
+
+        :return: The request body.
+        :rtype: bytes | str | None
         """
 
         return self._body
@@ -197,9 +196,8 @@ class HTTPRequest:
     def body(self, value: bytes | str | None) -> None:
         """
         Set the request body.
-        ----
-        Args:
-        - `value`: The body to set, either as bytes, a string, or None.
+
+        :param bytes | str | None value: The body to set.
         """
 
         self._body = value
@@ -208,11 +206,11 @@ class HTTPRequest:
 class HTTPRequestProxy:
     """
     Combines an object with a dictionary of defaults.
+
     Used internally by `AsyncHTTPClient` implementations.
-    ----
-    Args:
-    - `request`: The `HTTPRequest` object to proxy.
-    - `defaults`: Optional dictionary of default values.
+
+    :param quackpack.fetcher.util.HTTPRequest request: The `HTTPRequest` object to proxy.
+    :param dict[str, Any] | None defaults: Optional dictionary of default values.
     """
 
     def __init__(self, request: HTTPRequest, defaults: dict[str, Any] | None) -> None:
@@ -222,12 +220,10 @@ class HTTPRequestProxy:
     def __getattr__(self, name: str) -> Any:
         """
         Get an attribute from the proxied request or defaults.
-        ----
-        Args:
-        - `name`: The name of the attribute to retrieve.
-        ----
-        Returns:
-        - `Any`: The attribute value from the request or defaults.
+
+        :param str name: The name of the attribute to retrieve.
+        :return: The attribute value from the request or defaults.
+        :rtype: Any
         """
 
         request_attr = getattr(self.request, name) if hasattr(self.request, name) else None

@@ -1,9 +1,10 @@
 import contextlib
+from collections.abc import Iterator
 from enum import Enum
 from io import StringIO
 from math import log10
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 from pydantic import BaseModel, ValidationError
@@ -45,7 +46,6 @@ def get_file_fragment(path: Path, start: tuple[int, int], end: tuple[int, int]) 
     for i, line in enumerate(lines):
         if i + 1 < start_line or i - 1 > end_line:
             continue
-        line += " "
         line_number_indentation_length = max_line_number_indentation_length - digits_in_int(i + 1)
         buffer.write("[blue]")
         for _ in range(line_number_indentation_length):
@@ -195,7 +195,9 @@ def deserialize_and_tokenise(path: Path) -> tuple[Any, list[yaml.Token]]:
 
     with open(path) as config_file:
         try:
-            tokens: list[yaml.Token] = list(yaml.scan(config_file, Loader=yaml.BaseLoader))  # pyright: ignore[reportUnknownArgumentType,reportUnknownMemberType]
+            tokens: list[yaml.Token] = list(
+                cast(Iterator[yaml.Token], yaml.scan(config_file, Loader=yaml.BaseLoader))  # pyright: ignore[reportUnknownMemberType]
+            )
         except yaml.MarkedYAMLError as exp:
             if exp.problem_mark is not None:
                 start_line, start_column, end_line, end_column = (
@@ -544,7 +546,9 @@ def load_and_validate[T: BaseModel](path: Path, expected_type: type[T]) -> T:
             ) from None
 
         # The only possibility left is a 'key_missing' error
-        assert isinstance(non_union_error_keys[-1], str)
+        assert isinstance(non_union_error_keys[-1], str), (
+            "we got out of sync with Pydantic ValidationError.loc"
+        )
         missing_key = non_union_error_keys[-1]
         non_union_error_keys = non_union_error_keys[:-1]
         if not non_union_error_keys:

@@ -6,6 +6,7 @@ import pytest
 from quackpack.fetcher.api_types import Package, SingleMetadata
 from quackpack.fetcher.cache import MetadataCache, MetadataCacheContext, SQLiteDatabase
 from quackpack.util.errors import QuackPackError
+from quackpack.util.pkgid import Identifier
 
 
 @pytest.fixture(scope="function")
@@ -16,7 +17,7 @@ def temp_db_file(tmp_path: Path):
 
 @pytest.fixture(scope="class")
 def example_package():
-    return Package(name="example-package", version="1.2.3")
+    return Package(id=Identifier("example_package"), version="1.2.3")
 
 
 @pytest.fixture(scope="class")
@@ -26,7 +27,6 @@ def example_metadata():
     "metadata": {
         "author": "Patryk Rogalski",
         "version": "1.2.3",
-        "id": "quackpack",
         "name": "quackpack",
         "license": "GLTWSPL"
     },
@@ -130,7 +130,7 @@ class TestMetadataCache:
         cache = MetadataCache(temp_db_file)
         cache.execute_query(
             f"INSERT INTO {cache.SQLiteMetadata.TABLE} ({cache.SQLiteMetadata.Columns.NAME}, {cache.SQLiteMetadata.Columns.VERSION}, {cache.SQLiteMetadata.Columns.METADATA}) VALUES (?, ?, ?)",
-            (example_package.name, str(example_package.version), "invalid_json"),
+            (str(example_package.id), str(example_package.version), "invalid_json"),
         )
 
         with pytest.raises(QuackPackError):

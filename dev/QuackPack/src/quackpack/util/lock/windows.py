@@ -19,7 +19,7 @@ from win32file import (
 )
 
 from quackpack.signals import EnableInterrupt
-from quackpack.util.lock.common import BaseFileLock, Blocking, LockType, LockWouldBlock
+from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 if TYPE_CHECKING:
     from _win32typing import PyHANDLE, PyOVERLAPPED
@@ -39,12 +39,12 @@ ERROR_LOCK_VIOLATION: Literal[0x21] = 0x21
 class WindowsFileLock(BaseFileLock):
     @override
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, blocking: Blocking = Blocking.YES
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None:
         self.path: Path = path
         self.flags: int = (
             LOCKFILE_EXCLUSIVE_LOCK if lock_type is LockType.EXCLUSIVE else LOCKFILE_SHARED_LOCK
-        ) | (LOCKFILE_FAIL_IMMEDIATELY if blocking is Blocking.NO else 0)
+        ) | (LOCKFILE_FAIL_IMMEDIATELY if not blocking else 0)
         self.fd: PyHANDLE | None = None
         self.ov: PyOVERLAPPED | None = None
 
@@ -56,7 +56,7 @@ class WindowsFileLock(BaseFileLock):
     @override
     @classmethod
     def try_delete_lock(cls, path: Path) -> None:
-        # On Windows, trying to delete file opened by an another process
+        # On Windows, trying to delete file opened by another process
         # leads to an ERROR_SHARING_VIOLATION error.
         try:
             win32file.DeleteFile(str(path))
@@ -101,7 +101,7 @@ class WindowsFileLock(BaseFileLock):
                 with suppress(win32api.error):
                     self.fd.close()
             if isinstance(err, win32api.error) and err.winerror == ERROR_LOCK_VIOLATION:
-                raise LockWouldBlock() from err
+                raise LockWouldBlock from err
             raise
 
     @override

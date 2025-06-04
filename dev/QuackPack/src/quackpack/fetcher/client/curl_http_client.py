@@ -1,15 +1,18 @@
 """
-Module for handling asynchronous HTTP requests using libcurl.
-----
+Asynchronous HTTP client module using libcurl.
+
+This module provides classes for performing asynchronous HTTP requests
+leveraging libcurl's multi interface.
+
 Classes:
-- `CurlError`: Exception for errors encountered by the `CurlHTTPClient`.
-- `CurlInfo`: A named tuple containing information about a cURL request.
-- `CurlHTTPClient`: An asynchronous HTTP client using libcurl.
-----
+    - CurlError: Exception raised for errors encountered by CurlHTTPClient.
+    - CurlInfo: Named tuple containing details about a cURL request.
+    - CurlHTTPClient: Asynchronous HTTP client built on libcurl.
+
 References:
-  [1] https://curl.haxx.se/libcurl/c/multi-uv.html
-  [2] https://github.com/tornadoweb/tornado/blob/master/tornado/curl_httpclient.py
-  [3] https://github.com/gpfei/aiocurl
+    [1] https://curl.haxx.se/libcurl/c/multi-uv.html
+    [2] https://github.com/tornadoweb/tornado/blob/master/tornado/curl_httpclient.py
+    [3] https://github.com/gpfei/aiocurl
 """
 
 # NOTE: pycurl methods of Curl and MultiCurl objects like setopt, getopt have unknown types and pyright is really mad about it.
@@ -44,11 +47,10 @@ curl_log = get_logger(__name__)
 
 class CurlError(HTTPError):
     """
-    Exception for errors encountered by the `CurlHTTPClient`.
-    ----
-    Args:
-    - `errno`: The error number from libcurl.
-    - `message`: The error message from libcurl.
+    Exception for errors encountered by the :class:`CurlHTTPClient`.
+
+    :param int errno: The error number from libcurl.
+    :param str message: The error message from libcurl.
     """
 
     def __init__(self, errno: int, message: str) -> None:
@@ -59,13 +61,17 @@ class CurlError(HTTPError):
 class CurlInfo(NamedTuple):
     """
     A named tuple containing information about a cURL request.
-    ----
-    Attributes:
-    - `future`: The future associated with the request.
-    - `request`: The HTTP request being made.
-    - `buffer`: The buffer for storing the response body.
-    - `headers_buffer`: The buffer for storing the response headers.
-    - `curl_start_time`: The time when the cURL request started.
+
+    :ivar future: The future associated with the request.
+    :vartype future: asyncio.Future[quackpack.fetcher.util.HTTPResponse]
+    :ivar request: The HTTP request being made.
+    :vartype request: quackpack.fetcher.util.HTTPRequest
+    :ivar buffer: The buffer for storing the response body.
+    :vartype buffer: io.BytesIO | io.FileIO
+    :ivar headers_buffer: The buffer for storing the response headers.
+    :vartype headers_buffer: io.BytesIO
+    :ivar curl_start_time: The time when the cURL request started.
+    :vartype curl_start_time: float
     """
 
     future: Future[HTTPResponse]
@@ -78,9 +84,8 @@ class CurlInfo(NamedTuple):
 class CurlHTTPClient:
     """
     An asynchronous HTTP client using libcurl.
-    ----
-    Args:
-    - `max_clients`: The maximum number of concurrent clients (default: 100).
+
+    :param int max_clients: The maximum number of concurrent clients (default: 100).
     """
 
     def __init__(self, max_clients: int = 100) -> None:
@@ -126,6 +131,7 @@ class CurlHTTPClient:
         """
         Close the HTTP client and clean up resources.
         """
+
         curl_log.debug("Closing cURL client")
         if self._closed:
             return
@@ -143,9 +149,8 @@ class CurlHTTPClient:
     def _set_timeout(self, milliseconds: float) -> None:
         """
         Set a timeout for the next cURL operation.
-        ----
-        Args:
-        - `milliseconds`: The timeout duration in milliseconds.
+
+        :param float milliseconds: The timeout duration in milliseconds.
         """
 
         curl_log.debug(f"Setting cURL timeout to {milliseconds}ms")
@@ -207,9 +212,8 @@ class CurlHTTPClient:
     async def _periodical_force_timeout(self, milliseconds: float) -> None:
         """
         Periodically force a timeout check for cURL operations.
-        ----
-        Args:
-        - `milliseconds`: The interval between checks in milliseconds.
+
+        :param float milliseconds: The interval between checks in milliseconds.
         """
 
         while True:
@@ -234,12 +238,11 @@ class CurlHTTPClient:
     def _handle_socket(self, event: int, fd: int, _multi: pycurl.CurlMulti, _data: bytes) -> None:
         """
         Handle socket events for cURL operations.
-        ----
-        Args:
-        - `event`: The socket event type.
-        - `fd`: The file descriptor for the socket.
-        - `_multi`: The cURL multi handle.
-        - `_data`: Additional data associated with the event.
+
+        :param int event: The socket event type.
+        :param int fd: The file descriptor for the socket.
+        :param pycurl.CurlMulti _multi: The cURL multi handle.
+        :param bytes _data: Additional data associated with the event.
         """
 
         # TODO: investigate why OSError can be sometimes observed in stdout (but does not break anything)
@@ -259,10 +262,9 @@ class CurlHTTPClient:
     def _handle_events(self, fd: int, events: int) -> None:
         """
         Handle socket events for cURL operations.
-        ----
-        Args:
-        - `fd`: The file descriptor for the socket.
-        - `events`: The events to handle.
+
+        :param int fd: The file descriptor for the socket.
+        :param int events: The events to handle.
         """
 
         action = 0
@@ -287,11 +289,10 @@ class CurlHTTPClient:
     ) -> None:
         """
         Finish a cURL operation and process the result.
-        ----
-        Args:
-        - `curl`: The cURL handle.
-        - `curl_error`: The error code, if any.
-        - `curl_message`: The error message, if any.
+
+        :param pycurl.Curl curl: The cURL handle.
+        :param int | None curl_error: The error code, if any.
+        :param str | None curl_message: The error message, if any.
         """
 
         curl_log.debug("Finishing cURL client")
@@ -344,13 +345,14 @@ class CurlHTTPClient:
     async def fetch(self, request: HTTPRequest, buffer: BytesIO | FileIO) -> HTTPResponse | None:
         """
         Fetch an HTTP request using cURL.
-        ----
-        Args:
-        - `request`: The HTTP request to fetch.
-        - `buffer`: Buffer to which response body will be saved.
-        ----
-        Returns:
-        - `HTTPResponse | None`: A HTTP response, or None if the request fails.
+
+        :param request: The HTTP request to fetch.
+        :type request: quackpack.fetcher.util.HTTPRequest
+        :param buffer: Buffer to which the response body will be saved.
+        :type buffer: io.BytesIO | io.FileIO
+
+        :returns: A HTTP response, or None if the request fails.
+        :rtype: quackpack.fetcher.util.HTTPResponse | None
         """
 
         curl_log.debug(f"Fetching cURL {request}")
@@ -384,6 +386,13 @@ class CurlHTTPClient:
 
     @classmethod
     def _curl_create(cls) -> pycurl.Curl:
+        """
+        Create and configure a new cURL handle.
+
+        :return: A configured pycurl.Curl instance.
+        :rtype: pycurl.Curl
+        """
+
         curl = pycurl.Curl()
 
         curl.setopt(pycurl.PROTOCOLS, pycurl.PROTO_HTTP | pycurl.PROTO_HTTPS)
@@ -396,12 +405,14 @@ class CurlHTTPClient:
     ) -> None:
         """
         Set up a cURL request with the specified options.
-        ----
-        Args:
-        - `curl`: The cURL handle.
-        - `request`: The HTTP request to set up.
-        - `buffer`: The buffer for storing the response body.
-        - `headers_buffer`: The buffer for storing the response headers.
+
+        :param pycurl.Curl curl: The cURL handle.
+        :param request: The HTTP request to set up.
+        :type request: quackpack.fetcher.util.HTTPRequest
+        :param buffer: The buffer for storing the response body.
+        :type buffer: io.BytesIO | io.FileIO
+        :param headers_buffer: The buffer for storing the response headers.
+        :type headers_buffer: io.BytesIO
         """
 
         curl.setopt(pycurl.URL, request.url.encode())
@@ -529,8 +540,8 @@ class CurlHTTPClient:
                 # forbid clients from sending a body, it arguably
                 # disallows the server from doing anything with them.
                 raise ValueError("Body must be None for GET request")
-            assert request.body is None or isinstance(request.body, str)
-            body = (request.body or "").encode()
+
+            body = request.body if isinstance(request.body, bytes) else (request.body or "").encode()
             request_buffer = BytesIO(body)
 
             def ioctl(cmd: int) -> None:
@@ -589,11 +600,12 @@ class CurlHTTPClient:
     ) -> None:
         """
         Handle a header line received from a cURL request.
-        ----
-        Args:
-        - `headers_buffer`: The buffer for storing the response headers.
-        - `header_callback`: Optional callback function for handling headers.
-        - `header_line`: The header line received from cURL.
+
+        :param headers_buffer: The buffer for storing the response headers.
+        :type headers_buffer: io.BytesIO
+        :param header_callback: Optional callback function for handling headers.
+        :type header_callback: Callable[[str], None] | None
+        :param bytes header_line: The header line received from cURL.
         """
 
         if header_callback is not None:

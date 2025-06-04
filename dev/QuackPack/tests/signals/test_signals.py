@@ -47,7 +47,7 @@ def test_robust_context_consume():
     with RobustSignalHandler():
         counter = 0
         for _ in range(20):
-            if consume_signal():
+            if consume_signal() is not None:
                 counter += 1
                 if counter == 3:
                     return
@@ -63,16 +63,16 @@ def test_robust_context_interrupt():
         for _ in range(2):
             with pytest.raises(SignalInterrupt), EnableInterrupt():
                 sleep(1)
-            assert consume_signal()
-            assert not consume_signal()
+            assert consume_signal() is not None
+            assert consume_signal() is None
 
         sleep(0.5)
         with pytest.raises(SignalInterrupt), EnableInterrupt():
             pass
-        assert consume_signal()
+        assert consume_signal() is not None
 
         sleep(0.5)
-        assert consume_signal()
+        assert consume_signal() is not None
     with pytest.raises(KeyboardInterrupt):
         sleep(1)
 
@@ -84,9 +84,9 @@ def test_robust_context_no_interrupt():
     with RobustSignalHandler():
         with suppress(SignalInterrupt), EnableInterrupt():
             sleep(0.5)
-        assert not consume_signal()
+        assert consume_signal() is None
         sleep(0.6)
-        assert consume_signal()
+        assert consume_signal() is not None
 
 
 # TODO signals work completely differently on windows, needs fixing

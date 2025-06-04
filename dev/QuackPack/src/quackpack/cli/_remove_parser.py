@@ -1,26 +1,32 @@
+from quackpack.commands.remove import RemoveOptions, remove
+from quackpack.project_loader import ProjectLoader
 from quackpack.util.global_context import GlobalContext
 
-from ._parser import CliParser
+from ._arguments import Arguments
+from ._parser import ArgumentCount, CliParser
 
 
 def get_parser() -> CliParser:
     """
-    Get the argument parser for `remove` command.
-    ----
-    Returns:
-    - `CliParser`: Parser for `remove` command.
+    Get the CLI argument parser for the ``remove`` command.
+
+    :return: The parser configured for the ``remove`` command.
+    :rtype: quackpack.cli._parser.CliParser
     """
+
     return CliParser.subcommand(name="remove", description="Remove packages from the current venv").add_str(
-        long_name="packages", multiple=True, help="Packages to remove"
+        long_name="packages", argument_count=ArgumentCount.OneOrMore, help="Packages to remove"
     )
 
 
-def execute(ctx: GlobalContext) -> None:
+def execute(ctx: GlobalContext, args: Arguments) -> None:
     """
-    Execute this subcommand.
-    ----
-    Args:
-    - `ctx`: all possibly needed context for this function.
+    Execute the ``remove`` subcommand to remove packages from the current project environment.
+
+    :param quackpack.util.global_context.GlobalContext ctx: Context providing necessary runtime information.
+    :param quackpack.cli._arguments.Arguments args: Parsed arguments from the CLI for this command.
     """
-    ctx.console.debug("Implement 'execute()' for 'remove'")
-    raise NotImplementedError
+
+    project = ProjectLoader.find_from_cwd()
+    options = RemoveOptions(ctx=ctx, to_remove=args.matched.packages, project=project)
+    remove(options)

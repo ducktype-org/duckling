@@ -18,10 +18,12 @@ class Version:
     """
     Package major version. Should be non-negative.
     """
+
     minor: int = 0
     """
     Package minor version. Should be non-negative.
     """
+
     patch: int = 0
     """
     Package patch version. Should be non-negative.

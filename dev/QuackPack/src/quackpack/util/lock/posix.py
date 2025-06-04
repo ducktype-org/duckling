@@ -8,7 +8,7 @@ from typing import override
 
 from quackpack.signals import EnableInterrupt
 from quackpack.util.context_managers import OsFdContext, UMaskContext
-from quackpack.util.lock.common import BaseFileLock, Blocking, LockType, LockWouldBlock
+from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 
 def _posix_acquire(path: Path, lock_type: int) -> int:
@@ -52,7 +52,7 @@ def _posix_acquire(path: Path, lock_type: int) -> int:
                 # Posix does not define which of those two errors are returned
                 # when trying to acquire held lock with LOCK_NB.
                 if err.errno in (errno.EACCES, errno.EAGAIN):
-                    raise LockWouldBlock() from err
+                    raise LockWouldBlock from err
                 raise
 
             obtained_stat = os.fstat(fd)
@@ -76,11 +76,11 @@ def _posix_acquire(path: Path, lock_type: int) -> int:
 class PosixFileLock(BaseFileLock):
     @override
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, blocking: Blocking = Blocking.YES
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None:
         self.path: Path = path
         self.flags: int = (LOCK_EX if lock_type is LockType.EXCLUSIVE else LOCK_SH) | (
-            LOCK_NB if blocking is Blocking.NO else 0
+            LOCK_NB if not blocking else 0
         )
         self.fd: int | None = None
 

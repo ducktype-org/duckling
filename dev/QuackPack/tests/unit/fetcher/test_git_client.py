@@ -12,6 +12,7 @@ from git.exc import GitCommandError
 
 from quackpack.fetcher.client.git_client import GitClient
 from quackpack.util.errors import QuackPackError
+from quackpack.project_loader import ProjectLoader
 
 
 @pytest.fixture
@@ -23,7 +24,11 @@ def local_git_repo(tmp_path):
     repo = Repo.init(repo_dir)
 
     (repo_dir / "test_file.txt").write_text("Hello, Git!")
-    repo.index.add(["test_file.txt"])
+    (repo_dir / ProjectLoader.MANIFEST_NAME).write_text("""
+    metadata:
+        name: fixtured_git_dependency
+        version: 1.0""")
+    repo.index.add(["test_file.txt", ProjectLoader.MANIFEST_NAME])
     repo.index.commit("Initial commit")
 
     repo.create_head("test-branch")

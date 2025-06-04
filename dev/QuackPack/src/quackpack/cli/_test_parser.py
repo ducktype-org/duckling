@@ -1,15 +1,17 @@
 from quackpack.util.global_context import GlobalContext
 
+from ._arguments import Arguments
 from ._parser import CliParser, ExclusiveGroup
 
 
 def get_parser() -> CliParser:
     """
-    Get the argument parser for `test` command.
-    ----
-    Returns:
-    - `CliParser`: Parser for `test` command.
+    Get the CLI argument parser for the ``test`` command.
+
+    :return: The parser configured for the ``test`` command.
+    :rtype: quackpack.cli._parser.CliParser
     """
+
     return (
         CliParser.subcommand(name="test", description="Test a current project")
         .add_jobs()
@@ -24,12 +26,14 @@ def get_parser() -> CliParser:
     )
 
 
-def execute(ctx: GlobalContext) -> None:
+def execute(ctx: GlobalContext, _args: Arguments) -> None:
     """
-    Execute this subcommand.
-    ----
-    Args:
-    - `ctx`: all possibly needed context for this function.
+    Execute the ``test`` subcommand to test the current project.
+
+    :param quackpack.util.global_context.GlobalContext ctx: Context providing necessary runtime information.
+    :param quackpack.cli._arguments.Arguments _args: Parsed arguments from the CLI for this command.
+    :raises NotImplementedError: Function is not yet implemented.
     """
+
     ctx.console.debug("Implement 'execute()' for 'test'")
     raise NotImplementedError

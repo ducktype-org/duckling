@@ -11,6 +11,8 @@ from typing import Any
 from git import Repo
 from git.exc import GitCommandError, GitCommandNotFound
 
+from quackpack.fetcher.api_types import SingleMetadata
+from quackpack.project_loader import ProjectLoader
 from quackpack.util.errors import QuackPackError
 from quackpack.util.logger import get_logger
 
@@ -31,20 +33,19 @@ class GitClient:
         branch: str | None = None,
         tag: str | None = None,
         rev: str | None = None,
-    ) -> None:
+    ) -> tuple[str, SingleMetadata]:
         """
-        Clone a Git repository to the specified filepath.
-        ----
-        Args:
-        - `url`: The URL of the Git repository.
-        - `destination`: The local path where the repository will be cloned.
-        - `branch`: Optional branch to clone.
-        - `tag`: Optional tag to clone.
-        - `rev`: Optional revision (commit hash) to checkout after cloning.
-        ----
-        Raises:
-        - `QuackPackError`: If the directory already exists or if a Git command fails.
-        - `ValueError`: If both `branch` and `tag` are provided.
+        Clone a Git repository to a local directory and fetch project metadata.
+
+        :param str url: The URL of the Git repository to clone.
+        :param pathlib.Path destination: The local path where the repository will be cloned.
+        :param str | None branch: The branch to clone.
+        :param str | None tag: The tag to clone.
+        :param str | None rev: The revision (commit hash) to checkout after cloning.
+        :raises quackpack.util.errors.QuackPackError: If the destination exists or a Git command fails.
+        :raises ValueError: If both ``branch`` and ``tag`` are provided simultaneously.
+        :return: The fetched project Git commit hash and configuration metadata.
+        :rtype: tuple[str, quackpack.fetcher.api_types.SingleMetadata]
         """
 
         logger.debug(f"Git client: cloning '{url}' to {destination}; {branch=}, {tag=}, {rev=}")
@@ -75,3 +76,8 @@ class GitClient:
                 repo.git.checkout(rev)
             except GitCommandError as e:
                 raise QuackPackError(e) from e
+
+        metadata = ProjectLoader.find_at_exact_directory(destination).manifest_without_acquiring_lock()
+        commit_hash = str(repo.rev_parse("HEAD"))
+
+        return commit_hash, metadata

@@ -1,26 +1,26 @@
 from quackpack.util.global_context import GlobalContext
 
-from ._parser import CliParser
+from ._arguments import Arguments
+from ._parser import ArgumentCount, CliParser
 
 
 def get_parser(prog: str) -> CliParser:
     """
-    Get the argument parser for `alias` command.
-    ----
-    Args:
-    - `prog`: Program name from main parser.
-    ----
-    Returns:
-    - `CliParser`: Parser for `alias` command.
+    Get the CLI argument parser for the ``alias`` subcommand.
+
+    :param str prog: The name of the program, used for displaying usage in help messages.
+    :return: The parser configured for the ``alias`` command.
+    :rtype: quackpack.cli._parser.CliParser
     """
+
     return CliParser.subcommand(
-        name="alias", description="Manage aliases of packages in the currrent venv"
+        name="alias", description="Manage aliases of packages in the current venv"
     ).add_subcommands(
         CliParser.subcommand(name="add", description="Add alias to the package")
         .add_str(long_name="package", help="Package to change")
         .add_str(long_name="alias", help="Alias to add"),
         CliParser.subcommand(name="remove", description="Remove packages aliases").add_str(
-            long_name="alias", multiple=True, help="Aliases to remove"
+            long_name="alias", argument_count=ArgumentCount.OneOrMore, help="Aliases to remove"
         ),
         CliParser.subcommand(name="list", description="List aliases of all packages"),
         title="Alias Commands",
@@ -29,12 +29,14 @@ def get_parser(prog: str) -> CliParser:
     )
 
 
-def execute(ctx: GlobalContext) -> None:
+def execute(ctx: GlobalContext, _args: Arguments) -> None:
     """
-    Execute this subcommand.
-    ----
-    Args:
-    - `ctx`: all possibly needed context for this function.
+    Execute the ``alias`` subcommand.
+
+    :param quackpack.util.global_context.GlobalContext ctx: The global context containing configuration and state.
+    :param quackpack.cli._arguments.Arguments _args: Parsed command-line arguments for this subcommand.
+    :raises NotImplementedError: This function is not yet implemented.
     """
+
     ctx.console.debug("Implement 'execute()' for 'alias'")
     raise NotImplementedError

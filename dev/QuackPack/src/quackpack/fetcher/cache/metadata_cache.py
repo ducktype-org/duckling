@@ -12,7 +12,7 @@ from typing import override
 
 from pydantic import ValidationError
 
-from quackpack.fetcher.api_types import MultiMetadata, Package, SingleMetadata
+from quackpack.fetcher.api_types import MultiMetadata, Package, PackageName, SingleMetadata
 from quackpack.fetcher.cache.sqlite_database import SQLiteDatabase, SQLiteDatabaseContext
 from quackpack.util.errors import QuackPackError
 from quackpack.util.logger import get_logger
@@ -23,9 +23,8 @@ logger = get_logger(__name__)
 class MetadataCache(SQLiteDatabase):
     """
     A cache for storing and retrieving package metadata using an SQLite database.
-    ----
-    Args:
-    - `db_path`: Path to the SQLite database file.
+
+    :param pathlib.Path db_path: Path to the SQLite database file.
     """
 
     class SQLiteMetadata:
@@ -43,7 +42,9 @@ class MetadataCache(SQLiteDatabase):
 
     def initialize(self) -> None:
         """
-        Initialize the database by creating the `packages_metadata` table if it does not exist.
+        Initialize the SQLite database.
+
+        Creates the ``packages_metadata`` table if it does not already exist.
         """
 
         logger.debug("Creating SQLite backend database")
@@ -60,27 +61,23 @@ class MetadataCache(SQLiteDatabase):
     def get_metadata(self, package: Package) -> SingleMetadata | None:
         """
         Retrieve metadata for a specific package from the cache.
-        ----
-        Args:
-        - `package`: The package to retrieve metadata for.
-        ----
-        Returns:
-        - `SingleMetadata | None`: The package metadata, or None if not found.
-        ----
-        Raises:
-        - `QuackPackError`: If the metadata cannot be decoded from JSON.
+
+        :param quackpack.fetcher.api_types.Package package: The package to retrieve metadata for.
+        :return: The corresponding metadata if found, otherwise None.
+        :rtype: quackpack.fetcher.api_types.SingleMetadata | None
+        :raises quackpack.util.errors.QuackPackError: If metadata is invalid or cannot be parsed.
         """
 
-        logger.debug(f"Looking for '{package.name}v{package.version!s}'")
+        logger.debug(f"Looking for '{package.id}v{package.version!s}'")
         query = f"""
             SELECT {self.SQLiteMetadata.Columns.METADATA}
             FROM {self.SQLiteMetadata.TABLE}
             WHERE {self.SQLiteMetadata.Columns.NAME} = ? AND {self.SQLiteMetadata.Columns.VERSION} = ?
         """
-        result = self.fetch_one(query, (package.name, str(package.version)))
+        result = self.fetch_one(query, (str(package.id), str(package.version)))
 
         if result is None:
-            logger.debug(f"Could not find '{package.name}v{package.version}' in MetadataCache")
+            logger.debug(f"Could not find '{package.id}v{package.version}' in MetadataCache")
             return None
 
         try:
@@ -90,23 +87,19 @@ class MetadataCache(SQLiteDatabase):
 
         return metadata
 
-    def get_multi_metadata(self, package: Package) -> MultiMetadata | None:
+    def get_multi_metadata(self, package_id: PackageName) -> MultiMetadata | None:
         """
-        Retrieve metadata for a specific package from the cache.
-        ----
-        Args:
-        - `package`: The package name to retrieve metadata for.
-        ----
-        Returns:
-        - `MultiMetadata`: The package metadata, or None if not found.
-        ----
-        Raises:
-        - `QuackPackError`: If the metadata cannot be decoded from JSON.
+        Retrieve metadata for all versions of a given package.
+
+        :param quackpack.fetcher.api_types.PackageName package_id: The package name to retrieve metadata for.
+        :return: A collection of metadata for all known versions, or None if not found.
+        :rtype: quackpack.fetcher.api_types.MultiMetadata | None
+        :raises quackpack.util.errors.QuackPackError: If metadata is invalid or cannot be parsed.
         """
 
-        logger.debug(f"Looking for '{package.name}'")
+        logger.debug(f"Looking for '{package_id}'")
         query = f"SELECT {self.SQLiteMetadata.Columns.METADATA} FROM {self.SQLiteMetadata.TABLE} WHERE {self.SQLiteMetadata.Columns.NAME} = ?"
-        results = self.fetch_all(query, (package.name,))
+        results = self.fetch_all(query, (str(package_id),))
 
         try:
             multi_metadata = MultiMetadata(
@@ -120,13 +113,14 @@ class MetadataCache(SQLiteDatabase):
     def add_metadata(self, package: Package, metadata: SingleMetadata) -> None:
         """
         Add or update metadata for a specific package in the cache.
-        ----
-        Args:
-        - `package`: The package for which metadata addition or update should be performed.
-        - `metadata`: The metadata to store.
+
+        :param quackpack.fetcher.api_types.Package package: The package identifier (name and version).
+        :param quackpack.fetcher.api_types.SingleMetadata metadata: The metadata to store.
+        :return: None
+        :rtype: None
         """
 
-        logger.debug(f"Adding '{package.name}v{package.version!s}' with {metadata=}")
+        logger.debug(f"Adding '{package.id}v{package.version!s}' with {metadata=}")
         query = f"""
             INSERT OR REPLACE INTO {self.SQLiteMetadata.TABLE} (
                 {self.SQLiteMetadata.Columns.NAME},
@@ -136,29 +130,32 @@ class MetadataCache(SQLiteDatabase):
         """
 
         metadata_string = metadata.model_dump_json()
-        self.execute_query(query, (package.name, str(package.version), metadata_string))
+        self.execute_query(query, (str(package.id), str(package.version), metadata_string))
 
-    def add_multi_metadata(self, multi_package: Package, multi_metadata: MultiMetadata) -> None:
+    def add_multi_metadata(self, multi_package_id: PackageName, multi_metadata: MultiMetadata) -> None:
         """
-        Add or update metadata for a package in multiple versions in the cache.
-        ----
-        Args:
-        - `multi_package`: The package name for which metadata addition or update should be performed.
-        - `multi_metadata`: The metadata list to store.
+        Add or update metadata for multiple versions of a package in the cache.
+
+        :param quackpack.fetcher.api_types.PackageName multi_package_id: The package name for which metadata is being stored.
+        :param quackpack.fetcher.api_types.MultiMetadata multi_metadata: A collection of metadata for different versions of the package.
+        :return: None
+        :rtype: None
         """
 
         for metadata in multi_metadata.packages_metadata:
-            package = Package(name=multi_package.name, version=str(metadata.metadata.version))
+            package = Package(id=multi_package_id, version=str(metadata.metadata.version))
 
             self.add_metadata(package, metadata)
 
 
 class MetadataCacheContext(SQLiteDatabaseContext[MetadataCache]):
     """
-    A context manager for managing the lifecycle of a `MetadataCache` instance.
+    A context manager for managing the lifecycle of a MetadataCache instance.
 
-    This context manager provides an easy way to work with a `MetadataCache` instance within a `with` statement.
-    It automatically handles the opening and closing of the underlying SQLite database connection.
+    Ensures the underlying SQLite database is opened and closed properly when used
+    within a context manager block.
+
+    :ivar MetadataCache ducknest_client: The internal MetadataCache instance managed by the context.
     """
 
     @override

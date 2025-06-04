@@ -29,9 +29,9 @@ class HTTPOutputError(Exception):
 class HTTPError(Exception):
     """
     Exception for unsuccessful HTTP requests.
-    ----
-    Args:
-    - `code`: HTTP error integer code. Code 599 indicates no HTTP response was received (e.g., timeout).
+
+    :param int code: HTTP error integer code. Code 599 indicates no HTTP response was received (e.g., timeout).
+    :param str | None message: Optional message describing the error.
     """
 
     def __init__(self, code: int, message: str | None = None) -> None:

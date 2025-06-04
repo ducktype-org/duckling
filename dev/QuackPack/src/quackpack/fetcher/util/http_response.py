@@ -19,18 +19,27 @@ from quackpack.fetcher.util.http_request import HTTPRequest, HTTPRequestProxy
 class HTTPResponse:
     """
     Represents an HTTP response.
-    ----
-    Args:
-    - `request`: The `HTTPRequest` object associated with this response.
-    - `code`: The HTTP status code of the response.
-    - `headers`: Optional `HTTPHeaders` object containing response headers.
-    - `buffer`: Optional `BytesIO` object containing the response body.
-    - `effective_url`: Optional string representing the final URL after redirects.
-    - `error`: Optional exception object if an error occurred during the request.
-    - `request_time`: Optional float representing the time taken for the request.
-    - `time_info`: Optional dictionary containing timing information.
-    - `reason`: Optional string representing the HTTP reason phrase.
-    - `start_time`: Optional float representing the start time of the request.
+
+    :param request: The HTTP request associated with this response.
+    :type request: quackpack.fetcher.util.HTTPRequest | quackpack.fetcher.util.HTTPRequestProxy
+    :param code: The HTTP status code of the response.
+    :type code: int
+    :param headers: Response headers.
+    :type headers: quackpack.fetcher.util.HTTPHeaders | None
+    :param buffer: Buffer containing the response body.
+    :type buffer: io.BytesIO | None
+    :param effective_url: Final URL after redirects.
+    :type effective_url: str | None
+    :param error: Exception if an error occurred during the request.
+    :type error: BaseException | None
+    :param request_time: Time taken for the request in seconds.
+    :type request_time: float | None
+    :param time_info: Timing information dictionary.
+    :type time_info: dict[str, float] | None
+    :param reason: HTTP reason phrase.
+    :type reason: str | None
+    :param start_time: Optional start time of the request.
+    :type start_time: float | None
     """
 
     def __init__(
@@ -82,9 +91,9 @@ class HTTPResponse:
     def body(self) -> bytes:
         """
         Get the response body as bytes.
-        ----
-        Returns:
-        - `bytes`: The response body as bytes.
+
+        :return: The response body.
+        :rtype: bytes
         """
 
         if self.buffer is None:
@@ -96,10 +105,9 @@ class HTTPResponse:
 
     def rethrow(self) -> None:
         """
-        If there was an error on the request, raise an `HTTPError`.
-        ----
-        Raises:
-        - `HTTPError`: If an error occurred during the request.
+        Raise an HTTPError if an error occurred during the request.
+
+        :raises quackpack.fetcher.util.HTTPError: If the response contains an error.
         """
 
         if self.error:

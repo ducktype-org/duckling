@@ -24,21 +24,25 @@ from . import (
     _test_parser,
     _update_parser,
 )
-from ._external_cmd_parser import EXTERNAL_CMD_PREFIX
+from ._arguments import Arguments
+from ._external_cmd_parser import EXTERNAL_CMD_PREFIX, handle_external_command
 from ._main_parser import get_early_parser
 from ._parser import CliParser
 
 __all__ = [
     "EXTERNAL_CMD_PREFIX",
+    "Arguments",
     "ExecFn",
     "action_for",
     "builtin_aliases",
     "cli",
     "get_parser",
+    "handle_external_command",
     "setup_parser",
 ]
 
-type ExecFn = Callable[[GlobalContext], None]
+
+type ExecFn = Callable[[GlobalContext, Arguments], None]
 
 
 def setup_parser() -> None:

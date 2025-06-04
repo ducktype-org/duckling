@@ -1,15 +1,19 @@
+from quackpack.commands.sync import SyncOptions, sync
+from quackpack.project_loader import ProjectLoader
 from quackpack.util.global_context import GlobalContext
 
+from ._arguments import Arguments
 from ._parser import CliParser, ExclusiveGroup
 
 
 def get_parser() -> CliParser:
     """
-    Get the argument parser for `sync` command.
-    ----
-    Returns:
-    - `CliParser`: Parser for `sync` command.
+    Get the CLI argument parser for the ``sync`` command.
+
+    :return: The parser configured for the ``sync`` command.
+    :rtype: quackpack.cli._parser.CliParser
     """
+
     return CliParser.subcommand(name="sync", description="Synchronize current venv").add_exclusive_group(
         group=ExclusiveGroup()
         .add_flag(long_name="--locked", help="Assume freezefile doesn't change")
@@ -18,12 +22,14 @@ def get_parser() -> CliParser:
     )
 
 
-def execute(ctx: GlobalContext) -> None:
+def execute(ctx: GlobalContext, _args: Arguments) -> None:
     """
-    Execute this subcommand.
-    ----
-    Args:
-    - `ctx`: all possibly needed context for this function.
+    Execute the ``sync`` subcommand to synchronize the current venv.
+
+    :param quackpack.util.global_context.GlobalContext ctx: Context providing necessary runtime information.
+    :param quackpack.cli._arguments.Arguments _args: Parsed arguments from the CLI for this command.
     """
-    ctx.console.debug("Implement 'execute()' for 'sync'")
-    raise NotImplementedError
+
+    project = ProjectLoader.find_from_cwd()
+    opts = SyncOptions(ctx=ctx, target=project)
+    sync(opts)

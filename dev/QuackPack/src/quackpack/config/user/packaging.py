@@ -1,8 +1,6 @@
-from typing import Annotated
+from pydantic import BaseModel
 
-from pydantic import BaseModel, Field
-
-from quackpack.util.default_pydantic_options import default_pydantic_options
+from quackpack.util.default_pydantic_options import DEFAULT_MODEL_CONFIG
 
 __all__ = ["PackagingEntry"]
 
@@ -13,9 +11,10 @@ class PackagingEntry(BaseModel):
     """
 
     # FIXME: Use StrictBool.
-    build_from_source: Annotated[bool, Field(default=False)]
+    build_from_source: bool = False
     """
     If `True`, then all downloaded packages will be compiled on the host machine.
     """
-    model_config = default_pydantic_options()
+
+    model_config = DEFAULT_MODEL_CONFIG
     # TODO: Add dependency solver.

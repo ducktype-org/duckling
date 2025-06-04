@@ -18,6 +18,7 @@ dependencies = [
     "gitpython>=3.1.44",
     "pywin32>=308 ; sys_platform == 'win32'",
     "uvloop>=0.21.0 ; os_name == 'posix'",
+    "pyscipopt>=5.4.1",
 ]
 
 [project.scripts]
@@ -29,28 +30,29 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
-    "fastapi>=0.115.11",
-    "hypercorn[h3]>=0.17.3",
+    "ducknest>=0.1.0",
     "pyright>=1.1.395",
     "pytest>=8.3.4",
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=6.0.0",
-    "python-multipart>=0.0.20",
     "ruff>=0.9.7",
+    "sphinx>=8.2.3",
+    "sphinx-autodoc-typehints>=3.2.0",
 ]
 
 [tool.pyright]
-venvPath = "./"
-venv = ".venv/"
-typeCheckingMode = "strict"
 pythonPlatform = "All"
+pythonVersion = "3.12"
+reportImportCycles = "error"
+reportImplicitOverride = "error"
 reportMissingModuleSource = false
+reportUnusedClass = "warning"
+reportUnusedFunction = "warning"
 reportUnusedImport = "warning"
 reportUnusedVariable = "warning"
-reportUnusedFunction = "warning"
-reportUnusedClass = "warning"
-reportImplicitOverride = "error"
-reportImportCycles = "error"
+typeCheckingMode = "strict"
+venv = ".venv/"
+venvPath = "./"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
@@ -115,3 +117,6 @@ indent-style = "space"
 line-ending = "lf"
 quote-style = "double"
 skip-magic-trailing-comma = true
+
+[tool.uv.sources]
+ducknest = { git = "https://gitlab.mimuw.edu.pl/duckling-package-manager/ducknest.git" }

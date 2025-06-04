@@ -12,11 +12,14 @@ from typing import Self, SupportsIndex, cast, overload, override
 
 from pydantic import RootModel
 
+from quackpack.util.default_pydantic_options import DEFAULT_ROOT_CONFIG
+
 # FIXME: Ignores are because RootModel -> BaseModel has weird iterator.
 
 
 class PydanticMutableDict[K, V](RootModel[dict[K, V]], MutableMapping[K, V]):
     root: dict[K, V] = {}
+    model_config = DEFAULT_ROOT_CONFIG
 
     @override
     def __setitem__(self, key: K, value: V) -> None:
@@ -107,6 +110,7 @@ class PydanticMutableDict[K, V](RootModel[dict[K, V]], MutableMapping[K, V]):
 
 class PydanticMutableList[T](RootModel[list[T]], MutableSequence[T]):
     root: list[T] = []
+    model_config = DEFAULT_ROOT_CONFIG
 
     @override
     def __iter__(self) -> Iterator[T]:  # pyright: ignore[reportIncompatibleMethodOverride]

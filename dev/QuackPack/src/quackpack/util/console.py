@@ -19,7 +19,14 @@ __all__ = ["Console"]
 
 
 class Console(RichConsole):
+    """
+    Our wrapper on RichConsole.
+    """
+
     _verbose: bool = False
+    """
+    Controls, whether verbose messages should be printed.
+    """
 
     def __init__(
         self,
@@ -160,7 +167,7 @@ class Console(RichConsole):
         Helper for putting `Error` in bold red before text.
         """
         self.print(
-            "[bold red]Error",
+            "[bold red]Error:",
             *objects,
             sep=sep,
             end=end,
@@ -202,7 +209,7 @@ class Console(RichConsole):
         Helper for putting `Warning` in bold yellow before text.
         """
         self.print(
-            "[bold yellow]Warning",
+            "[bold yellow]Warning:",
             *objects,
             sep=sep,
             end=end,
@@ -244,7 +251,7 @@ class Console(RichConsole):
         Helper for putting `Critical` in bold reversed-red before text.
         """
         self.print(
-            "[bold red reverse]Critical",
+            "[bold red reverse]Critical:",
             *objects,
             sep=sep,
             end=end,
@@ -286,7 +293,7 @@ class Console(RichConsole):
         Helper for putting `Info` in bold cyan before text.
         """
         self.print(
-            "[bold cyan]Info",
+            "[bold cyan]Info:",
             *objects,
             sep=sep,
             end=end,
@@ -328,7 +335,7 @@ class Console(RichConsole):
         Helper for putting `Debug` in bold cyan before text.
         """
         self.print(
-            "[bold cyan]Debug",
+            "[bold cyan]Debug:",
             *objects,
             sep=sep,
             end=end,

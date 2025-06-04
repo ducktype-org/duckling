@@ -6,6 +6,9 @@ logger = get_logger(__name__)
 
 
 def get_logical_threads() -> int:
+    """
+    Get number of all possible threads.
+    """
     # FIXME: What is the best? We can use:
     #        1. os.cpu_count(),
     #        2. os.process_cpu_count(),

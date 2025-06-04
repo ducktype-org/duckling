@@ -9,11 +9,6 @@ class LockType(Enum):
     SHARED = auto()
 
 
-class Blocking(Enum):
-    YES = auto()
-    NO = auto()
-
-
 class LockWouldBlock(Exception):
     pass
 
@@ -28,7 +23,7 @@ class BaseFileLock(AbstractContextManager[None], ABC):
 
     @abstractmethod
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, blocking: Blocking = Blocking.YES
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None: ...
 
     @classmethod

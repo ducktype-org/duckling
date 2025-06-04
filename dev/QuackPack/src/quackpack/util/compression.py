@@ -41,7 +41,7 @@ def unpack_to_memory(*, source: Path, file_name: str) -> bytes:
             return target.read()
 
 
-def pack_to_memory(*, source: Path) -> bytes:
+def pack_to_memory(*, source: Path | list[Path]) -> bytes:
     """
     Pack all files from `source` to memory.
     ----
@@ -51,12 +51,14 @@ def pack_to_memory(*, source: Path) -> bytes:
     Returns:
     - `bytes`: raw data of packed files.
     """
+    to_add = [source] if isinstance(source, Path) else source
     with BytesIO() as buffer, tarfile.open(fileobj=buffer, mode="w:gz") as tar:
-        tar.add(source)
+        for f in to_add:
+            tar.add(f)
         return buffer.getvalue()
 
 
-def pack_to_file(*, source: Path, destination: Path) -> None:
+def pack_to_file(*, source: Path | list[Path], destination: Path) -> None:
     """
     Pack all files from `source` to `destination`.
     ----
@@ -64,6 +66,8 @@ def pack_to_file(*, source: Path, destination: Path) -> None:
     - `source`: file or directory to be packed.
     - `destination`: path to the new tar.gz.
     """
+    to_add = [source] if isinstance(source, Path) else source
     destination.parent.mkdir(parents=True, exist_ok=True)
     with tarfile.open(destination, "w:gz") as tar:
-        tar.add(source)
+        for f in to_add:
+            tar.add(f)

@@ -5,7 +5,7 @@ from types import TracebackType
 from typing import Final, override
 
 from quackpack.signals import EnableInterrupt
-from quackpack.util.lock.common import BaseFileLock, Blocking, LockType, LockWouldBlock
+from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 PROBE_INTERVAL: Final[float] = 1.0
 
@@ -13,7 +13,7 @@ PROBE_INTERVAL: Final[float] = 1.0
 class SoftwareFileLock(BaseFileLock):
     @override
     def __init__(
-        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, blocking: Blocking = Blocking.YES
+        self, path: Path, lock_type: LockType = LockType.EXCLUSIVE, *, blocking: bool = True
     ) -> None:
         self.path = path
         self.lock_type = lock_type
@@ -36,14 +36,14 @@ class SoftwareFileLock(BaseFileLock):
         while True:
             with suppress(FileExistsError):
                 # We use zero mode, as that does not prevent deleting the
-                # file programatically (that only needs write permissions
+                # file programmatically (that only needs write permissions
                 # to directory), but may be checked by external tools, such
                 # as `rm` command (it might ask when trying to remove
                 # write-protected file).
                 self.path.touch(mode=0, exist_ok=False)
                 break
-            if self.blocking == Blocking.NO:
-                raise LockWouldBlock() from None
+            if not self.blocking:
+                raise LockWouldBlock from None
             # TODO 🔨 dobrać odstęp (raczej nie ma sensu próbować używać
             # obserwowania filesystemu: wydaje się to bardziej niszowe
             # niż filelocki, więc lepiej by było wyifować aby używane

@@ -13,7 +13,7 @@ from time import monotonic, sleep
 import pytest
 
 from quackpack.signals import RobustSignalHandler, SignalInterrupt, consume_signal
-from quackpack.util.lock import BaseFileLock, Blocking, LockType, LockWouldBlock
+from quackpack.util.lock import BaseFileLock, LockType, LockWouldBlock
 
 
 def spawn_locker(platform: str, lock_type: str, tmp_dir: Path, lock_time: float):
@@ -36,10 +36,7 @@ def common_basic_test(tmp_dir: Path, platform: str, lock_class: type[BaseFileLoc
     spawn_locker(platform, "exclusive", tmp_dir, 1.0)
     with RobustSignalHandler():
         sleep(0.3)
-        with (
-            pytest.raises(LockWouldBlock),
-            lock_class(lock_path, lock_type=LockType.SHARED, blocking=Blocking.NO),
-        ):
+        with pytest.raises(LockWouldBlock), lock_class(lock_path, lock_type=LockType.SHARED, blocking=False):
             pass
         start_time = monotonic()
         with lock_class(lock_path):
@@ -55,7 +52,7 @@ def common_shared_test(tmp_dir: Path, platform: str, lock_class: type[BaseFileLo
         sleep(0.3)
         with (
             pytest.raises(LockWouldBlock),
-            lock_class(lock_path, lock_type=LockType.EXCLUSIVE, blocking=Blocking.NO),
+            lock_class(lock_path, lock_type=LockType.EXCLUSIVE, blocking=False),
         ):
             pass
         start_time = monotonic()
@@ -74,10 +71,10 @@ def common_interrupt_test(tmp_dir: Path, platform: str, lock_class: type[BaseFil
         sleep(0.3)
         with pytest.raises(SignalInterrupt), lock_class(lock_path):
             pass
-        assert consume_signal()
+        assert consume_signal() is not None
         with pytest.raises(SignalInterrupt), lock_class(lock_path):
             pass
-        assert consume_signal()
+        assert consume_signal() is not None
 
 
 def common_delete_test(tmp_dir: Path, platform: str, lock_class: type[BaseFileLock]):
@@ -88,7 +85,7 @@ def common_delete_test(tmp_dir: Path, platform: str, lock_class: type[BaseFileLo
         sleep(1.2)
         lock_class.try_delete_lock(lock_path)
         assert lock_path.exists()
-        assert consume_signal()
+        assert consume_signal() is not None
         sleep(0.6)
         lock_class.try_delete_lock(lock_path)
         assert not lock_path.exists()

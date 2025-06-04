@@ -14,6 +14,10 @@ __all__ = ["get_logger", "setup_logger"]
 
 
 class QuackPackDebugFilter(logging.Filter):
+    """
+    Filter for loggers using `"QP_DEBUG"` environmental variable.
+    """
+
     def __init__(self, name: str = ""):
         self._cached_filter: bool | None = None
         super().__init__(name)
@@ -31,6 +35,8 @@ class QuackPackDebugFilter(logging.Filter):
         return self._cached_filter
 
 
+# FIXME: Should RichHandler take console, so console settings propagate to the loggers?
+#        And if yes, then which one?
 def setup_logger() -> None:
     """
     Setup logger for debug printing.
@@ -55,8 +61,9 @@ def setup_logger() -> None:
 def get_logger(name: str) -> logging.Logger:
     """
     Get logger with name `name`.
-    Because Python does not have lazy initialization of global variables, there should not be a global `logger = get_logger(__name__)` variable; always wrap it in a function or create local variable when needed.
+
     `__name__` should always be passed as a `name` (but for Python reasons it can't be set here as a default, because it'd use this file `__name__`, therefor caller should pass its own).
+
     Loggers should only be used with `.debug()` calls.
     ----
     Args:

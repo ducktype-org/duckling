@@ -1,9 +1,16 @@
 """
 Module for interacting with Ducknest instances.
-----
-Classes:
-- `DucknestClient`: A client for fetching package metadata and blobs from Ducknest instances.
-- `DucknestClientContext`: A context manager for managing the lifecycle of a DucknestClient instance.
+
+Provides classes to fetch package metadata and blobs, and manage
+the lifecycle of DucknestClient instances.
+
+Classes
+-------
+DucknestClient
+    Client for fetching package metadata and blobs from Ducknest instances.
+
+DucknestClientContext
+    Context manager for managing the lifecycle of a DucknestClient instance.
 """
 
 from contextlib import AbstractContextManager
@@ -15,7 +22,7 @@ from urllib.parse import urljoin
 
 from pydantic import ValidationError
 
-from quackpack.fetcher.api_types import MultiMetadata, Package, SingleMetadata
+from quackpack.fetcher.api_types import MultiMetadata, Package, PackageName, SearchResult, SingleMetadata
 from quackpack.fetcher.client.curl_http_client import CurlHTTPClient
 from quackpack.fetcher.ducknest_endpoints import DucknestEndpoints
 from quackpack.fetcher.util import FailedRequestError, HTTPRequest, HTTPResponse
@@ -35,7 +42,7 @@ class DucknestClient:
 
     def close(self):
         """
-        Close HTTP client.
+        Close the underlying HTTP client connection.
         """
 
         self.client.close()
@@ -44,15 +51,13 @@ class DucknestClient:
         self, url: str, buffer: BytesIO | FileIO, headers: dict[str, str] | None = None
     ) -> HTTPResponse | None:
         """
-        Make a GET request using the HTTP client.
-        ----
-        Args:
-        - `url`: The URL to fetch.
-        - `buffer`: Buffer to which response body will be saved.
-        - `headers`: Optional request headers.
-        ----
-        Returns:
-        - `HTTPResponse | None`: The HTTP response, or None if an error occurred.
+        Perform an asynchronous HTTP GET request.
+
+        :param str url: The URL to fetch.
+        :param io.BytesIO | io.FileIO buffer: A buffer to store the response body.
+        :param dict[str, str] | None headers: Optional HTTP headers.
+        :return: The HTTP response or None if an error occurred.
+        :rtype: quackpack.fetcher.util.HTTPResponse | None
         """
 
         logger.debug(f"Ducknest client: GET to '{url}'")
@@ -68,17 +73,16 @@ class DucknestClient:
         headers: dict[str, str] | None = None,
     ) -> HTTPResponse | None:
         """
-        Make a POST request using the HTTP client.
-        ----
-        Args:
-        - `url`: The URL to post to.
-        - `buffer`: Buffer to which response body will be saved.
-        - `body`: Optional request body.
-        - `headers`: Optional request headers.
-        ----
-        Returns:
-        - `HTTPResponse | None`: The HTTP response, or None if an error occurred.
+        Perform an asynchronous HTTP POST request.
+
+        :param str url: The URL to post to.
+        :param io.BytesIO | io.FileIO buffer: A buffer to store the response body.
+        :param bytes | None body: Optional request body.
+        :param dict[str, str] | None headers: Optional HTTP headers.
+        :return: The HTTP response or None if an error occurred.
+        :rtype: quackpack.fetcher.util.HTTPResponse | None
         """
+
         logger.debug(f"Ducknest client: POST to '{url}'")
         request = HTTPRequest(url, method="POST", body=body, headers=headers, validate_cert=False)
         response = await self.client.fetch(request, buffer=buffer)
@@ -92,17 +96,16 @@ class DucknestClient:
         headers: dict[str, str] | None = None,
     ) -> HTTPResponse | None:
         """
-        Make a PUT request using the HTTP client.
-        ----
-        Args:
-        - `url`: The URL to put to.
-        - `buffer`: Buffer to which response body will be saved.
-        - `body`: Optional request body.
-        - `headers`: Optional request headers.
-        ----
-        Returns:
-        - `HTTPResponse | None`: The HTTP response, or None if an error occurred.
+        Perform an asynchronous HTTP PUT request.
+
+        :param str url: The URL to put to.
+        :param io.BytesIO | io.FileIO buffer: A buffer to store the response body.
+        :param bytes | None body: Optional request body.
+        :param dict[str, str] | None headers: Optional HTTP headers.
+        :return: The HTTP response or None if an error occurred.
+        :rtype: quackpack.fetcher.util.HTTPResponse | None
         """
+
         logger.debug(f"Ducknest client: PUT to '{url}'")
         request = HTTPRequest(url, method="PUT", body=body, headers=headers, validate_cert=False)
         response = await self.client.fetch(request, buffer=buffer)
@@ -111,22 +114,19 @@ class DucknestClient:
     async def get_package_metadata(self, instance_url: str, package: Package) -> SingleMetadata:
         """
         Retrieve metadata for a specific package from a Ducknest instance.
-        ----
-        Args:
-        - `instance_url`: The base URL of the Ducknest instance.
-        - `package`: The package to retrieve metadata for.
-        ----
-        Returns:
-        - `SingleMetadata`: The package metadata.
-        ----
-        Raises:
-        - `FailedRequestError`: if request failed.
-        - `QuackPackError`: If the metadata cannot be decoded from JSON.
+
+        :param str instance_url: The base URL of the Ducknest instance.
+        :param quackpack.fetcher.api_types.Package package: The package to retrieve metadata for.
+        :return: The package metadata.
+        :rtype: quackpack.fetcher.api_types.SingleMetadata
+        :raises quackpack.fetcher.util.FailedRequestError: If the request failed.
+        :raises quackpack.util.errors.QuackPackError: If the metadata cannot be decoded from JSON.
         """
+
         logger.debug(
-            f"Ducknest client: fetching '{package.name}v{package.version!s}' metadata from '{instance_url}'"
+            f"Ducknest client: fetching '{package.id}v{package.version!s}' metadata from '{instance_url}'"
         )
-        url = urljoin(instance_url, DucknestEndpoints.package_version(package))
+        url = urljoin(instance_url, DucknestEndpoints.get_package_single(package))
 
         with BytesIO() as buffer:
             response = await self._get(url, buffer)
@@ -141,26 +141,20 @@ class DucknestClient:
         except ValidationError as e:
             raise QuackPackError(e) from e
 
-    async def get_package_all_metadata(self, instance_url: str, package: Package) -> MultiMetadata:
+    async def get_package_all_metadata(self, instance_url: str, package_id: PackageName) -> MultiMetadata:
         """
         Retrieve all metadata for a specific package from a Ducknest instance.
-        ----
-        Args:
-        - `instance_url`: The base URL of the Ducknest instance.
-        - `package`: The package to retrieve metadata for.
-        ----
-        Returns:
-        - `MultiMetadata`: The package metadata.
-        ----
-        Raises:
-        - `FailedRequestError`: if request failed.
-        - `QuackPackError`: If the metadata cannot be decoded from JSON.
+
+        :param str instance_url: The base URL of the Ducknest instance.
+        :param quackpack.fetcher.api_types.PackageName package_id: The package identifier.
+        :return: All metadata for the package.
+        :rtype: quackpack.fetcher.api_types.MultiMetadata
+        :raises quackpack.fetcher.util.FailedRequestError: If the request failed.
+        :raises quackpack.util.errors.QuackPackError: If the metadata cannot be decoded from JSON.
         """
 
-        logger.debug(
-            f"Ducknest client: fetching '{package.name}v{package.version!s}' metadata tree from '{instance_url}'"
-        )
-        url = urljoin(instance_url, DucknestEndpoints.package(package))
+        logger.debug(f"Ducknest client: fetching '{package_id}' metadata tree from '{instance_url}'")
+        url = urljoin(instance_url, DucknestEndpoints.get_package_multi(package_id))
 
         with BytesIO() as buffer:
             response = await self._get(url, buffer)
@@ -175,30 +169,24 @@ class DucknestClient:
         except ValidationError as e:
             raise QuackPackError(e) from e
 
-    # TODO: adapt signature to actual implementation (interface)
-    async def publish_package(
-        self, instance_url: str, metadata: SingleMetadata, source_file: Path | None = None
-    ) -> None:
+    async def publish_package(self, instance_url: str, metadata: SingleMetadata, data_path: Path) -> None:
         """
         Publish a package to a Ducknest instance.
-        ----
-        Args:
-        - `instance_url`: The base URL of the Ducknest instance.
-        - `metadata`: The package metadata to publish.
-        - `source_file`: Optional path to the source file to upload.
-        ----
-        Raises:
-        - `FailedRequestError`: If any of the requests fail.
-        - `QuackPackError`: If there are validation errors.
+
+        :param str instance_url: The base URL of the Ducknest instance.
+        :param quackpack.fetcher.api_types.SingleMetadata metadata: The package metadata to publish.
+        :param pathlib.Path data_path: Path to the package data file to upload.
+        :raises quackpack.fetcher.util.FailedRequestError: If any of the requests fail.
+        :raises quackpack.util.errors.QuackPackError: If there are validation errors.
         """
 
         logger.debug(
             f"Ducknest client: publishing package '{metadata.metadata.name}v{metadata.metadata.version}' to '{instance_url}'"
         )
 
-        package = Package(name=metadata.metadata.name, version=str(metadata.metadata.version))
+        package = Package(id=metadata.metadata.name, version=str(metadata.metadata.version))
 
-        create_url = urljoin(instance_url, DucknestEndpoints.package(package))
+        create_url = urljoin(instance_url, DucknestEndpoints.post_package())
         with BytesIO() as buffer:
             response = await self._post(
                 create_url,
@@ -210,59 +198,88 @@ class DucknestClient:
             if response is None or response.error is not None:
                 raise FailedRequestError
 
-        if source_file is not None:
-            if not source_file.exists():
+        upload_url = urljoin(instance_url, DucknestEndpoints.put_package_blob(package))
+
+        boundary = "--------DuckNestBoundary"
+        headers = {"Content-Type": f"multipart/form-data; boundary={boundary}"}
+
+        with FileIO(data_path, "rb") as file:
+            file_content = file.read()
+
+        part_header = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="package_source"; filename="{data_path.name}"\r\n'
+            "Content-Type: application/octet-stream\r\n\r\n"
+        ).encode()
+        part_footer = f"\r\n--{boundary}--\r\n".encode()
+        multipart_body = part_header + file_content + part_footer
+
+        with BytesIO() as buffer:
+            response = await self._put(upload_url, buffer, body=multipart_body, headers=headers)
+
+            if response is None or response.error is not None:
                 raise FailedRequestError
 
-            upload_url = urljoin(instance_url, DucknestEndpoints.blob(package))
-
-            with FileIO(source_file, "rb") as file, BytesIO() as buffer:
-                response = await self._put(
-                    upload_url, buffer, body=file.read(), headers={"Content-Type": "application/octet-stream"}
-                )
-
-                if response is None or response.error is not None:
-                    raise FailedRequestError
-
-    # TODO: how do we validate whether fetch was successful
-    async def get_package_blob(self, instance_url: str, package: Package, filepath: Path) -> None:
+    async def get_package_blob(self, instance_url: str, package: Package, filepath: Path) -> bool:
         """
         Download a package blob from a Ducknest instance and save it to a file.
-        ----
-        Args:
-        - `instance_url`: The base URL of the Ducknest instance.
-        - `package`: The package to download the blob for.
-        - `filepath`: The path to save the downloaded blob.
-        ----
-        Returns:
-        - `None`: The blob is saved to the specified filepath.
-        ----
-        Raises:
-        - `FailedRequestError`: If request failed.
+
+        :param str instance_url: The base URL of the Ducknest instance.
+        :param quackpack.fetcher.api_types.Package package: The package to download the blob for.
+        :param pathlib.Path filepath: The path to save the downloaded blob.
+        :return: Whether the blob was successfully saved to the specified filepath.
+        :rtype: bool
+        :raises quackpack.fetcher.util.FailedRequestError: If the request failed.
         """
 
         logger.debug(
-            f"Ducknest client: fetching '{package.name}v{package.version!s}' blob from '{instance_url}' to '{filepath}'"
+            f"Ducknest client: fetching '{package.id}v{package.version!s}' blob from '{instance_url}' to '{filepath}'"
         )
-        url = urljoin(instance_url, DucknestEndpoints.blob(package))
+        url = urljoin(instance_url, DucknestEndpoints.get_package_blob(package))
 
         with FileIO(filepath, "wb") as buffer:
             response = await self._get(url, buffer)
-            # TODO: check error code and if different than 200, clear file and throw some exception
             if response is None:
                 raise FailedRequestError
 
-        return None
+        # TODO: REVIEW: do we need something better?
+        return response.code == 200
+
+    async def search(self, instance_url: str, query: str) -> SearchResult:
+        """
+        Search the Ducknest instance for all packages that match the provided query.
+
+        :param str instance_url: The base URL of the Ducknest instance.
+        :param str query: Search query to be sent.
+        :return: Search result obtained from the server.
+        :rtype: quackpack.fetcher.api_types.SearchResult
+        :raises quackpack.fetcher.util.FailedRequestError: If the request failed.
+        :raises quackpack.util.errors.QuackPackError: If the result cannot be decoded from JSON.
+        """
+
+        logger.debug(f"Ducknest client: searching '{query}' on '{instance_url}'")
+        url = urljoin(instance_url, DucknestEndpoints.get_search(query))
+
+        with BytesIO() as buffer:
+            response = await self._get(url, buffer)
+            if response is None:
+                raise FailedRequestError
+
+            body = response.body
+
+        try:
+            search_result = SearchResult.model_validate_json(body)
+            return search_result
+        except ValidationError as e:
+            raise QuackPackError(e) from e
 
 
 class DucknestClientContext(AbstractContextManager[DucknestClient]):
+    """
+    Context manager for DucknestClient to manage its lifecycle.
+    """
+
     def __init__(self):
-        """
-        A context manager for DucknestClient to manage the lifecycle of DucknestClient instances.
-
-        This class ensures that the DucknestClient is properly opened and closed when used in a `with` statement.
-        """
-
         self.ducknest_client: DucknestClient | None = None
 
     @override

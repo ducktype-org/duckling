@@ -4,9 +4,11 @@ from pathlib import Path
 from rich.prompt import Confirm, Prompt
 
 from quackpack.commands.init.types import InitOptions
-from quackpack.config.project import Venv
-from quackpack.config.project.models import Configuration
+from quackpack.config.project import Manifest
+from quackpack.project_loader import ProjectLoader
+from quackpack.util.errors import QuackPackError
 from quackpack.util.logger import get_logger
+from quackpack.util.pkgid import Identifier
 
 logger = get_logger(__name__)
 
@@ -18,9 +20,8 @@ class FileWithData:
 
     def execute(self) -> None:
         self.destination.parent.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Creating new file '{self.destination}' for venv")
-        with open(self.destination, "w") as f:
-            f.write(self.data)
+        logger.debug(f"Creating new file '{self.destination}' for project")
+        self.destination.write_text(self.data)
 
     def __post_init__(self) -> None:
         if not self.destination == self.destination.resolve().relative_to(Path.cwd()):
@@ -64,8 +65,8 @@ class BasicProject:
 @dataclass(frozen=True, kw_only=True)
 class AdvancedProject:
     options: InitOptions
-    project_config: Configuration
-    creators: list[PlainDirectory | FileWithData] = field(default_factory=list)
+    manifest: Manifest
+    creators: list[PlainDirectory | FileWithData] = field(default_factory=list[PlainDirectory | FileWithData])
 
     def execute(self) -> None:
         console = self.options.ctx.console
@@ -74,16 +75,16 @@ class AdvancedProject:
             self.creators.append(PlainDirectory(destination=Path("docs")))
         if Confirm.ask(prompt="Create tests directory?", default=True, console=console):
             self.creators.append(PlainDirectory(destination=Path("tests")))
-
-        self.project_config.metadata.name = Prompt.ask(
-            "Set project name", default=self.project_config.metadata.name, console=console
-        )
-        self.project_config.metadata.author = Prompt.ask("Set project author", console=console)
-
+        if name := Prompt.ask("Set project name", default=None, console=console):
+            try:
+                self.manifest.metadata.name = Identifier(name)
+            except ValueError:
+                raise QuackPackError(f"'{name}' is not a valid project name") from None
+        self.manifest.metadata.author = Prompt.ask("Set project author", console=console)
         for creator in self.creators:
             creator.execute()
         # NOTE: We CWD'ed.
-        self.project_config.save_to(Venv.CONFIG_FILE_NAME)
+        self.manifest.save_to(ProjectLoader.MANIFEST_NAME)
         self.options.ctx.console.info(
-            f"Successfully created new project '{self.project_config.metadata.name}' at '{self.options.destination}'"
+            f"Successfully created new project '{self.manifest.metadata.name}' at '{self.options.destination}'"
         )

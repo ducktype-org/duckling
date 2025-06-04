@@ -22,7 +22,7 @@ removes ALL locks corresponding to that file, owned by current process).
 import os
 import sys
 
-from quackpack.util.lock.common import BaseFileLock, Blocking, LockType, LockWouldBlock
+from quackpack.util.lock.common import BaseFileLock, LockType, LockWouldBlock
 
 FileLock: type[BaseFileLock]
 if os.name == "posix":
@@ -38,4 +38,4 @@ else:
 
     FileLock = SoftwareFileLock
 
-__all__ = ["BaseFileLock", "Blocking", "FileLock", "LockType", "LockWouldBlock"]
+__all__ = ["BaseFileLock", "FileLock", "LockType", "LockWouldBlock"]

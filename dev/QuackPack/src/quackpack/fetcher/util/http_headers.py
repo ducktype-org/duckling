@@ -26,12 +26,10 @@ _HTTP_WHITESPACE: Final[str] = " \t"
 def _normalize_header(name: str) -> str:
     """
     Normalize a header name to Http-Header-Case.
-    ----
-    Args:
-    - `name`: The header name to normalize.
-    ----
-    Returns:
-    - `str`: The normalized header name.
+
+    :param str name: The header name to normalize.
+    :return: The normalized header name.
+    :rtype: str
     """
 
     return "-".join(w.capitalize() for w in name.split("-"))
@@ -40,11 +38,7 @@ def _normalize_header(name: str) -> str:
 class HTTPHeaders(MutableMapping[str, str]):
     """
     A dictionary that maintains Http-Header-Case for all keys.
-    Supports multiple values per key via `add()` and `get_list()`.
-    ----
-    Args:
-    - `*args`: Optional arguments for initialization.
-    - `**kwargs`: Optional keyword arguments for initialization.
+    Supports multiple values per key via ``add()`` and ``get_list()``.
     """
 
     def __init__(self, *args: Any, **kwargs: str) -> None:
@@ -64,10 +58,9 @@ class HTTPHeaders(MutableMapping[str, str]):
     def add(self, name: str, value: str) -> None:
         """
         Add a new value for the given key.
-        ----
-        Args:
-        - `name`: The header name.
-        - `value`: The header value.
+
+        :param str name: The header name.
+        :param str value: The header value.
         """
 
         norm_name = _normalize_header(name)
@@ -81,12 +74,10 @@ class HTTPHeaders(MutableMapping[str, str]):
     def get_list(self, name: str) -> list[str]:
         """
         Get all values for the given header as a list.
-        ----
-        Args:
-        - `name`: The header name.
-        ----
-        Returns:
-        - `list[str]`: A list of values for the header.
+
+        :param str name: The header name.
+        :return: A list of values for the header.
+        :rtype: list[str]
         """
 
         norm_name = _normalize_header(name)
@@ -95,9 +86,9 @@ class HTTPHeaders(MutableMapping[str, str]):
     def get_all(self) -> Iterable[tuple[str, str]]:
         """
         Get an iterable of all (name, value) pairs.
-        ----
-        Returns:
-        - `Iterable[tuple[str, str]]`: An iterable of (name, value) pairs.
+
+        :return: An iterable of (name, value) pairs.
+        :rtype: Iterable[tuple[str, str]]
         """
 
         for name, values in self._as_list.items():
@@ -107,12 +98,9 @@ class HTTPHeaders(MutableMapping[str, str]):
     def parse_line(self, line: str) -> None:
         """
         Update the dictionary with a single header line.
-        ----
-        Args:
-        - `line`: The header line to parse.
-        ----
-        Raises:
-        - `HTTPInputError`: If the header line is malformed.
+
+        :param str line: The header line to parse.
+        :raises quackpack.fetcher.util.HTTPInputError: If the header line is malformed.
         """
 
         if line[0].isspace():
@@ -133,13 +121,11 @@ class HTTPHeaders(MutableMapping[str, str]):
     @classmethod
     def parse(cls, headers: str) -> HTTPHeaders:
         """
-        Parse HTTP header text into an `HTTPHeaders` object.
-        ----
-        Args:
-        - `headers`: The header text to parse.
-        ----
-        Returns:
-        - `HTTPHeaders`: The parsed headers.
+        Parse HTTP header text into an ``HTTPHeaders`` object.
+
+        :param str headers: The header text to parse.
+        :return: The parsed headers.
+        :rtype: quackpack.fetcher.util.HTTPHeaders
         """
 
         h = cls()
@@ -174,10 +160,10 @@ class HTTPHeaders(MutableMapping[str, str]):
 
     def copy(self) -> HTTPHeaders:
         """
-        Create a shallow copy of the `HTTPHeaders` object.
-        ----
-        Returns:
-        - `HTTPHeaders`: A shallow copy of the object.
+        Create a shallow copy of the ``HTTPHeaders`` object.
+
+        :return: A shallow copy of the object.
+        :rtype: quackpack.fetcher.util.HTTPHeaders
         """
 
         # NOTE: Original comment.
@@ -203,11 +189,10 @@ class HTTPHeaders(MutableMapping[str, str]):
 class ResponseStartLine(NamedTuple):
     """
     Represents the start line of an HTTP response.
-    ----
-    Attributes:
-    - `version`: HTTP version
-    - `code`: HTTP status code
-    - `reason`: HTTP reason phrase
+
+    :param str version: HTTP version.
+    :param int code: HTTP status code.
+    :param str reason: HTTP reason phrase.
     """
 
     version: str
@@ -217,16 +202,12 @@ class ResponseStartLine(NamedTuple):
 
 def parse_http1_response_start_line(line: str) -> ResponseStartLine:
     """
-    Parse an HTTP 1.x response start line into a `ResponseStartLine` tuple.
-    ----
-    Args:
-    - `line`: The HTTP response start line as a string.
-    ----
-    Returns:
-    - `ResponseStartLine`: A named tuple containing `version`, `code`, and `reason`.
-    ----
-    Raises:
-    - `HTTPInputError`: If the input line is not a valid HTTP 1.x response start line.
+    Parse an HTTP 1.x response start line into a ``ResponseStartLine`` tuple.
+
+    :param str line: The HTTP response start line as a string.
+    :return: A named tuple containing ``version``, ``code``, and ``reason``.
+    :rtype: quackpack.fetcher.util.ResponseStartLine
+    :raises quackpack.fetcher.util.HTTPInputError: If the input line is not a valid HTTP 1.x response start line.
     """
 
     match = re.match(r"(HTTP/1.[0-9]) ([0-9]+) ([^\r]*)", line)

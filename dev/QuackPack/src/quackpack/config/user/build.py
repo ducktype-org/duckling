@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
-from quackpack.config.project.models import BuildProfile, TargetProfile
-from quackpack.util.default_pydantic_options import default_pydantic_options
+from quackpack.config.project import BuildProfile, TargetProfile
+from quackpack.util.default_pydantic_options import DEFAULT_MODEL_CONFIG
 
 __all__ = ["BuildEntry"]
 
@@ -15,8 +15,10 @@ class BuildEntry(BaseModel):
     """
     Extra options for specified target.
     """
+
     profiles: BuildProfile = Field(default_factory=BuildProfile)
     """
     Extra options for specified profile.
     """
-    model_config = default_pydantic_options()
+
+    model_config = DEFAULT_MODEL_CONFIG
