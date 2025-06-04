@@ -30,5 +30,11 @@ namespace compiler::driver {
          * Compile all package modules and link them into a single binary.
          */
         void compilerEntirePackageIntoBinary();
+
+    private:
+        /**
+         * Compile builtin LLVM library into an object file.
+         */
+        artifacts::FileArtifact emitBuiltinObjectFile();
     };
 }

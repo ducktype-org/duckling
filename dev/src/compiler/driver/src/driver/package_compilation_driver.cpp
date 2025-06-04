@@ -5,9 +5,9 @@
 #include <query_framework/query_entry_point.hpp>
 #include <query_framework/query_impl.hpp>
 #include <driver/hout_to_binary_driver.hpp>
-#include <system_command/system_command.hpp>
 #include <backends/llvm/llvm_backend.hpp>
 #include "backend_driver/llvm_ir_lib.hpp"
+#include "link.hpp"
 
 namespace compiler::driver {
 
@@ -97,10 +97,10 @@ namespace compiler::driver {
         using namespace compiler;
         auto root = query::entryPoint<frontend::QueryModuleTree>(package_location );
         
-        std::vector<artifacts::FileArtifact> outputs;
+        std::vector<artifacts::FileArtifact> objects;
 
         std::function<void(frontend::ModuleID)> handle_module = [&](frontend::ModuleID module_id) -> void {
-            outputs.emplace_back(
+            objects.emplace_back(
                 query::entryPoint<CompilerModuleToLLVM>(module_id)
             );
             auto sub_modules = query::entryPoint<frontend::QuerySubmodules>(module_id);
@@ -116,37 +116,22 @@ namespace compiler::driver {
                 base::StrID(base::strConcat("package_", backendTypeToStr(backend), ".exe").c_str())
             );
 
-            // compile builtins:
-            auto mod                 = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
-			auto builtin_object_path = std::filesystem::path("builtin.o");
-			mod.compile(builtin_object_path, backend_llvm::CompilationOutputType::Object);
-        
-            // Link the object file.
-            // Use the default system linker - for Ubuntu it is advised to use gcc.
-            // Related research links:
-            // https://www.reddit.com/r/ProgrammingLanguages/comments/kji3k3/comment/ggx1ftq/?utm_source=share&utm_medium=web3x&utm_name=web3xcss&utm_term=1
-            // https://github.com/rust-lang/rust/issues/71519
-            // https://github.com/rust-lang/rust/blob/c62239aeb3ba7781a6d7f7055523c1e8c22b409c/compiler/rustc_codegen_ssa/src/back/link.rs#L1442
-            system_command::SystemCommand command("gcc");
-            
-            for (const auto& object_file_path: outputs)
-                command.addArg(object_file_path.FILE.native());
-
-            command.addArg(builtin_object_path.native());
-            
-                
-            // for (const auto& external_object_file: options->external_objects_files)
-            // command.addArg(external_object_file.str());
-
-            // for (const auto& external_lib: options->external_libs)
-            // command.addArg(base::strConcat("-l", external_lib.strView()));
-
-            command.addArg("-lc");  // Link the C standard library.
-
-            command.addArg("-o");
-            command.addArg(output_file.FILE.native());
-            command.execute();
+            objects.push_back(emitBuiltinObjectFile());
+            link(
+                output_file,
+                objects,
+                compiler::driver::LinkOptions{.link_c_standard_library = true}
+            );
         }   
 
+    }
+
+    artifacts::FileArtifact PackageCompilationDriver::emitBuiltinObjectFile() {
+        auto builtin_obj_file = root_artifact_collection.fileArtifactAtOrNew(
+            base::StrID(base::strConcat("builtin_", backendTypeToStr(backend), ".o").c_str())
+        );
+        auto mod = backend_llvm::Module::fromIRCode(LLVM_IR_LIB);
+        mod.compile(builtin_obj_file.FILE, backend_llvm::CompilationOutputType::Object);
+        return builtin_obj_file;
     }
 }

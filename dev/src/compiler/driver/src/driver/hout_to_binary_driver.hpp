@@ -36,13 +36,7 @@ namespace compiler::driver {
 			base::StrID module_id,
 			artifacts::FileArtifact output_artifact
 		);
-
-		// add linker submodule:
-		// /**
-		//  * @brief Links all module compiled so far into a complete program.
-		//  */
-		// void link(base::StrID output_file);
-
+		
 		/**
 		 * @brief Execute modules compiled with `compileModule` method.
 		 * Only relevant for DVM backend.

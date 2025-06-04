@@ -34,7 +34,5 @@ namespace compiler::driver {
 		backend_driver->compileModule(ctx, module_data, output_artifact);
 	}
 
-	// void HoutToBinaryDriver::link(base::StrID output_file) { backend_driver->link(output_file); }
-
 	std::expected<RunOutput, std::string> HoutToBinaryDriver::run() { return backend_driver->run(); }
 }
