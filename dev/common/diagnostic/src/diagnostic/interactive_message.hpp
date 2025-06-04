@@ -7,6 +7,7 @@
 
 #include <helios/hout/elements/expr.hpp>
 #include <json/json.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/expr_element.hpp>
 
 #include "base/string_id.hpp"
 #include <base/box.hpp>
@@ -67,10 +68,10 @@ namespace dia {
 		class Content: public InteractiveContent {
 		public:
 			Content(
-				Box<ContentParams>            params,
-				dia::SourcePosition           position,
-				pst::Access<pst::LangElement> pst,
-				query::Context&               ctx
+				Box<ContentParams>                  params,
+				dia::SourcePosition                 position,
+				pst::AccessLocked<pst::LangElement> pst,
+				query::Context&                     ctx
 			):
 				  InteractiveContent(
 					  ContentType::ERROR,
@@ -85,12 +86,12 @@ namespace dia {
 
 	public:
 		OperatorNotFound(
-			dia::SourcePosition           position,
-			base::StrID                   op,
-			Box<Expr>                     lhs,
-			Box<Expr>                     rhs,
-			pst::Access<pst::LangElement> pst,
-			query::Context&               ctx
+			dia::SourcePosition                 position,
+			base::StrID                         op,
+			Box<Expr>                           lhs,
+			Box<Expr>                           rhs,
+			pst::AccessLocked<pst::LangElement> pst,
+			query::Context&                     ctx
 		):
 			  InteractiveMessage(
 				  base::makeBox<Content>(

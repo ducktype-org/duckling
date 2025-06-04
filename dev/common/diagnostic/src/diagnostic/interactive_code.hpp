@@ -4,12 +4,20 @@
 #include "pst_parser/lang_parser_element.hpp"
 #include "source_position.hpp"
 
+#include <helios/hout/elements/expr.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/symbol_kind.hpp>
 #include <json/json.hpp>
+#include <pst_parser/access.hpp>
+#include <pst_parser/lang_parser_element.hpp>
+#include <pst_parser/pst.hpp>
 #include <typesystem/higher/abstract_type.hpp>
 
+#include <base/ref.hpp>
+
 #include <set>
+#include <string>
+#include <utility>
 
 namespace dia {
 	using pointer_message = dia::pointer_message;
@@ -45,21 +53,20 @@ namespace dia {
 
 	class InteractiveCode: public AbstractCode {
 	private:
-		pst::Access<pst::LangElement>           pst;
-		query::Context&                         ctx;
-		base::Optional<compiler::helios::SymID> get_symbol(pst::Access<pst::LangElement> pst) const;
-		void                                    visit_leafs(
-											   pst::Access<pst::LangElement> pst, json& out, usize range_start, usize range_end
-										   ) const;
+		pst::AccessLocked<pst::LangElement> pst;
+		query::Context&                     ctx;
+		void                                visit_leafs(
+										   pst::AccessLocked<pst::LangElement> pst, json& out, usize range_start, usize range_end
+									   ) const;
 
 	public:
 		json serialize_code() const override;
 
 		InteractiveCode(
-			dia::SourcePosition           position,
-			pst::Access<pst::LangElement> pst,
-			query::Context&               ctx,
-			pointer_message               pointer
+			dia::SourcePosition                 position,
+			pst::AccessLocked<pst::LangElement> pst,
+			query::Context&                     ctx,
+			pointer_message                     pointer
 		):
 			  AbstractCode(position, pointer),
 			  pst(pst),

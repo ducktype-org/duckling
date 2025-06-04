@@ -69,7 +69,7 @@ namespace nlohmann {
 	struct adl_serializer<std::set<T>> {
 		static void to_json(json& j, const std::set<T>& symbols) {
 			j = json::object();
-			for (auto& s: symbols) j[std::to_string(s.customPerfectHash())] = s;
+			for (auto& s: symbols) j[std::to_string(s.queryUnstablePerfectHash())] = s;
 			// TODO: Ask how symbols are represented in lsp, because I don't see any way to
 			// deserialize them.
 		}
