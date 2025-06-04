@@ -146,7 +146,6 @@ namespace compiler::helios::code {
 		Box<Expr> condition;
 		CodeBlock body;
 
-		// @TODO: optional else body
 
 		WhileStmt(Box<Expr> condition, CodeBlock body):
 			  condition(std::move(condition)),
