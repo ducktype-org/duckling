@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compiler View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            height: 100vh;
+        }
+        
+        #main-panel {
+            flex: 2;
+            padding: 20px;
+            border-right: 1px solid #ccc;
+            overflow-y: auto;
+        }
+        
+        #side-panel {
+            flex: 1;
+            padding: 20px;
+            background-color: #f5f5f5;
+            overflow-y: auto;
+        }
+        
+        .diagnostic {
+            margin-bottom: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .side-path {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .type-0 { border-left: 4px solid #ff4444; } /* Error */
+        .type-1 { border-left: 4px solid #ffbb33; } /* Warning */
+        .type-2 { border-left: 4px solid #00C851; } /* Note */
+        .type-3 { border-left: 4px solid #33b5e5; } /* Hint */
+        .type-4 { border-left: 4px solid #aa66cc; } /* Docs */
+
+        .code-component {
+            display: inline;
+            font-family: monospace;
+            white-space: pre;
+        }
+
+        .text-component {
+            display: inline;
+        }
+
+        .concat-component {
+            display: inline;
+        }
+
+        .highlighted {
+            background-color: #ffeb3b;
+        }
+
+        .code-section {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .code-section-header {
+            padding: 8px 12px;
+            background-color: #e0e0e0;
+            border-bottom: 1px solid #ddd;
+            border-radius: 4px 4px 0 0;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .code-section pre {
+            margin: 0;
+            padding: 12px;
+        }
+
+        .code-section code {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+</head>
+<body>
+    {% macro render_nohl_component(comp) -%}
+        {% set component_type = comp.WhichOneof('component') -%}
+        {% if component_type == 'text_component' -%}
+            <span class="text-component">{{ comp.text_component.content }}</span>
+        {%- elif component_type == 'code_component' -%}
+            <span class="code-component">{{ comp.code_component.content }}</span>
+        {%- elif component_type == 'concat_component' -%}
+            <span class="concat-component">
+                {%- for child in comp.concat_component.components -%}
+                    {{- render_nohl_component(child) -}}
+                {%- endfor -%}
+            </span>
+        {%- elif component_type == 'interactive_component' -%}
+            {{- render_nohl_component(comp.interactive_component.primary_component) -}}
+        {%- endif -%}
+    {%- endmacro %}
+
+    {% macro render_hl_component(comp) -%}
+        {% set component_type = comp.WhichOneof('component') -%}
+        {% if component_type == 'code_component' -%}
+            <span class="code-component {% if comp.code_component.hl_tags %}highlighted{% endif %}">{{ comp.code_component.content }}</span>
+        {%- elif component_type == 'concat_component' -%}
+            <span class="concat-component">
+                {%- for child in comp.concat_component.components -%}
+                    {{- render_hl_component(child) -}}
+                {%- endfor -%}
+            </span>
+        {%- elif component_type == 'interactive_component' -%}
+            {{- render_hl_component(comp.interactive_component.primary_component) -}}
+        {%- endif -%}
+    {%- endmacro %}
+
+    <div id="main-panel">
+        <h2>Diagnostics</h2>
+        {%- for diagnostic in diagnostics %}
+            <div class="diagnostic">
+                {%- for info in diagnostic.infos %}
+                    <div class="type-{{ info.metadata.type }}">
+                        <h3>
+                            {%- if info.metadata.type == 0 %}Error
+                            {%- elif info.metadata.type == 1 %}Warning
+                            {%- elif info.metadata.type == 2 %}Note
+                            {%- elif info.metadata.type == 3 %}Hint
+                            {%- elif info.metadata.type == 4 %}Docs
+                            {%- endif %}
+                            (Code: {{ info.metadata.code }})
+                        </h3>
+                        <div class="header">
+                            {{- render_nohl_component(info.header) -}}
+                        </div>
+                        {%- for section in info.sections %}
+                            <div class="section">
+                                {%- set section_type = section.WhichOneof('section') -%}
+                                {%- if section_type == 'code_section' %}
+                                    <div class="code-section">
+                                        <div class="code-section-header">
+                                            {{- section.code_section.metadata.filename -}}
+                                            {%- if section.code_section.metadata.line -%}
+                                                :{{- section.code_section.metadata.line -}}
+                                            {%- endif -%}
+                                            {%- if section.code_section.metadata.column -%}
+                                                :{{- section.code_section.metadata.column -}}
+                                            {%- endif -%}
+                                        </div>
+                                        <pre><code>{% for line in section.code_section.lines -%}
+{%- if line.content -%}{% if line.line_number %}{{ line.line_number }}:{% endif %}{{- render_hl_component(line.content) }}
+{% endif -%}
+{%- endfor -%}</code></pre>
+                                    </div>
+                                {%- elif section_type == 'text_section' -%}
+                                    {{- render_nohl_component(section.text_section) -}}
+                                {%- endif %}
+                            </div>
+                        {%- endfor %}
+                    </div>
+                {%- endfor %}
+            </div>
+        {%- endfor %}
+    </div>
+    
+    <div id="side-panel">
+        <h2>Side Information</h2>
+        {%- for path in side_paths %}
+            <div class="side-path">
+                {%- for info in path.infos %}
+                    <div class="side-info type-{{ info.metadata.type }}" data-id="{{ info.side_info_id }}">
+                        <h3>
+                            {%- if info.metadata.type == 0 %}Error
+                            {%- elif info.metadata.type == 1 %}Warning
+                            {%- elif info.metadata.type == 2 %}Note
+                            {%- elif info.metadata.type == 3 %}Hint
+                            {%- elif info.metadata.type == 4 %}Docs
+                            {%- endif %}
+                            (Code: {{ info.metadata.code }})
+                        </h3>
+                        <div class="header">
+                            {{- render_nohl_component(info.header) -}}
+                        </div>
+                        {%- for section in info.sections %}
+                            <div class="section">
+                                {%- set section_type = section.WhichOneof('section') -%}
+                                {%- if section_type == 'code_section' %}
+                                    <div class="code-section">
+                                        <div class="code-section-header">
+                                            {{- section.code_section.metadata.filename -}}
+                                            {%- if section.code_section.metadata.line -%}
+                                                :{{- section.code_section.metadata.line -}}
+                                            {%- endif -%}
+                                            {%- if section.code_section.metadata.column -%}
+                                                :{{- section.code_section.metadata.column -}}
+                                            {%- endif -%}
+                                        </div>
+                                        <pre><code>{% for line in section.code_section.lines -%}
+{%- if line.content -%}{% if line.line_number %}{{ line.line_number }}:{% endif %}{{- render_hl_component(line.content) }}
+{% endif -%}
+{%- endfor -%}</code></pre>
+                                    </div>
+                                {%- elif section_type == 'text_section' -%}
+                                    {{- render_nohl_component(section.text_section) -}}
+                                {%- endif %}
+                            </div>
+                        {%- endfor %}
+                        {%- if info.edges %}
+                            <div class="edges">
+                                {%- for edge in info.edges %}
+                                    <button onclick="getEdge({{ info.side_info_id }}, {{ edge.edge_id }})">
+                                        {{- edge.description -}}
+                                    </button>
+                                {%- endfor %}
+                            </div>
+                        {%- endif %}
+                        <button onclick="closeSideInfo({{ info.side_info_id }})">Close</button>
+                    </div>
+                {%- endfor %}
+            </div>
+        {%- endfor %}
+    </div>
+
+    <script>
+        function handleClick(componentId, clickType = 'CLICK') {
+            fetch('/click', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    click_type: clickType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reload the page to show updated view
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function closeSideInfo(sideInfoId) {
+            fetch('/close_side_info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    side_info_id: sideInfoId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reload the page to show updated view
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function getEdge(sideInfoId, edgeId) {
+            fetch('/get_edge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    side_info_id: sideInfoId,
+                    edge_id: edgeId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Reload the page to show updated view
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html> 
