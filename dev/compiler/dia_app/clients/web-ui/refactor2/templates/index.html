@@ -92,6 +92,13 @@
             font-family: monospace;
             white-space: pre;
         }
+
+        .interactive-component {
+            cursor: pointer;
+        }
+        .interactive-component:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -108,7 +115,9 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            {{- render_nohl_component(comp.interactive_component.primary_component) -}}
+            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
+                {{- render_nohl_component(comp.interactive_component.primary_component) -}}
+            </span>
         {%- endif -%}
     {%- endmacro %}
 
@@ -123,7 +132,9 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            {{- render_hl_component(comp.interactive_component.primary_component) -}}
+            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
+                {{- render_hl_component(comp.interactive_component.primary_component) -}}
+            </span>
         {%- endif -%}
     {%- endmacro %}
 
@@ -234,7 +245,15 @@
     </div>
 
     <script>
-        function handleClick(componentId, clickType = 'CLICK') {
+        function handleComponentClick(event, componentId) {
+            let clickType = 'CLICK';
+            
+            if (event.ctrlKey && event.shiftKey) {
+                clickType = 'CLICK_INTERACTIVE_ROLLBACK';
+            } else if (event.ctrlKey) {
+                clickType = 'CLICK_INTERACTIVE';
+            }
+
             fetch('/click', {
                 method: 'POST',
                 headers: {
