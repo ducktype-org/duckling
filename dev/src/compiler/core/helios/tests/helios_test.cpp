@@ -990,22 +990,12 @@ private:
 
 
 		ASSERT_EQUAL(
-			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123",
-			mangled_goo.value()
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.value()
 		);
-		ASSERT_EQUAL(
-			"_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321",
-			mangled_cnst.value()
-		);
+		ASSERT_EQUAL("_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321", mangled_cnst.value());
 
-		ASSERT_EQUAL(
-			"_Q4_M3subN5inSub6subFunEFi32E$metadata_v5",
-			mangled_sub_fun.value()
-		);
-		ASSERT_EQUAL(
-			"_Q4_M3subN5inSub8subConstE$metadata_v5",
-			mangled_sub_cnst.value()
-		);
+		ASSERT_EQUAL("_Q4_M3subN5inSub6subFunEFi32E$metadata_v5", mangled_sub_fun.value());
+		ASSERT_EQUAL("_Q4_M3subN5inSub8subConstE$metadata_v5", mangled_sub_cnst.value());
 	}
 };
 
