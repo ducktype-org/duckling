@@ -8,6 +8,10 @@
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <pst_parser/element_kind.hpp>
+#include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
+#include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
+#include <pst_parser/elements/hierarchy/not_statements/all_not_statements.hpp>
 #include <query_framework/query_impl.hpp>
 
 #include <algorithm>
@@ -219,7 +223,7 @@ namespace compiler::helios::mangler {
 	}  // namespace detail
 
 	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<std::string>) {
-		static auto provide(Context& ctx, QKey key) -> PResult {
+		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
 			auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);

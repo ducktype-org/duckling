@@ -18,7 +18,7 @@ namespace query::detail {
 	 */
 	template<typename KeyType>
 	detail::NodeID makeNodeID(QueryID id, const KeyType& key) {
-		return { id, unstableHashKey(key) };
+		return { id, { unstableHashKey(key) } };
 	}
 
 }
