@@ -64,13 +64,13 @@ namespace compiler::helios::mangler {
         
         std::string identifier(std::string name) {
             // @future: use punnycode for unicode strings
-            if(/*isUnicode*/ false) {
-                constexpr char unicode_prefix = 'U';
-                std::string punny_string;
-                return base::strConcat(unicode_prefix, punny_string.size(), punny_string); 
-            } else {
+            if(/* hasCharsOnlyFromAllowedCharacterSet */ true) {
                 name = std::to_string(name.size()) + name;
                 return name;
+            } else {
+                constexpr char unicode_prefix = 'U';
+                std::string punny_string = name; // @todo: convert to punnycode
+                return base::strConcat(unicode_prefix, punny_string.size(), punny_string); 
             }
         };
 
@@ -78,6 +78,10 @@ namespace compiler::helios::mangler {
             auto enclosing_scope = scope(symbol_id);
             auto enclosing_module = module(enclosing_scope);
             
+            // note: only the enclosing module is used for mangling. This is intentional,
+            // as modules are supposed to be self-contained and this would make moving them
+            // a more breaking (ABI-wise) change than it should be
+
             // "M" <module-name>                                 // standalone module
             // @future: templated modules
             if(/* standalone module */ true) {
@@ -85,7 +89,7 @@ namespace compiler::helios::mangler {
                 return base::strConcat("M", module_identifier);
             }
             
-            // @future: packages & scripts
+            // @future: add support for packages & scripts when they are implemented
             // "P" <package-name> <module-name>                  // module in a package
             // "S" <script-name>                                 // standalone script
             // "R" <package-name> <module-name> <script-name>    // script in a package
@@ -140,6 +144,7 @@ namespace compiler::helios::mangler {
                                 }
                             }
                         }
+                        // @future: local classes (mangle enclosing function name)
                     }
                     
                     current_scope = parent_scope.value();
@@ -147,7 +152,7 @@ namespace compiler::helios::mangler {
                     
                 std::string ret = "N";
                 for(auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) {
-                    ret += std::move(*it);
+                    ret += *it;
                 }
                 ret += unscoped_name(symbol_id) + "E";
                 return ret;
@@ -175,7 +180,8 @@ namespace compiler::helios::mangler {
 
                 ret += "E";
             } else if(kind(symbol_id) == SymbolKind::Method) {
-                // @future: methods
+                // @future: add methods when they are implemented
+                ret = "Ftodo_method_typeE";
             }
             
             return ret;
@@ -197,11 +203,11 @@ namespace compiler::helios::mangler {
             case SymbolKind::Constructor:
             case SymbolKind::Destructor:
                 // special symbols
-                return ""; // todo
+                return "todo_special_symbols"; // @todo
                 break;
 
             default:
-                return ""; // todo
+                return "todo_unknown_symbol"; // todo
                 break;
             }
         }
@@ -219,10 +225,10 @@ namespace compiler::helios::mangler {
 
         auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);
         if(!dealiased.get()->hasValue() || dealiased.get()->value().list.size() != 1)
-            return std::nullopt; // todo: ambiguous symbols
+            return std::nullopt; // @todo: ambiguous symbols
         auto symbol_id = dealiased.get()->value().list.front();
 
-        if(!detail::isManglable(symbol_id)) return std::nullopt; // todo: wrong symbol kind
+        if(!detail::isManglable(symbol_id)) return std::nullopt; // @todo: wrong symbol kind
         
         constexpr auto language_prefix = "_Q"sv;
         const auto mangling_scheme_version = detail::compactNumber(key.mangling_scheme_version);
