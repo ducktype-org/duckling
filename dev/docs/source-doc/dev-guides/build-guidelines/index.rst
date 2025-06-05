@@ -183,9 +183,6 @@ Docs configuration
 ------------------
 
 Our Sphinx documentation configuration is in the ``docs/doc-config`` directory.
-It is currently a separate Github repository that is included as a submodule in the main repository.
-When doing changes to the configuration, you should commit them to the submodule repository and then update 
-the main repository with the new submodule commit.
 
 Running the tests
 =================
