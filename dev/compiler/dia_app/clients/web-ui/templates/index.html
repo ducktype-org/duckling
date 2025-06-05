@@ -224,8 +224,8 @@
         <div class="code-section">
             <div class="code-section-header">{{- section.metadata.filename -}}:{{- section.metadata.line -}}:{{- section.metadata.column -}}</div>
             <pre><code>{%- for line in section.lines -%}
-{%- if line.line_number -%}<span class="line-number">{{- line.line_number -}}</span>{%- else -%}<span class="line-number"></span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.get_messages_for_line(loop.index0) -%}
-<span class="line-number"></span><div class="message-box type-{{- message.type -}}" data-tag="{{- message.tag -}}" onmouseover="highlightTag({{- message.tag -}})" onmouseout="unhighlightTag({{- message.tag -}})">{{- message.content -}}</div>&#10;{%- endfor -%}
+{%- if line.line_number -%}<span class="line-number">{{- line.line_number -}}</span>{%- else -%}<span class="line-number"> </span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.get_messages_for_line(loop.index0) -%}
+<div class="message-box type-{{- message.type -}}" data-tag="{{- message.tag -}}" onmouseover="highlightTag({{- message.tag -}})" onmouseout="unhighlightTag({{- message.tag -}})">{{- message.content -}}</div>&#10;{%- endfor -%}
 {%- endfor -%}</code></pre>
         </div>
     {%- endmacro -%}
