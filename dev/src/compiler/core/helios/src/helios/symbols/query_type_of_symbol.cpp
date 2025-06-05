@@ -10,6 +10,7 @@
 #include <pst_parser/pst_visitor.hpp>
 #include <query_framework/query_impl.hpp>
 #include <typesystem/higher/queries/types.hpp>
+#include <typesystem/higher/expression_type.hpp>
 
 namespace compiler::helios {
 
@@ -47,13 +48,35 @@ namespace compiler::helios {
 			base::Optional<tsh::SymbolType<>> symbol_type;
 
 			void visitConst(pst::Access<pst::Const> stmt) final {
-				// @TODO: handle potential lack of type
-				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				if (stmt->getType().has_value()) {
+					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				} else {
+					if (stmt->getValue().has_value()) {
+						auto parsed = ctx.query<EvalExprToType>(stmt->getValue().value().unlock(ctx)->getExpr());
+						if (parsed.hasValue())
+							setTypeOfSymbol(parsed.value());
+						else
+							CORE_PANIC("Const declaration with value that does not evaluate to a type.");
+					} else {
+						CORE_PANIC("Const declaration without type or value, this is a bug in the parser.");
+					}
+				}
 			}
 
 			void visitVariable(pst::Access<pst::Variable> stmt) final {
-				// @TODO: handle potential lack of type
-				setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				if (stmt->getType().has_value()) {
+					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
+				} else {
+					if (stmt->getValue().has_value()) {
+						auto parsed = ctx.query<EvalExprToType>(stmt->getValue().value().unlock(ctx)->getExpr());
+						if (parsed.hasValue())
+							setTypeOfSymbol(parsed.value());
+						else
+							CORE_PANIC("Variable declaration with value that does not evaluate to a type.");
+					} else {
+						CORE_PANIC("Variable declaration without type or value, this is a bug in the parser.");
+					}
+				}
 			}
 
 			void visitField(pst::Access<pst::Field> field) final {
