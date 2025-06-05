@@ -18,6 +18,7 @@ endif()
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 set(CMAKE_COLOR_MAKEFILE ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_LINK_LIBRARIES_ONLY_TARGETS ON)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -48,12 +49,11 @@ add_custom_test_pack(compiler)
 add_subdirectory(dependencies)
 insertLLVM()
 
-# Source:
-add_subdirectory(base)
-add_subdirectory(common)
-add_subdirectory(compiler)
-add_subdirectory(vm)
-add_subdirectory(playground)
+add_subdirectory(src/base)
+add_subdirectory(src/common)
+add_subdirectory(src/compiler)
+add_subdirectory(src/vm)
+add_subdirectory(src/playground)
 
 # Scripts:
 add_subdirectory(scripts/cmake)
