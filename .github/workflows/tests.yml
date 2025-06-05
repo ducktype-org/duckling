@@ -25,7 +25,8 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      target-label: 'build'
+      self-hosted-labels: 'build'
+      github-labels: 'ubuntu-24.04,ubuntu-latest'
     secrets: inherit
 
   build:

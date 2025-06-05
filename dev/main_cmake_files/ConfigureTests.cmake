@@ -27,15 +27,15 @@ if(ENABLE_COVERAGE)
 
         COMMAND ${FASTCOV}
             --gcov ${GCOV_VERSION}
-			--include "${CMAKE_SOURCE_DIR}"
-            --exclude "docs" 
+            --include "${CMAKE_SOURCE_DIR}" # Process only files in this folder
+            --exclude "docs" # Exclude paths containing this name from coverage
             "integration_tests"
-            "scripts"
-            "/tests/"
+            "scripts" 
+            "/tests/" 
             "/playground/"
-            "${CMAKE_BINARY_DIR}"
-			--process-gcno
-            --lcov
+            "${CMAKE_BINARY_DIR}" # Exclude paths containing this name from coverage
+            --process-gcno # Process files not touched by tests (generated during compilation)
+            --lcov # Generate output in lcov format
             -o coverage.info
 		
         COMMAND ${GENHTML} --demangle-cpp -o coverage coverage.info

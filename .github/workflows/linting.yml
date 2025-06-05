@@ -13,7 +13,8 @@ jobs:
   determine-runners:
     uses: ./.github/workflows/determine-runners.yml
     with:
-      target-label: 'ubuntu-24.04'
+      self-hosted-labels: 'ubuntu-24.04'
+      github-labels: 'ubuntu-24.04,ubuntu-latest'
     secrets: inherit
 
   cpp-linter:
