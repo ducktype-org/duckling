@@ -20,5 +20,4 @@ namespace query::detail {
 	detail::NodeID makeNodeID(QueryID id, const KeyType& key) {
 		return { .q_id = id, .hash = { .val = unstableHashKey(key) } };
 	}
-
 }

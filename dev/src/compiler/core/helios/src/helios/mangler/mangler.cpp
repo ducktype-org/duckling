@@ -1,8 +1,8 @@
 #include "mangler.hpp"
 
-#include "../../../src_private/helios_private/symbols/symbols.hpp"
-#include "../../../src_private/helios_private/symbols/symbol_data.hpp"
 #include "../../../src_private/helios_private/scopes/scopes.hpp"
+#include "../../../src_private/helios_private/symbols/symbol_data.hpp"
+#include "../../../src_private/helios_private/symbols/symbols.hpp"
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/scope_symbol_id.hpp>
