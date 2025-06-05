@@ -1,0 +1,48 @@
+#pragma once
+
+#include "../meta.hpp"
+
+namespace pst {
+	/**
+	 * @brief General Element representing a list of Elements.
+	 *
+	 * @tparam ListElements - Kept Elements, has to have precise length parse like Expr
+	 * @tparam getName - List name getter for errors.
+	 * @tparam Container - Vector-like container of SubElements with emplace_back. Possibly with
+	 * other condition because of iteration.
+	 */
+	template<
+		class ListElements,
+		GetName getName,
+		class Container = std::vector<AccessInternal<ListElements>>>
+	class List: public NotStmt {
+	protected:
+		Container elements;
+
+	public:
+		friend class ListParsingTemplate;
+
+		DECLARE_CONST_ELEMENT_ITERATOR(elements, ListElements)
+
+		[[nodiscard]]
+		usize size() const {
+			return elements.size();
+		}
+
+		explicit List(const dia::SourcePosition& position): NotStmt(position) {}
+
+		[[nodiscard]]
+		std::string elementType() const override {
+			return getName() + " list";
+		}
+
+		void dprint(std::ostream& out) const final {
+			out << "[";
+			for (auto& x: elements) {
+				nullAwareDprint(x, out);
+				out << ",";
+			}
+			out << "]";
+		}
+	};
+}

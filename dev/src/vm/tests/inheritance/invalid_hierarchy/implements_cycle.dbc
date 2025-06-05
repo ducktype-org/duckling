@@ -1,0 +1,11 @@
+type interface: A {
+	implements: { B };
+}
+
+type interface: B {
+	implements: { C };
+}
+
+type interface: C {
+	implements: { A };
+}

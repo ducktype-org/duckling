@@ -1,0 +1,130 @@
+/**
+ * @file stable_container.hpp
+ * @brief Provides a simple expandable container with stable references.
+ */
+#pragma once
+
+#include "box.hpp"
+#include "ref.hpp"
+
+#include <vector>
+
+namespace base {
+
+	/**
+	 * @brief Expandable list (like std::vector), but with stable references (References never
+	 * become dangling, because actual data never moves).
+	 *
+	 * @tparam Key must be convertible to and from usize.
+	 *
+	 * @note Add stable range based iteration (Probably with indexes)
+	 */
+	template<typename Data>
+	class StableVector final {
+		std::vector<Box<Data>> data;
+		static_assert(
+			std::is_same_v<typename std::vector<Box<Data>>::size_type, usize>,
+			"When this fail, figure out what to do."
+		);
+
+		StableVector(std::vector<Box<Data>> data): data(std::move(data)) {}
+
+		template<class T>
+		friend class StableVector;
+
+	public:
+		using RefT  = Ref<Data>;
+		using CRefT = CRef<Data>;
+
+		StableVector()               = default;
+		StableVector(StableVector&&) = default;
+
+		/**
+		 * @note explicit delete here causes much better compiler errors.
+		 * @note It is deleted because data member can't be copied in a simple way.
+		 */
+		StableVector(const StableVector&) = delete;
+
+		[[nodiscard]]
+		constexpr usize size() const noexcept {
+			return data.size();
+		}
+
+		[[nodiscard]]
+		constexpr bool empty() const noexcept {
+			return data.empty();
+		}
+
+		[[nodiscard]]
+		constexpr bool notEmpty() const noexcept {
+			return not data.empty();
+		}
+
+		[[nodiscard]]
+		constexpr Ref<Data> operator[](usize pos) {
+			return data.at(pos).refMut();
+		}
+
+		[[nodiscard]]
+		constexpr CRef<Data> operator[](usize pos) const {
+			return data.at(pos).ref();
+		}
+
+		constexpr void pushBack(const Data& value) {
+			auto new_ptr = makeBox<Data>(value);
+			data.emplace_back(std::move(new_ptr));
+		}
+
+		void pushBack(Data&& value) {
+			auto new_ptr = makeBox<Data>(std::move(value));
+			data.emplace_back(std::move(new_ptr));
+		}
+
+		[[nodiscard]]
+		RefT last() {
+			return data.back().refMut();
+		}
+
+		[[nodiscard]]
+		CRefT last() const {
+			return data.back().ref();
+		}
+
+		/**
+		 * Returns index of the last element (i.e. size - 1).
+		 */
+		[[nodiscard]]
+		constexpr usize lastIndex() const {
+			CORE_ASSERT(size() > 0, "Cannot get lastIndex() from empty StableVector");
+			return size() - 1;
+		}
+
+		template<class... Args>
+		constexpr void emplaceBack(Args&&... args) {
+			auto new_ptr = makeBox<Data>(std::forward<Args>(args)...);
+			data.emplace_back(std::move(new_ptr));
+		}
+
+		auto begin() const { return data.begin(); }
+
+		auto end() const { return data.end(); }
+
+		/**
+		 * @brief Converts stable vector into
+		 * A stable vector storing the same objects but as const Data (instead of Data).
+		 * It is useful when we want to "lock" the state of the objects stored in StableVector.
+		 * @note References created before this operation may still modify the data.
+		 *
+		 * The original container is left in an empty state, and should not be used again.
+		 */
+		StableVector<const Data> toConstData() && {
+			// we have to do this this way, since
+			// std does not provide any direct vector<T> -> vector<Q> construction.
+			std::vector<Box<const Data>> casted;
+			casted.reserve(data.size());
+			for (auto& item: data) casted.emplace_back(std::move(item));
+			data.clear();
+			return StableVector<const Data>(std::move(casted));
+		}
+	};
+}
