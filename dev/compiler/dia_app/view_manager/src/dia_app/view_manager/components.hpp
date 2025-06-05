@@ -142,10 +142,7 @@ namespace dia_app {
 			std::shared_ptr<Component> deepCopy() override;
 		};
 
-		inline component_id_t getNewId() {
-			static component_id_t next = 0;
-			return next++;
-		}
+		component_id_t getNewId();
 
 		class InteractiveComponent;
 		using id_to_interactive_component_mapping_t
