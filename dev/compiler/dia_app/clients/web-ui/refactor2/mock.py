@@ -7,7 +7,7 @@ import time
 class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
     def __init__(self):
         self.side_info_counter = 0
-        self.side_infos = {}  # id -> info
+        self.side_infos = {}
         self.clicked_components = set()
 
     def GetView(self, request, context):
@@ -16,7 +16,6 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         info.metadata.type = view_pb2.InfoType.Error
         info.metadata.code = 1234
 
-        # Make the header interactive
         header_component = info.header.interactive_component
         header_component.component_id = 1
         header_component.status = view_pb2.VisibilityStatus.Primary
@@ -49,15 +48,13 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
             line = code_section.lines.add()
             line.line_number = line_num
             
-            if line_num in [3, 4, 6, 8]:  # Lines containing 'item' variable
+            if line_num in [3, 4, 6, 8]:
                 concat = line.content.concat_component
                 
                 if line_num == 6:
-                    # Special handling for the process_item(item) line
                     parts = ["            results.push(process_", "item", "(", "item", ");"]
                     for i, part in enumerate(parts):
-                        if part == "item" and i == 3:  # Only the second 'item' is our variable
-                            # Add non-interactive highlighted item
+                        if part == "item" and i == 3:  
                             code = concat.components.add()
                             code.code_component.content = "item"
                             code.code_component.hl_tags.append(1)
@@ -65,14 +62,12 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
                             text = concat.components.add()
                             text.code_component.content = part
 
-                    # Add error message right after this line
                     msg = code_section.hl_messages.add()
                     msg.tag = 1
                     msg.priority = 1
                     msg.type = view_pb2.InfoType.Error
                     msg.message.text_component.content = "Cannot move out of borrowed content - 'item' is borrowed here but function expects owned String"
                 else:
-                    # Normal handling for other lines with 'item'
                     parts = content.split('item')
                     for i, part in enumerate(parts):
                         if part:
@@ -80,7 +75,6 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
                             text.code_component.content = part
                         
                         if i < len(parts) - 1:
-                            # Add non-interactive highlighted item
                             code = concat.components.add()
                             code.code_component.content = "item"
                             code.code_component.hl_tags.append(1)
@@ -101,7 +95,6 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         comp_id = request.component_id
         self.clicked_components.add(comp_id)
 
-        # Create a new side info with ownership explanation
         self.side_info_counter += 1
         side_info = view_pb2.SideInfo()
         side_info.side_info_id = self.side_info_counter
@@ -109,11 +102,9 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         side_info.metadata.code = 5678
         side_info.header.text_component.content = "Ownership Error Details"
         
-        # Add explanation section
         section = side_info.sections.add()
         section.text_section.text_component.content = "The error occurs because process_item expects to take ownership of the String, but 'item' is only borrowed in the for loop."
 
-        # Add edges for more information
         edge1 = side_info.edges.add()
         edge1.edge_id = self.side_info_counter * 10 + 1
         edge1.description = "Show how to fix"
@@ -139,13 +130,12 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         base_id = edge_id // 10
         edge_type = edge_id % 10
 
-        # Create a new side info based on the edge type
         self.side_info_counter += 1
         side_info = view_pb2.SideInfo()
         side_info.side_info_id = self.side_info_counter
         side_info.metadata.type = view_pb2.InfoType.Note
         
-        if edge_type == 1:  # How to fix
+        if edge_type == 1: 
             side_info.metadata.code = 1001
             side_info.header.text_component.content = "How to Fix the Error"
             
@@ -153,7 +143,6 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
             section.code_section.metadata.filename = "src/main.rs"
             section.code_section.metadata.line = 1
             
-            # Show the fixed version
             lines = [
                 "// Option 1: Clone the borrowed string",
                 "results.push(process_item(item.clone()));",
@@ -176,20 +165,17 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
                 line.line_number = i + 1
                 line.content.code_component.content = content
             
-            # Add edge to show performance implications
             edge = side_info.edges.add()
             edge.edge_id = self.side_info_counter * 10 + 4
             edge.description = "Compare solutions"
             
-        elif edge_type == 2:  # Learn about ownership
+        elif edge_type == 2: 
             side_info.metadata.code = 1002
             side_info.header.text_component.content = "Understanding Rust Ownership"
             
-            # Add explanation text
             text_section = side_info.sections.add()
             text_section.text_component.content = "In Rust, each value has a single owner. When you pass a value to a function, ownership is transferred unless:"
             
-            # Add code examples
             code_section = side_info.sections.add()
             code_section.metadata.filename = "ownership_examples.rs"
             code_section.metadata.line = 1
@@ -213,7 +199,7 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
                 line.line_number = i + 1
                 line.content.code_component.content = content
             
-        elif edge_type == 3:  # Similar examples
+        elif edge_type == 3: 
             side_info.metadata.code = 1003
             side_info.header.text_component.content = "Similar Ownership Errors"
             
@@ -244,7 +230,7 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
                 line.line_number = i + 1
                 line.content.code_component.content = content
             
-        elif edge_type == 4:  # Performance comparison
+        elif edge_type == 4:  
             side_info.metadata.code = 1004
             side_info.header.text_component.content = "Solution Performance Comparison"
             
@@ -279,7 +265,7 @@ def serve():
     print("Mock server started on port 50051")
     try:
         while True:
-            time.sleep(86400)  # One day in seconds
+            time.sleep(86400)
     except KeyboardInterrupt:
         server.stop(0)
 

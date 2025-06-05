@@ -25,12 +25,10 @@ class EnhancedCodeSection:
         self.lines = code_section.lines
         self.hl_messages = code_section.hl_messages
         
-        # Process the lines to find all tags in each line's subtree
         self.line_tags: Dict[int, Set[int]] = defaultdict(set)
         for i, line in enumerate(self.lines):
             self._collect_tags_from_component(line.content, i)
             
-        # Process messages to find their last containing line
         self.messages: Dict[int, MessageInfo] = {}
         for msg in self.hl_messages:
             last_line = max((i for i, tags in self.line_tags.items() if msg.tag in tags), default=-1)
@@ -73,17 +71,14 @@ class EnhancedCodeSection:
 app = Flask(__name__)
 app.jinja_env.undefined = StrictUndefined
 
-# Create gRPC channel and stub
 channel = grpc.insecure_channel('localhost:50051')
 stub = view_pb2_grpc.ViewServiceStub(channel)
 
 @app.route('/')
 def index():
     try:
-        # Get initial view
         response = stub.GetView(view_pb2.ViewRequest())
         
-        # Process each diagnostic
         diagnostics = []
         for diag in response.diagnostics:
             processed_diag = {'infos': []}
@@ -101,7 +96,7 @@ def index():
                             'type': 'code_section',
                             'section': enhanced_section
                         })
-                    else:  # text_section
+                    else:  
                         processed_info['sections'].append({
                             'type': 'text_section',
                             'section': section.text_section
@@ -109,7 +104,6 @@ def index():
                 processed_diag['infos'].append(processed_info)
             diagnostics.append(processed_diag)
 
-        # Process side paths
         side_paths = []
         for path in response.side_paths:
             processed_path = {'infos': []}
@@ -129,7 +123,7 @@ def index():
                             'type': 'code_section',
                             'section': enhanced_section
                         })
-                    else:  # text_section
+                    else:  
                         processed_info['sections'].append({
                             'type': 'text_section',
                             'section': section.text_section
@@ -152,17 +146,14 @@ def click():
         component_id = int(data.get('component_id', 0))
         click_type = data.get('click_type', 'CLICK')
         
-        # Convert string click type to enum
         click_type_enum = view_pb2.ClickType.Value(click_type)
         
-        # Make click request
         click_request = view_pb2.ClickRequest(
             component_id=component_id,
             click_type=click_type_enum
         )
         click_response = stub.Click(click_request)
         
-        # Get updated view
         view_response = stub.GetView(view_pb2.ViewRequest())
         
         return jsonify({
@@ -181,11 +172,9 @@ def close_side_info():
         data = request.json
         side_info_id = int(data.get('side_info_id', 0))
         
-        # Make close side info request
         close_request = view_pb2.CloseSideInfoRequest(side_info_id=side_info_id)
         close_response = stub.CloseSideInfo(close_request)
         
-        # Get updated view
         view_response = stub.GetView(view_pb2.ViewRequest())
         
         return jsonify({
@@ -205,14 +194,12 @@ def get_edge():
         side_info_id = int(data.get('side_info_id', 0))
         edge_id = int(data.get('edge_id', 0))
         
-        # Make edge request
         edge_request = view_pb2.EdgeRequest(
             side_info_id=side_info_id,
             edge_id=edge_id
         )
         edge_response = stub.GetEdge(edge_request)
         
-        # Get updated view
         view_response = stub.GetView(view_pb2.ViewRequest())
         
         return jsonify({

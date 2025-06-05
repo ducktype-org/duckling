@@ -291,13 +291,11 @@
     </div>
 
     <script>
-        // Save scroll positions before page reload
         window.addEventListener('beforeunload', function() {
             localStorage.setItem('mainPanelScroll', document.getElementById('main-panel').scrollTop);
             localStorage.setItem('sidePanelScroll', document.getElementById('side-panel').scrollTop);
         });
 
-        // Restore scroll positions after page load
         window.addEventListener('load', function() {
             const mainPanel = document.getElementById('main-panel');
             const sidePanel = document.getElementById('side-panel');
@@ -334,7 +332,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                // Reload the page to show updated view
                 window.location.reload();
             })
             .catch(error => console.error('Error:', error));
@@ -352,7 +349,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                // Reload the page to show updated view
                 window.location.reload();
             })
             .catch(error => console.error('Error:', error));
@@ -371,7 +367,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                // Reload the page to show updated view
                 window.location.reload();
             })
             .catch(error => console.error('Error:', error));
