@@ -1,26 +1,26 @@
 name: Determine Runners
 
-# This workflow determines the availability of self-hosted runners based on provided labels.
+# This workflow determines the availability of self-hosted runners based on a single provided label.
 # Inputs:
-# - self-hosted-labels: A comma-separated list of labels to check for self-hosted runners.
-#   Example: "build,linux"
-# - github-labels: A comma-separated list of labels to use for GitHub-hosted runners if self-hosted runners are unavailable.
-#   Example: "ubuntu-latest,windows-latest"
+# - self-hosted-label: A single label to check for self-hosted runners.
+#   Example: "build"
+# - github-label: A single label to use for GitHub-hosted runners if self-hosted runners are unavailable.
+#   Example: "ubuntu-latest"
 # Outputs:
-# - runner1: JSON object containing the group and labels for the first runner.
-#   Example: {"group":"SelfHostedRunners","labels":"build,linux"} or {"labels":"ubuntu-latest"}
-# - runner2: JSON object containing the group and labels for the second runner.
-#   Example: {"group":"SelfHostedRunners","labels":"build,linux"} or {"labels":"ubuntu-latest"}
+# - runner1: JSON object containing the group and label for the first runner.
+#   Example: {"group":"SelfHostedRunners","label":"build"} or {"label":"ubuntu-latest"}
+# - runner2: JSON object containing the group and label for the second runner.
+#   Example: {"group":"SelfHostedRunners","label":"build"} or {"label":"ubuntu-latest"}
 
 on:
   workflow_call:
     inputs:
-      self-hosted-labels:
-        description: 'Comma-separated list of labels to check for self-hosted runners'
+      self-hosted-label:
+        description: 'A single label to check for self-hosted runners'
         required: true
         type: string
-      github-labels:
-        description: 'Comma-separated list of labels to use for GitHub-hosted runners'
+      github-label:
+        description: 'A single label to use for GitHub-hosted runners'
         required: true
         type: string
     outputs:
@@ -41,18 +41,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
         run: |
-          echo "Checking for runners with labels: ${{ inputs.self-hosted-labels }}"
-          echo "Fallback GitHub labels: ${{ inputs.github-labels }}"
+          echo "Checking for runners with label: ${{ inputs.self-hosted-label }}"
+          echo "Fallback GitHub label: ${{ inputs.github-label }}"
 
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
           available_runners=$(echo "$runners" | \
-            jq -r --arg lbls "${{ inputs.self-hosted-labels }}" '
-              .runners[]? | 
+            jq -r --arg lbl "${{ inputs.self-hosted-label }}" \
+              '.runners[]? | \
               select(
-                .status == "online" and 
-                .busy == false and 
-                ([.labels[]?.name] | all($lbls | split(",")[]; index(.)))
+                .status == "online" and \
+                .busy == false and \
+                (.labels[]?.name == $lbl)
               ) | .name' | \
             head -2)
 
@@ -62,13 +62,13 @@ jobs:
           mapfile -t runners_array <<< "$available_runners"
 
           if [ -n "${runners_array[0]}" ]; then
-            echo "runner1={\"group\":\"SelfHostedRunners\",\"labels\":$(echo "${{ inputs.self-hosted-labels }}" | jq -R 'split(",") | tojson')}" >> $GITHUB_OUTPUT
+            echo "runner1={\"group\":\"SelfHostedRunners\",\"label\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
           else
-            echo "runner1={\"labels\":$(echo "${{ inputs.github-labels }}" | jq -R 'split(",") | tojson')}" >> $GITHUB_OUTPUT
+            echo "runner1={\"label\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
           fi
 
           if [ -n "${runners_array[1]}" ]; then
-            echo "runner2={\"group\":\"SelfHostedRunners\",\"labels\":$(echo "${{ inputs.self-hosted-labels }}" | jq -R 'split(",") | tojson')}" >> $GITHUB_OUTPUT
+            echo "runner2={\"group\":\"SelfHostedRunners\",\"label\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
           else
-            echo "runner2={\"labels\":$(echo "${{ inputs.github-labels }}" | jq -R 'split(",") | tojson')}" >> $GITHUB_OUTPUT
+            echo "runner2={\"label\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
           fi
