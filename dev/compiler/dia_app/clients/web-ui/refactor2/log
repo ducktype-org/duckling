@@ -1,0 +1,785 @@
+ * Serving Flask app 'web_server'
+ * Debug mode: on
+
+DEBUG: Full message structure with validation:
+Message type: ViewResponse
+  diagnostics: [
+    Message type: Diagnostic
+      infos: [
+        Message type: Info
+          metadata:
+            Message type: Metadata
+              type: 0
+              code: 1001
+          header:
+            Message type: NoHlComponent
+              text_component:
+                <empty>
+              code_component:
+                <empty>
+              concat_component:
+                Message type: NoHlConcatComponent
+                  components: [
+                    Message type: NoHlComponent
+                      text_component:
+                        <empty>
+                      code_component:
+                        <empty>
+                      concat_component:
+                        Message type: NoHlConcatComponent
+                          components: [
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: no matching `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: +
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: ` 
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: operator
+                                  assoc_side_entries: [2]
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content:  for types `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                Message type: NoHlCodeComponent
+                                  content: i32
+                                  assoc_side_entries: []
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content:  and `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                Message type: NoHlCodeComponent
+                                  content: i64
+                                  assoc_side_entries: []
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                          ]
+                      interactive_component:
+                        <empty>
+                  ]
+              interactive_component:
+                <empty>
+          sections: [
+            Message type: Section
+              code_section:
+                Message type: CodeSection
+                  metadata:
+                    Message type: CodeMetadata
+                      filename: /data/University/ducktype/rift-dev-zpp33/dev/compiler/duckling_snippets/helios_error/helios_error.dmf
+                      line: 7
+                      column: 12
+                  lines: [
+                    Message type: CodeLine
+                      line_number: 1
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    Message type: HlCodeComponent
+                                      content: fun foo() = {
+                                      assoc_side_infos: []
+                                      hl_tags: []
+                                  concat_component:
+                                    <empty>
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                    Message type: CodeLine
+                      line_number: 2
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    <empty>
+                                  concat_component:
+                                    Message type: HlConcatComponent
+                                      components: [
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:     
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: let a: 
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: i32
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:  = 0;
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                      ]
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                    Message type: CodeLine
+                      line_number: 3
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    <empty>
+                                  concat_component:
+                                    Message type: HlConcatComponent
+                                      components: [
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:     
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: let b: 
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: i64
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:  = 0;
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                      ]
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                    Message type: CodeLine
+                      line_number: 4
+                      content:
+                        <empty>
+                    Message type: CodeLine
+                      line_number: 5
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    <empty>
+                                  concat_component:
+                                    Message type: HlConcatComponent
+                                      components: [
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:     
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: alias x = 
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: b
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: ;
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                      ]
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                    Message type: CodeLine
+                      line_number: 6
+                      content:
+                        <empty>
+                    Message type: CodeLine
+                      line_number: 7
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    <empty>
+                                  concat_component:
+                                    Message type: HlConcatComponent
+                                      components: [
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content:     return 
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            <empty>
+                                          concat_component:
+                                            Message type: HlConcatComponent
+                                              components: [
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content: a
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content:  
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content: +
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content:  
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content: a
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content:  + 
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                                Message type: HlComponent
+                                                  code_component:
+                                                    Message type: HlCodeComponent
+                                                      content: x
+                                                      assoc_side_infos: []
+                                                      hl_tags: [1]
+                                                  concat_component:
+                                                    <empty>
+                                                  interactive_component:
+                                                    <empty>
+                                              ]
+                                          interactive_component:
+                                            <empty>
+                                        Message type: HlComponent
+                                          code_component:
+                                            Message type: HlCodeComponent
+                                              content: ;
+                                              assoc_side_infos: []
+                                              hl_tags: []
+                                          concat_component:
+                                            <empty>
+                                          interactive_component:
+                                            <empty>
+                                      ]
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                    Message type: CodeLine
+                      line_number: 8
+                      content:
+                        Message type: HlComponent
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: HlConcatComponent
+                              components: [
+                                Message type: HlComponent
+                                  code_component:
+                                    Message type: HlCodeComponent
+                                      content: }
+                                      assoc_side_infos: []
+                                      hl_tags: []
+                                  concat_component:
+                                    <empty>
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                  ]
+                  hl_messages: [
+                    Message type: HlMessage
+                      tag: 1
+                      priority: 1
+                      type: 0
+                      message:
+                        Message type: NoHlComponent
+                          text_component:
+                            <empty>
+                          code_component:
+                            <empty>
+                          concat_component:
+                            Message type: NoHlConcatComponent
+                              components: [
+                                Message type: NoHlComponent
+                                  text_component:
+                                    Message type: NoHlTextComponent
+                                      content: used here
+                                      assoc_side_entries: []
+                                  code_component:
+                                    <empty>
+                                  concat_component:
+                                    <empty>
+                                  interactive_component:
+                                    <empty>
+                              ]
+                          interactive_component:
+                            <empty>
+                  ]
+              text_section:
+                <empty>
+          ]
+        Message type: Info
+          metadata:
+            Message type: Metadata
+              type: 2
+              code: 1101
+          header:
+            Message type: NoHlComponent
+              text_component:
+                <empty>
+              code_component:
+                <empty>
+              concat_component:
+                Message type: NoHlConcatComponent
+                  components: [
+                    Message type: NoHlComponent
+                      text_component:
+                        <empty>
+                      code_component:
+                        <empty>
+                      concat_component:
+                        Message type: NoHlConcatComponent
+                          components: [
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: argument `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                <empty>
+                              concat_component:
+                                Message type: NoHlConcatComponent
+                                  components: [
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content: a
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content:  
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content: +
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content:  
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content: a
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                                  ]
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: ` is of type `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                Message type: NoHlCodeComponent
+                                  content: i32
+                                  assoc_side_entries: []
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                          ]
+                      interactive_component:
+                        <empty>
+                  ]
+              interactive_component:
+                <empty>
+          sections: [
+          ]
+        Message type: Info
+          metadata:
+            Message type: Metadata
+              type: 2
+              code: 1101
+          header:
+            Message type: NoHlComponent
+              text_component:
+                <empty>
+              code_component:
+                <empty>
+              concat_component:
+                Message type: NoHlConcatComponent
+                  components: [
+                    Message type: NoHlComponent
+                      text_component:
+                        <empty>
+                      code_component:
+                        <empty>
+                      concat_component:
+                        Message type: NoHlConcatComponent
+                          components: [
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: argument `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                Message type: NoHlInteractiveComponent
+                                  component_id: 0
+                                  status: 0
+                                  primary_component:
+                                    Message type: NoHlComponent
+                                      text_component:
+                                        <empty>
+                                      code_component:
+                                        Message type: NoHlCodeComponent
+                                          content: x
+                                          assoc_side_entries: []
+                                      concat_component:
+                                        <empty>
+                                      interactive_component:
+                                        <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: ` is of type `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                <empty>
+                              code_component:
+                                Message type: NoHlCodeComponent
+                                  content: i64
+                                  assoc_side_entries: []
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                            Message type: NoHlComponent
+                              text_component:
+                                Message type: NoHlTextComponent
+                                  content: `
+                                  assoc_side_entries: []
+                              code_component:
+                                <empty>
+                              concat_component:
+                                <empty>
+                              interactive_component:
+                                <empty>
+                          ]
+                      interactive_component:
+                        <empty>
+                  ]
+              interactive_component:
+                <empty>
+          sections: [
+          ]
+      ]
+  ]
+  side_paths: [
+  ]

@@ -42,11 +42,11 @@
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
         
-        .type-0 { border-left: 4px solid #ff4444; } /* Error */
-        .type-1 { border-left: 4px solid #ffbb33; } /* Warning */
-        .type-2 { border-left: 4px solid #00C851; } /* Note */
-        .type-3 { border-left: 4px solid #33b5e5; } /* Hint */
-        .type-4 { border-left: 4px solid #aa66cc; } /* Docs */
+        .type-0 { border-left: 4px solid #ff4444; } 
+        .type-1 { border-left: 4px solid #ffbb33; } 
+        .type-2 { border-left: 4px solid #00C851; } 
+        .type-3 { border-left: 4px solid #33b5e5; } 
+        .type-4 { border-left: 4px solid #aa66cc; } 
 
         .code-component {
             display: inline;
@@ -93,11 +93,59 @@
             white-space: pre;
         }
 
+        .line-number {
+            color: #666;
+            padding-right: 8px;
+            border-right: 1px solid #ddd;
+            margin-right: 8px;
+            display: inline-block;
+            min-width: 3em;
+            text-align: right;
+        }
+
         .interactive-component {
             cursor: pointer;
         }
         .interactive-component:hover {
             text-decoration: underline;
+        }
+
+        .message-box {
+            margin: 4px 0;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        .message-box.type-0 {  
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            color: #b71c1c;
+        }
+
+        .message-box.type-1 {  
+            background-color: #fff3e0;
+            border: 1px solid #ffe0b2;
+            color: #e65100;
+        }
+
+        .message-box.type-2 {  
+            background-color: #e8f5e9;
+            border: 1px solid #c8e6c9;
+            color: #1b5e20;
+        }
+
+        .message-box.type-3 {  
+            background-color: #e3f2fd;
+            border: 1px solid #bbdefb;
+            color: #0d47a1;
+        }
+
+        .message-box.type-4 {  
+            background-color: #f3e5f5;
+            border: 1px solid #e1bee7;
+            color: #4a148c;
         }
     </style>
 </head>
@@ -115,7 +163,7 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
+            <span class="interactive-component" onclick="handleClick({{ comp.interactive_component.component_id }}, 'CLICK')">
                 {{- render_nohl_component(comp.interactive_component.primary_component) -}}
             </span>
         {%- endif -%}
@@ -132,7 +180,7 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
+            <span class="interactive-component" onclick="handleClick({{ comp.interactive_component.component_id }}, 'CLICK')">
                 {{- render_hl_component(comp.interactive_component.primary_component) -}}
             </span>
         {%- endif -%}
@@ -143,7 +191,7 @@
         {%- for diagnostic in diagnostics %}
             <div class="diagnostic">
                 {%- for info in diagnostic.infos %}
-                    <div class="type-{{ info.metadata.type }}">
+                    <div class="info type-{{ info.metadata.type }}">
                         <h3>
                             {%- if info.metadata.type == 0 %}Error
                             {%- elif info.metadata.type == 1 %}Warning
@@ -158,24 +206,18 @@
                         </div>
                         {%- for section in info.sections %}
                             <div class="section">
-                                {%- set section_type = section.WhichOneof('section') -%}
-                                {%- if section_type == 'code_section' %}
+                                {%- if section.type == 'code_section' -%}
                                     <div class="code-section">
                                         <div class="code-section-header">
-                                            {{- section.code_section.metadata.filename -}}
-                                            {%- if section.code_section.metadata.line -%}
-                                                :{{- section.code_section.metadata.line -}}
-                                            {%- endif -%}
-                                            {%- if section.code_section.metadata.column -%}
-                                                :{{- section.code_section.metadata.column -}}
-                                            {%- endif -%}
+                                            {{ section.section.metadata.filename }}:{{ section.section.metadata.line }}:{{ section.section.metadata.column }}
                                         </div>
-                                        <pre><code>{% for line in section.code_section.lines -%}
-{%- if line.content -%}{% if line.line_number %}{{ line.line_number }}:{% endif %}{{- render_hl_component(line.content) }}
-{% endif -%}
+                                        <pre><code>{%- for line in section.section.lines -%}
+{%- if line.line_number -%}<span class="line-number">{{ line.line_number }}</span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.section.get_messages_for_line(loop.index0) -%}
+<div class="message-box type-{{ message.type }}">{{ message.content }}</div>
+{%- endfor -%}
 {%- endfor -%}</code></pre>
                                     </div>
-                                {%- elif section_type == 'text_section' -%}
+                                {%- elif section.type == 'text_section' -%}
                                     {{- render_nohl_component(section.text_section) -}}
                                 {%- endif %}
                             </div>
