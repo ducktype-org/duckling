@@ -90,7 +90,7 @@ private:
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
 
 			// Test locals:
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
 			auto i32_type = ctx.query<QueryIntegralType>(32);
 
@@ -104,21 +104,32 @@ private:
 				ASSERT_EQUAL(b->getName(), "b");
 				ASSERT_EQUAL(b->type.getType(), i32_type);
 			}
+			{
+				auto b = foo_mir.local_list[2];
+				ASSERT_EQUAL(b->getName(), "b");
+				ASSERT_EQUAL(b->type.getType(), i32_type);
+			}
 
 			// Test code generation:
 
-			ASSERT_EQUAL(foo_mir.block_order.size(), 5);
+			ASSERT_EQUAL(foo_mir.block_order.size(), 8);
 
 			// @note: instruction count does not include terminator instruction:
 
 			using enum compiler::mir::Operation;
 
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].id, foo_mir.block_order[0]);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].id, foo_mir.block_order[0]);
 
 			// those assertions might change when we improve mir generaration:
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.size(), 2);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(0).operation, Assign);
-			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].instructions.at(1).operation, Nop);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(7)].terminator.operation, Jump);
+
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.size(), 1);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].instructions.at(0).operation, Assign);
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(6)].terminator.operation, Jump);
+
+			ASSERT_EQUAL(foo_mir.blocks[BlockID(5)].terminator.operation, Branch);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(4)].terminator.operation, Branch);
 
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.size(), 1);
@@ -147,8 +158,8 @@ private:
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.block_order.size(), 4);
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir.block_order.size(), 7);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 
 			auto get_block_terminator
 				= [&](u64 block_id) { return foo_mir.blocks[BlockID(block_id)].terminator; };
@@ -159,12 +170,18 @@ private:
 			using BlockList = std::vector<BlockID>;
 			ASSERT_EQUAL(get_block_successors(1), BlockList{});
 			ASSERT_EQUAL(get_block_successors(2), BlockList{ BlockID{ 1 } });
+
+
 			ASSERT_EQUAL(get_block_successors(3), BlockList{ BlockID{ 1 } });
 
 			// Here, the order does not matter.
 			// If it breaks because the order changes,
 			// the check has to be changed to an order-free assertion.
 			ASSERT_EQUAL(get_block_successors(4), BlockList{ BlockID{ 3 } COMMA BlockID{ 2 } });
+			ASSERT_EQUAL(get_block_successors(5), BlockList{ BlockID{ 6 } COMMA BlockID{ 4 } });
+
+			ASSERT_EQUAL(get_block_successors(6), BlockList{ BlockID{ 5 } });
+			ASSERT_EQUAL(get_block_successors(7), BlockList{ BlockID{ 5 } });
 		});
 	}
 
@@ -186,7 +203,7 @@ private:
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(0) })->value();
 
 			ASSERT_EQUAL(foo_mir.name, base::StrID("foo"));
-			ASSERT_EQUAL(foo_mir.local_list.size(), 2);
+			ASSERT_EQUAL(foo_mir.local_list.size(), 3);
 		});
 	}
 
@@ -336,7 +353,8 @@ private:
 			auto& should_add_retvoid_fun
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(1) })->value();
 			should_add_retvoid_fun.validateBlockIDs();
-			should_add_retvoid_fun.debugPrint(std::cout);
+			std::stringstream foo_str;
+			should_add_retvoid_fun.debugPrint(foo_str);
 
 			auto& last_block
 				= should_add_retvoid_fun.blocks[should_add_retvoid_fun.block_order.back()];
@@ -346,8 +364,8 @@ private:
 			auto& unreachable_end_fun
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(2) })->value();
 			unreachable_end_fun.validateBlockIDs();
-			unreachable_end_fun.debugPrint(std::cout);
-			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 4);
+			unreachable_end_fun.debugPrint(foo_str);
+			ASSERT_EQUAL(unreachable_end_fun.block_order.size(), 7);
 
 			auto& empty
 				= ctx.query<compiler::mir::LowerToMirFunction>({ functions.at(3) })->value();

@@ -230,6 +230,16 @@ namespace compiler::helios {
 				output(code::IfStmt(std::move(condition), std::move(body)));
 			}
 
+			void visitWhile(pst::Access<pst::While> stmt) override {
+				auto condition
+					= ctx.query<QueryHoutOfExpr>(stmt->getCondition().unlock(ctx)->getExpr())
+				          .expect("Not handling errors here yet");
+
+				auto body = queryCodeOfCodeBlock(ctx, stmt->getBody());
+
+				output(code::WhileStmt(std::move(condition), std::move(body)));
+			}
+
 			void visitVariable(pst::Access<pst::Variable> stmt) override {
 				// @TODO: do something with mut/immut
 

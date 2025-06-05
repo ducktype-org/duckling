@@ -1,8 +1,10 @@
 fun foo() = {
 	var a: i32 = 23;
+	while (9) {
+		var b: i32 = 7;
+	}
 	if (9) {
 		var b: i32 = 7;
 	}
 	return 0;
 }
-

@@ -12,6 +12,12 @@ fun foo() = {
 		var y: i32 | f32 = c;
 		b;
 	}
+	while (0){
+		var a: i32 = 1;
+		var x: i32;
+		var y: i32 | f32 = c;
+		b;
+	}
 	var e: Q;
 	return a;
 }
