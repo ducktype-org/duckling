@@ -116,6 +116,11 @@
             border-radius: 4px;
             font-family: monospace;
             font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .code-component.highlighted {
+            background-color: rgba(255, 255, 0, 0.2);
         }
 
         .message-box.type-0 {  
@@ -172,7 +177,7 @@
     {% macro render_hl_component(comp) -%}
         {% set component_type = comp.WhichOneof('component') -%}
         {% if component_type == 'code_component' -%}
-            <span class="code-component {% if comp.code_component.hl_tags %}highlighted{% endif %}">{{ comp.code_component.content }}</span>
+            <span class="code-component" data-tags="{{ comp.code_component.hl_tags | join(',') }}">{{ comp.code_component.content }}</span>
         {%- elif component_type == 'concat_component' -%}
             <span class="concat-component">
                 {%- for child in comp.concat_component.components -%}
@@ -213,7 +218,7 @@
                                         </div>
                                         <pre><code>{%- for line in section.section.lines -%}
 {%- if line.line_number -%}<span class="line-number">{{ line.line_number }}</span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.section.get_messages_for_line(loop.index0) -%}
-<span class="line-number"></span><div class="message-box type-{{ message.type }}">{{ message.content }}</div>&#10;{%- endfor -%}
+<span class="line-number"></span><div class="message-box type-{{ message.type }}" data-tag="{{ message.tag }}" onmouseover="highlightTag({{ message.tag }})" onmouseout="unhighlightTag({{ message.tag }})">{{ message.content }}</div>&#10;{%- endfor -%}
 {%- endfor -%}</code></pre>
                                     </div>
                                 {%- elif section.type == 'text_section' -%}
@@ -348,6 +353,24 @@
                 window.location.reload();
             })
             .catch(error => console.error('Error:', error));
+        }
+
+        function highlightTag(tag) {
+            document.querySelectorAll('.code-component').forEach(component => {
+                const tagsStr = component.dataset.tags;
+                if (tagsStr) {
+                    const tags = tagsStr.split(',').filter(t => t).map(t => parseInt(t));
+                    if (tags.includes(tag)) {
+                        component.classList.add('highlighted');
+                    }
+                }
+            });
+        }
+
+        function unhighlightTag(tag) {
+            document.querySelectorAll('.code-component.highlighted').forEach(component => {
+                component.classList.remove('highlighted');
+            });
         }
     </script>
 </body>
