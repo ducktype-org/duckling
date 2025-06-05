@@ -1,255 +1,249 @@
 #include "mangler.hpp"
 
-#include <query_framework/query_impl.hpp>
-
-#include <helios/scope_symbol_id.hpp>
-#include <helios/symbols/simple.hpp>
-#include <helios/symbols/query_type_of_symbol.hpp>
-#include "../src_private/helios_private/symbols/symbols.hpp"
 #include "../src_private/helios_private/scopes/scopes.hpp"
 #include "../src_private/helios_private/symbols/symbol_data.hpp"
-#include <string_view>
+#include "../src_private/helios_private/symbols/symbols.hpp"
+
 #include <frontend/module_tree/queries.hpp>
+#include <helios/scope_symbol_id.hpp>
+#include <helios/symbols/query_type_of_symbol.hpp>
+#include <helios/symbols/simple.hpp>
+#include <query_framework/query_impl.hpp>
+
 #include <algorithm>
+#include <ranges>
+#include <string_view>
 
 namespace compiler::helios::mangler {
 
-    u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
-        static base::Map<KeyOf_MangledSymbol, u64> hashes{};
-        
-        if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-        
-        u64 result = hashes.size();
-        hashes.put(*this, result);
-        return result;
-    }
+	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+		static base::Map<KeyOf_MangledSymbol, u64> hashes{};
 
-    namespace detail {
+		if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
 
-        bool isManglable(SymID symbol_id) {
-            switch(kind(symbol_id)) {
-                case SymbolKind::Variable:
-                case SymbolKind::Field:
-                case SymbolKind::Const:
+		u64 result = hashes.size();
+		hashes.put(*this, result);
+		return result;
+	}
 
-                case SymbolKind::Function:
-                case SymbolKind::Method:
-                
-                case SymbolKind::Constructor:
-                case SymbolKind::Destructor:
-                    return true;
-                default:
-                    return false;
-            }
-        }
+	namespace detail {
 
-        std::string compactNumber(u64 number) {
-            using namespace std::literals::string_view_literals;
+		bool isManglable(SymID symbol_id) {
+			switch (kind(symbol_id)) {
+			case SymbolKind::Variable:
+			case SymbolKind::Field:
+			case SymbolKind::Const:
 
-            if(number == 0) return "_";
-            
-            static constexpr auto digits = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
-            constexpr u64 base = digits.size();
-            
-            std::string ret;
-            --number;
-            do {
-                ret += digits[number % base];
-                number /= base;
-            } while(number > 0);
-            std::reverse(ret.begin(), ret.end());
-            ret += '_';
-            return ret;
-        };
-        
-        std::string identifier(std::string name) {
-            // @future: use punnycode for unicode strings
-            if(/* hasCharsOnlyFromAllowedCharacterSet */ true) {
-                name = std::to_string(name.size()) + name;
-                return name;
-            } else {
-                constexpr char unicode_prefix = 'U';
-                std::string punny_string = name; // @todo: convert to punnycode
-                return base::strConcat(unicode_prefix, punny_string.size(), punny_string); 
-            }
-        };
+			case SymbolKind::Function:
+			case SymbolKind::Method:
 
-        std::string path_prefix(SymID symbol_id) {
-            auto enclosing_scope = scope(symbol_id);
-            auto enclosing_module = module(enclosing_scope);
-            
-            // note: only the enclosing module is used for mangling. This is intentional,
-            // as modules are supposed to be self-contained and this would make moving them
-            // a more breaking (ABI-wise) change than it should be
+			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
+				return true;
+			default:
+				return false;
+			}
+		}
 
-            // "M" <module-name>                                 // standalone module
-            // @future: templated modules
-            if(/* standalone module */ true) {
-                auto module_identifier = identifier(frontend::moduleName(enclosing_module).str());
-                return base::strConcat("M", module_identifier);
-            }
-            
-            // @future: add support for packages & scripts when they are implemented
-            // "P" <package-name> <module-name>                  // module in a package
-            // "S" <script-name>                                 // standalone script
-            // "R" <package-name> <module-name> <script-name>    // script in a package
+		std::string compactNumber(u64 number) {
+			using namespace std::literals::string_view_literals;
 
-            // @todo: backreference
-        }
+			if (number == 0) return "_";
 
-        std::string unscoped_name(SymID symbol_id) {
-            return identifier(compiler::helios::name(symbol_id).str());
-        }
+			static constexpr auto digits
+				= "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"sv;
+			constexpr u64 base = digits.size();
 
-        std::string symbol_name(query::Context& ctx, SymID symbol_id) {
-            auto scope_id = scope(symbol_id);
+			std::string ret;
+			--number;
+			do {
+				ret += digits[number % base];
+				number /= base;
+			} while (number > 0);
+			std::ranges::reverse(ret);
+			ret += '_';
+			return ret;
+		}
 
-            if(scopeDepth(scope_id) == 1) {
-                return "G" + unscoped_name(symbol_id);
-            } else {
-                std::vector<std::string> path_parts;
+		std::string identifier(std::string name) {
+			// @future: use punnycode for unicode strings
+			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
+				name = std::to_string(name.size()) + name;
+				return name;
+			} else {
+				constexpr char unicode_prefix = 'U';
+				std::string    punny_string   = name;  // @todo: convert to punnycode
+				return base::strConcat(unicode_prefix, punny_string.size(), punny_string);
+			}
+		}
 
-                auto current_scope = scope_id;
-                auto current_pst_id = symbolPst(symbol_id).unlock(ctx)->getID();
-                while(true) {
-                    auto parent_scope = parent(current_scope);
-                    if(!parent_scope.has_value()) break;
-                    
-                    auto symbols_in_parent = *ctx.query<compiler::helios::QuerySymbolsInScope>(parent_scope.value()).get();
-                    for(const auto& sym : symbols_in_parent) {
-                        auto pst_sym = symbolPst(sym).unlock(ctx);
-                        
-                        if(pst_sym->getElementKind() == pst::ElementKind::Namespace) {
-                            auto nmsp = pst_sym.dynamicCast<pst::Namespace>().value();
-                            auto body = nmsp->getBody().unlock(ctx);
+		std::string pathPrefix(SymID symbol_id) {
+			auto enclosing_scope  = scope(symbol_id);
+			auto enclosing_module = module(enclosing_scope);
 
-                            for(auto&& child_lck : body->viewChildren()) {
-                                auto child = child_lck.unlock(ctx);
-                                
-                                if(child->getID() == current_pst_id) {
-                                    path_parts.push_back(identifier(nmsp->getName().str()));
-                                    current_pst_id = pst_sym->getID();
-                                }
-                            }
-                        } else if (pst_sym->getElementKind() == pst::ElementKind::Class) {
-                            auto cls = pst_sym.dynamicCast<pst::Class>().value();
-                            auto body = cls->getBody().unlock(ctx);
-                        
-                            for(auto&& child_lck : body->viewChildren()) {
-                                auto child = child_lck.unlock(ctx);
-                                                                
-                                if(child->getID() == current_pst_id) {
-                                    path_parts.push_back(identifier(cls->getName().str()));
-                                    current_pst_id = pst_sym->getID();
-                                }
-                            }
-                        }
-                        // @future: local classes (mangle enclosing function name)
-                    }
-                    
-                    current_scope = parent_scope.value();
-                }
-                    
-                std::string ret = "N";
-                for(auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) {
-                    ret += *it;
-                }
-                ret += unscoped_name(symbol_id) + "E";
-                return ret;
-            }
-        }
+			// note: only the enclosing module is used for mangling. This is intentional,
+			// as modules are supposed to be self-contained and this would make moving them
+			// a more breaking (ABI-wise) change than it should be
 
-        std::string path(query::Context& ctx, SymID symbol_id) {
-            return base::strConcat(
-                path_prefix(symbol_id),
-                symbol_name(ctx, symbol_id)
-            );
-        }
+			// "M" <module-name>                                 // standalone module
+			// @future: templated modules
+			if (/* standalone module */ true) {
+				auto module_identifier = identifier(frontend::moduleName(enclosing_module).str());
+				return base::strConcat("M", module_identifier);
+			}
 
-        std::string func_type(query::Context& ctx, SymID symbol_id) {
-            std::string ret;
-            if(kind(symbol_id) == SymbolKind::Function) {
-                ret = "F";
-                auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
-                auto fun_type = tsh::FunctionAbstractType(type);
-                
-                auto ret_type = fun_type.getResultType();
-                ret += ret_type.toString();
-                for(auto param : fun_type.getParameterTypes())
-                    ret += param.toString();
+			// @future: add support for packages & scripts when they are implemented
+			// "P" <package-name> <module-name>                  // module in a package
+			// "S" <script-name>                                 // standalone script
+			// "R" <package-name> <module-name> <script-name>    // script in a package
 
-                ret += "E";
-            } else if(kind(symbol_id) == SymbolKind::Method) {
-                // @future: add methods when they are implemented
-                ret = "Ftodo_method_typeE";
-            }
-            
-            return ret;
-        }
+			// @todo: backreference
+		}
 
-        std::string symbol_encoding(query::Context& ctx, SymID symbol_id) {
-            switch (kind(symbol_id)) {
-            case SymbolKind::Variable:
-            case SymbolKind::Field: 
-            case SymbolKind::Const:
-                return path(ctx, symbol_id);
-                break;
-            
-            case SymbolKind::Function:
-            case SymbolKind::Method:
-                return path(ctx, symbol_id) + func_type(ctx, symbol_id);
-                break;
+		std::string unscopedName(SymID symbol_id) {
+			return identifier(compiler::helios::name(symbol_id).str());
+		}
 
-            case SymbolKind::Constructor:
-            case SymbolKind::Destructor:
-                // special symbols
-                return "todo_special_symbols"; // @todo
-                break;
+		std::string symbolName(query::Context& ctx, SymID symbol_id) {
+			auto scope_id = scope(symbol_id);
 
-            default:
-                return "todo_unknown_symbol"; // todo
-                break;
-            }
-        }
+			if (scopeDepth(scope_id) == 1) {
+				return "G" + unscopedName(symbol_id);
+			} else {
+				std::vector<std::string> path_parts;
 
-        std::string opt_metadata(base::Optional<std::string> metadata) {
-            if(!metadata.has_value()) return "";
-            return "$" + metadata.value();
-        }
+				auto current_scope  = scope_id;
+				auto current_pst_id = symbolPst(symbol_id).unlock(ctx)->getID();
+				while (true) {
+					auto parent_scope = parent(current_scope);
+					if (!parent_scope.has_value()) break;
 
-    } // namespace detail
+					auto symbols_in_parent
+						= *ctx.query<compiler::helios::QuerySymbolsInScope>(parent_scope.value())
+					           .get();
+					for (const auto& sym: symbols_in_parent) {
+						auto pst_sym = symbolPst(sym).unlock(ctx);
 
-    struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<std::string>) {
-    static auto provide(Context& ctx, QKey key) -> PResult {
-        using namespace std::literals::string_view_literals;
+						if (pst_sym->getElementKind() == pst::ElementKind::Namespace) {
+							auto nmsp = pst_sym.dynamicCast<pst::Namespace>().value();
+							auto body = nmsp->getBody().unlock(ctx);
 
-        auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);
-        if(!dealiased.get()->hasValue() || dealiased.get()->value().list.size() != 1)
-            return std::nullopt; // @todo: ambiguous symbols
-        auto symbol_id = dealiased.get()->value().list.front();
+							for (auto&& child_lck: body->viewChildren()) {
+								auto child = child_lck.unlock(ctx);
 
-        if(!detail::isManglable(symbol_id)) return std::nullopt; // @todo: wrong symbol kind
-        
-        constexpr auto language_prefix = "_Q"sv;
-        const auto mangling_scheme_version = detail::compactNumber(key.mangling_scheme_version);
-        std::string encoding = detail::symbol_encoding(ctx, symbol_id);
-        std::string metadata = detail::opt_metadata(key.additional_metadata);
+								if (child->getID() == current_pst_id) {
+									path_parts.push_back(identifier(nmsp->getName().str()));
+									current_pst_id = pst_sym->getID();
+								}
+							}
+						} else if (pst_sym->getElementKind() == pst::ElementKind::Class) {
+							auto cls  = pst_sym.dynamicCast<pst::Class>().value();
+							auto body = cls->getBody().unlock(ctx);
 
-        std::string mangled_name = base::strConcat(
-            language_prefix,
-            mangling_scheme_version,
-            encoding,
-            metadata
-        );
-        
-        return mangled_name;
-    }
+							for (auto&& child_lck: body->viewChildren()) {
+								auto child = child_lck.unlock(ctx);
 
-    QUERY_AUTO_CACHE_COPY
+								if (child->getID() == current_pst_id) {
+									path_parts.push_back(identifier(cls->getName().str()));
+									current_pst_id = pst_sym->getID();
+								}
+							}
+						}
+						// @future: local classes (mangle enclosing function name)
+					}
+
+					current_scope = parent_scope.value();
+				}
+
+				std::string ret = "N";
+				for (auto&& it = path_parts.rbegin(); it != path_parts.rend(); ++it) ret += *it;
+				ret += unscopedName(symbol_id) + "E";
+				return ret;
+			}
+		}
+
+		std::string path(query::Context& ctx, SymID symbol_id) {
+			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id));
+		}
+
+		std::string funcType(query::Context& ctx, SymID symbol_id) {
+			std::string ret;
+			if (kind(symbol_id) == SymbolKind::Function) {
+				ret       = "F";
+				auto type = ctx.query<QueryTypeOfSymbol>({ symbol_id }).get()->value().getType();
+				auto fun_type = tsh::FunctionAbstractType(type);
+
+				auto ret_type = fun_type.getResultType();
+				ret += ret_type.toString();
+				for (auto param: fun_type.getParameterTypes()) ret += param.toString();
+
+				ret += "E";
+			} else if (kind(symbol_id) == SymbolKind::Method) {
+				// @future: add methods when they are implemented
+				ret = "Ftodo_method_typeE";
+			}
+
+			return ret;
+		}
+
+		std::string symbolEncoding(query::Context& ctx, SymID symbol_id) {
+			switch (kind(symbol_id)) {
+			case SymbolKind::Variable:
+			case SymbolKind::Field:
+			case SymbolKind::Const:
+				return path(ctx, symbol_id);
+				break;
+
+			case SymbolKind::Function:
+			case SymbolKind::Method:
+				return path(ctx, symbol_id) + funcType(ctx, symbol_id);
+				break;
+
+			case SymbolKind::Constructor:
+			case SymbolKind::Destructor:
+				// special symbols
+				return "todo_special_symbols";  // @todo
+				break;
+
+			default:
+				return "todo_unknown_symbol";  // todo
+				break;
+			}
+		}
+
+		std::string optMetadata(base::Optional<std::string> metadata) {
+			if (!metadata.has_value()) return "";
+			return "$" + metadata.value();
+		}
+
+	}  // namespace detail
+
+	struct IMPLEMENT_QUERY(QueryMangledSymbol, base::Optional<std::string>) {
+		static auto provide(Context& ctx, QKey key) -> PResult {
+			using namespace std::literals::string_view_literals;
+
+			auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);
+			if (!dealiased.get()->hasValue() || dealiased.get()->value().list.size() != 1)
+				return std::nullopt;  // @todo: ambiguous symbols
+			auto symbol_id = dealiased.get()->value().list.front();
+
+			if (!detail::isManglable(symbol_id)) return std::nullopt;  // @todo: wrong symbol kind
+
+			constexpr auto language_prefix     = "_Q"sv;
+			const auto mangling_scheme_version = detail::compactNumber(key.mangling_scheme_version);
+			std::string encoding               = detail::symbolEncoding(ctx, symbol_id);
+			std::string metadata               = detail::optMetadata(key.additional_metadata);
+
+			std::string mangled_name
+				= base::strConcat(language_prefix, mangling_scheme_version, encoding, metadata);
+
+			return mangled_name;
+		}
+
+		QUERY_AUTO_CACHE_COPY
 	};
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryMangledSymbol);
-    
-    
-    
-} // namespace compiler::helios::mangler
+
+
+}  // namespace compiler::helios::mangler

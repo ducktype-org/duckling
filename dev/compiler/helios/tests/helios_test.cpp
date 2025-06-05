@@ -958,7 +958,7 @@ private:
 			{ goo.original_symbol, 123, "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.value() << '\n';
-	
+
 		auto cnst = hout_unit.glob_data[1];
 		std::cerr << "\n\nTEST -- Constant: " << cnst.original_name.strView() << '\n';
 		auto mangled_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
@@ -970,7 +970,7 @@ private:
 		// auto cls = getTypeFromDefinition("Cls", cls_scope);
 		// std::cerr << "name: " << cls.toString() << '\n';
 
-		auto sub_module = getModule(fs::FilePath(path("test_modules/mangling/sub")));
+		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
 		std::cerr << "Sub module HOUT unit: " << sub_hout_unit.debugPrint() << '\n';
 
