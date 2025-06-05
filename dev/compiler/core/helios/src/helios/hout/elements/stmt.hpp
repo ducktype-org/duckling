@@ -146,7 +146,6 @@ namespace compiler::helios::code {
 		Box<Expr> condition;
 		CodeBlock body;
 
-
 		WhileStmt(Box<Expr> condition, CodeBlock body):
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}

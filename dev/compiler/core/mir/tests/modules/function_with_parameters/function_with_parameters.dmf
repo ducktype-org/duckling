@@ -5,6 +5,9 @@ fun foo(x: i16, y: i32, z: i64) -> i64 = {
     while (b) {
         z = z + a;
     }
+    if (b) {
+        z = z + a;
+    }
     if (true) {
         z = z + a;
     }

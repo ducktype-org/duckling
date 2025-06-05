@@ -672,15 +672,9 @@ namespace compiler::mir {
 		}
 
 		void visitWhileStmt(const hc::WhileStmt& stmt) override {
-			auto loop_scope = function.newScope(parent_scope);
-
 			auto condition_scope = function.newScope(parent_scope);
 
-			auto loop_block = function.newBlock();
-
 			auto condition_continuation_block = function.newBlock();
-
-			auto condition_entry_block = function.newBlock();
 
 			auto get_condition_return = condition_continuation_block->addHole();
 
@@ -688,14 +682,22 @@ namespace compiler::mir {
 				*stmt.condition, condition_continuation_block, function, condition_scope
 			);
 
-			condition_entry_block->setTerminator(
-				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, condition_scope }
-			);
+			auto loop_scope = function.newScope(parent_scope);
 
-			loop_block->setTerminator(
+			auto loop_continuation_block = function.newBlock();
+
+			loop_continuation_block->setTerminator(
 				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
 			);
-			auto loop_body = lowerCodeBlock(stmt.body, loop_block, function, loop_scope);
+
+			auto loop_body
+				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+
+			auto entry_block = function.newBlock();
+
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
+			);
 
 			if (expr_result.value.isLocal()) {
 				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
@@ -735,7 +737,7 @@ namespace compiler::mir {
 					condition_scope,
 				});
 			}
-			output({ condition_entry_block });
+			output({ entry_block });
 		}
 
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
