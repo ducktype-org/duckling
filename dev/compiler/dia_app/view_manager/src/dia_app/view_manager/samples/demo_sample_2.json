@@ -346,54 +346,48 @@
               "number": 12,
               "type": "start_line"
             },
-            [
-              {
-                "content": "@why_instanced if (T is ",
+            {
+              "content": "@why_instanced if (T is ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "i32",
                 "type": "code"
               },
-              {
-                "content": {
-                  "content": "i32",
-                  "type": "code"
-                },
-                "refers_to": "builtin_type_i32",
-                "type": "entity"
-              },
-              {
-                "content": ")",
-                "type": "code"
-              }
-            ],
+              "refers_to": "builtin_type_i32",
+              "type": "entity"
+            },
+            {
+              "content": ")",
+              "type": "code"
+            },
             {
               "number": 13,
               "type": "start_line"
             },
-            [
-              {
-                "content": {
-                  "content": "struct K",
-                  "type": "code"
-                },
-                "groups": [
-                  "related"
-                ],
-                "type": "grouping"
-              },
-              {
-                "content": " {",
+            {
+              "content": {
+                "content": "struct K",
                 "type": "code"
-              }
-            ],
+              },
+              "groups": [
+                "related"
+              ],
+              "type": "grouping"
+            },
+            {
+              "content": " {",
+              "type": "code"
+            },
             {
               "number": 14,
               "type": "start_line"
             },
-            [
-              {
-                "content": "    @explore",
-                "type": "code"
-              }
-            ],
+            {
+              "content": "    @explore",
+              "type": "code"
+            },
             {
               "number": 15,
               "type": "start_line"
@@ -412,27 +406,24 @@
                   {
                     "type": "start_line"
                   },
-                  [
-                    {
-                      "content": "    fun get() -> T = {",
-                      "type": "code"
-                    }
-                  ],
+                  {
+                    "content": "    fun get() -> T = {",
+                    "type": "code"
+                  },
                   {
                     "type": "start_line"
                   },
-                  [
-                    "        return t;"
-                  ],
+                  {
+                    "content": "        return t;",
+                    "type": "code"
+                  },
                   {
                     "type": "start_line"
                   },
-                  [
-                    {
-                      "content": "    }",
-                      "type": "code"
-                    }
-                  ]
+                  {
+                    "content": "    }",
+                    "type": "code"
+                  }
                 ],
                 "content": [
                   {
@@ -869,54 +860,42 @@
               "number": 12,
               "type": "start_line"
             },
-            [
-              {
-                "content": "@why_instanced if (T is ",
+            {
+              "content": "@why_instanced if (T is ",
+              "type": "code"
+            },
+            {
+              "content": {
+                "content": "i32",
                 "type": "code"
               },
-              {
-                "content": {
-                  "content": "i32",
-                  "type": "code"
-                },
-                "refers_to": "builtin_type_i32",
-                "type": "entity"
-              },
-              {
-                "content": ")",
-                "type": "code"
-              }
-            ],
+              "refers_to": "builtin_type_i32",
+              "type": "entity"
+            },
+            {
+              "content": ")",
+              "type": "code"
+            },
             {
               "number": 13,
               "type": "start_line"
             },
-            [
-              {
-                "content": {
-                  "content": "struct K",
-                  "type": "code"
-                },
-                "groups": [
-                  "related"
-                ],
-                "type": "grouping"
-              },
-              {
-                "content": " {",
-                "type": "code"
-              }
-            ],
+            {
+              "content": "struct K",
+              "type": "code"
+            },
+            {
+              "content": " {",
+              "type": "code"
+            },
             {
               "number": 14,
               "type": "start_line"
             },
-            [
-              {
-                "content": "    @explore",
-                "type": "code"
-              }
-            ],
+            {
+              "content": "    @explore",
+              "type": "code"
+            },
             {
               "number": 15,
               "type": "start_line"
@@ -935,27 +914,24 @@
                   {
                     "type": "start_line"
                   },
-                  [
-                    {
-                      "content": "    fun get() -> T = {",
-                      "type": "code"
-                    }
-                  ],
+                  {
+                    "content": "    fun get() -> T = {",
+                    "type": "code"
+                  },
                   {
                     "type": "start_line"
                   },
-                  [
-                    "        return t;"
-                  ],
+                  {
+                    "content": "        return t;",
+                    "type": "code"
+                  },
                   {
                     "type": "start_line"
                   },
-                  [
-                    {
-                      "content": "    }",
-                      "type": "code"
-                    }
-                  ]
+                  {
+                    "content": "    }",
+                    "type": "code"
+                  }
                 ],
                 "content": [
                   {

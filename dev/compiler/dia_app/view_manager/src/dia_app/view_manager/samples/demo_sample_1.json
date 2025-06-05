@@ -224,10 +224,26 @@
           "line": 7
         }
       },
+      "left_type": {
+        "content": {
+          "content": "i32",
+          "type": "code"
+        },
+        "refers_to": "builtin_type_i32",
+        "type": "entity"
+      },
       "metadata": {
         "family": "type_check",
         "name": "no_match_2op",
         "type": "error"
+      },
+      "operator": {
+        "content": {
+          "content": "+",
+          "type": "code"
+        },
+        "refers_to": "builtin_op_plus_i32_i32",
+        "type": "entity"
       },
       "params": {
         "has_expanded_left_type": "false",
@@ -238,7 +254,7 @@
             "content": "i32",
             "type": "code"
           },
-          "refers_to": "98613205930592",
+          "refers_to": "95662650266208",
           "type": "entity"
         },
         "operator": "+",
@@ -247,9 +263,17 @@
             "content": "i64",
             "type": "code"
           },
-          "refers_to": "98613205930816",
+          "refers_to": "95662650266432",
           "type": "entity"
         }
+      },
+      "right_type": {
+        "content": {
+          "content": "i64",
+          "type": "code"
+        },
+        "refers_to": "builtin_type_i64",
+        "type": "entity"
       }
     },
     "secondary_infos": [
