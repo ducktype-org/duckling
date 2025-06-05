@@ -83,6 +83,8 @@ def index():
         # Get initial view
         response = stub.GetView(view_pb2.ViewRequest())
         
+        print(response)
+
         # Process each diagnostic
         diagnostics = []
         for diag in response.diagnostics:
