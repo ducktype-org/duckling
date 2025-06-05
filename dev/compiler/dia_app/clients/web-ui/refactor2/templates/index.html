@@ -156,138 +156,110 @@
 </head>
 <body>
     {% macro render_nohl_component(comp) -%}
-        {% set component_type = comp.WhichOneof('component') -%}
-        {% if component_type == 'text_component' -%}
-            <span class="text-component">{{ comp.text_component.content }}</span>
-        {%- elif component_type == 'code_component' -%}
-            <span class="code-component">{{ comp.code_component.content }}</span>
-        {%- elif component_type == 'concat_component' -%}
-            <span class="concat-component">
-                {%- for child in comp.concat_component.components -%}
-                    {{- render_nohl_component(child) -}}
-                {%- endfor -%}
-            </span>
-        {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
-                {{- render_nohl_component(comp.interactive_component.primary_component) -}}
-            </span>
+        {%- if comp is mapping -%}
+            {# Handle processed sections #}
+            <span class="text-component">{{- comp.content -}}</span>
+        {%- else -%}
+            {# Handle protobuf objects #}
+            {%- set component_type = comp.WhichOneof('component') -%}
+            {%- if component_type == 'text_component' -%}
+                <span class="text-component">{{- comp.text_component.content -}}</span>
+            {%- elif component_type == 'code_component' -%}
+                <span class="code-component">{{- comp.code_component.content -}}</span>
+            {%- elif component_type == 'concat_component' -%}
+                <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_nohl_component(child) -}}{%- endfor -%}</span>
+            {%- elif component_type == 'interactive_component' -%}
+                <span class="interactive-component" onclick="handleComponentClick(event, {{- comp.interactive_component.component_id -}})">{{- render_nohl_component(comp.interactive_component.primary_component) -}}</span>
+            {%- endif -%}
         {%- endif -%}
-    {%- endmacro %}
+    {%- endmacro -%}
 
     {% macro render_hl_component(comp) -%}
-        {% set component_type = comp.WhichOneof('component') -%}
-        {% if component_type == 'code_component' -%}
-            <span class="code-component" data-tags="{{ comp.code_component.hl_tags | join(',') }}">{{ comp.code_component.content }}</span>
-        {%- elif component_type == 'concat_component' -%}
-            <span class="concat-component">
-                {%- for child in comp.concat_component.components -%}
-                    {{- render_hl_component(child) -}}
-                {%- endfor -%}
-            </span>
-        {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
-                {{- render_hl_component(comp.interactive_component.primary_component) -}}
-            </span>
+        {%- if comp is mapping -%}
+            {# Handle processed sections #}
+            <span class="code-component" data-tags="{{- comp.hl_tags | default('') | join(',') -}}">{{- comp.content -}}</span>
+        {%- else -%}
+            {# Handle protobuf objects #}
+            {%- set component_type = comp.WhichOneof('component') -%}
+            {%- if component_type == 'code_component' -%}
+                <span class="code-component" data-tags="{{- comp.code_component.hl_tags | join(',') -}}">{{- comp.code_component.content -}}</span>
+            {%- elif component_type == 'concat_component' -%}
+                <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_hl_component(child) -}}{%- endfor -%}</span>
+            {%- elif component_type == 'interactive_component' -%}
+                <span class="interactive-component" onclick="handleComponentClick(event, {{- comp.interactive_component.component_id -}})">{{- render_hl_component(comp.interactive_component.primary_component) -}}</span>
+            {%- endif -%}
         {%- endif -%}
-    {%- endmacro %}
+    {%- endmacro -%}
+
+    {% macro render_code_section(section) -%}
+        <div class="code-section">
+            <div class="code-section-header">{{- section.metadata.filename -}}:{{- section.metadata.line -}}:{{- section.metadata.column -}}</div>
+            <pre><code>{%- for line in section.lines -%}
+{%- if line.line_number -%}<span class="line-number">{{- line.line_number -}}</span>{%- else -%}<span class="line-number"></span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.get_messages_for_line(loop.index0) -%}
+<span class="line-number"></span><div class="message-box type-{{- message.type -}}" data-tag="{{- message.tag -}}" onmouseover="highlightTag({{- message.tag -}})" onmouseout="unhighlightTag({{- message.tag -}})">{{- message.content -}}</div>&#10;{%- endfor -%}
+{%- endfor -%}</code></pre>
+        </div>
+    {%- endmacro -%}
 
     <div id="main-panel">
         <h2>Diagnostics</h2>
-        {%- for diagnostic in diagnostics %}
+        {%- for diagnostic in diagnostics -%}
             <div class="diagnostic">
-                {%- for info in diagnostic.infos %}
-                    <div class="info type-{{ info.metadata.type }}">
-                        <h3>
-                            {%- if info.metadata.type == 0 %}Error
-                            {%- elif info.metadata.type == 1 %}Warning
-                            {%- elif info.metadata.type == 2 %}Note
-                            {%- elif info.metadata.type == 3 %}Hint
-                            {%- elif info.metadata.type == 4 %}Docs
-                            {%- endif %}
-                            (Code: {{ info.metadata.code }})
-                        </h3>
-                        <div class="header">
-                            {{- render_nohl_component(info.header) -}}
-                        </div>
-                        {%- for section in info.sections %}
+                {%- for info in diagnostic.infos -%}
+                    <div class="info type-{{- info.metadata.type -}}">
+                        <div class="info-header">{{- render_nohl_component(info.header) -}}</div>
+                        {%- for section in info.sections -%}
                             <div class="section">
                                 {%- if section.type == 'code_section' -%}
-                                    <div class="code-section">
-                                        <div class="code-section-header">
-                                            {{ section.section.metadata.filename }}:{{ section.section.metadata.line }}:{{ section.section.metadata.column }}
-                                        </div>
-                                        <pre><code>{%- for line in section.section.lines -%}
-{%- if line.line_number -%}<span class="line-number">{{ line.line_number }}</span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.section.get_messages_for_line(loop.index0) -%}
-<span class="line-number"></span><div class="message-box type-{{ message.type }}" data-tag="{{ message.tag }}" onmouseover="highlightTag({{ message.tag }})" onmouseout="unhighlightTag({{ message.tag }})">{{ message.content }}</div>&#10;{%- endfor -%}
-{%- endfor -%}</code></pre>
-                                    </div>
+                                    {{- render_code_section(section.section) -}}
                                 {%- elif section.type == 'text_section' -%}
-                                    {{- render_nohl_component(section.text_section) -}}
-                                {%- endif %}
+                                    {{- render_nohl_component(section.section) -}}
+                                {%- endif -%}
                             </div>
-                        {%- endfor %}
+                        {%- endfor -%}
                     </div>
-                {%- endfor %}
+                {%- endfor -%}
             </div>
-        {%- endfor %}
+        {%- endfor -%}
     </div>
     
     <div id="side-panel">
         <h2>Side Information</h2>
-        {%- for path in side_paths %}
+        {%- for path in side_paths -%}
             <div class="side-path">
-                {%- for info in path.infos %}
-                    <div class="side-info type-{{ info.metadata.type }}" data-id="{{ info.side_info_id }}">
+                {%- for info in path.infos -%}
+                    <div class="side-info type-{{- info.metadata.type -}}" data-id="{{- info.side_info_id -}}">
                         <h3>
-                            {%- if info.metadata.type == 0 %}Error
-                            {%- elif info.metadata.type == 1 %}Warning
-                            {%- elif info.metadata.type == 2 %}Note
-                            {%- elif info.metadata.type == 3 %}Hint
-                            {%- elif info.metadata.type == 4 %}Docs
-                            {%- endif %}
-                            (Code: {{ info.metadata.code }})
+                            {%- if info.metadata.type == 0 -%}Error
+                            {%- elif info.metadata.type == 1 -%}Warning
+                            {%- elif info.metadata.type == 2 -%}Note
+                            {%- elif info.metadata.type == 3 -%}Hint
+                            {%- elif info.metadata.type == 4 -%}Docs
+                            {%- endif -%}
+                            (Code: {{- info.metadata.code -}})
                         </h3>
-                        <div class="header">
-                            {{- render_nohl_component(info.header) -}}
-                        </div>
-                        {%- for section in info.sections %}
+                        <div class="header">{{- render_nohl_component(info.header) -}}</div>
+                        {%- for section in info.sections -%}
                             <div class="section">
-                                {%- set section_type = section.WhichOneof('section') -%}
-                                {%- if section_type == 'code_section' %}
-                                    <div class="code-section">
-                                        <div class="code-section-header">
-                                            {{- section.code_section.metadata.filename -}}
-                                            {%- if section.code_section.metadata.line -%}
-                                                :{{- section.code_section.metadata.line -}}
-                                            {%- endif -%}
-                                            {%- if section.code_section.metadata.column -%}
-                                                :{{- section.code_section.metadata.column -}}
-                                            {%- endif -%}
-                                        </div>
-                                        <pre><code>{% for line in section.code_section.lines -%}
-{%- if line.content -%}{% if line.line_number %}{{ line.line_number }}:{% endif %}{{- render_hl_component(line.content) }}
-{% endif -%}
-{%- endfor -%}</code></pre>
-                                    </div>
-                                {%- elif section_type == 'text_section' -%}
-                                    {{- render_nohl_component(section.text_section) -}}
-                                {%- endif %}
+                                {%- if section.type == 'code_section' -%}
+                                    {{- render_code_section(section.section) -}}
+                                {%- elif section.type == 'text_section' -%}
+                                    {{- render_nohl_component(section.section) -}}
+                                {%- endif -%}
                             </div>
-                        {%- endfor %}
-                        {%- if info.edges %}
+                        {%- endfor -%}
+                        {%- if info.edges -%}
                             <div class="edges">
-                                {%- for edge in info.edges %}
-                                    <button onclick="getEdge({{ info.side_info_id }}, {{ edge.edge_id }})">
-                                        {{- edge.description -}}
-                                    </button>
-                                {%- endfor %}
+                                {%- for edge in info.edges -%}
+                                    <button onclick="getEdge({{- info.side_info_id -}}, {{- edge.edge_id -}})">{{- edge.description -}}</button>
+                                {%- endfor -%}
                             </div>
-                        {%- endif %}
-                        <button onclick="closeSideInfo({{ info.side_info_id }})">Close</button>
+                        {%- endif -%}
+                        <button onclick="closeSideInfo({{- info.side_info_id -}})">Close</button>
                     </div>
-                {%- endfor %}
+                {%- endfor -%}
             </div>
-        {%- endfor %}
+        {%- endfor -%}
     </div>
 
     <script>

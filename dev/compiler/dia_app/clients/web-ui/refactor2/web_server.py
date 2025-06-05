@@ -83,8 +83,6 @@ def index():
         # Get initial view
         response = stub.GetView(view_pb2.ViewRequest())
         
-        print(response)
-
         # Process each diagnostic
         diagnostics = []
         for diag in response.diagnostics:
@@ -111,9 +109,37 @@ def index():
                 processed_diag['infos'].append(processed_info)
             diagnostics.append(processed_diag)
 
+        # Process side paths
+        side_paths = []
+        for path in response.side_paths:
+            processed_path = {'infos': []}
+            for info in path.infos:
+                processed_info = {
+                    'metadata': info.metadata,
+                    'header': info.header,
+                    'sections': [],
+                    'edges': info.edges,
+                    'side_info_id': info.side_info_id
+                }
+                for section in info.sections:
+                    section_type = section.WhichOneof('section')
+                    if section_type == 'code_section':
+                        enhanced_section = EnhancedCodeSection(section.code_section)
+                        processed_info['sections'].append({
+                            'type': 'code_section',
+                            'section': enhanced_section
+                        })
+                    else:  # text_section
+                        processed_info['sections'].append({
+                            'type': 'text_section',
+                            'section': section.text_section
+                        })
+                processed_path['infos'].append(processed_info)
+            side_paths.append(processed_path)
+
         return render_template('index.html', 
                             diagnostics=diagnostics,
-                            side_paths=response.side_paths)
+                            side_paths=side_paths)
     except Exception as e:
         print(f"Error in main route:")
         traceback.print_exc()
