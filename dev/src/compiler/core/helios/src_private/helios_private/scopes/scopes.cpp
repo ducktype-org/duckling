@@ -393,6 +393,13 @@ namespace compiler::helios {
 				output(std::vector<SymID>{});
 			}
 
+			void visitWhile(pst::Access<pst::While>) override {
+				// Scope of "while →(...)← {}"
+				// @TODO: check if "While" defines any variables in its condition
+				// and add them here.
+				output(std::vector<SymID>{});
+			}
+
 			void visitExprStmt(pst::Access<pst::ExprStmt>) override {
 				output(std::vector<SymID>());
 			}

@@ -10,6 +10,7 @@ namespace compiler::helios::code {
 		VoidReturnStmt,
 		ExprStmt,
 		IfStmt,
+		WhileStmt,
 		VariableStmt,
 		AssignmentStmt
 	);
