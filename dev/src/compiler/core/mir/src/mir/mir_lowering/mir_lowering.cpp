@@ -6,7 +6,6 @@
 
 #include "mir_lowering.hpp"
 
-#include "mir/mir_structure/mir_local_ref.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <helios/helios_result.hpp>
