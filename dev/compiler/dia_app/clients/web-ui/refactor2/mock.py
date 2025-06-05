@@ -11,55 +11,82 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         self.clicked_components = set()
 
     def GetView(self, request, context):
-        # Create a sample diagnostic with interactive code
         diagnostic = view_pb2.Diagnostic()
         info = diagnostic.infos.add()
-        info.metadata.type = view_pb2.InfoType.Note
+        info.metadata.type = view_pb2.InfoType.Error
         info.metadata.code = 1234
 
-        # Add header
-        info.header.text_component.content = "Sample interactive code"
+        # Make the header interactive
+        header_component = info.header.interactive_component
+        header_component.component_id = 1
+        header_component.status = view_pb2.VisibilityStatus.Primary
+        header_component.primary_component.text_component.content = "Cannot move out of borrowed content"
 
-        # Add code section
         section = info.sections.add()
         code_section = section.code_section
-        code_section.metadata.filename = "example.txt"
-        code_section.metadata.line = 1
+        code_section.metadata.filename = "src/main.rs"
+        code_section.metadata.line = 42
         code_section.metadata.column = 1
 
-        # Add some lines with interactive components
-        for i in range(1, 4):
+        lines = [
+            (1, "fn process_data(data: &Vec<String>) {"),
+            (2, "    let mut results = Vec::new();"),
+            (3, "    for item in data {"),
+            (4, "        let len = item.len();"),
+            (5, "        if len > 5 {"),
+            (6, "            results.push(process_item(item));"),
+            (7, "        }"),
+            (8, "        println!(\"{} has length {}\", item, len);"),
+            (9, "    }"),
+            (10, "}"),
+            (11, ""),
+            (12, "fn process_item(s: String) -> String {"),
+            (13, "    s.to_uppercase()"),
+            (14, "}")
+        ]
+
+        for line_num, content in lines:
             line = code_section.lines.add()
-            line.line_number = i
+            line.line_number = line_num
             
-            # Create a concat component for the line
-            concat = line.content.concat_component
-            
-            # Add some regular code
-            code = concat.components.add()
-            code.code_component.content = f"let x{i} = "
-            
-            # Add interactive component
-            interactive = concat.components.add()
-            interactive.interactive_component.component_id = i
-            interactive.interactive_component.status = view_pb2.VisibilityStatus.Primary
-            interactive.interactive_component.primary_component.code_component.content = f"value{i}"
-            if i in self.clicked_components:
-                interactive.interactive_component.primary_component.code_component.hl_tags.append(i)
-            
-            # Add semicolon
-            end = concat.components.add()
-            end.code_component.content = ";"
+            if line_num in [3, 4, 6, 8]:  # Lines containing 'item' variable
+                concat = line.content.concat_component
+                
+                if line_num == 6:
+                    # Special handling for the process_item(item) line
+                    parts = ["            results.push(process_", "item", "(", "item", ");"]
+                    for i, part in enumerate(parts):
+                        if part == "item" and i == 3:  # Only the second 'item' is our variable
+                            # Add non-interactive highlighted item
+                            code = concat.components.add()
+                            code.code_component.content = "item"
+                            code.code_component.hl_tags.append(1)
+                        else:
+                            text = concat.components.add()
+                            text.code_component.content = part
 
-            # If component was clicked, add a message
-            if i in self.clicked_components:
-                msg = code_section.hl_messages.add()
-                msg.tag = i
-                msg.priority = 1
-                msg.type = view_pb2.InfoType.Note
-                msg.message.text_component.content = f"This value was clicked!"
+                    # Add error message right after this line
+                    msg = code_section.hl_messages.add()
+                    msg.tag = 1
+                    msg.priority = 1
+                    msg.type = view_pb2.InfoType.Error
+                    msg.message.text_component.content = "Cannot move out of borrowed content - 'item' is borrowed here but function expects owned String"
+                else:
+                    # Normal handling for other lines with 'item'
+                    parts = content.split('item')
+                    for i, part in enumerate(parts):
+                        if part:
+                            text = concat.components.add()
+                            text.code_component.content = part
+                        
+                        if i < len(parts) - 1:
+                            # Add non-interactive highlighted item
+                            code = concat.components.add()
+                            code.code_component.content = "item"
+                            code.code_component.hl_tags.append(1)
+            else:
+                line.content.code_component.content = content
 
-        # Add side infos if any exist
         response = view_pb2.ViewResponse()
         response.diagnostics.append(diagnostic)
 
@@ -74,26 +101,30 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         comp_id = request.component_id
         self.clicked_components.add(comp_id)
 
-        # Create a new side info
+        # Create a new side info with ownership explanation
         self.side_info_counter += 1
         side_info = view_pb2.SideInfo()
         side_info.side_info_id = self.side_info_counter
         side_info.metadata.type = view_pb2.InfoType.Note
         side_info.metadata.code = 5678
-        side_info.header.text_component.content = f"Clicked component {comp_id}"
+        side_info.header.text_component.content = "Ownership Error Details"
         
-        # Add a section with some details
+        # Add explanation section
         section = side_info.sections.add()
-        section.text_section.text_component.content = f"This is value{comp_id}. Click edges to learn more!"
+        section.text_section.text_component.content = "The error occurs because process_item expects to take ownership of the String, but 'item' is only borrowed in the for loop."
 
-        # Add edges that will show more information
+        # Add edges for more information
         edge1 = side_info.edges.add()
         edge1.edge_id = self.side_info_counter * 10 + 1
-        edge1.description = "Show type information"
+        edge1.description = "Show how to fix"
 
         edge2 = side_info.edges.add()
         edge2.edge_id = self.side_info_counter * 10 + 2
-        edge2.description = "Show usage examples"
+        edge2.description = "Learn about ownership"
+
+        edge3 = side_info.edges.add()
+        edge3.edge_id = self.side_info_counter * 10 + 3
+        edge3.description = "See similar examples"
 
         self.side_infos[self.side_info_counter] = side_info
         return view_pb2.ClickResponse(status="ok")
@@ -114,59 +145,128 @@ class ViewServiceServicer(view_pb2_grpc.ViewServiceServicer):
         side_info.side_info_id = self.side_info_counter
         side_info.metadata.type = view_pb2.InfoType.Note
         
-        if edge_type == 1:  # Type information
+        if edge_type == 1:  # How to fix
             side_info.metadata.code = 1001
-            side_info.header.text_component.content = "Type Information"
+            side_info.header.text_component.content = "How to Fix the Error"
             
             section = side_info.sections.add()
-            section.code_section.metadata.filename = "types.txt"
+            section.code_section.metadata.filename = "src/main.rs"
             section.code_section.metadata.line = 1
             
-            line = section.code_section.lines.add()
-            line.content.code_component.content = f"type value{base_id} = i32;"
+            # Show the fixed version
+            lines = [
+                "// Option 1: Clone the borrowed string",
+                "results.push(process_item(item.clone()));",
+                "",
+                "// Option 2: Change process_item to take a reference",
+                "fn process_item(s: &String) -> String {",
+                "    s.to_uppercase()",
+                "}",
+                "",
+                "// Option 3: Change the loop to take ownership",
+                "for item in data.iter() {",
+                "    if item.len() > 5 {",
+                "        results.push(process_item(item));",
+                "    }",
+                "}"
+            ]
             
-            # Add edge to show more type details
-            edge = side_info.edges.add()
-            edge.edge_id = self.side_info_counter * 10 + 3
-            edge.description = "Show type constraints"
-            
-        elif edge_type == 2:  # Usage examples
-            side_info.metadata.code = 1002
-            side_info.header.text_component.content = "Usage Examples"
-            
-            section = side_info.sections.add()
-            section.code_section.metadata.filename = "examples.txt"
-            section.code_section.metadata.line = 1
-            
-            for i in range(2):
+            for i, content in enumerate(lines):
                 line = section.code_section.lines.add()
                 line.line_number = i + 1
-                line.content.code_component.content = f"let example{i} = value{base_id} + {i};"
+                line.content.code_component.content = content
             
-            # Add edge to show more examples
+            # Add edge to show performance implications
             edge = side_info.edges.add()
             edge.edge_id = self.side_info_counter * 10 + 4
-            edge.description = "Show more examples"
+            edge.description = "Compare solutions"
             
-        elif edge_type == 3:  # Type constraints
+        elif edge_type == 2:  # Learn about ownership
+            side_info.metadata.code = 1002
+            side_info.header.text_component.content = "Understanding Rust Ownership"
+            
+            # Add explanation text
+            text_section = side_info.sections.add()
+            text_section.text_component.content = "In Rust, each value has a single owner. When you pass a value to a function, ownership is transferred unless:"
+            
+            # Add code examples
+            code_section = side_info.sections.add()
+            code_section.metadata.filename = "ownership_examples.rs"
+            code_section.metadata.line = 1
+            
+            examples = [
+                "// 1. The type implements Copy",
+                "let x = 5;  // i32 implements Copy",
+                "let y = x;  // x is still valid because i32 is Copy",
+                "",
+                "// 2. You pass a reference",
+                "let s = String::from(\"hello\");",
+                "let len = calculate_length(&s);  // s is borrowed, not moved",
+                "",
+                "// 3. You explicitly clone",
+                "let s1 = String::from(\"hello\");",
+                "let s2 = s1.clone();  // s1 is still valid because we cloned"
+            ]
+            
+            for i, content in enumerate(examples):
+                line = code_section.lines.add()
+                line.line_number = i + 1
+                line.content.code_component.content = content
+            
+        elif edge_type == 3:  # Similar examples
             side_info.metadata.code = 1003
-            side_info.header.text_component.content = "Type Constraints"
+            side_info.header.text_component.content = "Similar Ownership Errors"
             
             section = side_info.sections.add()
-            section.text_section.text_component.content = f"value{base_id} must be a valid 32-bit signed integer"
-            
-        elif edge_type == 4:  # More examples
-            side_info.metadata.code = 1004
-            side_info.header.text_component.content = "More Examples"
-            
-            section = side_info.sections.add()
-            section.code_section.metadata.filename = "more_examples.txt"
+            section.code_section.metadata.filename = "common_errors.rs"
             section.code_section.metadata.line = 1
             
-            for i in range(2):
+            examples = [
+                "// Error 1: Moving out of a vector",
+                "let v = vec![String::from(\"hello\")];",
+                "let s = v[0];  // Error: cannot move out of index of Vec",
+                "",
+                "// Error 2: Moving in a loop",
+                "let v = vec![String::from(\"hello\")];",
+                "for s in &v {",
+                "    take_ownership(*s);  // Error: cannot move out of borrow",
+                "}",
+                "",
+                "// Error 3: Moving captured variable",
+                "let s = String::from(\"hello\");",
+                "thread::spawn(|| {",
+                "    println!(\"{}\", s);  // Error: may outlive borrowed value",
+                "});"
+            ]
+            
+            for i, content in enumerate(examples):
                 line = section.code_section.lines.add()
                 line.line_number = i + 1
-                line.content.code_component.content = f"let complex_example{i} = value{base_id} * {i+2} + value{base_id};"
+                line.content.code_component.content = content
+            
+        elif edge_type == 4:  # Performance comparison
+            side_info.metadata.code = 1004
+            side_info.header.text_component.content = "Solution Performance Comparison"
+            
+            section = side_info.sections.add()
+            section.text_section.text_component.content = """Performance implications of different solutions:
+
+1. Using clone():
+   + Simple to implement
+   - Creates a new allocation
+   - O(n) time complexity where n is string length
+   
+2. Using references:
+   + No allocation needed
+   + O(1) overhead
+   - May need lifetime annotations
+   - Might need to change function signatures
+   
+3. Taking ownership in loop:
+   + No additional allocations
+   + Clear ownership semantics
+   - May need to restructure code
+   - Might not always be possible"""
 
         self.side_infos[self.side_info_counter] = side_info
         return view_pb2.EdgeResponse(status="ok")
