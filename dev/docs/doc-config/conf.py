@@ -71,7 +71,6 @@ print("INNER CONFIG")
 # Configuration meant for docs while they are WIP.
 
 redirects = {
-    # 'index': 'duckling/introduction/index.html',
 }
 
 rst_prolog = """
