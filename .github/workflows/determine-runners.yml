@@ -47,12 +47,12 @@ jobs:
           runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
 
           available_runners=$(echo "$runners" | \
-            jq -r --arg lbls "${{ inputs.self-hosted-labels }}" '
-              .runners[]? | 
+            jq -r --arg lbls "${{ inputs.self-hosted-labels }}" \
+              '.runners[]? | \
               select(
-                .status == "online" and 
-                .busy == false and 
-                (.labels[]?.name as $label | ($lbls | split(",")) | index($label) != null)
+                .status == "online" and \
+                .busy == false and \
+                ([.labels[]?.name] | all($lbls | split(",")[]; index(.)))
               ) | .name' | \
             head -2)
 
