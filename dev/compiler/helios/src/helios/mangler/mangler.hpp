@@ -10,33 +10,13 @@ namespace compiler::helios::mangler {
         u64 mangling_scheme_version = 0;
         base::Optional<std::string> additional_metadata = std::nullopt;
 
-        auto operator<=>(const KeyOf_MangledSymbol& rhs) const {
-            if( symbol != rhs.symbol )
-                return symbol <=> rhs.symbol;
-            if( mangling_scheme_version != rhs.mangling_scheme_version )
-                return mangling_scheme_version <=> rhs.mangling_scheme_version;
-            if( additional_metadata != rhs.additional_metadata ) {
-                if( !additional_metadata.has_value() && !rhs.additional_metadata.has_value() )
-                    return std::strong_ordering::equal;
-                if( additional_metadata.has_value() && rhs.additional_metadata.has_value() )
-                    return additional_metadata.value() <=> rhs.additional_metadata.value();
-                return additional_metadata.has_value() ? std::strong_ordering::greater : std::strong_ordering::less;
-            }
-            return std::strong_ordering::equal;
+        constexpr auto operator<=>(const KeyOf_MangledSymbol& other) const {
+            return std::tie(symbol, mangling_scheme_version, additional_metadata) <=> 
+                   std::tie(other.symbol, other.mangling_scheme_version, other.additional_metadata);
         }
-        
-        bool operator==(const KeyOf_MangledSymbol& rhs) const = default;
 
         [[nodiscard]]
-        u64 queryUnstablePerfectHash() const {
-            static base::Map<KeyOf_MangledSymbol, u64> hashes{};
-            
-            if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
-            
-            u64 result = hashes.size();
-            hashes.put(*this, result);
-            return result;
-        }
+        u64 queryUnstablePerfectHash() const;
     };
 
     /**

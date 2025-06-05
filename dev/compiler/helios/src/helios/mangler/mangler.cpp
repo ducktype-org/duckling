@@ -14,6 +14,16 @@
 
 namespace compiler::helios::mangler {
 
+    u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
+        static base::Map<KeyOf_MangledSymbol, u64> hashes{};
+        
+        if (const auto iter = hashes.find(*this); iter != hashes.end()) return iter->second;
+        
+        u64 result = hashes.size();
+        hashes.put(*this, result);
+        return result;
+    }
+
     namespace detail {
 
         bool isManglable(SymID symbol_id) {
@@ -88,11 +98,6 @@ namespace compiler::helios::mangler {
         }
 
         std::string symbol_name(query::Context& ctx, SymID symbol_id) {
-            std::cerr << __PRETTY_FUNCTION__ << '\n';
-
-            std::cerr << "symbol_id: " << symbol_id.queryUnstablePerfectHash() << '\n';
-            std::cerr << "symbol PstID: " << symbolPst(symbol_id).unlock(ctx)->getID().asInt() << '\n';
-
             auto scope_id = scope(symbol_id);
 
             if(scopeDepth(scope_id) == 1) {
@@ -103,9 +108,6 @@ namespace compiler::helios::mangler {
                 auto current_scope = scope_id;
                 auto current_pst_id = symbolPst(symbol_id).unlock(ctx)->getID();
                 while(true) {
-                    std::cerr << "while: scopeDepth: " << scopeDepth(current_scope) << '\n';
-                    current_scope.debugPrintScopeAndParents();
-                        
                     auto parent_scope = parent(current_scope);
                     if(!parent_scope.has_value()) break;
                     
@@ -113,16 +115,12 @@ namespace compiler::helios::mangler {
                     for(const auto& sym : symbols_in_parent) {
                         auto pst_sym = symbolPst(sym).unlock(ctx);
                         
-                        std::cerr << "\t" << sym.queryUnstablePerfectHash() << " - " << compiler::helios::name(sym).str() << '\t';
-                        std::cerr << "elem type: " << symbolPst(sym).unlock(ctx)->elementType() << '\n';
-                        
                         if(pst_sym->getElementKind() == pst::ElementKind::Namespace) {
                             auto nmsp = pst_sym.dynamicCast<pst::Namespace>().value();
                             auto body = nmsp->getBody().unlock(ctx);
 
                             for(auto&& child_lck : body->viewChildren()) {
                                 auto child = child_lck.unlock(ctx);
-                                std::cerr << "\t\tPstID: " << child->getID().asInt() << " elemType: " << child->elementType() << '\n';
                                 
                                 if(child->getID() == current_pst_id) {
                                     path_parts.push_back(identifier(nmsp->getName().str()));
@@ -132,10 +130,9 @@ namespace compiler::helios::mangler {
                         } else if (pst_sym->getElementKind() == pst::ElementKind::Class) {
                             auto cls = pst_sym.dynamicCast<pst::Class>().value();
                             auto body = cls->getBody().unlock(ctx);
-                            std::cerr << "\t\tClass: " << cls->getName().str() << '\n';
+                        
                             for(auto&& child_lck : body->viewChildren()) {
                                 auto child = child_lck.unlock(ctx);
-                                std::cerr << "\t\tPstID: " << child->getID().asInt() << " elemType: " << child->elementType() << '\n';
                                                                 
                                 if(child->getID() == current_pst_id) {
                                     path_parts.push_back(identifier(cls->getName().str()));
@@ -165,8 +162,6 @@ namespace compiler::helios::mangler {
         }
 
         std::string func_type(query::Context& ctx, SymID symbol_id) {
-            std::cerr << __PRETTY_FUNCTION__ << '\n';
-
             std::string ret;
             if(kind(symbol_id) == SymbolKind::Function) {
                 ret = "F";
@@ -191,13 +186,11 @@ namespace compiler::helios::mangler {
             case SymbolKind::Variable:
             case SymbolKind::Field: 
             case SymbolKind::Const:
-                std::cerr << "Mangling data\n";
                 return path(ctx, symbol_id);
                 break;
             
             case SymbolKind::Function:
             case SymbolKind::Method:
-                std::cerr << "Mangling function\n";
                 return path(ctx, symbol_id) + func_type(ctx, symbol_id);
                 break;
 
@@ -225,9 +218,9 @@ namespace compiler::helios::mangler {
         using namespace std::literals::string_view_literals;
 
         auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);
-        if(!dealiased.get()->hasValue() || dealiased.get()->value().size() != 1)
+        if(!dealiased.get()->hasValue() || dealiased.get()->value().list.size() != 1)
             return std::nullopt; // todo: ambiguous symbols
-        auto symbol_id = dealiased.get()->value().front();
+        auto symbol_id = dealiased.get()->value().list.front();
 
         if(!detail::isManglable(symbol_id)) return std::nullopt; // todo: wrong symbol kind
         

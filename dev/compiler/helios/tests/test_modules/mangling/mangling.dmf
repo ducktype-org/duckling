@@ -33,3 +33,11 @@ namespace P {
         return Mspc.Ooo.Cnst;
     }
 }
+
+import sub as S;
+
+namespace Nmspc2 {
+    fun fromSub() -> i32 = {
+        return S.inSub.subFun() * S.inSub.subConst;
+    }
+}
