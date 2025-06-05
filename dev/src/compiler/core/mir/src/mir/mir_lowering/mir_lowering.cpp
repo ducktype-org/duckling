@@ -6,6 +6,7 @@
 
 #include "mir_lowering.hpp"
 
+#include "mir/mir_structure/mir_local_ref.hpp"
 #include "mir_lifetimes.hpp"
 
 #include <helios/helios_result.hpp>
@@ -26,6 +27,7 @@
 
 #include <stack>
 #include <unordered_set>
+#include <variant>
 
 namespace compiler::mir {
 
@@ -702,55 +704,6 @@ namespace compiler::mir {
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
 
-			/**
-			 * @brief Visitor that outputs the assignment instruction depending
-			 * on the type of the location expression.
-			 * The result is stored in the @p out member.
-			 */
-			struct AssignmentExprVisitor final: public hc::HoutExprVisitorPanicky {
-				struct Result {
-					BlockBuilderRef begin_continuation;
-					Instruction     instruction;
-				};
-
-				BlockBuilderRef  continuation;
-				FunctionBuilder& function;
-				ScopeRef         assignment_scope;
-				MIRValue         new_value;
-
-				base::Optional<Result> out;
-
-				AssignmentExprVisitor(
-					BlockBuilderRef  continuation,
-					FunctionBuilder& function,
-					ScopeRef         assignment_scope,
-					MIRValue         new_value
-				):
-					  continuation(continuation),
-					  function(function),
-					  assignment_scope(assignment_scope),
-					  new_value(new_value) {}
-
-				void output(const Result& result) {
-					CORE_ASSERT(this->out.empty(), "Output already set.");
-					this->out.emplace(result);
-				}
-
-				void visitIdentifierExpr(const hc::IdentifierExpr& expr) override {
-					auto local = LocalRef(function.findLocal(expr.symbol).get());
-					output({ .begin_continuation = continuation,
-					         .instruction        = Instruction{ Operation::Assign,
-					                                            { local },
-					                                            { new_value },
-					                                            {},
-                                                         assignment_scope } });
-				}
-
-				// In the future the assignment instruction would depend on the type of outer
-				// expression. For example array subscript expression should convert to
-				// "array_store" MIR instruction and struct field to "struct_store" instruction.
-			};
-
 			auto assignment_scope = function.newScope(parent_scope);
 
 			auto target_construction_hole = continuation->addHole();
@@ -758,12 +711,22 @@ namespace compiler::mir {
 			auto [r_continuation, new_value]
 				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
 
-			AssignmentExprVisitor visitor(r_continuation, function, assignment_scope, new_value);
-			stmt.location_expr->acceptVisitor(visitor);
+			auto [l_continuation, location_value_result]
+				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
 
-			target_construction_hole.fill(visitor.out->instruction);
-
-			output({ visitor.out->begin_continuation });
+			CORE_ASSERT(
+				std::holds_alternative<LocalRef>(location_value_result.getVariant()),
+				"Left side of assignment statement doesn't contain reference to local variable."
+			);
+			auto local = location_value_result.get<LocalRef>();
+			target_construction_hole.fill(Instruction{
+				Operation::Assign,
+				{ local },
+				{ new_value },
+				{},
+				assignment_scope,
+			});
+			output({ l_continuation });
 		}
 	};
 
