@@ -62,13 +62,13 @@ jobs:
           mapfile -t runners_array <<< "$available_runners"
 
           if [ -n "${runners_array[0]}" ]; then
-            echo "runner1={\"group\":\"SelfHostedRunners\",\"label\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
+            echo "runner1={\"group\":\"SelfHostedRunners\",\"labels\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
           else
-            echo "runner1={\"label\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
+            echo "runner1={\"labels\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
           fi
 
           if [ -n "${runners_array[1]}" ]; then
-            echo "runner2={\"group\":\"SelfHostedRunners\",\"label\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
+            echo "runner2={\"group\":\"SelfHostedRunners\",\"labels\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
           else
-            echo "runner2={\"label\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
+            echo "runner2={\"labels\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
           fi
