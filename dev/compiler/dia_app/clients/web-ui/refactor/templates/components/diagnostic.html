@@ -1,7 +1,0 @@
-{% from "macros/rendering.html" import render_info %}
-
-<div class="diagnostic">
-    {%- for info in diag.infos -%}
-        {{- render_info(info, hl_info_map) -}}
-    {%- endfor -%}
-</div> 

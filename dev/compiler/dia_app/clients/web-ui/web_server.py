@@ -1,185 +1,216 @@
+from flask import Flask, render_template, jsonify, request
 import grpc
-import json
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from concurrent import futures
 import view_pb2
 import view_pb2_grpc
+import json
+import traceback
+from jinja2 import StrictUndefined
+from google.protobuf.json_format import MessageToDict
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import List, Dict, Set
+
+@dataclass
+class MessageInfo:
+    tag: int
+    priority: int
+    type: int
+    content: str
+    last_line: int
+
+class EnhancedCodeSection:
+    def __init__(self, code_section: view_pb2.CodeSection):
+        self.metadata = code_section.metadata
+        self.lines = code_section.lines
+        self.hl_messages = code_section.hl_messages
+        
+        self.line_tags: Dict[int, Set[int]] = defaultdict(set)
+        for i, line in enumerate(self.lines):
+            self._collect_tags_from_component(line.content, i)
+            
+        self.messages: Dict[int, MessageInfo] = {}
+        for msg in self.hl_messages:
+            last_line = max((i for i, tags in self.line_tags.items() if msg.tag in tags), default=-1)
+            if last_line >= 0:
+                self.messages[msg.tag] = MessageInfo(
+                    tag=msg.tag,
+                    priority=msg.priority,
+                    type=msg.type,
+                    content=self._extract_message_content(msg.message),
+                    last_line=last_line
+                )
+    
+    def _collect_tags_from_component(self, component: view_pb2.HlComponent, line_idx: int) -> None:
+        comp_type = component.WhichOneof('component')
+        if comp_type == 'code_component':
+            self.line_tags[line_idx].update(component.code_component.hl_tags)
+        elif comp_type == 'concat_component':
+            for child in component.concat_component.components:
+                self._collect_tags_from_component(child, line_idx)
+        elif comp_type == 'interactive_component':
+            self._collect_tags_from_component(component.interactive_component.primary_component, line_idx)
+    
+    def _extract_message_content(self, component: view_pb2.NoHlComponent) -> str:
+        comp_type = component.WhichOneof('component')
+        if comp_type == 'text_component':
+            return component.text_component.content
+        elif comp_type == 'code_component':
+            return component.code_component.content
+        elif comp_type == 'concat_component':
+            return ''.join(self._extract_message_content(child) for child in component.concat_component.components)
+        elif comp_type == 'interactive_component':
+            return self._extract_message_content(component.interactive_component.primary_component)
+        return ''
+
+    def get_messages_for_line(self, line_idx: int) -> List[MessageInfo]:
+        """Get all messages that should be displayed after this line, sorted by priority"""
+        messages = [msg for msg in self.messages.values() if msg.last_line == line_idx]
+        return sorted(messages, key=lambda m: m.priority)
+
+app = Flask(__name__)
+app.jinja_env.undefined = StrictUndefined
 
 channel = grpc.insecure_channel('localhost:50051')
-view_stub = view_pb2_grpc.ViewServiceStub(channel)
+stub = view_pb2_grpc.ViewServiceStub(channel)
 
+@app.route('/')
+def index():
+    try:
+        response = stub.GetView(view_pb2.ViewRequest())
+        
+        diagnostics = []
+        for diag in response.diagnostics:
+            processed_diag = {'infos': []}
+            for info in diag.infos:
+                processed_info = {
+                    'metadata': info.metadata,
+                    'header': info.header,
+                    'sections': []
+                }
+                for section in info.sections:
+                    section_type = section.WhichOneof('section')
+                    if section_type == 'code_section':
+                        enhanced_section = EnhancedCodeSection(section.code_section)
+                        processed_info['sections'].append({
+                            'type': 'code_section',
+                            'section': enhanced_section
+                        })
+                    else:  
+                        processed_info['sections'].append({
+                            'type': 'text_section',
+                            'section': section.text_section
+                        })
+                processed_diag['infos'].append(processed_info)
+            diagnostics.append(processed_diag)
 
-def generate_html(response):
-    hl_info_map = {}
-    for diag in response.diagnostics:
-        for info in diag.hl_messages:
-            hl_info_map.setdefault(info.tag, []).append(info.message)
+        side_paths = []
+        for path in response.side_paths:
+            processed_path = {'infos': []}
+            for info in path.infos:
+                processed_info = {
+                    'metadata': info.metadata,
+                    'header': info.header,
+                    'sections': [],
+                    'edges': info.edges,
+                    'side_info_id': info.side_info_id
+                }
+                for section in info.sections:
+                    section_type = section.WhichOneof('section')
+                    if section_type == 'code_section':
+                        enhanced_section = EnhancedCodeSection(section.code_section)
+                        processed_info['sections'].append({
+                            'type': 'code_section',
+                            'section': enhanced_section
+                        })
+                    else:  
+                        processed_info['sections'].append({
+                            'type': 'text_section',
+                            'section': section.text_section
+                        })
+                processed_path['infos'].append(processed_info)
+            side_paths.append(processed_path)
 
-    # TODO: consider caching the result to avoid disk access
-    with open("template.html", "r", encoding="utf-8") as f:
-        html = f.read()
-        # TODO: consider using templating engine such as jinja2
-        html = html.replace("HLINFO_PLACEHOLDER", json.dumps(hl_info_map))
+        return render_template('index.html', 
+                            diagnostics=diagnostics,
+                            side_paths=side_paths)
+    except Exception as e:
+        print(f"Error in main route:")
+        traceback.print_exc()
+        return str(e), 500
 
-    main_sections = []
-    for diag in response.diagnostics:
-        main_sections.append('<div class="diagnostic">')
-        meta = []
-        if diag.metadata.error_code:
-            meta.append(f"Error: {diag.metadata.error_code}")
-        if diag.metadata.file_info:
-            meta.append(f"File: {diag.metadata.file_info}")
-        if meta:
-            main_sections.append('<div class="metadata">' + ' | '.join(meta) + '</div>')
-        for sec in diag.sections:
-            main_sections.append('<div class="section">')
-            if sec.HasField('text_section'):
-                main_sections.append(render_component(sec.text_section.root))
-            elif sec.HasField('no_hl_text_section'):
-                main_sections.append(render_nohl_component(sec.no_hl_text_section.root))
-            elif sec.HasField('code_section'):
-                main_sections.append(render_code_section(sec.code_section))
-            main_sections.append('</div>')
-        main_sections.append('</div>')
-    main_html = "\n".join(main_sections)
+@app.route('/click', methods=['POST'])
+def click():
+    try:
+        data = request.json
+        component_id = int(data.get('component_id', 0))
+        click_type = data.get('click_type', 'CLICK')
+        
+        click_type_enum = view_pb2.ClickType.Value(click_type)
+        
+        click_request = view_pb2.ClickRequest(
+            component_id=component_id,
+            click_type=click_type_enum
+        )
+        click_response = stub.Click(click_request)
+        
+        view_response = stub.GetView(view_pb2.ViewRequest())
+        
+        return jsonify({
+            'status': click_response.status,
+            'diagnostics': [MessageToDict(d) for d in view_response.diagnostics],
+            'side_paths': [MessageToDict(p) for p in view_response.side_paths]
+        })
+    except Exception as e:
+        print(f"Error in click route:")
+        traceback.print_exc()
+        return str(e), 500
 
-    side_sections = []
-    for idx, note in enumerate(response.side_notes):
-        side_sections.append(f'<div class="side-note" id="side-{idx}">')
-        for diag in note.diagnostics:
-            for sec in diag.sections:
-                side_sections.append('<div class="section">')
-                if sec.HasField('text_section'):
-                    side_sections.append(render_component(sec.text_section.root))
-                elif sec.HasField('no_hl_text_section'):
-                    side_sections.append(render_nohl_component(sec.no_hl_text_section.root))
-                elif sec.HasField('code_section'):
-                    side_sections.append(render_code_section(sec.code_section))
-                side_sections.append('</div>')
-        side_sections.append(f'<span class="clickable close-note" onclick="closeSide({idx})">Close Note</span>')
-        side_sections.append('</div>')
-    side_html = "\n".join(side_sections)
+@app.route('/close_side_info', methods=['POST'])
+def close_side_info():
+    try:
+        data = request.json
+        side_info_id = int(data.get('side_info_id', 0))
+        
+        close_request = view_pb2.CloseSideInfoRequest(side_info_id=side_info_id)
+        close_response = stub.CloseSideInfo(close_request)
+        
+        view_response = stub.GetView(view_pb2.ViewRequest())
+        
+        return jsonify({
+            'status': close_response.status,
+            'diagnostics': [MessageToDict(d) for d in view_response.diagnostics],
+            'side_paths': [MessageToDict(p) for p in view_response.side_paths]
+        })
+    except Exception as e:
+        print(f"Error in close_side_info route:")
+        traceback.print_exc()
+        return str(e), 500
 
-    html = html.replace('<div id="main">', f'<div id="main">\n{main_html}')
-    html = html.replace('<div id="side">', f'<div id="side">\n{side_html}')
-
-    return html
-
-
-def render_component(comp, inherited_tags=None):
-    """
-    Render a component, propagating any inherited highlight tags down into nested elements.
-    """
-    if inherited_tags is None:
-        inherited_tags = []
-    kind = comp.WhichOneof('component')
-    if kind == 'text_component':
-        txt = comp.text_component.content
-        own_tags = list(comp.text_component.hl_tags)
-        tags = inherited_tags + own_tags
-        grp_attr = f' data-groups="{' '.join(str(t) for t in tags)}"' if tags else ''
-        return f'<span{grp_attr}>{txt}</span>'
-
-    if kind == 'code_component':
-        code = comp.code_component.content
-        own_tags = list(comp.code_component.hl_tags)
-        tags = inherited_tags + own_tags
-        grp_attr = f' data-groups="{' '.join(str(t) for t in tags)}"' if tags else ''
-        return f'<span class="code"{grp_attr}>{code}</span>'
-
-    if kind == 'concat_component':
-        own_tags = list(comp.concat_component.hl_tags)
-        tags = inherited_tags + own_tags
-        return ''.join(render_component(c, tags) for c in comp.concat_component.components)
-
-    if kind == 'interactive_component':
-        ic = comp.interactive_component
-        inner = render_component(ic.primary_component, inherited_tags)
-        return f'<span class="clickable" onclick="handleClick(event, {ic.component_id})">{inner}</span>'
-
-    if kind == 'side_entry_component':
-        se = comp.side_entry_component
-        grp_attr = f' data-groups="{' '.join(str(t) for t in inherited_tags)}"' if inherited_tags else ''
-        return f'<span class="clickable" onclick="handleClick(event, {se.side_entry_id})"{grp_attr}>[note]</span>'
-
-    return '<span>Unknown Component</span>'
-
-
-def render_nohl_component(comp):
-    kind = comp.WhichOneof('component')
-    if kind == 'text_component':
-        return f'<span>{comp.text_component.content}</span>'
-    if kind == 'code_component':
-        return f'<span class="code">{comp.code_component.content}</span>'
-    if kind == 'concat_component':
-        return ''.join(render_nohl_component(c) for c in comp.concat_component.components)
-    if kind == 'interactive_component':
-        ic = comp.interactive_component
-        inner = render_nohl_component(ic.primary_component)
-        return f'<span class="clickable" onclick="handleClick(event, {ic.component_id})">{inner}</span>'
-    if kind == 'side_entry_component':
-        se = comp.side_entry_component
-        return f'<span class="clickable" onclick="handleClick(event, {se.side_entry_id})">[note]</span>'
-    return '<span>Unknown NoHl</span>'
-
-
-def render_code_section(code_sec):
-    html = ['<div class="code-section">']
-    for line in code_sec.lines:
-        num = f"{line.line_number or ''}".rjust(4)
-        content = render_component(line.content.root)
-        html.append(f'<div class="code-line"><span class="lineno">{num}</span>{content}</div>')
-    html.append('</div>')
-    return ''.join(html)
-
-
-class WebRequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urlparse(self.path)
-
-        if parsed.path == '/click':
-            params = parse_qs(parsed.query)
-            cid = int(params.get('component_id', ['0'])[0])
-            ct = params.get('click_type', ['CLICK'])[0]
-            try:
-                click_enum = getattr(view_pb2, ct)
-            except AttributeError:
-                click_enum = view_pb2.CLICK
-
-            req = view_pb2.ClickRequest(component_id=cid, click_type=click_enum)
-            resp = view_stub.Click(req)
-
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(resp.status.encode())
-            return
-
-        if parsed.path == '/close':
-            params = parse_qs(parsed.query)
-            sid = int(params.get('side_note_id', ['0'])[0])
-            req = view_pb2.CloseSideNoteRequest(side_note_id=sid)
-            resp = view_stub.CloseSideNote(req)
-
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(resp.status.encode())
-            return
-
-        view_resp = view_stub.GetView(view_pb2.ViewRequest())
-        html = generate_html(view_resp)
-        self.send_response(200)
-        self.send_header('Content-type', 'text/html; charset=utf-8')
-        self.end_headers()
-        self.wfile.write(html.encode('utf-8'))
-
-
-def run_server(port=8080):
-    server = HTTPServer(('', port), WebRequestHandler)
-    print(f"Server running on port {port}")
-    server.serve_forever()
-
+@app.route('/get_edge', methods=['POST'])
+def get_edge():
+    try:
+        data = request.json
+        side_info_id = int(data.get('side_info_id', 0))
+        edge_id = int(data.get('edge_id', 0))
+        
+        edge_request = view_pb2.EdgeRequest(
+            side_info_id=side_info_id,
+            edge_id=edge_id
+        )
+        edge_response = stub.GetEdge(edge_request)
+        
+        view_response = stub.GetView(view_pb2.ViewRequest())
+        
+        return jsonify({
+            'status': edge_response.status,
+            'diagnostics': [MessageToDict(d) for d in view_response.diagnostics],
+            'side_paths': [MessageToDict(p) for p in view_response.side_paths]
+        })
+    except Exception as e:
+        print(f"Error in get_edge route:")
+        traceback.print_exc()
+        return str(e), 500
 
 if __name__ == '__main__':
-    run_server(8080)
+    app.run(debug=True, port=5000) 
