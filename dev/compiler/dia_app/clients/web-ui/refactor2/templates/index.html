@@ -263,6 +263,28 @@
     </div>
 
     <script>
+        // Save scroll positions before page reload
+        window.addEventListener('beforeunload', function() {
+            localStorage.setItem('mainPanelScroll', document.getElementById('main-panel').scrollTop);
+            localStorage.setItem('sidePanelScroll', document.getElementById('side-panel').scrollTop);
+        });
+
+        // Restore scroll positions after page load
+        window.addEventListener('load', function() {
+            const mainPanel = document.getElementById('main-panel');
+            const sidePanel = document.getElementById('side-panel');
+            
+            const savedMainScroll = localStorage.getItem('mainPanelScroll');
+            const savedSideScroll = localStorage.getItem('sidePanelScroll');
+            
+            if (savedMainScroll !== null) {
+                mainPanel.scrollTop = parseInt(savedMainScroll);
+            }
+            if (savedSideScroll !== null) {
+                sidePanel.scrollTop = parseInt(savedSideScroll);
+            }
+        });
+
         function handleComponentClick(event, componentId) {
             let clickType = 'CLICK';
             
