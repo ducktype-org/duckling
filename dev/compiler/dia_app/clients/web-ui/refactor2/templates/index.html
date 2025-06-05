@@ -163,7 +163,7 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleClick({{ comp.interactive_component.component_id }}, 'CLICK')">
+            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
                 {{- render_nohl_component(comp.interactive_component.primary_component) -}}
             </span>
         {%- endif -%}
@@ -180,7 +180,7 @@
                 {%- endfor -%}
             </span>
         {%- elif component_type == 'interactive_component' -%}
-            <span class="interactive-component" onclick="handleClick({{ comp.interactive_component.component_id }}, 'CLICK')">
+            <span class="interactive-component" onclick="handleComponentClick(event, {{ comp.interactive_component.component_id }})">
                 {{- render_hl_component(comp.interactive_component.primary_component) -}}
             </span>
         {%- endif -%}
@@ -213,8 +213,7 @@
                                         </div>
                                         <pre><code>{%- for line in section.section.lines -%}
 {%- if line.line_number -%}<span class="line-number">{{ line.line_number }}</span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.section.get_messages_for_line(loop.index0) -%}
-<div class="message-box type-{{ message.type }}">{{ message.content }}</div>
-{%- endfor -%}
+<span class="line-number"></span><div class="message-box type-{{ message.type }}">{{ message.content }}</div>&#10;{%- endfor -%}
 {%- endfor -%}</code></pre>
                                     </div>
                                 {%- elif section.type == 'text_section' -%}
