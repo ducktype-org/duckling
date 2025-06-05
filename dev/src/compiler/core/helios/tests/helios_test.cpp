@@ -972,7 +972,7 @@ private:
 
 		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
-		std::cerr << "Sub module HOUT unit: " << sub_hout_unit.debugPrint() << '\n';
+		// std::cerr << "Sub module HOUT unit: " << sub_hout_unit.debugPrint() << '\n';
 
 		auto sub_fun = sub_hout_unit.functions[0];
 		std::cerr << "\n\nTEST -- Sub function: " << sub_fun.original_name.strView() << '\n';
@@ -987,6 +987,25 @@ private:
 			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.value() << '\n';
+
+
+		ASSERT_EQUAL(
+			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123",
+			mangled_goo.value()
+		);
+		ASSERT_EQUAL(
+			"_Q5a_M8manglingN4Mspc3Ooo4CnstE$metadata_v321",
+			mangled_cnst.value()
+		);
+
+		ASSERT_EQUAL(
+			"_Q4_M3subN5inSub6subFunEFi32E$metadata_v5",
+			mangled_sub_fun.value()
+		);
+		ASSERT_EQUAL(
+			"_Q4_M3subN5inSub8subConstE$metadata_v5",
+			mangled_sub_cnst.value()
+		);
 	}
 };
 
