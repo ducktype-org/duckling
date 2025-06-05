@@ -198,8 +198,8 @@ function(FindOrBuildICU)
 	endif()
 
 	add_library(unicode INTERFACE)
-	target_link_libraries(unicode INTERFACE icuio icuuc icui18n icudata)
-	set(ICU_LIBRARIES icui18n icuuc icudata icuio)
+	target_link_libraries(unicode INTERFACE ICU::i18n ICU::uc ICU::io ICU::data)
+	set(ICU_LIBRARIES ICU::i18n ICU::uc ICU::data ICU::io)
 
 	message("-- ICU include dirs: ${ICU_INCLUDE_DIRS}")
 	message("-- ICU libraries: ${ICU_LIBRARIES}")
