@@ -101,8 +101,8 @@ namespace query::detail {
 		/**
 		 * Standard query function signatures:
 		 *  static auto provide(Context& context, QKey key) -> PResult;
-		 *  static auto load(query::QueryUnstableHash key_hash) -> LoadResult;
-		 *  static auto store(query::QueryUnstableHash key_hash, PResult res, query::ACD acd) ->
+		 *  static auto load(u64 | Bit256 key_hash) -> LoadResult;
+		 *  static auto store(u64 | Bit256 key_hash, PResult res, query::ACD acd) ->
 		 * QResult;
 		 */
 		static constexpr bool CACHE_ON_DISK = false;
@@ -145,7 +145,7 @@ namespace query::detail {
 		std::is_same_v<                                                                           \
 			std::invoke_result_t<                                                                 \
 				decltype(type::store),                                                            \
-				query::QueryUnstableHash,                                                         \
+				query::UKHash<type::QKey>,                                                        \
 				type::PResult,                                                                    \
 				::query::ACD>,                                                                    \
 			type::QResult>,                                                                       \
@@ -163,7 +163,7 @@ namespace query::detail {
 	);                                                                                            \
 	static_assert(                                                                                \
 		::query::HasUnstablePerfectHash<type::QKey>,                                              \
-		"queryUnstablePerfectHash must be implemented and return u64 (query::QueryUnstableHash)." \
+		"queryUnstablePerfectHash must be implemented and return u64 or Bit256"                   \
 	);                                                                                            \
 	static_assert(                                                                                \
 		not type::CACHE_ON_DISK || ::query::HasStablePerfectHash<type::QKey>,                     \
@@ -171,8 +171,8 @@ namespace query::detail {
 		"(QueryStableHash)."                                                                      \
 	);                                                                                            \
 	static_assert(                                                                                \
-		std::is_invocable_v<decltype(type::load), query::QueryUnstableHash>,                      \
-		"Load function must be callable with query::QueryUnstableHash."                           \
+		std::is_invocable_v<decltype(type::load), query::UKHash<type::QKey>>,                     \
+		"Load function must be callable with hash of QKey"                                        \
 	);
 
 /**

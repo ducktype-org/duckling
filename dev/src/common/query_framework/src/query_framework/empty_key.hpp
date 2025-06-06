@@ -1,6 +1,6 @@
 #pragma once
 
-#include "query_hash.hpp"
+#include <base/ints.hpp>
 
 namespace query {
 	/**
@@ -8,7 +8,7 @@ namespace query {
 	 */
 	struct EmptyKey final {
 		[[nodiscard]]
-		QueryUnstableHash queryUnstablePerfectHash() const {
+		u64 queryUnstablePerfectHash() const {
 			return 0;
 		}
 	};

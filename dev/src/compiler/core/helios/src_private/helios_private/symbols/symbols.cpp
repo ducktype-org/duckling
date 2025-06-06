@@ -348,11 +348,12 @@ namespace compiler::helios {
 						tsh::Mutability::Mutable
 					);
 					[[maybe_unused]]
-					auto unit_type = tsh::SymbolType<>(
-						ctx.query<tsh::QueryUnitType>({}),
-						tsh::ReferenceKind::Direct,
-						tsh::Mutability::Mutable
-					);
+					auto unit_type
+						= tsh::SymbolType<>(
+							ctx.query<tsh::QueryUnitType>({}),
+							tsh::ReferenceKind::Direct,
+							tsh::Mutability::Mutable
+						);
 
 					std::array<std::pair<base::StrID, tsh::FunctionAbstractType>, 2> function_data
 						= {

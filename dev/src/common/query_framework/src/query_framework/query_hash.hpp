@@ -4,8 +4,28 @@
 #include <base/ints.hpp>
 
 namespace query {
-	using QueryUnstableHash = u64;
-	using QueryStableHash   = base::Bit256;
+	using QueryStableHash = base::Bit256;
+
+	template<typename KeyType, bool IsU64OrBool>
+	struct UKHashHelper;
+
+	template<typename KeyType>
+	struct UKHashHelper<KeyType, true> {
+		using type = u64;
+	};
+
+	template<typename KeyType>
+	struct UKHashHelper<KeyType, false> {
+		using type = std::conditional_t<requires(KeyType t) {
+			{ t.queryUnstablePerfectHash() } -> std::convertible_to<u64>;
+		}, decltype(std::declval<KeyType>().queryUnstablePerfectHash()), void>;
+	};
+
+	template<typename KeyType>
+	using UKHash = typename UKHashHelper<
+		KeyType,
+		std::is_same_v<std::remove_cvref_t<KeyType>, u64>
+			|| std::is_same_v<std::remove_cvref_t<KeyType>, bool>>::type;
 
 	/**
 	 * @brief Gets hash from a key.
@@ -16,11 +36,11 @@ namespace query {
 	 * and use "legit hashing algorithm".
 	 */
 	template<typename KeyType>
-	QueryUnstableHash unstableHashKey(const KeyType& key) {
+	UKHash<KeyType> unstableHashKey(const KeyType& key) {
 		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
 			return key;
 		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
-			return static_cast<QueryUnstableHash>(key);
+			return static_cast<u64>(key);
 		else
 			return key.queryUnstablePerfectHash();
 	}
@@ -29,7 +49,9 @@ namespace query {
 	template<typename KeyType>
 	concept HasUnstablePerfectHash
 		= std::is_same_v<KeyType, bool> || std::is_same_v<KeyType, u64> || requires(KeyType t) {
-			  { t.queryUnstablePerfectHash() } -> std::same_as<QueryUnstableHash>;
+			  { t.queryUnstablePerfectHash() } -> std::same_as<u64>;
+		  } || requires(KeyType t) {
+			  { t.queryUnstablePerfectHash() } -> std::same_as<base::Bit256>;
 		  };
 
 	// Concept to validate queryStablePerfectHash signature
