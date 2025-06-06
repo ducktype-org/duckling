@@ -1,5 +1,7 @@
 ### mangling scheme
 
+This is the most up-to-date version of the mangling scheme. If any changes are made,
+either in the scheme or it's implementation, they should be reflected here.
 
 ```rust
 

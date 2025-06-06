@@ -20,8 +20,8 @@
 
 /**
  * This is the implementation of the mangling scheme according to mangling-scheme.md
+ * If any changes are made to this file, please also update the mangling-scheme.md
  * That file provides a detailed description and motivation for some design choices made here
- * Many functions correspond to the
  */
 namespace compiler::helios::mangler {
 
