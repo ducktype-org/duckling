@@ -786,7 +786,7 @@ namespace compiler::mir {
 				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
 
 			CORE_ASSERT(
-				std::holds_alternative<LocalRef>(location_value_result.getVariant()),
+				location_value_result.isLocal(),
 				"Left side of assignment statement doesn't contain reference to local variable."
 			);
 			auto local = location_value_result.get<LocalRef>();
