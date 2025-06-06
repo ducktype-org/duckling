@@ -1,8 +1,8 @@
 #include "mangler.hpp"
 
-#include "../../../src_private/helios_private/scopes/scopes.hpp"
-#include "../../../src_private/helios_private/symbols/symbol_data.hpp"
-#include "../../../src_private/helios_private/symbols/symbols.hpp"
+#include <helios/src_private/helios_private/scopes/scopes.hpp>
+#include <helios/src_private/helios_private/symbols/symbol_data.hpp>
+#include <helios/src_private/helios_private/symbols/symbols.hpp>
 
 #include <frontend/module_tree/queries.hpp>
 #include <helios/scope_symbol_id.hpp>
@@ -260,8 +260,6 @@ namespace compiler::helios::mangler {
 				break;
 
 			default:
-				// throw base::Exception("Cannot mangle symbol of kind: " +
-				// std::to_string(static_cast<int>(kind(symbol_id))));
 				throw base::LogicError{ base::strConcat(
 					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
 				) };
