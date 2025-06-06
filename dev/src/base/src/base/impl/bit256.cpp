@@ -14,7 +14,7 @@ namespace base {
 }
 
 namespace std {
-	std::ostream& operator<<(std::ostream& os, const  base::Bit256& bit256) {
+	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256) {
 		return os << bit256.toStringHex();
 	}
 }

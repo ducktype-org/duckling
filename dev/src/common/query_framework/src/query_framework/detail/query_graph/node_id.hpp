@@ -4,10 +4,12 @@
  */
 #pragma once
 
-#include <functional>
-#include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
-#include <base/bit256.hpp>
 #include <hashing/hash.hpp>
+#include <query_framework/detail/query_data/query_id.hpp>  // IWYU pragma: export
+
+#include <base/bit256.hpp>
+
+#include <functional>
 
 namespace query::detail {
 
@@ -43,7 +45,7 @@ struct std::hash<query::detail::NodeID> final {
 		auto l = key.q_id;
 		auto r = key.hash.val;
 
-		//This is questionable
+		// This is questionable
 		return l.asInt() * 9'223'372'036'854'775'783UL + std::hash<base::Bit256>{}(r);
 	}
 };

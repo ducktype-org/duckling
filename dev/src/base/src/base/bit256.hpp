@@ -37,16 +37,15 @@ namespace base {
 		[[nodiscard]] std::string toStringHex() const;
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
-			for (size_t i = 4; i-- > 0;) { // Iterate from the most significant to the least significant
+			for (size_t i = 4;
+			     i-- > 0;) {  // Iterate from the most significant to the least significant
 				if (data.at(i) < other.data.at(i)) return true;
 				if (data.at(i) > other.data.at(i)) return false;
 			}
-			return false; 
+			return false;
 		}
 
-		constexpr bool operator>(const Bit256& other) const noexcept {
-			return other < *this;
-		}
+		constexpr bool operator>(const Bit256& other) const noexcept { return other < *this; }
 	};
 }
 
@@ -61,5 +60,5 @@ namespace std {
 		}
 	};
 
-	std::ostream& operator<<(std::ostream& os, const  base::Bit256& bit256);
+	std::ostream& operator<<(std::ostream& os, const base::Bit256& bit256);
 }
