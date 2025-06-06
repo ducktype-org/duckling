@@ -1,0 +1,74 @@
+name: Determine Runners
+
+# This workflow determines the availability of self-hosted runners based on a single provided label.
+# Inputs:
+# - self-hosted-label: A single label to check for self-hosted runners.
+#   Example: "build"
+# - github-label: A single label to use for GitHub-hosted runners if self-hosted runners are unavailable.
+#   Example: "ubuntu-latest"
+# Outputs:
+# - runner1: JSON object containing the group and label for the first runner.
+#   Example: {"group":"SelfHostedRunners","label":"build"} or {"label":"ubuntu-latest"}
+# - runner2: JSON object containing the group and label for the second runner.
+#   Example: {"group":"SelfHostedRunners","label":"build"} or {"label":"ubuntu-latest"}
+
+on:
+  workflow_call:
+    inputs:
+      self-hosted-label:
+        description: 'A single label to check for self-hosted runners'
+        required: true
+        type: string
+      github-label:
+        description: 'A single label to use for GitHub-hosted runners'
+        required: true
+        type: string
+    outputs:
+      runner1:
+        value: ${{ jobs.determine.outputs.runner1 }}
+      runner2:
+        value: ${{ jobs.determine.outputs.runner2 }}
+
+jobs:
+  determine:
+    runs-on: ubuntu-latest
+    outputs:
+      runner1: ${{ steps.set-runner.outputs.runner1 }}
+      runner2: ${{ steps.set-runner.outputs.runner2 }}
+    steps:
+      - name: Check runner availability
+        id: set-runner
+        env:
+          GH_TOKEN: ${{ secrets.WORKLOW_SCHED_TOKEN }}
+        run: |
+          echo "Checking for runners with label: ${{ inputs.self-hosted-label }}"
+          echo "Fallback GitHub label: ${{ inputs.github-label }}"
+
+          runners=$(gh api -H "Accept: application/vnd.github+json" /orgs/ducktype-org/actions/runners 2>/dev/null || echo '{"runners":[]}')
+
+          available_runners=$(echo "$runners" | \
+            jq -r --arg lbl "${{ inputs.self-hosted-label }}" '
+              .runners[]? | 
+              select(
+                .status == "online" and 
+                .busy == false and 
+                (.labels[]?.name == $lbl)
+              ) | .name' | \
+            head -2)
+
+          echo "Available runners:"
+          echo "$available_runners"
+
+          mapfile -t runners_array <<< "$available_runners"
+
+          if [ -n "${runners_array[0]}" ]; then
+            echo "runner1={\"group\":\"SelfHostedRunners\",\"labels\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
+          else
+            echo "runner1={\"labels\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
+          fi
+
+          if [ -n "${runners_array[1]}" ]; then
+            echo "runner2={\"group\":\"SelfHostedRunners\",\"labels\":\"${{ inputs.self-hosted-label }}\"}" >> $GITHUB_OUTPUT
+          else
+            echo "runner2={\"labels\":\"${{ inputs.github-label }}\"}" >> $GITHUB_OUTPUT
+          fi
