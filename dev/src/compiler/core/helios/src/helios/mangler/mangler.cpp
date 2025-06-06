@@ -128,7 +128,7 @@ namespace compiler::helios::mangler {
 			// "S" <script-name>                                 // standalone script
 			// "R" <package-name> <module-name> <script-name>    // script in a package
 
-			// @todo: backreference
+			// @todo: backreference -- this will be added in the next PR
 		}
 
 		/**
@@ -277,7 +277,7 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if (!detail::isManglable(key.symbol)) return std::nullopt;  // @todo: wrong symbol kind
+			if (!detail::isManglable(key.symbol)) return std::nullopt;  // @todo: wrong symbol kind -- error types will be added in the next PR
 
 			// note: global identifiers starting with underscore and a capital letter are reserved
 			// in C Q seems to be free and stands for both query and quack
