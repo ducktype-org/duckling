@@ -948,46 +948,38 @@ private:
 
 	void testMangler() {
 		auto [module, _] = getModule(fs::FilePath(path("test_modules/mangling")));
-		std::cerr << "Module name: " << compiler::frontend::moduleName(module).str() << '\n';
-		auto hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
-		// std::cerr << "HOUT unit: " << hout_unit.debugPrint() << '\n';
+		auto hout_unit   = query::entryPoint<compiler::helios::QueryModuleHOUT>(module);
 
 		auto goo = hout_unit.functions[1];
-		std::cerr << "\n\nTEST -- Function: " << goo.original_name.strView() << '\n';
+		std::cerr << "\nFunction name: " << goo.original_name.strView() << '\n';
 		auto mangled_goo = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ goo.original_symbol, 123, "metadata_v123" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_goo.value() << '\n';
 
 		auto cnst = hout_unit.glob_data[1];
-		std::cerr << "\n\nTEST -- Constant: " << cnst.original_name.strView() << '\n';
+		std::cerr << "\nConstant name: " << cnst.original_name.strView() << '\n';
 		auto mangled_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ cnst.helios_symbol, 321, "metadata_v321" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_cnst.value() << '\n';
 
-		// auto cls_scope = compiler::helios::scope(goo.original_symbol);
-		// auto cls = getTypeFromDefinition("Cls", cls_scope);
-		// std::cerr << "name: " << cls.toString() << '\n';
-
 		auto sub_module    = getModule(fs::FilePath(path("test_modules/mangling/sub")));
 		auto sub_hout_unit = query::entryPoint<compiler::helios::QueryModuleHOUT>(sub_module.first);
-		// std::cerr << "Sub module HOUT unit: " << sub_hout_unit.debugPrint() << '\n';
 
 		auto sub_fun = sub_hout_unit.functions[0];
-		std::cerr << "\n\nTEST -- Sub function: " << sub_fun.original_name.strView() << '\n';
+		std::cerr << "\nSub function name: " << sub_fun.original_name.strView() << '\n';
 		auto mangled_sub_fun = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_fun.original_symbol, 5, "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_fun.value() << '\n';
 
 		auto sub_cnst = sub_hout_unit.glob_data[0];
-		std::cerr << "\n\nTEST -- Sub constant: " << sub_cnst.original_name.strView() << '\n';
+		std::cerr << "\nSub constant name: " << sub_cnst.original_name.strView() << '\n';
 		auto mangled_sub_cnst = query::entryPoint<compiler::helios::mangler::QueryMangledSymbol>(
 			{ sub_cnst.helios_symbol, 5, "metadata_v5" }
 		);
 		std::cerr << "Mangled symbol: " << mangled_sub_cnst.value() << '\n';
-
 
 		ASSERT_EQUAL(
 			"_Q1Y_M8manglingN4Mspc3Ooo5gooooEFi32i32f64E$metadata_v123", mangled_goo.value()

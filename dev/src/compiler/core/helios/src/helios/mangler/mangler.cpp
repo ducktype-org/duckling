@@ -202,7 +202,7 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Returns the symbol's path
+		 * @brief Returns the symbol's 'path'
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
@@ -234,7 +234,7 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Determines what tipe of symbol we are mangling to choose the right encoding
+		 * @brief Determines what type of symbol we are mangling to choose the right encoding
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string symbolEncoding(query::Context& ctx, SymID symbol_id) {
@@ -253,11 +253,18 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor:
 				// special symbols
+				throw base::NotYetImplemented(
+					"Mangling for special entities will be added in the future"
+				);
 				return "todo_special_symbols";  // @future
 				break;
 
 			default:
-				return "todo_unknown_symbol";  // @future
+				// throw base::Exception("Cannot mangle symbol of kind: " +
+				// std::to_string(static_cast<int>(kind(symbol_id))));
+				throw base::LogicError{ base::strConcat(
+					"Cannot mangle symbol of type: ", symbolPst(symbol_id).unlock(ctx)->elementType()
+				) };
 				break;
 			}
 		}
@@ -277,7 +284,9 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			if (!detail::isManglable(key.symbol)) return std::nullopt;  // @todo: wrong symbol kind -- error types will be added in the next PR
+			if (!detail::isManglable(key.symbol))
+				return std::nullopt;  // @todo: wrong symbol kind -- error types will be added in
+				                      // the next PR
 
 			// note: global identifiers starting with underscore and a capital letter are reserved
 			// in C Q seems to be free and stands for both query and quack
