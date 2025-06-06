@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compiler View</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            gap: 16px;
+            background-color: #f5f5f5;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        #main-panel {
+            flex: 1;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            height: calc(100vh - 32px);
+        }
+
+        #side-panel {
+            width: 30%;
+            flex: none;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            height: calc(100vh - 32px);
+        }
+
+        /* Scrollbar styling */
+        #main-panel::-webkit-scrollbar,
+        #side-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #main-panel::-webkit-scrollbar-track,
+        #side-panel::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        #main-panel::-webkit-scrollbar-thumb,
+        #side-panel::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        #main-panel::-webkit-scrollbar-thumb:hover,
+        #side-panel::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
+        }
+
+        .diagnostic {
+            margin-bottom: 16px;
+        }
+
+        .info {
+            margin-bottom: 12px;
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .info.type-0 { background-color: #fff5f5; border: 1px solid #feb2b2; }
+        .info.type-1 { background-color: #fffaf0; border: 1px solid #fbd38d; }
+        .info.type-2 { background-color: #f0fff4; border: 1px solid #9ae6b4; }
+        .info.type-3 { background-color: #ebf8ff; border: 1px solid #90cdf4; }
+        .info.type-4 { background-color: #f7fafc; border: 1px solid #cbd5e0; }
+
+        .info-header {
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .section {
+            margin: 8px 0;
+        }
+
+        .code-section {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .code-section-header {
+            padding: 6px 10px;
+            background-color: #edf2f7;
+            border-bottom: 1px solid #e2e8f0;
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #4a5568;
+        }
+
+        pre {
+            margin: 0;
+            padding: 10px 0;
+            overflow-x: auto;
+        }
+
+        code {
+            font-family: 'Fira Code', 'Consolas', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .line-number {
+            display: inline-block;
+            width: 40px;
+            padding-right: 8px;
+            margin-right: 8px;
+            color: #718096;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .message-box {
+            margin-left: 48px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-top: 4px;
+        }
+
+        .message-box.type-0 { background-color: #fff5f5; border-left: 3px solid #fc8181; }
+        .message-box.type-1 { background-color: #fffaf0; border-left: 3px solid #f6ad55; }
+        .message-box.type-2 { background-color: #f0fff4; border-left: 3px solid #68d391; }
+        .message-box.type-3 { background-color: #ebf8ff; border-left: 3px solid #63b3ed; }
+        .message-box.type-4 { background-color: #f7fafc; border-left: 3px solid #a0aec0; }
+
+        .code-component.highlighted {
+            background-color: #fefcbf;
+        }
+
+        .interactive-component {
+            cursor: pointer;
+            border-bottom: 1px dashed #4299e1;
+        }
+
+        .interactive-component:hover {
+            background-color: #ebf8ff;
+        }
+
+        .edges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin: 8px 0;
+        }
+
+        /* Unified button styles */
+        button {
+            background-color: #edf2f7;
+            border: 1px solid #e2e8f0;
+            color: #4a5568;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            margin: 2px;
+        }
+
+        button:hover {
+            background-color: #e2e8f0;
+            border-color: #cbd5e0;
+        }
+
+        button:active {
+            background-color: #cbd5e0;
+            transform: translateY(1px);
+        }
+    </style>
+</head>
+<body>
+    {% macro render_nohl_component(comp) -%}
+        {%- if comp is mapping -%}
+            {# Handle processed sections #}
+            <span class="text-component">{{- comp.content -}}</span>
+        {%- else -%}
+            {# Handle protobuf objects #}
+            {%- set component_type = comp.WhichOneof('component') -%}
+            {%- if component_type == 'text_component' -%}
+                <span class="text-component">{{- comp.text_component.content -}}</span>
+            {%- elif component_type == 'code_component' -%}
+                <span class="code-component">{{- comp.code_component.content -}}</span>
+            {%- elif component_type == 'concat_component' -%}
+                <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_nohl_component(child) -}}{%- endfor -%}</span>
+            {%- elif component_type == 'interactive_component' -%}
+                <span class="interactive-component" onclick="handleComponentClick(event, {{- comp.interactive_component.component_id -}})">{{- render_nohl_component(comp.interactive_component.primary_component) -}}</span>
+            {%- endif -%}
+        {%- endif -%}
+    {%- endmacro -%}
+
+    {% macro render_hl_component(comp) -%}
+        {%- if comp is mapping -%}
+            {# Handle processed sections #}
+            <span class="code-component" data-tags="{{- comp.hl_tags | default('') | join(',') -}}">{{- comp.content -}}</span>
+        {%- else -%}
+            {# Handle protobuf objects #}
+            {%- set component_type = comp.WhichOneof('component') -%}
+            {%- if component_type == 'code_component' -%}
+                <span class="code-component" data-tags="{{- comp.code_component.hl_tags | join(',') -}}">{{- comp.code_component.content -}}</span>
+            {%- elif component_type == 'concat_component' -%}
+                <span class="concat-component">{%- for child in comp.concat_component.components -%}{{- render_hl_component(child) -}}{%- endfor -%}</span>
+            {%- elif component_type == 'interactive_component' -%}
+                <span class="interactive-component" onclick="handleComponentClick(event, {{- comp.interactive_component.component_id -}})">{{- render_hl_component(comp.interactive_component.primary_component) -}}</span>
+            {%- endif -%}
+        {%- endif -%}
+    {%- endmacro -%}
+
+    {% macro render_code_section(section) -%}
+        <div class="code-section">
+            <div class="code-section-header">{{- section.metadata.filename -}}:{{- section.metadata.line -}}:{{- section.metadata.column -}}</div>
+            <pre><code>{%- for line in section.lines -%}
+{%- if line.line_number -%}<span class="line-number">{{- line.line_number -}}</span>{%- else -%}<span class="line-number"> </span>{%- endif -%}{{- render_hl_component(line.content) -}}&#10;{%- for message in section.get_messages_for_line(loop.index0) -%}
+<div class="message-box type-{{- message.type -}}" data-tag="{{- message.tag -}}" onmouseover="highlightTag({{- message.tag -}})" onmouseout="unhighlightTag({{- message.tag -}})">{{- message.content -}}</div>&#10;{%- endfor -%}
+{%- endfor -%}</code></pre>
+        </div>
+    {%- endmacro -%}
+
+    <div id="main-panel">
+        <h2>Diagnostics</h2>
+        {%- for diagnostic in diagnostics -%}
+            <div class="diagnostic">
+                {%- for info in diagnostic.infos -%}
+                    <div class="info type-{{- info.metadata.type -}}">
+                        <div class="info-header">{{- render_nohl_component(info.header) -}}</div>
+                        {%- for section in info.sections -%}
+                            <div class="section">
+                                {%- if section.type == 'code_section' -%}
+                                    {{- render_code_section(section.section) -}}
+                                {%- elif section.type == 'text_section' -%}
+                                    {{- render_nohl_component(section.section) -}}
+                                {%- endif -%}
+                            </div>
+                        {%- endfor -%}
+                    </div>
+                {%- endfor -%}
+            </div>
+        {%- endfor -%}
+    </div>
+    
+    <div id="side-panel">
+        {%- for path in side_paths -%}
+            <div class="side-path">
+                {%- for info in path.infos -%}
+                    <div class="side-info type-{{- info.metadata.type -}}" data-id="{{- info.side_info_id -}}">
+                        <h3>
+                            {%- if info.metadata.type == 0 -%}Error
+                            {%- elif info.metadata.type == 1 -%}Warning
+                            {%- elif info.metadata.type == 2 -%}Note
+                            {%- elif info.metadata.type == 3 -%}Hint
+                            {%- elif info.metadata.type == 4 -%}Docs
+                            {%- endif -%}
+                            (Code: {{- info.metadata.code -}})
+                        </h3>
+                        <div class="header">{{- render_nohl_component(info.header) -}}</div>
+                        {%- for section in info.sections -%}
+                            <div class="section">
+                                {%- if section.type == 'code_section' -%}
+                                    {{- render_code_section(section.section) -}}
+                                {%- elif section.type == 'text_section' -%}
+                                    {{- render_nohl_component(section.section) -}}
+                                {%- endif -%}
+                            </div>
+                        {%- endfor -%}
+                        {%- if info.edges -%}
+                            <div class="edges">
+                                {%- for edge in info.edges -%}
+                                    <button onclick="getEdge({{- info.side_info_id -}}, {{- edge.edge_id -}})">{{- edge.description -}}</button>
+                                {%- endfor -%}
+                            </div>
+                        {%- endif -%}
+                        <button onclick="closeSideInfo({{- info.side_info_id -}})">Close</button>
+                    </div>
+                {%- endfor -%}
+            </div>
+        {%- endfor -%}
+    </div>
+
+    <script>
+        window.addEventListener('beforeunload', function() {
+            localStorage.setItem('mainPanelScroll', document.getElementById('main-panel').scrollTop);
+            localStorage.setItem('sidePanelScroll', document.getElementById('side-panel').scrollTop);
+        });
+
+        window.addEventListener('load', function() {
+            const mainPanel = document.getElementById('main-panel');
+            const sidePanel = document.getElementById('side-panel');
+            
+            const savedMainScroll = localStorage.getItem('mainPanelScroll');
+            const savedSideScroll = localStorage.getItem('sidePanelScroll');
+            
+            if (savedMainScroll !== null) {
+                mainPanel.scrollTop = parseInt(savedMainScroll);
+            }
+            if (savedSideScroll !== null) {
+                sidePanel.scrollTop = parseInt(savedSideScroll);
+            }
+        });
+
+        function handleComponentClick(event, componentId) {
+            let clickType = 'CLICK';
+            
+            if (event.ctrlKey && event.shiftKey) {
+                clickType = 'CLICK_INTERACTIVE_ROLLBACK';
+            } else if (event.ctrlKey) {
+                clickType = 'CLICK_INTERACTIVE';
+            }
+
+            fetch('/click', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    component_id: componentId,
+                    click_type: clickType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function closeSideInfo(sideInfoId) {
+            fetch('/close_side_info', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    side_info_id: sideInfoId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function getEdge(sideInfoId, edgeId) {
+            fetch('/get_edge', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    side_info_id: sideInfoId,
+                    edge_id: edgeId
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                window.location.reload();
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function highlightTag(tag) {
+            document.querySelectorAll('.code-component').forEach(component => {
+                const tagsStr = component.dataset.tags;
+                if (tagsStr) {
+                    const tags = tagsStr.split(',').filter(t => t).map(t => parseInt(t));
+                    if (tags.includes(tag)) {
+                        component.classList.add('highlighted');
+                    }
+                }
+            });
+        }
+
+        function unhighlightTag(tag) {
+            document.querySelectorAll('.code-component.highlighted').forEach(component => {
+                component.classList.remove('highlighted');
+            });
+        }
+    </script>
+</body>
+</html> 

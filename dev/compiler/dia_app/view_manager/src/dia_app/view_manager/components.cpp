@@ -7,6 +7,12 @@
 
 namespace dia_app {
 	namespace view_manager {
+		
+		component_id_t getNewId() {
+			static component_id_t next = 0;
+			return next++;
+		}
+
 		// Component
 		Component::Component(
 			std::weak_ptr<ViewConstructor> view_constructor
