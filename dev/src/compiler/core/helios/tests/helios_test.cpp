@@ -596,7 +596,7 @@ private:
 		ASSERT_EQUAL(function.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.content.body->statements.size(), 8);
+		ASSERT_EQUAL(function.content.body->statements.size(), 10);
 
 		auto& statements = function.content.body->statements;
 

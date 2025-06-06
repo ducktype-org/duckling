@@ -27,6 +27,7 @@
 
 #include <stack>
 #include <unordered_set>
+#include <variant>
 
 namespace compiler::mir {
 
@@ -773,24 +774,30 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-			// TODO: #469 Support arbitrary lvalues on the left.
 
 			auto assignment_scope = function.newScope(parent_scope);
 
-			auto target_location          = function.findLocal(stmt.helios_symbol);
 			auto target_construction_hole = continuation->addHole();
-			auto [sub_continuation, result]
-				= lowerExpr(*stmt.new_value, continuation, function, assignment_scope);
 
+			auto [r_continuation, new_value]
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+
+			auto [l_continuation, location_value_result]
+				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
+
+			CORE_ASSERT(
+				location_value_result.isLocal(),
+				"Left side of assignment statement doesn't contain reference to local variable."
+			);
+			auto local = location_value_result.get<LocalRef>();
 			target_construction_hole.fill(Instruction{
 				Operation::Assign,
-				{ target_location },
-				{ result },
+				{ local },
+				{ new_value },
 				{},
 				assignment_scope,
 			});
-
-			output({ sub_continuation });
+			output({ l_continuation });
 		}
 	};
 

@@ -83,7 +83,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
-			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
 			auto foo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(0));
@@ -136,12 +136,46 @@ private:
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].instructions.at(0).operation, Assign);
 			ASSERT_EQUAL(foo_mir.blocks[BlockID(3)].terminator.operation, Jump);
 
-
 			// Test debug print:
 			// Note that doesn't test much other then that the code doesn't crash/throw exceptions.
 			std::stringstream foo_str;
 			foo_mir.debugPrint(foo_str);
 			ASSERT_TRUE(foo_mir.validateBlockIDs().isOk());
+
+			// Simple assignment tests
+			auto goo_mir = compiler::mir::lowerToPreMirFunction(ctx, functions.at(1));
+			ASSERT_EQUAL(goo_mir.name, base::StrID("goo"));
+
+			ASSERT_EQUAL(goo_mir.local_list.size(), 2);
+
+			// assert that in the first block we have an assignment
+			ASSERT_EQUAL(goo_mir.block_order.size(), 1);
+
+			auto first_block_id = goo_mir.block_order[0];
+			/**
+			     Local(4) :=  Assign           23               Flags[Construct Local(4)], scope:36
+			    Local(4) :=  Assign           24               Flags[], scope:35
+			    Local(5) :=  Call             Function(hoo)    Flags[Construct Local(5)], scope:34
+			    Local(5) :=  Assign           15               Flags[], scope:34
+			     FunctionEnd                       Flags[], scope:32
+			 */
+			ASSERT_EQUAL(goo_mir.blocks[first_block_id].instructions.size(), 4);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(0).operation,
+				compiler::mir::Operation::Assign
+			);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(1).operation,
+				compiler::mir::Operation::Assign
+			);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(2).operation,
+				compiler::mir::Operation::Call
+			);
+			ASSERT_EQUAL(
+				goo_mir.blocks[first_block_id].instructions.at(3).operation,
+				compiler::mir::Operation::Assign
+			);
 		});
 	}
 
@@ -151,7 +185,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
-			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
 			auto& foo_mir
@@ -196,7 +230,7 @@ private:
 		withContextDo([&](query::Context& ctx) {
 			auto  unit      = ctx.query<compiler::helios::QueryTopLevelEntities>(module);
 			auto& functions = unit->functions;
-			ASSERT_EQUAL(1, functions.size());
+			ASSERT_EQUAL(3, functions.size());
 			ASSERT_EQUAL(base::StrID("foo"), functions.at(0).original_name);
 
 			auto& foo_mir
