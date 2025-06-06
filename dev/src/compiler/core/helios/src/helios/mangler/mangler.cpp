@@ -202,7 +202,8 @@ namespace compiler::helios::mangler {
 		}
 
 		/**
-		 * @brief Returns the symbol's 'path'
+		 * @brief Returns the symbol's 'path' i.e. in which package/module/script it is defined
+		 * and all its enclosing scopes (namespaces, classes, functions, etc.)
 		 * @note: See mangling-scheme.md for details
 		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
@@ -256,7 +257,6 @@ namespace compiler::helios::mangler {
 				throw base::NotYetImplemented(
 					"Mangling for special entities will be added in the future"
 				);
-				return "todo_special_symbols";  // @future
 				break;
 
 			default:
