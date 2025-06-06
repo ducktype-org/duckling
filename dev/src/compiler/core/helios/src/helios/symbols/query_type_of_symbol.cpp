@@ -56,7 +56,8 @@ namespace compiler::helios {
 					if (stmt->getValue().has_value()) {
 						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
 						if (parsed.hasValue()) {
-							setTypeOfSymbol(parsed.value()->expression_type.getSymbolType());
+							const auto& expr_type = parsed.value()->expression_type;
+							setTypeOfSymbol(tsh::expressionTypeToSymbolType(expr_type));
 						} else
 							CORE_PANIC("Const declaration with value that does not evaluate to a type.");
 					} else {
@@ -72,7 +73,8 @@ namespace compiler::helios {
 					if (stmt->getValue().has_value()) {
 						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
 						if (parsed.hasValue()) {
-							setTypeOfSymbol(parsed.value()->expression_type.getSymbolType());
+							const auto& expr_type = parsed.value()->expression_type;
+							setTypeOfSymbol(tsh::expressionTypeToSymbolType(expr_type));
 						} else
 							CORE_PANIC("Variable declaration with value that does not evaluate to a type.");
 					} else {
