@@ -1,0 +1,36 @@
+type pointer: pointer_A A
+type fun: method_foo_void_A {pointer_A} void
+type fun: method_foo_void_impl_A {pointer_A} void
+
+function method_foo_void_impl_A {
+    init_lany_type x, i64;
+    mov_l64_imm x, 420;
+    output_l64 x;
+    deinit; # x
+    deinit; # arg0
+    ret;
+}
+
+type class: A {
+    fields: {
+        x: i64,
+    };
+    virtual_methods: {
+        foo: method_foo_void_A,
+    };
+    implementations: {
+        foo: method_foo_void_impl_A,
+    };
+}
+
+function main {
+    init_lany_type a_obj, pointer_A;
+    alloc_lptr_type a_obj, A;
+    setVTable_lptr_type a_obj, A;
+    init_lany_type a_ptr, pointer_A;
+    mov_lptr_lptr a_ptr, a_obj;
+    virtual_call_lptr_method a_obj, foo;
+
+    deinit; # a_obj
+    ret;
+}

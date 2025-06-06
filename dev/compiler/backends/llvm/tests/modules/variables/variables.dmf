@@ -1,7 +1,0 @@
-fun main() = {
-	var a: i32 = 0;
-  var b: bool = 0;
-  var c: f32 = 0;
-  var d: f64 = 0;
-	return;
-}

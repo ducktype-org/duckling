@@ -22,8 +22,16 @@ env:
   GCOV_VERSION: gcov-14
 
 jobs:
+  determine-runners:
+    uses: ./.github/workflows/determine-runners.yml
+    with:
+      self-hosted-label: 'build'
+      github-label: 'ubuntu-24.04'
+    secrets: inherit
+
   build:
     if: github.event.pull_request.draft == false
+    needs: determine-runners
 
     strategy:
       matrix:
@@ -40,14 +48,41 @@ jobs:
       coverage-value: ${{ steps.test-coverage.outputs.coverage-percent }}
 
     timeout-minutes: 20  # (Per matrix run)
-
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.build-type == 'Debug' && fromJson(needs.determine-runners.outputs.runner1) || fromJson(needs.determine-runners.outputs.runner2) }}
 
     env:
       BUILD_DEPLOYABLES: ${{ matrix.build-type == 'Release' }}
       COVERAGE_ENABLED: ${{ matrix.build-type == 'Debug' }}
 
     steps:
+      - name: Set self-hosted flag
+        id: set-self-hosted
+        run: |
+          if [[ "${{ matrix.build-type }}" == "Debug" && "${{ needs.determine-runners.outputs.runner1 }}" == *"SelfHostedRunners"* ]]; then
+            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ matrix.build-type }}" == "Release" && "${{ needs.determine-runners.outputs.runner2 }}" == *"SelfHostedRunners"* ]]; then
+            echo "is-self-hosted=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-self-hosted=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set number of threads
+        id: set-jobs
+        run: |
+          if [[ "${{ steps.set-self-hosted.outputs.is-self-hosted }}" == "true" ]]; then
+            echo "jobs=4" >> $GITHUB_OUTPUT
+          else
+            echo "jobs=2" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Clean workspace (self-hosted only)
+        if: ${{ steps.set-self-hosted.outputs.is-self-hosted == 'true' }}
+        run: |
+          echo "Cleaning up workspace on self-hosted runner..."
+          rm -rf ${{ github.workspace }}
+          mkdir -p ${{ github.workspace }}
+          echo "Workspace cleaned."
+      
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -55,6 +90,10 @@ jobs:
         if: ${{ env.COVERAGE_ENABLED == 'true' }}
         run: sudo apt -y install lcov
 
+      - name: Install fastcov
+        if: ${{ env.COVERAGE_ENABLED == 'true' }}
+        run: sudo pip install fastcov --break-system-packages --no-input
+      
       - name: Install graphviz
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         run: sudo apt -y install libgraphviz-dev
@@ -136,7 +175,7 @@ jobs:
 
       - name: Build tests
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- build_all_tests
+        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- build_all_tests
 
       # Check against regressions in target applications.
       # This step is run now so that the results are cached.
@@ -146,7 +185,7 @@ jobs:
         id: build-deployables
         if: ${{ env.BUILD_DEPLOYABLES == 'true' }}
         working-directory: ${{ env.WORKSPACE }}
-        run: cmake --build ${{ env.BUILD_DIR }} -j 2 -- all build_all_playgrounds
+        run: cmake --build ${{ env.BUILD_DIR }} -j ${{ steps.set-jobs.outputs.jobs }} -- all build_all_playgrounds
         continue-on-error: true
 
       # Source:  https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#force-deleting-cache-entries

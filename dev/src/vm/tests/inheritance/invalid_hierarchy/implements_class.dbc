@@ -1,0 +1,10 @@
+type class: Widget {
+	abstract: true;
+}
+
+type class: ClickCounter {
+	implements: { Widget };
+	fields: {
+		times_clicked: i64,
+	};
+}

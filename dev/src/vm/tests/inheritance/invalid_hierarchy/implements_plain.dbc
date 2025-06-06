@@ -1,0 +1,8 @@
+type data: Point {
+	x: i64,
+	y: i64,
+}
+
+type interface: Spacial {
+	implements: { Point };
+}
