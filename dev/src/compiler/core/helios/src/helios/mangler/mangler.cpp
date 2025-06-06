@@ -1,13 +1,12 @@
 #include "mangler.hpp"
 
-#include <helios/src_private/helios_private/scopes/scopes.hpp>
-#include <helios/src_private/helios_private/symbols/symbol_data.hpp>
-#include <helios/src_private/helios_private/symbols/symbols.hpp>
-
 #include <frontend/module_tree/queries.hpp>
 #include <helios/scope_symbol_id.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
+#include <helios_private/scopes/scopes.hpp>
+#include <helios_private/symbols/symbol_data.hpp>
+#include <helios_private/symbols/symbols.hpp>
 #include <pst_parser/element_kind.hpp>
 #include <pst_parser/elements/hierarchy/class_elements/all_class_elements.hpp>
 #include <pst_parser/elements/hierarchy/declarations/all_declarations.hpp>
