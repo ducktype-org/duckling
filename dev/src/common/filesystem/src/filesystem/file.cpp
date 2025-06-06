@@ -7,10 +7,10 @@
 
 #include "vfs.hpp"
 
-#include <base/ref.hpp>
 #include <base/exceptions.hpp>
 #include <base/maps.hpp>
 #include <base/raw_view.hpp>
+#include <base/ref.hpp>
 
 #include <algorithm>
 #include <fstream>
