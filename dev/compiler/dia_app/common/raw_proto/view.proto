@@ -10,13 +10,15 @@ enum VisibilityStatus {
 // ---------- COMPONENTS WITHOUT HIGHLIGHT ---------- //
 
 message NoHlTextComponent {
-    string content = 1;
-    repeated uint32 assoc_side_entries = 2;
+    uint32 component_id = 1;
+    string content = 2;
+    repeated uint32 assoc_side_entries = 3;
 }
 
 message NoHlCodeComponent {
-    string content = 1;
-    repeated uint32 assoc_side_entries = 2;
+    uint32 component_id = 1;
+    string content = 2;
+    repeated uint32 assoc_side_entries = 3;
 }
 
 message NoHlConcatComponent {
@@ -40,17 +42,15 @@ message NoHlComponent {
 
 // ---------- COMPONENTS WITH HIGHLIGHT ---------- //
 
-// Highlight tags (and associated side infos) can be pushed down to the leaves by the VM.
-// Pros: clarity; hl_tags in ConcatComponent were bloating the protocol and spreading confusion.
-
 // Note: higlights are only allowed inside code sections,
 //       and in these sections all text is rendered as code,
 //       so there is no need for a text component.
 
 message HlCodeComponent {
-    string content = 1;
-    repeated uint32 assoc_side_infos = 2;
-    repeated uint32 hl_tags = 3;
+    uint32 component_id = 1;
+    string content = 2;
+    repeated uint32 assoc_side_infos = 3;
+    repeated uint32 hl_tags = 4;
 }
 
 message HlConcatComponent {
