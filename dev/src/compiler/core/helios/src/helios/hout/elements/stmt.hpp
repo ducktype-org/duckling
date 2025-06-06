@@ -76,13 +76,12 @@ namespace compiler::helios::code {
 	 * @brief Represents `a = ..;` statement in HOUT
 	 */
 	struct AssignmentStmt final: public Stmt {
-		// TODO: #469 Support arbitrary lvalues on the left.
-		Box<Expr> new_value;
-		SymID     helios_symbol;
+		Box<Expr> location_expr;
+		Box<Expr> new_value_expr;
 
-		AssignmentStmt(Box<Expr> new_value, const SymID helios_symbol):
-			  new_value(std::move(new_value)),
-			  helios_symbol(helios_symbol) {}
+		AssignmentStmt(Box<Expr> location_expr, Box<Expr> new_value):
+			  location_expr(std::move(location_expr)),
+			  new_value_expr(std::move(new_value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
@@ -132,6 +131,21 @@ namespace compiler::helios::code {
 		// @TODO: optional else body
 
 		IfStmt(Box<Expr> condition, CodeBlock body):
+			  condition(std::move(condition)),
+			  body(std::move(body)) {}
+
+		void debugPrint(std::ostream& out, usize indent = 0) const final;
+		void acceptVisitor(HoutStmtVisitor&) const override;
+	};
+
+	/**
+	 * @brief Represents While statement in HOUT
+	 */
+	struct WhileStmt final: public Stmt {
+		Box<Expr> condition;
+		CodeBlock body;
+
+		WhileStmt(Box<Expr> condition, CodeBlock body):
 			  condition(std::move(condition)),
 			  body(std::move(body)) {}
 

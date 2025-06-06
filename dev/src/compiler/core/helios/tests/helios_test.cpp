@@ -290,7 +290,7 @@ private:
 		auto the_function = hout->functions.at(0);
 
 		auto& stmt_list = the_function.content.body->statements;
-		ASSERT_EQUAL(stmt_list.size(), 5);
+		ASSERT_EQUAL(stmt_list.size(), 6);
 
 		using namespace compiler::helios::code;
 
@@ -299,6 +299,7 @@ private:
 			usize return_stmt_count      = 0;
 			usize void_return_stmt_count = 0;
 			usize if_stmt_count          = 0;
+			usize while_stmt_count       = 0;
 
 			void visitExprStmt(const ExprStmt&) override { expr_stmt_count++; }
 
@@ -307,6 +308,8 @@ private:
 			void visitVoidReturnStmt(const VoidReturnStmt&) override { void_return_stmt_count++; }
 
 			void visitIfStmt(const IfStmt&) override { if_stmt_count++; }
+
+			void visitWhileStmt(const WhileStmt&) override { while_stmt_count++; }
 		};
 
 		{
@@ -329,6 +332,11 @@ private:
 			StmtVisitor visitor;
 			stmt_list.at(4)->acceptVisitor(visitor);
 			ASSERT_EQUAL(visitor.if_stmt_count, 1);
+		}
+		{
+			StmtVisitor visitor;
+			stmt_list.at(5)->acceptVisitor(visitor);
+			ASSERT_EQUAL(visitor.while_stmt_count, 1);
 		}
 
 		struct ExprVisitor: public HoutExprVisitorPanicky {
@@ -588,7 +596,7 @@ private:
 		ASSERT_EQUAL(function.original_name, "foo");
 
 		// note that alias should not be included here:
-		ASSERT_EQUAL(function.content.body->statements.size(), 7);
+		ASSERT_EQUAL(function.content.body->statements.size(), 10);
 
 		auto& statements = function.content.body->statements;
 
@@ -636,7 +644,17 @@ private:
 		}
 
 		{
-			auto& var = get_var_ref(5);
+			auto& while_stmt
+				= dynamic_cast<const compiler::helios::code::WhileStmt&>(*statements.at(5));
+			auto& var = dynamic_cast<const compiler::helios::code::VariableStmt&>(
+				*while_stmt.body.statements.at(0)
+			);
+			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "a");
+			ASSERT_EQUAL(var.type, st(i32_type));
+		}
+
+		{
+			auto& var = get_var_ref(6);
 			ASSERT_EQUAL(compiler::helios::name(var.helios_symbol), "e");
 			ASSERT_EQUAL(var.type.getType().getKind(), tsh::Kind::Class);
 		}
