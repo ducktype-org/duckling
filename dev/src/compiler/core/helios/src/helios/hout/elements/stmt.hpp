@@ -76,13 +76,12 @@ namespace compiler::helios::code {
 	 * @brief Represents `a = ..;` statement in HOUT
 	 */
 	struct AssignmentStmt final: public Stmt {
-		// TODO: #469 Support arbitrary lvalues on the left.
-		Box<Expr> new_value;
-		SymID     helios_symbol;
+		Box<Expr> location_expr;
+		Box<Expr> new_value_expr;
 
-		AssignmentStmt(Box<Expr> new_value, const SymID helios_symbol):
-			  new_value(std::move(new_value)),
-			  helios_symbol(helios_symbol) {}
+		AssignmentStmt(Box<Expr> location_expr, Box<Expr> new_value):
+			  location_expr(std::move(location_expr)),
+			  new_value_expr(std::move(new_value)) {}
 
 		void debugPrint(std::ostream& out, usize indent = 0) const final;
 		void acceptVisitor(HoutStmtVisitor&) const override;
