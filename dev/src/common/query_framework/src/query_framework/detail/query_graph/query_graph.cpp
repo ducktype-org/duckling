@@ -10,14 +10,14 @@
 
 namespace query::detail {
 
-	void QueryGraph:: setEntry(NodeID node, NodeID from) {
+	void QueryGraph::setEntry(NodeID node, NodeID from) {
 		query_stack_size++;
 
 		if (node_data.contains(node)) {
 			if (node_data.at(node).color == Color::Visiting) {
 				// Detect and print the cycle
 				std::cerr << "Cycle detected in dependency graph: \n";
-				NodeID current = from;
+				NodeID              current = from;
 				std::vector<NodeID> cycle;
 
 				while (current != node && node_data.contains(current)) {
@@ -26,7 +26,7 @@ namespace query::detail {
 				}
 				cycle.push_back(node);
 
-				printNodes(cycle, std::cerr);
+				debugPrintNodes(cycle, std::cerr);
 
 				throw base::NotYetImplemented("Query Cycle!");
 			}
@@ -90,10 +90,8 @@ namespace query::detail {
 	void QueryGraph::debugPrint(std::ostream& out) const {
 		out << "Dep Graph: \n";
 		std::vector<NodeID> all_nodes;
-		for (const auto& [k, _] : node_data) {
-			all_nodes.push_back(k);
-		}
-		printNodes(all_nodes, out);
+		for (const auto& [k, _]: node_data) all_nodes.push_back(k);
+		debugPrintNodes(all_nodes, out);
 	}
 
 	void QueryGraph::debugPrintForDrawing(std::ostream& out) const {
@@ -107,14 +105,15 @@ namespace query::detail {
 			for (auto& dep: v.dependencies) out << index[k] << " " << index[dep] << "\n";
 	}
 
-	void QueryGraph::printNodes(const std::vector<NodeID>& nodes, std::ostream& out) const{
+	void QueryGraph::debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const {
 		std::string spacing(25, ' ');
-		for (const auto& n : nodes) {
+		for (const auto& n: nodes) {
 			const auto& node_data_entry = node_data.at(n);
 			out << "    > Query - " << std::setw(5) << std::left;
-			out << n.q_id.asInt() << std::setw(30) << std::left << "\"" << n.q_id.getData().name << "\"";
+			out << n.q_id.asInt() << std::setw(30) << std::left << "\"" << n.q_id.getData().name
+				<< "\"";
 			out << " Key " << n.hash.val << " :=>\n";
-			for (const auto& dep : node_data_entry.dependencies) {
+			for (const auto& dep: node_data_entry.dependencies) {
 				out << spacing << "(Q: \"" << dep.q_id.getData().name << "\", "
 					<< "K: " << dep.hash.val << "),\n";
 			}

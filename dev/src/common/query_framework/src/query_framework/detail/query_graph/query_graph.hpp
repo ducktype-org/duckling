@@ -43,6 +43,12 @@ namespace query::detail {
 		 */
 		base::HashMap<NodeID, NodeData> node_data;
 
+		/**
+		 * @brief Helper function to print nodes and their dependencies.
+		 * @param nodes Vector of NodeIDs to print.
+		 * @param out Output stream to print to.
+		 */
+		void debugPrintNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 	public:
 		QueryGraph()                             = default;
@@ -109,14 +115,6 @@ namespace query::detail {
 			detail::NodeID node_id = makeNodeID(Query::getID(), key);
 			return this->getNodeDepsFiltered(node_id, dependency_id);
 		}
-
-	private:
-		/**
-		 * @brief Helper function to print nodes and their dependencies.
-		 * @param nodes Vector of NodeIDs to print.
-		 * @param out Output stream to print to.
-		 */
-		void printNodes(const std::vector<NodeID>& nodes, std::ostream& out) const;
 
 		~QueryGraph() = default;
 	};
