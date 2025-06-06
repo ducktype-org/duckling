@@ -583,12 +583,11 @@ namespace compiler::helios {
 
 	QUERY_IMPLEMENTATION_BOILERPLATE(QueryLookupInScopeAndParents);
 
-	u64 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
+	base::Bit256 KeyOf_LookupInScope::queryUnstablePerfectHash() const {
 		auto hash_1 = scope.queryUnstablePerfectHash();
 		auto hash_2 = std::hash<base::StrID>()(name);
 
-		// @FIXME: this does not work:
-		return (hash_1 * 143 + hash_2 * 7) * 2 + with_wildcards;
+		return { hash_1, hash_2, static_cast<u64>(with_wildcards) };
 	}
 
 	ScopeID queryRootScopeOfMainModuleFile(query::Context& ctx, frontend::ModuleID module) {

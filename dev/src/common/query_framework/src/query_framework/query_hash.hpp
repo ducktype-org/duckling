@@ -6,21 +6,37 @@
 namespace query {
 	using QueryStableHash = base::Bit256;
 
+	/**
+	 * @brief Helper struct to determine the hash type for a given KeyType.
+	 * Specializations handle cases where KeyType is u64, bool, or has a queryUnstablePerfectHash
+	 * method.
+	 */
 	template<typename KeyType, bool IsU64OrBool>
 	struct UKHashHelper;
 
+	/**
+	 * @brief Specialization of UKHashHelper for KeyType that is u64 or bool.
+	 * Defines the hash type as u64.
+	 */
 	template<typename KeyType>
 	struct UKHashHelper<KeyType, true> {
 		using type = u64;
 	};
 
+	/**
+	 * @brief Specialization of UKHashHelper for KeyType with queryUnstablePerfectHash.
+	 * Defines the hash type as the return type of queryUnstablePerfectHash().
+	 */
 	template<typename KeyType>
 	struct UKHashHelper<KeyType, false> {
-		using type = std::conditional_t<requires(KeyType t) {
-			{ t.queryUnstablePerfectHash() } -> std::convertible_to<u64>;
-		}, decltype(std::declval<KeyType>().queryUnstablePerfectHash()), void>;
+		using type = decltype(std::declval<KeyType>().queryUnstablePerfectHash());
 	};
 
+	/**
+	 * @brief Type alias to determine the hash type for a given KeyType.
+	 * If KeyType is u64 or bool, the hash type is u64. Otherwise, it is the return type of
+	 * queryUnstablePerfectHash().
+	 */
 	template<typename KeyType>
 	using UKHash = typename UKHashHelper<
 		KeyType,
@@ -41,6 +57,18 @@ namespace query {
 			return key;
 		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
 			return static_cast<u64>(key);
+		else
+			return key.queryUnstablePerfectHash();
+	}
+
+	template<typename KeyType>
+	u64 simpleUnstableHashKey(const KeyType& key) {
+		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
+			return key;
+		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
+			return static_cast<u64>(key);
+		else if constexpr (std::is_same_v<decltype(key.queryUnstablePerfectHash()), base::Bit256>)
+			return std::hash<base::Bit256>{}(key.queryUnstablePerfectHash());
 		else
 			return key.queryUnstablePerfectHash();
 	}
