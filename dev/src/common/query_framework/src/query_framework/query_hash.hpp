@@ -61,18 +61,6 @@ namespace query {
 			return key.queryUnstablePerfectHash();
 	}
 
-	template<typename KeyType>
-	u64 simpleUnstableHashKey(const KeyType& key) {
-		if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, u64>)
-			return key;
-		else if constexpr (std::is_same_v<std::remove_cvref_t<KeyType>, bool>)
-			return static_cast<u64>(key);
-		else if constexpr (std::is_same_v<decltype(key.queryUnstablePerfectHash()), base::Bit256>)
-			return std::hash<base::Bit256>{}(key.queryUnstablePerfectHash());
-		else
-			return key.queryUnstablePerfectHash();
-	}
-
 	// Concept to validate queryUnstablePerfectHash signature
 	template<typename KeyType>
 	concept HasUnstablePerfectHash

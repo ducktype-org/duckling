@@ -35,6 +35,18 @@ namespace base {
 		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
 		 */
 		[[nodiscard]] std::string toStringHex() const;
+
+		constexpr bool operator<(const Bit256& other) const noexcept {
+			for (size_t i = 4; i-- > 0;) { // Iterate from the most significant to the least significant
+				if (data.at(i) < other.data.at(i)) return true;
+				if (data.at(i) > other.data.at(i)) return false;
+			}
+			return false; 
+		}
+
+		constexpr bool operator>(const Bit256& other) const noexcept {
+			return other < *this;
+		}
 	};
 }
 
@@ -48,4 +60,6 @@ namespace std {
 			return hash;
 		}
 	};
+
+	std::ostream& operator<<(std::ostream& os, const  base::Bit256& bit256);
 }

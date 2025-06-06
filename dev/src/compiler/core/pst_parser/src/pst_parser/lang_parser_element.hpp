@@ -10,6 +10,7 @@
 
 #include <base/box.hpp>
 #include <base/ref.hpp>
+#include <base/bit256.hpp>
 
 #include <ranges>
 #include <variant>

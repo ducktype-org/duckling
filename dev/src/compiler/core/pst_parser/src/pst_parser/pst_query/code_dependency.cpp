@@ -30,7 +30,7 @@ namespace pst {
 			);
 
 			static auto get_pst_node
-				= [](query::detail::NodeID lid) { return LangElement::getByID(lid.hash.val); };
+				= [](query::detail::NodeID lid) { return LangElement::getByID(lid.hash.val.data.at(0)); };
 			static auto get_tokens = [](AccessLocked<LangElement> locked) {
 				return locked.illegalAccess().map([](auto el) { return el->viewTokens(); });
 			};
