@@ -12,6 +12,8 @@
 #include <typesystem/higher/queries/types.hpp>
 #include <typesystem/higher/expression_type.hpp>
 
+#include <helios_private/expressions/query_hout_of_expr.hpp>
+
 namespace compiler::helios {
 
 
@@ -52,10 +54,10 @@ namespace compiler::helios {
 					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
 				} else {
 					if (stmt->getValue().has_value()) {
-						auto parsed = ctx.query<EvalExprToType>(stmt->getValue().value().unlock(ctx)->getExpr());
-						if (parsed.hasValue())
-							setTypeOfSymbol(parsed.value());
-						else
+						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
+						if (parsed.hasValue()) {
+							setTypeOfSymbol(parsed.value()->expression_type.getSymbolType());
+						} else
 							CORE_PANIC("Const declaration with value that does not evaluate to a type.");
 					} else {
 						CORE_PANIC("Const declaration without type or value, this is a bug in the parser.");
@@ -68,10 +70,10 @@ namespace compiler::helios {
 					setTypeOfSymbol(stmt->getType().value().unlock(ctx)->getExpr().unlock(ctx));
 				} else {
 					if (stmt->getValue().has_value()) {
-						auto parsed = ctx.query<EvalExprToType>(stmt->getValue().value().unlock(ctx)->getExpr());
-						if (parsed.hasValue())
-							setTypeOfSymbol(parsed.value());
-						else
+						auto parsed = (ctx.query<QueryHoutOfExpr>({stmt->getValue().value().unlock(ctx)->getExpr()}));
+						if (parsed.hasValue()) {
+							setTypeOfSymbol(parsed.value()->expression_type.getSymbolType());
+						} else
 							CORE_PANIC("Variable declaration with value that does not evaluate to a type.");
 					} else {
 						CORE_PANIC("Variable declaration without type or value, this is a bug in the parser.");
