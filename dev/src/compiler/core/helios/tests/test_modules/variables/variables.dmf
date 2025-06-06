@@ -1,6 +1,6 @@
 class T {}
 
-fun foo() = {
+fun foo() -> i32 = {
 	var a: i32 = in_n;
 	var b: i32 = 0;
 	var c: i32 | f32;
@@ -19,6 +19,8 @@ fun foo() = {
 		b;
 	}
 	var e: Q;
+	a = 34;
+	foo() = 35;
 	return a;
 }
 

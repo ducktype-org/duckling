@@ -8,3 +8,13 @@ fun foo() = {
 	}
 	return 0;
 }
+
+fun goo() = { 
+	var a: i32 = 23;
+	a = 24;
+	hoo() = 15;
+}
+
+fun hoo() -> i32 = {
+	return 33;
+}
