@@ -11,6 +11,7 @@
 #include <helios/helios_result.hpp>
 #include <helios/hout/elements.hpp>
 #include <helios/hout/elements/expr.hpp>
+#include <helios/hout/elements/stmt.hpp>
 #include <helios/hout/visitors.hpp>
 #include <helios/symbols/query_type_of_symbol.hpp>
 #include <helios/symbols/simple.hpp>
@@ -26,6 +27,7 @@
 
 #include <stack>
 #include <unordered_set>
+#include <variant>
 
 namespace compiler::mir {
 
@@ -500,6 +502,8 @@ namespace compiler::mir {
 
 		void visitIfStmt(const hc::IfStmt& stmt) override { goOverCodeBlock(stmt.body); }
 
+		void visitWhileStmt(const hc::WhileStmt& stmt) override { goOverCodeBlock(stmt.body); }
+
 		// Explicit empty boilerplate. Expected changes when block expressions are implemented.
 
 		void visitReturnStmt(const hc::ReturnStmt&) override {}
@@ -668,6 +672,75 @@ namespace compiler::mir {
 			output({ expr_result.begin });
 		}
 
+		void visitWhileStmt(const hc::WhileStmt& stmt) override {
+			auto condition_scope = function.newScope(parent_scope);
+
+			auto condition_continuation_block = function.newBlock();
+
+			auto get_condition_return = condition_continuation_block->addHole();
+
+			auto expr_result = lowerExpr(
+				*stmt.condition, condition_continuation_block, function, condition_scope
+			);
+
+			auto loop_scope = function.newScope(parent_scope);
+
+			auto loop_continuation_block = function.newBlock();
+
+			loop_continuation_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, loop_scope }
+			);
+
+			auto loop_body
+				= lowerCodeBlock(stmt.body, loop_continuation_block, function, loop_scope);
+
+			auto entry_block = function.newBlock();
+
+			entry_block->setTerminator(
+				{ Operation::Jump, {}, { expr_result.begin->getID() }, {}, parent_scope }
+			);
+
+			if (expr_result.value.isLocal()) {
+				auto condition_result_tmp = function.addNoLifetimeBoolTmp();
+
+				get_condition_return.fill(Instruction{
+					Operation::Assign,
+					{ condition_result_tmp },
+					{ expr_result.value },
+					{ flagConstruct(condition_result_tmp) },
+					condition_scope,
+				});
+
+				condition_continuation_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ condition_result_tmp, loop_body.begin->getID(), continuation->getID() },
+					{},
+					condition_scope,
+				});
+
+			} else {
+				// we can use the result of the expression directly:
+
+				get_condition_return.fill(Instruction{
+					Operation::Nop,
+					{},
+					{},
+					{},
+					condition_scope,
+				});
+
+				condition_continuation_block->setTerminator({
+					Operation::Branch,
+					{},
+					{ expr_result.value, loop_body.begin->getID(), continuation->getID() },
+					{},
+					condition_scope,
+				});
+			}
+			output({ entry_block });
+		}
+
 		void visitVariableStmt(const hc::VariableStmt& stmt) override {
 			auto local = function.findLocal(stmt.helios_symbol);
 
@@ -701,24 +774,30 @@ namespace compiler::mir {
 
 		void visitAssignmentStmt(const hc::AssignmentStmt& stmt) override {
 			// TODO: #448 Search for location in global scope as well.
-			// TODO: #469 Support arbitrary lvalues on the left.
 
 			auto assignment_scope = function.newScope(parent_scope);
 
-			auto target_location          = function.findLocal(stmt.helios_symbol);
 			auto target_construction_hole = continuation->addHole();
-			auto [sub_continuation, result]
-				= lowerExpr(*stmt.new_value, continuation, function, assignment_scope);
 
+			auto [r_continuation, new_value]
+				= lowerExpr(*stmt.new_value_expr, continuation, function, assignment_scope);
+
+			auto [l_continuation, location_value_result]
+				= lowerExpr(*stmt.location_expr, r_continuation, function, assignment_scope);
+
+			CORE_ASSERT(
+				location_value_result.isLocal(),
+				"Left side of assignment statement doesn't contain reference to local variable."
+			);
+			auto local = location_value_result.get<LocalRef>();
 			target_construction_hole.fill(Instruction{
 				Operation::Assign,
-				{ target_location },
-				{ result },
+				{ local },
+				{ new_value },
 				{},
 				assignment_scope,
 			});
-
-			output({ sub_continuation });
+			output({ l_continuation });
 		}
 	};
 

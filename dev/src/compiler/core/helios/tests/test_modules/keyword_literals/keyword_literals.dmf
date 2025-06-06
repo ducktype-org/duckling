@@ -31,6 +31,7 @@ fun foo() = {
     # bool literals:
     if (false) { }
     if (true) { }
+    while (false) { }
 
     var v_str: str = "";
 }

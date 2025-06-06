@@ -1,6 +1,5 @@
-#include "../src_private/filesystem_private/vfs.hpp"
-
 #include <filesystem/file.hpp>
+#include <filesystem/vfs.hpp>
 #include <tester/tester.hpp>
 
 class SimpleFileSystemTest: public tester::TestSuite {
@@ -62,56 +61,91 @@ private:
 	}
 
 	void vfsTest() {
-		VFS vfs;
+		Ref<fs::VFS> vfs = fs::VFS::getInstance();
 
 		// Test createDirectory and listDirectory with real paths
-		assertTrue(!vfs.createDirectory("/testDir"), "Not a virtual path");
+		try {
+			vfs->createDirectory("/testDir");
+			assertTrue(false, "Expected LogicError for non-virtual path");
+		} catch (const base::LogicError& e) {
+			// Expected behavior
+			assertTrue(
+				std::string(e.what()) == "Path is not a vfs path!", "Unexpected error message"
+			);
+		}
+
 		// Test getRootPath
-		assertTrue(vfs.getRootPath() == "vfs:", "Root path incorrect");
+		assertTrue(vfs->getRootPath() == "vfs:", "Root path incorrect");
 
 		// Test edge cases with real paths
-		assertTrue(!vfs.createFile("vfs:"), "Should not allow file creation at root");
+		assertTrue(!vfs->createFile("vfs:"), "Should not allow file creation at root");
 
 		// Test virtual paths
-		assertTrue(vfs.createDirectory("vfs:/virtualDir"), "Failed to create virtual directory");
+		assertTrue(vfs->createDirectory("vfs:/virtualDir"), "Failed to create virtual directory");
 		assertTrue(
-			vfs.createDirectory("vfs:/virtualDir/virtualSubDir"),
+			vfs->createDirectory("vfs:/virtualDir/virtualSubDir"),
 			"Failed to create virtual subdirectory"
 		);
 		assertTrue(
-			vfs.createDirectory("vfs:/test/random/long/path"),
+			vfs->createDirectory("vfs:/test/random/long/path"),
 			"Failed to create virtual subdirectory"
 		);
-		auto virtual_dir_contents = vfs.listDirectory("vfs:/virtualDir");
+		auto virtual_dir_contents = vfs->listDirectory("vfs:/virtualDir");
 		assertTrue(
 			virtual_dir_contents.size() == 1 && virtual_dir_contents[0] == "virtualSubDir",
 			"Virtual directory contents incorrect"
 		);
 
 		assertTrue(
-			vfs.createFile("vfs:/virtualDir/virtualFile.txt"), "Failed to create virtual file"
+			vfs->createFile("vfs:/virtualDir/virtualFile.txt"), "Failed to create virtual file"
 		);
-		assertTrue(vfs.exists("vfs:/virtualDir/virtualFile.txt"), "Virtual file does not exist");
+		assertTrue(vfs->exists("vfs:/virtualDir/virtualFile.txt"), "Virtual file does not exist");
 
 		assertTrue(
-			vfs.writeFile("vfs:/virtualDir/virtualFile.txt", "Hello, Virtual VFS!"),
+			vfs->writeFile("vfs:/virtualDir/virtualFile.txt", "Hello, Virtual VFS!"),
 			"Failed to write to virtual file"
 		);
-		auto virtual_file_content = vfs.readFile("vfs:/virtualDir/virtualFile.txt");
+		auto virtual_file_content = vfs->readFile("vfs:/virtualDir/virtualFile.txt");
 		assertTrue(virtual_file_content == "Hello, Virtual VFS!", "Virtual file content incorrect");
 
 		assertTrue(
-			vfs.isFile("vfs:/virtualDir/virtualFile.txt"), "Virtual path is not recognized as a file"
+			vfs->isFile("vfs:/virtualDir/virtualFile.txt"),
+			"Virtual path is not recognized as a file"
 		);
 		assertTrue(
-			vfs.isDirectory("vfs:/virtualDir"), "Virtual path is not recognized as a directory"
+			vfs->isDirectory("vfs:/virtualDir"), "Virtual path is not recognized as a directory"
 		);
 
 		// Test edge cases with virtual paths
-		assertTrue(!vfs.createFile("vfs:/"), "Should not allow file creation at virtual root");
+		assertTrue(!vfs->createFile("vfs:/"), "Should not allow file creation at virtual root");
 		assertTrue(
-			!vfs.createDirectory("vfs:/virtualDir/virtualFile.txt"),
+			!vfs->createDirectory("vfs:/virtualDir/virtualFile.txt"),
 			"Should not allow directory creation at virtual file path"
+		);
+
+		// Test deleteFile
+		assertTrue(
+			vfs->deleteFile("vfs:/virtualDir/virtualFile.txt"), "Failed to delete virtual file"
+		);
+
+		assertTrue(
+			!vfs->exists("vfs:/virtualDir/virtualFile.txt"),
+			"Virtual file still exists after deletion"
+		);
+
+		// Test deleteDirectory without force
+		assertTrue(
+			!vfs->deleteDirectory("vfs:/virtualDir", false),
+			"Should not delete non-empty directory without force"
+		);
+
+		// Test deleteDirectory with force
+		assertTrue(
+			vfs->deleteDirectory("vfs:/virtualDir", true), "Failed to delete directory with force"
+		);
+
+		assertTrue(
+			!vfs->exists("vfs:/virtualDir"), "Directory still exists after deletion with force"
 		);
 	}
 
