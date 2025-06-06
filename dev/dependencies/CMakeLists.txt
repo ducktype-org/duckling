@@ -56,7 +56,6 @@ find_library(GVC_LIBRARY gvc)
 find_library(CGRAPH_LIBRARY cgraph)
 find_library(CDT_LIBRARY cdt)
 
-# Utwórz globalne cele IMPORTED
 add_library(System::gvc UNKNOWN IMPORTED GLOBAL)
 set_target_properties(System::gvc PROPERTIES
     IMPORTED_LOCATION "${GVC_LIBRARY}"
