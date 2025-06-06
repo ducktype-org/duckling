@@ -125,4 +125,8 @@ namespace tsh {
 		SymbolType<ABSTRACT_TYPE> symbol_type;
 		ValueCategory             value_category;
 	};
+
+	inline SymbolType<> expressionTypeToSymbolType(const ExpressionType<>& expr_type) {
+		return expr_type.getSymbolType();
+	}
 }
