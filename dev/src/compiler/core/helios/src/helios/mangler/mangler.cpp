@@ -18,7 +18,17 @@
 #include <ranges>
 #include <string_view>
 
+/**
+ * This is the implementation of the mangling scheme according to mangling-scheme.md
+ * That file provides a detailed description and motivation for some design choices made here
+ * Many functions correspond to the
+ */
 namespace compiler::helios::mangler {
+
+	constexpr auto KeyOf_MangledSymbol::operator<=>(const KeyOf_MangledSymbol& other) const {
+		return std::tie(symbol, mangling_scheme_version, additional_metadata)
+		   <=> std::tie(other.symbol, other.mangling_scheme_version, other.additional_metadata);
+	}
 
 	u64 KeyOf_MangledSymbol::queryUnstablePerfectHash() const {
 		static base::Map<KeyOf_MangledSymbol, u64> hashes{};
@@ -32,6 +42,9 @@ namespace compiler::helios::mangler {
 
 	namespace detail {
 
+		/**
+		 * @brief Checks if the symbol can be mangled
+		 */
 		bool isManglable(SymID symbol_id) {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
@@ -49,6 +62,10 @@ namespace compiler::helios::mangler {
 			}
 		}
 
+		/**
+		 * @brief A shorter representation of a number in base-62, used to save space
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string compactNumber(u64 number) {
 			using namespace std::literals::string_view_literals;
 
@@ -69,6 +86,12 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
+		/**
+		 * @brief Returns bare identifier of the symbol prefixed with its size
+		 * If the name contains characters outside of the allowed set,
+		 * it will be prefixed with 'U' and punnycode-encoded.
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string identifier(std::string name) {
 			// @future: use punnycode for unicode strings
 			if (/* hasCharsOnlyFromAllowedCharacterSet */ true) {
@@ -76,11 +99,15 @@ namespace compiler::helios::mangler {
 				return name;
 			} else {
 				constexpr char unicode_prefix = 'U';
-				std::string    punny_string   = name;  // @todo: convert to punnycode
+				std::string    punny_string   = name;  // @future: convert to punnycode
 				return base::strConcat(unicode_prefix, punny_string.size(), punny_string);
 			}
 		}
 
+		/**
+		 * @brief Returns package/module/script prefix for the symbol
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string pathPrefix(SymID symbol_id) {
 			auto enclosing_scope  = scope(symbol_id);
 			auto enclosing_module = module(enclosing_scope);
@@ -104,10 +131,18 @@ namespace compiler::helios::mangler {
 			// @todo: backreference
 		}
 
+		/**
+		 * @brief Returns the bare name of the symbol prefixed with its size
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string unscopedName(SymID symbol_id) {
 			return identifier(compiler::helios::name(symbol_id).str());
 		}
 
+		/**
+		 * @brief Returns symbol name prefixed with all enclosing it scopes to uniquely identify it
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string symbolName(query::Context& ctx, SymID symbol_id) {
 			auto scope_id = scope(symbol_id);
 
@@ -166,10 +201,18 @@ namespace compiler::helios::mangler {
 			}
 		}
 
+		/**
+		 * @brief Returns the symbol's path
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string path(query::Context& ctx, SymID symbol_id) {
 			return base::strConcat(pathPrefix(symbol_id), symbolName(ctx, symbol_id));
 		}
 
+		/**
+		 * @brief Returns mangled name of a function or method
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string funcType(query::Context& ctx, SymID symbol_id) {
 			std::string ret;
 			if (kind(symbol_id) == SymbolKind::Function) {
@@ -190,6 +233,10 @@ namespace compiler::helios::mangler {
 			return ret;
 		}
 
+		/**
+		 * @brief Determines what tipe of symbol we are mangling to choose the right encoding
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string symbolEncoding(query::Context& ctx, SymID symbol_id) {
 			switch (kind(symbol_id)) {
 			case SymbolKind::Variable:
@@ -206,15 +253,19 @@ namespace compiler::helios::mangler {
 			case SymbolKind::Constructor:
 			case SymbolKind::Destructor:
 				// special symbols
-				return "todo_special_symbols";  // @todo
+				return "todo_special_symbols";  // @future
 				break;
 
 			default:
-				return "todo_unknown_symbol";  // todo
+				return "todo_unknown_symbol";  // @future
 				break;
 			}
 		}
 
+		/**
+		 * @brief Returns formatted metadata that will be added to the mangled name
+		 * @note: See mangling-scheme.md for details
+		 */
 		std::string optMetadata(base::Optional<std::string> metadata) {
 			if (!metadata.has_value()) return "";
 			return "$" + metadata.value();
@@ -226,16 +277,14 @@ namespace compiler::helios::mangler {
 		static auto provide(Context& ctx, const QKey& key) -> PResult {
 			using namespace std::literals::string_view_literals;
 
-			auto dealiased = ctx.query<helios::QueryDealias>(key.symbol);
-			if (!dealiased.get()->hasValue() || dealiased.get()->value().list.size() != 1)
-				return std::nullopt;  // @todo: ambiguous symbols
-			auto symbol_id = dealiased.get()->value().list.front();
+			if (!detail::isManglable(key.symbol)) return std::nullopt;  // @todo: wrong symbol kind
 
-			if (!detail::isManglable(symbol_id)) return std::nullopt;  // @todo: wrong symbol kind
+			// note: global identifiers starting with underscore and a capital letter are reserved
+			// in C Q seems to be free and stands for both query and quack
+			constexpr auto language_prefix = "_Q"sv;
 
-			constexpr auto language_prefix     = "_Q"sv;
 			const auto mangling_scheme_version = detail::compactNumber(key.mangling_scheme_version);
-			std::string encoding               = detail::symbolEncoding(ctx, symbol_id);
+			std::string encoding               = detail::symbolEncoding(ctx, key.symbol);
 			std::string metadata               = detail::optMetadata(key.additional_metadata);
 
 			std::string mangled_name
