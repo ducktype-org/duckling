@@ -4,6 +4,7 @@
 
 #include <array>
 #include <string>
+#include <vector>
 
 namespace base {
 	/**
@@ -35,6 +36,21 @@ namespace base {
 		 * @brief Converts the 256-bit integer into a hexadecimal string representation.
 		 */
 		[[nodiscard]] std::string toStringHex() const;
+
+		/**
+		 * @brief Serialize the Bit256 object into a vector of bytes
+		 */
+		[[nodiscard]] std::vector<uint8_t> serialize() const;
+
+		/**
+		 * @brief Deserialize a Bit256 object from a vector of bytes
+		 */
+		static Bit256 deserialize(const std::vector<uint8_t>& buffer, const usize& offset);
+
+		/**
+		 * @brief Returns the size of the serialized Bit256 object in bytes.
+		 */
+		[[nodiscard]] static constexpr usize serializedSize() noexcept { return sizeof(data); }
 
 		constexpr bool operator<(const Bit256& other) const noexcept {
 			for (usize i = 4;
